@@ -164,7 +164,7 @@ public class ClassTree {
      * <p>Thread-safe: search fans out over a pool of workers that all read through this cache.
      */
     private final Map<String, String> pureSmaliCache =
-            Collections.synchronizedMap(new LinkedHashMap<String, String>(256, 0.75f, true) {
+            Collections.synchronizedMap(new LinkedHashMap<>(256, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
                     return size() > smaliCacheMax();

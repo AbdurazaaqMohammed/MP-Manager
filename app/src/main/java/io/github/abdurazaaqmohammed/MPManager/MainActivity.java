@@ -2611,25 +2611,32 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void setCurrentFolder(File curr, File[] files) {
-        int foldersCount = 0;
-        int totalCount;
-        if (files != null) {
-            // Count from the already-listed array (root listings carry
-            // isDirectory via RootFile). Re-listing with curr.listFiles()
-            // returns null on root-only dirs and would show 0 folders.
-            // Skip the ".." up-entry: getShownFiles() includes the parent
-            // folder at index 0, which is not inside curr. A raw listing
-            // from loadFolderInPane never contains curr's parent, so also
-            // guard by parent equality instead of blindly skipping index 0.
-            File upDir = null;
-            try {
-                upDir = curr == null ? null : curr.getParentFile();
-            } catch (Exception ignored) {
-            }
-            // At filesystem root there is no parent; the adapter reuses the
-            // folder itself as the ".." entry, so skip that too.
-            boolean skipFirst = files.length > 0 && (files[0] != null
-                    && (files[0].equals(upDir) || (upDir == null && files[0].equals(curr))));
+        if (files == null) {
+            updateFolderCount(0, 0, curr);
+            return;
+        }
+        // Count from the already-listed array (root listings carry
+        // isDirectory via RootFile). Re-listing with curr.listFiles()
+        // returns null on root-only dirs and would show 0 folders.
+        // Skip the ".." up-entry: getShownFiles() includes the parent
+        // folder at index 0, which is not inside curr. A raw listing
+        // from loadFolderInPane never contains curr's parent, so also
+        // guard by parent equality instead of blindly skipping index 0.
+        File upDir = null;
+        try {
+            upDir = curr == null ? null : curr.getParentFile();
+        } catch (Exception ignored) {
+        }
+        // At filesystem root there is no parent; the adapter reuses the
+        // folder itself as the ".." entry, so skip that too.
+        final boolean skipFirst = files.length > 0 && (files[0] != null
+                && (files[0].equals(upDir) || (upDir == null && files[0].equals(curr))));
+        // One isDirectory() per entry is one stat syscall per entry. Doing that
+        // on the main thread blocked the first frame of big listings such as
+        // /vendor, so count in the background and post just the two numbers.
+        final File folder = curr;
+        listingExecutor.execute(() -> {
+            int foldersCount = 0;
             for (int i = 0; i < files.length; i++) {
                 File f = files[i];
                 try {
@@ -2640,14 +2647,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             }
             int listed = files.length - (skipFirst ? 1 : 0);
-            totalCount = listed - foldersCount;
-        } else totalCount = 0;
+            updateFolderCount(foldersCount, listed - foldersCount, folder);
+        });
+    }
+
+    private void updateFolderCount(int foldersCount, int totalCount, File curr) {
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
-        int finalFoldersCount = foldersCount;
+        final int finalFoldersCount = foldersCount;
+        final int finalTotalCount = totalCount;
+        final String path = curr == null ? "" : curr.getPath();
         handler.post(() -> {
-            currentFolderPath.setText(curr.getPath());
+            currentFolderPath.setText(path);
             uiHelper.scrollTextView(currentFolderPath);
-            this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, finalFoldersCount, totalCount));
+            this.<TextView>findViewById(R.id.folderCount)
+                    .setText(rss.getString(R.string.folders_files_x, finalFoldersCount, finalTotalCount));
         });
     }
 

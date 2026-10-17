@@ -444,8 +444,9 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
         }
         String packageName = getPackageName();
 
-        return new Iterator<String>() {
+        return new Iterator<>() {
             String name = packageName;
+
             @Override
             public boolean hasNext() {
                 String name = this.name;
@@ -455,6 +456,7 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
                 }
                 return name.charAt(i - 1) == '/';
             }
+
             @Override
             public String next() {
                 String result = this.name;

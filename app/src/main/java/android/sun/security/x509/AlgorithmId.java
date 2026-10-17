@@ -567,7 +567,7 @@ public class AlgorithmId implements Serializable, DerEncoder {
                             break;
                         }
                         if (oidTable == null) {
-                            oidTable = new HashMap<String, ObjectIdentifier>();
+                            oidTable = new HashMap<>();
                         }
                         oidString = alias.substring(index);
                         String stdAlgName = prov.getProperty(alias);

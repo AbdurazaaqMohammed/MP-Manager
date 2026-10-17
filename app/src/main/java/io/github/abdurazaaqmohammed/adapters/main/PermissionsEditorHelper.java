@@ -75,19 +75,19 @@ public class PermissionsEditorHelper {
         setUid = new CheckBox(context);
         setUid.setText(context.getString(R.string.set_uid));
         setUid.setTextSize(12);
-        setUid.setChecked(permBits[3] == 4);
+        setUid.setChecked((permBits[3] & 4) != 0);
         setUid.setPadding(dp(4), 0, dp(16), 0);
 
         setGid = new CheckBox(context);
         setGid.setText(context.getString(R.string.set_gid));
         setGid.setTextSize(12);
-        setGid.setChecked(permBits[3] == 2);
+        setGid.setChecked((permBits[3] & 2) != 0);
         setGid.setPadding(dp(4), 0, dp(16), 0);
 
         sticky = new CheckBox(context);
         sticky.setText(context.getString(R.string.sticky));
         sticky.setTextSize(12);
-        sticky.setChecked(permBits[3] == 1);
+        sticky.setChecked((permBits[3] & 1) != 0);
         sticky.setPadding(dp(4), 0, dp(4), 0);
 
         LinearLayout specialRow = new LinearLayout(context);
@@ -119,7 +119,7 @@ public class PermissionsEditorHelper {
         numericInput.setTypeface(Typeface.MONOSPACE);
         numericInput.setText(String.valueOf(permBits[4]));
         numericInput.setSelectAllOnFocus(true);
-        numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(4) });
+        numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(4), octalOnly() });
         numericInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         numericInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -188,25 +188,27 @@ public class PermissionsEditorHelper {
 
     private int[] parseNumericPerms(String perms) {
         int[] bits = new int[5];
-        if (perms == null || perms.isEmpty()) return bits;
-        try {
-            String clean = perms.trim().replace(" ", "");
-            if (clean.length() == 3) {
-                bits[0] = Character.getNumericValue(clean.charAt(0));
-                bits[1] = Character.getNumericValue(clean.charAt(1));
-                bits[2] = Character.getNumericValue(clean.charAt(2));
-                bits[3] = 0;
-                bits[4] = bits[0] * 100 + bits[1] * 10 + bits[2];
-            } else if (clean.length() == 4) {
-                bits[3] = Character.getNumericValue(clean.charAt(0));
-                bits[0] = Character.getNumericValue(clean.charAt(1));
-                bits[1] = Character.getNumericValue(clean.charAt(2));
-                bits[2] = Character.getNumericValue(clean.charAt(3));
-                bits[4] = bits[3] * 1000 + bits[0] * 100 + bits[1] * 10 + bits[2];
+        if (perms == null) return bits;
+        String clean = perms.trim().replace(" ", "");
+        // Index of the first digit that maps to the owner octal. A 4-digit mode
+        // has a leading special-bits digit that must not be read as a digit group.
+        int offset;
+        if (clean.length() == 3) offset = 0;
+        else if (clean.length() == 4) offset = 1;
+        else return bits;
+        for (int i = 0; i < clean.length(); i++) {
+            char c = clean.charAt(i);
+            if (c < '0' || c > '7') return new int[5];
+            int target = i - offset;
+            if (target < 0) {
+                bits[3] = c - '0';
+            } else if (target <= 2) {
+                bits[target] = c - '0';
+            } else {
+                return new int[5];
             }
-        } catch (NumberFormatException e) {
-            bits = new int[5];
         }
+        bits[4] = bits[3] * 1000 + bits[0] * 100 + bits[1] * 10 + bits[2];
         return bits;
     }
 
@@ -220,9 +222,9 @@ public class PermissionsEditorHelper {
         otherRead.setChecked((bits[2] & 4) != 0);
         otherWrite.setChecked((bits[2] & 2) != 0);
         otherExec.setChecked((bits[2] & 1) != 0);
-        setUid.setChecked(bits[3] == 4);
-        setGid.setChecked(bits[3] == 2);
-        sticky.setChecked(bits[3] == 1);
+        setUid.setChecked((bits[3] & 4) != 0);
+        setGid.setChecked((bits[3] & 2) != 0);
+        sticky.setChecked((bits[3] & 1) != 0);
     }
 
     private CheckBox createPermCheckbox(int checkedBit) {
@@ -260,5 +262,33 @@ public class PermissionsEditorHelper {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    /**
+     * Keeps the numeric field to octal digits. Character.getNumericValue returns
+     * -1 for anything else, so typing a non-digit used to flip random checkboxes.
+     */
+    private static InputFilter octalOnly() {
+        return (source, start, end, dest, dstart, dend) -> {
+            StringBuilder out = new StringBuilder(end - start);
+            for (int i = start; i < end; i++) {
+                char c = source.charAt(i);
+                if (c >= '0' && c <= '7') out.append(c);
+            }
+            return out;
+        };
+    }
+
+    /** Rebinds the checkboxes to a mode read from disk after the editor is built. */
+    public void applyNumericPerms(String perms) {
+        if (perms == null || !isReady()) return;
+        int[] bits = parseNumericPerms(perms);
+        setCheckboxesFromBits(bits);
+        if (symbolicPreview != null) symbolicPreview.setText(getSymbolicString());
+        if (numericInput != null) numericInput.setText(String.valueOf(bits[4]));
+    }
+
+    public boolean isReady() {
+        return ownerRead != null;
     }
 }

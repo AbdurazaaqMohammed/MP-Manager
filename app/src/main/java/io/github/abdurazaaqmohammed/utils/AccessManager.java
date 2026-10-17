@@ -131,6 +131,40 @@ public final class AccessManager {
             throw new IOException("Refusing to stage non-absolute path");
         }
         Backend backend = active(context);
+        File dst = newStagingTarget(context, srcAbsPath);
+        IOException firstFailure;
+        try {
+            stageForRead(context, backend, srcAbsPath, dst);
+            return dst;
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            dst.delete();
+            firstFailure = e;
+            if (backend == Backend.ROOT && canUseShizuku(context)) {
+                backend = Backend.SHIZUKU;
+            } else if (backend == Backend.SHIZUKU && canUseRoot(context)) {
+                backend = Backend.ROOT;
+            } else {
+                throw firstFailure;
+            }
+        }
+        File retried = newStagingTarget(context, srcAbsPath);
+        try {
+            // The two backends have genuinely different permissions: the shell uid
+            // often cannot read what root can (e.g. /vendor/build.prop is 0640
+            // root:root and readable by neither the app nor the shell), so a
+            // failure on one is worth retrying on the other before giving up.
+            stageForRead(context, backend, srcAbsPath, retried);
+            return retried;
+        } catch (IOException retryFailure) {
+            //noinspection ResultOfMethodCallIgnored
+            retried.delete();
+            retryFailure.addSuppressed(firstFailure);
+            throw retryFailure;
+        }
+    }
+
+    private static File newStagingTarget(Context context, String srcAbsPath) throws IOException {
         File dir = RootStaging.stageDir(context);
         String base = new File(srcAbsPath).getName();
         if (base.isEmpty()) base = "staged_file";
@@ -140,6 +174,28 @@ public final class AccessManager {
         while (dst.exists() && dup < 100) {
             dst = new File(dir, System.currentTimeMillis() + "_" + (dup++) + "_" + base);
         }
+        return dst;
+    }
+
+    private static boolean canUseRoot(Context context) {
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            return rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean canUseShizuku(Context context) {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void stageForRead(Context context, Backend backend, String srcAbsPath, File dst) throws IOException {
         if (backend == Backend.ROOT) {
             RootManager rm = RootManager.getInstance(context);
             if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
@@ -153,8 +209,7 @@ public final class AccessManager {
                 throw e;
             }
         } else if (backend == Backend.SHIZUKU) {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            if (!prefs.getBoolean("shizuku_file_ops", false) || !ShizukuManager.ready()) {
+            if (!canUseShizuku(context)) {
                 throw new IOException("Shizuku file access is disabled or unavailable");
             }
             try (OutputStream os = new FileOutputStream(dst)) {
@@ -176,7 +231,6 @@ public final class AccessManager {
             dst.delete();
             throw new IOException("Staging failed");
         }
-        return dst;
     }
 
     public static void writeBack(Context context, File stagedCopy, String originalAbsPath) throws IOException {

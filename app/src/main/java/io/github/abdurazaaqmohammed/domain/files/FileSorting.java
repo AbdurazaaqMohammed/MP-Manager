@@ -80,30 +80,73 @@ public final class FileSorting {
     }
 
     public static void sortFiles(File[] files, int sortBy, boolean reverse) {
-        if (files == null) return;
-        Arrays.sort(files, (f1, f2) -> {
+        if (files == null || files.length < 2) return;
+        // Reading isDirectory()/length()/lastModified() inside the comparator cost
+        // O(n log n) stat syscalls per folder load, which is what made listings
+        // such as /vendor feel slow. Read each value once, then sort.
+        int n = files.length;
+        final long[] sizes = new long[n];
+        final long[] times = new long[n];
+        final boolean[] dirs = new boolean[n];
+        final String[] names = new String[n];
+        final String[] exts = new String[n];
+        boolean needSizes = sortBy == SORT_SIZE;
+        boolean needTimes = sortBy == SORT_DATE;
+        boolean needExts = sortBy == SORT_TYPE;
+        for (int i = 0; i < n; i++) {
+            File f = files[i];
+            if (f == null) {
+                names[i] = "";
+                exts[i] = "";
+                continue;
+            }
+            names[i] = f.getName();
+            try {
+                dirs[i] = f.isDirectory();
+            } catch (Exception ignored) {
+            }
+            if (needExts) exts[i] = getExt(names[i]);
+            if (!dirs[i] || needSizes) {
+                try {
+                    sizes[i] = f.length();
+                } catch (Exception ignored) {
+                }
+            }
+            if (!dirs[i] || needTimes) {
+                try {
+                    times[i] = f.lastModified();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        Integer[] order = new Integer[n];
+        for (int i = 0; i < n; i++) order[i] = i;
+        Arrays.sort(order, (a, b) -> {
+            int ia = a;
+            int ib = b;
             int result;
             switch (sortBy) {
                 case SORT_SIZE:
-                    result = Long.compare(f1.length(), f2.length());
+                    result = Long.compare(sizes[ia], sizes[ib]);
                     break;
                 case SORT_DATE:
-                    result = Long.compare(f1.lastModified(), f2.lastModified());
+                    result = Long.compare(times[ia], times[ib]);
                     break;
                 case SORT_TYPE:
-                    String ext1 = getExt(f1.getName());
-                    String ext2 = getExt(f2.getName());
-                    result = ext1.compareToIgnoreCase(ext2);
-                    if (result == 0) result = compareNaturalIgnoreCase(f1.getName(), f2.getName());
+                    result = exts[ia].compareToIgnoreCase(exts[ib]);
+                    if (result == 0) result = compareNaturalIgnoreCase(names[ia], names[ib]);
                     break;
                 default:
-                    result = compareNaturalIgnoreCase(f1.getName(), f2.getName());
+                    result = compareNaturalIgnoreCase(names[ia], names[ib]);
                     break;
             }
-            if (f1.isDirectory() && !f2.isDirectory()) return -1;
-            if (!f1.isDirectory() && f2.isDirectory()) return 1;
+            if (dirs[ia] && !dirs[ib]) return -1;
+            if (!dirs[ia] && dirs[ib]) return 1;
             return reverse ? -result : result;
         });
+        File[] sorted = new File[n];
+        for (int i = 0; i < n; i++) sorted[i] = files[order[i]];
+        System.arraycopy(sorted, 0, files, 0, n);
     }
 
     public static void sortZipEntries(List<ZipEntryInfo> entries, String folderPath, int sortBy, boolean reverse) {

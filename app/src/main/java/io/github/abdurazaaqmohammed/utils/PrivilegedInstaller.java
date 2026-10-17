@@ -14,7 +14,10 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -287,57 +290,75 @@ public final class PrivilegedInstaller {
         List<File> staged = new ArrayList<>();
         try {
             int i = 0;
+            Set<String> usedStageNames = new LinkedHashSet<>();
             for (File src : apkFiles) {
-                File dst = new File(stageDir, "part" + (i++) + ".apk");
+                String raw = src.getName();
+                String base = raw != null && raw.toLowerCase(Locale.ROOT).endsWith(".apk")
+                        ? raw.replaceAll("[^A-Za-z0-9._-]", "_") : null;
+                String stageName;
+                if (base != null && usedStageNames.add(base)) {
+                    stageName = base;
+                } else {
+                    // Split names must match the APKs' own names, so a duplicate or
+                    // unusable one gets a unique partN.apk fallback instead.
+                    stageName = "part" + (i++) + ".apk";
+                    while (!usedStageNames.add(stageName)) stageName = "part" + (i++) + ".apk";
+                }
+                File dst = new File(stageDir, stageName);
                 copyFile(src, dst);
                 staged.add(dst);
             }
             List<String> stagedPaths = absPaths(staged);
             long total = 0;
             for (File f : staged) total += f.length();
-            String tag = "_mp" + (System.currentTimeMillis() % 100000);
+            String tag = "_mp" + UUID.randomUUID().toString().replace("-", "");
+            List<String> tmpPaths = new ArrayList<>();
+            for (int k = 0; k < stagedPaths.size(); k++) tmpPaths.add("/data/local/tmp/" + tag + "_" + k + ".apk");
             String createCmd = buildCreateCommand(total, installer, collectFlags(context));
-            // 1) push staged files where pm can read them
-            StringBuilder push = new StringBuilder();
-            for (int k = 0; k < stagedPaths.size(); k++) {
-                push.append("cp ").append(RootManager.escapeShellArg(stagedPaths.get(k)))
-                        .append(" ").append(RootManager.escapeShellArg("/data/local/tmp/" + tag + "_" + k + ".apk"))
-                        .append(" ; ");
-            }
-            ShizukuShell.Result pushRes = ShizukuShell.exec(push.toString(), 120);
-            if (!pushRes.success) throw new IllegalStateException("Shizuku stage failed: " + pushRes.stderr);
-
-            ShizukuShell.Result createRes = ShizukuShell.exec(createCmd, 60);
-            for (int attempt = 0; attempt < 2 && !createRes.success; attempt++) {
-                String retry = downgradeCreateCommand(createCmd,
-                        combinedOutput(createRes.stdout, createRes.stderr));
-                if (retry == null) break;
-                createCmd = retry;
-                createRes = ShizukuShell.exec(createCmd, 60);
-            }
-            String session = parseSessionId(createRes.stdout);
-            if (!createRes.success || session == null)
-                throw new IllegalStateException("Shizuku install-create failed: "
-                        + createRes.stdout + " " + createRes.stderr);
-
-            for (int k = 0; k < staged.size(); k++) {
-                String tmp = "/data/local/tmp/" + tag + "_" + k + ".apk";
-                String write = "pm install-write -S " + staged.get(k).length()
-                        + " " + session + " split" + k + " " + RootManager.escapeShellArg(tmp);
-                ShizukuShell.Result w = ShizukuShell.exec(write, 120);
-                if (!w.success) {
-                    ShizukuShell.exec("pm install-abandon " + session, 15);
-                    throw new IllegalStateException("Shizuku install-write failed: " + w.stdout + " " + w.stderr);
+            try {
+                // 1) push staged files where pm can read them
+                StringBuilder push = new StringBuilder();
+                for (int k = 0; k < stagedPaths.size(); k++) {
+                    push.append("cp ").append(RootManager.escapeShellArg(stagedPaths.get(k)))
+                            .append(" ").append(RootManager.escapeShellArg(tmpPaths.get(k)))
+                            .append(" ; ");
                 }
+                ShizukuShell.Result pushRes = ShizukuShell.exec(push.toString(), 120);
+                if (!pushRes.success) throw new IllegalStateException("Shizuku stage failed: " + pushRes.stderr);
+
+                ShizukuShell.Result createRes = ShizukuShell.exec(createCmd, 60);
+                for (int attempt = 0; attempt < 2 && !createRes.success; attempt++) {
+                    String retry = downgradeCreateCommand(createCmd,
+                            combinedOutput(createRes.stdout, createRes.stderr));
+                    if (retry == null) break;
+                    createCmd = retry;
+                    createRes = ShizukuShell.exec(createCmd, 60);
+                }
+                String session = parseSessionId(createRes.stdout);
+                if (!createRes.success || session == null)
+                    throw new IllegalStateException("Shizuku install-create failed: "
+                            + createRes.stdout + " " + createRes.stderr);
+
+                for (int k = 0; k < staged.size(); k++) {
+                    String write = "pm install-write -S " + staged.get(k).length()
+                            + " " + session + " " + staged.get(k).getName() + " "
+                            + RootManager.escapeShellArg(tmpPaths.get(k));
+                    ShizukuShell.Result w = ShizukuShell.exec(write, 120);
+                    if (!w.success) {
+                        ShizukuShell.exec("pm install-abandon " + session, 15);
+                        throw new IllegalStateException("Shizuku install-write failed: " + w.stdout + " " + w.stderr);
+                    }
+                }
+                ShizukuShell.Result commit = ShizukuShell.exec("pm install-commit " + session, 120);
+                if (!commit.success || (!commit.stdout.contains("Success") && !commit.stdout.contains("Session")))
+                    throw new IllegalStateException("Shizuku install-commit failed: " + commit.stdout + " " + commit.stderr);
+            } finally {
+                // Always clear /data/local/tmp, even when a write or commit failed.
+                StringBuilder cleanup = new StringBuilder();
+                for (String tmp : tmpPaths)
+                    cleanup.append("rm -f ").append(RootManager.escapeShellArg(tmp)).append(" ; ");
+                ShizukuShell.exec(cleanup.toString(), 15);
             }
-            ShizukuShell.Result commit = ShizukuShell.exec("pm install-commit " + session, 120);
-            // always clean /data/local/tmp, even on failure
-            StringBuilder cleanup = new StringBuilder();
-            for (int k = 0; k < staged.size(); k++)
-                cleanup.append("rm -f ").append(RootManager.escapeShellArg("/data/local/tmp/" + tag + "_" + k + ".apk")).append(" ; ");
-            ShizukuShell.exec(cleanup.toString(), 15);
-            if (!commit.success || (!commit.stdout.contains("Success") && !commit.stdout.contains("Session")))
-                throw new IllegalStateException("Shizuku install-commit failed: " + commit.stdout + " " + commit.stderr);
         } finally {
             for (File f : staged) {
                 try {
@@ -375,21 +396,35 @@ public final class PrivilegedInstaller {
 
     /**
      * Plain session with InstallerX flag/reason metadata applied on a
-     * best-effort basis. Without privilege the installer attribution is
-     * informational only; the system records our own package.
+     * best-effort basis. The installer attribution is only honoured when the
+     * session is created by a privileged caller: on API 34+ PackageManager
+     * rejects a spoofed installer name outright ("Package X does not belong to
+     * &lt;uid&gt;") instead of silently overwriting it with our own package.
      */
     @SuppressLint("RequestInstallPackagesPolicy")
     public static int createSessionWithMetadata(Context context, PackageInstaller installer,
                                                 String targetPackage, long totalSize,
                                                 String installerPkg, int flags) throws Exception {
+        return createSessionWithMetadata(context, installer, targetPackage, totalSize,
+                installerPkg, flags, isPrivilegedSilentReady(context));
+    }
+
+    @SuppressLint("RequestInstallPackagesPolicy")
+    public static int createSessionWithMetadata(Context context, PackageInstaller installer,
+                                                String targetPackage, long totalSize,
+                                                String installerPkg, int flags,
+                                                boolean mayClaimInstaller) throws Exception {
         PackageInstaller.SessionParams params =
                 new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
         params.setSize(totalSize);
-        try {
-            params.setAppPackageName(targetPackage);
-        } catch (Exception ignored) {
+        if (targetPackage != null && !targetPackage.trim().isEmpty()
+                && RootManager.isPackageNameValid(targetPackage)) {
+            try {
+                params.setAppPackageName(targetPackage);
+            } catch (Exception ignored) {
+            }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (mayClaimInstaller && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             try {
                 if (installerPkg != null && !installerPkg.isEmpty()) params.setInstallerPackageName(installerPkg);
             } catch (Exception ignored) {
@@ -401,12 +436,44 @@ public final class PrivilegedInstaller {
             } catch (Exception ignored) {
             }
         }
-        try {
-            params.setInstallReason(PackageManager.INSTALL_REASON_USER);
-        } catch (Exception ignored) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                params.setInstallReason(PackageManager.INSTALL_REASON_USER);
+            } catch (Exception ignored) {
+            }
         }
         applyInstallFlags(params, flags);
-        return installer.createSession(params);
+        try {
+            return installer.createSession(params);
+        } catch (SecurityException e) {
+            // Some ROMs still reject a claimed installer name even from an
+            // elevated caller. Retry unspoofed so the install can still proceed.
+            if (!mayClaimInstaller || installerPkg == null || installerPkg.isEmpty()) throw e;
+            PackageInstaller.SessionParams retry =
+                    new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            retry.setSize(totalSize);
+            if (targetPackage != null && !targetPackage.trim().isEmpty()
+                    && RootManager.isPackageNameValid(targetPackage)) {
+                try {
+                    retry.setAppPackageName(targetPackage);
+                } catch (Exception ignored) {
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    retry.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+                } catch (Exception ignored) {
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    retry.setInstallReason(PackageManager.INSTALL_REASON_USER);
+                } catch (Exception ignored) {
+                }
+            }
+            applyInstallFlags(retry, flags);
+            return installer.createSession(retry);
+        }
     }
 
     private static void applyInstallFlags(PackageInstaller.SessionParams params, int flags) {

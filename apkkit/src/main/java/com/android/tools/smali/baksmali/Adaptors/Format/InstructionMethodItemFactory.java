@@ -59,7 +59,7 @@ public class InstructionMethodItemFactory {
                     new PackedSwitchMethodItem(methodDef, codeAddress, (PackedSwitchPayload) instruction);
             case SparseSwitchPayload ->
                     new SparseSwitchMethodItem(methodDef, codeAddress, (SparseSwitchPayload) instruction);
-            default -> new InstructionMethodItem<Instruction>(methodDef, codeAddress, instruction);
+            default -> new InstructionMethodItem<>(methodDef, codeAddress, instruction);
         };
     }
 }

@@ -358,6 +358,7 @@ public class SettingsController {
                 if (e == null) continue;
                 final String key = ExternalActions.settingKey(e);
                 final boolean isAction = ExternalActions.settingIsAction(e);
+                String tl = TextUtils.isEmpty(e.title) ? e.id : e.title;
                 if (!isAction) {
                     LinearLayout row = new LinearLayout(activity);
                     row.setOrientation(LinearLayout.HORIZONTAL);
@@ -367,7 +368,7 @@ public class SettingsController {
                     rowParams.topMargin = (int) (8 * density);
                     row.setLayoutParams(rowParams);
                     TextView title = new TextView(activity);
-                    title.setText(e.title == null || e.title.isEmpty() ? e.id : e.title);
+                    title.setText(tl);
                     title.setTextSize(14);
                     LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
                             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -381,9 +382,7 @@ public class SettingsController {
                     box.addView(row);
                 }
                 MaterialButton setup = new MaterialButton(activity);
-                setup.setText(isAction
-                        ? (e.title == null || e.title.isEmpty() ? e.id : e.title)
-                        : "Setup");
+                setup.setText(isAction ? tl : activity.getString(R.string.setup));
                 LinearLayout.LayoutParams setupParams = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 setupParams.topMargin = (int) (4 * density);
@@ -447,8 +446,8 @@ public class SettingsController {
 
     private void setupLanguageSettings(ScrollView root) {
         AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
-        String[] langTags = {"", "en", "es", "ru", "zh-CN"};
-        String[] langLabels = {activity.getString(R.string.language_system), "English", "Español", "Русский", "中文 (简体)"};
+        String[] langTags = {"", "ar", "en", "es", "fa", "ru", "th", "zh-CN"};
+        String[] langLabels = {activity.getString(R.string.language_system), "العربية", "English", "Español", "فارسی", "Русский", "ภาษาไทย", "中文 (简体)"};
         languageTv.setAdapter(dropdownAdapter(langLabels));
         String current = AppCompatDelegate.getApplicationLocales().toLanguageTags();
         int selected = 0;
@@ -478,7 +477,7 @@ public class SettingsController {
 
     private ArrayAdapter<String> dropdownAdapter(List<String> items) {
         List<String> all = new ArrayList<>(items);
-        return new ArrayAdapter<String>(activity,
+        return new ArrayAdapter<>(activity,
                 android.R.layout.simple_dropdown_item_1line, new ArrayList<>(all)) {
             @Override
             public Filter getFilter() {
@@ -674,7 +673,7 @@ public class SettingsController {
         // Each entry previews in its own font. Like every dropdown here, the
         // adapter must not filter: see dropdownAdapter().
         final List<String> fontLabels = new ArrayList<>(labels);
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(activity,
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity,
                 android.R.layout.simple_dropdown_item_1line, labels) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {

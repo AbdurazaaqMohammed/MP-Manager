@@ -33,6 +33,7 @@ import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
@@ -1638,9 +1639,20 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-            int theme = PreferenceManager.getDefaultSharedPreferences(context).getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-            String themeName = theme == R.style.Theme_MyApp_Light ? "light.json" : "dark.json";
+            // The legacy int "theme" preference is no longer written anywhere, so
+            // it always fell back to uiMode. With a theme plugin forcing light
+            // mode that picked dark.json and the editor rendered light gray text
+            // on a light background. Ask the app theme registry instead.
+            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
+            boolean dark;
+            if (pluginId != null) {
+                dark = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId)
+                        == AppCompatDelegate.MODE_NIGHT_YES;
+            } else {
+                dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                        == Configuration.UI_MODE_NIGHT_YES;
+            }
+            String themeName = dark ? "dark.json" : "light.json";
             IThemeSource themeSource = null;
             try {
                 themeSource = IThemeSource.fromInputStream(context.getAssets().open( "themes/" + themeName), themeName, null);

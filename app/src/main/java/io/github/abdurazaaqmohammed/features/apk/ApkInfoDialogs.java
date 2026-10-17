@@ -88,6 +88,7 @@ import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -326,7 +327,9 @@ public class ApkInfoDialogs {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> {
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)));
+                    // "View certificate" moved onto the Signatures row, which now opens the
+                    // full signature sheet on tap.
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)));
                     final int builtinCount = moreTitles.size();
                     final List<ApkMoreAction> pluginMore =
                             ExtensionRegistry.apkActions();
@@ -654,13 +657,12 @@ public class ApkInfoDialogs {
                                         doClone.run();
                                     }); else doClone.run();
                                 }).show();
-                    } else if (which1 == 6) signatures.showCertificateDialog(file);
-                    else if (which1 == 7) overlay.showAddToastDialog(file, filePath);
-                    else if (which1 == 8) overlay.showRemoveAllToastsDialog(file);
-                    else if (which1 == 9) signatures.removeSignature(file);
-                    else if (which1 == 10) signatures.showSignatureHealthDialog(file);
-                    else if (which1 == 11) manifestEditor.showManifestTogglesDialog(file);
-                    else if (which1 == 12) manifestEditor.showPermissionsDialog(file);
+                    } else if (which1 == 6) overlay.showAddToastDialog(file, filePath);
+                    else if (which1 == 7) overlay.showRemoveAllToastsDialog(file);
+                    else if (which1 == 8) signatures.removeSignature(file);
+                    else if (which1 == 9) signatures.showSignatureHealthDialog(file);
+                    else if (which1 == 10) manifestEditor.showManifestTogglesDialog(file);
+                    else if (which1 == 11) manifestEditor.showPermissionsDialog(file);
                     else {
                         int pluginIndex = which1 - builtinCount;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
@@ -963,6 +965,7 @@ public class ApkInfoDialogs {
         ad.show();
 
         new Thread(() -> {
+            final boolean[] loaded = {false};
             try {
                 PackageManager pm = context.getPackageManager();
                 PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
@@ -984,59 +987,48 @@ public class ApkInfoDialogs {
                 Drawable icon = appInfo.loadIcon(pm);
                 String label = appInfo.loadLabel(pm).toString();
                 String verName = packageInfo.versionName;
-                int vCode = packageInfo.versionCode;
+                long versionCode = ApkInfoUtil.getVersionCode(packageInfo);
+                String vCode = versionCode > 0 ? String.valueOf(versionCode) : "";
                 String pkg = packageInfo.packageName;
 
-                StringBuilder sigs = new StringBuilder();
-                final String[] certFp = {""};
+                ApkSignatureInfo sigInfo;
                 try {
-                    ApkVerifier.Result result = new ApkVerifier.Builder(file).build().verify();
-                    try {
-                        List<X509Certificate> certs = result.getSignerCertificates();
-                        if (certs != null && !certs.isEmpty()) certFp[0] = CertUtil.getSha256(certs.get(0));
-                    } catch (Exception ignored) {}
-                    boolean verified = result.isVerified();
-                    boolean v1 = result.isVerifiedUsingV1Scheme();
-                    boolean v2 = result.isVerifiedUsingV2Scheme();
-                    boolean v3 = result.isVerifiedUsingV3Scheme();
-                    boolean v31 = result.isVerifiedUsingV31Scheme();
-                    boolean v4 = result.isVerifiedUsingV4Scheme();
-                    if (v1) sigs.append("V1");
-                    if (v2) { if (v1) sigs.append(" + "); sigs.append("V2"); }
-                    if (v3 || v31) { if (v1 || v2) sigs.append(" + "); sigs.append("V3"); }
-                    if (v4) { if (v1 || v2 || v3 || v31) sigs.append(" + "); sigs.append("V4"); }
-                    if (verified && !TextUtils.isEmpty(sigs)) { /* use sigs */ }
-                    else {
-                        sigs.setLength(0);
-                        try (ArchiveFile af = new ArchiveFile(file)) {
-                            sigs.append(af.getEntrySource("META-INF/MANIFEST.MF") == null ? "Not signed" : "Verification failed");
-                        }
-                    }
+                    sigInfo = ApkSignatureInfo.analyze(file);
                 } catch (Exception e) {
-                    sigs.append(context.rss.getString(android.R.string.unknownName));
+                    sigInfo = null;
                 }
-                String signatureStr = sigs.toString();
+                final String[] certFp = {""};
+                if (sigInfo != null) {
+                    X509Certificate primary = sigInfo.getPrimaryCertificate();
+                    if (primary != null) certFp[0] = CertUtil.getSha256(primary);
+                }
+                String signatureStr = sigInfo == null
+                        ? context.rss.getString(android.R.string.unknownName) : sigInfo.getStatusLabel();
+                final ApkSignatureInfo finalSigInfo = sigInfo;
 
                 String protectedStr;
                 try (ArchiveFile af = new ArchiveFile(file); ApkModule am = new ApkModule(af.createZipEntryMap())) {
                     String aProtected = Util.isProtected(am);
-                    protectedStr = TextUtils.isEmpty(aProtected) ? "Not found" : aProtected;
+                    protectedStr = TextUtils.isEmpty(aProtected) ? context.getString(R.string.protection_not_found) : aProtected;
                 } catch (Exception e) {
                     protectedStr = context.rss.getString(android.R.string.unknownName);
                 }
 
                 String finalProtectedStr = protectedStr;
+                final String finalVerName = TextUtils.isEmpty(verName)
+                        ? context.getString(R.string.version_name_unset) : verName;
                 context.handler.post(() -> {
                     apkIcon.setImageDrawable(icon);
                     apkTitle.setText(label);
-                    apkVersionName.setText(verName);
-                    verCode.setText(Integer.toString(vCode));
+                    apkVersionName.setText(finalVerName);
+                    verCode.setText(TextUtils.isEmpty(vCode) ? "—" : vCode);
                     pkgName.setText(pkg);
                     uiHelper.scrollTextView(pkgName);
                     signaturesInApk.setText(signatureStr);
                     protectedDisplay.setText(finalProtectedStr);
                     fileSize.setText(context.getString(R.string.fs_entries, Formatter.formatFileSize(context, file.length()), ApkInfoUtil.getEntryCount(file)));
-                    apkTargetSdk.setText(String.valueOf(packageInfo.applicationInfo.targetSdkVersion));
+                    int target = packageInfo.applicationInfo.targetSdkVersion;
+                    apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(min));
                     apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
@@ -1048,8 +1040,27 @@ public class ApkInfoDialogs {
                         apkInstalled.setText(installedText);
                     }
                 });
+                loaded[0] = true;
+                context.handler.post(() -> signaturesInApk.setOnClickListener(v -> {
+                    if (finalSigInfo != null) {
+                        ad.dismiss();
+                        SignatureInfoDialog.show(context, dialogUtil, file);
+                    }
+                }));
+                context.handler.post(() -> apkCert.setOnClickListener(v -> {
+                    if (finalSigInfo != null) {
+                        ad.dismiss();
+                        SignatureInfoDialog.show(context, dialogUtil, file);
+                    }
+                }));
             } catch (Exception e) {
+                loaded[0] = false;
                 new ErrorUtil(context).showError(e);
+            }
+            // Only a failed load falls back to placeholders; on success this would
+            // wipe the values that were just written into the rows.
+            if (!loaded[0]) {
+                context.handler.post(() -> showPlaceholders(ad, context.getString(R.string.apk_info_unavailable)));
             }
             View.OnLongClickListener lcl = v -> {
                 if(v instanceof TextView tv) CopyUtil.copyToClipboard(ad, tv.getText());
@@ -1074,6 +1085,26 @@ public class ApkInfoDialogs {
 
     private void openZipFile(File file) {
         context.loadZipFolderInPane(file, "", pane1, true);
+    }
+
+    /**
+     * Fills every value row with {@code placeholder}. Without this a failure
+     * half-way through the loader left the dialog showing "Loading…" forever,
+     * which is what users reported as empty fields.
+     */
+    private void showPlaceholders(androidx.appcompat.app.AlertDialog ad, CharSequence placeholder) {
+        try {
+            if (ad.getWindow() == null) return;
+            android.view.View root = ad.getWindow().getDecorView();
+            int[] ids = {R.id.apkTitle, R.id.apkVersionName, R.id.verCode, R.id.pkgName,
+                    R.id.signaturesInApk, R.id.protectedDisplay, R.id.fileSize,
+                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkCert, R.id.apkInstalled};
+            for (int id : ids) {
+                TextView tv = root.findViewById(id);
+                if (tv != null) tv.setText(placeholder);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
 

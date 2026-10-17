@@ -47,6 +47,7 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 
 import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -165,33 +166,7 @@ public class APKExtractorActivity extends BaseActivity {
 
     public static String resolveSigType(File apk) {
         try {
-            ApkVerifier.Result result = new ApkVerifier.Builder(apk).build().verify();
-            StringBuilder sigs = new StringBuilder();
-            boolean v1 = false;
-            try { v1 = result.isVerifiedUsingV1Scheme(); } catch (Exception ignored) {}
-            boolean v2 = false;
-            try { v2 = result.isVerifiedUsingV2Scheme(); } catch (Exception ignored) {}
-            boolean v3 = false;
-            try { v3 = result.isVerifiedUsingV3Scheme() || result.isVerifiedUsingV31Scheme(); } catch (Exception ignored) {}
-            boolean v4 = false;
-            try { v4 = result.isVerifiedUsingV4Scheme(); } catch (Exception ignored) {}
-            if (v1) sigs.append("V1");
-            if (v2) {
-                if (sigs.length() > 0) sigs.append(" + ");
-                sigs.append("V2");
-            }
-            if (v3) {
-                if (sigs.length() > 0) sigs.append(" + ");
-                sigs.append("V3");
-            }
-            if (v4) {
-                if (sigs.length() > 0) sigs.append(" + ");
-                sigs.append("V4");
-            }
-            if (sigs.length() > 0 && result.isVerified()) return sigs.toString();
-            try (ArchiveFile af = new ArchiveFile(apk)) {
-                return af.getEntrySource("META-INF/MANIFEST.MF") == null ? "Not signed" : "Invalid";
-            }
+            return ApkSignatureInfo.analyze(apk).getStatusLabel();
         } catch (Exception e) {
             return "Unknown";
         }

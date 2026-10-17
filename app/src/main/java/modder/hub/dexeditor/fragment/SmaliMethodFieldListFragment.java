@@ -44,6 +44,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.AlertCircularProgress;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -57,6 +58,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -70,6 +72,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -189,7 +192,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         Menu menu = toolbar.getMenu();
         MenuItem searchItem = menu.findItem(R.id.search);
-        int tint = getTheme() == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE;
+        // Fragment.getTheme() is 0 unless setStyle() was called, so the old
+        // comparison never matched and the icons were always white - invisible
+        // on the light dialog surface.
+        int tint = onSurfaceColor();
         DrawableCompat.setTint(menu.findItem(R.id.strings_list).getIcon(), tint);
         DrawableCompat.setTint(menu.findItem(R.id.close).getIcon(), tint);
         DrawableCompat.setTint(searchItem.getIcon(), tint);
@@ -275,6 +281,14 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             // Height will WRAP_CONTENT automatically
             Objects.requireNonNull(dialog.getWindow()).setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+        // Keep the sheet on the same surface as the rest of the editor. The
+        // window is transparent, so the visible colour comes from the layout's
+        // ?attr/colorSurface, which used to resolve to black.
+        View root = getView();
+        if (root != null) {
+            root.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    themeColor(com.google.android.material.R.attr.colorSurface, 0xFFFFFBFE)));
         }
     }
 
@@ -383,6 +397,40 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         drawable.setCornerRadius(50);
         drawable.setColor(color);
         return drawable;
+    }
+
+    /** Resolves a Material colour attribute of the activity theme. */
+    private int themeColor(int attr, int fallback) {
+        Context ctx = getContext();
+        if (ctx == null) return fallback;
+        try {
+            TypedValue value = new TypedValue();
+            if (ctx.getTheme().resolveAttribute(attr, value, true)) {
+                if (value.resourceId != 0) {
+                    int color = ContextCompat.getColor(ctx, value.resourceId);
+                    if (color != 0) return color;
+                }
+                if (value.data != 0) return value.data;
+            }
+        } catch (Exception ignored) {
+        }
+        return fallback;
+    }
+
+    /** colorOnSurface of the activity theme. */
+    private int onSurfaceColor() {
+        int resolved = themeColor(com.google.android.material.R.attr.colorOnSurface, 0);
+        if (resolved != 0) return resolved;
+        return themeColor(android.R.attr.textColorPrimary, 0xFF1C1B1F);
+    }
+
+    /**
+     * Highlight for the currently selected row. The old saturated cyan was far
+     * too loud against the dialog surface; a material secondary-container tone
+     * reads as "selected" without shouting.
+     */
+    private int selectionHighlightColor() {
+        return themeColor(com.google.android.material.R.attr.colorSecondaryContainer, 0xFFD6E3F0);
     }
 
     // Update the editor line number in the parent activity or current fragment
@@ -968,7 +1016,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                        dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                        dynamicBackground.setColor(selectionHighlightColor());
                     } else {
                         dynamicBackground.setColor(Color.TRANSPARENT);
                     }
@@ -982,7 +1030,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                        dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                        dynamicBackground.setColor(selectionHighlightColor());
                     } else {
                         dynamicBackground.setColor(Color.TRANSPARENT);
                     }
@@ -1001,7 +1049,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber >= startLine && editorLineNumber <= endLine) {
-                    dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                    dynamicBackground.setColor(selectionHighlightColor());
                 } else {
                     dynamicBackground.setColor(Color.TRANSPARENT);
                 }
@@ -1322,7 +1370,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             }
             if(dynamicBackground != null) {
                 if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                    dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                    dynamicBackground.setColor(selectionHighlightColor());
                 } else {
                     dynamicBackground.setColor(Color.TRANSPARENT);
                 }

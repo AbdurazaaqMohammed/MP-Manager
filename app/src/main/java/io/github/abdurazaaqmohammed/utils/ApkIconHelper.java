@@ -36,6 +36,15 @@ public final class ApkIconHelper {
                 || l.endsWith(".apkm") || l.endsWith(".aspk");
     }
 
+    /**
+     * True for archives that are really signable APKs. Split bundles
+     * (.apks/.xapk/.apkm/.aspk) are containers, so signing one rewrites the
+     * container rather than the app inside it.
+     */
+    public static boolean isApkArchiveName(String name) {
+        return name != null && name.toLowerCase(Locale.ROOT).endsWith(".apk");
+    }
+
     public static Drawable getApkIcon(Context context, String path) {
         if (context == null || path == null) return null;
         File src = new File(path);

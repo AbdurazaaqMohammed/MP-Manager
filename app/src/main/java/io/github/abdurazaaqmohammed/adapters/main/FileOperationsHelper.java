@@ -324,43 +324,46 @@ public class FileOperationsHelper {
 
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
         boolean useElevated = AccessManager.fileOpsOn(context);
+        Map<Object, File> plan = planCopies(items, destinationFolder, useElevated);
+        if (plan == null) return true;
 
-        for (Object item : items) {
-            if (item instanceof File f) {
-                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : getUnusedDest(destinationFolder, f.getName(), useElevated);
-                if (dest == null || dest.equals(f)) continue;
+        for (Map.Entry<Object, File> entry : plan.entrySet()) {
+            Object item = entry.getKey();
+            if (!(item instanceof File f)) continue;
+            File dest = entry.getValue();
+            if (dest == null || dest.equals(f)) continue;
+            if (useElevated) {
+                try {
+                    if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                    else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    continue;
+                } catch (Exception e) {
+                }
+            }
+            if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null)
+                continue;
+            if (f.isDirectory()) {
                 if (useElevated) {
                     try {
-                        if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
-                        else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
-                        AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
-                        continue;
-                    } catch (Exception e) {
-                    }
-                }
-                if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null)
-                    continue;
-                if (f.isDirectory()) {
-                    if (useElevated) {
-                        try {
-                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
-                        } catch (Exception ignored) {
-                            //noinspection ResultOfMethodCallIgnored
-                            dest.mkdir();
-                        }
-                    } else {
+                        AccessManager.mkdir(context, dest.getAbsolutePath(), true);
+                    } catch (Exception ignored) {
                         //noinspection ResultOfMethodCallIgnored
                         dest.mkdir();
                     }
-                    FileUtils.copyFolder(f, dest);
-                    syncDirTimes(f, dest);
                 } else {
-                    FileUtils.copyFile(f, dest);
-                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    //noinspection ResultOfMethodCallIgnored
+                    dest.mkdir();
                 }
-            } else if (item instanceof ZipEntryInfo) {
-                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+                FileUtils.copyFolder(f, dest);
+                syncDirTimes(f, dest);
+            } else {
+                FileUtils.copyFile(f, dest);
+                AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
             }
+        }
+        for (Object item : items) {
+            if (item instanceof ZipEntryInfo) extractZipEntry((ZipEntryInfo) item, destinationFolder);
         }
         context.handler.post(() -> {
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
@@ -368,6 +371,113 @@ public class FileOperationsHelper {
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
+    }
+
+    /**
+     * Works out where every item should land before anything is written, so all
+     * name conflicts in a multi-item copy can be shown in one dialog with a
+     * choice that applies to all of them.
+     *
+     * @return source -> destination (null value means "skip"), or null when the
+     *         user aborted the whole copy.
+     */
+    private Map<Object, File> planCopies(List<Object> items, File destinationFolder, boolean useElevated)
+            throws IOException {
+        Map<Object, File> plan = new LinkedHashMap<>();
+        List<CopyConflictDialog.Conflict> conflicts = new ArrayList<>();
+        for (Object item : items) {
+            if (!(item instanceof File f)) continue;
+            plan.put(f, null);
+            File existing = new File(destinationFolder, f.getName());
+            if (existsAt(destinationFolder, f, existing, useElevated)) {
+                conflicts.add(describeConflict(f, existing, destinationFolder, useElevated));
+            } else {
+                plan.put(f, getUnusedDest(destinationFolder, f.getName(), useElevated));
+            }
+        }
+        if (conflicts.isEmpty()) return plan;
+
+        int bulk = CopyConflictDialog.askBulk(context, dialogUtil, conflicts, () ->
+                showActiveProgress(context.rss.getString(R.string.copying, summarizeItems(items))));
+        if (bulk == CopyConflictDialog.ACTION_CANCEL) return null;
+
+        int applied = -1;
+        for (CopyConflictDialog.Conflict c : conflicts) {
+            int action;
+            if (CopyConflictDialog.isBulkAction(bulk)) {
+                action = bulk;
+            } else if (applied >= 0) {
+                action = applied;
+            } else {
+                dismissActiveProgress();
+                action = CopyConflictDialog.askSingle(context, dialogUtil, c, () ->
+                        showActiveProgress(context.rss.getString(R.string.copying, c.sourceName)));
+                showActiveProgress(context.rss.getString(R.string.copying, summarizeItems(items)));
+                if (!CopyConflictDialog.isBulkAction(action)) return null;
+                // One decision covers the rest of the batch, matching the
+                // "applies to all the further files" expectation.
+                applied = action;
+            }
+            plan.put(c.source, resolveDestination(c, destinationFolder, action, useElevated));
+        }
+        return plan;
+    }
+
+    private File resolveDestination(CopyConflictDialog.Conflict c, File destinationFolder,
+                                    int action, boolean useElevated) {
+        switch (action) {
+            case CopyConflictDialog.ACTION_SKIP:
+                return null;
+            case CopyConflictDialog.ACTION_KEEP_BOTH:
+                // Recompute so two conflicts in the same batch cannot both claim
+                // the same numbered name.
+                return new File(destinationFolder,
+                        getDuplicateName(c.sourceName, destinationFolder, useElevated));
+            case CopyConflictDialog.ACTION_REPLACE:
+            default:
+                return new File(destinationFolder, c.sourceName);
+        }
+    }
+
+    private CopyConflictDialog.Conflict describeConflict(File source, File existing,
+                                                         File destinationFolder, boolean useElevated) {
+        long sourceSize = -1, sourceTime = 0;
+        try {
+            sourceSize = source.length();
+        } catch (Exception ignored) {
+        }
+        try {
+            sourceTime = source.lastModified();
+        } catch (Exception ignored) {
+        }
+        long existingSize = -1, existingTime = 0;
+        try {
+            existingSize = existing.length();
+        } catch (Exception ignored) {
+        }
+        try {
+            existingTime = existing.lastModified();
+        } catch (Exception ignored) {
+        }
+        return new CopyConflictDialog.Conflict(source, source.getName(), sourceSize, sourceTime,
+                existing.getName(), existingSize, existingTime,
+                getDuplicateName(source.getName(), destinationFolder, useElevated));
+    }
+
+    /** True when the natural destination name is already taken (or is the source itself). */
+    private boolean existsAt(File destinationFolder, File source, File candidate, boolean useElevated) {
+        if (isSameDirectory(source, destinationFolder)) return true;
+        try {
+            if (candidate.exists()) return true;
+        } catch (Exception ignored) {
+        }
+        if (useElevated) {
+            try {
+                return AccessManager.exists(context, candidate.getAbsolutePath());
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
     }
 
     private boolean isSameDirectory(File file, File destinationFolder) {
@@ -381,13 +491,12 @@ public class FileOperationsHelper {
     }
 
     private String getDuplicateName(String fileName, File destinationFolder) {
+        return getDuplicateName(fileName, destinationFolder, AccessManager.fileOpsOn(context));
+    }
+
+    private String getDuplicateName(String fileName, File destinationFolder, boolean useElevated) {
         String base = FilenameUtils.getBaseName(fileName);
         String ext = FilenameUtils.getExtension(fileName);
-        boolean useElevated = false;
-        try {
-            useElevated = AccessManager.fileOpsOn(context);
-        } catch (Exception ignored) {
-        }
         int i = 1;
         String candidate;
         do {
@@ -396,40 +505,6 @@ public class FileOperationsHelper {
         } while (new File(destinationFolder, candidate).exists()
                 || (useElevated && AccessManager.exists(context, new File(destinationFolder, candidate).getAbsolutePath())));
         return candidate;
-    }
-
-    private File promptForDuplicateName(File sourceFile, File destinationFolder) throws IOException {
-        final CountDownLatch latch = new CountDownLatch(1);
-        final File[] result = new File[1];
-        final String defaultName = getDuplicateName(sourceFile.getName(), destinationFolder);
-        dismissActiveProgress();
-        context.handler.post(() -> {
-            View view = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
-            EditText input = view.findViewById(R.id.m_et_edittext);
-            input.setText(defaultName);
-            input.setSelection(0, defaultName.length());
-            input.requestFocus();
-            MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder()
-                    .setTitle(context.rss.getString(R.string.enter_name_for_copy))
-                    .setView(view)
-                    .setPositiveButton(android.R.string.ok, (d, w) -> {
-                        String name = input.getText().toString().trim();
-                        result[0] = new File(destinationFolder, name.isEmpty() ? defaultName : name);
-                        latch.countDown();
-                    })
-                    .setNegativeButton(android.R.string.cancel, (d, w) -> latch.countDown());
-            AlertDialog dialog = builder.create();
-            io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, input, true);
-            dialogUtil.styleAlertDialog(dialog);
-        });
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        }
-        if (result[0] != null) showActiveProgress(context.rss.getString(R.string.copying, sourceFile));
-        return result[0];
     }
 
     public boolean copyToZip(List items, File zipFile, String currentPath) throws IOException {
@@ -539,6 +614,7 @@ public class FileOperationsHelper {
             // {file, entryName}; a null entryName marks a directory added under targetDir keeping its own name
             List<Object[]> namedAdds = new ArrayList<>();
             List<File> plainFilesToAdd = new ArrayList<>();
+            List<String> emptyFolders = new ArrayList<>();
 
             if (items.get(0) instanceof File) {
                 for (Object itemObj : items) {
@@ -553,20 +629,47 @@ public class FileOperationsHelper {
                 tempFileDir = new File(context.getCacheDir(), UUID.randomUUID().toString());
                 tempFileDir.mkdirs();
                 int counter = 0;
+                ZipFile entrySource = null;
+                try {
                 for (Object itemObj : items) {
                     ZipEntryInfo zipEntry = (ZipEntryInfo) itemObj;
-                    try (ZipFile sourceZipFile = new ZipFile(zipEntry.getZipFile())) {
-                        FileHeader fh = sourceZipFile.getFileHeader(zipEntry.getFullPath());
-                        if (fh != null && !fh.isDirectory()) {
-                            String entryName = targetDir + zipEntry.getName();
-                            if (!shouldAdd(entryName, fh.getLastModifiedTime(), existingEntries, updateMode, toRemove)) continue;
-                            File tempFile = new File(tempFileDir, "entry_" + counter++);
-                            try (InputStream is = sourceZipFile.getInputStream(fh)) {
-                                FileUtils.copyFile(is, tempFile);
-                            }
-                            namedAdds.add(new Object[] {tempFile, entryName});
-                        }
+                    if (zipEntry.getZipFile() == null || zipEntry.getFullPath() == null) continue;
+                    // One handle for the whole batch: reopening the source
+                    // archive per selected entry was slow and pointless.
+                    if (entrySource == null || !sameArchive(entrySource, zipEntry.getZipFile())) {
+                        if (entrySource != null) entrySource.close();
+                        entrySource = new ZipFile(zipEntry.getZipFile());
                     }
+                    FileHeader fh = entrySource.getFileHeader(zipEntry.getFullPath());
+                    if (fh == null) continue;
+                    if (fh.isDirectory()) {
+                        // A folder inside an archive must be walked entry by entry.
+                        // Adding only the directory stub produced an empty folder,
+                        // which read as "copy did nothing".
+                        String dirPath = normalizeEntryPath(zipEntry.getFullPath());
+                        if (dirPath.isEmpty()) continue;
+                        String dirEntryName = targetDir + zipEntry.getName();
+                        boolean any = false;
+                        for (FileHeader child : entrySource.getFileHeaders()) {
+                            if (child.isDirectory()) continue;
+                            String childName = normalizeEntryPath(child.getFileName());
+                            if (!childName.startsWith(dirPath + "/")) continue;
+                            String entryName = dirEntryName + "/" + childName.substring(dirPath.length() + 1);
+                            if (!shouldAdd(entryName, child.getLastModifiedTime(), existingEntries, updateMode, toRemove))
+                                continue;
+                            namedAdds.add(new Object[]{stageZipEntry(entrySource, child, tempFileDir, counter++), entryName});
+                            any = true;
+                        }
+                        if (!any) emptyFolders.add(dirEntryName + "/");
+                    } else {
+                        String entryName = targetDir + zipEntry.getName();
+                        if (!shouldAdd(entryName, fh.getLastModifiedTime(), existingEntries, updateMode, toRemove))
+                            continue;
+                        namedAdds.add(new Object[]{stageZipEntry(entrySource, fh, tempFileDir, counter++), entryName});
+                    }
+                }
+                } finally {
+                    if (entrySource != null) entrySource.close();
                 }
             }
             if (!toRemove.isEmpty()) sourceZip.removeFiles(new ArrayList<>(toRemove));
@@ -584,8 +687,45 @@ public class FileOperationsHelper {
                     sourceZip.addFile(f, params);
                 }
             }
+            addEmptyFolders(sourceZip, emptyFolders);
         } finally {
             if (tempFileDir != null) Util.deleteDir(tempFileDir);
+        }
+    }
+
+    private static boolean sameArchive(ZipFile open, File file) {
+        try {
+            return open.getFile() != null && open.getFile().equals(file);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String normalizeEntryPath(String entryPath) {
+        if (entryPath == null) return "";
+        String name = entryPath.replace('\\', '/');
+        while (name.endsWith("/")) name = name.substring(0, name.length() - 1);
+        return name;
+    }
+
+    private static File stageZipEntry(ZipFile sourceZip, FileHeader fh, File tempFileDir, int index)
+            throws IOException {
+        File tempFile = new File(tempFileDir, "entry_" + index);
+        try (InputStream is = sourceZip.getInputStream(fh)) {
+            FileUtils.copyFile(is, tempFile);
+        }
+        return tempFile;
+    }
+
+    /** Keeps genuinely empty folders copied out of an archive visible in the target. */
+    private static void addEmptyFolders(ZipFile zip, List<String> folderPaths) {
+        for (String path : folderPaths) {
+            try {
+                ZipParameters params = new ZipParameters();
+                params.setFileNameInZip(path);
+                zip.addFolder(zip.getFile(), params);
+            } catch (Exception ignored) {
+            }
         }
     }
 
