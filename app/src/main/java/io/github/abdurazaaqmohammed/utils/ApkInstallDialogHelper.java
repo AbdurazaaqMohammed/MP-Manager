@@ -26,7 +26,12 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -136,19 +141,20 @@ public class ApkInstallDialogHelper {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void installSplitWithPackageInstaller(List<File> apkFiles, String appName, ProgressManager pm, File firstApk) {
         BroadcastReceiver resultReceiver = null;
+        PackageInstaller pi = null;
+        int sessionId = -1;
         try {
-            PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
+            pi = activity.getPackageManager().getPackageInstaller();
             long totalSize = 0;
             for (File f : apkFiles) totalSize += f.length();
             String targetPkg = getPackageNameForApk(firstApk);
             String installerPkg = InstallerConfig.resolveInstallerPackageName(activity);
-            int sessionId = PrivilegedInstaller.createSessionWithMetadata(activity, pi,
-                    targetPkg != null ? targetPkg : "",
-                    totalSize, installerPkg, PrivilegedInstaller.collectFlags(activity));
+            sessionId = PrivilegedInstaller.createSessionWithMetadata(activity, pi,
+                    targetPkg, totalSize, installerPkg, PrivilegedInstaller.collectFlags(activity));
             try (PackageInstaller.Session session = pi.openSession(sessionId)) {
-                int idx = 0;
-                for (File apkFile : apkFiles) {
-                    try (OutputStream out = session.openWrite("split_" + idx, 0, apkFile.length());
+                for (Map.Entry<String, File> split : nameSplits(apkFiles).entrySet()) {
+                    File apkFile = split.getValue();
+                    try (OutputStream out = session.openWrite(split.getKey(), 0, apkFile.length());
                          InputStream in = new FileInputStream(apkFile)) {
                         byte[] buffer = new byte[65536];
                         int bytesRead;
@@ -157,7 +163,6 @@ public class ApkInstallDialogHelper {
                         }
                         session.fsync(out);
                     }
-                    idx++;
                 }
             }
 
@@ -184,11 +189,45 @@ public class ApkInstallDialogHelper {
             try (PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
+            sessionId = -1;
         } catch (Exception e) {
             if (resultReceiver != null) { try { activity.unregisterReceiver(resultReceiver); } catch (Exception ignored) {} }
+            // A session left open leaks until the system times it out; abandon it.
+            if (pi != null && sessionId >= 0) {
+                try {
+                    try (PackageInstaller.Session abandoned = pi.openSession(sessionId)) {
+                        abandoned.abandon();
+                    }
+                } catch (Exception ignored) {}
+            }
             dismissProgress(pm);
             new ErrorUtil(activity).showError(e);
         }
+    }
+
+    /**
+     * Split entries must keep the APK's own split names: PackageInstaller works
+     * out which file is the base APK and which are feature splits from those
+     * names, so "split_0"/"split_1" made real split sets fail to install.
+     */
+    private Map<String, File> nameSplits(List<File> apkFiles) {
+        Map<String, File> named = new LinkedHashMap<>();
+        Set<String> used = new HashSet<>();
+        int fallback = 0;
+        for (File apkFile : apkFiles) {
+            String name = null;
+            try {
+                name = apkFile.getName();
+            } catch (Exception ignored) {
+            }
+            if (name == null || name.isEmpty() || !name.toLowerCase(Locale.ROOT).endsWith(".apk")
+                    || !used.add(name)) {
+                name = "split_" + fallback++;
+                while (!used.add(name)) name = "split_" + fallback++;
+            }
+            named.put(name, apkFile);
+        }
+        return named;
     }
 
     private ProgressManager showProgress(String text) {
