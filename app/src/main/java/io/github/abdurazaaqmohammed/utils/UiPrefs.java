@@ -10,6 +10,8 @@ import androidx.preference.PreferenceManager;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class UiPrefs {
 
@@ -31,6 +33,35 @@ public final class UiPrefs {
 
     private UiPrefs() {
     }
+
+    /**
+     * Verifying a date pattern means building a {@link SimpleDateFormat}, which is
+     * expensive. formatDate() runs once per bound row, so the verdict is memoized
+     * instead of re-allocating a throwaway formatter on every call.
+     */
+    private static final Map<String, Boolean> VALID_DATE_PATTERNS = new ConcurrentHashMap<>();
+
+    private static boolean isDatePatternValid(String pattern) {
+        Boolean known = VALID_DATE_PATTERNS.get(pattern);
+        if (known != null) return known;
+        boolean valid;
+        try {
+            new SimpleDateFormat(pattern, Locale.getDefault());
+            valid = true;
+        } catch (Exception e) {
+            valid = false;
+        }
+        VALID_DATE_PATTERNS.put(pattern, valid);
+        return valid;
+    }
+
+    /**
+     * Reusable formatter per thread. SimpleDateFormat is not thread safe and
+     * constructing one is costly, so each thread keeps its own instance keyed by
+     * the pattern it was built for.
+     */
+    private static final ThreadLocal<SimpleDateFormat> THREAD_DATE_FORMAT = new ThreadLocal<>();
+    private static final ThreadLocal<String> THREAD_DATE_PATTERN = new ThreadLocal<>();
 
     public static int getScale(Context context) {
         try {
@@ -54,18 +85,40 @@ public final class UiPrefs {
         try {
             String p = PreferenceManager.getDefaultSharedPreferences(context).getString("date_format", DATE_PRESETS[0]);
             if (p == null || p.isEmpty()) return DATE_PRESETS[0];
-            new SimpleDateFormat(p, Locale.getDefault());
-            return p;
+            if (isDatePatternValid(p)) return p;
+            return DATE_PRESETS[0];
         } catch (Exception e) {
             return DATE_PRESETS[0];
         }
     }
 
     public static String formatDate(Context context, long millis) {
+        return formatDate(getDatePattern(context), millis);
+    }
+
+    /** Formats with an already-resolved pattern, reusing this thread's formatter. */
+    public static String formatDate(String pattern, long millis) {
+        String effective = pattern;
+        SimpleDateFormat fmt = THREAD_DATE_FORMAT.get();
+        if (fmt == null || !effective.equals(THREAD_DATE_PATTERN.get())) {
+            if (!isDatePatternValid(effective)) effective = DATE_PRESETS[0];
+            try {
+                fmt = new SimpleDateFormat(effective, Locale.getDefault());
+            } catch (Exception e) {
+                effective = DATE_PRESETS[0];
+                try {
+                    fmt = new SimpleDateFormat(effective, Locale.getDefault());
+                } catch (Exception e2) {
+                    return "";
+                }
+            }
+            THREAD_DATE_FORMAT.set(fmt);
+            THREAD_DATE_PATTERN.set(effective);
+        }
         try {
-            return new SimpleDateFormat(getDatePattern(context), Locale.getDefault()).format(new Date(millis));
+            return fmt.format(new Date(millis));
         } catch (Exception e) {
-            return new SimpleDateFormat(DATE_PRESETS[0], Locale.getDefault()).format(new Date(millis));
+            return "";
         }
     }
 

@@ -241,7 +241,21 @@ public final class ShizukuManager {
         }
     }
 
-    public static long streamFromShell(String srcPath, OutputStream out, long maxBytes) throws IOException {        byte[] data = ShizukuShell.execBytes("cat " + RootManager.escapeShellArg(srcPath), maxBytes, 120);
+    public static long streamFromShell(String srcPath, OutputStream out, long maxBytes) throws IOException {
+        if (srcPath == null || srcPath.isEmpty()) throw new IOException("No source path");
+        String arg = RootManager.escapeShellArg(srcPath);
+        // `-e` only tests the directory entry, not read access: a path the shell
+        // can stat but not read (many /vendor and /odm files) used to fail later
+        // as an opaque "exit 1" from cat.
+        if (!ShizukuShell.isGranted()) throw new IOException("Shizuku not granted");
+        ShizukuShell.Result readable = ShizukuShell.exec("[ -r " + arg + " ]", 15);
+        if (readable != null && !readable.success) {
+            boolean present = ShizukuShell.exec("[ -e " + arg + " ]", 15).success;
+            throw new IOException(present
+                    ? "The shell user cannot read this file. Enable elevated file access or use root."
+                    : "No such file or directory: " + srcPath);
+        }
+        byte[] data = ShizukuShell.execBytes("cat -- " + arg, maxBytes, 120);
         out.write(data);
         out.flush();
         return data.length;

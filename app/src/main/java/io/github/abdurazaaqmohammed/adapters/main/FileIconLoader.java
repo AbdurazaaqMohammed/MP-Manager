@@ -22,6 +22,7 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.LruCache;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -32,7 +33,11 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -50,10 +55,37 @@ import io.github.abdurazaaqmohammed.utils.UiPrefs;
 public class FileIconLoader {
 
     private static final ExecutorService iconLoaderService = Executors.newFixedThreadPool(4);
-    private static final LruCache<String, Drawable> iconCache = new LruCache<>(100);
-    private static final LruCache<String, Drawable> badgeCache = new LruCache<>(200);
-    private static final LruCache<String, Long> mtimeCache = new LruCache<>(200);
-    private static final LruCache<String, Long> sizeCache = new LruCache<>(200);
+    /**
+     * Backend (root/Shizuku) stat lookups run here instead of on the icon pool.
+     * Each one may spawn a shell process, and sharing the pool let a listing of
+     * stat requests starve real icon work.
+     */
+    private static final ExecutorService backendStatService = Executors.newFixedThreadPool(2);
+    private static final Object STATS_LOCK = new Object();
+    private static final SyncCache<Drawable> iconCache = new SyncCache<>(100);
+    private static final SyncCache<Drawable> badgeCache = new SyncCache<>(200);
+    private static final SyncCache<Long> mtimeCache = new SyncCache<>(400);
+    private static final SyncCache<Long> sizeCache = new SyncCache<>(400);
+    private static final Set<String> pendingStats = new HashSet<>();
+
+    /** android.util.LruCache is not thread safe and rows bind on the UI thread
+     *  while loaders fill it from background threads, so every access is guarded. */
+    private static final class SyncCache<V> {
+        private final LruCache<String, V> cache;
+        SyncCache(int maxEntries) {
+            cache = new LruCache<>(maxEntries);
+        }
+        V get(String key) {
+            synchronized (cache) {
+                return cache.get(key);
+            }
+        }
+        void put(String key, V value) {
+            synchronized (cache) {
+                cache.put(key, value);
+            }
+        }
+    }
     private static final Handler badgeHandler = new Handler(Looper.getMainLooper());
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
@@ -65,9 +97,56 @@ public class FileIconLoader {
     private final MainActivity context;
     private final boolean isInZip;
 
+    /**
+     * Row metrics snapshotted once per listing (one loader instance serves one
+     * adapter). Reading prefs and resolving the active backend used to happen on
+     * every bind, which made big folders stutter while scrolling.
+     */
+    private final float dateTextSize;
+    private final int dateTextSizePx;
+    private final String datePattern;
+    private final boolean elevatedFileOps;
+    /** Per-listing memo of [isDir, length, mtime] so rebinds do not re-stat. */
+    private final Map<String, long[]> metaMemo = new ConcurrentHashMap<>();
+    /** Per-listing memo of resolved icons, so classification runs once per path. */
+    private final Map<String, Drawable> iconMemo = new ConcurrentHashMap<>();
+    /**
+     * Ceiling on backend stat lookups for one listing. A listing normally has
+     * the metadata already (RootFile caches it, ShizukuFile now parses it out of
+     * {@code ls -l}, plain Files use a local stat), so anything beyond a handful
+     * means a backend we cannot get data out of quickly. Rather than queue
+     * hundreds of shell calls and leave dates blank for seconds, give up and
+     * leave the row without a date.
+     */
+    private static final int MAX_BACKEND_STATS_PER_LISTING = 48;
+    private final java.util.concurrent.atomic.AtomicInteger backendStatBudget =
+            new java.util.concurrent.atomic.AtomicInteger(MAX_BACKEND_STATS_PER_LISTING);
+
+    private boolean claimBackendStatSlot(String tag) {
+        if (backendStatBudget.getAndDecrement() <= 0) {
+            // Remember the refusal so rebinding this row does not retry.
+            synchronized (STATS_LOCK) {
+                sizeCache.put(tag, -1L);
+                mtimeCache.put(tag, 0L);
+            }
+            return false;
+        }
+        return true;
+    }
+
     public FileIconLoader(MainActivity context, boolean isInZip) {
         this.context = context;
         this.isInZip = isInZip;
+        this.dateTextSize = UiPrefs.dateSize(UiPrefs.getScale(context));
+        this.dateTextSizePx = Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+                this.dateTextSize, context.getResources().getDisplayMetrics()));
+        this.datePattern = UiPrefs.getDatePattern(context);
+        boolean elevated = false;
+        try {
+            elevated = AccessManager.fileOpsOn(context);
+        } catch (Exception ignored) {
+        }
+        this.elevatedFileOps = elevated;
         ensureCachedIcons(context.getResources(), context.theme);
     }
 
@@ -85,40 +164,34 @@ public class FileIconLoader {
         if (zipEntry.isDirectory() && zipEntry.getFullPath() != null) {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.VISIBLE);
-            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+            applyDateTextSize(fileDateView);
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
         } else if (zipEntry.isDirectory()) {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
         } else {
             setupNonFolderIconView(zipEntry.getFullPath(), fileIconView);
             fileDateView.setVisibility(View.VISIBLE);
-            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+            applyDateTextSize(fileDateView);
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
         }
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
-        if (treatAsFolder(file)) {
+        long[] meta = metaOf(file);
+        if (meta[0] == 1) {
             fileIconView.setImageDrawable(cachedFolderIcon);
-            showFolderDate(file, fileDateView);
+            showFolderDate(file, fileDateView, meta);
         } else {
-            long len = 0;
-            long mt = 0;
-            try {
-                len = file.length();
-            } catch (Exception ignored) {}
-            try {
-                mt = file.lastModified();
-            } catch (Exception ignored) {}
-            if ((len > 0 || mt > 0) || isGhostFile(file) || !AccessManager.fileOpsOn(context)) {
+            long len = meta[1];
+            long mt = meta[2];
+            boolean ghost = len <= 0 && mt <= 0 && isGhostFile(file);
+            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps) {
                 fileDateView.setTag(null);
-                if (isGhostFile(file)) {
+                if (ghost) {
                     fileDateView.setVisibility(View.INVISIBLE);
                 } else {
-                    fileDateView.setVisibility(View.VISIBLE);
-                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-                    fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, mt)).append(' ').append(FileSize.getHumanReadableFileSize(len)));
+                    showFileStats(fileDateView, len, mt);
                 }
             } else {
                 showFileStatsAsync(file, fileDateView);
@@ -127,21 +200,83 @@ public class FileIconLoader {
         }
     }
 
+    private void showFileStats(TextView view, long size, long mtime) {
+        view.setVisibility(View.VISIBLE);
+        applyDateTextSize(view);
+        view.setText(new StringBuilder(UiPrefs.formatDate(datePattern, mtime))
+                .append(' ').append(FileSize.getHumanReadableFileSize(size)));
+    }
+
+    /**
+     * TextView.setTextSize() re-measures and requests a layout even when the size
+     * is unchanged. Called per bound row that made every bind cost a layout pass,
+     * which is what made big folders stutter while scrolling.
+     */
+    private void applyDateTextSize(TextView view) {
+        if (view.getTextSize() != dateTextSizePx) view.setTextSize(dateTextSize);
+    }
+
+    /**
+     * isDir/size/mtime for a listing entry, memoized per listing. Every rebind
+     * of a plain {@link File} otherwise costs three syscalls, which is what made
+     * large system folders such as /vendor stutter while scrolling.
+     */
+    private long[] metaOf(File file) {
+        String key;
+        try {
+            key = file.getAbsolutePath();
+        } catch (Exception e) {
+            return statDirect(file);
+        }
+        long[] memo = metaMemo.get(key);
+        if (memo != null) return memo;
+        long[] fresh = statDirect(file);
+        metaMemo.put(key, fresh);
+        return fresh;
+    }
+
+    private static long[] statDirect(File file) {
+        long[] meta = new long[3];
+        meta[0] = treatAsFolder(file) ? 1 : 0;
+        // Read the date for folders too. Leaving it at 0 made every folder row
+        // take the backend path and spawn a shell stat, which was far slower
+        // than the local stat that already answers this.
+        try {
+            meta[2] = file.lastModified();
+        } catch (Exception ignored) {
+        }
+        if (meta[0] == 0) {
+            try {
+                meta[1] = file.length();
+            } catch (Exception ignored) {
+            }
+        }
+        return meta;
+    }
+
     private void showFileStatsAsync(File file, TextView fileDateView) {
         String tag = file.getAbsolutePath();
         Long cachedSize = sizeCache.get(tag);
         Long cachedMtime = mtimeCache.get(tag);
-        if (cachedSize != null && cachedMtime != null && (cachedSize > 0 || cachedMtime > 0)) {
+        if (cachedSize != null && cachedMtime != null) {
             fileDateView.setTag(null);
-            fileDateView.setVisibility(View.VISIBLE);
-            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, cachedMtime)).append(' ').append(FileSize.getHumanReadableFileSize(cachedSize)));
+            if (cachedSize > 0 || cachedMtime > 0) showFileStats(fileDateView, cachedSize, cachedMtime);
+            else fileDateView.setVisibility(View.INVISIBLE);
             return;
         }
         fileDateView.setVisibility(View.INVISIBLE);
         fileDateView.setTag(tag);
-        iconLoaderService.execute(() -> {
-            if (!tag.equals(fileDateView.getTag())) return;
+        if (!claimBackendStatSlot(tag)) return;
+        synchronized (STATS_LOCK) {
+            // A shell stat per row per bind is what made /vendor crawl, so only
+            // one lookup per path may be in flight and failures are cached too.
+            if (!pendingStats.add(tag)) return;
+        }
+        backendStatService.execute(() -> {
+            if (!tag.equals(fileDateView.getTag())) {
+                releasePending(tag);
+                return;
+            }
             long size = -1;
             long mtime = 0;
             try {
@@ -150,19 +285,25 @@ public class FileIconLoader {
             try {
                 mtime = AccessManager.getMtime(context, tag);
             } catch (Exception ignored) {}
-            if ((size <= 0 && mtime <= 0) || !tag.equals(fileDateView.getTag())) return;
-            sizeCache.put(tag, Math.max(0, size));
-            mtimeCache.put(tag, Math.max(0, mtime));
-            final long finalSize = Math.max(0, size);
-            final long finalMtime = Math.max(0, mtime);
+            releasePending(tag);
+            sizeCache.put(tag, size);
+            mtimeCache.put(tag, mtime);
+            if (!tag.equals(fileDateView.getTag())) return;
+            if (size <= 0 && mtime <= 0) return;
+            long[] memo = new long[]{0, Math.max(0, size), Math.max(0, mtime)};
+            metaMemo.put(tag, memo);
+            final long finalSize = memo[1];
+            final long finalMtime = memo[2];
             context.runOnUiThread(() -> {
-                if (tag.equals(fileDateView.getTag())) {
-                    fileDateView.setVisibility(View.VISIBLE);
-                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-                    fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, finalMtime)).append(' ').append(FileSize.getHumanReadableFileSize(finalSize)));
-                }
+                if (tag.equals(fileDateView.getTag())) showFileStats(fileDateView, finalSize, finalMtime);
             });
         });
+    }
+
+    private static void releasePending(String tag) {
+        synchronized (STATS_LOCK) {
+            pendingStats.remove(tag);
+        }
     }
 
     private static boolean treatAsFolder(File file) {
@@ -185,48 +326,59 @@ public class FileIconLoader {
         }
     }
 
-    private void showFolderDate(File file, TextView fileDateView) {
-        long mtime = 0;
-        try {
-            mtime = file.lastModified();
-        } catch (Exception ignored) {}
+    private void showFolderDate(File file, TextView fileDateView, long[] meta) {
+        long mtime = meta[2];
         if (mtime > 0) {
             fileDateView.setTag(null);
             fileDateView.setVisibility(View.VISIBLE);
-            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            fileDateView.setText(UiPrefs.formatDate(context, mtime));
+            applyDateTextSize(fileDateView);
+            fileDateView.setText(UiPrefs.formatDate(datePattern, mtime));
             return;
         }
-        if (!AccessManager.fileOpsOn(context)) {
+        if (!elevatedFileOps) {
             fileDateView.setTag(null);
             fileDateView.setVisibility(View.INVISIBLE);
             return;
         }
         String tag = file.getAbsolutePath();
         Long cached = mtimeCache.get(tag);
-        if (cached != null && cached > 0) {
+        if (cached != null) {
             fileDateView.setTag(null);
-            fileDateView.setVisibility(View.VISIBLE);
-            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            fileDateView.setText(UiPrefs.formatDate(context, cached));
+            if (cached > 0) {
+                fileDateView.setVisibility(View.VISIBLE);
+                applyDateTextSize(fileDateView);
+                fileDateView.setText(UiPrefs.formatDate(datePattern, cached));
+            } else {
+                fileDateView.setVisibility(View.INVISIBLE);
+            }
             return;
         }
         fileDateView.setVisibility(View.INVISIBLE);
         fileDateView.setTag(tag);
-        iconLoaderService.execute(() -> {
-            if (!tag.equals(fileDateView.getTag())) return;
+        if (!claimBackendStatSlot(tag)) return;
+        synchronized (STATS_LOCK) {
+            if (!pendingStats.add(tag)) return;
+        }
+        backendStatService.execute(() -> {
+            if (!tag.equals(fileDateView.getTag())) {
+                releasePending(tag);
+                return;
+            }
             long m = 0;
             try {
                 m = AccessManager.getMtime(context, tag);
             } catch (Exception ignored) {}
-            if (m <= 0 || !tag.equals(fileDateView.getTag())) return;
+            releasePending(tag);
             mtimeCache.put(tag, m);
+            if (m <= 0 || !tag.equals(fileDateView.getTag())) return;
+            long[] memo = metaMemo.get(tag);
+            if (memo != null) memo[2] = m;
             final long finalM = m;
             context.runOnUiThread(() -> {
                 if (tag.equals(fileDateView.getTag())) {
                     fileDateView.setVisibility(View.VISIBLE);
-                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-                    fileDateView.setText(UiPrefs.formatDate(context, finalM));
+                    applyDateTextSize(fileDateView);
+                    fileDateView.setText(UiPrefs.formatDate(datePattern, finalM));
                 }
             });
         });
@@ -238,10 +390,16 @@ public class FileIconLoader {
         if (name == null || name.isEmpty()) return;
         boolean folderBadge = isDataRoot(listedDir)
                 && io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(name);
-        String lower = name.toLowerCase(Locale.ROOT);
-        boolean splitBadge = file.isFile()
-                && (lower.endsWith(".apks") || lower.endsWith(".xapk")
-                || lower.endsWith(".apkm") || lower.endsWith(".aspk"));
+        boolean splitBadge = false;
+        if (!folderBadge) {
+            // Extension test before isFile(): the stat was previously paid on
+            // every row bind just to rule out a split container.
+            String lower = name.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".apks") || lower.endsWith(".xapk")
+                    || lower.endsWith(".apkm") || lower.endsWith(".aspk")) {
+                splitBadge = file.isFile();
+            }
+        }
         if (!folderBadge && !splitBadge) return;
         String key = (folderBadge ? "pkg:" : "split:") + (folderBadge ? name : file.getPath());
         Drawable cached = badgeCache.get(key);
@@ -348,39 +506,52 @@ public class FileIconLoader {
                 return;
             }
         }
+        fileIconView.setImageDrawable(resolveNonFolderIcon(path, fileIconView));
+    }
 
+    /**
+     * Resolves the icon for a path. The result is memoized per listing: only
+     * APKs and images ever produced a cache hit before, so every ordinary file
+     * re-ran the extension classification on every bind.
+     */
+    private Drawable resolveNonFolderIcon(String path, ImageView fileIconView) {
+        Drawable memo = iconMemo.get(path);
+        if (memo != null) return memo;
         String ext = FilenameUtils.getExtension(path);
         if (ext != null) ext = "." + ext.toLowerCase(Locale.ROOT);
         else ext = "";
 
+        Drawable resolved;
         if (ApkIconHelper.isApkLikeExt(ext)) {
             if (isSplitApkExt(ext)) {
-                fileIconView.setImageDrawable(cachedArchiveIcon);
+                resolved = cachedArchiveIcon;
             } else {
-                fileIconView.setImageDrawable(cachedApkIcon);
+                resolved = cachedApkIcon;
                 if (!isInZip) loadApkIconAsync(path, fileIconView);
             }
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
-            fileIconView.setImageDrawable(cachedImageIcon);
+            resolved = cachedImageIcon;
             if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
-            fileIconView.setImageDrawable(cachedVideoIcon);
+            resolved = cachedVideoIcon;
             if (!isInZip) loadThumbnailAsync(path, fileIconView, true);
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) {
-            fileIconView.setImageDrawable(cachedMusicIcon);
+            resolved = cachedMusicIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) {
-            fileIconView.setImageDrawable(cachedArchiveIcon);
+            resolved = cachedArchiveIcon;
         } else if (".pdf".equals(ext)) {
-            fileIconView.setImageDrawable(cachedPdfIcon);
-        } else if(".dex".equals(ext)) {
-            fileIconView.setImageDrawable(cachedDexIcon);
-        } else if(".arsc".equals(ext)) {
-            fileIconView.setImageDrawable(cachedArscIcon);
+            resolved = cachedPdfIcon;
+        } else if (".dex".equals(ext)) {
+            resolved = cachedDexIcon;
+        } else if (".arsc".equals(ext)) {
+            resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            fileIconView.setImageDrawable(cachedTextIcon);
+            resolved = cachedTextIcon;
         } else {
-            fileIconView.setImageDrawable(cachedFileIcon);
+            resolved = cachedFileIcon;
         }
+        iconMemo.put(path, resolved);
+        return resolved;
     }
 
     private static boolean isSplitApkExt(String extWithDot) {

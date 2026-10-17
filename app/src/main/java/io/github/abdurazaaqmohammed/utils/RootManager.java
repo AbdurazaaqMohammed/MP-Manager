@@ -41,7 +41,7 @@ public class RootManager {
     private final Object lock = new Object();
 
     private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-:]+$");
-    private static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:[A-Z][a-z]{2}\\s+\\d{1,2}|\\d{4}-\\d{2}-\\d{2})\\s+\\S+)\\s+(.*)$");
+    private static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
 
     // Directories that should never be deleted (absolute block)
     private static final Set<String> BLOCKED_DELETE_PATHS = new HashSet<>(Arrays.asList(
@@ -562,7 +562,10 @@ public class RootManager {
     }
 
     public String getPermissions(String path) {
-        ShellResult result = executeFs("stat -c %a " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("stat -c %a " + escapeShellArg(emulatedAlias(path)), 30);
+        if (!result.isSuccess() && !path.equals(emulatedAlias(path))) {
+            result = executeFs("stat -c %a " + escapeShellArg(path), 30);
+        }
         return result.isSuccess() ? result.output.trim() : null;
     }
 
@@ -591,6 +594,25 @@ public class RootManager {
         }
         ShellResult result = execute("chmod " + mode + " " + escapeShellArg(path));
         if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
+    }
+
+    /**
+     * chmod through the mount-namespace probe. Reading a file's mode uses
+     * {@link #executeFs} while the old write path used plain {@code execute}, so
+     * on devices that need the global namespace the write hit a path the target
+     * was not visible at and failed.
+     */
+    public void chmodFs(String path, String mode) throws IOException {
+        if (!isChmodModeValid(mode)) {
+            throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
+        }
+        ShellResult result = executeFs("chmod " + mode + " -- " + escapeShellArg(emulatedAlias(path)), 30);
+        if (!result.isSuccess()) {
+            // Retry without the namespace and alias in case the probe is wrong here.
+            result = execute("chmod " + mode + " -- " + escapeShellArg(path), 30);
+            if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
+        }
+        invalidateListCache();
     }
 
     public void chown(String path, String owner, String group) throws IOException {
@@ -1224,6 +1246,11 @@ public class RootManager {
         File[] primary = listRootFilesLsLong(actual);
         if (!isAppDataDir(actual)) {
             if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
+            // One shell call that reports name/type/size/mtime per entry. Preferred
+            // over the name-only fallback, which left every row with a 0 date and
+            // so queued one extra stat per visible row just to draw it.
+            File[] detailed = listRootFilesDetailed(actual);
+            if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
             File[] portable = listRootFilesPortable(actual);
             if (portable != null && portable.length > 0) return remapParent(portable, dirPath);
             return primary != null ? remapParent(primary, dirPath) : portable;
@@ -1232,6 +1259,8 @@ public class RootManager {
         File[] explicit = listAppDataDirsExplicit(actual);
         File[] merged = unionRootFiles(primary, explicit);
         if (merged != null && merged.length > 0) return remapParent(merged, dirPath);
+        File[] detailed = listRootFilesDetailed(actual);
+        if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
         File[] portable = listRootFilesPortable(actual);
         return remapParent(unionRootFiles(merged, portable), dirPath);
     }
@@ -1280,15 +1309,7 @@ public class RootManager {
             } catch (NumberFormatException ignored) {
                 size = 0L;
             }
-            String dateTime = matcher.group(3);
-            int dateSplit = dateTime.indexOf(' ');
-            long mtime;
-            if (dateSplit > 0 && Character.isDigit(dateTime.charAt(0))) {
-                mtime = parseLsDateTime(dateTime.substring(0, dateSplit), dateTime.substring(dateSplit + 1));
-            } else {
-                String[] dateParts = dateTime.split("\\s+", 3);
-                mtime = dateParts.length == 3 ? parseLsTime(dateParts[0], dateParts[1], dateParts[2]) : 0L;
-            }
+            long mtime = parseLsDateTimeFlexible(matcher.group(3));
             String mode = matcher.group(1).length() > 1 ? matcher.group(1).substring(1) : null;
             if (type == 'l') {
                 linkIdx.add(files.size());
@@ -1355,6 +1376,72 @@ public class RootManager {
         } catch (Exception ignored) {
             return 0L;
         }
+    }
+
+    /**
+     * Parses the date field of an {@code ls -l} line. Toybox prints several
+     * shapes depending on the file's age and build, and the previous parser
+     * only understood two of them, so every line in the {@code MM-DD HH:MM}
+     * form was discarded - which silently emptied a listing and dropped the
+     * whole folder onto the metadata-less fallback.
+     */
+    private static long parseLsDateTimeFlexible(String dateTime) {
+        if (dateTime == null) return 0L;
+        String value = dateTime.trim();
+        try {
+            if (value.matches("\\d{4}-\\d{2}-\\d{2}.*")) {
+                String[] p = value.split("\\s+", 2);
+                String date = p[0];
+                String time = p.length > 1 ? p[1] : null;
+                if (time != null && time.matches("\\d{4}")) time = null;
+                if (time == null) return new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date).getTime();
+                return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                        .parse(date + " " + time).getTime();
+            }
+            if (value.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                return new SimpleDateFormat("MM-dd-yyyy", Locale.US).parse(value).getTime();
+            }
+            if (value.matches("\\d{2}-\\d{2}.*")) {
+                String[] p = value.split("\\s+", 2);
+                if (p.length == 2 && p[1].matches("\\d{2}:\\d{2}")) {
+                    // toybox only omits the year for files in the current year.
+                    return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                            .parse(Calendar.getInstance().get(Calendar.YEAR) + "-" + p[0] + " " + p[1])
+                            .getTime();
+                }
+                if (p.length == 2 && p[1].matches("\\d{4}")) {
+                    return new SimpleDateFormat("MM-dd-yyyy", Locale.US)
+                            .parse(p[0] + "-" + p[1]).getTime();
+                }
+                return 0L;
+            }
+            String[] p = value.split("\\s+", 3);
+            if (p.length == 3) {
+                long t = parseLsTime(p[0], p[1], p[2]);
+                if (t > 0 && !p[2].matches("\\d{4}")) {
+                    // "Jan  1 09:30" omits the year. DateFormat.parse clears the
+                    // calendar, so the result lands in 1900; re-anchor it to the
+                    // current year (backing off one if that would be in future).
+                    Calendar parsed = Calendar.getInstance();
+                    parsed.setTimeInMillis(t);
+                    Calendar c = Calendar.getInstance();
+                    c.clear();
+                    c.set(Calendar.YEAR, Calendar.getInstance().get(Calendar.YEAR));
+                    c.set(Calendar.MONTH, parsed.get(Calendar.MONTH));
+                    c.set(Calendar.DAY_OF_MONTH, parsed.get(Calendar.DAY_OF_MONTH));
+                    c.set(Calendar.HOUR_OF_DAY, parsed.get(Calendar.HOUR_OF_DAY));
+                    c.set(Calendar.MINUTE, parsed.get(Calendar.MINUTE));
+                    c.set(Calendar.SECOND, 0);
+                    if (c.getTimeInMillis() > System.currentTimeMillis() + 86400000L) {
+                        c.add(Calendar.YEAR, -1);
+                    }
+                    t = c.getTimeInMillis();
+                }
+                return t;
+            }
+        } catch (Exception ignored) {
+        }
+        return 0L;
     }
 
     private static boolean isAppDataDir(String dirPath) {
