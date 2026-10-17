@@ -199,14 +199,57 @@ public class DexEditorActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-        setTheme(theme);
+        // BaseActivity already applied the registered theme plugin. Re-applying a
+        // legacy style int here overrode it with a possibly different theme, which
+        // is what made the tabs bar and dialogs render black in light mode.
         setContentView(R.layout.dex_editor);
 
         initialize(savedInstanceState);
 
         initializeLogic();
+    }
+
+    /**
+     * True when the applied theme is a light one. Resolved from the theme itself
+     * rather than from a legacy style id, so it stays correct for theme plugins.
+     */
+    public boolean isLightTheme() {
+        try {
+            android.util.TypedValue value = new android.util.TypedValue();
+            if (getTheme().resolveAttribute(android.R.attr.isLightTheme, value, true)) return value.data != 0;
+        } catch (Exception ignored) {
+        }
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                != Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /** colorOnSurface of the applied theme, with a sane fallback. */
+    public int onSurfaceColor() {
+        int resolved = themeColor(com.google.android.material.R.attr.colorOnSurface, 0);
+        if (resolved != 0) return resolved;
+        return isLightTheme() ? 0xFF1C1B1F : 0xFFE6E1E5;
+    }
+
+    /** colorSurface of the applied theme, with a sane fallback. */
+    public int surfaceColor() {
+        int resolved = themeColor(com.google.android.material.R.attr.colorSurface, 0);
+        if (resolved != 0) return resolved;
+        return isLightTheme() ? 0xFFFFFBFE : 0xFF1C1B1F;
+    }
+
+    private int themeColor(int attr, int fallback) {
+        try {
+            android.util.TypedValue value = new android.util.TypedValue();
+            if (getTheme().resolveAttribute(attr, value, true)) {
+                if (value.resourceId != 0) {
+                    int color = androidx.core.content.ContextCompat.getColor(this, value.resourceId);
+                    if (color != 0) return color;
+                }
+                if (value.data != 0) return value.data;
+            }
+        } catch (Exception ignored) {
+        }
+        return fallback;
     }
 
     @Override
@@ -279,7 +322,7 @@ public class DexEditorActivity extends BaseActivity {
         drawerToolbar = findViewById(R.id.drawer_toolbar);
         drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.ic_more_mt));
         if (drawerToolbar.getOverflowIcon() != null) {
-            DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
+            DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), onSurfaceColor());
         }
         setupDrawerToolbar();
 
@@ -1742,16 +1785,16 @@ public class DexEditorActivity extends BaseActivity {
 
         MenuItem closeAbove = menu.findItem(3);
         closeAbove.setEnabled(index > 0);
-        UIHelper.setMenuItemColor(closeAbove, closeAbove.isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(closeAbove, closeAbove.isEnabled() ? onSurfaceColor() : Color.GRAY);
 
         MenuItem closeBelow = menu.findItem(4);
         closeBelow.setEnabled(index != -1 && index < count - 1);
-        UIHelper.setMenuItemColor(closeBelow, closeBelow.isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(closeBelow, closeBelow.isEnabled() ? onSurfaceColor() : Color.GRAY);
 
         // Also update other items color if needed
-        UIHelper.setMenuItemColor(menu.findItem(0), menu.findItem(0).isEnabled() ? Color.BLACK : Color.GRAY);
-        UIHelper.setMenuItemColor(menu.findItem(1), menu.findItem(1).isEnabled() ? Color.BLACK : Color.GRAY);
-        UIHelper.setMenuItemColor(menu.findItem(2), menu.findItem(2).isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(0), menu.findItem(0).isEnabled() ? onSurfaceColor() : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(1), menu.findItem(1).isEnabled() ? onSurfaceColor() : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(2), menu.findItem(2).isEnabled() ? onSurfaceColor() : Color.GRAY);
     }
 
     public static class EditorTab {
@@ -2054,10 +2097,9 @@ public class DexEditorActivity extends BaseActivity {
 
                     // holder trick so the click listener can reference the adapter it belongs to
                     final StringAdapter[] holder = new StringAdapter[1];
-                    boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                    int theme = requireActivity().getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+                    int onSurface = activity.onSurfaceColor();
 
-                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), onSurface);
                     holder[0] = stringAdapter;
 
                     btnReload.setOnClickListener(v -> {
@@ -2787,14 +2829,13 @@ public class DexEditorActivity extends BaseActivity {
             if (position == 0) {
                 isSelected = viewPager.getVisibility() != View.VISIBLE;
                 holder.title.setText(R.string.dex_editor_plus);
-                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                int onSurface = onSurfaceColor();
+                holder.title.setTextColor(isSelected ? skyColor : onSurface);
                 holder.path.setVisibility(View.GONE);
                 holder.icon.setImageResource(R.drawable.ic_home);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : Color.BLACK));
-                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : Color.BLACK));
+                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : onSurface));
+                } else holder.icon.setColorFilter(new LightingColorFilter(onSurface, isSelected ? skyColor : onSurface));
                 holder.mainView.setOnClickListener(v -> {
                     drawerLayout.closeDrawer(GravityCompat.START);
                     v.postDelayed(this::hideEditor, 250);
@@ -2806,9 +2847,8 @@ public class DexEditorActivity extends BaseActivity {
                 EditorTab tab = tabs.get(tabIndex);
                 isSelected = (viewPager.getVisibility() == View.VISIBLE && tabIndex == currentTabIndex);
                 holder.title.setText((tab.isModified ? "*" : "") + tab.title); // highlight the spcific edited classes with star
-                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                int onSurface = onSurfaceColor();
+                holder.title.setTextColor(isSelected ? skyColor : onSurface);
 
                 holder.path.setVisibility(View.VISIBLE);
                 holder.path.setText(tab.className);
@@ -2820,8 +2860,8 @@ public class DexEditorActivity extends BaseActivity {
                     holder.icon.setImageResource(R.drawable.ic_edit_mt);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : Color.BLACK));
-                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : Color.BLACK));
+                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : onSurface));
+                } else holder.icon.setColorFilter(new LightingColorFilter(onSurface, isSelected ? skyColor : onSurface));
 
                 holder.mainView.setOnClickListener(v -> {
                     int currentPos = holder.getBindingAdapterPosition();
@@ -2901,12 +2941,11 @@ public class DexEditorActivity extends BaseActivity {
                     }
                 });
             }
-            if (isSelected) holder.mainView.setBackgroundColor(Color.parseColor("#E1F5FE"));
-            else {
-                TypedValue tv = new TypedValue();
-                getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true);
-                holder.mainView.setBackgroundColor(tv.data);
-            }
+            // A soft material container tone instead of a hard-coded light blue, which
+            // vanished against a light surface and glared against a dark one.
+            holder.mainView.setBackgroundColor(isSelected
+                    ? themeColor(com.google.android.material.R.attr.colorSecondaryContainer, 0xFFD6E3F0)
+                    : surfaceColor());
         }
 
         public void closeOtherTabs(int index) {

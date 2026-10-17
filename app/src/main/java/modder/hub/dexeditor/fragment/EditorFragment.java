@@ -436,18 +436,21 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            String themeName = "dark.json";
+            // The theme used to be hardcoded to dark.json (twice), which rendered
+            // light gray text on the light editor background.
+            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
+            boolean dark;
+            if (pluginId != null) {
+                dark = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId)
+                        == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES;
+            } else {
+                dark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                        == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+            }
+            String themeName = dark ? "dark.json" : "light.json";
             IThemeSource themeSource = null;
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
-                registry.loadTheme(themeSource);
-                registry.setTheme(themeName);
-            } catch (Exception e) {
-                Log.e("EditorFragment", "Theme load error", e);
-            }
-
-            try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/" + themeName), themeName, null);
                 registry.loadTheme(themeSource);
                 registry.setTheme(themeName);
             } catch (Exception e) {
