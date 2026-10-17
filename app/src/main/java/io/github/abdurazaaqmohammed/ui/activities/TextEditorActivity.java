@@ -66,11 +66,18 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         List<ResEntry> resEntries;
         String pendingDecoded;
         String content;
-        boolean loaded;
-        boolean loading;
+        /** Written by loader threads, read by the UI thread. */
+        volatile boolean loaded;
+        volatile boolean loading;
+        volatile boolean loadFailed;
         boolean modified;
-        boolean loadFailed;
         boolean pendingArchiveUpdate;
+        /**
+         * Bumped whenever a load is started or superseded. A background read from
+         * an earlier attempt compares against it before touching the tab, so a
+         * stale staged copy cannot overwrite a newer one with stale content.
+         */
+        int loadToken;
     }
 
     private DrawerLayout drawerLayout;
@@ -87,7 +94,6 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private final List<EditorTab> tabs = new ArrayList<>();
     private int currentIndex = -1;
-    private boolean sessionRestored;
 
     private UnifiedEditorFragment editorFragment;
 
@@ -100,7 +106,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         setupListeners();
         initEditorFragment();
         restoreSession();
-        if (sessionRestored && currentIndex >= 0 && currentIndex < tabs.size()) selectTab(currentIndex);
+        // handleIntent() is what selects and loads the tab for whatever was
+        // requested. Selecting the restored tab here as well started a read for
+        // it even when the user was opening something else, which surfaced that
+        // tab's failure (a gone share-menu file, a revoked permission) as an
+        // error next to the file actually being opened.
         handleIntent(getIntent());
     }
 
@@ -225,7 +235,6 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 tabs.add(t);
             }
             if (!tabs.isEmpty()) {
-                sessionRestored = true;
                 currentIndex = Math.max(0, Math.min(root.optInt("current", 0), tabs.size() - 1));
                 updateTabsList();
             }
@@ -392,6 +401,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             f.setText(t.content == null ? "" : t.content);
             t.modified = wasModified;
         }
+        // Content is fetched when the tab is actually shown, never up front for
+        // every open tab. A tab whose load failed stays retryable because
+        // markLoadFailed() clears the loading flag.
         if (!t.loaded && !t.loading && (t.file != null || t.fileUri != null)) loadTabContent(t);
         updateTitleBar();
         updateTabsList();
@@ -400,9 +412,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private void addTabAndOpen(EditorTab tab) {
         tabs.add(tab);
+        // selectTab() starts the load, so this tab is read exactly once.
         selectTab(tabs.size() - 1);
-
-        if (!tab.loaded) loadTabContent(tab);
         persistSession();
     }
 
@@ -476,9 +487,14 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 existing.loaded = false;
                 existing.content = null;
                 existing.loadFailed = false;
-            }
-            if (existing.loadFailed) {
+                // Supersede a read still in flight against the old staged copy,
+                // otherwise it lands afterwards and re-marks the tab loaded.
+                existing.loadToken++;
+                existing.loading = false;
+            } else if (existing.loadFailed) {
+                // Retryable: a failed read must not leave a blank tab behind.
                 existing.loaded = false;
+                existing.content = null;
             }
             String existingZipFile = intent.getStringExtra("zf");
             String existingZipEntry = intent.getStringExtra("zipEntryPath");
@@ -508,7 +524,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
         if (file == null && uri == null && extraText == null && !tabs.isEmpty()) {
             // Bare launch with a restored session: keep the previously open tabs
-            updateTabsList();
+            // and show the one that was active, loading only that one.
+            if (currentIndex < 0 || currentIndex >= tabs.size()) currentIndex = 0;
+            selectTab(currentIndex);
             return;
         }
 
@@ -575,54 +593,122 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private void loadTabContent(EditorTab tab) {
+        if (tab == null) return;
         tab.loading = true;
+        tab.loadFailed = false;
+        final int token = ++tab.loadToken;
         new Thread(() -> {
-            if (tab.rootOriginalPath != null && (tab.file == null || !tab.file.exists())) {
-                try {
-                    File restaged = RootStaging.stageForRead(TextEditorActivity.this, tab.rootOriginalPath);
-                    tab.file = restaged;
-                    tab.fileUri = Uri.fromFile(restaged);
-                } catch (Exception e) {
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
-                    applyLoadedText(tab, tab.content == null ? "" : tab.content);
+            try {
+                if (!ensureReadableFile(tab)) {
+                    markLoadFailed(tab, null);
                     return;
                 }
-            }
-            if (tab.pendingDecoded != null) {
-                applyLoadedText(tab, tab.pendingDecoded);
-                return;
-            }
-            boolean isFromFile = tab.file != null;
-            File cachedFile = isFromFile ? new File(getCacheDir(), (tab.file.getPath()).replace(File.separator, ".")) : null;
-            if (cachedFile != null && cachedFile.exists() && cachedFile.length() != tab.file.length()) {
-                final String fileText = readTabText(tab);
-                runOnUiThread(() -> new MaterialAlertDialogBuilder(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
-                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                            try {
-                                FileUtils.copyFile(cachedFile, tab.file);
-                            } catch (Exception e) {
-                                new ErrorUtil(this).showError(e);
-                            }
-                            new Thread(() -> applyLoadedText(tab, readTabText(tab))).start();
-                        })
-                        .setNegativeButton(android.R.string.cancel, (dialog, which) -> applyLoadedText(tab, fileText)).show());
-            } else {
-                applyLoadedText(tab, readTabText(tab));
+                if (tab.pendingDecoded != null) {
+                    applyLoadedText(tab, tab.pendingDecoded, token);
+                    return;
+                }
+                File cachedFile = tab.file != null
+                        ? new File(getCacheDir(), tab.file.getPath().replace(File.separator, ".")) : null;
+                if (cachedFile != null && cachedFile.exists() && cachedFile.length() != tab.file.length()) {
+                    final String fileText = readTabText(tab, token);
+                    if (fileText == null) {
+                        markLoadFailed(tab, null);
+                        return;
+                    }
+                    runOnUiThread(() -> {
+                        if (tab.loadToken != token) return;
+                        new MaterialAlertDialogBuilder(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
+                                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                                    try {
+                                        FileUtils.copyFile(cachedFile, tab.file);
+                                    } catch (Exception e) {
+                                        new ErrorUtil(this).showError(e);
+                                    }
+                                    new Thread(() -> {
+                                        String text = readTabText(tab, token);
+                                        if (text == null) markLoadFailed(tab, null);
+                                        else applyLoadedText(tab, text, token);
+                                    }).start();
+                                })
+                                .setNegativeButton(android.R.string.cancel, (dialog, which) -> applyLoadedText(tab, fileText, token)).show();
+                    });
+                } else {
+                    String text = readTabText(tab, token);
+                    if (text == null) {
+                        markLoadFailed(tab, null);
+                        return;
+                    }
+                    // An empty read of a file the backend says is non-empty means
+                    // the staged copy was stale or truncated. Take a fresh one.
+                    if (text.isEmpty() && tab.rootOriginalPath != null && originalSize(tab) > 0) {
+                        boolean restaged = restage(tab);
+                        if (restaged) {
+                            String retry = readTabText(tab, token);
+                            if (retry != null) text = retry;
+                        }
+                    }
+                    applyLoadedText(tab, text, token);
+                }
+            } catch (Throwable t) {
+                markLoadFailed(tab, t);
             }
         }).start();
     }
 
-    private String readTabText(EditorTab tab) {
+    /**
+     * Makes sure {@code tab.file} still points at something readable.
+     *
+     * <p>Root and Shizuku tabs read from a disposable staged copy in the app
+     * cache. That copy can be gone by the time the tab is opened again (the
+     * session is restored from disk pointing at the previous run's path), and
+     * reusing it produced a blank editor.
+     */
+    private boolean ensureReadableFile(EditorTab tab) {
+        boolean stagedCopyGone = tab.file == null || !tab.file.isFile();
+        if (!stagedCopyGone && tab.rootOriginalPath != null && tab.file.length() == 0
+                && originalSize(tab) > 0) {
+            stagedCopyGone = true;
+        }
+        if (stagedCopyGone && tab.rootOriginalPath != null) {
+            return restage(tab);
+        }
+        if (tab.file != null) return tab.file.isFile() && tab.file.canRead();
+        return tab.fileUri != null;
+    }
+
+    private boolean restage(EditorTab tab) {
+        try {
+            File staged = RootStaging.stageForRead(TextEditorActivity.this, tab.rootOriginalPath);
+            if (staged == null || !staged.isFile()) return false;
+            tab.file = staged;
+            tab.fileUri = Uri.fromFile(staged);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private long originalSize(EditorTab tab) {
+        try {
+            return AccessManager.getSize(this, tab.rootOriginalPath);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /**
+     * @return the tab's text, or null when it could not be read. A null result
+     *         never becomes an empty-but-loaded tab, which is what left the
+     *         editor blank until the tab was closed and recreated.
+     */
+    private String readTabText(EditorTab tab, int token) {
         // Binary axml must be decoded, not read as UTF-8 text
         if (tab.axml) {
             try (InputStream is = tab.file != null ? FileUtils.getInputStream(tab.file)
                     : getContentResolver().openInputStream(tab.fileUri)) {
-                tab.loadFailed = false;
                 return new aXMLDecoder(is, tab.resEntries).decodeAsString();
             } catch (Exception e) {
-                tab.loadFailed = true;
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
-                return "";
+                return null;
             }
         }
         boolean isFromFile = tab.file != null;
@@ -635,12 +721,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
             if (tab.abx) {
                 try {
-                    tab.loadFailed = false;
                     return AbxUtil.decodeToString(bis);
                 } catch (Exception e) {
-                    tab.loadFailed = true;
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
-                    return "";
+                    return null;
                 }
             }
             try (InputStreamReader isr = new InputStreamReader(bis, StandardCharsets.UTF_8);
@@ -651,25 +734,41 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 while ((line = reader.readLine()) != null) {
                     sb.append(line).append('\n');
                 }
-                tab.loadFailed = false;
                 return sb.toString();
             } catch (Exception e) {
-                tab.loadFailed = true;
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
-                return "";
+                return null;
             }
         } catch (Exception e) {
-            tab.loadFailed = true;
-            runOnUiThread(() -> new ErrorUtil(this).showError(e));
-            return "";
+            return null;
         }
     }
 
-    private void applyLoadedText(EditorTab tab, String text) {
+    /**
+     * Records a failed load without marking the tab loaded, so selecting it again
+     * retries instead of showing an editor permanently stuck on empty text. The
+     * message is only surfaced when the failing tab is the one on screen.
+     */
+    private void markLoadFailed(EditorTab tab, Throwable error) {
         tab.loading = false;
+        tab.loadFailed = true;
+        tab.loaded = false;
+        tab.content = null;
         runOnUiThread(() -> {
-            tab.content = text == null ? "" : text;
+            updateTabsList();
+            if (getCurrentTab() != tab) return;
+            String message = error == null || error.getMessage() == null
+                    ? getString(R.string.cannot_open_item) : error.getMessage();
+            Extensions.showMessage(this, message);
+        });
+    }
+
+    private void applyLoadedText(EditorTab tab, String text, int token) {
+        runOnUiThread(() -> {
+            if (tab.loadToken != token) return;
+            tab.loading = false;
+            tab.loadFailed = false;
             tab.loaded = true;
+            tab.content = text == null ? "" : text;
             if (getCurrentTab() == tab) {
                 UnifiedEditorFragment f = getFragment();
                 if (f != null) {
@@ -919,7 +1018,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         // Mapped from the fragment's "Reload file" item: re-read the file from disk
         EditorTab t = getCurrentTab();
         if (t == null || t.axml) return;
-        new Thread(() -> applyLoadedText(t, readTabText(t))).start();
+        t.loaded = false;
+        t.content = null;
+        t.loading = false;
+        loadTabContent(t);
     }
 
     @Override
