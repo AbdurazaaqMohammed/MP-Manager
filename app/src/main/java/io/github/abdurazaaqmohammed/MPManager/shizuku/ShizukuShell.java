@@ -204,9 +204,19 @@ public final class ShizukuShell {
                 }
             } catch (IOException ignored) {
             }
+            // Keep draining after a cap hit: `cat` would otherwise block on a full
+            // pipe, never exit, and the wait would end in a bogus "timeout".
+            try {
+                InputStream rest = p.getInputStream();
+                byte[] buf = new byte[65536];
+                while (rest.read(buf) != -1) {
+                }
+            } catch (IOException ignored) {
+            }
         });
         reader.start();
-        Thread errT = drain(p.getErrorStream(), new StringBuilder());
+        StringBuilder errBuf = new StringBuilder();
+        Thread errT = drain(p.getErrorStream(), errBuf);
         boolean finished;
         try {
             finished = p.waitForTimeout(timeoutSeconds, TimeUnit.SECONDS);
@@ -233,9 +243,30 @@ public final class ShizukuShell {
         } catch (Throwable t) {
             throw new IOException("process failed");
         }
-        if (exit != 0) throw new IOException("exit " + exit);
+        // Check the size cap first: a truncated read always leaves a non-zero exit
+        // behind once the writer is killed, which used to be reported as "exit N".
         if (truncated[0]) throw new IOException("File too large");
+        if (exit != 0) throw new IOException(describeFailure(exit, errBuf.toString()));
         return bos.toByteArray();
+    }
+
+    /**
+     * Turns a bare "exit 1" into something the user can act on. The shell's
+     * stderr is the only clue about *why* a read failed (SELinux denial on
+     * /vendor paths, a directory opened as a file, a vanished path), and it used
+     * to be drained into a throwaway buffer.
+     */
+    private static String describeFailure(int exit, String stderr) {
+        String detail = stderr == null ? "" : stderr.trim();
+        if (detail.isEmpty()) return "Shell command failed (exit " + exit + ")";
+        if (detail.contains("Is a directory")) return "Cannot open as a file: it is a directory";
+        if (detail.contains("Not a directory")) return "Cannot open as a file: not a directory";
+        if (detail.contains("No such file")) return "No such file or directory";
+        if (detail.contains("Permission denied")) {
+            return detail + " (this path is not accessible to the shell user; "
+                    + "grant elevated file access or use root)";
+        }
+        return detail;
     }
 
     private static Thread drain(InputStream is, StringBuilder sb) {        Thread t = new Thread(() -> {
