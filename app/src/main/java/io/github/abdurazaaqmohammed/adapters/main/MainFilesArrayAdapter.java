@@ -166,23 +166,69 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      */
     private boolean isDir(File f) {
         try {
-            if (f == null) return false;
-            if (f.isDirectory()) return true;
-            if (f.isFile()) return false;
-            if (AccessManager.fileOpsOn(context)) {
-                String path = f.getAbsolutePath();
-                try {
-                    if (RootManager.getInstance(context).isDirectory(path)) return true;
-                } catch (Exception ignored) {
-                }
-                try {
-                    if (ShizukuManager.isDirectory(context, path)) return true;
-                } catch (Exception ignored) {
-                }
+            return f != null && f.isDirectory();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Last resort for a path the app cannot stat (RootFile/ShizukuFile carry the
+     * type from their listing, so this is rarely needed). Only the active
+     * backend is consulted, and only when the row is actually opened - doing it
+     * during bind spawned a shell per row on listings the app cannot stat.
+     */
+    private boolean resolveDirViaBackend(File f) {
+        if (f == null) return false;
+        try {
+            String path = f.getAbsolutePath();
+            AccessManager.Backend backend = AccessManager.active(context);
+            if (backend == AccessManager.Backend.ROOT) {
+                return RootManager.getInstance(context).isDirectory(path);
+            }
+            if (backend == AccessManager.Backend.SHIZUKU) {
+                return ShizukuManager.isDirectory(context, path);
             }
         } catch (Exception ignored) {
         }
         return false;
+    }
+
+    /**
+     * Opens a row: navigate when it is a folder, open it otherwise. Restricted
+     * paths are classified off the UI thread so a tap never blocks on a shell.
+     */
+    private void handleRowClick(final File f, final String fileName) {
+        if (f == null) return;
+        if (isDirCached(f)) {
+            context.clearGreen(pane1);
+            context.setSelectedPane(pane1 ? 1 : 2);
+            context.loadFolderInPaneAsync(f, pane1);
+            return;
+        }
+        if (f.isFile()) {
+            context.clearGreen(pane1);
+            context.setSelectedPane(pane1 ? 1 : 2);
+            context.setCurrentFolder(f.getParentFile(), getOldValues());
+            fileOpener.handleFileClick(f, fileName);
+            return;
+        }
+        new Thread(() -> {
+            final boolean dir = resolveDirViaBackend(f);
+            context.handler.post(() -> {
+                try {
+                    context.clearGreen(pane1);
+                    context.setSelectedPane(pane1 ? 1 : 2);
+                    if (dir) {
+                        context.loadFolderInPaneAsync(f, pane1);
+                    } else {
+                        context.setCurrentFolder(f.getParentFile(), getOldValues());
+                        fileOpener.handleFileClick(f, fileName);
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+        }).start();
     }
 
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
@@ -264,7 +310,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 });
     }
 
-    /** isDir() can hit the elevated backend; memoize per listing. */
+    /** Local directory test, memoized per listing. Never shells out. */
     private boolean isDirCached(File f) {
         if (f == null) return false;
         String key;
@@ -301,6 +347,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final TextView fileNameView, fileDateView;
         final ImageView fileIconView, appBadgeView;
         final int defaultNameColor;
+        // Last values actually pushed to the row. Re-applying the same text
+        // size or max lines invalidates the text layout on every bind, which is
+        // costly while scrolling a large folder.
+        int appliedTextSizePx = -1;
+        int appliedMaxLines = -1;
+        int appliedBackgroundColor = -2;
+        View.OnClickListener boundClickListener;
+        View.OnLongClickListener boundLongClickListener;
+        SwipeTouchListener touchListener;
+
         ViewHolder(View v) {
             super(v);
             fileNameView = v.findViewById(R.id.fileName);
@@ -320,7 +376,25 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(LayoutInflater.from(context).inflate(R.layout.list_file, parent, false));
+        ViewHolder holder = new ViewHolder(
+                LayoutInflater.from(context).inflate(R.layout.list_file, parent, false));
+        // One gesture detector per row view instead of per bind: building one
+        // allocated a GestureDetector and two interpolators on every bind.
+        holder.touchListener = new SwipeTouchListener(
+                context,
+                v -> {
+                    View.OnClickListener l = holder.boundClickListener;
+                    if (l != null) l.onClick(v);
+                },
+                v -> {
+                    View.OnLongClickListener l = holder.boundLongClickListener;
+                    return l != null && l.onLongClick(v);
+                },
+                () -> holder.getBindingAdapterPosition(),
+                MainFilesArrayAdapter.this,
+                pane1 ? 1 : 2);
+        holder.itemView.setOnTouchListener(holder.touchListener);
+        return holder;
     }
 
     /**
@@ -393,9 +467,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             holder.appBadgeView.setTag(null);
         }
 
-        holder.fileNameView.setTextSize(nameTextSize);
-        holder.fileNameView.setMaxLines(nameMaxLines);
-        holder.fileNameView.setEllipsize(TextUtils.TruncateAt.END);
+        if (holder.appliedTextSizePx != (int) (nameTextSize * holder.fileNameView.getResources().getDisplayMetrics().scaledDensity)) {
+            holder.fileNameView.setTextSize(nameTextSize);
+            holder.appliedTextSizePx = (int) (nameTextSize * holder.fileNameView.getResources().getDisplayMetrics().scaledDensity);
+        }
+        if (holder.appliedMaxLines != nameMaxLines) {
+            holder.fileNameView.setMaxLines(nameMaxLines);
+            holder.fileNameView.setEllipsize(TextUtils.TruncateAt.END);
+            holder.appliedMaxLines = nameMaxLines;
+        }
         ViewGroup.LayoutParams iconParams = holder.fileIconView.getLayoutParams();
         if (iconParams != null && (iconParams.width != rowIconPx || iconParams.height != rowIconPx)) {
             // Unconditional setLayoutParams per bind forces a remeasure of
@@ -424,7 +504,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
 
         boolean selected = selectedPositions.contains(position);
-        convertView.setBackgroundColor(selected ? Color.DKGRAY : Color.TRANSPARENT);
+        int background = selected ? Color.DKGRAY : Color.TRANSPARENT;
+        if (holder.appliedBackgroundColor != background) {
+            convertView.setBackgroundColor(background);
+            holder.appliedBackgroundColor = background;
+        }
         try {
             holder.fileNameView.setTextColor(context.isGreen(pane1, fileName) ? GREEN_NAME : holder.defaultNameColor);
         } catch (Exception ignored) {}
@@ -442,13 +526,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 context.clearGreen(pane1);
                 context.setSelectedPane(pane1 ? 1 : 2);
                 handleMultiSelect(finalPosition);
-            } : !isInZip && finalFile != null && finalPosition != 0 && !isDirCached(finalFile) ?
-                v -> {
-                    context.clearGreen(pane1);
-                    context.setSelectedPane(pane1 ? 1 : 2);
-                    context.setCurrentFolder(finalFile.getParentFile(), getOldValues());
-                    fileOpener.handleFileClick(finalFile, finalFileName);
-                } : (View.OnClickListener) v -> {
+            } : !isInZip && finalFile != null && finalPosition != 0 ?
+                v -> handleRowClick(finalFile, finalFileName) : (View.OnClickListener) v -> {
                 context.clearGreen(pane1);
                 context.setSelectedPane(pane1 ? 1 : 2);
                 if (isInZip)
@@ -458,16 +537,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             };
         }
 
-        convertView.setOnTouchListener(new SwipeTouchListener(
-                context,
-                originalClickListener,
-                v -> {
-                    showRowMenu(finalPosition, finalFile, finalEntry, finalFileName, finalItem);
-                    return true;
-                },
-                finalPosition,
-                MainFilesArrayAdapter.this,
-                pane1 ? 1 : 2));
+        holder.boundClickListener = originalClickListener;
+        holder.boundLongClickListener = v -> {
+            showRowMenu(holder.getBindingAdapterPosition(), finalFile, finalEntry, finalFileName, finalItem);
+            return true;
+        };
     }
 
     /**

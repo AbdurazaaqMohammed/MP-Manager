@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import androidx.annotation.NonNull;
 import androidx.core.view.GestureDetectorCompat;
+import androidx.recyclerview.widget.RecyclerView;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
@@ -21,6 +22,11 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private final View.OnLongClickListener originalLongClickListener;
     private final Object arrayAdapter;
     private final int position;
+    private final PositionSource positionSource;
+
+    public interface PositionSource {
+        int currentPosition();
+    }
 
     private final float swipeSlopPx;
     private final float swipeConfirmPx;
@@ -39,9 +45,32 @@ public class SwipeTouchListener implements View.OnTouchListener {
                               View.OnLongClickListener longClickListener,
                               int position,
                               Object arrayAdapter, int pane) {
+        this(context, clickListener, longClickListener, null, position, arrayAdapter, pane);
+    }
+
+    /**
+     * Variant that resolves the row position at event time. Recycling a row no
+     * longer needs a new detector, so one can be built per row view instead of
+     * one per bind.
+     */
+    public SwipeTouchListener(MainActivity context,
+                              View.OnClickListener clickListener,
+                              View.OnLongClickListener longClickListener,
+                              PositionSource positionSource,
+                              Object arrayAdapter, int pane) {
+        this(context, clickListener, longClickListener, positionSource, RecyclerView.NO_POSITION, arrayAdapter, pane);
+    }
+
+    private SwipeTouchListener(MainActivity context,
+                               View.OnClickListener clickListener,
+                               View.OnLongClickListener longClickListener,
+                               PositionSource positionSource,
+                               int position,
+                               Object arrayAdapter, int pane) {
         this.originalClickListener = clickListener;
         this.originalLongClickListener = longClickListener;
         this.position = position;
+        this.positionSource = positionSource;
         this.context = context;
         this.arrayAdapter = arrayAdapter;
         this.pane = pane;
@@ -58,7 +87,8 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
                             if (arrayAdapter instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) arrayAdapter).isMultiSelectMode()) {
-                                ((MainFilesArrayAdapter) arrayAdapter).handleMultiSelect(position);
+                                int pos = resolvePosition();
+                                if (pos != RecyclerView.NO_POSITION) ((MainFilesArrayAdapter) arrayAdapter).handleMultiSelect(pos);
                             } else {
                                 originalClickListener.onClick(null);
                             }
@@ -76,6 +106,17 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         }
                     }
                 });
+    }
+
+    private int resolvePosition() {
+        if (positionSource != null) {
+            try {
+                return positionSource.currentPosition();
+            } catch (Exception ignored) {
+                return RecyclerView.NO_POSITION;
+            }
+        }
+        return position;
     }
 
     @Override
@@ -133,21 +174,22 @@ public class SwipeTouchListener implements View.OnTouchListener {
                     float translation = Math.abs(v.getTranslationX());
                     boolean confirmed = translation >= swipeConfirmPx * 0.75f;
 
-                    if (confirmed && event.getActionMasked() == MotionEvent.ACTION_UP) {
-                        float direction = v.getTranslationX() > 0 ? 1f : -1f;
-                        v.animate()
-                                .translationX(direction * swipeConfirmPx * 1.15f)
-                                .setDuration(80)
-                                .withEndAction(() -> v.animate()
-                                        .translationX(0)
-                                        .setDuration(220)
-                                        .setInterpolator(new DecelerateInterpolator(1.8f))
-                                        .start())
-                                .start();
+if (confirmed && event.getActionMasked() == MotionEvent.ACTION_UP) {
+                            float direction = v.getTranslationX() > 0 ? 1f : -1f;
+                            v.animate()
+                                    .translationX(direction * swipeConfirmPx * 1.15f)
+                                    .setDuration(80)
+                                    .withEndAction(() -> v.animate()
+                                            .translationX(0)
+                                            .setDuration(220)
+                                            .setInterpolator(new DecelerateInterpolator(1.8f))
+                                            .start())
+                                    .start();
 
-                        if (arrayAdapter instanceof MainFilesArrayAdapter ma)
-                            ma.handleSwipe(position);
-                    } else {
+                            int pos = resolvePosition();
+                            if (arrayAdapter instanceof MainFilesArrayAdapter ma && pos != RecyclerView.NO_POSITION)
+                                ma.handleSwipe(pos);
+                        } else {
                         v.animate().translationX(0).setDuration(180).setInterpolator(new DecelerateInterpolator(1.5f)).start();
                     }
                     isSwiping = false;
