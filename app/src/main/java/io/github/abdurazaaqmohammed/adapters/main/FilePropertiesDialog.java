@@ -56,13 +56,11 @@ public class FilePropertiesDialog {
     private final MainActivity context;
     private final DialogUtil dialogUtil;
     private final ChecksumDialogs checksumDialogs;
-    private final PermissionsEditorHelper permissionsEditor;
 
     public FilePropertiesDialog(MainActivity context, DialogUtil dialogUtil, ChecksumDialogs checksumDialogs) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.checksumDialogs = checksumDialogs;
-        this.permissionsEditor = new PermissionsEditorHelper(context);
     }
 
     public void show(boolean multi, Object[] values, Set<Integer> selectedPositions,
@@ -176,81 +174,81 @@ public class FilePropertiesDialog {
         }
 
         RootManager rm = RootManager.getInstance(context);
-        if (!isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+        boolean canEditPerms = !isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        // Built up front so the OK handler can apply the mode; the dialog itself
+        // is created once at the end so the checksum section is always present.
+        // Returning early from the permissions block used to skip it entirely,
+        // which is why checksums vanished in root mode.
+        final PermissionsEditorHelper editor = canEditPerms ? new PermissionsEditorHelper(context) : null;
+        // Guards against saving before stat loaded, which previously chmodded
+        // to 0 - or silently did nothing at all.
+        final boolean[] permsLoaded = {false};
+        if (canEditPerms) {
             TextView permsTitle = new TextView(context);
             permsTitle.setText(R.string.root_permissions);
             permsTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
             permsTitle.setPadding(0, dp(12), 0, dp(4));
             propRows.addView(permsTitle);
 
-            View permsEditor = permissionsEditor.createPermissionsEditor("0000");
-            propRows.addView(permsEditor);
+            View permsEditorView = editor.createPermissionsEditor("0000");
+            propRows.addView(permsEditorView);
 
             new Thread(() -> {
                 String perms = rm.getPermissions(file.getAbsolutePath());
                 context.handler.post(() -> {
-                    if (perms != null) {
-                        int[] bits = parsePermsForEditor(perms);
-                        String numeric = String.valueOf(bits[0] * 1000 + bits[1] * 100 + bits[2] * 10 + bits[3]);
-                        propRows.removeView(permsEditor);
-                        View refreshedEditor = permissionsEditor.createPermissionsEditor(numeric);
-                        propRows.addView(refreshedEditor, propRows.getChildCount() - 1);
+                    if (perms == null || perms.isEmpty()) {
+                        Extensions.showMessage(context, R.string.permissions_unavailable);
+                        return;
                     }
+                    editor.applyNumericPerms(perms);
+                    permsLoaded[0] = true;
                 });
             }).start();
-
-            selfDialog[0] = dialogUtil.getDialogBuilder()
-                    .setTitle(context.getString(R.string.properties))
-                    .setView(wrapInScroll(propView))
-                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                        String permsStr = String.valueOf(permissionsEditor.getNumericValue());
-                        if (!permsStr.equals("0")) {
-                            new Thread(() -> {
-                                try {
-                                    rm.chmod(file.getAbsolutePath(), permsStr);
-                                    Extensions.showMessage(context, R.string.permissions_updated);
-                                } catch (Exception e) {
-                                    context.handler.post(() ->
-                                            new ErrorUtil(context).showError(e));
-                                }
-                            }).start();
-                        }
-                    })
-                    .create();
-            dialogUtil.styleAlertDialog(selfDialog[0]);
-            return;
         }
 
         Map<String, String> propHashes = new HashMap<>();
         ChecksumDialogs.HashProvider propSupplier = () -> propHashes;
-        if (!isInZip && !multi && file.isFile()) {
-            if (RootStaging.needsStaging(context, file)) {
-                // Root-only file: hash a staged copy (HashUtil needs FileInputStream).
+        // A root-only file cannot be stat()ed by the app, so isFile() is false for
+        // it even though it is very much a file. needsStaging() answers via the
+        // backend and keeps the checksum section available for those paths.
+        boolean needsStaging = !isInZip && !multi && !file.isDirectory()
+                && RootStaging.needsStaging(context, file);
+        if (!isInZip && !multi && (file.isFile() || needsStaging)) {
+            if (needsStaging) {
+                // Root-only file: hash a staged copy (HashUtil needs a FileInputStream).
                 Runnable runStagedChecksum = () -> {
+                    checksumRows.removeAllViews();
                     TextView hint = new TextView(context);
+                    hint.setText(R.string.checksum_reading_elevated);
                     checksumRows.addView(hint);
                     new Thread(() -> {
+                        File staged = null;
                         try {
-                            File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                            staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                            final Map<String, String> hashes = HashUtil.hashAll(staged);
                             context.handler.post(() -> {
                                 checksumRows.removeAllViews();
-                                checksumDialogs.startChecksumComputation(checksumRows, staged, propHashes);
+                                showHashes(checksumRows, hashes, propHashes);
                                 checksumDialogs.addVerifySection(checksumRows, propSupplier);
                             });
                         } catch (Exception e) {
                             context.handler.post(() -> {
                                 checksumRows.removeAllViews();
                                 TextView err = new TextView(context);
-                                err.setText("Checksum unavailable: " + e.getMessage());
+                                err.setText(context.getString(R.string.checksum_unavailable,
+                                        e.getMessage() == null ? e.toString() : e.getMessage()));
                                 checksumRows.addView(err);
                             });
+                        } finally {
+                            // The staged copy is disposable; nothing else holds it.
+                            if (staged != null) {
+                                //noinspection ResultOfMethodCallIgnored
+                                staged.delete();
+                            }
                         }
                     }).start();
                 };
-                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
-                    checksumRows.removeAllViews();
-                    runStagedChecksum.run();
-                });
+                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> runStagedChecksum.run());
                 runStagedChecksum.run();
             } else {
                 propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
@@ -280,9 +278,41 @@ public class FilePropertiesDialog {
         selfDialog[0] = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.properties))
                 .setView(wrapInScroll(propView))
-                .setPositiveButton(android.R.string.ok, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    if (editor == null) return;
+                    if (!permsLoaded[0] || !editor.isReady()) {
+                        Extensions.showMessage(context, R.string.permissions_unavailable);
+                        return;
+                    }
+                    String permsStr = String.valueOf(editor.getNumericValue());
+                    new Thread(() -> {
+                        try {
+                            rm.chmodFs(file.getAbsolutePath(), permsStr);
+                            rm.invalidateListCache();
+                            context.handler.post(() ->
+                                    Extensions.showMessage(context, R.string.permissions_updated));
+                        } catch (Exception e) {
+                            context.handler.post(() ->
+                                    new ErrorUtil(context).showError(e));
+                        }
+                    }).start();
+                })
                 .create();
         dialogUtil.styleAlertDialog(selfDialog[0]);
+    }
+
+    /** Fills the checksum rows from an already-computed set of digests. */
+    private void showHashes(LinearLayout container, Map<String, String> hashes,
+                            Map<String, String> out) {
+        for (String algo : HashUtil.ALGORITHMS) {
+            TextView tv = checksumDialogs.addChecksumRow(container, algo);
+            String value = hashes.get(algo);
+            tv.setText(value == null ? "—" : value);
+        }
+        if (out != null) {
+            out.clear();
+            out.putAll(hashes);
+        }
     }
 
     private long getFolderSize(File file, TextView toUpdate) {
@@ -545,31 +575,6 @@ public class FilePropertiesDialog {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private int[] parsePermsForEditor(String perms) {
-        int[] result = new int[4];
-        if (TextUtils.isEmpty(perms)) return result;
-        try {
-            String clean = perms.trim();
-            int i = Integer.parseInt(String.valueOf(clean.charAt(0)));
-            int i1 = Integer.parseInt(String.valueOf(clean.charAt(1)));
-            int i2 = Integer.parseInt(String.valueOf(clean.charAt(2)));
-            if (clean.length() == 3) {
-                result[1] = i;
-                result[2] = i1;
-                result[3] = i2;
-                result[0] = 0;
-            } else if (clean.length() == 4) {
-                result[0] = i;
-                result[1] = i1;
-                result[2] = i2;
-                result[3] = Integer.parseInt(String.valueOf(clean.charAt(3)));
-            }
-        } catch (NumberFormatException e) {
-            result = new int[4];
-        }
-        return result;
     }
 
     private View wrapInScroll(View content) {
