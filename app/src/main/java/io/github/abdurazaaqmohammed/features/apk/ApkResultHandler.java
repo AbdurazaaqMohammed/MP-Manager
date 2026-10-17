@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Looper;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -20,6 +21,8 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.ArchiveBackupUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
@@ -77,13 +80,25 @@ public class ApkResultHandler {
                             : path.substring(path.lastIndexOf("/") + 1);
                     LinearLayout ll = (LinearLayout) LayoutInflater.from(activity).inflate(R.layout.item_modified_dialog, null);
                     String zipFileName = zipFile.getName();
-                    boolean isApk = zipFileName.endsWith(".apk");
+                    boolean isApk = ApkIconHelper.isApkArchiveName(zipFileName);
                     ll.<TextView>findViewById(R.id.modifiedText).setText(activity.rss.getString(R.string.file_modified_x, modifiedFileName, (isApk ? "APK" : "ZIP")));
                     CheckBox autosign = ll.findViewById(R.id.autosign);
                     boolean[] sign = new boolean[1];
-                    autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                    // Signing only makes sense for an APK. Plain ZIPs were offered
+                    // the sign prompt and then silently ignored it, so hide the
+                    // option entirely instead of asking a question with no answer.
+                    sign[0] = isApk && settings.getBoolean("autosign", true);
+                    autosign.setChecked(sign[0]);
+                    View signRow = ll.findViewById(R.id.autosign);
+                    View signSettingsRow = ll.findViewById(R.id.sign_settings);
+                    if (!isApk && signRow.getParent() instanceof View) {
+                        ((View) signRow.getParent()).setVisibility(View.GONE);
+                    } else {
+                        signRow.setVisibility(View.VISIBLE);
+                        signSettingsRow.setVisibility(View.VISIBLE);
+                    }
                     autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
-                    ll.findViewById(R.id.sign_settings).setOnClickListener(activity.uiHelper.showSignSettingsDialog());
+                    signSettingsRow.setOnClickListener(activity.uiHelper.showSignSettingsDialog());
                     new MaterialAlertDialogBuilder(activity)
                         .setTitle(activity.getString(R.string.file_modified))
                         .setView(ll)
@@ -100,15 +115,38 @@ public class ApkResultHandler {
                                 new Thread(() -> {
                                     List<String> addedNames = new ArrayList<>();
                                     try (ZipFile zf = new ZipFile(zipFile)) {
-                                        if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                         if (modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                             File modifiedFile = new File(path);
                                             File folder = modifiedFile.getParentFile();
                                             File[] dexFiles = folder == null ? null : folder.listFiles((dir, name1) -> name1.endsWith(".dex"));
                                             if (dexFiles == null || dexFiles.length == 0) throw new IOException("No dex files found");
-                                            for (File dexFile : dexFiles) addedNames.add(dexFile.getName());
+                                            boolean changed = false;
+                                            for (File dexFile : dexFiles) {
+                                                if (ArchiveBackupUtil.isEntryChanged(zf, dexFile.getName(), dexFile)) changed = true;
+                                            }
+                                            if (!changed) {
+                                                // Nothing actually differs, so leave the
+                                                // archive (and its backup) untouched.
+                                                pm.dismiss();
+                                                activity.handler.post(() -> Extensions.showMessage(activity, R.string.archive_unchanged));
+                                                return;
+                                            }
+                                            if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
+                                            for (File dexFile : dexFiles) {
+                                                ArchiveBackupUtil.backupEntryIfChanged(zf, dexFile.getName(), dexFile);
+                                                addedNames.add(dexFile.getName());
+                                            }
                                             zf.addFiles(Arrays.asList(dexFiles));
                                         } else {
+                                            File replacement = new File(path);
+                                            String targetEntry = entryName != null ? entryName : modifiedFileName;
+                                            if (!ArchiveBackupUtil.isEntryChanged(zf, targetEntry, replacement)) {
+                                                pm.dismiss();
+                                                activity.handler.post(() -> Extensions.showMessage(activity, R.string.archive_unchanged));
+                                                return;
+                                            }
+                                            if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
+                                            ArchiveBackupUtil.backupEntryIfChanged(zf, targetEntry, replacement);
                                             addedNames.add(modifiedFileName);
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
@@ -185,13 +223,21 @@ public class ApkResultHandler {
                     try {
                         d.dismiss();
                     } catch (Exception ignored) {}
-                    boolean outerApk = parent.outerZip.getName().endsWith(".apk");
+                    boolean outerApk = ApkIconHelper.isApkArchiveName(parent.outerZip.getName());
                     Runnable apply = () -> {
                         ProgressManager pm = new ProgressManager(activity, true).show();
                         pm.setText(activity.rss.getString(R.string.adding, innerName));
                         new Thread(() -> {
                             try (ZipFile zf = new ZipFile(parent.outerZip)) {
+                                // An unchanged inner archive must not rewrite the
+                                // outer one or trigger a pointless re-sign.
+                                if (!ArchiveBackupUtil.isEntryChanged(zf, parent.entryPath, innerZip)) {
+                                    pm.dismiss();
+                                    activity.handler.post(() -> chainUpdateOuter(parent.outerZip, wrapper, sign, pane1, depth + 1));
+                                    return;
+                                }
                                 if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(parent.outerZip);
+                                ArchiveBackupUtil.backupEntryIfChanged(zf, parent.entryPath, innerZip);
                                 ZipParameters zp = new ZipParameters();
                                 zp.setCompressionMethod(CompressionMethod.DEFLATE);
                                 zp.setFileNameInZip(parent.entryPath);
