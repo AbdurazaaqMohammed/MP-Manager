@@ -298,7 +298,7 @@ public class ApkManifestEditor {
         }
         updateResolvedLabel(appNameResolved, appName, resEntries);
         if (appNameInput instanceof EditText) {
-            ((EditText) appNameInput).addTextChangedListener(new TextWatcher() {
+            appNameInput.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
                 @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
                 @Override public void afterTextChanged(Editable s) {
@@ -754,13 +754,12 @@ public class ApkManifestEditor {
                     for (ResEntry e : decodedResources) {
                         if (ids.contains(e.getResourceId())) iconEntries.add(e);
                     }
-                    if (iconEntries.isEmpty()) return targets;
                 } else {
                     for (ResEntry e : decodedResources) {
                         if (wanted.contains(e.getName())) iconEntries.add(e);
                     }
-                    if (iconEntries.isEmpty()) return targets;
                 }
+                if (iconEntries.isEmpty()) return targets;
             }
 
             for (ResEntry e : iconEntries) addIconPath(zf, targets, e.getValue());

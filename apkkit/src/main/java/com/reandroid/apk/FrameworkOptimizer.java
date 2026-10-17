@@ -133,7 +133,7 @@ import java.util.zip.ZipEntry;
         logMessage("Compressing manifest ...");
         int prev = manifestBlock.countBytes();
         ResXmlElement manifest = manifestBlock.getDocumentElement();
-        manifest.removeIf(new Predicate<ResXmlNode>() {
+        manifest.removeIf(new Predicate<>() {
             @Override
             public boolean evaluate(ResXmlNode xmlNode) {
                 return !(xmlNode instanceof ResXmlElement) ||

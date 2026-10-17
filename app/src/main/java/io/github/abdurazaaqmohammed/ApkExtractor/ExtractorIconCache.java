@@ -17,7 +17,7 @@ public final class ExtractorIconCache {
 
     private static final int MAX_FILES = 400;
 
-    private final LruCache<String, Drawable> memory = new LruCache<String, Drawable>(64) {
+    private final LruCache<String, Drawable> memory = new LruCache<>(64) {
         @Override
         protected int sizeOf(String key, Drawable value) {
             return 1;

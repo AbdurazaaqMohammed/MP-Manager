@@ -19,7 +19,6 @@ import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.snackbar.Snackbar;
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import io.github.abdurazaaqmohammed.utils.AppGson;

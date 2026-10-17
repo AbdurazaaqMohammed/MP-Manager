@@ -185,7 +185,7 @@ public List<Note> query(int filter, String tag, String search, int sort, boolean
 
     private void sort(List<Note> list, int sort, boolean ascending) {
         final boolean asc = ascending;
-        Collections.sort(list, new Comparator<Note>() {
+        Collections.sort(list, new Comparator<>() {
             @Override
             public int compare(Note a, Note b) {
                 if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
