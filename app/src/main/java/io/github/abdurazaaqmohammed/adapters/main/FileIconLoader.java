@@ -289,9 +289,12 @@ public class FileIconLoader {
             sizeCache.put(tag, size);
             mtimeCache.put(tag, mtime);
             if (!tag.equals(fileDateView.getTag())) return;
-            if (size <= 0 && mtime <= 0) return;
+            // Memoize the negative result too. Empty files stat as 0/0, and
+            // without this every rebind of an empty root-only row asked the
+            // backend again, spending two shell spawns each time.
             long[] memo = new long[]{0, Math.max(0, size), Math.max(0, mtime)};
             metaMemo.put(tag, memo);
+            if (size <= 0 && mtime <= 0) return;
             final long finalSize = memo[1];
             final long finalMtime = memo[2];
             context.runOnUiThread(() -> {

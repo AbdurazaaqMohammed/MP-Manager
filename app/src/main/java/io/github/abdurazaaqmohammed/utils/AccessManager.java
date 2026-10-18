@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 public final class AccessManager {
 
     public enum Backend { NONE, ROOT, SHIZUKU }
@@ -289,6 +291,61 @@ public final class AccessManager {
             }
         }
         FileUtils.copyFolder(new File(src), new File(dest));
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps. Equivalent to a copy
+     * followed by {@link #preserveTime}, but for the root backend it is a single
+     * {@code cp -pf} instead of a copy plus a stat plus a {@code touch}, which
+     * is what made moving small and empty files feel slow in root mode.
+     */
+    public static void copyPreserving(Context context, String src, String dest, boolean directory,
+                                      boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager rm = RootManager.getInstance(context);
+                if (directory) rm.copyDirPreserving(src, dest);
+                else rm.copyFilePreserving(src, dest);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                if (directory) ShizukuManager.copyDir(context, src, dest);
+                else ShizukuManager.copyFile(context, src, dest);
+                preserveTime(context, src, dest);
+                return;
+            }
+        }
+        if (directory) FileUtils.copyFolder(new File(src), new File(dest));
+        else FileUtils.copyFile(new File(src), new File(dest));
+        preserveTime(context, src, dest);
+    }
+
+    /**
+     * Deletes every path in one round trip when the backend allows it.
+     *
+     * @return the paths that were handled by the backend.
+     */
+    public static List<String> deleteAll(Context context, List<String> paths, boolean useElevated) throws IOException {
+        if (paths == null || paths.isEmpty()) return new ArrayList<>();
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).deleteAll(paths);
+            if (backend == Backend.SHIZUKU) {
+                List<String> done = new ArrayList<>();
+                for (String path : paths) {
+                    ShizukuManager.delete(context, path);
+                    done.add(path);
+                }
+                return done;
+            }
+        }
+        List<String> done = new ArrayList<>();
+        for (String path : paths) {
+            delete(context, path, false);
+            done.add(path);
+        }
+        return done;
     }
 
     public static void mkdir(Context context, String path, boolean useElevated) throws IOException {

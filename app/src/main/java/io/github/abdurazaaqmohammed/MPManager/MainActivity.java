@@ -138,6 +138,7 @@ import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -1979,7 +1980,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ZipEntryInfo parent = null;
         HashSet<String> seenDirs = new HashSet<>() {
         };
-        try (ZipFile zf = new ZipFile(zipFile)) {
+        {
             String parentPath = TextUtils.isEmpty(path) ? "" : path;
             if (!TextUtils.isEmpty(parentPath) && !parentPath.endsWith("/")) parentPath += "/";
             if (TextUtils.isEmpty(path)) {
@@ -1992,7 +1993,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 entries.add(parent);
             }
 
-            List<FileHeader> fhs = zf.getFileHeaders();
+            List<FileHeader> fhs = ZipCompat.listHeaders(zipFile);
             String prefix = parentPath;
             Map<String, long[]> dirStats = new HashMap<>();
             for (FileHeader fh : fhs) {

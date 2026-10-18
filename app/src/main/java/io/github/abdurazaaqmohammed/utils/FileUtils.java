@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
+import java.util.Collection;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
@@ -271,5 +272,37 @@ public class FileUtils {
 
     public static File getUnusedFile(File appFolder, String name) {
         return getUnusedFile(new File(appFolder, name));
+    }
+
+    /**
+     * Counts the files a copy, move, delete or compress will touch, so a
+     * progress dialog can show a real total instead of a spinner.
+     *
+     * <p>The walk happens before any work starts, so it stops at {@code cap}
+     * entries; without that a huge tree would cost more than the operation it
+     * is measuring. The result is always at least one so the progress bar has a
+     * usable maximum.
+     */
+    public static int countFilesForProgress(Collection<File> roots, int cap) {
+        int total = 0;
+        if (roots == null) return 1;
+        for (File root : roots) {
+            if (total >= cap) break;
+            total += countFilesForProgress(root, cap - total);
+        }
+        return Math.max(1, total);
+    }
+
+    public static int countFilesForProgress(File root, int cap) {
+        if (root == null) return 0;
+        if (cap <= 0) return 0;
+        File[] children = root.listFiles();
+        if (children == null || children.length == 0) return 1;
+        int total = 0;
+        for (File child : children) {
+            if (total >= cap) break;
+            total += child.isDirectory() ? countFilesForProgress(child, cap - total) : 1;
+        }
+        return total;
     }
 }
