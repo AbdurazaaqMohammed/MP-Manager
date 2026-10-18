@@ -1,11 +1,8 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
-import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
 import java.io.File;
-import java.io.InputStream;
-import java.util.zip.CRC32;
 
 /**
  * Value holder for one zip entry. Moved here from the adapters package;
@@ -41,8 +38,10 @@ public class ZipEntryInfo {
         this.isDirectory = isDir;
         String cleaned = isDir ? entryName.replaceAll("/+$","") : entryName;
         this.name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/')+1);
-        this.size = fileHeader.getUncompressedSize() < 0 ? 0 : fileHeader.getUncompressedSize();
-        this.lastModified = fileHeader.getLastModifiedTime() >= 0 ? fileHeader.getLastModifiedTime() : 0L;
+        long size = fileHeader.getUncompressedSize();
+        long time = fileHeader.getLastModifiedTime();
+        this.size = size < 0 ? 0 : size;
+        this.lastModified = time >= 0 ? time : 0L;
         this.zipFile = zipFile;
     }
 
@@ -55,18 +54,6 @@ public class ZipEntryInfo {
 
     public long computeCrc32() {
         if (isDirectory || zipFile == null || fullPath == null) return -1;
-        try (ZipFile zf = new ZipFile(zipFile)) {
-            FileHeader fh = zf.getFileHeader(fullPath);
-            if (fh == null) return -1;
-            CRC32 crc = new CRC32();
-            try (InputStream is = zf.getInputStream(fh)) {
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = is.read(buf)) != -1) crc.update(buf, 0, n);
-            }
-            return crc.getValue();
-        } catch (Exception e) {
-            return -1;
-        }
+        return io.github.abdurazaaqmohammed.utils.ZipCompat.crc32(zipFile, fullPath);
     }
 }
