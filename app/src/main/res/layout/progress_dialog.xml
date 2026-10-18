@@ -31,4 +31,16 @@
     android:indeterminate="true"
     android:layout_centerHorizontal="true"
     android:layout_below="@id/dialogTitle"/>
+
+<TextView
+    android:id="@+id/progressCount"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/progressBar"
+    android:layout_alignParentStart="true"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="8dp"
+    android:textSize="14sp"
+    android:visibility="gone"/>
 </RelativeLayout>

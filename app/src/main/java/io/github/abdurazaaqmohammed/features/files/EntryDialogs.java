@@ -207,7 +207,8 @@ public class EntryDialogs {
     public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
         Object[] values = state.values();
         boolean isInZip = state.isInZip();
-        ProgressManager pm = new ProgressManager(context, true);
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.showCount(true);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -236,35 +237,55 @@ public class EntryDialogs {
                         boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
                         if (multi) {
                             if (!isInZip) {
-                                File selectedFile = null;
+                                List<File> selectedFiles = new ArrayList<>();
                                 for (int i : state.selectedPositions()) {
-                                    selectedFile = (File) values[i];
-                                    File finalSelectedFile1 = selectedFile;
-                                    if (finalSelectedFile1 != null)
-                                        pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
-
-                                    if (useElevatedForDelete) {
-                                        try {
-                                            AccessManager.delete(context, selectedFile.getAbsolutePath(), true);
-                                            continue;
-                                        } catch (Exception ignored) {}
-                                    }
-                                    if (selectedFile.isDirectory())
-                                        Util.deleteDir(selectedFile);
-                                    else
-                                        selectedFile.delete();
+                                    File f = (File) values[i];
+                                    if (f != null) selectedFiles.add(f);
                                 }
-                                if (selectedFile != null) {
-                                    File finalSelectedFile = selectedFile;
-                                    context.handler.post(() -> {
-                                        state.clearSelection();
-                                        context.refreshPaneAfterChange(pane1, null);
-                                    });
-                                } else context.handler.post(state::clearSelection);
+                                int totalSelected = FileUtils.countFilesForProgress(selectedFiles, 20000);
+                                pm.setProgress(0, totalSelected);
+                                if (useElevatedForDelete) {
+                                    // One shell round trip for the whole selection:
+                                    // deleting item by item spent a su spawn per
+                                    // file, all serialised behind the same lock.
+                                    List<String> paths = new ArrayList<>(selectedFiles.size());
+                                    for (File f : selectedFiles) paths.add(f.getAbsolutePath());
+                                    try {
+                                        AccessManager.deleteAll(context, paths, true);
+                                    } catch (Exception ignored) {
+                                        int removed = 0;
+                                        for (File f : selectedFiles) {
+                                            try {
+                                                AccessManager.delete(context, f.getAbsolutePath(), true);
+                                                removed += FileUtils.countFilesForProgress(f, 20000);
+                                            } catch (Exception ignoredInner) {
+                                                if (f.isDirectory()) Util.deleteDir(f);
+                                                else f.delete();
+                                                removed++;
+                                            }
+                                            pm.setProgress(Math.min(removed, totalSelected), totalSelected);
+                                        }
+                                    }
+                                } else {
+                                    int removed = 0;
+                                    for (File f : selectedFiles) {
+                                        if (f.isDirectory()) Util.deleteDir(f);
+                                        else f.delete();
+                                        removed += FileUtils.countFilesForProgress(f, 20000);
+                                        pm.setProgress(Math.min(removed, totalSelected), totalSelected);
+                                    }
+                                }
+                                pm.setProgress(totalSelected, totalSelected);
+                                context.handler.post(() -> {
+                                    state.clearSelection();
+                                    context.refreshPaneAfterChange(pane1, null);
+                                });
                             } else {
                                 List<ZipEntryInfo> selected = new ArrayList<>();
                                 for (int i : state.selectedPositions()) selected.add((ZipEntryInfo) values[i]);
+                                pm.setProgress(0, Math.max(1, selected.size()));
                                 fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                                pm.setProgress(Math.max(1, selected.size()), Math.max(1, selected.size()));
                                 if (sign[0]) wrapper[0].signApk(zipFile);
                                 File changedZip = zipFile != null ? zipFile
                                         : (selected.isEmpty() ? null : selected.get(0).getZipFile());
@@ -272,7 +293,7 @@ public class EntryDialogs {
                                 context.handler.post(state::clearSelection);
                             }
                         } else if (!isInZip) {
-                            int total = (int) Util.countInsideFolder(file).total();
+                            int total = Math.max(1, FileUtils.countFilesForProgress(file, 20000));
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
@@ -287,12 +308,15 @@ public class EntryDialogs {
                                 if (file.isDirectory()) Util.deleteDir(file);
                                 else file.delete();
                             }
+                            pm.setProgress(total, total);
                             context.handler.post(() -> {
                                 state.clearSelection();
                                 context.refreshPaneAfterChange(pane1, null);
                             });
                         } else {
+                            pm.setProgress(0, 1);
                             fileOps.deleteZipEntry(entry);
+                            pm.setProgress(1, 1);
                             if (sign[0]) wrapper[0].signApk(zipFile);
                             context.offerOuterUpdate(zipFile, pane1);
                             context.handler.post(state::clearSelection);
@@ -490,7 +514,8 @@ public class EntryDialogs {
         compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
         compressDialog.setView(compressView);
         compressDialog.setNegativeButton(context.rss.getString(android.R.string.cancel), null);
-        ProgressManager pm = new ProgressManager(context, true);
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.showCount(true);
         compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> {
             String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
             if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
@@ -526,6 +551,8 @@ public class EntryDialogs {
                 if (multi) {
                     for (int i : state.selectedPositions()) sources.add((File) values[i]);
                 } else sources.add(file);
+                final int totalSources = Math.max(1, FileUtils.countFilesForProgress(sources, 20000));
+                pm.setProgress(0, totalSources);
 
                 boolean compressElevated = AccessManager.fileOpsOn(context);
                 File compressStageTmp = null;
@@ -589,12 +616,16 @@ public class EntryDialogs {
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zf.setPassword(pw.toString().toCharArray());
                         }
+                        int compressed = 0;
                         for (File source : finalSources) {
                             if (source.isDirectory())
                                 zf.addFolder(source, zipParameters);
                             else zf.addFile(source, zipParameters);
+                            compressed += Math.max(1, FileUtils.countFilesForProgress(source, 20000));
+                            pm.setProgress(Math.min(compressed, totalSources), totalSources);
                         }
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        pm.setProgress(totalSources, totalSources);
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
@@ -616,6 +647,7 @@ public class EntryDialogs {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        pm.setProgress(totalSources, totalSources);
                         pm.dismiss();
                         context.handler.post(context::reloadCurrentFolder);
                     } catch (Exception e) {
