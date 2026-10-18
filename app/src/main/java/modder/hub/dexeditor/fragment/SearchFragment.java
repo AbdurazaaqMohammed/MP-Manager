@@ -111,6 +111,7 @@ import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.Notify_MT;
+import modder.hub.dexeditor.utils.RegexGuard;
 import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -560,10 +561,17 @@ public class SearchFragment extends Fragment {
                     Extensions.showMessage(_context, "Value format error");
                     return; }
             }
+            lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
+            if (lastIsRegex && !type.equals("Integer")) {
+                String regexError = RegexGuard.validate(query, lastMatchCase);
+                if (regexError != null) {
+                    Extensions.showMessage(requireActivity(), regexError);
+                    return; }
+                if (RegexGuard.mayBacktrackCatastrophically(query))
+                    Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files"); }
             lastSearchQuery = query; lastSearchType = type;
             if (!query.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, query);
             if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
-            lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
             List<String> scopeClasses = null;
             if (searchInResults) { scopeClasses = new ArrayList<>(); collectClassFullNames(searchResults, scopeClasses); }
             searchResults.clear(); currentQuery = null; adapter.refreshVisibleNodes(); updateUIState();
@@ -637,19 +645,34 @@ public class SearchFragment extends Fragment {
         });
 
         // Setting up the replace dialog with options like regex and match case
-        new MaterialAlertDialogBuilder(requireContext())
+        AlertDialog replaceDialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.replace)
                 .setView(dialogView)
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
-                    lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
-                    if (!find.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, find);
-                    List<String> scopeClasses = new ArrayList<>();
-                    collectClassFullNames(searchResults, scopeClasses);
-                    new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
-                })
+                .setPositiveButton(android.R.string.ok, null)
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        replaceDialog.show();
+
+        // Set after show() so an unusable pattern keeps the dialog open instead
+        // of dismissing it and losing the typed query.
+        replaceDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
+            boolean regexMode = cbRegex.isChecked(), matchCaseMode = cbMatchCase.isChecked();
+            if (regexMode) {
+                String regexError = RegexGuard.validate(find, matchCaseMode);
+                if (regexError != null) {
+                    Extensions.showMessage(requireActivity(), regexError);
+                    return; }
+                if (RegexGuard.mayBacktrackCatastrophically(find))
+                    Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files");
+            }
+            lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = matchCaseMode; lastIsRegex = regexMode; lastExactlyMatch = cbExactlyMatch.isChecked();
+            if (!find.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, find);
+            List<String> scopeClasses = new ArrayList<>();
+            collectClassFullNames(searchResults, scopeClasses);
+            replaceDialog.dismiss();
+            new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
+        });
     }
 
 
@@ -1320,6 +1343,7 @@ public class SearchFragment extends Fragment {
         }
     }
     private static class ReplaceTask {
+        private static final Pattern STRING_LITERAL = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"");
         private final WeakReference<SearchFragment> fragmentRef;
         private final String findQuery;
         private final String replaceWith;
@@ -1329,6 +1353,7 @@ public class SearchFragment extends Fragment {
         private final boolean exactlyMatch;
         private final List<String> scopeClasses;
         private final Pattern compiledPattern;
+        private final Pattern stringPattern;
         private final List<String> errorClasses = Collections.synchronizedList(new ArrayList<>());
         private final AtomicInteger replacedCount = new AtomicInteger(0);
         private final AtomicInteger affectedClasses = new AtomicInteger(0);
@@ -1353,10 +1378,16 @@ public class SearchFragment extends Fragment {
             this.scopeClasses = scopeClasses;
 
             if (isRegex) {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
-                this.compiledPattern = Pattern.compile(findQuery, flags);
+                // The dialog validates first; this second check keeps a task
+                // built from any other entry point from crashing the process.
+                this.compiledPattern = RegexGuard.compile(findQuery, matchCase);
+                String literal = exactlyMatch ? RegexGuard.anchorWhole(findQuery) : findQuery;
+                this.stringPattern = RegexGuard.compile(literal, matchCase);
             } else {
                 this.compiledPattern = null;
+                this.stringPattern = Pattern.compile(
+                        exactlyMatch ? "^" + Pattern.quote(findQuery) + "$" : Pattern.quote(findQuery),
+                        matchCase ? 0 : Pattern.CASE_INSENSITIVE);
             }
         }
 
@@ -1443,17 +1474,11 @@ public class SearchFragment extends Fragment {
                                 int countInClass = 0;
 
                                 if (type.equals("String")) {
-                                    Matcher lm = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(originalText);
+                                    Matcher lm = STRING_LITERAL.matcher(originalText);
                                     StringBuffer sb = new StringBuffer();
 
-                                    int flag = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
-                                    String q1 = isRegex ? findQuery : Pattern.quote(findQuery);
-                                    String q2 = exactlyMatch ? "^" + q1 + "$" : q1;
-
-                                    Pattern innerFind = Pattern.compile(q2, flag);
-
                                     while (lm.find()) {
-                                        Matcher im = innerFind.matcher(lm.group(1));
+                                        Matcher im = stringPattern.matcher(lm.group(1));
                                         StringBuffer inner = new StringBuffer();
                                         while (im.find()) {
                                             countInClass++;
@@ -1495,7 +1520,7 @@ public class SearchFragment extends Fragment {
                                             modifiedText = originalText.replace(search, replacement);
                                         } else {
                                             Pattern p = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE);
-                                           Matcher m = p.matcher(originalText);
+                                            Matcher m = p.matcher(originalText);
                                             StringBuffer sb = new StringBuffer();
                                             while (m.find()) {
                                                 countInClass++;
@@ -1540,6 +1565,13 @@ public class SearchFragment extends Fragment {
                                 }
                             }
                         } catch (Exception ignored) {
+                        } catch (Throwable t) {
+                            // A StackOverflowError inside a nested smali literal or a
+                            // backtracking regex must not kill the worker silently:
+                            // the task would hang on awaitTermination forever.
+                            isStopped = true;
+                            errorClasses.add(className + ": " + t);
+                            executor.shutdownNow();
                         }
 
                         final int processed = processedCount.incrementAndGet();
@@ -1554,6 +1586,7 @@ public class SearchFragment extends Fragment {
                 try {
                     executor.awaitTermination(1, TimeUnit.HOURS);
                 } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
                 }
 
                 mainHandler.post(() -> onPostExecute(activity));
@@ -1731,7 +1764,7 @@ public class SearchFragment extends Fragment {
                     }
                 }
             }
-            this.compiledPattern = isRegex ? Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE) : null;
+            this.compiledPattern = isRegex ? RegexGuard.compile(query, matchCase) : null;
 
             // Hoist everything the worker loop would otherwise recompute per class.
             // The pool pre-filter is a *conservative* filter (it can only skip a class that provably
@@ -1955,8 +1988,18 @@ public class SearchFragment extends Fragment {
 
                                     if (isRegex || queryHasNewline) {
                                             Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-                                            Matcher matcher = pattern.matcher(smali);
-                                            while (matcher.find()) {
+                                            Matcher matcher = RegexGuard.boundedMatcher(pattern, smali);
+                                            int lastLineStart = 0;
+                                            int lineIdx = 0;
+                                            while (true) {
+                                                if (isStopped || Thread.currentThread().isInterrupted()) return;
+                                                boolean found;
+                                                try {
+                                                    found = matcher.find();
+                                                } catch (StackOverflowError | OutOfMemoryError e) {
+                                                    stopSearchWithLimit(activity);
+                                                    return; }
+                                                if (!found) break;
                                                 if (foundCount.incrementAndGet() >= 250000) {
                                                     stopSearchWithLimit(activity);
                                                     return;
@@ -1965,8 +2008,14 @@ public class SearchFragment extends Fragment {
                                                 int lineStart = smali.lastIndexOf('\n', startPos) + 1;
                                                 int lineEnd = smali.indexOf('\n', startPos);
                                                 if (lineEnd == -1) lineEnd = smali.length();
+                                                // Matches arrive in source order, so the line index is
+                                                // advanced incrementally instead of rescanning from the
+                                                // top of the class for every hit.
+                                                if (lineStart != lastLineStart) {
+                                                    lineIdx += countNewlines(smali, lastLineStart, lineStart);
+                                                    lastLineStart = lineStart;
+                                                }
                                                 String lineText = smali.substring(lineStart, lineEnd);
-                                                int lineIdx = countLinesBefore(smali, lineStart);
                                                 TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
                                                 snippet.setSnippet(true);
                                                 snippet.setLineNumber(lineIdx);
@@ -2250,7 +2299,7 @@ public class SearchFragment extends Fragment {
         }
 
         private boolean checkMatchInRange(String text, int start, int end) {
-            if (isRegex) return compiledPattern != null && compiledPattern.matcher(text.substring(start, end)).find();
+            if (isRegex) return compiledPattern != null && RegexGuard.boundedMatcher(compiledPattern, text.subSequence(start, end)).find();
             boolean ignoreCase = !matchCase;
             int len = query.length();
             int lastStart = end - len;
@@ -2267,7 +2316,14 @@ public class SearchFragment extends Fragment {
         }
 
         private boolean checkMatch(String text) {
-            if (isRegex) return compiledPattern != null && compiledPattern.matcher(text).find();
+            if (isRegex) {
+                if (compiledPattern == null) return false;
+                try {
+                    return RegexGuard.boundedMatcher(compiledPattern, text).find();
+                } catch (StackOverflowError | OutOfMemoryError e) {
+                    return false;
+                }
+            }
             if (matchCase) return exactlyMatch ? text.equals(query) : text.contains(query);
             return exactlyMatch ? text.equalsIgnoreCase(query) : containsIgnoreCase(text, query);
         }
@@ -2486,6 +2542,14 @@ public class SearchFragment extends Fragment {
         private int countLinesBefore(String text, int index) {
             int count = 0;
             for (int i = 0; i < index && i < text.length(); i++)
+                if (text.charAt(i) == '\n') count++;
+            return count;
+        }
+
+        private static int countNewlines(String text, int from, int to) {
+            int count = 0;
+            int end = Math.min(to, text.length());
+            for (int i = Math.max(0, from); i < end; i++)
                 if (text.charAt(i) == '\n') count++;
             return count;
         }

@@ -664,6 +664,23 @@ public class ClassTree {
     }
 
     // save all loaded dexes
+    /** Raised when the user cancelled a save; never surfaced as a build failure. */
+    public static class SaveCancelledException extends RuntimeException {
+        public SaveCancelledException() {
+            super("CANCELLED");
+        }
+    }
+
+    /**
+     * Keeps the original throwable as the cause. Wrapping an {@link Error}
+     * (OutOfMemoryError, StackOverflowError) into a plain Exception is what let
+     * those escape the save thread and take the process down.
+     */
+    private static Exception asException(Throwable t) {
+        if (t instanceof Exception) return (Exception) t;
+        return new Exception(t);
+    }
+
     @SuppressLint("SdCardPath")
     public void saveAllDexFiles(DexSaveProgress dexSaveProgress) throws Exception {
         if (dexClassMap == null || dexClassMap.isEmpty()) return;
@@ -780,9 +797,8 @@ public class ClassTree {
                             }
                         }
                     } catch (final Throwable t) {
-                        Exception e = t instanceof Exception ? (Exception) t : new Exception(t);
                         synchronized (threadException) {
-                            if (threadException[0] == null) threadException[0] = e;
+                            if (threadException[0] == null) threadException[0] = asException(t);
                         }
                     }
                     return null;
@@ -792,17 +808,25 @@ public class ClassTree {
             for (Future<?> f : futures) {
                 try {
                     f.get();
-                    if (threadException[0] != null) break;
+                } catch (InterruptedException e) {
+                    // A cancelled save is not a compile failure; record it as such
+                    // so the caller can report it without an error dialog.
+                    Thread.currentThread().interrupt();
+                    synchronized (threadException) {
+                        if (threadException[0] == null) threadException[0] = new SaveCancelledException();
+                    }
+                    break;
                 } catch (Exception e) {
                     Throwable cause = e;
                     if (e instanceof ExecutionException && e.getCause() != null) {
                         cause = e.getCause();
                     }
                     synchronized (threadException) {
-                        if (threadException[0] == null) threadException[0] = cause instanceof Exception ? (Exception) cause : new Exception(cause);
+                        if (threadException[0] == null) threadException[0] = asException(cause);
                     }
                     break;
                 }
+                if (threadException[0] != null) break;
             }
             if (threadException[0] != null) {
                 throw threadException[0];
@@ -842,12 +866,29 @@ public class ClassTree {
                         ? (int) Math.min(Integer.MAX_VALUE - 64L, (long) original.getFileSize() * 12L / 10L + (1 << 20))
                         : classCount * 1024;
                 MemoryDataStore memoryDataStore = new MemoryDataStore(Math.max(1 << 16, estimate));
-                dexBuilder.writeTo(memoryDataStore);
-                // Write the live buffer slice directly. Anything that copies it first (a byte[]
-                // clone, a buffered stream, a channel transfer) only pays for a second full-dex
-                // memory pass before the bytes ever reach the disk.
-                byte[] buf = memoryDataStore.getBuffer();
-                int size = memoryDataStore.getSize();
+                byte[] buf;
+                int size;
+                try {
+                    // Write the live buffer slice directly. Anything that copies it
+                    // first (a byte[] clone, a buffered stream, a channel transfer)
+                    // only pays for a second full-dex memory pass before the bytes
+                    // even reach the disk.
+                    dexBuilder.writeTo(memoryDataStore);
+                    buf = memoryDataStore.getBuffer();
+                    size = memoryDataStore.getSize();
+                } catch (OutOfMemoryError tooBig) {
+                    // The preallocated buffer is one contiguous array sized from the
+                    // original dex, which a low-RAM device cannot always hold. Drop
+                    // it before retrying so the collector can actually reclaim it,
+                    // then let the store grow in fixed steps instead of failing the
+                    // whole save.
+                    memoryDataStore = null;
+                    System.gc();
+                    memoryDataStore = new MemoryDataStore(1 << 16);
+                    dexBuilder.writeTo(memoryDataStore);
+                    buf = memoryDataStore.getBuffer();
+                    size = memoryDataStore.getSize();
+                }
 
                 String outputDir = paths != null && !paths.isEmpty() && paths.get(0) != null
                         ? new File(paths.get(0)).getParent()
@@ -874,9 +915,10 @@ public class ClassTree {
                 }
                 // Nothing may throw after this point: the dex on disk is now the new one.
                 committed = true;
-            } catch (final Exception e) {
+            } catch (final Throwable e) {
                 e.printStackTrace();
-                throw e;
+                if (e instanceof Exception) throw (Exception) e;
+                throw new Exception(e);
             } finally {
                 writeFileNanos += System.nanoTime() - writeStart;
                 if (!committed && backupOfThisDex != null && backupOfThisDex.exists() && outFile != null) {
@@ -1040,6 +1082,12 @@ public class ClassTree {
         pureSmaliCache.clear();
         classDefIndex.clear();
         dexFileByName.clear();
+        // Pending text and dirty flags outlive a session otherwise, so the next
+        // load would re-apply edits from the previous one on save.
+        pendingSmaliMap.clear();
+        editedClassMap.clear();
+        deletedClassJson.clear();
+        classDefList.clear();
         
         // Clean up cache directory (never while a load is still using it)
         if (workDir != null && !isWorkDirClaimed(workDir)) {
