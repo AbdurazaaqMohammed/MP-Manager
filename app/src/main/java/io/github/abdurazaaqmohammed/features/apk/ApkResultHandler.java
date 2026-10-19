@@ -212,10 +212,10 @@ public class ApkResultHandler {
         } catch (Exception e) {
             return;
         }
-        if (parent == null || parent.outerZip == null || parent.entryPath == null) return;
-        if (!parent.outerZip.isFile() || !innerZip.isFile()) return;
+        if (parent == null || parent.outerZip() == null || parent.entryPath() == null) return;
+        if (!parent.outerZip().isFile() || !innerZip.isFile()) return;
         String innerName = innerZip.getName();
-        String outerName = parent.outerZip.getName();
+        String outerName = parent.outerZip().getName();
         new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.add_to_outer_title))
                 .setMessage(activity.getString(R.string.add_to_outer_msg, innerName, outerName))
@@ -223,33 +223,33 @@ public class ApkResultHandler {
                     try {
                         d.dismiss();
                     } catch (Exception ignored) {}
-                    boolean outerApk = ApkIconHelper.isApkArchiveName(parent.outerZip.getName());
+                    boolean outerApk = ApkIconHelper.isApkArchiveName(parent.outerZip().getName());
                     Runnable apply = () -> {
                         ProgressManager pm = new ProgressManager(activity, true).show();
                         pm.setText(activity.rss.getString(R.string.adding, innerName));
                         new Thread(() -> {
-                            try (ZipFile zf = new ZipFile(parent.outerZip)) {
+                            try (ZipFile zf = new ZipFile(parent.outerZip())) {
                                 // An unchanged inner archive must not rewrite the
                                 // outer one or trigger a pointless re-sign.
-                                if (!ArchiveBackupUtil.isEntryChanged(zf, parent.entryPath, innerZip)) {
+                                if (!ArchiveBackupUtil.isEntryChanged(zf, parent.entryPath(), innerZip)) {
                                     pm.dismiss();
-                                    activity.handler.post(() -> chainUpdateOuter(parent.outerZip, wrapper, sign, pane1, depth + 1));
+                                    activity.handler.post(() -> chainUpdateOuter(parent.outerZip(), wrapper, sign, pane1, depth + 1));
                                     return;
                                 }
-                                if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(parent.outerZip);
-                                ArchiveBackupUtil.backupEntryIfChanged(zf, parent.entryPath, innerZip);
+                                if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(parent.outerZip());
+                                ArchiveBackupUtil.backupEntryIfChanged(zf, parent.entryPath(), innerZip);
                                 ZipParameters zp = new ZipParameters();
                                 zp.setCompressionMethod(CompressionMethod.DEFLATE);
-                                zp.setFileNameInZip(parent.entryPath);
+                                zp.setFileNameInZip(parent.entryPath());
                                 zf.addFile(innerZip.getAbsolutePath(), zp);
                                 if (sign && outerApk && wrapper[0] != null)
-                                    wrapper[0].signApk(parent.outerZip);
+                                    wrapper[0].signApk(parent.outerZip());
                                 pm.dismiss();
                                 activity.handler.post(() -> {
                                     try {
                                         Extensions.showMessage(activity, activity.rss.getString(R.string.outer_updated_f, innerName, outerName));
                                     } catch (Exception ignored) {}
-                                    chainUpdateOuter(parent.outerZip, wrapper, sign, pane1, depth + 1);
+                                    chainUpdateOuter(parent.outerZip(), wrapper, sign, pane1, depth + 1);
                                 });
                             } catch (Exception e) {
                                 pm.dismiss();
