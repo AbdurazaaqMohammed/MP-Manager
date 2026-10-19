@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
@@ -35,6 +37,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -120,9 +123,31 @@ public class EntryDialogs {
             RenameHelper.selectBaseName(renameInput, renameIsFile);
             return true;
         });
+        // Renaming an entry rewrites the archive, which breaks the APK's
+        // signature. Offer to re-sign when the container being browsed is an
+        // APK, the same way the add-to-zip and modified-file dialogs do.
+        final File zipFile = isInZip && entry != null ? entry.getZipFile() : null;
+        final boolean zipIsApk = zipFile != null && ApkIconHelper.isApkArchiveName(zipFile.getName());
+        final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = {zipIsApk && settings.getBoolean("autosign", true)};
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(rnm, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (zipIsApk) {
+            View signRow = LayoutInflater.from(context).inflate(R.layout.dialog_sign_option, container, false);
+            MaterialCheckBox autosign = signRow.findViewById(R.id.autosign);
+            autosign.setChecked(sign[0]);
+            autosign.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                sign[0] = isChecked;
+                settings.edit().putBoolean("autosign", isChecked).apply();
+            });
+            signRow.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
+            container.addView(signRow);
+        }
         renameDialog
                 .setTitle(context.rss.getString(R.string.rename_1, fileName))
-                .setView(rnm)
+                .setView(container)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.paste, (dialog1, which) -> {
                     int selectionStart = renameInput.getSelectionStart();
@@ -142,24 +167,28 @@ public class EntryDialogs {
                         return;
                     }
                     if (isInZip) {
-                        File zipFile = entry.getZipFile();
-                        try (ZipFile zf = new ZipFile(zipFile)) {
-                            String entryName = entry.getName();
-                            if (entry.isDirectory()) {
-                                Map<String, String> map = new HashMap<>();
-
-                                for (FileHeader fh : zf.getFileHeaders()) {
-                                    String fhFileName = fh.getFileName();
-                                    if (fhFileName.startsWith(entryName)) map.put(fhFileName, fhFileName.replace(entryName, s));
-                                }
-                                if (!map.isEmpty()) zf.renameFiles(map);
-                            } else zf.renameFile((entryName), s);
-                            context.refreshPaneAfterChange(pane1, s);
-                            context.flashPaneItem(pane1, s);
-                            context.offerOuterUpdate(entry.getZipFile(), pane1);
-                        } catch (Exception e) {
-                            new ErrorUtil(context).showError(e);
-                        }
+                        String target = s;
+                        final boolean signIt = zipIsApk && sign[0];
+                        Runnable doRename = () -> RenameUtil.renameZipEntry(context, entry, target,
+                                state.currentZipPath(), pane1,
+                                () -> {
+                                    context.flashPaneItem(pane1, target);
+                                    context.offerOuterUpdate(entry.getZipFile(), pane1);
+                                });
+                        if (signIt) {
+                            // The rename rewrites the archive; sign it afterwards
+                            // so the APK stays installable.
+                            SignWrapper.requireAuth(context, sw -> {
+                                RenameUtil.renameZipEntry(context, entry, target,
+                                        state.currentZipPath(), pane1,
+                                        () -> {
+                                            context.flashPaneItem(pane1, target);
+                                            RenameUtil.signArchiveAfterEdit(context, zipFile, sw,
+                                                    state.currentZipPath(), pane1,
+                                                    () -> context.offerOuterUpdate(zipFile, pane1));
+                                        });
+                            });
+                        } else doRename.run();
                     } else {
                         File ogFolder = file.getParentFile();
                         if (ogFolder == null) {
