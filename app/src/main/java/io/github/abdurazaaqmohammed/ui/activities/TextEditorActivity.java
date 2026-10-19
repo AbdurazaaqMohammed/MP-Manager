@@ -44,6 +44,7 @@ import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -854,20 +855,62 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private void writeTabText(EditorTab tab, String text, Runnable onDone) {
-        backupForSave(tab.file, null);
-        try (OutputStream os = (tab.file == null
-                ? getContentResolver().openOutputStream(tab.fileUri, "wt")
-                : FileUtils.getOutputStream(tab.file))) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries)
-                    : tab.abx ? AbxUtil.encodeString(text) : text.getBytes(StandardCharsets.UTF_8));
+        // Compiling a multi-megabyte manifest into binary XML (and the backup
+        // copy that precedes it) takes seconds; doing it inline froze the UI and
+        // could take the process down with it on very large files.
+        if (requiresBackgroundWrite(tab, text)) {
+            runWriteAsync(tab, text, onDone);
+            return;
+        }
+        doWriteTabText(tab, text, onDone);
+    }
+
+    private boolean requiresBackgroundWrite(EditorTab tab, String text) {
+        return text == null || text.length() > BACKGROUND_WRITE_CHARS
+                || tab.axml || tab.abx;
+    }
+
+    private static final int BACKGROUND_WRITE_CHARS = 64 * 1024;
+
+    private void runWriteAsync(EditorTab tab, String text, Runnable onDone) {
+        if (isFinishing() || isDestroyed()) return;
+        ProgressManager pm = new ProgressManager(this, true);
+        pm.setText(getString(R.string.saving));
+        pm.show();
+        new Thread(() -> {
+            try {
+                doWriteTabText(tab, text, onDone);
+            } finally {
+                runOnUiThread(pm::dismiss);
+            }
+        }).start();
+    }
+
+    private void doWriteTabText(EditorTab tab, String text, Runnable onDone) {
+        try {
+            backupForSave(tab.file, null);
+            byte[] payload = encodeTabPayload(tab, text);
+            try (OutputStream os = (tab.file == null
+                    ? getContentResolver().openOutputStream(tab.fileUri, "wt")
+                    : FileUtils.getOutputStream(tab.file))) {
+                os.write(payload);
+            }
             tab.content = text;
             tab.modified = false;
-            Extensions.showMessage(this, getString(R.string.saved));
-            if (onDone != null) onDone.run();
+            runOnUiThread(() -> {
+                Extensions.showMessage(this, getString(R.string.saved));
+                if (onDone != null) onDone.run();
+            });
         } catch (Exception e) {
             tab.modified = true;
-            new ErrorUtil(this).showError(e);
+            runOnUiThread(() -> new ErrorUtil(this).showError(e));
         }
+    }
+
+    private byte[] encodeTabPayload(EditorTab tab, String text) throws Exception {
+        if (tab.axml) return new aXMLEncoder().encodeString(text, this, tab.resEntries);
+        if (tab.abx) return AbxUtil.encodeString(text);
+        return text.getBytes(StandardCharsets.UTF_8);
     }
 
     private void saveTabTextRoot(EditorTab tab, String text) {
@@ -875,17 +918,37 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private void saveTabTextRoot(EditorTab tab, String text, Runnable onDone) {
-        backupForSave(tab.file, tab.rootOriginalPath);
-        try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries)
-                    : tab.abx ? AbxUtil.encodeString(text) : text.getBytes(StandardCharsets.UTF_8));
+        if (requiresBackgroundWrite(tab, text)) {
+            if (isFinishing() || isDestroyed()) return;
+            ProgressManager pm = new ProgressManager(this, true);
+            pm.setText(getString(R.string.saving));
+            pm.show();
+            new Thread(() -> {
+                try {
+                    saveTabTextRootInline(tab, text, onDone);
+                } finally {
+                    runOnUiThread(pm::dismiss);
+                }
+            }).start();
+            return;
+        }
+        saveTabTextRootInline(tab, text, onDone);
+    }
+
+    private void saveTabTextRootInline(EditorTab tab, String text, Runnable onDone) {
+        try {
+            backupForSave(tab.file, tab.rootOriginalPath);
+            byte[] payload = encodeTabPayload(tab, text);
+            try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
+                os.write(payload);
+            }
         } catch (Exception e) {
             tab.modified = true;
-            new ErrorUtil(this).showError(e);
+            runOnUiThread(() -> new ErrorUtil(this).showError(e));
             return;
         }
         tab.content = text;
-        Extensions.showMessage(this, getString(R.string.editor_writing_root));
+        runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.editor_writing_root)));
         new Thread(() -> {
             try {
                 if (text.isEmpty() && originalKnownNonEmpty(tab)) {

@@ -39,6 +39,7 @@ import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -132,6 +133,9 @@ public class SharedEntryActivity extends BaseActivity {
             return;
         }
         sourcePackage = detectSourcePackage(getIntent());
+        // Remember who handed us the file so the "app that shared this file"
+        // installer-package mode can attribute an install back to them.
+        InstallerConfig.setInitiatorPackage(this, sourcePackage);
 
         for (Uri uri : uris) {
             ItemState item = new ItemState();

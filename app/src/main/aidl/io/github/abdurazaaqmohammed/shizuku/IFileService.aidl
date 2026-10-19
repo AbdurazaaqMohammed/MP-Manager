@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.shizuku;
 
+import android.content.IntentSender;
 import android.os.ParcelFileDescriptor;
 
 interface IFileService {
@@ -22,5 +23,6 @@ interface IFileService {
     boolean touchPath(String path);
     boolean touchMtime(String path, long millis);
     String shell(String command, int timeoutSeconds);
+    String installApks(in List<String> paths, String installerPkg, int flags, in IntentSender resultReceiver);
     String lastError();
 }

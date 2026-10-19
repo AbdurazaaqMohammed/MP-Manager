@@ -67,10 +67,19 @@ public final class CopyConflictDialog {
      */
     public static int askSingle(MainActivity context, DialogUtil dialogUtil, Conflict c,
                                 Runnable onDismissed) {
+        return askSingle(context, dialogUtil, R.string.copy_conflict_title, c, onDismissed);
+    }
+
+    /**
+     * Asks about one conflict. {@code onDismissed} runs once the dialog is gone
+     * so the caller can bring its progress dialog back.
+     */
+    public static int askSingle(MainActivity context, DialogUtil dialogUtil, int titleRes,
+                                Conflict c, Runnable onDismissed) {
         final CountDownLatch latch = new CountDownLatch(1);
         final int[] result = {ACTION_CANCEL};
         context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle(R.string.copy_conflict_title)
+                .setTitle(titleRes)
                 .setMessage(describe(context, c))
                 .setPositiveButton(R.string.copy_conflict_replace,
                         (d, w) -> {
@@ -101,11 +110,22 @@ public final class CopyConflictDialog {
      */
     public static int askBulk(MainActivity context, DialogUtil dialogUtil, List<Conflict> conflicts,
                               Runnable onDismissed) {
-        if (conflicts.size() == 1) return askSingle(context, dialogUtil, conflicts.get(0), onDismissed);
+        return askBulk(context, dialogUtil, R.string.copy_conflict_title,
+                R.string.copy_conflict_title_all, conflicts, onDismissed);
+    }
+
+    /**
+     * Lists every conflict in the batch and asks for one decision to apply to
+     * all of them. Returns {@link #ACTION_REVIEW_EACH} when the user wants to
+     * decide per file, or {@link #ACTION_CANCEL} to abort the whole operation.
+     */
+    public static int askBulk(MainActivity context, DialogUtil dialogUtil, int singleTitleRes,
+                              int allTitleRes, List<Conflict> conflicts, Runnable onDismissed) {
+        if (conflicts.size() == 1) return askSingle(context, dialogUtil, singleTitleRes, conflicts.get(0), onDismissed);
         final CountDownLatch latch = new CountDownLatch(1);
         final int[] result = {ACTION_CANCEL};
         context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle(R.string.copy_conflict_title_all)
+                .setTitle(allTitleRes)
                 .setView(buildConflictList(context, conflicts))
                 .setPositiveButton(R.string.copy_conflict_replace_all,
                         (d, w) -> {

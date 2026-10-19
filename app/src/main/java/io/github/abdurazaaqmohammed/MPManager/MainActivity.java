@@ -90,7 +90,6 @@ import com.reandroid.apkeditor.compile.Builder;
 import com.reandroid.utils.StringsUtil;
 import com.reandroid.utils.io.FileUtil;
 
-import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -1363,17 +1362,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 boolean isPane1 = lastPaneSelected == 1;
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if ((a instanceof MainFilesArrayAdapter adapter)) {
-                    if (adapter.isInZip) {
-                        File zipFile = isPane1 ? pane1Folder : pane2Folder;
-                        if (TextUtils.isEmpty(adapter.currentZipPath)) {
-                            if (isStagedArchive(zipFile) && navigateBack(isPane1)) return;
-                            if (zipFile.getParentFile() != null)
-                                loadFolderInPane(zipFile.getParentFile(), isPane1);
-                        } else {
-                            File parentInZip = new File(adapter.currentZipPath).getParentFile();
-                            loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
-                        }
-                    } else loadFolderInPane((File) adapter.getItem(0), isPane1);
+                    adapter.goUp();
                 } else {
                     ftp.ftpParent(isPane1);
                 }
@@ -1983,15 +1972,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         {
             String parentPath = TextUtils.isEmpty(path) ? "" : path;
             if (!TextUtils.isEmpty(parentPath) && !parentPath.endsWith("/")) parentPath += "/";
-            if (TextUtils.isEmpty(path)) {
-                entries.add(new ZipEntryInfo("..", null, true, 0L, 0L, zipFile));
-            } else {
+            String parentFull = null;
+            if (!TextUtils.isEmpty(path)) {
                 String parentDir = new File(path).getParent();
-                if (parentDir == null) parentDir = "";
-                String parentFull = parentDir.isEmpty() ? "" : parentDir.replaceAll("/+$", "") + "/";
-                parent = new ZipEntryInfo("..", parentFull, true, 0L, 0L, zipFile);
-                entries.add(parent);
+                parentFull = (parentDir == null || parentDir.isEmpty())
+                        ? "" : parentDir.replaceAll("/+$", "") + "/";
             }
+            parent = new ZipEntryInfo("..", parentFull, true, 0L, 0L, zipFile);
+            entries.add(parent);
 
             List<FileHeader> fhs = ZipCompat.listHeaders(zipFile);
             String prefix = parentPath;
@@ -2338,26 +2326,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             handler.post(this::reloadCurrentFolder);
             return;
         }
-        boolean isPane1 = lastPaneSelected == 1;
-        File folderToReload = isPane1 ? pane1Folder : pane2Folder;
-        reloadPane(isPane1, true);
-        // If both panes show the same plain folder, reload the other pane too.
-        if (folderToReload != null && !folderToReload.isFile() && !folderToReload.getName().endsWith(".zip")) {
-            File otherFolder = isPane1 ? pane2Folder : pane1Folder;
-            if (otherFolder != null && folderToReload.equals(otherFolder)) {
-                // Check that the other pane is showing a plain folder (not a zip subpath)
-                RecyclerView otherPaneView = findViewById(isPane1 ? R.id.listViewPane2 : R.id.listViewPane1);
-                if (otherPaneView != null) {
-                    RecyclerView.Adapter<?> otherAdapter = otherPaneView.getAdapter();
-                    if (otherAdapter instanceof MainFilesArrayAdapter) {
-                        MainFilesArrayAdapter oa = (MainFilesArrayAdapter) otherAdapter;
-                        if (!oa.isInZip) {
-                            reloadPane(!isPane1, true);
-                        }
-                    }
-                }
-            }
-        }
+        // reloadPane already cascades to the other pane when both show the same folder.
+        reloadPane(lastPaneSelected == 1, true);
     }
 
     private void setupPullToRefresh() {
@@ -2373,12 +2343,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void refreshPane(boolean pane1) {
         reloadPane(pane1, false);
         if (panesShowSameFolder()) {
-            reloadPane(!pane1, false);
             try {
                 ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane2 : R.id.swipeRefreshPane1)).setRefreshing(false);
             } catch (Exception ignored) { }
         }
-        ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+        try {
+            ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+        } catch (Exception ignored) { }
     }
 
     private void reloadPane(boolean pane1) {
@@ -2391,6 +2362,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * does not jump to the top while the user is browsing.
      */
     private void reloadPane(boolean pane1, boolean preserveScroll) {
+        // When both panes point at the same listing, a change made through
+        // either one is visible in both, so the other pane has to be reloaded
+        // too. Decided before the first reload, since that rewrites the pane's
+        // folder fields.
+        boolean alsoOther = panesShowSameFolder();
+        reloadOnePane(pane1, preserveScroll);
+        if (alsoOther) reloadOnePane(!pane1, preserveScroll);
+    }
+
+    private void reloadOnePane(boolean pane1, boolean preserveScroll) {
         int[] saved = preserveScroll ? capturePaneScroll(pane1) : null;
         try {
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
@@ -2507,14 +2488,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-    public static final class ArchiveParent {
-        public final File outerZip;
-        public final String entryPath;
-
-        public ArchiveParent(File outerZip, String entryPath) {
-            this.outerZip = outerZip;
-            this.entryPath = entryPath;
-        }
+    public record ArchiveParent(File outerZip, String entryPath) {
     }
 
     private final Map<String, ArchiveParent> archiveParents = new HashMap<>();
@@ -2547,6 +2521,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
         return false;
+    }
+
+    /**
+     * Steps out of an archive that is currently open at its root. A staged
+     * archive is a temp copy of an entry that lives somewhere else (a nested
+     * zip, an entry opened from another archive), so history is the only
+     * sensible destination; a plain archive goes to the folder holding it.
+     */
+    public void leaveArchive(File zipFile, boolean pane1) {
+        if (zipFile == null) return;
+        if (isStagedArchive(zipFile) && navigateBack(pane1)) return;
+        File outer = zipFile.getParentFile();
+        if (outer != null) loadFolderInPane(outer, pane1);
     }
 
     private MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {

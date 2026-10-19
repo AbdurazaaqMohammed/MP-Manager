@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -17,6 +18,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.color.MaterialColors;
@@ -45,6 +47,10 @@ import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
 
 public class RenameUtil {
 
@@ -93,6 +99,27 @@ public class RenameUtil {
             view.findViewById(quickButtonIds[i]).setOnClickListener(v -> insertAtCursor(patternInput, token));
         }
 
+        // Renaming entries rewrites the archive, which breaks an APK's
+        // signature. Offer to re-sign when the archive being edited is an APK.
+        final File zipFile = isInZip && !items.isEmpty() && items.get(0) instanceof ZipEntryInfo
+                ? ((ZipEntryInfo) items.get(0)).getZipFile() : null;
+        final boolean zipIsApk = zipFile != null && ApkIconHelper.isApkArchiveName(zipFile.getName());
+        final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = {zipIsApk && settings.getBoolean("autosign", true)};
+        if (zipIsApk && view instanceof ViewGroup
+                && ((ViewGroup) view).getChildAt(0) instanceof ViewGroup) {
+            ViewGroup root = (ViewGroup) ((ViewGroup) view).getChildAt(0);
+            View signRow = LayoutInflater.from(context).inflate(R.layout.dialog_sign_option, root, false);
+            MaterialCheckBox autosign = signRow.findViewById(R.id.autosign);
+            autosign.setChecked(sign[0]);
+            autosign.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                sign[0] = isChecked;
+                settings.edit().putBoolean("autosign", isChecked).apply();
+            });
+            signRow.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
+            root.addView(signRow);
+        }
+
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setTitle(context.rss.getString(R.string.rename_numitems, items.size()))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -102,13 +129,13 @@ public class RenameUtil {
 
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> showRenamePreview(context, items,
                 patternInput.getText().toString(), findInput.getText().toString(),
-                replaceInput.getText().toString(), regexCheck.isChecked(), caseSensitiveCheck.isChecked(), pane1, currentZipPath));
+                replaceInput.getText().toString(), regexCheck.isChecked(), caseSensitiveCheck.isChecked(), pane1, currentZipPath, sign[0]));
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> executeRename(context, buildRenamePlan(items,
                 patternInput.getText().toString(), findInput.getText().toString(),
-                replaceInput.getText().toString(), regexCheck.isChecked(), caseSensitiveCheck.isChecked()), pane1, currentZipPath));
+                replaceInput.getText().toString(), regexCheck.isChecked(), caseSensitiveCheck.isChecked()), pane1, currentZipPath, sign[0]));
     }
 
-    private static void showRenamePreview(MainActivity context, List<Object> items, String pattern, String find, String replace, boolean regex, boolean caseSensitive, boolean pane1, String currentZipPath) {
+    private static void showRenamePreview(MainActivity context, List<Object> items, String pattern, String find, String replace, boolean regex, boolean caseSensitive, boolean pane1, String currentZipPath, boolean sign) {
         String validationError = validateFind(find, regex);
         if (validationError != null) {
             Extensions.showMessage(context, validationError);
@@ -128,10 +155,15 @@ public class RenameUtil {
                 .setTitle(context.getString(R.string.rename_preview))
                 .setView(container)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(context.getString(R.string.rename), (d, w) -> executeRename(context, plans, pane1, currentZipPath)).show();
+                .setPositiveButton(context.getString(R.string.rename),
+                        (d, w) -> executeRename(context, plans, pane1, currentZipPath, sign)).show();
     }
 
     private static void executeRename(MainActivity context, List<RenamePlan> plans, boolean pane1, String currentZipPath) {
+        executeRename(context, plans, pane1, currentZipPath, false);
+    }
+
+    private static void executeRename(MainActivity context, List<RenamePlan> plans, boolean pane1, String currentZipPath, boolean sign) {
         resolveConflicts(plans);
         for (RenamePlan p : plans) {
             if (p.error != null) {
@@ -145,7 +177,7 @@ public class RenameUtil {
             Extensions.showMessage(context, R.string.no_files_need_renaming);
             return;
         }
-        if (plans.get(0).item instanceof ZipEntryInfo) executeRenameZip(context, plans, currentZipPath, pane1);
+        if (plans.get(0).item instanceof ZipEntryInfo) executeRenameZip(context, plans, currentZipPath, pane1, sign);
         else executeRenameFiles(context, plans, pane1);
     }
 
@@ -249,7 +281,87 @@ public class RenameUtil {
         }).start();
     }
 
+    /**
+     * Renames a single archive entry. Folders are renamed by rewriting every
+     * entry beneath them; the folder's own header is renamed too when the
+     * archive actually stores one (many do not, in which case the folder name is
+     * implied by its children and they alone carry the change).
+     *
+     * <p>The entry's full path is used as the zip key, not its display name:
+     * inside {@code res/}, a row reads "drawable" but its entry is
+     * {@code res/drawable/}. Renaming by display name silently matches nothing
+     * below the archive root.
+     */
+    public static void renameZipEntry(MainActivity context, ZipEntryInfo entry, String newName,
+                                      String currentZipPath, boolean pane1, Runnable onDone) {
+        if (entry == null || entry.getZipFile() == null || entry.getFullPath() == null) {
+            Extensions.showMessage(context, R.string.invalid_names);
+            return;
+        }
+        RenamePlan plan = new RenamePlan(entry, entry.getName(), newName);
+        resolveConflicts(java.util.Collections.singletonList(plan));
+        if (plan.error != null) {
+            Extensions.showMessage(context, R.string.invalid_names);
+            return;
+        }
+        executeRenameZip(context, java.util.Collections.singletonList(plan), currentZipPath, pane1, onDone);
+    }
+
     private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath, boolean pane1) {
+        executeRenameZip(context, plans, currentZipPath, pane1, null);
+    }
+
+    /**
+     * Same rename with an optional re-sign step. The rename rewrites every
+     * entry of the archive, which invalidates the signature of an APK, so the
+     * caller authenticates a signer first and the onDone of the rename performs
+     * the signing.
+     */
+    private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath,
+                                         boolean pane1, boolean sign) {
+        if (!sign) {
+            executeRenameZip(context, plans, currentZipPath, pane1, (Runnable) null);
+            return;
+        }
+        final File zipFile = ((ZipEntryInfo) plans.get(0).item).getZipFile();
+        if (zipFile == null || !ApkIconHelper.isApkArchiveName(zipFile.getName())) {
+            executeRenameZip(context, plans, currentZipPath, pane1, (Runnable) null);
+            return;
+        }
+        SignWrapper.requireAuth(context, sw ->
+                executeRenameZip(context, plans, currentZipPath, pane1, () ->
+                        signArchiveAfterEdit(context, zipFile, sw, currentZipPath, pane1, null)));
+    }
+
+    /**
+     * Re-signs an APK that was just edited inside the file manager, showing the
+     * signing progress and reloading the pane when done.
+     */
+    public static void signArchiveAfterEdit(MainActivity context, File zipFile, SignWrapper wrapper,
+                                            String currentZipPath, boolean pane1, Runnable onDone) {
+        if (context == null || zipFile == null || wrapper == null) return;
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.signing, zipFile.getName()));
+        new Thread(() -> {
+            try {
+                wrapper.signApk(zipFile);
+                pm.dismiss();
+                context.handler.post(() -> {
+                    try {
+                        context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);
+                    } catch (Exception ignored) {
+                    }
+                    if (onDone != null) onDone.run();
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath,
+                                         boolean pane1, Runnable onDone) {
         File zipFile = ((ZipEntryInfo) plans.get(0).item).getZipFile();
         ProgressManager pm = new ProgressManager(context, true).show();
         Handler handler = context.handler;
@@ -269,8 +381,10 @@ public class RenameUtil {
                     String tempBase = parentPath + "__MP_RENAME_TMP_" + (t++) + "_";
                     if (ze.isDirectory()) {
                         String dirEntry = oldPath.endsWith("/") ? oldPath : oldPath + "/";
-                        oldToTemp.put(dirEntry, tempBase);
-                        tempToFinal.put(tempBase, parentPath + p.newName + "/");
+                        // zip4j only renames a whole subtree when the KEY ends with
+                        // "/", so the directory itself is keyed slash-terminated too.
+                        oldToTemp.put(dirEntry, tempBase.endsWith("/") ? tempBase : tempBase + "/");
+                        tempToFinal.put(oldToTemp.get(dirEntry), parentPath + p.newName + "/");
                         for (FileHeader fh : zf.getFileHeaders()) {
                             String fhName = fh.getFileName();
                             if (fhName.startsWith(dirEntry) && fhName.length() > dirEntry.length() && !oldToTemp.containsKey(fhName)) {
@@ -294,10 +408,11 @@ public class RenameUtil {
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
                     context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);
+                    if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
                 pm.dismiss();
-                new ErrorUtil(context).showError(e);
+                handler.post(() -> new ErrorUtil(context).showError(e));
             }
         }).start();
     }
