@@ -106,6 +106,36 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final Set<Integer> selectedPositions = new HashSet<>();
     private Integer rangeStartPosition = null;
 
+    /** Target of the synthetic ".." row, resolved once per listing. */
+    private final File upFile;
+    private final File upZipFile;
+    private final String upZipPath;
+
+    /** Parent folder / parent archive location the ".." row navigates to. */
+    public void goUp() {
+        context.clearGreen(pane1);
+        context.setSelectedPane(pane1 ? 1 : 2);
+        if (isInZip) {
+            if (upZipFile == null) return;
+            if (upZipPath == null) {
+                context.leaveArchive(upZipFile, pane1);
+            } else {
+                context.loadZipFolderInPane(upZipFile, upZipPath, pane1, true);
+            }
+            return;
+        }
+        File target = upFile;
+        if (target == null) return;
+        if (target.equals(context.pane1Folder) && pane1) return;
+        if (target.equals(context.pane2Folder) && !pane1) return;
+        context.loadFolderInPaneAsync(target, pane1);
+    }
+
+    /** True when the row at {@code position} is the synthetic parent entry. */
+    public boolean isUpRow(int position) {
+        return position == 0;
+    }
+
     private static final int GREEN_NAME = 0xFF7ED957;
 
     public int findPositionByName(String name) {
@@ -238,6 +268,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         this.pane1 = pane1;
         this.isInZip = isInZip;
         this.currentZipPath = currentZipPath;
+        // Row 0 is the synthetic ".." entry. Remember where it goes instead of
+        // re-deriving it from the row value on every click, so navigating up can
+        // never depend on the row's File/ZipEntryInfo type.
+        if (isInZip) {
+            ZipEntryInfo up = (parent instanceof ZipEntryInfo ze) ? ze : null;
+            this.upZipPath = up != null ? up.getFullPath() : null;
+            this.upZipFile = up != null ? up.getZipFile() : null;
+            this.upFile = null;
+        } else {
+            this.upFile = (File) parent;
+            this.upZipFile = null;
+            this.upZipPath = null;
+        }
         int scale = UiPrefs.getScale(context);
         this.nameTextSize = UiPrefs.nameSize(scale);
         this.nameMaxLines = UiPrefs.getMaxLines(context);
@@ -356,6 +399,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         View.OnClickListener boundClickListener;
         View.OnLongClickListener boundLongClickListener;
         SwipeTouchListener touchListener;
+        /**
+         * Position of the last completed bind. {@link ViewHolder#getBindingAdapterPosition()}
+         * answers NO_POSITION while a row is momentarily detached, which silently
+         * dropped swipes on the first render of a freshly opened folder.
+         */
+        int lastBoundPosition = RecyclerView.NO_POSITION;
 
         ViewHolder(View v) {
             super(v);
@@ -390,7 +439,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     View.OnLongClickListener l = holder.boundLongClickListener;
                     return l != null && l.onLongClick(v);
                 },
-                () -> holder.getBindingAdapterPosition(),
+                () -> {
+                    int live = holder.getBindingAdapterPosition();
+                    return live != RecyclerView.NO_POSITION ? live : holder.lastBoundPosition;
+                },
                 MainFilesArrayAdapter.this,
                 pane1 ? 1 : 2);
         holder.itemView.setOnTouchListener(holder.touchListener);
@@ -451,8 +503,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final View convertView = holder.itemView;
+        // Point the row's gesture detector at this adapter before anything can
+        // dispatch, so a recycled row never drives the adapter it was created for.
+        if (holder.touchListener != null) holder.touchListener.rebind(this, pane1 ? 1 : 2);
         position = holder.getBindingAdapterPosition();
         if (position < 0 || position >= values.length) return;
+        holder.lastBoundPosition = position;
         Object item = values[position];
         File file;
         ZipEntryInfo entry;
@@ -518,30 +574,38 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final String finalFileName = fileName;
         final Object finalItem = item;
 
-        final View.OnClickListener originalClickListener;
-        if (isInZip && finalPosition == 0 && finalEntry.getFullPath() == null) {
-            originalClickListener = v -> context.loadFolderInPane(finalEntry.getZipFile().getParentFile(), pane1);
+final View.OnClickListener originalClickListener;
+        if (finalPosition == 0) {
+            // Parent row: never routed through the value at index 0, whose type
+            // differs between plain folders (File) and archives (ZipEntryInfo).
+            // Multi-select taps are intercepted by the touch listener before this
+            // listener runs, so no mode check is needed here.
+            originalClickListener = v -> goUp();
         } else {
             originalClickListener = isMultiSelectMode ? v -> {
                 context.clearGreen(pane1);
                 context.setSelectedPane(pane1 ? 1 : 2);
                 handleMultiSelect(finalPosition);
-            } : !isInZip && finalFile != null && finalPosition != 0 ?
+            } : !isInZip && finalFile != null ?
                 v -> handleRowClick(finalFile, finalFileName) : (View.OnClickListener) v -> {
-                context.clearGreen(pane1);
-                context.setSelectedPane(pane1 ? 1 : 2);
-                if (isInZip)
-                    fileOps.handleZipEntryClick(finalEntry);
-                else
-                    context.loadFolderInPaneAsync(finalFile, pane1);
-            };
+                    context.clearGreen(pane1);
+                    context.setSelectedPane(pane1 ? 1 : 2);
+                    if (isInZip)
+                        fileOps.handleZipEntryClick(finalEntry);
+                    else
+                        context.loadFolderInPaneAsync(finalFile, pane1);
+                };
         }
 
         holder.boundClickListener = originalClickListener;
-        holder.boundLongClickListener = v -> {
-            showRowMenu(holder.getBindingAdapterPosition(), finalFile, finalEntry, finalFileName, finalItem);
-            return true;
-        };
+        if (finalPosition == 0) {
+            holder.boundLongClickListener = v -> true;
+        } else {
+            holder.boundLongClickListener = v -> {
+                showRowMenu(holder.getBindingAdapterPosition(), finalFile, finalEntry, finalFileName, finalItem);
+                return true;
+            };
+        }
     }
 
     /**
@@ -551,6 +615,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * state (selection etc.) is also fresher than bind-time snapshots.
      */
     private void showRowMenu(int finalPosition, File file, ZipEntryInfo entry, String fileName, Object item) {
+        if (finalPosition <= 0 || finalPosition >= values.length) return;
         context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
         if (isInZip) {
@@ -1050,6 +1115,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     public void handleSwipe(int position) {
+        if (position <= 0 || position >= values.length) return;
         context.setCurrentPane(pane1 ? 1 : 2);
         if (isMultiSelectMode) {
             if (rangeStartPosition != null) {
@@ -1076,6 +1142,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     public void handleMultiSelect(int position) {
+        if (position <= 0 || position >= values.length) return;
         if (selectedPositions.contains(position)) {
             selectedPositions.remove(position);
             if (selectedPositions.isEmpty()) {
