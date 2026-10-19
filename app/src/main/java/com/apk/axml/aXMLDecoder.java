@@ -3,6 +3,7 @@ package com.apk.axml;
 import android.util.TypedValue;
 
 import com.apk.axml.aXMLUtils.AXmlResourceParser;
+import com.apk.axml.aXMLUtils.AttrValueResolver;
 import com.apk.axml.serializableItems.ResEntry;
 import com.apk.axml.aXMLUtils.Utils;
 import com.apk.axml.serializableItems.XMLEntry;
@@ -36,6 +37,8 @@ public class aXMLDecoder {
 	private static final String ATTR_INLINE = " ";
 	/** Closes a childless element, e.g. {@code android:name="..." />}. */
 	private static final String SELF_CLOSING = " />";
+	/** Namespace URI of framework attributes; only those have a symbolic value table. */
+	private static final String ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android";
 
 	private final InputStream inputStream;
 	private final List<ResEntry> resourceEntries;
@@ -87,13 +90,14 @@ public class aXMLDecoder {
 
 				int attrCount = parser.getAttributeCount();
 				for (int i = 0; i < attrCount; i++) {
-					String prefix = parser.getAttributePrefix(i);
-					String name = parser.getAttributeName(i);
+				String prefix = parser.getAttributePrefix(i);
+				String name = parser.getAttributeName(i);
 				String fullName = (prefix != null && !prefix.isEmpty()) ? prefix + ":" + name : name;
-				String value = escapeAttr(getAttributeValue(parser, byId, i));
+				String value = escapeAttr(getAttributeValue(parser, byId, i, name,
+						parser.getAttributeNamespace(i)));
 				result.add(new XMLEntry(ATTR_INDENT + fullName,"=\"",value,"\""));
 				if (prefix != null && !prefix.isEmpty()) usedPrefixes.add(prefix);
-				}
+			}
 
 				int closeIndex = result.size() - 1;
 				stack.push(new OpenElem(tag, closeIndex));
@@ -149,11 +153,22 @@ public class aXMLDecoder {
 		return Utils.decodeAsString(decode());
 	}
 
-    private static String getAttributeValue(AXmlResourceParser parser, Map<Integer, ResEntry> byId, int index) {
+	private static String getAttributeValue(AXmlResourceParser parser, Map<Integer, ResEntry> byId, int index) {
+		return getAttributeValue(parser, byId, index, null, null);
+	}
+
+	/**
+	 * @param attrName      local attribute name, used to look up a symbolic value
+	 *                      table for enums and flag sets (layout_gravity and friends)
+	 * @param attrNamespace namespace URI, only the Android framework one qualifies
+	 */
+	private static String getAttributeValue(AXmlResourceParser parser, Map<Integer, ResEntry> byId, int index,
+										   String attrName, String attrNamespace) {
 		final int type = parser.getAttributeValueType(index);
 		final int data = parser.getAttributeValueData(index);
+		final String symbolic = symbolic(attrName, attrNamespace, type, data);
 
-        return switch (type) {
+		return switch (type) {
             case TypedValue.TYPE_STRING -> parser.getAttributeValue(index);
             case TypedValue.TYPE_REFERENCE -> {
                 ResEntry e = byId == null ? null : byId.get(data);
@@ -170,13 +185,13 @@ public class aXMLDecoder {
                 yield String.format("?%08X", data);
             }
             case TypedValue.TYPE_INT_BOOLEAN -> Boolean.toString(data != 0);
+            case TypedValue.TYPE_INT_HEX -> symbolic != null ? symbolic : String.format("0x%08X", data);
+            case TypedValue.TYPE_INT_DEC -> symbolic != null ? symbolic : Integer.toString(data);
             case TypedValue.TYPE_DIMENSION ->
                     trimTrailingZero(complexToFloat(data)) + DIMENSION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
             case TypedValue.TYPE_FRACTION ->
                     trimTrailingZero(complexToFloat(data)) + FRACTION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
             case TypedValue.TYPE_FLOAT -> trimTrailingZero(Float.intBitsToFloat(data));
-            case TypedValue.TYPE_INT_HEX -> String.format("0x%08X", data);
-            case TypedValue.TYPE_INT_DEC -> Integer.toString(data);
             case TypedValue.TYPE_INT_COLOR_ARGB8 -> String.format("#%08X", data); // AARRGGBB
 
             case TypedValue.TYPE_INT_COLOR_RGB8 ->
@@ -193,6 +208,20 @@ public class aXMLDecoder {
                 yield v != null ? v : String.format("<0x%X, type 0x%02X>", data, type);
             }
         };
+	}
+
+	/**
+	 * Symbolic name for an integer attribute whose value set has a table, or null
+	 * when it should stay a plain number. Only framework attributes qualify: an
+	 * app-defined {@code layout_gravity} in another namespace means nothing here.
+	 */
+	private static String symbolic(String attrName, String attrNamespace, int type, int data) {
+		if (attrName == null) return null;
+		if (attrNamespace != null && !attrNamespace.isEmpty()
+				&& !ANDROID_NAMESPACE.equals(attrNamespace)) return null;
+		if (type != TypedValue.TYPE_INT_HEX && type != TypedValue.TYPE_INT_DEC) return null;
+		if (!AttrValueResolver.isKnown(attrName)) return null;
+		return AttrValueResolver.resolve(attrName, data);
 	}
 
 	private static String escapeText(String s) {

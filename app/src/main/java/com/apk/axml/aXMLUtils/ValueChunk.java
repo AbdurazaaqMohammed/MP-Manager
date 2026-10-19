@@ -17,6 +17,7 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
     final byte res0 = 0;
     byte type = -1;
     int data = -1;
+    private static final String ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android";
 
     static class ValPair {
         final int pos;
@@ -127,6 +128,15 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
         return val.substring(0, val.length() - number);
     }
 
+    /** Numeric value for a known framework attribute, or null when unknown. */
+    private Integer symbolicValue() {
+        String attrName = attrChunk == null ? null : attrChunk.name;
+        if (attrName == null || attrChunk.rawValue == null) return null;
+        String namespace = attrChunk.namespace;
+        if (namespace != null && !namespace.isEmpty() && !ANDROID_NAMESPACE.equals(namespace)) return null;
+        return AttrValueResolver.parse(attrName, attrChunk.rawValue);
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     public void evaluate() {
         Matcher m = explicitType.matcher(attrChunk.rawValue);
@@ -141,6 +151,15 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
                 throw new RuntimeException();
             }
         } else {
+            // Framework attributes with a symbolic value set (layout_gravity,
+            // layout_width, screenOrientation, ...) must not degrade into a raw
+            // string: the platform reads them as integers.
+            Integer symbolic = symbolicValue();
+            if (symbolic != null) {
+                type = 0x10;
+                data = symbolic;
+                return;
+            }
             m = types.matcher(attrChunk.rawValue);
             if (m.find()) {
                 ValPair vp = new ValPair(m);
