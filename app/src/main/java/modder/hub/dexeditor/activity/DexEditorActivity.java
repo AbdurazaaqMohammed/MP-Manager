@@ -1547,10 +1547,11 @@ public class DexEditorActivity extends BaseActivity {
                     handleUndoRedo();
                     if (onSaved != null) onSaved.run();
                 });
-            } catch (final Exception e) {
+            } catch (final Throwable e) {
+                final String detail = e.getMessage() != null ? e.getMessage() : e.toString();
                 runOnUiThread(() -> {
                     pd.dismiss();
-                    Notify_MT.Notify(DexEditorActivity.this, "Error saving " + tab.title, e.getMessage(), "Close");
+                    Notify_MT.Notify(DexEditorActivity.this, "Error saving " + tab.title, detail, "Close");
                     if (onSaved != null) onSaved.run();
                 });
             }
@@ -2558,7 +2559,7 @@ public class DexEditorActivity extends BaseActivity {
 
                             @Override
                             public void onMessage(final String message) {
-                                if (isStopped) throw new RuntimeException("CANCELLED");
+                                if (isStopped) throw new ClassTree.SaveCancelledException();
                                 runOnUiThread(() -> alertProgress.setMessage(message));
                             }
                         });
@@ -2578,8 +2579,8 @@ public class DexEditorActivity extends BaseActivity {
                             setResult(757, resultIntent);
                             finish();
                         });
-                    } catch (final Exception e) {
-                        if ("CANCELLED".equals(e.getMessage())) {
+                    } catch (final Throwable e) {
+                        if (e instanceof ClassTree.SaveCancelledException || "CANCELLED".equals(e.getMessage())) {
                             runOnUiThread(() -> Extensions.showMessage(DexEditorActivity.this, "Operation Cancelled"));
                             alertProgress.dismiss();
                             return;

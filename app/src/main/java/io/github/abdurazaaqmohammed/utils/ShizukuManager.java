@@ -155,6 +155,69 @@ public final class ShizukuManager {
         if (!isAllowed(path)) throw new IOException("Shizuku cannot access this path");
     }
 
+    /**
+     * The user service only ever opens the app-private Android/{data,obb,media}
+     * trees. Shizuku itself runs as the shell user, which can read much more
+     * (/data, /vendor, /odm, ...), so anything the service refuses is handled
+     * over the shell instead of being reported as inaccessible.
+     */
+    private static boolean useShell(String path) {
+        return !isAllowed(path);
+    }
+
+    private static String shellArg(String path) {
+        return RootManager.escapeShellArg(path);
+    }
+
+    /** Directory listing over the shell, in the same shape {@link #listWithStat} returns. */
+    private static File[] listWithShell(String dirPath) {
+        try {
+            String arg = shellArg(dirPath);
+            ShizukuShell.Result r = ShizukuShell.exec(
+                    "test -d " + arg + " || exit 4; LC_ALL=C ls -la -- " + arg + " 2>/dev/null", 30);
+            if (r == null || !r.success || r.stdout == null) return null;
+            List<File> files = new ArrayList<>();
+            for (String line : r.stdout.split("\\r?\\n")) {
+                if (line.trim().isEmpty() || line.startsWith("total ")) continue;
+                java.util.regex.Matcher matcher = RootManager.LS_LONG_LINE.matcher(line);
+                if (!matcher.matches()) continue;
+                String mode = matcher.group(1);
+                char type = mode.charAt(0);
+                if (type != '-' && type != 'd' && type != 'l') continue;
+                String name = matcher.group(4);
+                int arrow = name.indexOf(" -> ");
+                if (arrow > 0) name = name.substring(0, arrow);
+                if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+                long size;
+                try {
+                    size = Long.parseLong(matcher.group(2));
+                } catch (NumberFormatException e) {
+                    size = 0L;
+                }
+                long mtime = RootManager.parseLsDateTimeFlexible(matcher.group(3));
+                boolean isDir = type == 'd';
+                files.add(new RootFile(dirPath, name, true, isDir, type != 'd',
+                        isDir ? 0L : Math.max(0L, size), mtime,
+                        mode.length() > 1 ? mode.substring(1) : null));
+            }
+            return files.toArray(new File[0]);
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    private static IOException shellError(String what, ShizukuShell.Result r) {
+        String err = r == null ? null : (r.stderr == null || r.stderr.isEmpty() ? r.stdout : r.stderr);
+        if (err != null && err.length() > 200) err = err.substring(0, 200);
+        return new IOException(err == null || err.trim().isEmpty() ? what + " failed" : err.trim());
+    }
+
+    private static void throwIfShellFails(String command, String what, int timeout) throws IOException {
+        if (!ready()) throw new IOException("Shizuku not connected or permission missing");
+        ShizukuShell.Result r = ShizukuShell.exec(command, timeout);
+        if (r == null || !r.success) throw shellError(what, r);
+    }
+
     public static boolean exists(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
@@ -278,6 +341,12 @@ public final class ShizukuManager {
 
     public static long dirSize(Context context, String path) {
         try {
+            if (useShell(path)) {
+                ShizukuShell.Result r = ShizukuShell.exec("du -sk -- " + shellArg(path) + " 2>/dev/null", 60);
+                if (r == null || !r.success || r.stdout == null) return -1;
+                String[] parts = r.stdout.trim().split("\\s+");
+                return Long.parseLong(parts[0].trim()) * 1024L;
+            }
             requireAllowed(path);
             return serviceSync(context).dirSize(path);
         } catch (Throwable e) {
@@ -286,6 +355,7 @@ public final class ShizukuManager {
     }
 
     public static File[] listWithStat(Context context, String dirPath) {
+        if (useShell(dirPath)) return listWithShell(dirPath);
         try {
             requireAllowed(dirPath);
             List<String> lines = serviceSync(context).dirStat(dirPath);
@@ -320,6 +390,7 @@ public final class ShizukuManager {
     }
 
     public static long streamFrom(Context context, String srcPath, OutputStream out, long maxBytes) throws IOException {
+        if (useShell(srcPath)) return streamFromShell(srcPath, out, maxBytes);
         requireAllowed(srcPath);
         IFileService s = serviceSync(context);
         ParcelFileDescriptor pfd;
@@ -344,6 +415,10 @@ public final class ShizukuManager {
     }
 
     public static void streamTo(Context context, File localSrc, String dstPath) throws IOException {
+        if (useShell(dstPath)) {
+            streamToShell(localSrc, dstPath);
+            return;
+        }
         requireAllowed(dstPath);
         if (isTopLevel(dstPath)) throw new IOException("Refusing protected top-level path");
         if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
@@ -389,6 +464,14 @@ public final class ShizukuManager {
     }
 
     public static void copyFile(Context context, String src, String dest) throws IOException {
+        if (useShell(src) || useShell(dest)) {
+            File destParent = new File(dest).getParentFile();
+            StringBuilder cmd = new StringBuilder();
+            if (destParent != null) cmd.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
+            cmd.append("cat -- ").append(shellArg(src)).append(" > ").append(shellArg(dest));
+            throwIfShellFails(cmd.toString(), "copy", 120);
+            return;
+        }
         requireAllowed(src);
         requireAllowed(dest);
         if (isTopLevel(src) || isTopLevel(dest)) throw new IOException("Refusing protected top-level path");
@@ -403,6 +486,14 @@ public final class ShizukuManager {
     }
 
     public static void copyDir(Context context, String src, String dest) throws IOException {
+        if (useShell(src) || useShell(dest)) {
+            File destParent = new File(dest).getParentFile();
+            StringBuilder cmd = new StringBuilder();
+            if (destParent != null) cmd.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
+            cmd.append("cp -r ").append(shellArg(src)).append(" ").append(shellArg(dest));
+            throwIfShellFails(cmd.toString(), "copy", 300);
+            return;
+        }
         requireAllowed(src);
         requireAllowed(dest);
         if (isTopLevel(src) || isTopLevel(dest)) throw new IOException("Refusing protected top-level path");
@@ -417,6 +508,10 @@ public final class ShizukuManager {
     }
 
     public static void mkdir(Context context, String path) throws IOException {
+        if (useShell(path)) {
+            throwIfShellFails("mkdir -p " + shellArg(path), "mkdir", 30);
+            return;
+        }
         requireAllowed(path);
         IFileService s = serviceSync(context);
         try {
@@ -429,6 +524,11 @@ public final class ShizukuManager {
     }
 
     public static void delete(Context context, String path) throws IOException {
+        if (useShell(path)) {
+            if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+            throwIfShellFails("rm -rf " + shellArg(path), "delete", 120);
+            return;
+        }
         requireAllowed(path);
         if (isTopLevel(path)) throw new IOException("Refusing protected top-level path");
         IFileService s = serviceSync(context);
@@ -442,6 +542,10 @@ public final class ShizukuManager {
     }
 
     public static void rename(Context context, String oldPath, String newPath) throws IOException {
+        if (useShell(oldPath) || useShell(newPath)) {
+            throwIfShellFails("mv " + shellArg(oldPath) + " " + shellArg(newPath), "rename", 120);
+            return;
+        }
         requireAllowed(oldPath);
         requireAllowed(newPath);
         if (isTopLevel(oldPath) || isTopLevel(newPath)) {
@@ -458,6 +562,10 @@ public final class ShizukuManager {
     }
 
     public static void touch(Context context, String path) throws IOException {
+        if (useShell(path)) {
+            throwIfShellFails("touch " + shellArg(path), "touch", 30);
+            return;
+        }
         requireAllowed(path);
         IFileService s = serviceSync(context);
         try {
@@ -470,6 +578,10 @@ public final class ShizukuManager {
     }
 
     public static void touchMtime(Context context, String path, long millis) throws IOException {
+        if (useShell(path)) {
+            if (!touchMtimeShell(path, millis)) throw new IOException("touch failed");
+            return;
+        }
         requireAllowed(path);
         IFileService s = serviceSync(context);
         try {

@@ -1015,6 +1015,13 @@ public class ApkInfoDialogs {
                 }
 
                 String finalProtectedStr = protectedStr;
+                // Hashing the candidate and the installed copy is real I/O, so it
+                // stays on this worker thread rather than blocking the dialog.
+                String comparisonText = ApkInfoUtil.getInstalledVersion(context, pkg);
+                if (comparisonText == null) comparisonText = context.getString(R.string.not_installed);
+                else if (ApkInfoUtil.isDowngrade(context, packageInfo))
+                    comparisonText += " (" + context.getString(R.string.downgrade) + ")";
+                final String comparison = comparisonText;
                 final String finalVerName = TextUtils.isEmpty(verName)
                         ? context.getString(R.string.version_name_unset) : verName;
                 context.handler.post(() -> {
@@ -1032,13 +1039,7 @@ public class ApkInfoDialogs {
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(min));
                     apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
-                    String installedVer = ApkInfoUtil.getInstalledVersion(context, pkg);
-                    if (installedVer == null) apkInstalled.setText(context.getString(R.string.not_installed));
-                    else {
-                        String installedText = installedVer;
-                        if (ApkInfoUtil.isDowngrade(context, packageInfo)) installedText += " (" + context.getString(R.string.downgrade) + ")";
-                        apkInstalled.setText(installedText);
-                    }
+                    apkInstalled.setText(comparison);
                 });
                 loaded[0] = true;
                 context.handler.post(() -> signaturesInApk.setOnClickListener(v -> {

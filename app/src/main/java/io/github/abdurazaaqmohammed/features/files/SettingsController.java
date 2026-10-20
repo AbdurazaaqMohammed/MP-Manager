@@ -887,6 +887,7 @@ public class SettingsController {
         MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
         MaterialSwitch shizukuSilentToggle = root.findViewById(R.id.shizukuSilentToggle);
         AutoCompleteTextView installerSourceTv = root.findViewById(R.id.installerSourceTv);
+        AutoCompleteTextView installInfoTv = root.findViewById(R.id.installInfoTv);
         View installerCustomPkgLayout = root.findViewById(R.id.installerCustomPkgLayout);
         TextInputEditText installerCustomPkgEt = root.findViewById(R.id.installerCustomPkgEt);
         MaterialSwitch installAllowTestToggle = root.findViewById(R.id.installAllowTestToggle);
@@ -1005,30 +1006,34 @@ public class SettingsController {
         });
 
         String labelSelf = activity.getString(R.string.installer_source_self);
+        String labelInitiator = activity.getString(R.string.installer_source_initiator);
         String labelPlay = activity.getString(R.string.installer_source_play);
         String labelShell = activity.getString(R.string.installer_source_shell);
         String labelCustom = activity.getString(R.string.installer_source_custom);
         List<String> sourceLabels = new ArrayList<>();
         sourceLabels.add(labelSelf);
+        sourceLabels.add(labelInitiator);
         sourceLabels.add(labelPlay);
         sourceLabels.add(labelShell);
         sourceLabels.add(labelCustom);
         installerSourceTv.setAdapter(dropdownAdapter(sourceLabels));
-        String currentSource = InstallerConfig.getSource(activity);
-        if (InstallerConfig.SOURCE_PLAY.equals(currentSource)) installerSourceTv.setText(labelPlay, false);
-        else if (InstallerConfig.SOURCE_SHELL.equals(currentSource)) installerSourceTv.setText(labelShell, false);
-        else if (InstallerConfig.SOURCE_CUSTOM.equals(currentSource)) installerSourceTv.setText(labelCustom, false);
+        String currentSource = InstallerConfig.getMode(activity);
+        if (InstallerConfig.MODE_PLAY.equals(currentSource)) installerSourceTv.setText(labelPlay, false);
+        else if (InstallerConfig.MODE_SHELL.equals(currentSource)) installerSourceTv.setText(labelShell, false);
+        else if (InstallerConfig.MODE_CUSTOM.equals(currentSource)) installerSourceTv.setText(labelCustom, false);
+        else if (InstallerConfig.MODE_INITIATOR.equals(currentSource)) installerSourceTv.setText(labelInitiator, false);
         else installerSourceTv.setText(labelSelf, false);
         Runnable refreshCustomPkg = () -> installerCustomPkgLayout.setVisibility(
-                InstallerConfig.SOURCE_CUSTOM.equals(InstallerConfig.getSource(activity))
+                InstallerConfig.MODE_CUSTOM.equals(InstallerConfig.getMode(activity))
                         ? View.VISIBLE : View.GONE);
         refreshCustomPkg.run();
         installerSourceTv.setOnItemClickListener((parent, view, position, id) -> {
             String picked = sourceLabels.get(position);
-            if (picked.equals(labelPlay)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_PLAY);
-            else if (picked.equals(labelShell)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_SHELL);
-            else if (picked.equals(labelCustom)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_CUSTOM);
-            else InstallerConfig.setSource(activity, InstallerConfig.SOURCE_SELF);
+            if (picked.equals(labelPlay)) InstallerConfig.setMode(activity, InstallerConfig.MODE_PLAY);
+            else if (picked.equals(labelShell)) InstallerConfig.setMode(activity, InstallerConfig.MODE_SHELL);
+            else if (picked.equals(labelCustom)) InstallerConfig.setMode(activity, InstallerConfig.MODE_CUSTOM);
+            else if (picked.equals(labelInitiator)) InstallerConfig.setMode(activity, InstallerConfig.MODE_INITIATOR);
+            else InstallerConfig.setMode(activity, InstallerConfig.MODE_SELF);
             refreshCustomPkg.run();
         });
         installerCustomPkgEt.setText(InstallerConfig.getCustomPackage(activity));
@@ -1044,6 +1049,27 @@ public class SettingsController {
                 settings.edit().putString("installer_custom_pkg", v).apply();
             }
         });
+
+        String labelNever = activity.getString(R.string.install_info_never);
+        String labelWhenDiffers = activity.getString(R.string.install_info_when_differs);
+        String labelAlways = activity.getString(R.string.install_info_always);
+        List<String> installInfoLabels = new ArrayList<>();
+        installInfoLabels.add(labelWhenDiffers);
+        installInfoLabels.add(labelAlways);
+        installInfoLabels.add(labelNever);
+        if (installInfoTv != null) {
+            installInfoTv.setAdapter(dropdownAdapter(installInfoLabels));
+            String infoMode = InstallerConfig.getInstallInfoMode(activity);
+            if (InstallerConfig.INFO_MODE_ALWAYS.equals(infoMode)) installInfoTv.setText(labelAlways, false);
+            else if (InstallerConfig.INFO_MODE_NEVER.equals(infoMode)) installInfoTv.setText(labelNever, false);
+            else installInfoTv.setText(labelWhenDiffers, false);
+            installInfoTv.setOnItemClickListener((parent, view, position, id) -> {
+                String picked = installInfoLabels.get(position);
+                if (picked.equals(labelAlways)) InstallerConfig.setInstallInfoMode(activity, InstallerConfig.INFO_MODE_ALWAYS);
+                else if (picked.equals(labelNever)) InstallerConfig.setInstallInfoMode(activity, InstallerConfig.INFO_MODE_NEVER);
+                else InstallerConfig.setInstallInfoMode(activity, InstallerConfig.INFO_MODE_WHEN_SIGNATURE_DIFFERS);
+            });
+        }
 
         installAllowTestToggle.setChecked(settings.getBoolean("install_allow_test", false));
         installAllowTestToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_allow_test", checked).apply());

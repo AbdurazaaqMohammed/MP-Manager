@@ -85,6 +85,19 @@ Code fixed/enhancement/some hidden ideas/comments by ChatGPT
 
 public class TextActionWindow extends EditorTextActionWindow implements View.OnLongClickListener {
 	private static final long DISPLAY_DELAY = 200;
+	/**
+	 * Two nested quantifiers that both accept a bare 'L' make the descriptor
+	 * pattern backtrack exponentially on a run of 'L' with no terminator. Real
+	 * smali type descriptors are far shorter than this, and the input is a single
+	 * editor line, so refusing to scan very long lines removes the hang without
+	 * changing the answer for anything the user can actually type.
+	 */
+	private static final int MAX_DESCRIPTOR_SCAN = 512;
+	private static final Pattern TYPE_DESCRIPTOR = Pattern.compile("(L(?:[^;L]|L(?!\\w*/))+(?:/[^;L]|L(?!\\w*/))*;)");
+	private static final Pattern INVOKE_SIGNATURE = Pattern.compile(";->([^:()]+):|;->([^()]+)\\(([^)]*)\\)");
+	private static final Pattern LABEL_DECLARATION = Pattern.compile("(:[a-zA-Z_0-9]+)");
+	private static final Pattern GETTER_OR_SETTER = Pattern.compile("^[is]?[gp]et(-\\w+)?\\s.*");
+	private static final Pattern INVOKE_LINE = Pattern.compile("^\\s*L[^;]+;->\\w+:");
 	private final ItemClickCallBack actionCallback;
 	private ImageButton copyButton;
 	private ImageButton cutButton;
@@ -981,14 +994,15 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	}
 	
 	public String extractTextWithLAndSemiColon(String text, int position) {
-		Matcher matcher = Pattern.compile("(L(?:[^;L]|L(?!\\w*/))+(?:/[^;L]|L(?!\\w*/))*;)").matcher(text);
+		if (text == null || text.length() > MAX_DESCRIPTOR_SCAN) return "NotAvailable";
+		Matcher matcher = TYPE_DESCRIPTOR.matcher(text);
 		while (matcher.find()) {
 			if (matcher.start() <= position && position < matcher.end()) {
 				return matcher.group();
 			}
 		}
-		
-		Matcher matcher2 = Pattern.compile(";->([^:()]+):|;->([^()]+)\\(([^)]*)\\)").matcher(text);
+
+		Matcher matcher2 = INVOKE_SIGNATURE.matcher(text);
 		if (matcher2.find()) {
 			if ((matcher2.start(1) == -1 || matcher2.start(1) - 2 > position || position >= matcher2.end(1)) && 
 			(matcher2.start(2) == -1 || matcher2.start(2) - 2 > position || position >= matcher2.end(2))) {
@@ -1013,14 +1027,13 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		while (lineEnd < text.length() && text.charAt(lineEnd) != '\n') lineEnd++;
 		String currentLine = text.substring(lineStart, lineEnd).trim();
 		
-		if (currentLine.startsWith(".field") || 
-		currentLine.matches("^[is]?[g|p]et(-\\w+)?\\s.*") ||
-		currentLine.matches("^\\s*L[^;]+;->\\w+:")) {
+		if (currentLine.startsWith(".field") ||
+		GETTER_OR_SETTER.matcher(currentLine).matches() ||
+		INVOKE_LINE.matcher(currentLine).matches()) {
 			return "NotAvailable";
 		}
 		
-		Pattern pattern = Pattern.compile("(:[a-zA-Z_0-9]+)");
-		Matcher matcher = pattern.matcher(text);
+		Matcher matcher = LABEL_DECLARATION.matcher(text);
 		
 		while (matcher.find()) {
 			int start = matcher.start();
@@ -1035,7 +1048,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			}
 		}
 		
-		Matcher lineMatcher = pattern.matcher(currentLine);
+		Matcher lineMatcher = LABEL_DECLARATION.matcher(currentLine);
 		if (lineMatcher.find()) {
 			return lineMatcher.group();
 		}

@@ -41,7 +41,8 @@ public class RootManager {
     private final Object lock = new Object();
 
     private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-:]+$");
-    private static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
+    /** Shared with {@link ShizukuManager}, whose shell fallback parses the same output. */
+    static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
 
     // Directories that should never be deleted (absolute block)
     private static final Set<String> BLOCKED_DELETE_PATHS = new HashSet<>(Arrays.asList(
@@ -674,10 +675,51 @@ public class RootManager {
         invalidateListCache();
     }
 
+    /**
+     * Copies with mode, ownership and timestamps in one step. Copying and then
+     * fixing the timestamps separately costs two extra {@code su} spawns per
+     * file, which dominates the runtime for small and empty files.
+     */
+    public void copyFilePreserving(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -pf " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        invalidateListCache();
+    }
+
     public void copyDir(String src, String dest) throws IOException {
         ShellResult result = executeFs("cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
+    }
+
+    public void copyDirPreserving(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        invalidateListCache();
+    }
+
+    /**
+     * Removes every path in one shell process. Deleting a selection item by
+     * item cost one {@code su} spawn each, all serialised behind the same lock,
+     * so even a handful of empty files felt slow.
+     *
+     * @return the paths that were actually removed.
+     */
+    public List<String> deleteAll(List<String> paths) throws IOException {
+        List<String> targets = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (isPathBlocked(path))
+                throw new IOException("Blocked: refusing to delete critical path: " + path);
+            targets.add(path);
+        }
+        if (targets.isEmpty()) return targets;
+        StringBuilder cmd = new StringBuilder("rm -rf --");
+        for (String path : targets) cmd.append(' ').append(escapeShellArg(path));
+        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30));
+        if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        invalidateListCache();
+        return targets;
     }
 
     public void touch(String path) throws IOException {
@@ -1385,7 +1427,7 @@ public class RootManager {
      * form was discarded - which silently emptied a listing and dropped the
      * whole folder onto the metadata-less fallback.
      */
-    private static long parseLsDateTimeFlexible(String dateTime) {
+    static long parseLsDateTimeFlexible(String dateTime) {
         if (dateTime == null) return 0L;
         String value = dateTime.trim();
         try {

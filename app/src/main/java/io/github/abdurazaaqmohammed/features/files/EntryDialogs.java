@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
@@ -35,6 +37,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -120,9 +123,31 @@ public class EntryDialogs {
             RenameHelper.selectBaseName(renameInput, renameIsFile);
             return true;
         });
+        // Renaming an entry rewrites the archive, which breaks the APK's
+        // signature. Offer to re-sign when the container being browsed is an
+        // APK, the same way the add-to-zip and modified-file dialogs do.
+        final File zipFile = isInZip && entry != null ? entry.getZipFile() : null;
+        final boolean zipIsApk = zipFile != null && ApkIconHelper.isApkArchiveName(zipFile.getName());
+        final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = {zipIsApk && settings.getBoolean("autosign", true)};
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(rnm, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (zipIsApk) {
+            View signRow = LayoutInflater.from(context).inflate(R.layout.dialog_sign_option, container, false);
+            MaterialCheckBox autosign = signRow.findViewById(R.id.autosign);
+            autosign.setChecked(sign[0]);
+            autosign.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                sign[0] = isChecked;
+                settings.edit().putBoolean("autosign", isChecked).apply();
+            });
+            signRow.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
+            container.addView(signRow);
+        }
         renameDialog
                 .setTitle(context.rss.getString(R.string.rename_1, fileName))
-                .setView(rnm)
+                .setView(container)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.paste, (dialog1, which) -> {
                     int selectionStart = renameInput.getSelectionStart();
@@ -142,24 +167,28 @@ public class EntryDialogs {
                         return;
                     }
                     if (isInZip) {
-                        File zipFile = entry.getZipFile();
-                        try (ZipFile zf = new ZipFile(zipFile)) {
-                            String entryName = entry.getName();
-                            if (entry.isDirectory()) {
-                                Map<String, String> map = new HashMap<>();
-
-                                for (FileHeader fh : zf.getFileHeaders()) {
-                                    String fhFileName = fh.getFileName();
-                                    if (fhFileName.startsWith(entryName)) map.put(fhFileName, fhFileName.replace(entryName, s));
-                                }
-                                if (!map.isEmpty()) zf.renameFiles(map);
-                            } else zf.renameFile((entryName), s);
-                            context.refreshPaneAfterChange(pane1, s);
-                            context.flashPaneItem(pane1, s);
-                            context.offerOuterUpdate(entry.getZipFile(), pane1);
-                        } catch (Exception e) {
-                            new ErrorUtil(context).showError(e);
-                        }
+                        String target = s;
+                        final boolean signIt = zipIsApk && sign[0];
+                        Runnable doRename = () -> RenameUtil.renameZipEntry(context, entry, target,
+                                state.currentZipPath(), pane1,
+                                () -> {
+                                    context.flashPaneItem(pane1, target);
+                                    context.offerOuterUpdate(entry.getZipFile(), pane1);
+                                });
+                        if (signIt) {
+                            // The rename rewrites the archive; sign it afterwards
+                            // so the APK stays installable.
+                            SignWrapper.requireAuth(context, sw -> {
+                                RenameUtil.renameZipEntry(context, entry, target,
+                                        state.currentZipPath(), pane1,
+                                        () -> {
+                                            context.flashPaneItem(pane1, target);
+                                            RenameUtil.signArchiveAfterEdit(context, zipFile, sw,
+                                                    state.currentZipPath(), pane1,
+                                                    () -> context.offerOuterUpdate(zipFile, pane1));
+                                        });
+                            });
+                        } else doRename.run();
                     } else {
                         File ogFolder = file.getParentFile();
                         if (ogFolder == null) {
@@ -207,7 +236,8 @@ public class EntryDialogs {
     public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
         Object[] values = state.values();
         boolean isInZip = state.isInZip();
-        ProgressManager pm = new ProgressManager(context, true);
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.showCount(true);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -236,35 +266,55 @@ public class EntryDialogs {
                         boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
                         if (multi) {
                             if (!isInZip) {
-                                File selectedFile = null;
+                                List<File> selectedFiles = new ArrayList<>();
                                 for (int i : state.selectedPositions()) {
-                                    selectedFile = (File) values[i];
-                                    File finalSelectedFile1 = selectedFile;
-                                    if (finalSelectedFile1 != null)
-                                        pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
-
-                                    if (useElevatedForDelete) {
-                                        try {
-                                            AccessManager.delete(context, selectedFile.getAbsolutePath(), true);
-                                            continue;
-                                        } catch (Exception ignored) {}
-                                    }
-                                    if (selectedFile.isDirectory())
-                                        Util.deleteDir(selectedFile);
-                                    else
-                                        selectedFile.delete();
+                                    File f = (File) values[i];
+                                    if (f != null) selectedFiles.add(f);
                                 }
-                                if (selectedFile != null) {
-                                    File finalSelectedFile = selectedFile;
-                                    context.handler.post(() -> {
-                                        state.clearSelection();
-                                        context.refreshPaneAfterChange(pane1, null);
-                                    });
-                                } else context.handler.post(state::clearSelection);
+                                int totalSelected = FileUtils.countFilesForProgress(selectedFiles, 20000);
+                                pm.setProgress(0, totalSelected);
+                                if (useElevatedForDelete) {
+                                    // One shell round trip for the whole selection:
+                                    // deleting item by item spent a su spawn per
+                                    // file, all serialised behind the same lock.
+                                    List<String> paths = new ArrayList<>(selectedFiles.size());
+                                    for (File f : selectedFiles) paths.add(f.getAbsolutePath());
+                                    try {
+                                        AccessManager.deleteAll(context, paths, true);
+                                    } catch (Exception ignored) {
+                                        int removed = 0;
+                                        for (File f : selectedFiles) {
+                                            try {
+                                                AccessManager.delete(context, f.getAbsolutePath(), true);
+                                                removed += FileUtils.countFilesForProgress(f, 20000);
+                                            } catch (Exception ignoredInner) {
+                                                if (f.isDirectory()) Util.deleteDir(f);
+                                                else f.delete();
+                                                removed++;
+                                            }
+                                            pm.setProgress(Math.min(removed, totalSelected), totalSelected);
+                                        }
+                                    }
+                                } else {
+                                    int removed = 0;
+                                    for (File f : selectedFiles) {
+                                        if (f.isDirectory()) Util.deleteDir(f);
+                                        else f.delete();
+                                        removed += FileUtils.countFilesForProgress(f, 20000);
+                                        pm.setProgress(Math.min(removed, totalSelected), totalSelected);
+                                    }
+                                }
+                                pm.setProgress(totalSelected, totalSelected);
+                                context.handler.post(() -> {
+                                    state.clearSelection();
+                                    context.refreshPaneAfterChange(pane1, null);
+                                });
                             } else {
                                 List<ZipEntryInfo> selected = new ArrayList<>();
                                 for (int i : state.selectedPositions()) selected.add((ZipEntryInfo) values[i]);
+                                pm.setProgress(0, Math.max(1, selected.size()));
                                 fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                                pm.setProgress(Math.max(1, selected.size()), Math.max(1, selected.size()));
                                 if (sign[0]) wrapper[0].signApk(zipFile);
                                 File changedZip = zipFile != null ? zipFile
                                         : (selected.isEmpty() ? null : selected.get(0).getZipFile());
@@ -272,7 +322,7 @@ public class EntryDialogs {
                                 context.handler.post(state::clearSelection);
                             }
                         } else if (!isInZip) {
-                            int total = (int) Util.countInsideFolder(file).total();
+                            int total = Math.max(1, FileUtils.countFilesForProgress(file, 20000));
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
@@ -287,12 +337,15 @@ public class EntryDialogs {
                                 if (file.isDirectory()) Util.deleteDir(file);
                                 else file.delete();
                             }
+                            pm.setProgress(total, total);
                             context.handler.post(() -> {
                                 state.clearSelection();
                                 context.refreshPaneAfterChange(pane1, null);
                             });
                         } else {
+                            pm.setProgress(0, 1);
                             fileOps.deleteZipEntry(entry);
+                            pm.setProgress(1, 1);
                             if (sign[0]) wrapper[0].signApk(zipFile);
                             context.offerOuterUpdate(zipFile, pane1);
                             context.handler.post(state::clearSelection);
@@ -490,7 +543,8 @@ public class EntryDialogs {
         compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
         compressDialog.setView(compressView);
         compressDialog.setNegativeButton(context.rss.getString(android.R.string.cancel), null);
-        ProgressManager pm = new ProgressManager(context, true);
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.showCount(true);
         compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> {
             String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
             if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
@@ -526,6 +580,8 @@ public class EntryDialogs {
                 if (multi) {
                     for (int i : state.selectedPositions()) sources.add((File) values[i]);
                 } else sources.add(file);
+                final int totalSources = Math.max(1, FileUtils.countFilesForProgress(sources, 20000));
+                pm.setProgress(0, totalSources);
 
                 boolean compressElevated = AccessManager.fileOpsOn(context);
                 File compressStageTmp = null;
@@ -589,12 +645,16 @@ public class EntryDialogs {
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zf.setPassword(pw.toString().toCharArray());
                         }
+                        int compressed = 0;
                         for (File source : finalSources) {
                             if (source.isDirectory())
                                 zf.addFolder(source, zipParameters);
                             else zf.addFile(source, zipParameters);
+                            compressed += Math.max(1, FileUtils.countFilesForProgress(source, 20000));
+                            pm.setProgress(Math.min(compressed, totalSources), totalSources);
                         }
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        pm.setProgress(totalSources, totalSources);
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
@@ -616,6 +676,7 @@ public class EntryDialogs {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        pm.setProgress(totalSources, totalSources);
                         pm.dismiss();
                         context.handler.post(context::reloadCurrentFolder);
                     } catch (Exception e) {

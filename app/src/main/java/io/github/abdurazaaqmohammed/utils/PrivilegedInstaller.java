@@ -1,12 +1,11 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.annotation.SuppressLint;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
-import android.content.pm.SigningInfo;
 import android.os.Build;
 
 import java.io.File;
@@ -25,38 +24,51 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.shizuku.IFileService;
+import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
+
+import com.faith.apkinstaller.APKInstallService;
 
 /**
- * Privileged APK installer with installer-source spoofing.
+ * Privileged APK installer with installer-package spoofing.
  *
  * <p>Logic ported from InstallerX Revived (GPL-3.0-only):
- * {@code IBinderAppInstallerRepoImpl} (caller-package spoof + flag fold +
- * session create/write/commit), {@code SessionParamsExt} (installer package,
- * reason, package source) and {@code ShizukuAppInstallerRepoImpl} (shell/root
- * as the trusted caller). The Kotlin/coroutine/Koin machinery is replaced
- * with the shell-{@code pm} transport this app already uses in
- * {@link RootManager}, because it needs no hidden-API stubs and behaves the
- * same from a privileged uid: {@code pm install-create -i <pkg>} makes
- * {@code getInstallSourceInfo()} report that package (AOSP
- * PackageManagerShellCommand {@code makeInstallParams} handles {@code -i};
- * there is no {@code --installer-package-name} long option).
+ * {@code IBinderAppInstallerRepoImpl} (flag fold + session
+ * create/write/commit), {@code SessionParamsExt} (installer package, reason)
+ * and {@code ShizukuAppInstallerRepoImpl} (shell/root as the trusted caller).
+ *
+ * <p>Attribution works because {@code PackageInstallerService#createSessionInternal}
+ * short-circuits every installer-ownership check when the caller is root or
+ * shell ({@code PackageManagerServiceUtils#isRootOrShell}) and records
+ * {@code SessionParams.installerPackageName} as the responsible installer.
+ * Only that session field survives: {@code pm install-create -i} sets the
+ * caller-package argument instead, which the platform replaces with the shell
+ * package for uid 2000 (and some ROMs attribute the install to it), and
+ * {@code pm set-installer} is refused for third-party installers
+ * ("Caller does not have same cert as new installer package").
  *
  * <p>Routing:
  * <ol>
  *   <li>Root silent ({@code su} + {@code pm}) when root mode + toggle + root.</li>
- *   <li>Shizuku silent ({@link ShizukuShell} + {@code pm}) when shizuku mode +
- *       toggle + permission. APKs are staged through app-readable storage
- *       first because the shell uid cannot read our private cache.</li>
- *   <li>Plain {@link PackageInstaller} session otherwise (system dialog; on
- *       Android 14+ still records {@code setInstallerPackageName}, but without
- *       privilege the system overwrites it with our package).</li>
+ *   <li>Shizuku silent through the Shizuku user service, which runs as the
+ *       shell uid but owns a {@link Context}, so it can create the session with
+ *       {@code setInstallerPackageName}; the {@code pm} transport is kept as a
+ *       fallback. APKs are staged through app-readable storage first because
+ *       the shell uid cannot read our private cache.</li>
+ *   <li>Plain {@link PackageInstaller} session otherwise (system dialog).</li>
  * </ol>
+ *
+ * <p>Only the installer-of-record field is spoofed. The install *initiator*
+ * comes from the session's caller package, which the platform forces to
+ * {@code com.android.shell} for root/shell uids, so the service creates its
+ * sessions under that caller explicitly (InstallerX does the same for its
+ * Shizuku/root authorizers) and additionally claims the spoofed package as the
+ * originating package.
  *
  * <p>Safety: installer package names are validated, every shell arg is
  * escaped, staging files use random names under {@code /data/local/tmp} and
- * are always cleaned up, signature mismatches against the installed app abort
- * with an explanatory error before anything is staged, and critical-system
- * packages require the mismatch gate to pass as well.
+ * are always cleaned up, and a signature mismatch against the installed app is
+ * reported before anything is staged.
  *
  * <p>SPDX-License-Identifier: GPL-3.0-only
  */
@@ -121,6 +133,13 @@ public final class PrivilegedInstaller {
         executor.shutdown();
     }
 
+    private static volatile String lastTrace = "";
+
+    /** How the last install attributed its installer; shown when the spoof did not stick. */
+    public static String lastTrace() {
+        return lastTrace;
+    }
+
     public static String installBlocking(Context context, List<File> apkFiles) throws Exception {
         if (apkFiles == null || apkFiles.isEmpty()) throw new IllegalArgumentException("No APKs to install");
         for (File f : apkFiles) {
@@ -128,12 +147,13 @@ public final class PrivilegedInstaller {
                 throw new IllegalArgumentException("Unreadable APK: " + (f == null ? "null" : f.getPath()));
         }
         String installer = InstallerConfig.resolveInstallerPackageName(context);
-        checkSignatureGate(context, apkFiles, installer);
+        lastTrace = "";
 
         if (isRootSilentReady(context)) {
             List<String> paths = absPaths(apkFiles);
             RootManager rm = RootManager.getInstance(context);
             rm.installWithInstaller(paths, installer, collectFlags(context));
+            lastTrace = "root";
             return installer;
         }
         if (isShizukuSilentReady(context)) {
@@ -143,75 +163,55 @@ public final class PrivilegedInstaller {
         throw new IllegalStateException("No privileged installer available");
     }
 
-    // ---- signature gate (InstallerX signature-mismatch policy, simplified) ----
-
-    private static void checkSignatureGate(Context context, List<File> apkFiles, String installer) throws Exception {
-        String targetPkg = packageNameOf(context, apkFiles.get(0));
-        if (targetPkg == null) return;
-        PackageManager pm = context.getPackageManager();
-        PackageInfo installed;
+    /**
+     * Runs the install inside the Shizuku user service, which executes as the
+     * shell uid but still owns a {@link Context}. That is the only place where
+     * {@code SessionParams#setInstallerPackageName} can be used: the installer
+     * recorded by {@code getInstallSourceInfo()} comes from the session params,
+     * while {@code pm install-create -i} only sets the caller-package argument,
+     * which some ROMs replace with the shell package for uid 2000.
+     *
+     * @return "ok", "fail:reason", "err:reason" when the service could not run
+     * the session at all, or null when the service is unavailable so the caller
+     * can fall back to {@code pm}.
+     */
+    private static String shizukuServiceInstall(Context context, List<String> paths, String installer, int flags) {
         try {
-            installed = Build.VERSION.SDK_INT >= 28
-                    ? pm.getPackageInfo(targetPkg, PackageManager.GET_SIGNING_CERTIFICATES)
-                    : pm.getPackageInfo(targetPkg, PackageManager.GET_SIGNATURES);
-        } catch (PackageManager.NameNotFoundException e) {
-            return; // fresh install, nothing to compare
-        }
-        PackageInfo candidate = pm.getPackageArchiveInfo(
-                apkFiles.get(0).getAbsolutePath(),
-                Build.VERSION.SDK_INT >= 28
-                        ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES);
-        if (candidate == null) return;
-        if (!signaturesMatch(installed, candidate)) {
-            throw new SecurityException("Signature mismatch for " + targetPkg
-                    + ": installed app was signed by a different key. The system will refuse "
-                    + "this install (INSTALL_FAILED_UPDATE_INCOMPATIBLE). Uninstall first or "
-                    + "install an APK with the matching signature. Requested installer: " + installer);
-        }
-    }
-
-    private static String packageNameOf(Context context, File apk) {
-        try {
-            PackageInfo info = context.getPackageManager()
-                    .getPackageArchiveInfo(apk.getAbsolutePath(), 0);
-            return info == null ? null : info.packageName;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private static boolean signaturesMatch(PackageInfo installed, PackageInfo candidate) {
-        try {
-            if (Build.VERSION.SDK_INT >= 28) {
-                SigningInfo a = installed.signingInfo;
-                SigningInfo b = candidate.signingInfo;
-                if (a == null || b == null) return true; // cannot tell -> let system decide
-                // Compare current signer digests; past history ignored on purpose.
-                if (!a.hasMultipleSigners() && !b.hasMultipleSigners()) {
-                    return a.getSigningCertificateHistory()[0] != null
-                            && b.getSigningCertificateHistory()[0] != null
-                            && java.util.Arrays.equals(
-                                    sha256(a.getSigningCertificateHistory()[0].toByteArray()),
-                                    sha256(b.getSigningCertificateHistory()[0].toByteArray()));
-                }
-                return java.util.Arrays.equals(
-                        sha256(a.getApkContentsSigners()[0].toByteArray()),
-                        sha256(b.getApkContentsSigners()[0].toByteArray()));
-            } else {
-                if (installed.signatures == null || candidate.signatures == null) return true;
-                if (installed.signatures.length == 0 || candidate.signatures.length == 0) return true;
-                return java.util.Arrays.equals(
-                        sha256(installed.signatures[0].toByteArray()),
-                        sha256(candidate.signatures[0].toByteArray()));
+            IFileService service = ShizukuConnection.await(context, 5000);
+            if (service == null) {
+                ShizukuConnection.unbind(context);
+                service = ShizukuConnection.await(context, 5000);
             }
-        } catch (Exception ignored) {
-            return true; // fail-open to system verdict, never block blindly
+            if (service == null) return null;
+            PendingIntent result = PendingIntent.getService(context, 0,
+                    new Intent(context, APKInstallService.class), PendingIntent.FLAG_MUTABLE);
+            return service.installApks(paths, installer, flags, result.getIntentSender());
+        } catch (Throwable t) {
+            return "err:" + (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
         }
     }
 
-    private static byte[] sha256(byte[] in) throws Exception {
-        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-        return md.digest(in);
+    // ---- signature comparison ----
+
+    /**
+     * Whether the candidate APK is signed by a different key than the copy of
+     * that package already on the device.
+     *
+     * <p>This used to abort the install outright. It no longer does: a mismatch
+     * is information the user should see <em>before</em> deciding, not a fatal
+     * error, and it is exactly what Core Patch exists to work around. The
+     * comparison now feeds {@code ApkInstallAnalysis}, which shows the warning
+     * and offers uninstall-and-reinstall. Unknown results report "matches" so
+     * nothing is blocked on a guess.
+     */
+    public static boolean hasSignatureMismatch(Context context, List<File> apkFiles) {
+        try {
+            if (apkFiles == null || apkFiles.isEmpty()) return false;
+            return io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis
+                    .analyze(context, apkFiles.get(0)).isDifferentSigner();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     // ---- flags ----
@@ -279,8 +279,26 @@ public final class PrivilegedInstaller {
         return a + "\n" + b;
     }
 
+    static String stripInstallerFlag(String cmd) {
+        if (cmd == null) return null;
+        int i = cmd.indexOf(" -i ");
+        if (i < 0) return null;
+        int s = cmd.indexOf(" -S ", i);
+        if (s > i) return cmd.substring(0, i) + cmd.substring(s);
+        return cmd.substring(0, i);
+    }
+
     // ---- shizuku transport ----
 
+    /**
+     * The shell uid does not need to own the requested installer package.
+     * {@code PackageInstallerService.createSessionInternal} short-circuits every
+     * ownership check for {@code isRootOrShell(callingUid)} and takes
+     * {@code SessionParams.installerPackageName} ({@code pm}'s {@code -i})
+     * verbatim as the responsible installer. So the plain shell transport is
+     * already able to attribute the install to any installed package; only the
+     * flag has to be passed.
+     */
     private static void shizukuInstallBlocking(Context context, List<File> apkFiles, String installer) throws Exception {
         // The shell uid cannot read our private cache, so stage through a
         // shell-readable spot first (app copies out, shell copies in).
@@ -326,6 +344,29 @@ public final class PrivilegedInstaller {
                 ShizukuShell.Result pushRes = ShizukuShell.exec(push.toString(), 120);
                 if (!pushRes.success) throw new IllegalStateException("Shizuku stage failed: " + pushRes.stderr);
 
+                String serviceResult = shizukuServiceInstall(context, tmpPaths, installer, collectFlags(context));
+                if (serviceResult != null && serviceResult.startsWith("ok")) {
+                    lastTrace = serviceResult.length() > 2
+                            ? "shizuku session (recorded " + serviceResult.substring(3) + ")"
+                            : "shizuku session";
+                    return;
+                }
+                if (serviceResult != null && serviceResult.startsWith("fail:")) {
+                    // The install actually ran and the system rejected it (e.g.
+                    // INSTALL_FAILED_NO_MATCHING_ABIS). A pm retry would fail
+                    // the same way, so surface the real reason instead.
+                    String reason = serviceResult.substring(5);
+                    lastTrace = "shizuku session";
+                    throw new IllegalStateException(reason);
+                }
+                if (serviceResult != null && !serviceResult.startsWith("err:")) {
+                    lastTrace = "shizuku session " + serviceResult;
+                    throw new IllegalStateException("Shizuku install failed: " + serviceResult);
+                }
+                lastTrace = "shizuku session "
+                        + (serviceResult == null ? "unavailable" : "unavailable (" + serviceResult + ")")
+                        + ", pm fallback";
+
                 ShizukuShell.Result createRes = ShizukuShell.exec(createCmd, 60);
                 for (int attempt = 0; attempt < 2 && !createRes.success; attempt++) {
                     String retry = downgradeCreateCommand(createCmd,
@@ -333,6 +374,13 @@ public final class PrivilegedInstaller {
                     if (retry == null) break;
                     createCmd = retry;
                     createRes = ShizukuShell.exec(createCmd, 60);
+                }
+                if (!createRes.success) {
+                    String withoutInstaller = stripInstallerFlag(createCmd);
+                    if (withoutInstaller != null) {
+                        createCmd = withoutInstaller;
+                        createRes = ShizukuShell.exec(createCmd, 60);
+                    }
                 }
                 String session = parseSessionId(createRes.stdout);
                 if (!createRes.success || session == null)
@@ -476,7 +524,8 @@ public final class PrivilegedInstaller {
         }
     }
 
-    private static void applyInstallFlags(PackageInstaller.SessionParams params, int flags) {
+    /** Hidden-API write of the INSTALL_* flags onto a session; silently skipped when blocked. */
+    public static void applyInstallFlags(PackageInstaller.SessionParams params, int flags) {
         try {
             java.lang.reflect.Field f = PackageInstaller.SessionParams.class.getDeclaredField("installFlags");
             f.setAccessible(true);

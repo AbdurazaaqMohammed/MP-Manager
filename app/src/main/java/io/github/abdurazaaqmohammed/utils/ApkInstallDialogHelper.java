@@ -20,6 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.faith.apkinstaller.APKInstallService;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis;
+import io.github.abdurazaaqmohammed.features.apk.InstallInfoDialog;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,13 +51,47 @@ public class ApkInstallDialogHelper {
     public void installSingleApk(File apkFile) {
         List<File> single = new ArrayList<>();
         single.add(apkFile);
-        installPrivilegedOrFallback(single, getAppNameForApk(apkFile).toString(), apkFile);
+        confirmThenInstall(single, getAppNameForApk(apkFile).toString(), apkFile);
     }
 
     public void installSplitApks(List<File> apkFiles, String archiveName) {
         String appName = archiveName != null ? archiveName : "Split APK";
         File firstApk = apkFiles.isEmpty() ? null : apkFiles.get(0);
-        installPrivilegedOrFallback(new ArrayList<>(apkFiles), appName, firstApk);
+        confirmThenInstall(new ArrayList<>(apkFiles), appName, firstApk);
+    }
+
+    /**
+     * Shows the install comparison before installing when the user asked for it
+     * ("Show installation info": always / only when the signature differs /
+     * never). It reports what the candidate would do to the installed copy -
+     * newer, older or identical; same or different signer; matching checksums -
+     * and, when the signatures differ, explains that Android will refuse the
+     * install, links to Core Patch, and offers uninstall-and-install with an
+     * optional data backup.
+ */
+    private void confirmThenInstall(List<File> apkFiles, String appName, File firstApk) {
+        if (firstApk == null) {
+            installPrivilegedOrFallback(apkFiles, appName, firstApk);
+            return;
+        }
+        new Thread(() -> {
+            ApkInstallAnalysis analysis;
+            try {
+                analysis = ApkInstallAnalysis.analyze(activity, firstApk);
+            } catch (Throwable t) {
+                analysis = null;
+            }
+            final ApkInstallAnalysis result = analysis;
+            activity.runOnUiThread(() -> {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                if (result == null || !InstallInfoDialog.shouldShow(activity, result)) {
+                    installPrivilegedOrFallback(apkFiles, appName, firstApk);
+                    return;
+                }
+                InstallInfoDialog.show(activity, new DialogUtil(activity), appName, result,
+                        () -> installPrivilegedOrFallback(apkFiles, appName, firstApk));
+            });
+        }).start();
     }
 
     private void installPrivilegedOrFallback(List<File> apkFiles, String appName, File firstApk) {
@@ -65,15 +101,8 @@ public class ApkInstallDialogHelper {
             PrivilegedInstaller.installAsync(activity, apkFiles, new PrivilegedInstaller.Callback() {
                 @Override
                 public void onSuccess(String recorded) {
-                    activity.runOnUiThread(() -> {
-                        dismissProgress(pm);
-                        String verified = firstApk != null
-                                ? PrivilegedInstaller.readRecordedInstaller(
-                                        activity, getPackageNameForApk(firstApk) != null
-                                                ? getPackageNameForApk(firstApk) : "")
-                                : recorded;
-                        showInstallCompleteDialog(appName + "\nInstaller: " + verified, firstApk);
-                    });
+                    String pkg = firstApk != null ? getPackageNameForApk(firstApk) : null;
+                    awaitRecordedInstaller(pkg, installer, recorded, pm, appName, firstApk);
                 }
 
                 @Override
@@ -99,6 +128,48 @@ public class ApkInstallDialogHelper {
             ProgressManager pm = showProgress("Installing " + appName + "...");
             installSplitWithPackageInstaller(apkFiles, appName, pm, firstApk);
         }
+    }
+
+    /**
+     * An installer-package session is committed asynchronously, so the recorded
+     * value is only final a moment after the installer reports back. Poll it
+     * briefly so the confirmation reflects what the system actually stored.
+     */
+    private void awaitRecordedInstaller(String packageName, String requestedInstaller, String fallback,
+                                        ProgressManager pm, String appName, File firstApk) {
+        if (packageName == null || packageName.isEmpty()) {
+            finishInstall(fallback, pm, appName, firstApk);
+            return;
+        }
+        new Thread(() -> {
+            String recorded = fallback;
+            for (int i = 0; i < 20; i++) {
+                String now = PrivilegedInstaller.readRecordedInstaller(activity, packageName);
+                if (now != null && !"?".equals(now)) {
+                    recorded = now;
+                    if (now.equals(requestedInstaller)) break;
+                }
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            final String shown = recorded;
+            activity.runOnUiThread(() -> finishInstall(shown, pm, appName, firstApk));
+        }).start();
+    }
+
+    private void finishInstall(String recorded, ProgressManager pm, String appName, File firstApk) {
+        dismissProgress(pm);
+        String message = appName + "\nInstaller: " + recorded;
+        String requested = InstallerConfig.resolveInstallerPackageName(activity);
+        if (requested != null && !requested.equals(recorded)) {
+            String trace = PrivilegedInstaller.lastTrace();
+            message += "\nSpoof: " + (trace.isEmpty() ? "system installer" : trace);
+        }
+        showInstallCompleteDialog(message, firstApk);
     }
 
     @SuppressLint("RequestInstallPackagesPolicy")

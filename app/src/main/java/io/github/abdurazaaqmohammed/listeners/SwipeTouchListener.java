@@ -20,9 +20,11 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private final GestureDetectorCompat gestureDetector;
     private final View.OnClickListener originalClickListener;
     private final View.OnLongClickListener originalLongClickListener;
-    private final Object arrayAdapter;
     private final int position;
     private final PositionSource positionSource;
+
+    private Object arrayAdapter;
+    private int pane;
 
     public interface PositionSource {
         int currentPosition();
@@ -37,7 +39,6 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private boolean gestureHandled;
 
     private boolean swipeDecided;
-    private final int pane;
     private final MainActivity context;
 
     public SwipeTouchListener(MainActivity context,
@@ -86,9 +87,10 @@ public class SwipeTouchListener implements View.OnTouchListener {
                     public boolean onSingleTapUp(@NonNull MotionEvent e) {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
-                            if (arrayAdapter instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) arrayAdapter).isMultiSelectMode()) {
-                                int pos = resolvePosition();
-                                if (pos != RecyclerView.NO_POSITION) ((MainFilesArrayAdapter) arrayAdapter).handleMultiSelect(pos);
+                            MainFilesArrayAdapter live = liveAdapter();
+                            int pos = resolvePosition();
+                            if (live != null && live.isMultiSelectMode()) {
+                                if (pos != RecyclerView.NO_POSITION) live.handleMultiSelect(pos);
                             } else {
                                 originalClickListener.onClick(null);
                             }
@@ -117,6 +119,20 @@ public class SwipeTouchListener implements View.OnTouchListener {
             }
         }
         return position;
+    }
+
+    /**
+     * A recycled row view keeps its detector, but the adapter it drives is a
+     * different instance on every folder change. Rebinding here keeps swipes and
+     * taps acting on the adapter that is actually on screen.
+     */
+    public void rebind(Object arrayAdapter, int pane) {
+        this.arrayAdapter = arrayAdapter;
+        this.pane = pane;
+    }
+
+    private MainFilesArrayAdapter liveAdapter() {
+        return arrayAdapter instanceof MainFilesArrayAdapter a ? a : null;
     }
 
     @Override
@@ -187,8 +203,9 @@ if (confirmed && event.getActionMasked() == MotionEvent.ACTION_UP) {
                                     .start();
 
                             int pos = resolvePosition();
-                            if (arrayAdapter instanceof MainFilesArrayAdapter ma && pos != RecyclerView.NO_POSITION)
-                                ma.handleSwipe(pos);
+                            MainFilesArrayAdapter live = liveAdapter();
+                            if (live != null && pos != RecyclerView.NO_POSITION)
+                                live.handleSwipe(pos);
                         } else {
                         v.animate().translationX(0).setDuration(180).setInterpolator(new DecelerateInterpolator(1.5f)).start();
                     }

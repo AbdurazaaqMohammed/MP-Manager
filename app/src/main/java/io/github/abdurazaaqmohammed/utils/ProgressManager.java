@@ -34,6 +34,7 @@ public class ProgressManager {
     private String currentText;
     private int progressVal, maxVal;
     private boolean hidden, dismissed;
+    private boolean showCount;
     private NotificationManagerCompat nm;
 
     private static final String CHANNEL_ID = "progress_channel";
@@ -54,7 +55,11 @@ public class ProgressManager {
             ProgressBar pb = v.findViewById(R.id.progressBar);
             pb.setIndeterminate(indeterminate);
             if (currentText != null) ((TextView) v.findViewById(R.id.dialogTitle)).setText(currentText);
-            if (!indeterminate && maxVal > 0) { pb.setMax(maxVal); pb.setProgress(progressVal); }
+            if (!indeterminate && maxVal > 0) {
+                pb.setMax(maxVal);
+                pb.setProgress(progressVal);
+                applyCount(v.findViewById(R.id.progressCount));
+            }
             dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
         });
         return this;
@@ -85,10 +90,40 @@ public class ProgressManager {
                 pb.setIndeterminate(false);
                 pb.setMax(max);
                 pb.setProgress(progress);
+                applyCount(dialog.findViewById(R.id.progressCount));
             }
             if (hidden) updateNotification();
         });
         return this;
+    }
+
+    /** Declares the work size up front so the dialog opens already determinate. */
+    public ProgressManager setTotal(int total) {
+        return setProgress(progressVal, total);
+    }
+
+    /**
+     * Turns on the "n / total (x%)" line. Only shown when a total is known, so
+     * indeterminate operations keep the plain spinner.
+     */
+    public ProgressManager showCount(boolean show) {
+        this.showCount = show;
+        handler.post(() -> {
+            if (dismissed) return;
+            if (dialog != null && dialog.isShowing()) applyCount(dialog.findViewById(R.id.progressCount));
+        });
+        return this;
+    }
+
+    private void applyCount(TextView count) {
+        if (count == null) return;
+        if (!showCount || indeterminate || maxVal <= 0) {
+            count.setVisibility(View.GONE);
+            return;
+        }
+        int percent = (int) ((progressVal * 100L) / maxVal);
+        count.setVisibility(View.VISIBLE);
+        count.setText(progressVal + " / " + maxVal + " (" + Math.min(100, Math.max(0, percent)) + "%)");
     }
 
     public void dismiss() {

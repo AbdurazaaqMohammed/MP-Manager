@@ -65,7 +65,7 @@ public class ArchiveUtil {
     public static void extract(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
         if (!destDir.exists()) destDir.mkdirs();
         String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) extractZip(archive, destDir, password);
+        if (lower.endsWith(".zip")) extractZip(archive, destDir, preserveTime, password);
         else if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
         else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime);
         else if (lower.endsWith(".tar")) extractTar(new FileInputStream(archive), destDir, preserveTime);
@@ -123,11 +123,18 @@ public class ArchiveUtil {
      * Zip extraction via zip4j: extractAll handles nested folders, mtimes and
      * parent dirs, and refuses entries escaping the destination (canonical
      * path check), so no manual traversal sanitizing is needed here.
+     *
+     * Archives using a compression method zip4j does not implement (XZ,
+     * Zstandard, bzip2, LZMA) abort its central-directory read, so the same
+     * guarantee is provided by {@link ZipCompat} for those.
      */
-    private static void extractZip(File archive, File destDir, char[] password) throws IOException {
+    private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
         try (ZipFile zf = new ZipFile(archive)) {
             if (password != null) zf.setPassword(password);
             zf.extractAll(destDir.getAbsolutePath());
+        } catch (net.lingala.zip4j.exception.ZipException e) {
+            if (password != null || isPasswordError(e)) throw e;
+            ZipCompat.extractAll(archive, destDir, preserveTime);
         }
     }
 
@@ -141,6 +148,13 @@ public class ArchiveUtil {
         if (lower.endsWith(".zip")) {
             try (ZipFile zf = new ZipFile(archive)) {
                 return zf.isEncrypted();
+            } catch (net.lingala.zip4j.exception.ZipException e) {
+                // zip4j cannot walk archives with unknown compression methods;
+                // ask the central directory directly instead of failing.
+                for (net.lingala.zip4j.model.FileHeader fh : ZipCompat.listHeaders(archive)) {
+                    if (fh.isEncrypted()) return true;
+                }
+                return false;
             }
         }
         if (lower.endsWith(".7z")) {
