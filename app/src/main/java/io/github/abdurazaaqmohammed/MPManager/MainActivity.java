@@ -363,12 +363,29 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         super.onPause();
         updates.unregister();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        settings.edit()
+        SharedPreferences.Editor editor = settings.edit()
                 .putString("bookmarks", getBookmarks().toString())
                 .putBoolean("systemTheme", systemTheme)
                 .putBoolean("checkForUpdates", checkForUpdates)
-                .putInt("theme", theme)
-                .apply();
+                .putInt("theme", theme);
+        
+        try {
+            RecyclerView pane1View = findViewById(R.id.listViewPane1);
+            if (pane1View != null && pane1View.getAdapter() instanceof MainFilesArrayAdapter adapter1) {
+                Set<Integer> selected1 = new HashSet<>(adapter1.selectedPositions);
+                editor.putStringSet("pane1_selected", selected1.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+            }
+        } catch (Exception ignored) {}
+        
+        try {
+            RecyclerView pane2View = findViewById(R.id.listViewPane2);
+            if (pane2View != null && pane2View.getAdapter() instanceof MainFilesArrayAdapter adapter2) {
+                Set<Integer> selected2 = new HashSet<>(adapter2.selectedPositions);
+                editor.putStringSet("pane2_selected", selected2.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+            }
+        } catch (Exception ignored) {}
+        
+        editor.apply();
     }
 
     public void openSidebarDrawer() {
@@ -1910,9 +1927,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
-        pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
+        MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
+        pane.setAdapter(adapter);
+        
+        try {
+            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+            String prefKey = pane1 ? "pane1_selected" : "pane2_selected";
+            Set<String> savedSelection = settings.getStringSet(prefKey, null);
+            if (savedSelection != null && !savedSelection.isEmpty()) {
+                Set<Integer> positions = new HashSet<>();
+                for (String s : savedSelection) {
+                    try {
+                        positions.add(Integer.parseInt(s));
+                    } catch (Exception ignored) {}
+                }
+                adapter.restoreSelection(positions);
+                settings.edit().remove(prefKey).apply();
+            }
+        } catch (Exception ignored) {}
+        
         UiPrefs.playFolderTransition(pane);
-        // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
     }
@@ -2853,12 +2887,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-
-
-
-
-
-
     private boolean isNotHidden(File f) {
         return sortFilter.isNotHidden(f);
     }
@@ -2906,4 +2934,3 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ftp.loadFtpFolderInPane(folder, pane1);
     }
 }
-

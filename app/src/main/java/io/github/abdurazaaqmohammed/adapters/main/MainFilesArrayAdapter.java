@@ -103,8 +103,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return isMultiSelectMode;
     }
 
-    private final Set<Integer> selectedPositions = new HashSet<>();
+    public final Set<Integer> selectedPositions = new HashSet<>();
     private Integer rangeStartPosition = null;
+
+    public void restoreSelection(Set<Integer> positions) {
+        if (positions != null && !positions.isEmpty()) {
+            selectedPositions.clear();
+            selectedPositions.addAll(positions);
+            isMultiSelectMode = true;
+            notifyDataSetChanged();
+        }
+    }
 
     /** Target of the synthetic ".." row, resolved once per listing. */
     private final File upFile;
@@ -1008,6 +1017,26 @@ final View.OnClickListener originalClickListener;
                                     case FileMenuOrder.SHARE:
                                         if (isInZip) {
                                             fileOpener.shareZipEntry(item, fileName);
+                                        } else if (multi) {
+                                            ArrayList<Uri> uris = new ArrayList<>();
+                                            for (int sp : selectedPositions) {
+                                                if (sp >= 0 && sp < values.length && values[sp] instanceof File) {
+                                                    File selectedFile = (File) values[sp];
+                                                    fileOpener.withReadableCopy(selectedFile, readable -> {
+                                                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                        synchronized (uris) {
+                                                            uris.add(uri);
+                                                            if (uris.size() == selectedPositions.size()) {
+                                                                Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                                                                intent.setType("*/*");
+                                                                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                                                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                                                context.startActivity(Intent.createChooser(intent, "Share " + selectedPositions.size() + " files"));
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            }
                                         } else fileOpener.withReadableCopy(file, readable -> {
                                             Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
                                             String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
