@@ -245,9 +245,9 @@ public class SidebarController {
         if (event.getActionMasked() == MotionEvent.ACTION_UP
                 || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
             if (!organizeDragStarted) activity.handler.removeCallbacks(organizeLongPressRunnable);
-            return true;
+            return false;
         }
-        return true;
+        return organizeDragStarted;
     }
 
     private void startSidebarDrag(View view, SidebarAdapter.SidebarEntry entry) {
