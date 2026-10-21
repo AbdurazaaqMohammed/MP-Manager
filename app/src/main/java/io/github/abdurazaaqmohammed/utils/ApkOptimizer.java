@@ -57,19 +57,43 @@ public class ApkOptimizer {
                     return false;
                 });
             List<File> lf = net.lingala.zip4j.util.FileUtils.getFilesInDirectoryRecursive(tempFolder, zpF);
-            for (File f : lf) if (!f.isDirectory()) {
+            for (File f : lf) {
+                if (f.isDirectory()) continue;
                 String relativePath = f.getPath().replace(tempFolder.getPath() + File.separatorChar, "");
                 if (relativePath.equals(amS) || relativePath.equals(rssS)) continue;
+                if (isSignatureFile(relativePath) || relativePath.equals("META-INF/MANIFEST.MF")) continue;
                 logger.logMessage(context.getString(R.string.adding, relativePath));
                 ZipParameters params = new ZipParameters(zipParameters);
-                if (relativePath.startsWith("res/") && !relativePath.endsWith(".xml")) {
+                if (mustStore(relativePath)) {
                     params.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
                     params.setCompressionMethod(CompressionMethod.STORE);
                 }
                 params.setFileNameInZip(relativePath);
                 opt.addFile(f, params);
             }
+        } finally {
+            deleteRecursive(tempFolder);
         }
+        ApkZipAlignUtil.ensureInstallable(optFile);
         return optFile;
+    }
+
+    private static boolean mustStore(String relativePath) {
+        return ApkZipAlignUtil.mustStore(relativePath)
+                || (relativePath.startsWith("lib/") && relativePath.endsWith(".so"));
+    }
+
+    private static boolean isSignatureFile(String relativePath) {
+        if (!relativePath.startsWith("META-INF/")) return false;
+        String name = relativePath.substring("META-INF/".length());
+        return name.endsWith(".RSA") || name.endsWith(".DSA") || name.endsWith(".EC") || name.endsWith(".SF");
+    }
+
+    private static void deleteRecursive(File file) {
+        if (file == null || !file.exists()) return;
+        File[] kids = file.listFiles();
+        if (kids != null) for (File kid : kids) deleteRecursive(kid);
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
     }
 }
