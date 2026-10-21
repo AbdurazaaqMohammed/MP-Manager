@@ -187,6 +187,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private static Language cachedSmaliLanguage;
     private static TextMateColorScheme cachedColorScheme;
     private static String[] cachedInstructions;
+    private static String cachedThemeName;
 
     // TextMate syntax highlighting for regular text files. Grammars are bundled under
     // assets/syntaxes and registered from assets/languages.json. They are loaded lazily on
@@ -1631,28 +1632,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         cachedSmaliLanguage = null;
         cachedColorScheme = null;
         cachedInstructions = null;
+        cachedThemeName = null;
         syntaxLanguageCache.clear();
     }
 
     public static synchronized void ensureLanguageInitialized(Context context) {
-        if (cachedSmaliLanguage != null) return;
+        String themeName = currentEditorThemeName(context);
+        if (cachedSmaliLanguage != null && themeName.equals(cachedThemeName)) return;
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            // The legacy int "theme" preference is no longer written anywhere, so
-            // it always fell back to uiMode. With a theme plugin forcing light
-            // mode that picked dark.json and the editor rendered light gray text
-            // on a light background. Ask the app theme registry instead.
-            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
-            boolean dark;
-            if (pluginId != null) {
-                dark = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId)
-                        == AppCompatDelegate.MODE_NIGHT_YES;
-            } else {
-                dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                        == Configuration.UI_MODE_NIGHT_YES;
-            }
-            String themeName = dark ? "dark.json" : "light.json";
+            cachedThemeName = themeName;
             IThemeSource themeSource = null;
             try {
                 themeSource = IThemeSource.fromInputStream(context.getAssets().open( "themes/" + themeName), themeName, null);
@@ -1668,6 +1658,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             cachedColorScheme = TextMateColorScheme.create(registry);
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) { Log.e("UnifiedEditor", "Static init error", e); }
+    }
+
+    private static String currentEditorThemeName(Context context) {
+        try {
+            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
+            if (pluginId != null) {
+                int nightMode = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId);
+                if (nightMode == AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";
+                if (nightMode == AppCompatDelegate.MODE_NIGHT_NO) return "light.json";
+            }
+        } catch (Exception ignored) {
+        }
+        boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+        return dark ? "dark.json" : "light.json";
     }
 
     private static void initTMStatic(Context context) {
