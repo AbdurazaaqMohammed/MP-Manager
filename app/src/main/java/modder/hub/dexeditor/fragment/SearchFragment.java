@@ -1777,7 +1777,8 @@ public class SearchFragment extends Fragment {
             this.queryHasNewline = query.indexOf('\n') >= 0;
             this.excludeArray = excludeList.toArray(new String[0]);
             this.poolPrefilterEnabled = "Smali".equals(this.type) && !this.isRegex
-                    && query.length() >= 2 && !isCommonSmaliWord(query);
+                    && query.length() >= 2 && !isCommonSmaliWord(query)
+                    && !containsNonPoolContextChar(query);
         }
 
         private void initSmaliKeywords() {
@@ -2335,6 +2336,23 @@ public class SearchFragment extends Fragment {
             // Literals or register ranges
             char first = query.charAt(0);
             return !Character.isLetter(first) && first != 'L';
+        }
+
+        /**
+         * The pool pre-filter can only skip a class when the whole query provably occurs
+         * inside the dex string pool. The generated smali text also contains characters
+         * produced by the writer that never live in the pool, so a query carrying one of
+         * them may span a pool string and a generated token (e.g. {@code renameTo(} joins
+         * the pooled method name with the generated parameter list). Such queries must be
+         * matched against the smali text itself instead of being skipped.
+         */
+        private static final String NON_POOL_CONTEXT_CHARS = "(){}<>-,. \t\r\n\"'|";
+
+        private static boolean containsNonPoolContextChar(String query) {
+            final int n = query.length();
+            for (int i = 0; i < n; i++)
+                if (NON_POOL_CONTEXT_CHARS.indexOf(query.charAt(i)) >= 0) return true;
+            return false;
         }
 
         private boolean checkDexPool(DexBackedDexFile dex, String query, boolean matchCase) {
