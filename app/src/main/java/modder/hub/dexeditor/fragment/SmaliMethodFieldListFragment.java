@@ -579,9 +579,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         final String proto = parsed[1];
         final String sClass = slashClass;
         if (overrideCount > 0) {
-            new MaterialAlertDialogBuilder(requireContext())
+            new MaterialAlertDialogBuilder(activity)
                     .setTitle(R.string.find_usages)
-                    .setMessage(getString(R.string.overriding_methods_found, overrideCount))
+                    .setMessage(activity.getString(R.string.overriding_methods_found, overrideCount))
                     .setPositiveButton(android.R.string.ok, (d, w) -> {
                         DexEditorActivity a = (DexEditorActivity) getActivity();
                         dismiss();
@@ -621,7 +621,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         DexEditorActivity activity = (DexEditorActivity) act;
         AlertCircularProgress pd = new AlertCircularProgress(activity);
         try {
-            pd.setMessage(getString(R.string.clearing_method));
+            pd.setMessage(act.getString(R.string.clearing_method));
         } catch (Exception ignored) {
         }
         pd.show();
@@ -1248,7 +1248,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         public void run() {
             activity.runOnUiThread(() -> {
                 pd = new AlertCircularProgress(activity);
-                pd.setMessage(getString(R.string.generating_flowchart));
+                pd.setMessage(activity.getString(R.string.generating_flowchart));
                 pd.show();
             });
 
@@ -1260,6 +1260,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 activity.runOnUiThread(() -> {
                     if (pd != null) pd.dismiss();
+                    if (activity.isFinishing() || activity.isDestroyed()) return;
 
                     for (Method method : drawFlowDiagram.getClassInSmali().getMethodDict().values()) {
                         final String dotDiagram = drawFlowDiagram.drawMethodFlowDiagram(method);
@@ -1275,6 +1276,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             } catch (final Exception e) {
                 activity.runOnUiThread(() -> {
                     if (pd != null) pd.dismiss();
+                    if (activity.isFinishing() || activity.isDestroyed()) return;
                     showExceptionDlg(activity, e);
                 });
             }
@@ -1297,7 +1299,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         public void run() {
             activity.runOnUiThread(() -> {
                 pd = new AlertCircularProgress(activity);
-                pd.setMessage(getString(R.string.decompiling));
+                pd.setMessage(activity.getString(R.string.decompiling));
                 pd.show();
             });
 
