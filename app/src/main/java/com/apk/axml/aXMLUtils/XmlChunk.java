@@ -19,9 +19,14 @@ public class XmlChunk extends Chunk<XmlChunk.H> {
     }
 
     public XmlChunk(Context context, List<ResEntry> resourceEntries) {
+        this(context, resourceEntries, StringPoolChunk.Encoding.UNICODE);
+    }
+
+    public XmlChunk(Context context, List<ResEntry> resourceEntries, StringPoolChunk.Encoding encoding) {
         super(null);
         this.context=context;
         this.resourceEntries = resourceEntries;
+        stringPool.setEncoding(encoding);
     }
 
     public class H extends Chunk.Header {

@@ -47,7 +47,7 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
             "|(0x[0-9a-zA-Z]+)" +
             "|([-+]?\\d+(?:\\.\\d+)?)" +
             "|([-+]?\\d+(?:\\.\\d+)?(?:dp|dip|in|px|sp|pt|mm))" +
-            "|([-+]?\\d+(?:\\.\\d+)?(?:%))" +
+            "|([-+]?\\d+(?:\\.\\d+)?(?:%p?))" +
             "|(\\#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))" +
             "|(match_parent|wrap_content|fill_parent)" +
             ")$").replaceAll("\\s+", ""));
@@ -80,7 +80,10 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
         int base;
         String num;
 
-        if (val.endsWith("%")) {
+        if (val.endsWith("%p")) {
+            num = getNumber(val,2);
+            unit = 1;
+        } else if (val.endsWith("%")) {
             num = getNumber(val,1);
             unit = 0;
         } else if (val.endsWith("dp")) {

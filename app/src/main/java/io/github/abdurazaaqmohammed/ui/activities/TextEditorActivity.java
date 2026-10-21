@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.apk.axml.ResourceTableParser;
 import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
+import com.apk.axml.aXMLUtils.StringPoolChunk;
 import com.apk.axml.serializableItems.ResEntry;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -65,6 +66,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         boolean axml;
         boolean abx;
         List<ResEntry> resEntries;
+        StringPoolChunk.Encoding poolEncoding;
         String pendingDecoded;
         String content;
         /** Written by loader threads, read by the UI thread. */
@@ -428,6 +430,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         boolean isAxml = false;
         boolean isAbx = false;
         List<ResEntry> entries = null;
+        StringPoolChunk.Encoding axmlEncoding = null;
         String extraText = null;
 
         if (intent.hasExtra("abx")) {
@@ -449,7 +452,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 try(InputStream is = FileUtils.getInputStream(intent.getStringExtra("rssPath")); InputStream is2 = FileUtils.getInputStream(intent.getStringExtra("path"))) {
                     ResourceTableParser rtp = new ResourceTableParser(is);
                     entries = rtp.parse();
-                    extraText = new aXMLDecoder(is2, entries).decodeAsString();
+                    aXMLDecoder decoder = new aXMLDecoder(is2, entries);
+                    extraText = decoder.decodeAsString();
+                    axmlEncoding = decoder.getPoolEncoding();
                 } catch (Exception e) { new ErrorUtil(this).showError(e); }
             }
             file = new File(intent.getStringExtra("path"));
@@ -537,6 +542,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         tab.axml = isAxml;
         tab.abx = isAbx;
         tab.resEntries = entries;
+        tab.poolEncoding = axmlEncoding;
         String zipFileExtra = intent.getStringExtra("zf");
         String zipEntryExtra = intent.getStringExtra("zipEntryPath");
         if (zipFileExtra != null && !zipFileExtra.isEmpty()) tab.zipFilePath = zipFileExtra;
@@ -707,7 +713,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         if (tab.axml) {
             try (InputStream is = tab.file != null ? FileUtils.getInputStream(tab.file)
                     : getContentResolver().openInputStream(tab.fileUri)) {
-                return new aXMLDecoder(is, tab.resEntries).decodeAsString();
+                aXMLDecoder decoder = new aXMLDecoder(is, tab.resEntries);
+                String text = decoder.decodeAsString();
+                tab.poolEncoding = decoder.getPoolEncoding();
+                return text;
             } catch (Exception e) {
                 return null;
             }
@@ -908,7 +917,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private byte[] encodeTabPayload(EditorTab tab, String text) throws Exception {
-        if (tab.axml) return new aXMLEncoder().encodeString(text, this, tab.resEntries);
+        if (tab.axml) return new aXMLEncoder().encodeString(text, this, tab.resEntries, tab.poolEncoding);
         if (tab.abx) return AbxUtil.encodeString(text);
         return text.getBytes(StandardCharsets.UTF_8);
     }

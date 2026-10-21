@@ -37,11 +37,12 @@ public class aXMLEncoder {
     }
 
     public byte[] encodeString(List<XMLEntry> xmlEntries, Context context, List<ResEntry> resourceEntries) throws XmlPullParserException, IOException {
-        XmlPullParserFactory f = XmlPullParserFactory.newInstance();
-        f.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);
-        XmlPullParser p = f.newPullParser();
-        p.setInput(new StringReader(Utils.decodeAsString(xmlEntries)));
-        return encode(p, context, resourceEntries);
+        return encodeString(Utils.decodeAsString(xmlEntries), context, resourceEntries);
+    }
+
+    public byte[] encodeString(List<XMLEntry> xmlEntries, Context context, List<ResEntry> resourceEntries,
+                               StringPoolChunk.Encoding encoding) throws XmlPullParserException, IOException {
+        return encodeString(Utils.decodeAsString(xmlEntries), context, resourceEntries, encoding);
     }
 
     public byte[] encodeString(String xml, Context context) throws XmlPullParserException, IOException {
@@ -56,8 +57,24 @@ public class aXMLEncoder {
         return encode(p, context, resourceEntries);
     }
 
+    public byte[] encodeString(String xml, Context context, List<ResEntry> resourceEntries,
+                               StringPoolChunk.Encoding encoding) throws XmlPullParserException, IOException {
+        XmlPullParserFactory f = XmlPullParserFactory.newInstance();
+        f.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);
+        XmlPullParser p = f.newPullParser();
+        p.setInput(new StringReader(xml));
+        return encode(p, context, resourceEntries, encoding);
+    }
+
     private static byte[] encode(XmlPullParser p, Context context, List<ResEntry> resourceEntries) throws XmlPullParserException, IOException {
-        XmlChunk chunk = new XmlChunk(context, resourceEntries);
+        return encode(p, context, resourceEntries, null);
+    }
+
+    private static byte[] encode(XmlPullParser p, Context context, List<ResEntry> resourceEntries,
+                                 StringPoolChunk.Encoding encoding) throws XmlPullParserException, IOException {
+        XmlChunk chunk = encoding == null
+                ? new XmlChunk(context, resourceEntries)
+                : new XmlChunk(context, resourceEntries, encoding);
         TagChunk current = null;
         for (int i=p.getEventType(); i!=XmlPullParser.END_DOCUMENT; i=p.next()) {
             switch (i){
