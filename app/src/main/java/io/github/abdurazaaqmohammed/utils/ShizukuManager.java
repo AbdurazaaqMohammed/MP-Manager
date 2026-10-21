@@ -507,6 +507,69 @@ public final class ShizukuManager {
         }
     }
 
+    /**
+     * Runs every copy in one shell process when the shell can reach the paths,
+     * and one binder round trip each when it cannot. Per-item shell copies cost
+     * a fresh {@code sh -c} process each, which dominated multi-selection copies.
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        StringBuilder shell = new StringBuilder();
+        int shellOps = 0;
+        List<RootManager.CopyOp> service = new ArrayList<>();
+        for (RootManager.CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (useShell(src) || useShell(dest)) {
+                if (shell.length() > 0) shell.append(" && ");
+                if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
+                    shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
+                }
+                File destParent = new File(dest).getParentFile();
+                if (destParent != null) shell.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
+                shell.append("cp -p").append(op.directory ? " -r" : "").append(" -- ")
+                        .append(shellArg(src)).append(' ').append(shellArg(dest));
+                shellOps++;
+            } else {
+                service.add(op);
+            }
+        }
+        if (shellOps > 0) throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60));
+        if (service.isEmpty()) return;
+        IFileService s = serviceSync(context);
+        for (RootManager.CopyOp op : service) {
+            requireAllowed(op.src);
+            requireAllowed(op.dest);
+            if (isTopLevel(op.src) || isTopLevel(op.dest)) throw new IOException("Refusing protected top-level path");
+            if (op.destExists && op.directory) {
+                try {
+                    s.deletePath(op.dest);
+                } catch (Exception ignored) {
+                }
+            }
+            boolean ok;
+            if (op.directory) {
+                try {
+                    ok = s.copyDir(op.src, op.dest);
+                } catch (android.os.RemoteException e) {
+                    throw new IOException("copy failed: " + e.getMessage());
+                }
+            } else {
+                try {
+                    ok = s.copyFile(op.src, op.dest);
+                } catch (android.os.RemoteException e) {
+                    throw new IOException("copy failed: " + e.getMessage());
+                }
+            }
+            if (!ok) throw new IOException(serviceError(s));
+            try {
+                s.touchMtime(op.dest, s.pathMtime(op.src));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     public static void mkdir(Context context, String path) throws IOException {
         if (useShell(path)) {
             throwIfShellFails("mkdir -p " + shellArg(path), "mkdir", 30);
@@ -538,6 +601,37 @@ public final class ShizukuManager {
             throw e;
         } catch (Exception e) {
             throw new IOException("delete failed: " + e.getMessage());
+        }
+    }
+
+    public static void deleteAll(Context context, List<String> paths) throws IOException {
+        if (paths == null || paths.isEmpty()) return;
+        StringBuilder shell = new StringBuilder("rm -rf --");
+        int shellPaths = 0;
+        List<String> service = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (useShell(path)) {
+                if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+                shell.append(' ').append(shellArg(path));
+                shellPaths++;
+            } else {
+                requireAllowed(path);
+                if (isTopLevel(path)) throw new IOException("Refusing protected top-level path");
+                service.add(path);
+            }
+        }
+        if (shellPaths > 0) throwIfShellFails(shell.toString(), "delete", Math.max(30, shellPaths * 30));
+        if (service.isEmpty()) return;
+        IFileService s = serviceSync(context);
+        for (String path : service) {
+            try {
+                if (!s.deletePath(path)) throw new IOException(serviceError(s));
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("delete failed: " + e.getMessage());
+            }
         }
     }
 

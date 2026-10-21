@@ -39,6 +39,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +62,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
@@ -74,6 +77,8 @@ public class FileOperationsHelper {
     private final DialogUtil dialogUtil;
     private final MainFilesArrayAdapter adapter;
     private final DexTools dex;
+    /** Folder path -> entry names, so planning checks cost one listing per folder. */
+    private final Map<String, String[]> dirListingCache = new HashMap<>();
 
     private volatile ProgressManager activeProgress;
 
@@ -253,8 +258,49 @@ public class FileOperationsHelper {
         Map<Object, File> plan = planMoves(items, destinationFolder, useElevated);
         if (plan == null) return true;
 
+        Set<Object> batchDone = new HashSet<>();
+        if (useElevated) {
+            List<RootManager.CopyOp> ops = new ArrayList<>();
+            List<String> sources = new ArrayList<>();
+            List<Object> opItems = new ArrayList<>();
+            long opFiles = 0;
+            for (Map.Entry<Object, File> planned : plan.entrySet()) {
+                Object item = planned.getKey();
+                if (!(item instanceof File f)) continue;
+                File dest = planned.getValue();
+                if (dest == null || dest.equals(f)) {
+                    batchDone.add(item);
+                    continue;
+                }
+                boolean destExists;
+                try {
+                    destExists = dirHasEntry(destinationFolder, dest.getName());
+                } catch (Exception e) {
+                    destExists = false;
+                }
+                // The batch already removes replaced destinations, so the per-item
+                // clear below must not run for the items it handled.
+                ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
+                        f.isDirectory(), destExists));
+                sources.add(f.getAbsolutePath());
+                opItems.add(item);
+                opFiles += FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+            }
+            if (!ops.isEmpty()) {
+                try {
+                    AccessManager.copyAllPreserving(context, ops);
+                    AccessManager.deleteAll(context, sources, true);
+                    batchDone.addAll(opItems);
+                    done += opFiles;
+                    advanceActiveProgress(done, totalFiles);
+                } catch (Exception e) {
+                }
+            }
+        }
+
         for (Map.Entry<Object, File> planned : plan.entrySet()) {
             Object item = planned.getKey();
+            if (batchDone.contains(item)) continue;
             File dest = planned.getValue();
             if (item instanceof File f) {
                 if (dest == null || dest.equals(f)) continue;
@@ -316,6 +362,7 @@ public class FileOperationsHelper {
         }
         context.handler.post(() -> {
             adapter.clearSelection();
+            clearDirListingCache();
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
             // Source pane also changed after a move (files deleted) â€” reload it too.
             try {
@@ -371,17 +418,53 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         File first = FileUtils.getUnusedFile(destDir, name);
         if (!useElevated) return first;
         try {
-            if (!AccessManager.exists(context, first.getAbsolutePath())) return first;
+            if (!dirHasEntry(destDir, name)) return first;
             String base = FilenameUtils.getBaseName(name);
             String ext = FilenameUtils.getExtension(name);
             for (int i = 1; i < 1000; i++) {
                 String candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
-                File c = new File(destDir, candidate);
-                if (!AccessManager.exists(context, c.getAbsolutePath())) return c;
+                if (!dirHasEntry(destDir, candidate)) return new File(destDir, candidate);
             }
         } catch (Exception ignored) {
         }
         return first;
+    }
+
+    /**
+     * Existence test inside one folder, backed by a single directory listing.
+     * Asking the elevated backend per name costs one shell round trip each, which
+     * dominated the runtime of every multi-selection copy.
+     */
+    private boolean dirHasEntry(File dir, String name) {
+        if (dir == null || name == null) return false;
+        try {
+            if (new File(dir, name).exists()) return true;
+        } catch (Exception ignored) {
+        }
+        final boolean elevated = AccessManager.fileOpsOn(context);
+        if (!elevated) return false;
+        String key = dir.getAbsolutePath();
+        String[] names = dirListingCache.get(key);
+        if (names == null) {
+            try {
+                File[] listed = AccessManager.listWithStat(context, key);
+                if (listed != null) {
+                    names = new String[listed.length];
+                    for (int i = 0; i < listed.length; i++) names[i] = listed[i].getName();
+                    dirListingCache.put(key, names);
+                    for (String n : names) if (n.equals(name)) return true;
+                    return false;
+                }
+            } catch (Exception ignored) {
+            }
+            return AccessManager.exists(context, new File(dir, name).getAbsolutePath());
+        }
+        for (String n : names) if (n.equals(name)) return true;
+        return false;
+    }
+
+    private void clearDirListingCache() {
+        dirListingCache.clear();
     }
 
     private void syncDirTimes(File srcDir, File dstDir) {
@@ -423,8 +506,38 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         int done = 0;
         final int totalFiles = countFiles(items);
 
+        Set<Object> batchDone = new HashSet<>();
+        if (useElevated) {
+            List<RootManager.CopyOp> ops = new ArrayList<>();
+            List<Object> opItems = new ArrayList<>();
+            long opFiles = 0;
+            for (Map.Entry<Object, File> entry : plan.entrySet()) {
+                Object item = entry.getKey();
+                if (!(item instanceof File f)) continue;
+                File dest = entry.getValue();
+                if (dest == null || dest.equals(f)) {
+                    batchDone.add(item);
+                    continue;
+                }
+                ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
+                        f.isDirectory(), dirHasEntry(destinationFolder, dest.getName())));
+                opItems.add(item);
+                opFiles += FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+            }
+            if (!ops.isEmpty()) {
+                try {
+                    AccessManager.copyAllPreserving(context, ops);
+                    batchDone.addAll(opItems);
+                    done += opFiles;
+                    advanceActiveProgress(done, totalFiles);
+                } catch (Exception e) {
+                }
+            }
+        }
+
         for (Map.Entry<Object, File> entry : plan.entrySet()) {
             Object item = entry.getKey();
+            if (batchDone.contains(item)) continue;
             if (!(item instanceof File f)) continue;
             File dest = entry.getValue();
             if (dest == null || dest.equals(f)) continue;
@@ -474,6 +587,7 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         }
         context.handler.post(() -> {
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            clearDirListingCache();
             // Copy destination changed too â€” ensure the source pane reflects renames/copies.
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
@@ -601,7 +715,7 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         }
         if (useElevated) {
             try {
-                return AccessManager.exists(context, candidate.getAbsolutePath());
+                return dirHasEntry(destinationFolder, source.getName());
             } catch (Exception ignored) {
             }
         }
@@ -630,8 +744,8 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         do {
             candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
             i++;
-        } while (new File(destinationFolder, candidate).exists()
-                || (useElevated && AccessManager.exists(context, new File(destinationFolder, candidate).getAbsolutePath())));
+        } while (useElevated ? dirHasEntry(destinationFolder, candidate)
+                : new File(destinationFolder, candidate).exists());
         return candidate;
     }
 

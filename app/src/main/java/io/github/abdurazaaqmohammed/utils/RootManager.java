@@ -698,6 +698,50 @@ public class RootManager {
         invalidateListCache();
     }
 
+    public static final class CopyOp {
+        public final String src;
+        public final String dest;
+        public final boolean directory;
+        public final boolean destExists;
+
+        public CopyOp(String src, String dest, boolean directory, boolean destExists) {
+            this.src = src;
+            this.dest = dest;
+            this.directory = directory;
+            this.destExists = destExists;
+        }
+    }
+
+    /**
+     * Runs every copy in one shell process. Copying item by item cost one
+     * {@code su} spawn each, all serialised behind the same lock, so even a
+     * handful of small files felt slow.
+     */
+    public void copyAllPreserving(List<CopyOp> ops) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        StringBuilder cmd = new StringBuilder();
+        int count = 0;
+        int timeout = 0;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (op.destExists && op.directory && !isPathBlocked(dest)) {
+                if (cmd.length() > 0) cmd.append(" && ");
+                cmd.append("rm -rf -- ").append(escapeShellArg(dest)).append(" && ");
+            } else if (cmd.length() > 0) cmd.append(" && ");
+            String parent = new File(dest).getParent();
+            if (parent != null) cmd.append("mkdir -p ").append(escapeShellArg(parent)).append(" && ");
+            cmd.append("cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            count++;
+            timeout += op.directory ? 120 : 60;
+        }
+        if (count == 0) return;
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout));
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        invalidateListCache();
+    }
+
     /**
      * Removes every path in one shell process. Deleting a selection item by
      * item cost one {@code su} spawn each, all serialised behind the same lock,
