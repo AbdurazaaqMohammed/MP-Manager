@@ -15,6 +15,7 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
@@ -23,6 +24,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -54,12 +56,15 @@ public class ApkSignatureTools {
             APKLogger logger = pm.getLogger();
             new Thread(() -> {
                 try {
+                    List<File> signed = new ArrayList<>();
                     for (int i = 0; i < apks.size(); i++) {
                         File apk = apks.get(i);
                         String msg = context.rss.getString(R.string.signing, apk.getName());
                         pm.setText(msg);
                         logger.logMessage(msg);
-                        sw.signApk(apk);
+                        File out = signedOutputFor(apk);
+                        sw.signApk(apk, out);
+                        signed.add(out);
                     }
                     pm.dismiss();
                     context.handler.post(() -> {
@@ -72,6 +77,14 @@ public class ApkSignatureTools {
                 }
             }).start();
         });
+    }
+
+    private static File signedOutputFor(File apk) {
+        String name = apk.getName();
+        File sibling = new File(apk.getParentFile(),
+                name.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
+        if (sibling.equals(apk)) sibling = new File(apk.getParentFile(), name + "_signed");
+        return FileUtils.getUnusedFile(sibling);
     }
 
     public void removeSignature(File apk) {
