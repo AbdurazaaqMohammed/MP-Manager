@@ -219,27 +219,57 @@ public class SignWrapper {
     }
 
     public void signApk(File inputApk, File output, boolean v1, boolean v2, boolean v3, boolean v4) throws Exception {
-        if (zipalign) {
-            ApkZipAlignUtil.ensureInstallable(inputApk);
-        }
         boolean inPlace = inputApk.equals(output);
         File actualOutput = inPlace ? resolveSibling(output, output.getName() + ".tmp") : output;
 
-        ApkSigner.Builder builder = new ApkSigner.Builder(Collections.singletonList(createSignerConfig()))
-                .setInputApk(inputApk)
-                .setOutputApk(actualOutput)
-                .setCreatedBy(TextUtils.isEmpty(signedBy) ? DEFAULT_SIGNED_BY : signedBy)
-                .setV1SigningEnabled(v1)
-                .setV2SigningEnabled(v2)
-                .setV3SigningEnabled(v3)
-                .setV4SigningEnabled(v4);
-        if (v4) {
-            builder.setV4SignatureOutputFile(getV4SignatureOutputFile(inputApk, actualOutput));
+        File actualInput = inputApk;
+        File alignedCopy = null;
+        if (zipalign) {
+            alignedCopy = alignedCopyOf(inputApk, actualOutput);
+            if (alignedCopy != null) actualInput = alignedCopy;
         }
-        builder.build().sign();
+
+        try {
+            ApkSigner.Builder builder = new ApkSigner.Builder(Collections.singletonList(createSignerConfig()))
+                    .setInputApk(actualInput)
+                    .setOutputApk(actualOutput)
+                    .setCreatedBy(TextUtils.isEmpty(signedBy) ? DEFAULT_SIGNED_BY : signedBy)
+                    .setV1SigningEnabled(v1)
+                    .setV2SigningEnabled(v2)
+                    .setV3SigningEnabled(v3)
+                    .setV4SigningEnabled(v4);
+            if (v4) {
+                builder.setV4SignatureOutputFile(getV4SignatureOutputFile(inputApk, actualOutput));
+            }
+            builder.build().sign();
+        } finally {
+            if (alignedCopy != null) {
+                try {
+                    if (!alignedCopy.delete()) alignedCopy.deleteOnExit();
+                } catch (Exception ignored) {
+                }
+            }
+        }
 
         if (inPlace) {
             finishInPlaceSign(inputApk, actualOutput);
+        }
+    }
+
+    private static File alignedCopyOf(File inputApk, File output) {
+        File parent = output.getParentFile() != null ? output.getParentFile() : inputApk.getParentFile();
+        if (parent == null) return null;
+        File tmp = new File(parent, inputApk.getName() + ".align" + System.nanoTime() + ".tmp");
+        try {
+            ApkZipAlignUtil.rebuildApk(inputApk, tmp, null, null, null, null);
+            return tmp;
+        } catch (Exception e) {
+            try {
+                //noinspection ResultOfMethodCallIgnored
+                tmp.delete();
+            } catch (Exception ignored) {
+            }
+            return null;
         }
     }
 

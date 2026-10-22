@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.features.files;
 
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -40,6 +43,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -108,6 +112,43 @@ public class SettingsController {
         this.externalSettingLauncher = externalSettingLauncher;
     }
 
+    /**
+     * The theme is read once per process in a handful of places (including the text editor
+     * themes and the file icons), so a live switch leaves parts of the app on the old theme.
+     * Ask for a restart instead of pretending the change is complete.
+     */
+    private void promptThemeRestart() {
+        try {
+            Snackbar snackbar = Snackbar.make(
+                    activity.findViewById(android.R.id.content),
+                    R.string.restart_to_apply_theme, Snackbar.LENGTH_INDEFINITE);
+            snackbar.setAction(R.string.restart, v -> restartApp(activity));
+            snackbar.show();
+        } catch (Exception ignored) {
+            activity.recreate();
+        }
+    }
+
+    private static void restartApp(Context context) {
+        try {
+            Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            if (launch == null) return;
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pending = PendingIntent.getActivity(context, 0x5448, launch,
+                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am != null) {
+                am.set(AlarmManager.RTC, System.currentTimeMillis() + 150, pending);
+            } else {
+                context.startActivity(launch);
+            }
+        } catch (Exception ignored) {
+        }
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
+    }
+
     public void attach(ScrollView settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
@@ -158,7 +199,7 @@ public class SettingsController {
                 applySystemThemeFlag(system);
                 ThemeRegistry.setCurrentId(activity, pluginId);
                 settings.edit().putInt("theme", ThemeRegistry.currentStyleRes(activity)).apply();
-                activity.recreate();
+                promptThemeRestart();
             }
         });
 
@@ -881,8 +922,10 @@ public class SettingsController {
     private void setupAccessSettings(ScrollView root, SharedPreferences settings) {
         RootManager rootManager = RootManager.getInstance(activity);
         AutoCompleteTextView workingModeTv = root.findViewById(R.id.workingModeTv);
-        MaterialSwitch rootStatusSwitch = root.findViewById(R.id.rootStatusSwitch);
-        MaterialSwitch shizukuStatusSwitch = root.findViewById(R.id.shizukuStatusSwitch);
+        View groupRoot = root.findViewById(R.id.groupRoot);
+        View groupShizuku = root.findViewById(R.id.groupShizuku);
+        View groupShizukuOptions = root.findViewById(R.id.groupShizukuOptions);
+        View groupFileOps = root.findViewById(R.id.groupFileOps);
         MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
         MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
         MaterialSwitch shizukuSilentToggle = root.findViewById(R.id.shizukuSilentToggle);
@@ -918,36 +961,48 @@ public class SettingsController {
             workingModeTv.setText(labelShizuku, false);
         } else workingModeTv.setText(labelNonRoot, false);
 
-        rootStatusSwitch.setChecked(false);
         Runnable refreshShizukuRow = () -> {
-            boolean running = ShizukuManager.isRunning();
-            boolean granted = ShizukuManager.hasPermission();
-            shizukuStatusSwitch.setChecked(running && granted);
-            if (!shizukuSupported) {
-                shizukuStatusSwitch.setText(activity.getString(R.string.shizuku_unsupported));
-            } else if (granted) {
-                shizukuStatusSwitch.setText(activity.getString(R.string.shizuku_ready));
-            } else if (running) {
-                shizukuStatusSwitch.setText(activity.getString(R.string.shizuku_running_no_perm));
-            } else {
-                shizukuStatusSwitch.setText(activity.getString(R.string.shizuku_not_running));
-            }
+            boolean running = shizukuSupported && ShizukuManager.isRunning();
+            boolean granted = running && ShizukuManager.hasPermission();
             grantShizukuBtn.setVisibility(
                     rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
                             && running && !granted ? View.VISIBLE : View.GONE);
         };
-        refreshShizukuRow.run();
 
         Runnable applyModeUi = () -> {
             RootManager.WorkingMode mode = rootManager.getWorkingMode();
             boolean isRoot = mode == RootManager.WorkingMode.ROOT;
-            boolean isSh = mode == RootManager.WorkingMode.SHIZUKU;
-            silentInstallToggle.setEnabled(isRoot);
-            shizukuSilentToggle.setEnabled(isSh);
-            rootFileOpsToggle.setEnabled(isRoot);
-            shizukuFileOpsToggle.setEnabled(isSh);
-            rootExtractorToggle.setEnabled(isRoot);
-            rebootMenuBtn.setVisibility(isRoot && rootStatusSwitch.isChecked() ? View.VISIBLE : View.GONE);
+            boolean isSh = mode == RootManager.WorkingMode.SHIZUKU && shizukuSupported;
+            boolean rootOk = isRoot && rootManager.isRootAvailable();
+            boolean shizukuRunning = isSh && ShizukuManager.isRunning();
+            boolean shizukuReady = shizukuRunning && ShizukuManager.hasPermission();
+
+            // Status is shown in the mode field itself; the separate status switches only
+            // duplicated what the dropdown already says.
+            String status;
+            if (isRoot) {
+                status = labelRoot + " - " + (rootOk
+                        ? activity.getString(R.string.elevated_status_available)
+                        : activity.getString(R.string.elevated_status_unavailable));
+            } else if (isSh) {
+                status = labelShizuku + " - " + shizukuStatus(shizukuSupported, ShizukuManager.isRunning(),
+                        ShizukuManager.hasPermission());
+            } else {
+                status = labelNonRoot;
+            }
+            workingModeTv.setText(status, false);
+
+            groupRoot.setVisibility(rootOk ? View.VISIBLE : View.GONE);
+            groupShizuku.setVisibility(isSh && ShizukuManager.isRunning() ? View.VISIBLE : View.GONE);
+            groupShizukuOptions.setVisibility(shizukuReady ? View.VISIBLE : View.GONE);
+            groupFileOps.setVisibility(rootOk || shizukuReady ? View.VISIBLE : View.GONE);
+
+            silentInstallToggle.setEnabled(rootOk);
+            shizukuSilentToggle.setEnabled(shizukuReady);
+            rootFileOpsToggle.setEnabled(rootOk);
+            shizukuFileOpsToggle.setEnabled(shizukuReady);
+            rootExtractorToggle.setEnabled(rootOk);
+            rebootMenuBtn.setVisibility(rootOk ? View.VISIBLE : View.GONE);
             refreshShizukuRow.run();
         };
         applyModeUi.run();
@@ -962,10 +1017,8 @@ public class SettingsController {
                     handler.post(() -> {
                         if (ok) {
                             rootManager.setWorkingMode(RootManager.WorkingMode.ROOT);
-                            rootStatusSwitch.setChecked(true);
                         } else {
                             Extensions.showMessage(activity, R.string.root_denied_msg);
-                            rootStatusSwitch.setChecked(false);
                             workingModeTv.setText(rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
                                     ? labelShizuku : labelNonRoot, false);
                         }
@@ -981,20 +1034,18 @@ public class SettingsController {
                     return;
                 }
                 rootManager.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
-                rootStatusSwitch.setChecked(false);
                 applyModeUi.run();
                 new Thread(() -> ShizukuManager.warmUp(activity)).start();
                 if (!ShizukuManager.hasPermission()) {
-                    requestShizukuPerm(refreshShizukuRow);
+                    requestShizukuPerm(applyModeUi);
                 }
                 return;
             }
             rootManager.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
-            rootStatusSwitch.setChecked(false);
             applyModeUi.run();
         });
 
-        grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(refreshShizukuRow));
+        grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(applyModeUi));
 
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
         silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
@@ -1095,6 +1146,13 @@ public class SettingsController {
         rootExtractorToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_extractor", checked).apply());
 
         rebootMenuBtn.setOnClickListener(v -> showRebootDialog());
+    }
+
+    private String shizukuStatus(boolean supported, boolean running, boolean granted) {
+        if (!supported) return activity.getString(R.string.shizuku_unsupported);
+        if (granted) return activity.getString(R.string.shizuku_ready);
+        if (running) return activity.getString(R.string.shizuku_running_no_perm);
+        return activity.getString(R.string.shizuku_not_running);
     }
 
     private void requestShizukuPerm(Runnable onResult) {

@@ -322,6 +322,29 @@ public final class AccessManager {
     }
 
     /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch. The
+     * backend gets one shell process (root) or one command (shizuku shell
+     * paths) for the entire selection instead of one per item.
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager.getInstance(context).copyAllPreserving(ops);
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            ShizukuManager.copyAllPreserving(context, ops);
+            return;
+        }
+        for (RootManager.CopyOp op : ops) {
+            if (op.directory) FileUtils.copyFolder(new File(op.src), new File(op.dest));
+            else FileUtils.copyFile(new File(op.src), new File(op.dest));
+            preserveTime(context, op.src, op.dest);
+        }
+    }
+
+    /**
      * Deletes every path in one round trip when the backend allows it.
      *
      * @return the paths that were handled by the backend.
@@ -332,12 +355,8 @@ public final class AccessManager {
             Backend backend = active(context);
             if (backend == Backend.ROOT) return RootManager.getInstance(context).deleteAll(paths);
             if (backend == Backend.SHIZUKU) {
-                List<String> done = new ArrayList<>();
-                for (String path : paths) {
-                    ShizukuManager.delete(context, path);
-                    done.add(path);
-                }
-                return done;
+                ShizukuManager.deleteAll(context, paths);
+                return paths;
             }
         }
         List<String> done = new ArrayList<>();

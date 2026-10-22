@@ -25,7 +25,11 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
     }
     private int[] stringsOffset;
 
-    final Encoding encoding = aXMLEncoder.Config.encoding;
+    Encoding encoding = aXMLEncoder.Config.encoding;
+
+    public void setEncoding(Encoding encoding) {
+        if (encoding != null) this.encoding = encoding;
+    }
 
     public StringPoolChunk(Chunk parent) {
         super(parent);

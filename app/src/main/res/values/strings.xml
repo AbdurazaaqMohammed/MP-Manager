@@ -870,6 +870,12 @@ Layout Inspector
     <string name="folders">Folders</string>
     <string name="file_operations">File operations</string>
     <string name="elevated_access">Elevated access</string>
+    <string name="elevated_access_mode">Access mode</string>
+    <string name="elevated_install">Installing</string>
+    <string name="elevated_install_flags">Install flags</string>
+    <string name="restart_to_apply_theme">Restart the app to apply the new theme</string>
+    <string name="elevated_status_available">available</string>
+    <string name="elevated_status_unavailable">unavailable</string>
     <string name="behavior">Behavior</string>
     <string name="signing_card">Signing</string>
     <string name="file_list_size">File list size (%1$d%%)</string>

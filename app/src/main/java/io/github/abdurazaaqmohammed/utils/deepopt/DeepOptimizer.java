@@ -13,6 +13,7 @@ import com.reandroid.arsc.chunk.xml.ResXmlAttribute;
 import com.reandroid.arsc.chunk.xml.ResXmlDocument;
 import com.reandroid.arsc.chunk.xml.ResXmlElement;
 
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 
 import org.apache.commons.io.FilenameUtils;
@@ -161,6 +162,7 @@ public class DeepOptimizer {
         compressAll(module);
         module.writeApk(outFile, (path, method, length) -> {
         });
+        ApkZipAlignUtil.ensureInstallable(outFile);
         log("Deep optimization complete: " + outFile.getName());
 
         if (verifyOutput) {
@@ -195,13 +197,18 @@ public class DeepOptimizer {
     }
 
     /**
-     * Last step of the pipeline: force every zip entry to DEFLATE at the maximum level so the
-     * max-compression setting applies to absolutely everything (including entries the plain
-     * optimizer previously left STORED).
+     * Last step of the pipeline: force every compressible zip entry to DEFLATE at the maximum
+     * level so the max-compression setting applies to as much as possible. Entries that the
+     * installer requires to be STORED (manifest, resource table, raw resources) and native
+     * libraries, which must stay STORED and page aligned when not extracted at install time,
+     * keep their original method.
      */
     private void compressAll(ApkModule module) {
         try {
             for (InputSource source : module.getInputSources()) {
+                String name = source.getName();
+                if (name != null && (ApkZipAlignUtil.mustStore(name)
+                        || (name.startsWith("lib/") && name.endsWith(".so")))) continue;
                 source.setMethod(ZipEntry.DEFLATED);
             }
         } catch (Exception ignored) {

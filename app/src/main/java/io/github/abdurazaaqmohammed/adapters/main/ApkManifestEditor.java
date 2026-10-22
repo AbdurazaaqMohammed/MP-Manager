@@ -34,6 +34,7 @@ import androidx.appcompat.app.AlertDialog;
 import com.apk.axml.ResourceTableParser;
 import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
+import com.apk.axml.aXMLUtils.StringPoolChunk;
 import com.apk.axml.serializableItems.ResEntry;
 import com.apk.axml.serializableItems.XMLEntry;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
@@ -1439,7 +1440,32 @@ public class ApkManifestEditor {
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries, List<ResEntry> resEntries) throws Exception {
         // The same resource table used at decode time must be supplied at encode time:
         // symbolic references (e.g. "@string/app_name") otherwise resolve to 0 and break the APK.
-        replaceZipEntry(apkFile, "AndroidManifest.xml", new aXMLEncoder().encodeString(entries, context, resEntries));
+        // The original string pool encoding has to be kept as well, otherwise a UTF-8 pool
+        // is rewritten as UTF-16 and every manifest edit changes the file size for no reason.
+        replaceZipEntry(apkFile, "AndroidManifest.xml",
+                new aXMLEncoder().encodeString(entries, context, resEntries, manifestPoolEncoding(apkFile)));
+    }
+
+    private StringPoolChunk.Encoding manifestPoolEncoding(File apkFile) {
+        try (ZipFile zf = new ZipFile(apkFile)) {
+            FileHeader header = zf.getFileHeader("AndroidManifest.xml");
+            if (header == null) return null;
+            try (InputStream is = zf.getInputStream(header)) {
+                byte[] head = new byte[28];
+                int read = 0;
+                while (read < head.length) {
+                    int n = is.read(head, read, head.length - read);
+                    if (n < 0) break;
+                    read += n;
+                }
+                if (read < head.length) return null;
+                int flags = (head[24] & 0xFF) | ((head[25] & 0xFF) << 8)
+                        | ((head[26] & 0xFF) << 16) | ((head[27] & 0xFF) << 24);
+                return (flags & 0x100) != 0 ? StringPoolChunk.Encoding.UTF8 : StringPoolChunk.Encoding.UNICODE;
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String appendDisabled(String middleTag) {

@@ -123,6 +123,17 @@ public class MergeUtil {
                         .putString("compressLevel", levels.get(pos)).apply();
             } catch (Exception ignored) { }
         });
+        tv.setKeyListener(null);
+        tv.setRawInputType(InputType.TYPE_NULL);
+        tv.setCursorVisible(false);
+        tv.setLongClickable(false);
+        tv.setOnClickListener(v -> tv.showDropDown());
+        tv.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                v.clearFocus();
+                tv.showDropDown();
+            }
+        });
         return tv;
     }
 

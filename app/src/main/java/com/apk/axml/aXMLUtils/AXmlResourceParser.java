@@ -212,6 +212,10 @@ public class AXmlResourceParser implements XmlResourceParser, AutoCloseable {
 		resetEventInfo();
 	}
 
+	public boolean isStringPoolUtf8() {
+		return stringBlock != null && stringBlock.isUtf8();
+	}
+
 	private void doNext() throws IOException {
 		int readInt = 0;
 		if (this.stringBlock == null) {

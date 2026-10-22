@@ -47,6 +47,10 @@ public class StringBlock {
         return block;
     }
 
+    public boolean isUtf8() {
+        return m_isUTF8;
+    }
+
     public String getString(int index) {
         if (index < 0 || m_stringOffsets == null || index >= m_stringOffsets.length) {
             return null;

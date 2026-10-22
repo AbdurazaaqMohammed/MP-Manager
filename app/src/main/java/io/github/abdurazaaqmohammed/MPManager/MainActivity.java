@@ -2492,7 +2492,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private final Map<String, ArchiveParent> archiveParents = new HashMap<>();
-
     public void noteArchiveParent(File staged, File outer, String entryPath) {
         if (staged == null || outer == null || entryPath == null) return;
         try {

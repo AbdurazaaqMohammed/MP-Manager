@@ -423,31 +423,25 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private static Language cachedSmaliLanguage;
     private static TextMateColorScheme cachedColorScheme;
     private static String[] cachedInstructions;
+    private static String cachedThemeName;
 
     public static void clearCache() {
         cachedSmaliLanguage = null;
         cachedColorScheme = null;
         cachedInstructions = null;
+        cachedThemeName = null;
     }
 
     // sora editor theme
     public static synchronized void ensureLanguageInitialized(Context context) {
-        if (cachedSmaliLanguage != null) return;
+        String themeName = currentEditorThemeName(context);
+        if (cachedSmaliLanguage != null && themeName.equals(cachedThemeName)) return;
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
             // The theme used to be hardcoded to dark.json (twice), which rendered
             // light gray text on the light editor background.
-            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
-            boolean dark;
-            if (pluginId != null) {
-                dark = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId)
-                        == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES;
-            } else {
-                dark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-                        == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-            }
-            String themeName = dark ? "dark.json" : "light.json";
+            cachedThemeName = themeName;
             IThemeSource themeSource = null;
             try {
                 themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/" + themeName), themeName, null);
@@ -470,6 +464,21 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         } catch (Exception e) {
             Log.e("EditorFragment", "Static init error", e);
         }
+    }
+
+    private static String currentEditorThemeName(Context context) {
+        try {
+            String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
+            if (pluginId != null) {
+                int nightMode = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId);
+                if (nightMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";
+                if (nightMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO) return "light.json";
+            }
+        } catch (Exception ignored) {
+        }
+        boolean dark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        return dark ? "dark.json" : "light.json";
     }
 
     private static void initTMStatic(Context context) {
