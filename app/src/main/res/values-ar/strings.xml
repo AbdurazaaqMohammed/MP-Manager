@@ -235,6 +235,7 @@
     <string name="hex_editor">محرر الهيكس (Hex)</string>
     <string name="media_player">مشغل الوسائط</string>
     <string name="apk_info">معلومات APK</string>
+    <string name="pdf_viewer">عارض PDF</string>
     <string name="not_an_apk">ليس ملف APK</string>
     <string name="cannot_open_item">لا يمكن فتح هذا العنصر بالوظيفة المحددة</string>
     <string name="fix_mime_type">إصلاح نوع MIME قبل المشاركة/الفتح (اكتشاف من البايتات)</string>

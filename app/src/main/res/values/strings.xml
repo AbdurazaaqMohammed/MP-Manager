@@ -251,6 +251,7 @@
     <string name="hex_editor">Hex editor</string>
     <string name="media_player">Media player</string>
     <string name="apk_info">APK info</string>
+    <string name="pdf_viewer">PDF viewer</string>
     <string name="not_an_apk">Not an APK file</string>
     <string name="cannot_open_item">This item cannot be opened with the selected function</string>
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
