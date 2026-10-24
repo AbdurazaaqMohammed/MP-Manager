@@ -74,6 +74,18 @@ public class FilePropertiesDialog {
         LinearLayout checksumRows = propView.findViewById(R.id.checksumRows);
 
         propTitle.setText(displayName);
+        propTitle.setOnLongClickListener(v -> {
+            String pathToCopy;
+            if (isInZip) {
+                pathToCopy = (entry != null && entry.getPath() != null) ? entry.getPath() : fileName;
+            } else if (file != null) {
+                pathToCopy = file.getAbsolutePath();
+            } else {
+                pathToCopy = displayName;
+            }
+            CopyUtil.copyToClipboard(context, pathToCopy);
+            return true;
+        });
 
         boolean isFolder = isInZip ? entry.isDirectory() : file.isDirectory();
         String typeStr = multi ? context.getString(R.string.items, selectedPositions.size())

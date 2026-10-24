@@ -168,12 +168,6 @@ public final class InstallInfoDialog {
 
         addRow(content, activity.getString(R.string.sig_owner),
                 TextUtils.isEmpty(owner) ? activity.getString(android.R.string.unknownName) : owner);
-        // Owner and issuer are the same certificate's two DNs; when they match, one line is enough.
-        if (!TextUtils.isEmpty(owner) && !TextUtils.isEmpty(issuer) && !owner.equals(issuer)) {
-            addRow(content, activity.getString(R.string.sig_issuer), issuer);
-        } else if (TextUtils.isEmpty(owner) && !TextUtils.isEmpty(issuer)) {
-            addRow(content, activity.getString(R.string.sig_issuer), issuer);
-        }
         addRow(content, activity.getString(R.string.cert_sha256),
                 analysis.signerCertSha256 == null ? activity.getString(android.R.string.unknownName)
                         : shortHash(analysis.signerCertSha256));
