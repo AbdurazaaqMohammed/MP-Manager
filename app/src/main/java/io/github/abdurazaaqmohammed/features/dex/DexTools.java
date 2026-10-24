@@ -351,6 +351,7 @@ public class DexTools {
             });
         });
         dialog.show();
+        DialogUtil.keepButtonsHorizontal(dialog);
     }
 
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
