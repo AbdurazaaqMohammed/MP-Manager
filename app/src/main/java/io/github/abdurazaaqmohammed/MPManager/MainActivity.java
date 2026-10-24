@@ -1262,6 +1262,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
                 menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
                 menu.add(0, 13, 0, getString(R.string.preferences)).setIcon(R.drawable.baseline_settings_24);
+                menu.add(0, 16, 0, getString(R.string.recycle_bin)).setIcon(R.drawable.baseline_delete_24);
                 menu.add(0, 14, 0, getString(R.string.exit)).setIcon(R.drawable.baseline_exit_to_app_24);
 
                 popup.setOnMenuItemClickListener(item -> {
@@ -1362,6 +1363,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             break;
                         case 13:
                             showSettingsDialog();
+                            break;
+                        case 16:
+                            showRecycleBinDialog();
                             break;
                         case 14:
                             finishAffinity();
@@ -1490,6 +1494,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } catch (Exception ignored) {
                     }
                 }, "root-probe").start();
+                new Thread(() -> {
+                    try {
+                        int purged = io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(MainActivity.this);
+                        if (purged > 0) handler.post(() ->
+                                Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.recycle_bin_purged_x, purged)));
+                    } catch (Exception ignored) {
+                    }
+                }, "bin-purge").start();
             });
             if ((checkForUpdates = settings.getBoolean("checkForUpdates", true))) {
                 runWhenIdle(() -> {
@@ -2869,6 +2882,84 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private void showSearchDialog() {
         fileSearch.showSearchDialog();
+    }
+
+    /** Recycle bin browser: restore / permanently delete binned items. */
+    private void showRecycleBinDialog() {
+        new Thread(() -> {
+            io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(this);
+            List<io.github.abdurazaaqmohammed.utils.RecycleBin.Entry> entries =
+                    io.github.abdurazaaqmohammed.utils.RecycleBin.entries(this);
+            handler.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (entries.isEmpty()) {
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle(R.string.recycle_bin)
+                            .setMessage(R.string.recycle_bin_empty)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create());
+                    return;
+                }
+                CharSequence[] labels = new CharSequence[entries.size()];
+                java.text.DateFormat df = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT);
+                for (int i = 0; i < entries.size(); i++) {
+                    io.github.abdurazaaqmohammed.utils.RecycleBin.Entry e = entries.get(i);
+                    String when = e.deletedAt > 0 ? df.format(new java.util.Date(e.deletedAt)) : "";
+                    labels[i] = e.displayName() + (when.isEmpty() ? "" : "\n" + when)
+                            + (e.originPath == null || e.originPath.isEmpty()
+                            ? "" : "\n" + rss.getString(R.string.deleted_from_x, e.originPath));
+                }
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle(getString(R.string.recycle_bin) + " (" + entries.size() + ")")
+                        .setItems(labels, (dialog, which) ->
+                                showRecycleBinItemDialog(entries.get(which)))
+                        .setNeutralButton(R.string.empty_recycle_bin, (dialog, which) ->
+                                new MaterialAlertDialogBuilder(MainActivity.this)
+                                        .setTitle(R.string.empty_recycle_bin)
+                                        .setMessage(R.string.empty_recycle_bin_confirm)
+                                        .setPositiveButton(R.string.delete, (d, w) -> {
+                                            io.github.abdurazaaqmohammed.utils.RecycleBin.emptyBin(MainActivity.this);
+                                            Extensions.showMessage(MainActivity.this, R.string.recycle_bin_emptied);
+                                        })
+                                        .setNegativeButton(android.R.string.cancel, null)
+                                        .show())
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .create());
+            });
+        }).start();
+    }
+
+    private void showRecycleBinItemDialog(io.github.abdurazaaqmohammed.utils.RecycleBin.Entry entry) {
+        String[] actions = {rss.getString(R.string.restore), rss.getString(R.string.delete_forever)};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(entry.displayName())
+                .setItems(actions, (dialog, which) -> {
+                    if (which == 0) {
+                        new Thread(() -> {
+                            File restored = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
+                            handler.post(() -> {
+                                if (restored != null) {
+                                    Extensions.showMessage(MainActivity.this, rss.getString(R.string.restore_to_x, restored.getAbsolutePath()));
+                                    File parent = restored.getParentFile();
+                                    if (parent != null
+                                            && (parent.equals(pane1Folder) || parent.equals(pane2Folder))) {
+                                        refreshPaneAfterChange(parent.equals(pane1Folder), restored.getName());
+                                    }
+                                } else {
+                                    Extensions.showMessage(MainActivity.this, R.string.restore_failed);
+                                }
+                            });
+                        }).start();
+                    } else {
+                        new Thread(() -> {
+                            boolean ok = io.github.abdurazaaqmohammed.utils.RecycleBin.deleteEntry(MainActivity.this, entry);
+                            if (!ok) handler.post(() ->
+                                    Extensions.showMessage(MainActivity.this, R.string.delete_forever_failed));
+                        }).start();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
     }
 
     private void showFindInFilesDialog() {
