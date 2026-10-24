@@ -736,6 +736,18 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     return null;
                 }
             }
+            if (!tab.axml && FileUtils.isAxml(bis)) {
+                tab.axml = true;
+                if (getCurrentTab() == tab) axml = true;
+                try {
+                    aXMLDecoder decoder = new aXMLDecoder(bis, tab.resEntries);
+                    String text = decoder.decodeAsString();
+                    tab.poolEncoding = decoder.getPoolEncoding();
+                    return text;
+                } catch (Exception e) {
+                    return null;
+                }
+            }
             try (InputStreamReader isr = new InputStreamReader(bis, StandardCharsets.UTF_8);
                  BufferedReader reader = new BufferedReader(isr)) {
 

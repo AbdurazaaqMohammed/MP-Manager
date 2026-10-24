@@ -35,9 +35,15 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+import io.github.abdurazaaqmohammed.utils.AbxUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -515,11 +521,7 @@ public class FileSearchController {
                 ((TextView) row.getChildAt(1)).setText(hit.snippet());
                 row.setOnClickListener(v -> {
                     dialog.dismiss();
-                    activity.startActivity(new Intent(activity, TextEditorActivity.class)
-                            .putExtra("path", hit.file().getAbsolutePath())
-                            .putExtra("search", query)
-                            .putExtra("searchRegex", regex)
-                            .putExtra("searchMatchCase", matchCase));
+                    openContentHit(hit, query, regex, matchCase);
                 });
             }
 
@@ -529,6 +531,104 @@ public class FileSearchController {
             }
         });
         activity.dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void openContentHit(ContentHit hit, String query, boolean regex, boolean matchCase) {
+        new Thread(() -> {
+            try {
+                File target = hit.file();
+                String entryPath = hit.displayPath();
+                Intent intent = new Intent(activity, TextEditorActivity.class);
+                intent.putExtra("search", query);
+                intent.putExtra("searchRegex", regex);
+                intent.putExtra("searchMatchCase", matchCase);
+
+                boolean isArchive = target.isFile() && (target.getName().toLowerCase().endsWith(".apk")
+                        || target.getName().toLowerCase().endsWith(".zip"))
+                        && entryPath != null && !entryPath.isEmpty() && !entryPath.equals(target.getName());
+
+                if (isArchive) {
+                    try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(target)) {
+                        java.util.zip.ZipEntry ze = zf.getEntry(entryPath);
+                        if (ze == null) return;
+                        File cacheDir = new File(activity.getCacheDir(), "xml_search_" + System.currentTimeMillis());
+                        cacheDir.mkdirs();
+                        String entryFileName = new File(entryPath).getName();
+                        File tempFile = new File(cacheDir, entryFileName);
+                        try (InputStream is = zf.getInputStream(ze);
+                             FileOutputStream fos = new FileOutputStream(tempFile)) {
+                            byte[] buf = new byte[8192];
+                            int n;
+                            while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                        }
+
+                        intent.putExtra("path", tempFile.getAbsolutePath());
+                        intent.putExtra("zf", target.getAbsolutePath());
+                        intent.putExtra("zipEntryPath", entryPath);
+
+                        boolean isAxml = false;
+                        try (InputStream is = new FileInputStream(tempFile)) {
+                            isAxml = FileUtils.isAxml(is);
+                        }
+                        if (isAxml) {
+                            intent.putExtra("axml", true);
+                            java.util.zip.ZipEntry rssEntry = zf.getEntry("resources.arsc");
+                            if (rssEntry != null) {
+                                File tmpRss = new File(cacheDir, "resources.arsc");
+                                try (InputStream ris = zf.getInputStream(rssEntry);
+                                     FileOutputStream rfos = new FileOutputStream(tmpRss)) {
+                                    byte[] buf = new byte[8192];
+                                    int n;
+                                    while ((n = ris.read(buf)) != -1) rfos.write(buf, 0, n);
+                                }
+                                intent.putExtra("rssPath", tmpRss.getAbsolutePath());
+                                try (InputStream is2 = new FileInputStream(tempFile);
+                                     InputStream ris2 = new FileInputStream(tmpRss)) {
+                                    com.apk.axml.ResourceTableParser rtp = new com.apk.axml.ResourceTableParser(ris2);
+                                    List<com.apk.axml.ResEntry> entries = rtp.parse();
+                                    com.apk.axml.aXMLDecoder decoder = new com.apk.axml.aXMLDecoder(is2, entries);
+                                    intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
+                                } catch (Exception ignored) {
+                                }
+                            } else {
+                                try (InputStream is2 = new FileInputStream(tempFile)) {
+                                    com.apk.axml.aXMLDecoder decoder = new com.apk.axml.aXMLDecoder(is2);
+                                    intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
+                                } catch (Exception ignored) {
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    File file = target;
+                    intent.putExtra("path", file.getAbsolutePath());
+                    boolean isAxml = false;
+                    boolean isAbx = false;
+                    try (InputStream is = FileUtils.getInputStream(file)) {
+                        isAbx = FileUtils.isAbx(is);
+                    } catch (Exception ignored) {}
+                    if (!isAbx) {
+                        try (InputStream is = FileUtils.getInputStream(file)) {
+                            isAxml = FileUtils.isAxml(is);
+                        } catch (Exception ignored) {}
+                    }
+                    if (isAbx) {
+                        try (InputStream is = FileUtils.getInputStream(file)) {
+                            intent.putExtra("abx", true);
+                            intent.putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is).trim());
+                        } catch (Exception ignored) {}
+                    } else if (isAxml) {
+                        try (InputStream is = FileUtils.getInputStream(file)) {
+                            intent.putExtra("axml", true);
+                            intent.putExtra(Intent.EXTRA_TEXT, new com.apk.axml.aXMLDecoder(is).decodeAsString().trim());
+                        } catch (Exception ignored) {}
+                    }
+                }
+                activity.runOnUiThread(() -> activity.startActivity(intent));
+            } catch (Exception e) {
+                new ErrorUtil(activity).showError(e);
+            }
+        }).start();
     }
 
     private int dp(int value) {
