@@ -11,6 +11,7 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.TypedValue;
+import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +27,10 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Button;
+import android.graphics.Bitmap;
+import android.graphics.pdf.PdfRenderer;
+import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -185,6 +190,12 @@ public class FileOpener {
             actionIcons.add(R.drawable.uppercase_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_FONT, file, fileName, zipFile, zipEntryPath));
         }
+        if (lower.endsWith(".pdf")) {
+            actionIds.add(BUILTIN_PDF);
+            actionNames.add(context.getString(R.string.pdf_viewer));
+            actionIcons.add(R.drawable.pdf_24px);
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_PDF, file, fileName, zipFile, zipEntryPath));
+        }
         if (lower.endsWith(".arsc")) {
             actionIds.add(BUILTIN_ARSC);
             actionNames.add(context.getString(R.string.arsc_functions));
@@ -319,6 +330,7 @@ public class FileOpener {
     private static final String BUILTIN_MEDIA = "media";
     private static final String BUILTIN_APK = "apk";
     private static final String BUILTIN_FONT = "font";
+    private static final String BUILTIN_PDF = "pdf";
     private static final String BUILTIN_ARSC = "arsc";
     private static final String BUILTIN_XML = "xml";
     private static final String BUILTIN_SIG = "sig";
@@ -377,6 +389,10 @@ public class FileOpener {
                 if (file == null) return;
                 showFontPreview(file, fileName);
                 return;
+            case BUILTIN_PDF:
+                if (file == null) return;
+                showPdfViewer(file, fileName);
+                return;
             case BUILTIN_ARSC:
                 if (file == null) return;
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
@@ -407,6 +423,7 @@ public class FileOpener {
             case BUILTIN_MEDIA:
             case BUILTIN_APK:
             case BUILTIN_FONT:
+            case BUILTIN_PDF:
             case BUILTIN_ARSC:
             case BUILTIN_XML:
             case BUILTIN_SIG:
@@ -592,20 +609,158 @@ public class FileOpener {
                 root.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
                 root.setPadding(pad, pad, pad, pad);
+
+                EditText customInput = new EditText(context);
+                customInput.setHint("Type custom text here...");
+                customInput.setTextSize(16);
+                root.addView(customInput);
+
                 TextView sample = new TextView(context);
-                sample.setText("ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789 !?@#");
+                sample.setText("The quick brown fox jumps over the lazy dog.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789 !?@#$%^&*()");
                 sample.setTypeface(tf);
-                sample.setTextSize(22);
+                sample.setTextSize(20);
+                sample.setPadding(0, pad / 2, 0, pad / 2);
                 root.addView(sample);
+
+                customInput.addTextChangedListener(new android.text.TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        sample.setText(s.length() > 0 ? s : "The quick brown fox jumps over the lazy dog.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789 !?@#$%^&*()");
+                    }
+                    @Override public void afterTextChanged(android.text.Editable s) {}
+                });
+
                 TextView meta = new TextView(context);
-                meta.setText(fileName + " · " + readable.length() + " bytes");
+                meta.setText(fileName + " · " + Formatter.formatFileSize(context, readable.length()));
                 meta.setTextSize(13);
                 root.addView(meta);
+
+                ScrollView scroll = new ScrollView(context);
+                scroll.addView(root);
+
                 dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                         .setTitle(context.getString(R.string.font_preview) + ": " + fileName)
-                        .setView(root)
+                        .setView(scroll)
                         .setPositiveButton(android.R.string.ok, null)
                         .create());
+            } catch (Exception e) {
+                new ErrorUtil(context).showError(e);
+            }
+        });
+    }
+
+    private void showPdfViewer(File file, String fileName) {
+        withReadableCopy(file, readable -> {
+            try {
+                ParcelFileDescriptor pfd = ParcelFileDescriptor.open(readable, ParcelFileDescriptor.MODE_READ_ONLY);
+                PdfRenderer renderer = new PdfRenderer(pfd);
+                int pageCount = renderer.getPageCount();
+                if (pageCount <= 0) {
+                    renderer.close();
+                    pfd.close();
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+
+                int[] currentPage = new int[]{0};
+
+                LinearLayout root = new LinearLayout(context);
+                root.setOrientation(LinearLayout.VERTICAL);
+                root.setGravity(Gravity.CENTER_HORIZONTAL);
+                int pad = (int) (12 * context.getResources().getDisplayMetrics().density + 0.5f);
+                root.setPadding(pad, pad, pad, pad);
+
+                TextView pageInfo = new TextView(context);
+                pageInfo.setGravity(Gravity.CENTER);
+                pageInfo.setTextSize(15);
+                pageInfo.setPadding(0, 0, 0, pad / 2);
+                root.addView(pageInfo);
+
+                ImageView pageImageView = new ImageView(context);
+                pageImageView.setAdjustViewBounds(true);
+                pageImageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                root.addView(pageImageView, new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                LinearLayout navLayout = new LinearLayout(context);
+                navLayout.setOrientation(LinearLayout.HORIZONTAL);
+                navLayout.setGravity(Gravity.CENTER);
+                navLayout.setPadding(0, pad, 0, 0);
+
+                Button prevBtn = new Button(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                prevBtn.setText("◀ Prev");
+                Button nextBtn = new Button(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                nextBtn.setText("Next ▶");
+
+                navLayout.addView(prevBtn);
+                navLayout.addView(nextBtn);
+                root.addView(navLayout);
+
+                final Bitmap[] currentBitmap = new Bitmap[1];
+
+                Runnable renderPage = () -> {
+                    try {
+                        PdfRenderer.Page page = renderer.openPage(currentPage[0]);
+                        int screenWidth = context.getResources().getDisplayMetrics().widthPixels - (pad * 4);
+                        if (screenWidth <= 0) screenWidth = 800;
+                        int targetWidth = screenWidth;
+                        int targetHeight = (int) ((float) page.getHeight() / page.getWidth() * targetWidth);
+
+                        Bitmap bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
+                        bitmap.eraseColor(Color.WHITE);
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                        page.close();
+
+                        if (currentBitmap[0] != null && !currentBitmap[0].isRecycled()) {
+                            currentBitmap[0].recycle();
+                        }
+                        currentBitmap[0] = bitmap;
+
+                        pageImageView.setImageBitmap(bitmap);
+                        pageInfo.setText((currentPage[0] + 1) + " / " + pageCount);
+                        prevBtn.setEnabled(currentPage[0] > 0);
+                        nextBtn.setEnabled(currentPage[0] < pageCount - 1);
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                };
+
+                prevBtn.setOnClickListener(v -> {
+                    if (currentPage[0] > 0) {
+                        currentPage[0]--;
+                        renderPage.run();
+                    }
+                });
+
+                nextBtn.setOnClickListener(v -> {
+                    if (currentPage[0] < pageCount - 1) {
+                        currentPage[0]++;
+                        renderPage.run();
+                    }
+                });
+
+                renderPage.run();
+
+                ScrollView scroll = new ScrollView(context);
+                scroll.addView(root);
+
+                AlertDialog dialog = dialogUtil.getDialogBuilder()
+                        .setTitle(fileName)
+                        .setView(scroll)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create();
+
+                dialog.setOnDismissListener(d -> {
+                    try {
+                        if (currentBitmap[0] != null && !currentBitmap[0].isRecycled()) {
+                            currentBitmap[0].recycle();
+                        }
+                        renderer.close();
+                        pfd.close();
+                    } catch (Exception ignored) {}
+                });
+
+                dialogUtil.styleAlertDialog(dialog);
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
@@ -951,6 +1106,8 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showShellScriptDialog(readable, file, fileName));
             } else if (FileUtils.matchExt(ext, FileUtils.FONT_EXTS)) {
                 withReadableCopy(file, readable -> showFontPreview(readable, fileName));
+            } else if (ext.equals(".pdf")) {
+                withReadableCopy(file, readable -> showPdfViewer(readable, fileName));
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }

@@ -110,7 +110,6 @@ public final class SignatureInfoDialog {
                 header.setTextSize(14f);
                 block.addView(header);
                 addRow(block, context.getString(R.string.sig_owner), cert.getSubjectX500Principal().getName(), false);
-                addRow(block, context.getString(R.string.sig_issuer), cert.getIssuerX500Principal().getName(), false);
                 addRow(block, context.getString(R.string.sig_serial), cert.getSerialNumber().toString(16), false);
                 addRow(block, context.getString(R.string.sig_created), formatDate(cert.getNotBefore().getTime()), false);
                 addRow(block, context.getString(R.string.sig_expired), formatDate(cert.getNotAfter().getTime()), false);
