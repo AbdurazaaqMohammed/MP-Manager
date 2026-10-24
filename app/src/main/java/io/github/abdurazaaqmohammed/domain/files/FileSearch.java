@@ -303,3 +303,5 @@ public final class FileSearch {
             }
         }
     }
+}
+
