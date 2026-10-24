@@ -333,9 +333,7 @@ public class FileIconLoader {
         long mtime = meta[2];
         if (mtime > 0) {
             fileDateView.setTag(null);
-            fileDateView.setVisibility(View.VISIBLE);
-            applyDateTextSize(fileDateView);
-            fileDateView.setText(UiPrefs.formatDate(datePattern, mtime));
+            showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, mtime));
             return;
         }
         if (!elevatedFileOps) {
@@ -348,9 +346,7 @@ public class FileIconLoader {
         if (cached != null) {
             fileDateView.setTag(null);
             if (cached > 0) {
-                fileDateView.setVisibility(View.VISIBLE);
-                applyDateTextSize(fileDateView);
-                fileDateView.setText(UiPrefs.formatDate(datePattern, cached));
+                showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, cached));
             } else {
                 fileDateView.setVisibility(View.INVISIBLE);
             }
@@ -379,12 +375,51 @@ public class FileIconLoader {
             final long finalM = m;
             context.runOnUiThread(() -> {
                 if (tag.equals(fileDateView.getTag())) {
-                    fileDateView.setVisibility(View.VISIBLE);
-                    applyDateTextSize(fileDateView);
-                    fileDateView.setText(UiPrefs.formatDate(datePattern, finalM));
+                    showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, finalM));
                 }
             });
         });
+    }
+
+    private void showFolderSizeAndDate(File file, TextView fileDateView, String dateStr) {
+        fileDateView.setVisibility(View.VISIBLE);
+        applyDateTextSize(fileDateView);
+        Long cached = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(file);
+        if (cached != null) {
+            fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(cached)));
+            return;
+        }
+        fileDateView.setText(dateStr);
+        String tag = file.getAbsolutePath();
+        fileDateView.setTag(tag);
+        backendStatService.execute(() -> {
+            if (!tag.equals(fileDateView.getTag())) return;
+            long size = calculateFolderSize(file);
+            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
+            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            context.runOnUiThread(() -> {
+                if (tag.equals(fileDateView.getTag())) {
+                    fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
+                }
+            });
+        });
+    }
+
+    private static long calculateFolderSize(File dir) {
+        if (dir == null || !dir.isDirectory()) return 0;
+        long total = 0;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File c : children) {
+                if (c == null) continue;
+                if (c.isDirectory()) {
+                    total += calculateFolderSize(c);
+                } else {
+                    total += c.length();
+                }
+            }
+        }
+        return total;
     }
 
     public void requestRowBadge(File file, ImageView badgeView, String listedDir) {
