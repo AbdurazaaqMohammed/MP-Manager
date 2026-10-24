@@ -77,7 +77,7 @@ public class FilePropertiesDialog {
         propTitle.setOnLongClickListener(v -> {
             String pathToCopy;
             if (isInZip) {
-                pathToCopy = (entry != null && entry.getPath() != null) ? entry.getPath() : fileName;
+                pathToCopy = (entry != null && entry.getFullPath() != null) ? entry.getFullPath() : fileName;
             } else if (file != null) {
                 pathToCopy = file.getAbsolutePath();
             } else {

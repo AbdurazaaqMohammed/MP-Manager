@@ -576,7 +576,6 @@ public class PlayerManager {
         this.queue = new ArrayList<>(newQueue);
         this.currentIndex = Math.max(0, Math.min(newIndex, queue.size() - 1));
         if (shuffle) buildShuffleOrder();
-        notifyQueueChanged();
     }
 
     public void next() {

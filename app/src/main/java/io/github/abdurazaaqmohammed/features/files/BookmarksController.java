@@ -656,7 +656,6 @@ public class BookmarksController {
         bookmarkDragging = true;
         row.setElevation(8f * density);
         listView.requestDisallowInterceptTouchEvent(true);
-        row.requestDisallowInterceptTouchEvent(true);
         ViewParent pagerParent = listView.getParent();
         if (pagerParent != null) pagerParent.requestDisallowInterceptTouchEvent(true);
 
