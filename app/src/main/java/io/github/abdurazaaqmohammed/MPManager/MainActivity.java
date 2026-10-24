@@ -1746,11 +1746,29 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
+        // Refresh of the folder already on screen (post-action reload): keep
+        // the scroll position so the listing does not jump back to the top.
+        // Navigating to a different folder still starts at the first row.
+        int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : null;
         File[] files = listPlainFolder(folder, pane1);
         if (files == null) return;
         Arrays.sort(files);
         sortFiles(files, folder.getPath());
         bindListedFolder(folder, files, pane1, addToHistory);
+        if (saved != null) restorePaneScroll(pane1, saved);
+    }
+
+    /** True when the pane currently lists this exact plain folder. */
+    private boolean samePlainFolderShown(File folder, boolean pane1) {
+        try {
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane == null || !(pane.getAdapter() instanceof MainFilesArrayAdapter a) || a.isInZip) return false;
+            File shown = pane1 ? pane1Folder : pane2Folder;
+            return shown != null && folder != null
+                    && shown.getAbsolutePath().equals(folder.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -1983,6 +2001,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory, Runnable afterBind) {
         invalidatePaneLoad(pane1);
         final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
+        // Re-listing the archive location already on screen: keep scroll.
+        final int[] saved = sameZipFolderShown(zipFile, path, pane1) ? capturePaneScroll(pane1) : null;
         listingExecutor.execute(() -> {
             final ZipRead read;
             try {
@@ -2008,6 +2028,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 } catch (Exception ignored) {
                     return;
                 }
+                if (saved != null) restorePaneScroll(pane1, saved);
                 if (afterBind != null) {
                     try {
                         afterBind.run();
@@ -2016,6 +2037,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             });
         });
+    }
+
+    /** True when the pane currently lists this exact archive location. */
+    private boolean sameZipFolderShown(File zipFile, String path, boolean pane1) {
+        try {
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane == null || !(pane.getAdapter() instanceof MainFilesArrayAdapter a) || !a.isInZip) return false;
+            File shown = pane1 ? pane1Folder : pane2Folder;
+            String inner = a.currentZipPath == null ? "" : a.currentZipPath;
+            String target = path == null ? "" : path;
+            return shown != null && zipFile != null
+                    && shown.getAbsolutePath().equals(zipFile.getAbsolutePath())
+                    && inner.equals(target);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** Background-safe half of a zip listing: central-directory scan + filter. */
@@ -2164,6 +2201,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         invalidatePaneLoad(pane1);
         final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
         final String folderPath = folder.getAbsolutePath();
+        final int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : null;
         listingExecutor.execute(() -> {
             final File[] files;
             try {
@@ -2185,6 +2223,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 } catch (Exception ignored) {
                     return;
                 }
+                if (saved != null) restorePaneScroll(pane1, saved);
                 if (afterBind != null) {
                     try {
                         afterBind.run();
