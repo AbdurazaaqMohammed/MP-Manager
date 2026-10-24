@@ -697,7 +697,7 @@ final View.OnClickListener originalClickListener;
                     }
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
+                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 

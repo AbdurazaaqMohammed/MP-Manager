@@ -35,6 +35,19 @@ public class ArchiveUtil {
 
     private static final int BUFFER_SIZE = 8192;
 
+    public static boolean isMiuiOrAndroidBackup(File file) {
+        if (file == null || !file.exists() || file.isDirectory()) return false;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buf = new byte[256];
+            int n = fis.read(buf);
+            if (n < 16) return false;
+            String header = new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8);
+            return header.startsWith("MIUI BACKUP") || header.startsWith("ANDROID BACKUP");
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public static boolean isSupportedArchive(String fileName) {
         if (fileName == null) return false;
         String lower = fileName.toLowerCase(Locale.ROOT);
@@ -78,7 +91,31 @@ public class ArchiveUtil {
         else if (lower.endsWith(".gz")) extractSingleCompressed(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".gz");
         else if (lower.endsWith(".bz2")) extractSingleCompressed(new BZip2CompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".bz2");
         else if (lower.endsWith(".xz")) extractSingleCompressed(new XZCompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".xz");
+        else if (isMiuiOrAndroidBackup(archive)) extractBackupArchive(archive, destDir, preserveTime);
         else throw new IOException("Unsupported archive format: " + archive.getName());
+    }
+
+    private static void extractBackupArchive(File archive, File destDir, boolean preserveTime) throws IOException {
+        InputStream is = new BufferedInputStream(new FileInputStream(archive));
+        // Consume text header lines until tar payload starts
+        int linesToSkip = 0;
+        is.mark(1024);
+        byte[] probe = new byte[256];
+        int read = is.read(probe);
+        is.reset();
+        String headStr = new String(probe, 0, Math.max(0, read), java.nio.charset.StandardCharsets.UTF_8);
+        if (headStr.startsWith("MIUI BACKUP")) {
+            linesToSkip = 9;
+        } else if (headStr.startsWith("ANDROID BACKUP")) {
+            linesToSkip = 4;
+        }
+        for (int i = 0; i < linesToSkip; i++) {
+            while (true) {
+                int b = is.read();
+                if (b == -1 || b == '\n') break;
+            }
+        }
+        extractTar(is, destDir, preserveTime);
     }
 
     public static void create(File output, List<File> sources) throws IOException {
