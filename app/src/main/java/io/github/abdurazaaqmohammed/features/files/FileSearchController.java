@@ -56,6 +56,28 @@ import java.util.regex.Pattern;
 public class FileSearchController {
 
     private final MainActivity activity;
+    private List<File> lastSearchResults = null;
+    private File lastSearchStartDir = null;
+    private boolean lastSearchIsPane1 = true;
+
+    public boolean hasSearchResults() {
+        return lastSearchResults != null && !lastSearchResults.isEmpty();
+    }
+
+    public File getLastSearchStartDir() {
+        return lastSearchStartDir;
+    }
+
+    public void clearLastSearchResults() {
+        lastSearchResults = null;
+        lastSearchStartDir = null;
+    }
+
+    public void showLastSearchResultsDialog() {
+        if (hasSearchResults()) {
+            showSearchResultsDialog(lastSearchStartDir, lastSearchResults, lastSearchIsPane1);
+        }
+    }
 
     public FileSearchController(MainActivity activity) {
         this.activity = activity;
@@ -321,13 +343,164 @@ public class FileSearchController {
                 if (results.isEmpty()) {
                     Extensions.showMessage(activity, R.string.no_files_found);
                 } else {
-                    File[] resArray = results.toArray(new File[0]);
-                    activity.setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
-                    RecyclerView pane = activity.findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-                    pane.setAdapter(new MainFilesArrayAdapter(activity, resArray, startDir, isPane1, false, null));
+                    lastSearchResults = results;
+                    lastSearchStartDir = startDir;
+                    lastSearchIsPane1 = isPane1;
+                    showSearchResultsDialog(startDir, results, isPane1);
                 }
             });
         }).start();
+    }
+
+    public void showSearchResultsDialog(File startDir, List<File> results, boolean isPane1) {
+        lastSearchResults = results;
+        lastSearchStartDir = startDir;
+        lastSearchIsPane1 = isPane1;
+
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+
+        RecyclerView list = new RecyclerView(activity);
+        list.setLayoutManager(new LinearLayoutManager(activity));
+        LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+        list.setLayoutParams(listParams);
+        root.addView(list);
+
+        LinearLayout bottomBar = new LinearLayout(activity);
+        bottomBar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pad = dp(12);
+        bottomBar.setPadding(pad, dp(4), pad, dp(4));
+
+        Button expandBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        expandBtn.setText("⤢ Open in Pane");
+        expandBtn.setTextSize(13);
+        bottomBar.addView(expandBtn);
+
+        View spacer = new View(activity);
+        LinearLayout.LayoutParams spacerLp = new LinearLayout.LayoutParams(0, 1, 1.0f);
+        spacer.setLayoutParams(spacerLp);
+        bottomBar.addView(spacer);
+
+        Button clearBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        clearBtn.setText("CLEAR");
+        clearBtn.setTextSize(13);
+        bottomBar.addView(clearBtn);
+
+        Button closeBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        closeBtn.setText("CLOSE");
+        closeBtn.setTextSize(13);
+        bottomBar.addView(closeBtn);
+
+        root.addView(bottomBar);
+
+        AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
+                .setTitle("search results (" + results.size() + ")")
+                .setView(root)
+                .create();
+
+        expandBtn.setOnClickListener(v -> {
+            dialog.dismiss();
+            openSearchResultsInPane(startDir, results, isPane1);
+        });
+
+        clearBtn.setOnClickListener(v -> {
+            clearLastSearchResults();
+            dialog.dismiss();
+        });
+
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+
+        list.setAdapter(new RecyclerView.Adapter<>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                LinearLayout row = new LinearLayout(activity);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(16), dp(8), dp(16), dp(8));
+
+                ImageView icon = new ImageView(activity);
+                LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(28), dp(28));
+                icon.setLayoutParams(iconLp);
+                icon.setImageResource(R.drawable.baseline_search_24);
+                row.addView(icon);
+
+                LinearLayout textCol = new LinearLayout(activity);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                textLp.setMarginStart(dp(12));
+                textCol.setLayoutParams(textLp);
+
+                TextView title = new TextView(activity);
+                title.setTextSize(14);
+                title.setTypeface(null, Typeface.BOLD);
+                title.setSingleLine(true);
+                title.setEllipsize(TextUtils.TruncateAt.END);
+                textCol.addView(title);
+
+                TextView sub = new TextView(activity);
+                sub.setTextSize(12);
+                sub.setTextColor(android.graphics.Color.GRAY);
+                sub.setSingleLine(true);
+                sub.setEllipsize(TextUtils.TruncateAt.START);
+                textCol.addView(sub);
+
+                row.addView(textCol);
+                return new RecyclerView.ViewHolder(row) {};
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                File f = results.get(position);
+                LinearLayout row = (LinearLayout) holder.itemView;
+                ImageView icon = (ImageView) row.getChildAt(0);
+                LinearLayout textCol = (LinearLayout) row.getChildAt(1);
+                TextView title = (TextView) textCol.getChildAt(0);
+                TextView sub = (TextView) textCol.getChildAt(1);
+
+                title.setText(f.getName());
+                sub.setText(f.getParent() != null ? f.getParent() : "");
+                if (f.isDirectory()) {
+                    icon.setImageResource(R.drawable.baseline_folder_24);
+                } else {
+                    icon.setImageResource(R.drawable.ic_link_24);
+                }
+
+                row.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    if (f.isDirectory()) {
+                        activity.clearGreen(isPane1);
+                        activity.setSelectedPane(isPane1 ? 1 : 2);
+                        activity.loadFolderInPaneAsync(f, isPane1);
+                    } else {
+                        activity.fileOpener.handleFileClick(f, f.getName());
+                    }
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return results.size();
+            }
+        });
+
+        activity.dialogUtil.styleAlertDialog(dialog);
+        dialog.show();
+    }
+
+    public void openSearchResultsInPane(File startDir, List<File> results, boolean isPane1) {
+        lastSearchResults = results;
+        lastSearchStartDir = startDir;
+        lastSearchIsPane1 = isPane1;
+        File[] resArray = results.toArray(new File[0]);
+        activity.setCurrentFolder(startDir.getPath() + " - Search results", Arrays.asList(resArray));
+        RecyclerView pane = activity.findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(activity, resArray, startDir, isPane1, false, null);
+        adapter.setSearchResultsMode(true);
+        pane.setAdapter(adapter);
     }
 
     public void showFindInFilesDialog() {

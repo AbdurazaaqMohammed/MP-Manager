@@ -1274,6 +1274,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     hiddenMenu.add(0, 9, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
                 }
 
+                if (fileSearch.hasSearchResults()) {
+                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.baseline_search_24);
+                }
+                if (a instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) a).isSearchResultsMode()) {
+                    menu.add(0, 19, 0, getString(R.string.clear_search_results)).setIcon(R.drawable.close_24px);
+                }
                 menu.add(0, 10, 0, getString(R.string.menu_add_bookmark)).setIcon(R.drawable.baseline_bookmark_24);
                 menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
                 menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
@@ -1323,6 +1329,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             break;
                         case 17:
                             fileSearch.showXmlSearchDialog();
+                            break;
+                        case 18:
+                            fileSearch.showLastSearchResultsDialog();
+                            break;
+                        case 19:
+                            clearSearchResults(lastPaneSelected == 1);
                             break;
                         case 3:
                             if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
@@ -1645,7 +1657,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if(a instanceof MainFilesArrayAdapter adapter) {
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
-                    else {
+                    else if (adapter.isSearchResultsMode()) {
+                        clearSearchResults(adapter.pane1);
+                    } else {
                         String s = adapter.currentZipPath;
                         if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
                             char[] chars = s.toCharArray();
@@ -1694,6 +1708,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void navigateForward(boolean pane1) {
         navigation.navigateForward(pane1);
+    }
+
+    public void clearSearchResults(boolean pane1) {
+        File dir = fileSearch.getLastSearchStartDir();
+        if (dir == null) dir = pane1 ? pane1Folder : pane2Folder;
+        loadFolderInPaneAsync(dir, pane1);
     }
 
     private void updateNavigationButtons() {
