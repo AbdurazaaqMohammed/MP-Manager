@@ -263,7 +263,7 @@ public final class ApkInstallAnalysis {
     private static String subjectOf(@Nullable X509Certificate cert) {
         if (cert == null) return null;
         try {
-            String dn = cert.getSubjectX500Principal().getName();
+            String dn = CertUtil.formatPrincipal(cert.getSubjectX500Principal());
             if (dn != null && dn.length() > 120) dn = dn.substring(0, 120) + "…";
             return dn;
         } catch (Throwable t) {
