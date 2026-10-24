@@ -56,8 +56,30 @@ public class ApkInstallDialogHelper {
 
     public void installSplitApks(List<File> apkFiles, String archiveName) {
         String appName = archiveName != null ? archiveName : "Split APK";
-        File firstApk = apkFiles.isEmpty() ? null : apkFiles.get(0);
+        File firstApk = baseSplitApk(apkFiles);
         confirmThenInstall(new ArrayList<>(apkFiles), appName, firstApk);
+    }
+
+    /**
+     * Picks the split that carries the full install manifest for the comparison.
+     * Split bundles are walked in zip order, which is not guaranteed to list the
+     * base APK first, and a {@code config.*} split has no installable base for
+     * {@link PackageManager#getPackageArchiveInfo}. Favour an explicit base name,
+     * then the first entry whose archive info yields a package.
+     */
+    private static File baseSplitApk(List<File> apkFiles) {
+        if (apkFiles == null || apkFiles.isEmpty()) return null;
+        File explicitBase = null;
+        for (File f : apkFiles) {
+            if (f == null) continue;
+            String name = f.getName().toLowerCase(Locale.ROOT);
+            if (name.equals("base.apk") || name.equals("master.apk") || name.equals("main.apk")) {
+                explicitBase = f;
+                break;
+            }
+        }
+        if (explicitBase != null) return explicitBase;
+        return apkFiles.get(0);
     }
 
     /**
