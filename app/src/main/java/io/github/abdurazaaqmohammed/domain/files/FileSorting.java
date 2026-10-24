@@ -106,18 +106,46 @@ public final class FileSorting {
             } catch (Exception ignored) {
             }
             if (needExts) exts[i] = getExt(names[i]);
-            if (!dirs[i] || needSizes) {
-                try {
-                    sizes[i] = f.length();
-                } catch (Exception ignored) {
-                }
-            }
             if (!dirs[i] || needTimes) {
                 try {
                     times[i] = f.lastModified();
                 } catch (Exception ignored) {
                 }
             }
+        }
+        // Size sorting needs real folder sizes, which means walking whole trees.
+        // Each measured folder goes into the persistent DirSizeCache (validated
+        // against the folder's own mtime), so revisits and later app starts skip
+        // the walk; only never-measured or changed folders are walked, in
+        // parallel, before the actual sort.
+        if (needSizes) {
+            List<File> dirsToSize = new java.util.ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                if (dirs[i]) {
+                    Long cached = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(files[i]);
+                    if (cached != null) {
+                        sizes[i] = cached;
+                        continue;
+                    }
+                    Long memory = DIR_SIZE_CACHE.get(pathOf(files[i]));
+                    if (memory != null) {
+                        sizes[i] = memory;
+                        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(files[i], memory);
+                        continue;
+                    }
+                    dirsToSize.add(files[i]);
+                } else {
+                    try {
+                        sizes[i] = files[i].length();
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            computeSizesParallel(dirsToSize);
+            for (int i = 0; i < n; i++) {
+                if (dirs[i]) sizes[i] = dirSize(files[i]);
+            }
+            if (!dirsToSize.isEmpty()) io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
         }
         Integer[] order = new Integer[n];
         for (int i = 0; i < n; i++) order[i] = i;
@@ -147,6 +175,76 @@ public final class FileSorting {
         File[] sorted = new File[n];
         for (int i = 0; i < n; i++) sorted[i] = files[order[i]];
         System.arraycopy(sorted, 0, files, 0, n);
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, Long> DIR_SIZE_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    // Storage-bound work: a handful of concurrent walkers saturates flash I/O
+    // without flooding the system with hundreds of stat calls at once.
+    private static final java.util.concurrent.ExecutorService SIZE_POOL =
+            java.util.concurrent.Executors.newFixedThreadPool(
+                    Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors())));
+
+    /** Walks every uncached sibling folder in parallel so a size sort stays responsive. */
+    private static void computeSizesParallel(List<File> dirs) {
+        if (dirs == null || dirs.isEmpty()) return;
+        List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        for (File d : dirs) {
+            if (d == null) continue;
+            futures.add(SIZE_POOL.submit(() -> recursiveSize(d)));
+        }
+        for (java.util.concurrent.Future<?> f : futures) {
+            try {
+                f.get();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /** Recursively sums a folder's contents; every visited folder is cached so
+     * one walk of a deep tree also covers all of its sub-folders. */
+    private static long recursiveSize(File dir) {
+        if (dir == null) return 0;
+        String key = pathOf(dir);
+        if (key == null) return 0;
+        Long cached = DIR_SIZE_CACHE.get(key);
+        if (cached != null) return cached;
+        Long persisted = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(dir);
+        if (persisted != null) {
+            DIR_SIZE_CACHE.put(key, persisted);
+            return persisted;
+        }
+        long total = 0;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File c : children) {
+                if (c == null) continue;
+                try {
+                    total += c.isDirectory() ? recursiveSize(c) : c.length();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        DIR_SIZE_CACHE.put(key, total);
+        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(dir, total);
+        return total;
+    }
+
+    private static String pathOf(File f) {
+        try {
+            return f.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static long dirSize(File dir) {
+        if (dir == null) return 0;
+        String key = pathOf(dir);
+        if (key == null) return 0;
+        Long cached = DIR_SIZE_CACHE.get(key);
+        if (cached != null) return cached;
+        return recursiveSize(dir);
     }
 
     public static void sortZipEntries(List<ZipEntryInfo> entries, String folderPath, int sortBy, boolean reverse) {
