@@ -273,7 +273,12 @@ public class aXMLDecoder {
 	}
 
 	private static String trimTrailingZero(float f) {
-		String s=Float.toString(f); return s.endsWith(".0") ? s.substring(0,s.length()-2) : s;
+		float rounded = Math.round(f);
+		if (Math.abs(f - rounded) < 0.0005f) {
+			return Integer.toString((int) rounded);
+		}
+		String s = new java.text.DecimalFormat("0.####", new java.text.DecimalFormatSymbols(java.util.Locale.US)).format(f);
+		return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
 	}
 
 	private static float complexToFloat(int complex) {
