@@ -184,11 +184,62 @@ public class CertUtil {
         return getFingerprint(cert, "SHA-256");
     }
 
+    public static String formatPrincipal(java.security.Principal principal) {
+        if (principal == null) return "";
+        return cleanDistinguishedName(principal.getName());
+    }
+
+    public static String cleanDistinguishedName(String dn) {
+        if (dn == null || dn.isEmpty()) return "";
+        String res = dn.replace("OID.1.2.840.113549.1.9.1=", "EMAILADDRESS=")
+                       .replace("1.2.840.113549.1.9.1=", "EMAILADDRESS=");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(=#)([0-9a-fA-F]{4,})").matcher(res);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String decoded = decodeDerHexString(m.group(2));
+            m.appendReplacement(sb, "=" + java.util.regex.Matcher.quoteReplacement(decoded));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static String decodeDerHexString(String hex) {
+        try {
+            if (hex.length() % 2 != 0 || hex.length() < 4) return "#" + hex;
+            byte[] bytes = new byte[hex.length() / 2];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+            }
+            int tag = bytes[0] & 0xFF;
+            if (tag == 0x16 || tag == 0x0C || tag == 0x13 || tag == 0x14 || tag == 0x1A) {
+                int lenByte = bytes[1] & 0xFF;
+                int offset;
+                int len;
+                if ((lenByte & 0x80) == 0) {
+                    len = lenByte;
+                    offset = 2;
+                } else {
+                    int numBytes = lenByte & 0x7F;
+                    if (2 + numBytes > bytes.length) return "#" + hex;
+                    len = 0;
+                    for (int k = 0; k < numBytes; k++) {
+                        len = (len << 8) | (bytes[2 + k] & 0xFF);
+                    }
+                    offset = 2 + numBytes;
+                }
+                if (offset + len <= bytes.length) {
+                    return new String(bytes, offset, len, StandardCharsets.UTF_8);
+                }
+            }
+        } catch (Exception ignored) {}
+        return "#" + hex;
+    }
+
     public static CharSequence describe(X509Certificate cert) {
         if (cert == null) return "";
         StringBuilder sb = new StringBuilder();
-        sb.append("Subject: ").append(cert.getSubjectX500Principal().getName()).append('\n');
-        sb.append("Issuer: ").append(cert.getIssuerX500Principal().getName()).append('\n');
+        sb.append("Subject: ").append(formatPrincipal(cert.getSubjectX500Principal())).append('\n');
+        sb.append("Issuer: ").append(formatPrincipal(cert.getIssuerX500Principal())).append('\n');
         sb.append("Serial: ").append(cert.getSerialNumber().toString(16)).append('\n');
         sb.append("Valid from: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotBefore())).append('\n');
         sb.append("Valid to: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotAfter())).append('\n');
