@@ -1052,6 +1052,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         pane1.setLayoutManager(new LinearLayoutManager(this));
         pane2.setLayoutManager(new LinearLayoutManager(this));
+        // Fast scroller only makes sense on long listings; short folders keep
+        // the plain view (threshold check lives in FastScrollerRecyclerView).
+        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane1).setMinItemsForScroller(50);
+        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane2).setMinItemsForScroller(50);
         // Stable rows: skips a requestLayout per bind and shares the view pool
         // between panes so the second pane inflates fewer row views.
         pane1.setHasFixedSize(true);

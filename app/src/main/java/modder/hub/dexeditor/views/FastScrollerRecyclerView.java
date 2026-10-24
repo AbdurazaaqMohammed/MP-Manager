@@ -41,6 +41,12 @@ public class FastScrollerRecyclerView extends RecyclerView {
     private boolean isTrackVisible = true;
     private ItemAnimator savedAnimator;
     private int pendingScrollPosition = -1;
+    /**
+     * Minimum adapter item count before the fast scroller may appear.
+     * 0 keeps the default child-count heuristic; set higher (e.g. 50) for
+     * panes where a scroller on short lists is unwanted noise.
+     */
+    private int minItemsForScroller = 0;
     private final Runnable scrollRunnable = () -> {
         if (pendingScrollPosition != -1) {
             LayoutManager lm = getLayoutManager();
@@ -117,6 +123,11 @@ public class FastScrollerRecyclerView extends RecyclerView {
         invalidate();
     }
 
+    public void setMinItemsForScroller(int minItems) {
+        this.minItemsForScroller = Math.max(0, minItems);
+        invalidate();
+    }
+
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         super.dispatchDraw(canvas);
@@ -127,7 +138,8 @@ public class FastScrollerRecyclerView extends RecyclerView {
         int childCount = getChildCount();
 
         // Check if list is long enough to show scroller
-        if (childCount <= 0 || itemCount <= childCount * 2) {
+        if (childCount <= 0 || itemCount <= childCount * 2
+                || (minItemsForScroller > 0 && itemCount < minItemsForScroller)) {
             if (!isDefaultScrollBarEnabled) {
                 isDefaultScrollBarEnabled = true;
                 setVerticalScrollBarEnabled(true);
