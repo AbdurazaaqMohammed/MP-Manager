@@ -111,7 +111,10 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
             throw new RuntimeException("invalid unit");
         }
         double f = Double.parseDouble(num);
-        if (f < 1 && f > -1) {
+        if (f == Math.floor(f) && f >= -0x800000 && f <= 0x7FFFFF) {
+            base = (int) f;
+            radix = 0;
+        } else if (f < 1 && f > -1) {
             base = (int) (f * (1 << 23));
             radix = 3;
         } else if (f < 0x100 && f > -0x100) {
