@@ -2671,7 +2671,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public MainFilesArrayAdapter getCurrentFilesAdapter() {
-        return paneFilesAdapter(selectedPane == 1);
+        return paneFilesAdapter(lastPaneSelected == 1);
     }
 
     public MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {

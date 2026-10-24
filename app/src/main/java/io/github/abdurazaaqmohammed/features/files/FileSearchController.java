@@ -477,13 +477,9 @@ public class FileSearchController {
                         activity.loadFolderInPaneAsync(f, isPane1);
                     } else {
                         MainFilesArrayAdapter adapter = activity.getCurrentFilesAdapter();
+                        if (adapter == null) adapter = activity.paneFilesAdapter(isPane1);
                         if (adapter != null && adapter.getFileOpener() != null) {
                             adapter.getFileOpener().handleFileClick(f, f.getName());
-                        } else {
-                            try {
-                                io.github.abdurazaaqmohammed.utils.InstallUtil.openFile(f, activity);
-                            } catch (Exception ignored) {
-                            }
                         }
                     }
                 });
