@@ -145,7 +145,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             });
     private LinearLayout bottomBarLayout, searchPanel, replacePanel, linearHeader;
     private EditText searchInput, replaceInput;
-    private View btnFind, btnReplaceToggle, btnSearchMenu, btnStopSearch;
+    private View btnSearchPrev, btnSearchNext, btnReplaceToggle, btnSearchMenu, btnStopSearch;
     private MaterialButton btnReplaceAll;
     //private SymbolInputView symbolInput;
     private ProgressBar loadingProgress;
@@ -196,12 +196,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private static final Map<String, TextMateLanguage> syntaxLanguageCache = new HashMap<>();
     private static final String[] SYNTAX_LABELS = {
             "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
-            "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell"
+            "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell", "Prop"
     };
     private static final String[] SYNTAX_SCOPES = {
             null, "text.xml", "text.xml", "source.java", "source.c", "source.cpp", "source.python",
             "source.js", "text.html.basic", "source.css", "text.html.markdown", "source.json",
-            "source.rust", "source.shell"
+            "source.rust", "source.shell", "source.prop"
     };
 
     public interface EditorCallback {
@@ -282,7 +282,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         replacePanel = view.findViewById(R.id.replace_panel);
         searchInput = view.findViewById(R.id.search_input);
         replaceInput = view.findViewById(R.id.replace_input);
-        btnFind = view.findViewById(R.id.btn_find);
+        btnSearchPrev = view.findViewById(R.id.btn_search_prev);
+        btnSearchNext = view.findViewById(R.id.btn_search_next);
         btnReplaceToggle = view.findViewById(R.id.btn_replace_toggle);
         btnReplaceAll = view.findViewById(R.id.btn_replace_all);
         btnSearchMenu = view.findViewById(R.id.btn_search_menu);
@@ -365,7 +366,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private void setupSearchListeners() {
-        btnFind.setOnClickListener(v -> performSearch());
+        btnSearchPrev.setOnClickListener(v -> goToMatch(false));
+        btnSearchNext.setOnClickListener(v -> goToMatch(true));
         searchInput.setOnEditorActionListener((v, actionId, event) -> {
             performSearch();
             return true;
@@ -752,7 +754,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             wholeWord = false;
             int type = useRegex ? EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
                     : EditorSearcher.SearchOptions.TYPE_NORMAL;
-            startSearch(query, type, !matchCase);
+            startSearch(query, type, !matchCase, true);
         } catch (Exception ignored) {
         }
     }
@@ -765,13 +767,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             int type = regex ? EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
                     : wholeWord ? EditorSearcher.SearchOptions.TYPE_WHOLE_WORD
                     : EditorSearcher.SearchOptions.TYPE_NORMAL;
-            startSearch(query.toString(), type, !matchCase);
+            startSearch(query.toString(), type, !matchCase, true);
         } catch (Exception e) {
             if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
         }
     }
 
-    private void startSearch(String query, int type, boolean ignoreCase) {
+    private void startSearch(String query, int type, boolean ignoreCase, boolean next) {
         try {
             EditorSearcher searcher = editor.getSearcher();
             searcher.setCyclicJumping(true); // Find wraps around instead of dying at the last match
@@ -779,30 +781,58 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             lastSearchType = type;
             lastIgnoreCase = ignoreCase;
             searcher.search(query, new EditorSearcher.SearchOptions(type, ignoreCase));
-            jumpWhenReady(searcher, 0);
+            jumpWhenReady(searcher, 0, next);
         } catch (Exception e) {
             if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
         }
     }
 
-    private void goToNextMatch() {
-        if (lastSearchType == null || TextUtils.isEmpty(lastSearchQuery)) {
-            searchPanel.setVisibility(View.VISIBLE);
-            return;
+    /**
+     * Jumps to the next/previous match, (re)starting the search when the query
+     * or one of the options changed since the last run - otherwise the arrows
+     * would navigate a stale result set.
+     */
+    private void goToMatch(boolean next) {
+        CharSequence query = searchInput.getText();
+        if (TextUtils.isEmpty(query)) return;
+        int type = regex ? EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
+                : wholeWord ? EditorSearcher.SearchOptions.TYPE_WHOLE_WORD
+                : EditorSearcher.SearchOptions.TYPE_NORMAL;
+        boolean ignoreCase = !matchCase;
+        boolean queryChanged = !query.toString().equals(lastSearchQuery)
+                || lastSearchType == null || lastSearchType != type
+                || lastIgnoreCase != ignoreCase;
+        try {
+            EditorSearcher searcher = editor.getSearcher();
+            if (queryChanged || !searcher.hasQuery()) {
+                startSearch(query.toString(), type, ignoreCase, next);
+                return;
+            }
+            if (next ? searcher.gotoNext() : searcher.gotoPrevious()) return;
+            // Matches may still be computing right after a search; retry briefly
+            // instead of restarting the search and losing the position.
+            editor.postDelayed(() -> {
+                try {
+                    EditorSearcher s = editor.getSearcher();
+                    if (!TextUtils.isEmpty(lastSearchQuery)
+                            && (next ? s.gotoNext() : s.gotoPrevious())) return;
+                    if (isAdded()) Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
+                } catch (Exception ignored) {
+                }
+            }, 120);
+        } catch (Exception e) {
+            if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
         }
-        EditorSearcher searcher = editor.getSearcher();
-        if (searcher.hasQuery() && searcher.gotoNext()) return;
-        startSearch(lastSearchQuery, lastSearchType, lastIgnoreCase);
     }
 
-    private void jumpWhenReady(EditorSearcher searcher, int attempt) {
+    private void jumpWhenReady(EditorSearcher searcher, int attempt, boolean next) {
         if (!isAdded() || editor.getSearcher() != searcher) return;
-        if (searcher.gotoNext()) return;
+        if (next ? searcher.gotoNext() : searcher.gotoPrevious()) return;
         if (attempt >= 12) {
             Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
             return;
         }
-        editor.postDelayed(() -> jumpWhenReady(searcher, attempt + 1), 80);
+        editor.postDelayed(() -> jumpWhenReady(searcher, attempt + 1, next), 80);
     }
 
     private void performReplace() {
@@ -889,7 +919,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         String action = obj.optString(actionKey);
         if (TextUtils.isEmpty(action)) return;
         if (action.equalsIgnoreCase("Search")) {
-            goToNextMatch();
+            goToMatch(true);
             return;
         }
         Cursor cursor = editor.getCursor();
@@ -1250,6 +1280,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             case "rs": return "source.rust";
             case "sh":
             case "bash": return "source.shell";
+            case "prop":
+            case "ini":
+            case "conf":
+            case "cfg": return "source.prop";
             default: return null;
         }
     }

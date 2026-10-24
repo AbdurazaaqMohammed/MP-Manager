@@ -4,11 +4,14 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.ActivityNotFoundException;
 import android.net.Uri;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -23,8 +26,60 @@ public class DialogUtil {
         return new MaterialAlertDialogBuilder(context);
     }
 
+    /**
+     * Keeps a dialog's action buttons on one horizontal row. Vertical stacking
+     * is disabled globally by the app's overrides of
+     * {@code mtrl_alert_dialog_actions} / {@code m3_alert_dialog_actions}
+     * ({@code app:allowStacking="false"}); this helper re-asserts that at
+     * runtime (covering dialogs whose theme differs) without touching button
+     * sizes, so labels always keep their natural width and stay readable.
+     *
+     * <p>Must be called after the dialog is shown (buttons are only inflated
+     * then), and it does not touch the dialog's own show listener.
+     */
+    public static void keepButtonsHorizontal(AlertDialog dialog) {
+        if (dialog == null) return;
+        View decor = dialog.getWindow() == null ? null : dialog.getWindow().getDecorView();
+        if (decor == null) return;
+        decor.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
+                v.post(() -> forceButtonsHorizontal(dialog)));
+    }
+
+    private static void forceButtonsHorizontal(AlertDialog dialog) {
+        LinearLayout panel = buttonPanel(dialog);
+        if (panel == null) return;
+        try {
+            if (panel instanceof androidx.appcompat.widget.ButtonBarLayout bar) {
+                // Cheap no-op when already false (guarded inside appcompat).
+                bar.setAllowStacking(false);
+            } else {
+                panel.setOrientation(LinearLayout.HORIZONTAL);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** The row that holds the action buttons, found via any visible button's parent. */
+    private static LinearLayout buttonPanel(AlertDialog dialog) {
+        View positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positive != null && positive.getParent() instanceof LinearLayout p) return p;
+        View negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        if (negative != null && negative.getParent() instanceof LinearLayout p2) return p2;
+        View neutral = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        if (neutral != null && neutral.getParent() instanceof LinearLayout p3) return p3;
+        return null;
+    }
+
+    /**
+     * Shows the dialog with its buttons pinned to a single horizontal row (see
+     * {@link #keepButtonsHorizontal}). Dialogs shown through this helper never
+     * end up with a vertical, scroll-requiring button bar.
+     */
     public void styleAlertDialog(AlertDialog ad) {
-        context.runOnUiThread(ad::show);
+        context.runOnUiThread(() -> {
+            ad.show();
+            keepButtonsHorizontal(ad);
+        });
     }
 
     /**

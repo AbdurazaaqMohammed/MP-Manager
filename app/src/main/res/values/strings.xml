@@ -755,6 +755,11 @@ Layout Inspector
     <string name="install_uninstall_note_no_data">“Uninstall and install” removes the existing app and installs this one. Its data cannot be read without root, so it will be lost.</string>
     <string name="install_dont_show_again">Don\'t show this again</string>
     <string name="uninstall_and_install">Uninstall and install</string>
+    <string name="install_info_signature">Signature</string>
+    <string name="install_info_hashes">Hashes</string>
+    <string name="install_info_notes">Notes</string>
+    <string name="apk_compare_sha256_label">Candidate SHA-256</string>
+    <string name="apk_compare_installed_label">Installed SHA-256</string>
     <string name="install_info_mode">Show installation info</string>
     <string name="install_info_never">Never</string>
     <string name="install_info_when_differs">Only when the signature differs</string>
@@ -1775,4 +1780,24 @@ Layout Inspector
     <string name="edpref_get_api_key_summary">Visit Gemini website to get your API key</string>
     <string name="donate">Donate</string>
     <string name="setup">Setup</string>
+    <string name="recycle_bin">Recycle bin</string>
+    <string name="recycle_bin_summary">Move deleted files here instead of erasing them, so accidental deletes can be undone</string>
+    <string name="ask">Ask</string>
+    <string name="never">Never</string>
+    <string name="always">Always</string>
+    <string name="recycle_bin_retention">Keep deleted items for</string>
+    <string name="recycle_bin_location">Recycle bin location</string>
+    <string name="recycle_bin_empty">Recycle bin is empty</string>
+    <string name="empty_recycle_bin">Empty recycle bin</string>
+    <string name="empty_recycle_bin_confirm">Permanently delete all items in the recycle bin?</string>
+    <string name="recycle_bin_emptied">Recycle bin emptied</string>
+    <string name="delete_forever_failed">Could not delete item</string>
+    <string name="recycle_bin_purged_x">Recycle bin: removed %1$d expired item(s)</string>
+    <string name="moved_to_recycle_bin">Moved to recycle bin</string>
+    <string name="delete_forever">Delete permanently</string>
+    <string name="restore_to_x">Restored to %1$s</string>
+    <string name="restore_failed">Restore failed</string>
+    <string name="deleted_from_x">From: %1$s</string>
+    <string name="days_x">%1$d days</string>
+    <string name="forever">Forever</string>
 </resources>

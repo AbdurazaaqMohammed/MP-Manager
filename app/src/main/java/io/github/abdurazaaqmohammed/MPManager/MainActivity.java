@@ -363,12 +363,29 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         super.onPause();
         updates.unregister();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        settings.edit()
+        SharedPreferences.Editor editor = settings.edit()
                 .putString("bookmarks", getBookmarks().toString())
                 .putBoolean("systemTheme", systemTheme)
                 .putBoolean("checkForUpdates", checkForUpdates)
-                .putInt("theme", theme)
-                .apply();
+                .putInt("theme", theme);
+        
+        try {
+            RecyclerView pane1View = findViewById(R.id.listViewPane1);
+            if (pane1View != null && pane1View.getAdapter() instanceof MainFilesArrayAdapter adapter1) {
+                Set<Integer> selected1 = new HashSet<>(adapter1.selectedPositions);
+                editor.putStringSet("pane1_selected", selected1.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+            }
+        } catch (Exception ignored) {}
+        
+        try {
+            RecyclerView pane2View = findViewById(R.id.listViewPane2);
+            if (pane2View != null && pane2View.getAdapter() instanceof MainFilesArrayAdapter adapter2) {
+                Set<Integer> selected2 = new HashSet<>(adapter2.selectedPositions);
+                editor.putStringSet("pane2_selected", selected2.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+            }
+        } catch (Exception ignored) {}
+        
+        editor.apply();
     }
 
     public void openSidebarDrawer() {
@@ -861,6 +878,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
+        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.init(this);
+        // Applies the custom app dir to REAndroid's framework loader before
+        // any decode/build can read the default location.
+        UiPrefs.frameworkDir(this);
         // ShizukuShell.warmUp() does binder IPC: deferred to runWhenIdle below,
         // never on the cold-start critical path.
         //WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
@@ -887,7 +908,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // background-priority thread, so it never competes with the startup listing.
         runWhenIdle(() -> new Thread(() -> {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-            File frameworks = new File("/sdcard/MP Manager/frameworks/");
+            File frameworks = UiPrefs.frameworkDir(this);
             if (frameworks.exists() || frameworks.mkdirs()) {
                 int[] resourceIds = {
                         R.raw.android_23, R.raw.android_24, R.raw.android_25,
@@ -1031,6 +1052,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         pane1.setLayoutManager(new LinearLayoutManager(this));
         pane2.setLayoutManager(new LinearLayoutManager(this));
+        // Fast scroller only makes sense on long listings; short folders keep
+        // the plain view (threshold check lives in FastScrollerRecyclerView).
+        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane1).setMinItemsForScroller(50);
+        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane2).setMinItemsForScroller(50);
         // Stable rows: skips a requestLayout per bind and shares the view pool
         // between panes so the second pane inflates fewer row views.
         pane1.setHasFixedSize(true);
@@ -1245,6 +1270,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
                 menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
                 menu.add(0, 13, 0, getString(R.string.preferences)).setIcon(R.drawable.baseline_settings_24);
+                menu.add(0, 16, 0, getString(R.string.recycle_bin)).setIcon(R.drawable.baseline_delete_24);
                 menu.add(0, 14, 0, getString(R.string.exit)).setIcon(R.drawable.baseline_exit_to_app_24);
 
                 popup.setOnMenuItemClickListener(item -> {
@@ -1345,6 +1371,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             break;
                         case 13:
                             showSettingsDialog();
+                            break;
+                        case 16:
+                            showRecycleBinDialog();
                             break;
                         case 14:
                             finishAffinity();
@@ -1473,6 +1502,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } catch (Exception ignored) {
                     }
                 }, "root-probe").start();
+                new Thread(() -> {
+                    try {
+                        int purged = io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(MainActivity.this);
+                        if (purged > 0) handler.post(() ->
+                                Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.recycle_bin_purged_x, purged)));
+                    } catch (Exception ignored) {
+                    }
+                }, "bin-purge").start();
             });
             if ((checkForUpdates = settings.getBoolean("checkForUpdates", true))) {
                 runWhenIdle(() -> {
@@ -1708,11 +1746,29 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
+        // Refresh of the folder already on screen (post-action reload): keep
+        // the scroll position so the listing does not jump back to the top.
+        // Navigating to a different folder still starts at the first row.
+        int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : null;
         File[] files = listPlainFolder(folder, pane1);
         if (files == null) return;
         Arrays.sort(files);
         sortFiles(files, folder.getPath());
         bindListedFolder(folder, files, pane1, addToHistory);
+        if (saved != null) restorePaneScroll(pane1, saved);
+    }
+
+    /** True when the pane currently lists this exact plain folder. */
+    private boolean samePlainFolderShown(File folder, boolean pane1) {
+        try {
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane == null || !(pane.getAdapter() instanceof MainFilesArrayAdapter a) || a.isInZip) return false;
+            File shown = pane1 ? pane1Folder : pane2Folder;
+            return shown != null && folder != null
+                    && shown.getAbsolutePath().equals(folder.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -1910,9 +1966,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
-        pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
+        MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
+        pane.setAdapter(adapter);
+        
+        try {
+            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+            String prefKey = pane1 ? "pane1_selected" : "pane2_selected";
+            Set<String> savedSelection = settings.getStringSet(prefKey, null);
+            if (savedSelection != null && !savedSelection.isEmpty()) {
+                Set<Integer> positions = new HashSet<>();
+                for (String s : savedSelection) {
+                    try {
+                        positions.add(Integer.parseInt(s));
+                    } catch (Exception ignored) {}
+                }
+                adapter.restoreSelection(positions);
+                settings.edit().remove(prefKey).apply();
+            }
+        } catch (Exception ignored) {}
+        
         UiPrefs.playFolderTransition(pane);
-        // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
     }
@@ -1928,6 +2001,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory, Runnable afterBind) {
         invalidatePaneLoad(pane1);
         final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
+        // Re-listing the archive location already on screen: keep scroll.
+        final int[] saved = sameZipFolderShown(zipFile, path, pane1) ? capturePaneScroll(pane1) : null;
         listingExecutor.execute(() -> {
             final ZipRead read;
             try {
@@ -1953,6 +2028,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 } catch (Exception ignored) {
                     return;
                 }
+                if (saved != null) restorePaneScroll(pane1, saved);
                 if (afterBind != null) {
                     try {
                         afterBind.run();
@@ -1961,6 +2037,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             });
         });
+    }
+
+    /** True when the pane currently lists this exact archive location. */
+    private boolean sameZipFolderShown(File zipFile, String path, boolean pane1) {
+        try {
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane == null || !(pane.getAdapter() instanceof MainFilesArrayAdapter a) || !a.isInZip) return false;
+            File shown = pane1 ? pane1Folder : pane2Folder;
+            String inner = a.currentZipPath == null ? "" : a.currentZipPath;
+            String target = path == null ? "" : path;
+            return shown != null && zipFile != null
+                    && shown.getAbsolutePath().equals(zipFile.getAbsolutePath())
+                    && inner.equals(target);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** Background-safe half of a zip listing: central-directory scan + filter. */
@@ -2109,6 +2201,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         invalidatePaneLoad(pane1);
         final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
         final String folderPath = folder.getAbsolutePath();
+        final int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : null;
         listingExecutor.execute(() -> {
             final File[] files;
             try {
@@ -2130,6 +2223,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 } catch (Exception ignored) {
                     return;
                 }
+                if (saved != null) restorePaneScroll(pane1, saved);
                 if (afterBind != null) {
                     try {
                         afterBind.run();
@@ -2837,6 +2931,84 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         fileSearch.showSearchDialog();
     }
 
+    /** Recycle bin browser: restore / permanently delete binned items. */
+    private void showRecycleBinDialog() {
+        new Thread(() -> {
+            io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(this);
+            List<io.github.abdurazaaqmohammed.utils.RecycleBin.Entry> entries =
+                    io.github.abdurazaaqmohammed.utils.RecycleBin.entries(this);
+            handler.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (entries.isEmpty()) {
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle(R.string.recycle_bin)
+                            .setMessage(R.string.recycle_bin_empty)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create());
+                    return;
+                }
+                CharSequence[] labels = new CharSequence[entries.size()];
+                java.text.DateFormat df = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT);
+                for (int i = 0; i < entries.size(); i++) {
+                    io.github.abdurazaaqmohammed.utils.RecycleBin.Entry e = entries.get(i);
+                    String when = e.deletedAt > 0 ? df.format(new java.util.Date(e.deletedAt)) : "";
+                    labels[i] = e.displayName() + (when.isEmpty() ? "" : "\n" + when)
+                            + (e.originPath == null || e.originPath.isEmpty()
+                            ? "" : "\n" + rss.getString(R.string.deleted_from_x, e.originPath));
+                }
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle(getString(R.string.recycle_bin) + " (" + entries.size() + ")")
+                        .setItems(labels, (dialog, which) ->
+                                showRecycleBinItemDialog(entries.get(which)))
+                        .setNeutralButton(R.string.empty_recycle_bin, (dialog, which) ->
+                                new MaterialAlertDialogBuilder(MainActivity.this)
+                                        .setTitle(R.string.empty_recycle_bin)
+                                        .setMessage(R.string.empty_recycle_bin_confirm)
+                                        .setPositiveButton(R.string.delete, (d, w) -> {
+                                            io.github.abdurazaaqmohammed.utils.RecycleBin.emptyBin(MainActivity.this);
+                                            Extensions.showMessage(MainActivity.this, R.string.recycle_bin_emptied);
+                                        })
+                                        .setNegativeButton(android.R.string.cancel, null)
+                                        .show())
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .create());
+            });
+        }).start();
+    }
+
+    private void showRecycleBinItemDialog(io.github.abdurazaaqmohammed.utils.RecycleBin.Entry entry) {
+        String[] actions = {rss.getString(R.string.restore), rss.getString(R.string.delete_forever)};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(entry.displayName())
+                .setItems(actions, (dialog, which) -> {
+                    if (which == 0) {
+                        new Thread(() -> {
+                            File restored = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
+                            handler.post(() -> {
+                                if (restored != null) {
+                                    Extensions.showMessage(MainActivity.this, rss.getString(R.string.restore_to_x, restored.getAbsolutePath()));
+                                    File parent = restored.getParentFile();
+                                    if (parent != null
+                                            && (parent.equals(pane1Folder) || parent.equals(pane2Folder))) {
+                                        refreshPaneAfterChange(parent.equals(pane1Folder), restored.getName());
+                                    }
+                                } else {
+                                    Extensions.showMessage(MainActivity.this, R.string.restore_failed);
+                                }
+                            });
+                        }).start();
+                    } else {
+                        new Thread(() -> {
+                            boolean ok = io.github.abdurazaaqmohammed.utils.RecycleBin.deleteEntry(MainActivity.this, entry);
+                            if (!ok) handler.post(() ->
+                                    Extensions.showMessage(MainActivity.this, R.string.delete_forever_failed));
+                        }).start();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
     private void showFindInFilesDialog() {
         fileSearch.showFindInFilesDialog();
     }
@@ -2852,12 +3024,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
     }
-
-
-
-
-
-
 
     private boolean isNotHidden(File f) {
         return sortFilter.isNotHidden(f);
@@ -2906,4 +3072,3 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ftp.loadFtpFolderInPane(folder, pane1);
     }
 }
-

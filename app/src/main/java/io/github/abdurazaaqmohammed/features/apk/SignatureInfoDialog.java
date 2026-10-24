@@ -57,14 +57,16 @@ public final class SignatureInfoDialog {
             pm.dismiss();
             context.handler.post(() -> {
                 CharSequence all = flatten(context, info);
-                dialogUtil.getDialogBuilder()
+                // The sheet already lays out every certificate field inline, so the
+                // separate "View certificate" copy is redundant; keep just Close/Copy.
+                androidx.appcompat.app.AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(R.string.signature_info)
                         .setView(build(context, info))
                         .setPositiveButton(R.string.close, null)
-                        .setNeutralButton(R.string.view_certificate,
-                                (d, w) -> showCertificate(context, dialogUtil, info))
                         .setNegativeButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, all))
-                        .show();
+                        .create();
+                dialog.show();
+                io.github.abdurazaaqmohammed.utils.DialogUtil.keepButtonsHorizontal(dialog);
             });
         }).start();
     }
@@ -148,28 +150,6 @@ public final class SignatureInfoDialog {
             default:
                 return context.getString(android.R.string.unknownName);
         }
-    }
-
-    private static void showCertificate(MainActivity context, DialogUtil dialogUtil, ApkSignatureInfo info) {
-        List<X509Certificate> certs = info.getCertificates();
-        CharSequence text;
-        if (certs.isEmpty()) {
-            text = context.getString(R.string.no_signature_found);
-        } else {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < certs.size(); i++) {
-                if (i > 0) sb.append("\n\n");
-                sb.append(context.getString(R.string.cert, i + 1)).append('\n');
-                sb.append(CertUtil.describe(certs.get(i)));
-            }
-            text = sb;
-        }
-        dialogUtil.getDialogBuilder()
-                .setTitle(R.string.view_certificate)
-                .setMessage(text)
-                .setPositiveButton(android.R.string.ok, null)
-                .setNeutralButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, text))
-                .show();
     }
 
     private static CharSequence flatten(MainActivity context, ApkSignatureInfo info) {

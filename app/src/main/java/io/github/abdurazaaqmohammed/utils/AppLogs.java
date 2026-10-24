@@ -14,8 +14,18 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class AppLogs {
+
+    private static Context appContext;
+
+    /** Captured once at process start so log paths can resolve the app dir pref. */
+    public static void init(Context context) {
+        if (context != null) appContext = context.getApplicationContext();
+    }
+
     public static File getLogsDir() {
-        File dir = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"), "logs");
+        String base = UiPrefs.appPathDir(appContext,
+                new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath());
+        File dir = new File(base, "logs");
         dir.mkdirs();
         return dir;
     }
@@ -79,6 +89,7 @@ public class AppLogs {
     }
 
     public static void install(Context context) {
+        init(context);
         Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, e) -> {
             try {

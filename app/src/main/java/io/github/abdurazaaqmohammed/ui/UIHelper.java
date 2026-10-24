@@ -47,7 +47,7 @@ public class UIHelper {
         }
         new MaterialAlertDialogBuilder(context)
                 .setTitle(lib.name)
-                .setMessage(message.toString())
+                .setMessage(message)
                 .setPositiveButton(context.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lib.url))))
                 .setNegativeButton(context.getString(R.string.close), null)
                 .show();
@@ -117,9 +117,8 @@ public class UIHelper {
             ((TextView) row.findViewById(R.id.aboutLibAuthor)).setText(context.getString(R.string.about_by_author, lib.author));
             TextView licenseText = row.findViewById(R.id.aboutLibLicense);
             licenseText.setText(lib.licenseName);
-            if (licenseText.getBackground() instanceof GradientDrawable) {
-                ((GradientDrawable) licenseText.getBackground()).setColor(
-                        MaterialColors.getColor(context, com.google.android.material.R.attr.colorSecondaryContainer, Color.TRANSPARENT));
+            if (licenseText.getBackground() instanceof GradientDrawable gd) {
+                gd.setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorSecondaryContainer, Color.TRANSPARENT));
             }
             row.setOnClickListener(v -> showLibraryDialog(lib));
             libsContainer.addView(row);

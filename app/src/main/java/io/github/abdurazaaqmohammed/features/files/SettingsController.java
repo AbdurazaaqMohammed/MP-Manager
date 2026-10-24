@@ -68,6 +68,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SectionCollapse;
+import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -861,11 +862,13 @@ public class SettingsController {
                 }));
 
         TextView appPathTv = root.findViewById(R.id.appPathTv);
-        appPathTv.setText(UiPrefs.appPathDir(activity,
-                new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath()));
+        appPathTv.setText(UiPrefs.appPathDir(activity, UiPrefs.defaultAppDir()));
         root.findViewById(R.id.pickAppPathBtn).setOnClickListener(v ->
-                pickDirInto(appPathTv, chosen ->
-                        settings.edit().putString("app_path_dir", chosen).apply()));
+                pickDirInto(appPathTv, chosen -> {
+                    settings.edit().putString("app_path_dir", chosen).apply();
+                    // Logs and framework resources follow the new base immediately.
+                    UiPrefs.frameworkDir(activity);
+                }));
     }
 
     public interface DirPicked {
@@ -893,6 +896,45 @@ public class SettingsController {
         backupSwitch.setChecked(settings.getBoolean("gen_backup", true));
         backupSwitch.setOnCheckedChangeListener((v, checked) ->
                 settings.edit().putBoolean("gen_backup", checked).apply());
+
+        AutoCompleteTextView recycleBinModeTv = root.findViewById(R.id.recycleBinModeTv);
+        List<String> binModes = new ArrayList<>();
+        binModes.add(activity.getString(R.string.ask));
+        binModes.add(activity.getString(R.string.always));
+        binModes.add(activity.getString(R.string.never));
+        recycleBinModeTv.setAdapter(dropdownAdapter(binModes));
+        String savedBinMode = RecycleBin.mode(activity);
+        int binModeIdx = RecycleBin.MODE_ALWAYS.equals(savedBinMode) ? 1
+                : RecycleBin.MODE_NEVER.equals(savedBinMode) ? 2 : 0;
+        recycleBinModeTv.setText(binModes.get(binModeIdx), false);
+        recycleBinModeTv.setOnItemClickListener((p, v, pos, id) ->
+                RecycleBin.setMode(activity, pos == 1 ? RecycleBin.MODE_ALWAYS
+                        : pos == 2 ? RecycleBin.MODE_NEVER : RecycleBin.MODE_ASK));
+
+        AutoCompleteTextView retentionTv = root.findViewById(R.id.recycleBinRetentionTv);
+        int[] retentionChoices = {1, 7, 30, 90, 0};
+        List<String> retentionLabels = new ArrayList<>();
+        for (int d : retentionChoices) {
+            retentionLabels.add(d == 0 ? activity.getString(R.string.forever)
+                    : activity.getString(R.string.days_x, d));
+        }
+        retentionTv.setAdapter(dropdownAdapter(retentionLabels));
+        int savedDays = RecycleBin.retentionDays(activity);
+        int selected = 2;
+        for (int i = 0; i < retentionChoices.length; i++) {
+            if (retentionChoices[i] == savedDays) selected = i;
+        }
+        retentionTv.setText(retentionLabels.get(selected), false);
+        retentionTv.setOnItemClickListener((p, v, pos, id) ->
+                RecycleBin.setRetentionDays(activity, retentionChoices[pos]));
+
+        TextView recycleBinPathTv = root.findViewById(R.id.recycleBinPathTv);
+        recycleBinPathTv.setText(RecycleBin.binDir(activity).getPath());
+        root.findViewById(R.id.pickRecycleBinBtn).setOnClickListener(v ->
+                pickDirInto(recycleBinPathTv, chosen -> {
+                    RecycleBin.setBinDir(activity, chosen);
+                    recycleBinPathTv.setText(RecycleBin.binDir(activity).getPath());
+                }));
 
         CompoundButton preserveSwitch = root.findViewById(R.id.preserveSwitch);
         preserveSwitch.setChecked(settings.getBoolean("preserve_mtime", true));

@@ -862,16 +862,25 @@ public class FileOpener {
             openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, checksumDialogs::showHashVerifyDialog);
-        } else if(fileName.endsWith(".xml")) {
+        } else if (fileName.endsWith(".xml") || fileName.endsWith(".axml")
+            || FileUtils.isAxml(file) || FileUtils.isAbx(file)) {
             withReadableCopy(file, readable -> {
-                try (InputStream is = FileUtils.getInputStream(readable)) {
-                    if (FileUtils.isAbx(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                try {
+                    boolean abx;
+                    try (InputStream is = FileUtils.getInputStream(readable)) {
+                        abx = FileUtils.isAbx(is);
+                    }
+                    boolean axml = false;
+                    if (!abx) try (InputStream is = FileUtils.getInputStream(readable)) {
+                        axml = FileUtils.isAxml(is);
+                    }
+                    if (abx) try (InputStream is2 = FileUtils.getInputStream(readable)) {
                         context.startActivity(rootAwareEditorIntent(readable, file)
                                 .putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is2).trim())
                                 .putExtra("abx", true)
                                 .putExtra("path", readable.getPath()));
                     }
-                    else if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                    else if (axml) try (InputStream is2 = FileUtils.getInputStream(readable)) {
                         context.startActivity(rootAwareEditorIntent(readable, file)
                                 .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
                                 .putExtra("axml", true)
@@ -940,6 +949,8 @@ public class FileOpener {
                 fileOps.showDexOptionsDialog(file, null, null, fileName);
             } else if (fileName.endsWith(".sh")) {
                 withReadableCopy(file, readable -> showShellScriptDialog(readable, file, fileName));
+            } else if (FileUtils.matchExt(ext, FileUtils.FONT_EXTS)) {
+                withReadableCopy(file, readable -> showFontPreview(readable, fileName));
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
@@ -982,6 +993,47 @@ public class FileOpener {
             } catch (Exception e) {
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
+        }).start();
+    }
+
+    public void shareZipEntries(List<ZipEntryInfo> entries) {
+        if (entries == null || entries.isEmpty()) return;
+        new Thread(() -> {
+            ArrayList<Uri> uris = new ArrayList<>();
+            IOException failure = null;
+            for (ZipEntryInfo entry : entries) {
+                if (entry == null || entry.isDirectory()) continue;
+                try {
+                    File staged = stageZipEntry(entry);
+                    uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged));
+                } catch (IOException e) {
+                    if (failure == null) failure = e;
+                }
+            }
+            final IOException finalFailure = failure;
+            context.handler.post(() -> {
+                try {
+                    if (uris.isEmpty()) {
+                        if (finalFailure != null) new ErrorUtil(context).showError(finalFailure);
+                        else Extensions.showMessage(context, R.string.cannot_open_item);
+                        return;
+                    }
+                    if (uris.size() == 1) {
+                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+                                .setType("application/octet-stream")
+                                .putExtra(Intent.EXTRA_STREAM, uris.get(0))
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share 1 file"));
+                    } else {
+                        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE)
+                                .setType("*/*")
+                                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, "Share " + uris.size() + " files"));
+                    }
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
+            });
         }).start();
     }
 

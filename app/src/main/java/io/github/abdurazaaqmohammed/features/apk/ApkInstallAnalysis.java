@@ -57,11 +57,14 @@ public final class ApkInstallAnalysis {
     public final String installedChecksum;
     public final String signerSubject;
     public final String installedSignerSubject;
+    public final String signerCertSha256;
+    public final String installedSignerCertSha256;
 
     private ApkInstallAnalysis(boolean installed, String packageName, String versionName, long versionCode,
                               String installedVersionName, long installedVersionCode, int versionRelation,
                               int signerRelation, boolean sameBytes, String checksum, String installedChecksum,
-                              String signerSubject, String installedSignerSubject) {
+                              String signerSubject, String installedSignerSubject,
+                              String signerCertSha256, String installedSignerCertSha256) {
         this.installed = installed;
         this.packageName = packageName;
         this.versionName = versionName;
@@ -75,6 +78,8 @@ public final class ApkInstallAnalysis {
         this.installedChecksum = installedChecksum;
         this.signerSubject = signerSubject;
         this.installedSignerSubject = installedSignerSubject;
+        this.signerCertSha256 = signerCertSha256;
+        this.installedSignerCertSha256 = installedSignerCertSha256;
     }
 
     public boolean isDifferentSigner() {
@@ -187,7 +192,8 @@ public final class ApkInstallAnalysis {
 
         if (pkg == null) {
             return new ApkInstallAnalysis(false, null, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null);
+                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                    archiveCert, null);
         }
 
         PackageInfo installedInfo;
@@ -195,11 +201,13 @@ public final class ApkInstallAnalysis {
             installedInfo = context.getPackageManager().getPackageInfo(pkg, signingFlags());
         } catch (Throwable e) {
             return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null);
+                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                    archiveCert, null);
         }
         if (installedInfo == null) {
             return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null);
+                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                    archiveCert, null);
         }
 
         long installedCode = ApkInfoUtil.getVersionCode(installedInfo);
@@ -224,7 +232,8 @@ public final class ApkInstallAnalysis {
         String installedSubject = subjectOf(installedSignerCert(installedInfo));
 
         return new ApkInstallAnalysis(true, pkg, versionName, versionCode, installedName, installedCode,
-                relation, signerRelation, sameBytes, checksum, installedChecksum, archiveSubject, installedSubject);
+                relation, signerRelation, sameBytes, checksum, installedChecksum, archiveSubject,
+                installedSubject, archiveCert, installedCert);
     }
 
     private static int signingFlags() {

@@ -338,6 +338,11 @@ public class ShizukuFile extends File {
         return !directory;
     }
 
+    /** True when the ls entry was a symlink (target type already resolved). */
+    public boolean isLink() {
+        return isLink;
+    }
+
     @Override
     public boolean canRead() {
         return true;

@@ -43,6 +43,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -244,7 +245,10 @@ public class EntryDialogs {
         boolean[] sign = new boolean[1];
         File zipFile = isInZip ? entry.getZipFile() : null;
         TextView customMsgView = null;
+        String binMode = RecycleBin.mode(context);
+        final CheckBox recycleCb;
         if (isInZip && zipFile.getName().endsWith(".apk")) {
+            recycleCb = null;
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
             customMsgView = ll.findViewById(R.id.modifiedText);
             customMsgView.setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
@@ -253,7 +257,23 @@ public class EntryDialogs {
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+        } else if (!isInZip && RecycleBin.MODE_ASK.equals(binMode)) {
+            recycleCb = new CheckBox(context);
+            recycleCb.setText(R.string.recycle_bin);
+            recycleCb.setChecked(RecycleBin.lastChoiceEnabled(context));
+            LinearLayout ll = new LinearLayout(context);
+            ll.setOrientation(LinearLayout.VERTICAL);
+            int pad = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
+            ll.setPadding(pad, pad / 2, pad, 0);
+            TextView msg = new TextView(context);
+            msg.setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+            ll.addView(msg);
+            ll.addView(recycleCb);
+            deleteDialog.setView(ll);
+        } else {
+            recycleCb = null;
+            deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+        }
         deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
@@ -264,6 +284,17 @@ public class EntryDialogs {
                             if (UiPrefs.genBackup(context)) FileUtils.backupOnce(zipFile);
                         }
                         boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
+                        // Recycle bin covers plain-file deletes (root/Shizuku
+                        // paths included - the bin stages them through the
+                        // elevated backend). In-archive deletes are permanent.
+                        boolean toBin;
+                        if (isInZip) toBin = false;
+                        else if (RecycleBin.MODE_ALWAYS.equals(binMode)) toBin = true;
+                        else if (RecycleBin.MODE_NEVER.equals(binMode)) toBin = false;
+                        else {
+                            toBin = recycleCb != null && recycleCb.isChecked();
+                            RecycleBin.setLastChoice(context, toBin);
+                        }
                         if (multi) {
                             if (!isInZip) {
                                 List<File> selectedFiles = new ArrayList<>();
@@ -273,7 +304,17 @@ public class EntryDialogs {
                                 }
                                 int totalSelected = FileUtils.countFilesForProgress(selectedFiles, 20000);
                                 pm.setProgress(0, totalSelected);
-                                if (useElevatedForDelete) {
+                                if (toBin) {
+                                    int removed = 0;
+                                    for (File f : selectedFiles) {
+                                        if (!RecycleBin.moveToBin(context, f)) {
+                                            if (f.isDirectory()) Util.deleteDir(f);
+                                            else f.delete();
+                                        }
+                                        removed += FileUtils.countFilesForProgress(f, 20000);
+                                        pm.setProgress(Math.min(removed, totalSelected), totalSelected);
+                                    }
+                                } else if (useElevatedForDelete) {
                                     // One shell round trip for the whole selection:
                                     // deleting item by item spent a su spawn per
                                     // file, all serialised behind the same lock.
@@ -326,7 +367,9 @@ public class EntryDialogs {
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
-                            if (useElevatedForDelete) {
+                            if (toBin && RecycleBin.moveToBin(context, file)) {
+                                // item is in the bin now
+                            } else if (useElevatedForDelete) {
                                 try {
                                     AccessManager.delete(context, file.getAbsolutePath(), true);
                                 } catch (Exception e) {
@@ -351,6 +394,10 @@ public class EntryDialogs {
                             context.handler.post(state::clearSelection);
                         }
                         pm.dismiss();
+                        if (toBin) {
+                            context.handler.post(() ->
+                                    Extensions.showMessage(context, R.string.moved_to_recycle_bin));
+                        }
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);

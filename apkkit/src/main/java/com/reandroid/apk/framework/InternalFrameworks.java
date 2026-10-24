@@ -178,13 +178,35 @@ public class InternalFrameworks extends FrameworkManager {
         }
     }
     private static String toResourcePath(int version) {
-        return ANDROID_RESOURCE_DIRECTORY + ANDROID_PACKAGE
+        return getAndroidResourceDirectory() + ANDROID_PACKAGE
                 + '_' + version
                 + FRAMEWORK_EXTENSION;
     }
 
     //FIX THIS
     private static final String ANDROID_RESOURCE_DIRECTORY = "/sdcard/MP Manager/frameworks/";
+    private static volatile String androidResourceDirectory;
+
+    /**
+     * Directory holding android_XX.apk framework resources. The host app can
+     * point this at a user-chosen location; until then the built-in default
+     * is used. Reset clears the override back to the default.
+     */
+    public static void setAndroidResourceDirectory(String directory) {
+        String normalized = null;
+        if (directory != null && !directory.isEmpty()) {
+            normalized = directory.endsWith("/") ? directory : directory + "/";
+        }
+        synchronized (InternalFrameworks.class) {
+            androidResourceDirectory = normalized;
+            INSTANCE.resourcePaths = null;
+        }
+    }
+
+    private static String getAndroidResourceDirectory() {
+        String dir = androidResourceDirectory;
+        return dir != null ? dir : ANDROID_RESOURCE_DIRECTORY;
+    }
     private static final String ANDROID_PACKAGE = "android";
     private static final String FRAMEWORK_EXTENSION = ".apk";
     private static final int LOWEST_AVAILABLE_VERSION = 23;

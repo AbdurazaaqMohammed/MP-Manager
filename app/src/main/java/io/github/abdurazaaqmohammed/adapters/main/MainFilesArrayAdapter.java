@@ -103,8 +103,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return isMultiSelectMode;
     }
 
-    private final Set<Integer> selectedPositions = new HashSet<>();
+    public final Set<Integer> selectedPositions = new HashSet<>();
     private Integer rangeStartPosition = null;
+
+    public void restoreSelection(Set<Integer> positions) {
+        if (positions != null && !positions.isEmpty()) {
+            selectedPositions.clear();
+            selectedPositions.addAll(positions);
+            isMultiSelectMode = true;
+            notifyDataSetChanged();
+        }
+    }
 
     /** Target of the synthetic ".." row, resolved once per listing. */
     private final File upFile;
@@ -197,6 +206,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private boolean isDir(File f) {
         try {
             return f != null && f.isDirectory();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Symlink detection for the row badge. Shizuku listings carry the flag
+     * from ls; plain listings compare the canonical path (java File follows
+     * links for isDirectory/isFile, so this is display-only there).
+     */
+    static boolean isSymlink(File f) {
+        if (f instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile sf) return sf.isLink();
+        try {
+            return !f.getCanonicalPath().equals(f.getAbsolutePath());
         } catch (Exception e) {
             return false;
         }
@@ -555,7 +578,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 holder.fileDateView.setVisibility(View.GONE);
                 holder.fileDateView.setTag(null);
             } else if (holder.appBadgeView != null && file.getParent() != null) {
-                iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+                if (isSymlink(file)) {
+                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                    holder.appBadgeView.setVisibility(View.VISIBLE);
+                } else {
+                    iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+                }
             }
         }
 
@@ -1006,8 +1034,58 @@ final View.OnClickListener originalClickListener;
                                         propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, entryDialogs.getFilesToDisplay(multi, finalPosition).toString());
                                         break;
                                     case FileMenuOrder.SHARE:
-                                        if (isInZip) {
+                                        if (isInZip && multi) {
+                                            List<ZipEntryInfo> shareEntries = new ArrayList<>();
+                                            for (int sp : selectedPositions) {
+                                                if (sp >= 0 && sp < values.length && values[sp] instanceof ZipEntryInfo ze) {
+                                                    if (!ze.isDirectory()) shareEntries.add(ze);
+                                                }
+                                            }
+                                            if (shareEntries.size() == 1) fileOpener.shareZipEntry(shareEntries.get(0), shareEntries.get(0).getName());
+                                            else if (shareEntries.size() > 1) fileOpener.shareZipEntries(shareEntries);
+                                        } else if (isInZip) {
                                             fileOpener.shareZipEntry(item, fileName);
+                                        } else if (multi) {
+                                            // Only real files can be staged as content URIs; directories
+                                            // can't be shared and must not count towards the completion
+                                            // check or the chooser never fires.
+                                            List<File> shareFiles = new ArrayList<>();
+                                            for (int sp : selectedPositions) {
+                                                if (sp >= 0 && sp < values.length && values[sp] instanceof File f) {
+                                                    if (!f.isDirectory()) shareFiles.add(f);
+                                                }
+                                            }
+                                            if (shareFiles.size() == 1) {
+                                                File only = shareFiles.get(0);
+                                                fileOpener.withReadableCopy(only, readable -> {
+                                                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                    String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
+                                                    context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+                                                            .setType(shareMime != null ? shareMime : "application/octet-stream")
+                                                            .putExtra(Intent.EXTRA_STREAM, uri)
+                                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + only.getName()));
+                                                });
+                                            } else if (shareFiles.size() > 1) {
+                                                List<Uri> uris = java.util.Collections.synchronizedList(new ArrayList<>());
+                                                java.util.concurrent.atomic.AtomicInteger pending =
+                                                        new java.util.concurrent.atomic.AtomicInteger(shareFiles.size());
+                                                for (File sf : shareFiles) {
+                                                    fileOpener.withReadableCopy(sf, readable -> {
+                                                        try {
+                                                            Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                            uris.add(uri);
+                                                        } catch (Exception ignored) {
+                                                        }
+                                                        if (pending.decrementAndGet() == 0) {
+                                                            Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                                                            intent.setType("*/*");
+                                                            intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, new ArrayList<>(uris));
+                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                                            context.startActivity(Intent.createChooser(intent, "Share " + uris.size() + " files"));
+                                                        }
+                                                    });
+                                                }
+                                            }
                                         } else fileOpener.withReadableCopy(file, readable -> {
                                             Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
                                             String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
