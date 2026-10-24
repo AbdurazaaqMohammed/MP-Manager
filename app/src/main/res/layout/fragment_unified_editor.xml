@@ -118,11 +118,20 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <ImageButton
-                android:id="@+id/btn_find"
+                android:id="@+id/btn_search_prev"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/baseline_search_24" />
+                android:contentDescription="@string/previous"
+                android:src="@drawable/ic_arrow_up_mt" />
+
+            <ImageButton
+                android:id="@+id/btn_search_next"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/next"
+                android:src="@drawable/ic_arrow_down_mt" />
 
             <ImageButton
                 android:id="@+id/btn_replace_toggle"
