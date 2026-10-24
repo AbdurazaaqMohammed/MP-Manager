@@ -133,7 +133,6 @@ public class ApkResultHandler {
                                             }
                                             if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                             for (File dexFile : dexFiles) {
-                                                ArchiveBackupUtil.backupEntryIfChanged(zf, dexFile.getName(), dexFile);
                                                 addedNames.add(dexFile.getName());
                                             }
                                             zf.addFiles(Arrays.asList(dexFiles));
@@ -146,7 +145,6 @@ public class ApkResultHandler {
                                                 return;
                                             }
                                             if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
-                                            ArchiveBackupUtil.backupEntryIfChanged(zf, targetEntry, replacement);
                                             addedNames.add(modifiedFileName);
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
@@ -237,7 +235,6 @@ public class ApkResultHandler {
                                     return;
                                 }
                                 if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(parent.outerZip());
-                                ArchiveBackupUtil.backupEntryIfChanged(zf, parent.entryPath(), innerZip);
                                 ZipParameters zp = new ZipParameters();
                                 zp.setCompressionMethod(CompressionMethod.DEFLATE);
                                 zp.setFileNameInZip(parent.entryPath());
