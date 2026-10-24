@@ -24,9 +24,22 @@ public final class FileSearch {
     private FileSearch() {
     }
 
+    public interface SearchCallback {
+        void onFolderEntered(File folder);
+        void onFileChecking(File file);
+        void onFileFound(File file, int totalFound);
+        boolean isCancelled();
+    }
+
     public static List<File> searchByName(File dir, String query, boolean subfolders,
             boolean matchCase, boolean regex, String textInside,
             long minSize, long maxSize, Function<File, File[]> lister) {
+        return searchByName(dir, query, subfolders, matchCase, regex, textInside, minSize, maxSize, lister, null);
+    }
+
+    public static List<File> searchByName(File dir, String query, boolean subfolders,
+            boolean matchCase, boolean regex, String textInside,
+            long minSize, long maxSize, Function<File, File[]> lister, SearchCallback callback) {
         List<File> results = new ArrayList<>();
         Pattern pattern = null;
         if (regex) {
@@ -37,13 +50,15 @@ public final class FileSearch {
             }
         }
         searchRecursive(dir, results, matchCase ? query : query.toLowerCase(),
-                subfolders, matchCase, regex, pattern, textInside, minSize, maxSize, lister);
+                subfolders, matchCase, regex, pattern, textInside, minSize, maxSize, lister, callback);
         return results;
     }
 
     private static void searchRecursive(File dir, List<File> results, String query,
             boolean subfolders, boolean mCase, boolean regex, Pattern pattern,
-            String textInside, long minSize, long maxSize, Function<File, File[]> lister) {
+            String textInside, long minSize, long maxSize, Function<File, File[]> lister, SearchCallback callback) {
+        if (callback != null && callback.isCancelled()) return;
+        if (callback != null) callback.onFolderEntered(dir);
         File[] files = dir.listFiles();
         if (files == null) {
             try {
@@ -53,6 +68,8 @@ public final class FileSearch {
             if (files == null) return;
         }
         for (File f : files) {
+            if (callback != null && callback.isCancelled()) return;
+            if (callback != null) callback.onFileChecking(f);
             boolean matchName;
             String name = f.getName();
             if (regex && pattern != null) {
@@ -86,11 +103,14 @@ public final class FileSearch {
                 }
             }
 
-            if (matchName && matchSize && matchText) results.add(f);
+            if (matchName && matchSize && matchText) {
+                results.add(f);
+                if (callback != null) callback.onFileFound(f, results.size());
+            }
 
             if (subfolders && f.isDirectory()) {
                 searchRecursive(f, results, query, subfolders, mCase, regex,
-                        pattern, textInside, minSize, maxSize, lister);
+                        pattern, textInside, minSize, maxSize, lister, callback);
             }
         }
     }

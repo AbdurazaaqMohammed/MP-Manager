@@ -178,9 +178,63 @@ public class FileSearchController {
             }
         }
 
-        ProgressManager pm = new ProgressManager(activity, true).show();
-        pm.setText(activity.rss.getString(R.string.searching));
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity);
+        builder.setTitle(activity.rss.getString(R.string.searching));
+
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (18 * activity.getResources().getDisplayMetrics().density + 0.5f);
+        layout.setPadding(pad, pad / 2, pad, pad / 2);
+
+        TextView folderView = new TextView(activity);
+        folderView.setEllipsize(TextUtils.TruncateAt.START);
+        folderView.setSingleLine(true);
+        folderView.setText(startDir.getAbsolutePath());
+        folderView.setTextSize(13);
+        layout.addView(folderView);
+
+        TextView checkingView = new TextView(activity);
+        checkingView.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        checkingView.setSingleLine(true);
+        checkingView.setText("...");
+        checkingView.setTextSize(12);
+        checkingView.setPadding(0, 8, 0, 8);
+        layout.addView(checkingView);
+
+        TextView countView = new TextView(activity);
+        countView.setText("Found: 0");
+        countView.setTextSize(14);
+        countView.setTypeface(null, Typeface.BOLD);
+        layout.addView(countView);
+
+        TextView previewView = new TextView(activity);
+        previewView.setTextSize(12);
+        previewView.setMaxLines(5);
+        previewView.setEllipsize(TextUtils.TruncateAt.END);
+        previewView.setPadding(0, 8, 0, 0);
+        layout.addView(previewView);
+
+        builder.setView(layout);
+        builder.setCancelable(false);
+
+        boolean[] cancelled = {false};
+        boolean[] stopped = {false};
+
+        builder.setPositiveButton("Stop", (d, which) -> {
+            stopped[0] = true;
+            cancelled[0] = true;
+        });
+
+        builder.setNegativeButton(android.R.string.cancel, (d, which) -> {
+            cancelled[0] = true;
+        });
+
+        AlertDialog progressDialog = builder.create();
+        progressDialog.show();
+
         final String finalQuery = query;
+        List<String> matchedNames = new ArrayList<>();
+        long[] lastUiUpdate = {0};
 
         new Thread(() -> {
             List<File> results = FileSearch.searchByName(startDir, finalQuery, subfolders,
@@ -197,11 +251,70 @@ public class FileSearchController {
                         } catch (Exception ignored) {
                         }
                         return null;
+                    },
+                    new FileSearch.SearchCallback() {
+                        @Override
+                        public void onFolderEntered(File folder) {
+                            long now = System.currentTimeMillis();
+                            if (now - lastUiUpdate[0] > 100) {
+                                lastUiUpdate[0] = now;
+                                String path = folder.getAbsolutePath();
+                                activity.handler.post(() -> folderView.setText(path));
+                            }
+                        }
+
+                        @Override
+                        public void onFileChecking(File file) {
+                            long now = System.currentTimeMillis();
+                            if (now - lastUiUpdate[0] > 100) {
+                                lastUiUpdate[0] = now;
+                                String name = file.getName();
+                                activity.handler.post(() -> checkingView.setText(name));
+                            }
+                        }
+
+                        @Override
+                        public void onFileFound(File file, int totalFound) {
+                            synchronized (matchedNames) {
+                                if (matchedNames.size() < 10) {
+                                    matchedNames.add(file.getName());
+                                } else {
+                                    matchedNames.remove(0);
+                                    matchedNames.add(file.getName());
+                                }
+                                StringBuilder sb = new StringBuilder();
+                                for (String n : matchedNames) {
+                                    if (sb.length() > 0) sb.append("\n");
+                                    sb.append("• ").append(n);
+                                }
+                                String preview = sb.toString();
+                                activity.handler.post(() -> {
+                                    countView.setText("Found: " + totalFound);
+                                    previewView.setText(preview);
+                                });
+                            }
+                        }
+
+                        @Override
+                        public boolean isCancelled() {
+                            return cancelled[0];
+                        }
                     });
-            pm.dismiss();
+
             activity.handler.post(() -> {
-                if (results.isEmpty()) Extensions.showMessage(activity, R.string.no_files_found);
-                else {
+                try {
+                    progressDialog.dismiss();
+                } catch (Exception ignored) {
+                }
+
+                if (cancelled[0] && !stopped[0]) {
+                    // Aborted via Cancel
+                    return;
+                }
+
+                if (results.isEmpty()) {
+                    Extensions.showMessage(activity, R.string.no_files_found);
+                } else {
                     File[] resArray = results.toArray(new File[0]);
                     activity.setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
                     RecyclerView pane = activity.findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
