@@ -1254,6 +1254,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 menu.add(0, 1, 0, getString(R.string.filter)).setIcon(R.drawable.baseline_filter_list_24);
                 menu.add(0, 2, 0, getString(R.string.search)).setIcon(R.drawable.baseline_search_24);
                 menu.add(0, 15, 0, getString(R.string.find_in_files)).setIcon(R.drawable.ic_search_replace);
+                menu.add(0, 17, 0, getString(R.string.xml_search)).setIcon(R.drawable.baseline_search_24);
                 menu.add(0, 3, 0, getString(R.string.menu_select_all)).setIcon(R.drawable.baseline_select_all_24);
                 menu.add(0, 4, 0, getString(R.string.sort)).setIcon(R.drawable.baseline_sort_24);
 
@@ -1319,6 +1320,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             break;
                         case 15:
                             showFindInFilesDialog();
+                            break;
+                        case 17:
+                            fileSearch.showXmlSearchDialog();
                             break;
                         case 3:
                             if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();

@@ -398,6 +398,83 @@ public class FileSearchController {
         }).start();
     }
 
+    public void showXmlSearchDialog() {
+        boolean isPane1 = activity.lastPaneSelected == 1;
+        RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
+        File targetFile = null;
+        if (a instanceof MainFilesArrayAdapter adapter) {
+            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) {
+                targetFile = ((io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) adapter.values[0]).getZipFile();
+            }
+        }
+        if (targetFile == null) {
+            targetFile = isPane1 ? activity.pane1Folder : activity.pane2Folder;
+        }
+
+        File searchTarget = targetFile;
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * activity.getResources().getDisplayMetrics().density + 0.5f);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextInputLayout box = UiFields.box(activity, "Text or ID to find in XML");
+        EditText queryInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
+        root.addView(box);
+        CheckBox cbCase = new CheckBox(activity);
+        cbCase.setText(activity.getString(R.string.match_case));
+        CheckBox cbRegex = new CheckBox(activity);
+        cbRegex.setText(activity.getString(R.string.regex));
+        root.addView(cbCase);
+        root.addView(cbRegex);
+        TextView scope = new TextView(activity);
+        scope.setText(searchTarget.getPath());
+        scope.setTextSize(12);
+        root.addView(scope);
+
+        AlertDialog xmlDialog = new MaterialAlertDialogBuilder(activity)
+                .setTitle(activity.getString(R.string.xml_search))
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.search_go, (d, w) -> {
+                    String q = queryInput.getText() == null ? "" : queryInput.getText().toString();
+                    if (q.isEmpty()) {
+                        Extensions.showMessage(activity, R.string.search_query_needed);
+                        return;
+                    }
+                    runXmlSearch(searchTarget, q, cbCase.isChecked(), cbRegex.isChecked());
+                }).create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(xmlDialog, queryInput, false);
+        xmlDialog.show();
+    }
+
+    private void runXmlSearch(File searchTarget, String query, boolean matchCase, boolean regex) {
+        if (regex) {
+            try {
+                Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+            } catch (Exception e) {
+                Extensions.showMessage(activity, R.string.invalid_regex);
+                return;
+            }
+        }
+        ProgressManager pm = new ProgressManager(activity, true).show();
+        pm.setText(activity.rss.getString(R.string.searching));
+        new Thread(() -> {
+            List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, matchCase, regex,
+                    scanned -> {
+                        if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
+                            pm.setText(scanned + " XML files…");
+                        }
+                    });
+            pm.dismiss();
+            activity.handler.post(() -> {
+                if (hits.isEmpty()) {
+                    Extensions.showMessage(activity, R.string.no_files_found);
+                    return;
+                }
+                showContentHitsDialog(hits, query, regex, matchCase);
+            });
+        }).start();
+    }
+
     private void showContentHitsDialog(List<ContentHit> hits, String query, boolean regex, boolean matchCase) {
         RecyclerView list = new RecyclerView(activity);
         list.setLayoutManager(new LinearLayoutManager(activity));
@@ -433,7 +510,8 @@ public class FileSearchController {
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
                 ContentHit hit = hits.get(position);
                 LinearLayout row = (LinearLayout) holder.itemView;
-                ((TextView) row.getChildAt(0)).setText(hit.file().getName() + " :" + hit.line());
+                String label = (hit.displayPath() != null && !hit.displayPath().isEmpty()) ? hit.displayPath() : hit.file().getName();
+                ((TextView) row.getChildAt(0)).setText(label + " :" + hit.line());
                 ((TextView) row.getChildAt(1)).setText(hit.snippet());
                 row.setOnClickListener(v -> {
                     dialog.dismiss();
