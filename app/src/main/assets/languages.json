@@ -63,6 +63,11 @@
       "grammar": "syntaxes/grammars/shellscript.tmLanguage.json",
       "name": "Shell",
       "scopeName": "source.shell"
+    },
+    {
+      "grammar": "syntaxes/grammars/prop.tmLanguage.json",
+      "name": "Prop",
+      "scopeName": "source.prop"
     }
   ]
 }

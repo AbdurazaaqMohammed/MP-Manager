@@ -196,12 +196,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private static final Map<String, TextMateLanguage> syntaxLanguageCache = new HashMap<>();
     private static final String[] SYNTAX_LABELS = {
             "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
-            "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell"
+            "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell", "Prop"
     };
     private static final String[] SYNTAX_SCOPES = {
             null, "text.xml", "text.xml", "source.java", "source.c", "source.cpp", "source.python",
             "source.js", "text.html.basic", "source.css", "text.html.markdown", "source.json",
-            "source.rust", "source.shell"
+            "source.rust", "source.shell", "source.prop"
     };
 
     public interface EditorCallback {
@@ -1250,6 +1250,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             case "rs": return "source.rust";
             case "sh":
             case "bash": return "source.shell";
+            case "prop":
+            case "ini":
+            case "conf":
+            case "cfg": return "source.prop";
             default: return null;
         }
     }
