@@ -862,16 +862,25 @@ public class FileOpener {
             openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, checksumDialogs::showHashVerifyDialog);
-        } else if(fileName.endsWith(".xml")) {
+        } else if (fileName.endsWith(".xml") || fileName.endsWith(".axml")
+            || FileUtils.isAxml(file) || FileUtils.isAbx(file)) {
             withReadableCopy(file, readable -> {
-                try (InputStream is = FileUtils.getInputStream(readable)) {
-                    if (FileUtils.isAbx(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                try {
+                    boolean abx;
+                    try (InputStream is = FileUtils.getInputStream(readable)) {
+                        abx = FileUtils.isAbx(is);
+                    }
+                    boolean axml = false;
+                    if (!abx) try (InputStream is = FileUtils.getInputStream(readable)) {
+                        axml = FileUtils.isAxml(is);
+                    }
+                    if (abx) try (InputStream is2 = FileUtils.getInputStream(readable)) {
                         context.startActivity(rootAwareEditorIntent(readable, file)
                                 .putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is2).trim())
                                 .putExtra("abx", true)
                                 .putExtra("path", readable.getPath()));
                     }
-                    else if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                    else if (axml) try (InputStream is2 = FileUtils.getInputStream(readable)) {
                         context.startActivity(rootAwareEditorIntent(readable, file)
                                 .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
                                 .putExtra("axml", true)
@@ -940,6 +949,8 @@ public class FileOpener {
                 fileOps.showDexOptionsDialog(file, null, null, fileName);
             } else if (fileName.endsWith(".sh")) {
                 withReadableCopy(file, readable -> showShellScriptDialog(readable, file, fileName));
+            } else if (FileUtils.matchExt(ext, FileUtils.FONT_EXTS)) {
+                withReadableCopy(file, readable -> showFontPreview(readable, fileName));
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
