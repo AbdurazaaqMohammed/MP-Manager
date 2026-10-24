@@ -1846,7 +1846,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             .toArray(File[]::new);
                     if (viaRoot.length > 0 || files == null) files = viaRoot;
                 }
-                if ((files == null || files.length == 0) && shizukuDir) {
+                if ((files == null || files.length == 0) && (shizukuDir || rootListingPath || !folder.canRead())) {
                     try {
                         if (RootManager.getInstance(this).isRootAvailable()) {
                             File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
@@ -1857,6 +1857,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }
                     } catch (Exception ignored) {}
                 }
+            } else {
+                try {
+                    if (RootManager.getInstance(this).isRootAvailable()) {
+                        File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                        if (directRoot != null) {
+                            directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
+                            if (directRoot.length > 0 || files == null) files = directRoot;
+                        }
+                    }
+                } catch (Exception ignored) {}
             }
             if (files == null && shizukuDir && AccessManager.active(this) != AccessManager.Backend.ROOT) {
                 boolean rootAvailable = false;

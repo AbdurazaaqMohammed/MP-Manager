@@ -532,8 +532,14 @@ public class RootManager {
     }
 
     public boolean isDirectory(String path) {
-        ShellResult result = executeFs("test -d " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
-        return result.isSuccess() && result.output.trim().equals("yes");
+        if (path == null || path.isEmpty()) return false;
+        try {
+            File f = new File(path);
+            if (f.exists() && f.isDirectory()) return true;
+        } catch (Exception ignored) {}
+        if (!isRootAvailable()) return false;
+        ShellResult result = executeFs("( [ -d " + escapeShellArg(path) + " ] || [ -d " + escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
+        return result.isSuccess() && result.output != null && result.output.trim().equals("yes");
     }
 
     public boolean isFile(String path) {
@@ -1198,10 +1204,9 @@ public class RootManager {
     public static final long MAX_STAGE_BYTES = 100L * 1024L * 1024L;
 
     private static final String[] ROOT_ONLY_PREFIXES = {
-            "/data/data", "/data/user", "/data/user_de",
-            "/data/system", "/data/misc", "/data/vendor",
-            "/data/property", "/data/adb", "/data/app-private",
-            "/root"
+            "/data", "/metadata", "/linkerconfig", "/bootstrap-apex",
+            "/apex", "/config", "/cust", "/acct", "/dev",
+            "/data_mirror", "/debug_ramdisk", "/mi_ext", "/root"
     };
 
     public record RootEntry(String path, boolean exists, boolean isDirectory, boolean isFile,
@@ -1353,14 +1358,16 @@ public class RootManager {
 
     private static File[] remapParent(File[] files, String newParent) {
         if (files == null) return null;
+        String cleanParent = (newParent != null && newParent.endsWith("/") && newParent.length() > 1)
+                ? newParent.substring(0, newParent.length() - 1) : newParent;
         for (int i = 0; i < files.length; i++) {
             File f = files[i];
             if (f == null) continue;
             if (f instanceof RootFile) {
                 RootFile r = (RootFile) f;
-                files[i] = new RootFile(newParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode());
+                files[i] = new RootFile(cleanParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode());
             } else {
-                files[i] = new File(newParent, f.getName());
+                files[i] = new File(cleanParent, f.getName());
             }
         }
         return files;
@@ -1368,12 +1375,9 @@ public class RootManager {
 
     private File[] listRootFilesLsLong(String dirPath) {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
-        // Never list a file as if it were a folder: `ls -la <file>` prints the
-        // file itself, which used to become a phantom child "<file>/<file>"
-        // (e.g. tapping /vendor/build.prop produced "cat: .../build.prop/build.prop:
-        // Not a directory" when opened). Bail out so callers show an error instead.
-        ShellResult result = executeFs("test -d " + escapeShellArg(dirPath) + " || exit 4; "
-                + "LC_ALL=C ls -la -- " + escapeShellArg(dirPath) + " 2>/dev/null", 15);
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();
@@ -1401,15 +1405,15 @@ public class RootManager {
                 linkIdx.add(files.size());
                 linkNames.add(name);
             }
-            files.add(new RootFile(dirPath, name, true, type == 'd', type == '-',
+            files.add(new RootFile(cleanPath, name, true, type == 'd', type == '-',
                     type == 'd' ? 0L : Math.max(0L, size), mtime, mode));
         }
         if (!linkNames.isEmpty()) {
             StringBuilder cmd = new StringBuilder();
             for (int i = 0; i < linkNames.size(); i++) {
                 if (i > 0) cmd.append(' ');
-                String p = escapeShellArg(dirPath + "/" + linkNames.get(i));
-                cmd.append("if [ -d ").append(p).append(" ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
+                String p = escapeShellArg(cleanPath.equals("/") ? "/" + linkNames.get(i) : cleanPath + "/" + linkNames.get(i));
+                cmd.append("if [ -d ").append(p).append(" ] || [ -d ").append(p).append("/ ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
             }
             try {
                 ShellResult r = executeFs(cmd.toString(), 15);
@@ -1431,7 +1435,7 @@ public class RootManager {
                     for (int i = 0; i < linkNames.size(); i++) {
                         File old = files.get(linkIdx.get(i));
                         boolean isDir = linkIsDir.get(i);
-                        files.set(linkIdx.get(i), new RootFile(old.getPath(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null));
+                        files.set(linkIdx.get(i), new RootFile(old.getParent(), old.getName(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null));
                     }
                 }
             } catch (Exception ignored) {
@@ -1629,13 +1633,11 @@ public class RootManager {
 
     public File[] listRootFilesPortable(String dirPath) {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
-        // Same file-as-folder guard as listRootFilesLsLong: without it,
-        // `ls <file>` yields the file itself and callers fabricate a phantom
-        // child "<file>/<file>".
-        ShellResult result = executeFs("test -d " + escapeShellArg(dirPath) + " || exit 4; "
-                + "ls -1ALp -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 30);
         if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
-            result = executeFs("ls -1Ap -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+            result = executeFs("ls -1Ap -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 30);
         }
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
@@ -1646,31 +1648,28 @@ public class RootManager {
             int slash = name.lastIndexOf('/');
             if (slash >= 0) name = name.substring(slash + 1);
             if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
-            files.add(new RootFile(dirPath, name, true, dir, !dir, 0L, 0L, null));
+            files.add(new RootFile(cleanPath, name, true, dir, !dir, 0L, 0L, null));
         }
         return files.toArray(new File[0]);
     }
 
     public File[] listRootFilesDetailed(String dirPath) {
         if (dirPath == null || dirPath.isEmpty()) return null;
-
-        // Guard against listing a file as a folder (see listRootFilesLsLong):
-        // `for f in "$d"/*` on a file path would stat the file itself and hand
-        // back a phantom child "<file>/<file>".
-        String script = "d=" + escapeShellArg(dirPath) + "; "
-                + "[ -d \"$d\" ] || exit 4; "
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        String script = "d=" + escapeShellArg(cleanPath) + "; "
                 + "for f in \"$d\"/* \"$d\"/.*; do "
                 + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
                 + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
                 + "if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$f\" 2>/dev/null); then :; "
                 + "else s=$(printf '%s\037unknown\0370\0370\037' \"$f\"); fi; "
-                + "if [ -d \"$f\" ]; then printf '%s\0371\\n' \"$s\"; "
+                + "if [ -d \"$f\" ] || [ -d \"$f\"/ ]; then printf '%s\0371\\n' \"$s\"; "
                 + "else printf '%s\0370\\n' \"$s\"; fi; "
                 + "done";
         ShellResult result = executeFs(script, 30);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
-        parseStatLines(files, result.output, dirPath);
+        parseStatLines(files, result.output, cleanPath);
         return files.toArray(new File[0]);
     }
 

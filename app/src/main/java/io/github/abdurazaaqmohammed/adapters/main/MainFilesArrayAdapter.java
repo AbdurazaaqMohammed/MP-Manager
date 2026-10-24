@@ -217,6 +217,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * {@code RootManager.streamFromRoot}. Ask the elevated backend instead.
      */
     private boolean isDir(File f) {
+        if (f instanceof RootFile rf) return rf.isDirectory();
         try {
             return f != null && f.isDirectory();
         } catch (Exception e) {
@@ -249,7 +250,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         try {
             String path = f.getAbsolutePath();
             AccessManager.Backend backend = AccessManager.active(context);
-            if (backend == AccessManager.Backend.ROOT) {
+            if (backend == AccessManager.Backend.ROOT || RootManager.getInstance(context).isRootAvailable()) {
                 return RootManager.getInstance(context).isDirectory(path);
             }
             if (backend == AccessManager.Backend.SHIZUKU) {

@@ -99,6 +99,9 @@ public final class AccessManager {
         if (backend == Backend.SHIZUKU) {
             return ShizukuManager.listWithStat(context, dirPath);
         }
+        if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+            return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
+        }
         return null;
     }
 
