@@ -38,6 +38,8 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
         boolean isBatchSelected(int position);
 
         boolean isDragging();
+
+        void onItemLongPressed(View row, int position, MotionEvent initialEvent);
     }
 
     private final MainActivity context;
@@ -101,6 +103,56 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
                 });
             }
         }
+
+        final int pos = position;
+        final View row = convertView;
+        convertView.setOnTouchListener(new View.OnTouchListener() {
+            private float downX, downY;
+            private boolean isLongPressTriggered = false;
+            private MotionEvent lastEvent;
+            private final Runnable longPressRunnable = () -> {
+                isLongPressTriggered = true;
+                row.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                if (callbacks != null) {
+                    callbacks.onItemLongPressed(row, pos, lastEvent);
+                }
+            };
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                lastEvent = event;
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getRawX();
+                        downY = event.getRawY();
+                        isLongPressTriggered = false;
+                        row.postDelayed(longPressRunnable, 350);
+                        return false;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = Math.abs(event.getRawX() - downX);
+                        float dy = Math.abs(event.getRawY() - downY);
+                        float slop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
+                        if (dx > slop || dy > slop) {
+                            if (!isLongPressTriggered) {
+                                row.removeCallbacks(longPressRunnable);
+                            }
+                        }
+                        if (isLongPressTriggered && callbacks != null && callbacks.isDragging()) {
+                            return true;
+                        }
+                        return false;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        row.removeCallbacks(longPressRunnable);
+                        if (isLongPressTriggered) {
+                            return true;
+                        }
+                        return false;
+                }
+                return false;
+            }
+        });
+
         return convertView;
     }
 }
