@@ -56,6 +56,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
@@ -93,6 +94,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final CommandHelper commandHelper;
     private final BatchImageTools batchImages;
     private final FileOpener fileOpener;
+    public FileOpener getFileOpener() {
+        return fileOpener;
+    }
     private final EntryDialogs entryDialogs;
 
     /** Row metrics snapshotted once: bind previously re-read prefs per row. */

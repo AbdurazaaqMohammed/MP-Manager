@@ -464,7 +464,7 @@ public class FileSearchController {
                 title.setText(f.getName());
                 sub.setText(f.getParent() != null ? f.getParent() : "");
                 if (f.isDirectory()) {
-                    icon.setImageResource(R.drawable.baseline_folder_24);
+                    icon.setImageResource(R.drawable.folder_24px);
                 } else {
                     icon.setImageResource(R.drawable.ic_link_24);
                 }
@@ -476,7 +476,15 @@ public class FileSearchController {
                         activity.setSelectedPane(isPane1 ? 1 : 2);
                         activity.loadFolderInPaneAsync(f, isPane1);
                     } else {
-                        activity.fileOpener.handleFileClick(f, f.getName());
+                        MainFilesArrayAdapter adapter = activity.getCurrentFilesAdapter();
+                        if (adapter != null && adapter.getFileOpener() != null) {
+                            adapter.getFileOpener().handleFileClick(f, f.getName());
+                        } else {
+                            try {
+                                io.github.abdurazaaqmohammed.utils.InstallUtil.openFile(f, activity);
+                            } catch (Exception ignored) {
+                            }
+                        }
                     }
                 });
             }
@@ -758,7 +766,7 @@ public class FileSearchController {
                                 try (InputStream is2 = new FileInputStream(tempFile);
                                      InputStream ris2 = new FileInputStream(tmpRss)) {
                                     com.apk.axml.ResourceTableParser rtp = new com.apk.axml.ResourceTableParser(ris2);
-                                    List<com.apk.axml.ResEntry> entries = rtp.parse();
+                                    List<com.apk.axml.serializableItems.ResEntry> entries = rtp.parse();
                                     com.apk.axml.aXMLDecoder decoder = new com.apk.axml.aXMLDecoder(is2, entries);
                                     intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
                                 } catch (Exception ignored) {

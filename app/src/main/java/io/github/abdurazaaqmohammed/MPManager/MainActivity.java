@@ -2670,7 +2670,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (outer != null) loadFolderInPane(outer, pane1);
     }
 
-    private MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {
+    public MainFilesArrayAdapter getCurrentFilesAdapter() {
+        return paneFilesAdapter(selectedPane == 1);
+    }
+
+    public MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         if (pane != null && pane.getAdapter() instanceof MainFilesArrayAdapter adapter) return adapter;
         return null;
