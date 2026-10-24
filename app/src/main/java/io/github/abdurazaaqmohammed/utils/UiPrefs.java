@@ -153,6 +153,25 @@ public final class UiPrefs {
         return def;
     }
 
+    /** Default working directory base ("MP Manager" on the sdcard). */
+    public static String defaultAppDir() {
+        return new java.io.File(android.os.Environment.getExternalStorageDirectory(), "MP Manager").getPath();
+    }
+
+    /**
+     * Framework resources directory ({@code <app dir>/frameworks}), following the
+     * custom app-path preference. Also points REAndroid's framework loader at
+     * it so decode/build use the same location the app extracts to.
+     */
+    public static java.io.File frameworkDir(Context context) {
+        java.io.File fw = new java.io.File(appPathDir(context, defaultAppDir()), "frameworks");
+        try {
+            com.reandroid.apk.framework.InternalFrameworks.setAndroidResourceDirectory(fw.getPath());
+        } catch (Throwable ignored) {
+        }
+        return fw;
+    }
+
     public static boolean genBackup(Context context) {
         try {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("gen_backup", true);

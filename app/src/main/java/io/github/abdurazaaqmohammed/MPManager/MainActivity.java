@@ -878,6 +878,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
+        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.init(this);
+        // Applies the custom app dir to REAndroid's framework loader before
+        // any decode/build can read the default location.
+        UiPrefs.frameworkDir(this);
         // ShizukuShell.warmUp() does binder IPC: deferred to runWhenIdle below,
         // never on the cold-start critical path.
         //WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
@@ -904,7 +908,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // background-priority thread, so it never competes with the startup listing.
         runWhenIdle(() -> new Thread(() -> {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-            File frameworks = new File("/sdcard/MP Manager/frameworks/");
+            File frameworks = UiPrefs.frameworkDir(this);
             if (frameworks.exists() || frameworks.mkdirs()) {
                 int[] resourceIds = {
                         R.raw.android_23, R.raw.android_24, R.raw.android_25,
