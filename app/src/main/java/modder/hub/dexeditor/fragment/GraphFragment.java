@@ -164,14 +164,32 @@ public class GraphFragment extends Fragment {
 
         String base64Dot = Base64.encodeToString(dotContent.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
 
+        boolean dark = true;
+        if (getActivity() instanceof DexEditorActivity dexActivity) {
+            dark = !dexActivity.isLightTheme();
+        } else {
+            dark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                    == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        }
+
         String html = "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "<head>\n" +
                 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
                 "    <style>\n" +
-                "        body { margin: 0; padding: 10px; display: flex; justify-content: center; background: #f5f5f5; }\n" +
+                "        body { margin: 0; padding: 10px; display: flex; justify-content: center; background: " + (dark ? "#1c1b1f" : "#f5f5f5") + "; }\n" +
                 "        #graph { width: 100%; text-align: center; }\n" +
                 "        svg { width: 100%; height: auto; }\n" +
+                (dark
+                        ? "        svg { background: transparent; }\n"
+                        + "        svg > g > polygon { fill: #1c1b1f; }\n"
+                        + "        svg text { fill: #e6e1e5; }\n"
+                        + "        svg g.node polygon, svg g.node ellipse { fill: #2d2d30; stroke: #9e9e9e; }\n"
+                        + "        svg g.node path { stroke: #9e9e9e; }\n"
+                        + "        svg g.edge path { stroke: #b0b0b0; }\n"
+                        + "        svg g.edge polygon { fill: #b0b0b0; stroke: #b0b0b0; }\n"
+                        + "        svg g.cluster polygon { fill: #26262a; stroke: #6f6f74; }\n"
+                        : "") +
                 "        .error { color: red; font-family: monospace; padding: 20px; text-align: left; background: #ffebee; border: 1px solid #ffcdd2; }\n" +
                 "    </style>\n" +
                 "</head>\n" +
@@ -214,6 +232,7 @@ public class GraphFragment extends Fragment {
                 "</body>\n" +
                 "</html>";
 
+        webView.setBackgroundColor(dark ? 0xFF1C1B1F : 0xFFF5F5F5);
         webView.loadDataWithBaseURL("https://cdn.jsdelivr.net", html, "text/html", "UTF-8", null);
     }
 }
