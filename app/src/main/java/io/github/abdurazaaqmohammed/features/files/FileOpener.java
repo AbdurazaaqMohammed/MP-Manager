@@ -996,6 +996,47 @@ public class FileOpener {
         }).start();
     }
 
+    public void shareZipEntries(List<ZipEntryInfo> entries) {
+        if (entries == null || entries.isEmpty()) return;
+        new Thread(() -> {
+            ArrayList<Uri> uris = new ArrayList<>();
+            IOException failure = null;
+            for (ZipEntryInfo entry : entries) {
+                if (entry == null || entry.isDirectory()) continue;
+                try {
+                    File staged = stageZipEntry(entry);
+                    uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged));
+                } catch (IOException e) {
+                    if (failure == null) failure = e;
+                }
+            }
+            final IOException finalFailure = failure;
+            context.handler.post(() -> {
+                try {
+                    if (uris.isEmpty()) {
+                        if (finalFailure != null) new ErrorUtil(context).showError(finalFailure);
+                        else Extensions.showMessage(context, R.string.cannot_open_item);
+                        return;
+                    }
+                    if (uris.size() == 1) {
+                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+                                .setType("application/octet-stream")
+                                .putExtra(Intent.EXTRA_STREAM, uris.get(0))
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share 1 file"));
+                    } else {
+                        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE)
+                                .setType("*/*")
+                                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, "Share " + uris.size() + " files"));
+                    }
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
+            });
+        }).start();
+    }
+
     public void openWithZipEntry(Object item, String fileName) {
         if (!(item instanceof ZipEntryInfo)) {
             Extensions.showMessage(context, R.string.cannot_open_item);
