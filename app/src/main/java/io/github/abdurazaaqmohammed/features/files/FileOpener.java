@@ -1108,6 +1108,12 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showFontPreview(readable, fileName));
             } else if (ext.equals(".pdf")) {
                 withReadableCopy(file, readable -> showPdfViewer(readable, fileName));
+            } else if (fileName.endsWith(".mtcr") || fileName.endsWith(".dexdiff")) {
+                withReadableCopy(file, readable -> {
+                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.class)
+                            .putExtra(io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
+                    context.startActivity(intent);
+                });
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }

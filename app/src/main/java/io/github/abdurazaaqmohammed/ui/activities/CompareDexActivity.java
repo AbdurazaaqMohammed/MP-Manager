@@ -64,6 +64,10 @@ public class CompareDexActivity extends BaseActivity {
     public static final String EXTRA_IGNORE_OPTIMIZATIONS = "ignore_optimizations";
     public static final String EXTRA_IGNORE_REGISTERS = "ignore_register_count";
     public static final String EXTRA_IGNORE_NOP = "ignore_nop_instructions";
+    public static final String EXTRA_MTCR_FILE = "mtcr_file";
+
+    private String mtcrFilePath;
+    private java.util.zip.ZipFile mtcrZipFile;
 
     private static final int COLOR_ADDED = 0xFF4CAF50;
     private static final int COLOR_REMOVED = 0xFFF44336;
@@ -128,6 +132,11 @@ public class CompareDexActivity extends BaseActivity {
                 .putStringArrayListExtra(EXTRA_FILES2, paths2)
                 .putStringArrayListExtra(EXTRA_NAMES1, names1)
                 .putStringArrayListExtra(EXTRA_NAMES2, names2);
+    }
+
+    public static Intent intentForDiffFile(Context context, File file) {
+        return new Intent(context, CompareDexActivity.class)
+                .putExtra(EXTRA_MTCR_FILE, file.getAbsolutePath());
     }
 
     /** Same as {@link #intent(Context, List, List)} plus the ignore options. */
@@ -305,6 +314,19 @@ public class CompareDexActivity extends BaseActivity {
     // ==========================================
 
     private void startCompare() {
+        if (getIntent().hasExtra(EXTRA_MTCR_FILE)) {
+            mtcrFilePath = getIntent().getStringExtra(EXTRA_MTCR_FILE);
+        } else if (getIntent().getData() != null && getIntent().getData().getPath() != null) {
+            String path = getIntent().getData().getPath();
+            if (path.endsWith(".mtcr") || path.endsWith(".dexdiff")) {
+                mtcrFilePath = path;
+            }
+        }
+        if (mtcrFilePath != null) {
+            loadFromMtcr(new File(mtcrFilePath));
+            return;
+        }
+
         List<String> paths1 = getIntent().getStringArrayListExtra(EXTRA_FILES1);
         List<String> paths2 = getIntent().getStringArrayListExtra(EXTRA_FILES2);
         if (paths1 == null || paths1.isEmpty() || paths2 == null || paths2.isEmpty()) {
@@ -348,6 +370,70 @@ public class CompareDexActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     allClasses.clear();
                     allClasses.addAll(differences);
+                    applyFilter();
+                    progressBar.setVisibility(View.GONE);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    new ErrorUtil(CompareDexActivity.this).showError(e);
+                });
+            }
+        }).start();
+    }
+
+    private void loadFromMtcr(File file) {
+        summaryView.setText(R.string.loading);
+        progressBar.setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            try {
+                mtcrZipFile = new java.util.zip.ZipFile(file);
+                java.util.zip.ZipEntry infoEntry = mtcrZipFile.getEntry("info.json");
+                if (infoEntry != null) {
+                    try (java.io.InputStream in = mtcrZipFile.getInputStream(infoEntry)) {
+                        String jsonStr = new String(readAllBytes(in), java.nio.charset.StandardCharsets.UTF_8);
+                        org.json.JSONObject obj = new org.json.JSONObject(jsonStr);
+                        String f1 = obj.optString("file1", "");
+                        String f2 = obj.optString("file2", "");
+                        names1 = new File(f1).getName();
+                        names2 = new File(f2).getName();
+                    } catch (Exception ignored) {}
+                }
+                if (TextUtils.isEmpty(names1)) names1 = file.getName();
+
+                java.util.Set<String> aSet = new java.util.HashSet<>();
+                java.util.Set<String> bSet = new java.util.HashSet<>();
+                java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = mtcrZipFile.entries();
+                while (entries.hasMoreElements()) {
+                    java.util.zip.ZipEntry ze = entries.nextElement();
+                    String name = ze.getName();
+                    if (name.startsWith("a/") && name.length() > 2) {
+                        aSet.add(name.substring(2));
+                    } else if (name.startsWith("b/") && name.length() > 2) {
+                        bSet.add(name.substring(2));
+                    }
+                }
+
+                java.util.Set<String> allPaths = new java.util.TreeSet<>(aSet);
+                allPaths.addAll(bSet);
+
+                List<DexCompareEngine.ComparedClass> list = new ArrayList<>();
+                for (String p : allPaths) {
+                    String type = "L" + p + ";";
+                    boolean inA = aSet.contains(p);
+                    boolean inB = bSet.contains(p);
+                    DexCompareEngine.Status status;
+                    if (inA && inB) status = DexCompareEngine.Status.CHANGED;
+                    else if (inA) status = DexCompareEngine.Status.REMOVED;
+                    else status = DexCompareEngine.Status.ADDED;
+                    list.add(new DexCompareEngine.ComparedClass(type, status));
+                }
+                list.sort((c1, c2) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(c1.displayName(), c2.displayName()));
+
+                runOnUiThread(() -> {
+                    updateListSubtitle();
+                    allClasses.clear();
+                    allClasses.addAll(list);
                     applyFilter();
                     progressBar.setVisibility(View.GONE);
                 });
@@ -417,8 +503,18 @@ public class CompareDexActivity extends BaseActivity {
         final String type = currentType;
         new Thread(() -> {
             try {
-                String left = engine.smaliLeft(type);
-                String right = engine.smaliRight(type);
+                String left;
+                String right;
+                if (mtcrZipFile != null) {
+                    String inner = currentType.startsWith("L") && currentType.endsWith(";")
+                            ? currentType.substring(1, currentType.length() - 1)
+                            : currentType;
+                    left = readZipEntryText(mtcrZipFile, "a/" + inner);
+                    right = readZipEntryText(mtcrZipFile, "b/" + inner);
+                } else {
+                    left = engine.smaliLeft(type);
+                    right = engine.smaliRight(type);
+                }
                 final List<DiffLine> built = buildDiff(left, right);
                 runOnUiThread(() -> {
                     if (!type.equals(currentType)) return;
@@ -726,6 +822,10 @@ public class CompareDexActivity extends BaseActivity {
         }
         if (id == R.id.action_compare_dex_exit) {
             finish();
+            return true;
+        }
+        if (id == R.id.action_export_compare_result) {
+            exportMtcr();
             return true;
         }
         if (id == R.id.action_hide_added) {
@@ -1222,6 +1322,109 @@ public class CompareDexActivity extends BaseActivity {
                 markerNew = view.findViewById(R.id.unified_marker_new);
                 textNew = view.findViewById(R.id.unified_text_new);
             }
+        }
+    }
+
+    private void exportMtcr() {
+        if (allClasses.isEmpty()) {
+            Extensions.showMessage(this, R.string.nothing_to_export);
+            return;
+        }
+        String timestamp = new java.text.SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(new java.util.Date());
+        String outFileName = "Compare dex_" + timestamp + ".mtcr";
+        File downloadDir = new File("/storage/emulated/0/Download");
+        if (!downloadDir.exists()) downloadDir.mkdirs();
+        File outFile = new File(downloadDir, outFileName);
+
+        final android.app.ProgressDialog progress = new android.app.ProgressDialog(this);
+        progress.setMessage(getString(R.string.exporting));
+        progress.setCancelable(false);
+        progress.show();
+
+        new Thread(() -> {
+            try {
+                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(outFile))) {
+                    org.json.JSONObject info = new org.json.JSONObject();
+                    List<String> paths1 = getIntent().getStringArrayListExtra(EXTRA_FILES1);
+                    List<String> paths2 = getIntent().getStringArrayListExtra(EXTRA_FILES2);
+                    info.put("file1", paths1 != null && !paths1.isEmpty() ? paths1.get(0) : names1);
+                    info.put("file2", paths2 != null && !paths2.isEmpty() ? paths2.get(0) : names2);
+                    info.put("ignoreDebugInfo", compareOptions.ignoreDebugInfo);
+                    info.put("ignoreNopInstruction", compareOptions.ignoreNopInstructions);
+                    info.put("ignoreOptimize", compareOptions.ignoreOptimizations);
+                    info.put("ignoreRegister", compareOptions.ignoreRegisterCount);
+                    info.put("type", "dex");
+                    info.put("versionCode", 24011893);
+
+                    zos.putNextEntry(new java.util.zip.ZipEntry("info.json"));
+                    zos.write(info.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    zos.closeEntry();
+
+                    for (DexCompareEngine.ComparedClass cc : allClasses) {
+                        String inner = cc.type.startsWith("L") && cc.type.endsWith(";")
+                                ? cc.type.substring(1, cc.type.length() - 1)
+                                : cc.type;
+                        if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.REMOVED) {
+                            String smaliL = mtcrZipFile != null
+                                    ? readZipEntryText(mtcrZipFile, "a/" + inner)
+                                    : engine.smaliLeft(cc.type);
+                            if (!TextUtils.isEmpty(smaliL)) {
+                                zos.putNextEntry(new java.util.zip.ZipEntry("a/" + inner));
+                                zos.write(smaliL.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                zos.closeEntry();
+                            }
+                        }
+                        if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.ADDED) {
+                            String smaliR = mtcrZipFile != null
+                                    ? readZipEntryText(mtcrZipFile, "b/" + inner)
+                                    : engine.smaliRight(cc.type);
+                            if (!TextUtils.isEmpty(smaliR)) {
+                                zos.putNextEntry(new java.util.zip.ZipEntry("b/" + inner));
+                                zos.write(smaliR.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                zos.closeEntry();
+                            }
+                        }
+                    }
+                }
+                runOnUiThread(() -> {
+                    progress.dismiss();
+                    Extensions.showMessage(CompareDexActivity.this, getString(R.string.exported_to_X, outFile.getAbsolutePath()));
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progress.dismiss();
+                    new ErrorUtil(CompareDexActivity.this).showError(e);
+                });
+            }
+        }).start();
+    }
+
+    private static String readZipEntryText(java.util.zip.ZipFile zf, String entryName) {
+        if (zf == null) return "";
+        java.util.zip.ZipEntry ze = zf.getEntry(entryName);
+        if (ze == null) return "";
+        try (java.io.InputStream in = zf.getInputStream(ze)) {
+            return new String(readAllBytes(in), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static byte[] readAllBytes(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int r;
+        while ((r = in.read(buf)) != -1) out.write(buf, 0, r);
+        return out.toByteArray();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mtcrZipFile != null) {
+            try {
+                mtcrZipFile.close();
+            } catch (Exception ignored) {}
         }
     }
 }
