@@ -36,11 +36,11 @@ public class ArchiveUtil {
     private static final int BUFFER_SIZE = 8192;
 
     public static boolean isMiuiOrAndroidBackup(File file) {
-        if (file == null || !file.exists() || file.isDirectory()) return false;
-        try (FileInputStream fis = new FileInputStream(file)) {
+        if (file == null || file.isDirectory()) return false;
+        try (InputStream is = FileUtils.getInputStream(file)) {
             byte[] buf = new byte[256];
-            int n = fis.read(buf);
-            if (n < 16) return false;
+            int n = is.read(buf);
+            if (n < 11) return false;
             String header = new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8);
             return header.startsWith("MIUI BACKUP") || header.startsWith("ANDROID BACKUP");
         } catch (Exception ignored) {
@@ -96,26 +96,57 @@ public class ArchiveUtil {
     }
 
     private static void extractBackupArchive(File archive, File destDir, boolean preserveTime) throws IOException {
-        InputStream is = new BufferedInputStream(new FileInputStream(archive));
-        // Consume text header lines until tar payload starts
-        int linesToSkip = 0;
-        is.mark(1024);
-        byte[] probe = new byte[256];
-        int read = is.read(probe);
-        is.reset();
-        String headStr = new String(probe, 0, Math.max(0, read), java.nio.charset.StandardCharsets.UTF_8);
-        if (headStr.startsWith("MIUI BACKUP")) {
-            linesToSkip = 9;
-        } else if (headStr.startsWith("ANDROID BACKUP")) {
-            linesToSkip = 4;
+        InputStream raw = new BufferedInputStream(FileUtils.getInputStream(archive));
+        String line = readAsciiLine(raw);
+        if (line == null) {
+            raw.close();
+            throw new IOException("Empty backup archive: " + archive.getName());
         }
-        for (int i = 0; i < linesToSkip; i++) {
-            while (true) {
-                int b = is.read();
-                if (b == -1 || b == '\n') break;
+        line = line.trim();
+        if (line.startsWith("MIUI BACKUP")) {
+            boolean foundAndroidBackup = false;
+            for (int i = 0; i < 20; i++) {
+                line = readAsciiLine(raw);
+                if (line == null) break;
+                if (line.trim().startsWith("ANDROID BACKUP")) {
+                    foundAndroidBackup = true;
+                    break;
+                }
             }
+            if (!foundAndroidBackup) {
+                raw.close();
+                throw new IOException("Invalid MIUI backup format: missing ANDROID BACKUP section");
+            }
+        } else if (!line.startsWith("ANDROID BACKUP")) {
+            raw.close();
+            throw new IOException("Not an Android or MIUI backup: " + line);
         }
-        extractTar(is, destDir, preserveTime);
+
+        String versionStr = readAsciiLine(raw);
+        String compressionStr = readAsciiLine(raw);
+        String encryptionStr = readAsciiLine(raw);
+
+        if (encryptionStr != null && !"none".equalsIgnoreCase(encryptionStr.trim())) {
+            raw.close();
+            throw new IOException("Encrypted backups (" + encryptionStr + ") are not supported");
+        }
+
+        boolean isCompressed = compressionStr != null &&
+                !"0".equals(compressionStr.trim()) &&
+                !"none".equalsIgnoreCase(compressionStr.trim());
+
+        InputStream tarStream = isCompressed ? new java.util.zip.InflaterInputStream(raw) : raw;
+        extractTar(tarStream, destDir, preserveTime);
+    }
+
+    private static String readAsciiLine(InputStream is) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        int b;
+        while ((b = is.read()) != -1) {
+            if (b == '\n') break;
+            if (b != '\r') sb.append((char) b);
+        }
+        return sb.length() == 0 && b == -1 ? null : sb.toString();
     }
 
     public static void create(File output, List<File> sources) throws IOException {
