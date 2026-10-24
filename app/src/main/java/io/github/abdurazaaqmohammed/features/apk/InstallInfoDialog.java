@@ -114,7 +114,14 @@ public final class InstallInfoDialog {
 
         // Summary row: version comparison at a glance, always visible.
         TextView summary = new TextView(activity);
-        summary.setText(analysis.summary(activity));
+        String candidateVer = (TextUtils.isEmpty(analysis.versionName) ? "" : analysis.versionName)
+                + (analysis.versionCode > 0 ? " (" + analysis.versionCode + ")" : "");
+        String summaryText = analysis.summary(activity);
+        if (!TextUtils.isEmpty(candidateVer) && analysis.installed) {
+            summary.setText(candidateVer + "\n" + summaryText);
+        } else {
+            summary.setText(summaryText);
+        }
         summary.setTextSize(15f);
         summary.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(summary, matchWrap());
