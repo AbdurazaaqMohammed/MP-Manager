@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.features.files;
 
 import android.content.Intent;
 import android.graphics.Typeface;
+import android.os.Parcelable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -59,6 +60,7 @@ public class FileSearchController {
     private List<File> lastSearchResults = null;
     private File lastSearchStartDir = null;
     private boolean lastSearchIsPane1 = true;
+    private Parcelable searchResultsScrollState = null;
 
     private List<ContentHit> lastXmlHits = null;
     private String lastXmlQuery = null;
@@ -424,11 +426,17 @@ public class FileSearchController {
         });
 
         clearBtn.setOnClickListener(v -> {
+            searchResultsScrollState = null;
             clearLastSearchResults();
             dialog.dismiss();
         });
 
-        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        closeBtn.setOnClickListener(v -> {
+            if (list.getLayoutManager() != null) {
+                searchResultsScrollState = list.getLayoutManager().onSaveInstanceState();
+            }
+            dialog.dismiss();
+        });
 
         list.setAdapter(new RecyclerView.Adapter<>() {
             @NonNull
@@ -488,7 +496,9 @@ public class FileSearchController {
                 }
 
                 row.setOnClickListener(v -> {
-                    dialog.dismiss();
+                    if (list.getLayoutManager() != null) {
+                        searchResultsScrollState = list.getLayoutManager().onSaveInstanceState();
+                    }
                     if (f.isDirectory()) {
                         activity.clearGreen(isPane1);
                         activity.setSelectedPane(isPane1 ? 1 : 2);
@@ -508,6 +518,14 @@ public class FileSearchController {
                 return results.size();
             }
         });
+
+        if (searchResultsScrollState != null) {
+            list.post(() -> {
+                if (list.getLayoutManager() != null && searchResultsScrollState != null) {
+                    list.getLayoutManager().onRestoreInstanceState(searchResultsScrollState);
+                }
+            });
+        }
 
         activity.dialogUtil.styleAlertDialog(dialog);
         dialog.show();
@@ -786,7 +804,6 @@ public class FileSearchController {
                 sub.setText(group.directoryPath);
 
                 row.setOnClickListener(v -> {
-                    dialog.dismiss();
                     if (!group.hits.isEmpty()) {
                         openContentHit(group.hits.get(0), query, regex, matchCase);
                     }
