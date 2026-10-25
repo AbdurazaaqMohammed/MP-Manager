@@ -1704,4 +1704,6 @@
     <string name="selected_count">تم تحديد %1$d</string>
     <string name="restore_all">استعادة المحدد</string>
     <string name="delete_all">حذف المحدد</string>
+    <string name="dex_to_jar">تحويل Dex إلى Jar</string>
+    <string name="jar_saved_to">تم حفظ ملف JAR في %1$s</string>
 </resources>

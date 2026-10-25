@@ -1827,4 +1827,6 @@ Layout Inspector
     <string name="selected_count">%1$d selected</string>
     <string name="restore_all">Restore all</string>
     <string name="delete_all">Delete all</string>
+    <string name="dex_to_jar">Dex to Jar</string>
+    <string name="jar_saved_to">JAR saved to %1$s</string>
 </resources>
