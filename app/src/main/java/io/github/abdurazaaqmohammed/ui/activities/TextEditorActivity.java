@@ -924,8 +924,115 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             });
         } catch (Exception e) {
             tab.modified = true;
-            runOnUiThread(() -> new ErrorUtil(this).showError(e));
+            if (handleSaveFailureElevated(tab, text, onDone, e)) return;
+            runOnUiThread(() -> showSaveFallbackDialog(tab, text, onDone, e));
         }
+    }
+
+    /**
+     * The direct write failed (read-only grant from a sharing app, or a
+     * storage volume that denies writes). When an elevated backend is active
+     * and the tab maps to a real path, retry the write through it before
+     * showing the fallback dialog.
+     *
+     * @return true when the elevated write succeeded
+     */
+    private boolean handleSaveFailureElevated(EditorTab tab, String text, Runnable onDone, Exception cause) {
+        if (tab.file == null || !AccessManager.fileOpsOn(this)) return false;
+        try {
+            byte[] payload = encodeTabPayload(tab, text);
+            File tmp = new File(getCacheDir(), "editor_save_" + System.currentTimeMillis() + ".tmp");
+            try (OutputStream os = FileUtils.getOutputStream(tmp)) {
+                os.write(payload);
+            }
+            try {
+                AccessManager.copyFile(this, tmp.getPath(), tab.file.getAbsolutePath(), true);
+                if (!AccessManager.exists(this, tab.file.getAbsolutePath())) throw new java.io.IOException("copy failed");
+            } finally {
+                //noinspection ResultOfMethodCallIgnored
+                tmp.delete();
+            }
+            tab.content = text;
+            tab.modified = false;
+            runOnUiThread(() -> {
+                Extensions.showMessage(this, getString(R.string.saved_elevated));
+                if (onDone != null) onDone.run();
+            });
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * Explains why a direct save is impossible and offers ways out: save a
+     * copy anywhere via the folder picker, or an elevated write when root or
+     * Shizuku can reach the location (Shizuku only for app-data areas, per
+     * its backend rules).
+     */
+    private void showSaveFallbackDialog(EditorTab tab, String text, Runnable onDone, Exception cause) {
+        if (isFinishing() || isDestroyed()) return;
+        boolean readOnlyProvider = tab.file == null && tab.fileUri != null;
+        String reason = readOnlyProvider
+                ? getString(R.string.save_read_only_reason)
+                : getString(R.string.save_denied_reason);
+        String detail = cause == null ? "" : cause.toString() + "\n\n";
+
+        boolean rootAvailable = false;
+        try {
+            rootAvailable = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable() && tab.file != null;
+        } catch (Exception ignored) {
+        }
+        boolean shizukuUsable = io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()
+                && tab.file != null
+                && io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile.isAndroidDataPath(tab.file);
+
+        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.save_denied_title)
+                .setMessage(detail + reason)
+                .setPositiveButton(R.string.save_copy, (d, w) -> pickSaveCopyDir(tab, text))
+                .setNegativeButton(android.R.string.cancel, null);
+        if (rootAvailable || shizukuUsable) {
+            b.setNeutralButton(R.string.save_elevated, (d, w) -> {
+                if (!handleSaveFailureElevated(tab, text, onDone, cause)) {
+                    new ErrorUtil(this).showError(cause);
+                }
+            });
+        }
+        b.show();
+    }
+
+    /** "Save a copy": pick a destination folder and write the buffer there. */
+    private void pickSaveCopyDir(EditorTab tab, String text) {
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties props =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties();
+        props.selection_mode = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.SINGLE_MODE;
+        props.selection_type = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.DIR_SELECT;
+        props.root = android.os.Environment.getExternalStorageDirectory();
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog picker =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog(this, props);
+        picker.setTitle(getString(R.string.save_copy));
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            new Thread(() -> {
+                try {
+                    String name = tab.file != null ? tab.file.getName()
+                            : (tab.title != null ? tab.title : "untitled.txt");
+                    File dest = FileUtils.getUnusedFile(new File(files[0], name));
+                    byte[] payload = encodeTabPayload(tab, text);
+                    try (OutputStream os = FileUtils.getOutputStream(dest)) {
+                        os.write(payload);
+                    }
+                    tab.content = text;
+                    tab.modified = false;
+                    runOnUiThread(() -> Extensions.showMessage(this,
+                            getString(R.string.saved_to_x, dest.getAbsolutePath())));
+                } catch (Exception e) {
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                }
+            }).start();
+        });
+        picker.show();
     }
 
     private byte[] encodeTabPayload(EditorTab tab, String text) throws Exception {

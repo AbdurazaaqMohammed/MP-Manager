@@ -1802,4 +1802,13 @@ Layout Inspector
     <string name="deleted_from_x">From: %1$s</string>
     <string name="days_x">%1$d days</string>
     <string name="forever">Forever</string>
+    <string name="details">Details</string>
+    <string name="delete_failed_x">%1$d item(s) could not be deleted</string>
+    <string name="save_denied_title">Can\'t save to the original location</string>
+    <string name="save_read_only_reason">The file was opened from another app that only granted read access, so writing back to the original is not permitted by Android.</string>
+    <string name="save_denied_reason">The storage location denied write access. Removable SD cards on Android 10+ only accept writes through SAF, root or Shizuku.</string>
+    <string name="save_copy">Save a copy</string>
+    <string name="saved_to_x">Saved copy to %1$s</string>
+    <string name="saved_elevated">Saved using elevated access</string>
+    <string name="save_elevated">Save with elevated access</string>
 </resources>
