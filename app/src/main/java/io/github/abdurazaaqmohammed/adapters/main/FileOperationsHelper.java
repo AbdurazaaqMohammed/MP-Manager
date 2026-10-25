@@ -33,6 +33,8 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
+import io.github.abdurazaaqmohammed.utils.RecycleBin;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -325,6 +327,9 @@ public class FileOperationsHelper {
                     advanceActiveProgress(done, totalFiles);
                     continue;
                 }
+                if (dest.exists()) {
+                    RecycleBin.moveToBin(context, dest, "overwrite");
+                }
                 if (f.renameTo(dest)) {
                     done += itemTotal;
                     advanceActiveProgress(done, totalFiles);
@@ -557,6 +562,9 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
                 done += itemTotal;
                 advanceActiveProgress(done, totalFiles);
                 continue;
+            }
+            if (dest.exists()) {
+                RecycleBin.moveToBin(context, dest, "overwrite");
             }
             if (f.isDirectory()) {
                 if (useElevated) {
@@ -1065,11 +1073,18 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
             for (FileHeader fh : ZipCompat.listHeaders(zipFile)) {
                 String name = fh.getFileName().replace('\\', '/');
                 if (!name.startsWith(prefix) || fh.isDirectory()) continue;
-                ZipCompat.extractEntry(zipFile, name,
-                        new File(destinationFolder, zipEntry.getName() + "/" + name.substring(prefix.length())));
+                File target = new File(destinationFolder, zipEntry.getName() + "/" + name.substring(prefix.length()));
+                if (target.exists()) {
+                    RecycleBin.moveToBin(context, target, "overwrite");
+                }
+                ZipCompat.extractEntry(zipFile, name, target);
             }
         } else {
-            ZipCompat.extractEntry(zipFile, zipEntryPath, new File(destinationFolder, zipEntry.getName()));
+            File target = new File(destinationFolder, zipEntry.getName());
+            if (target.exists()) {
+                RecycleBin.moveToBin(context, target, "overwrite");
+            }
+            ZipCompat.extractEntry(zipFile, zipEntryPath, target);
         }
     }
 

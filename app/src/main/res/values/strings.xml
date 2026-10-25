@@ -1811,4 +1811,9 @@ Layout Inspector
     <string name="saved_to_x">Saved copy to %1$s</string>
     <string name="saved_elevated">Saved using elevated access</string>
     <string name="save_elevated">Save with elevated access</string>
+    <string name="restored_renamed_toast">Restored item was renamed to %1$s because an item with the same name already exists in that location.</string>
+    <string name="recycle_bin_reason_overwrite">Overwritten</string>
+    <string name="recycle_bin_reason_delete">Deleted</string>
+    <string name="recycle_bin_options">Recycle bin options</string>
+    <string name="enable_recycle_bin">Enable recycle bin</string>
 </resources>

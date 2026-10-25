@@ -1688,4 +1688,9 @@
     <string name="edpref_get_api_key">الحصول على مفتاح API</string>
     <string name="edpref_get_api_key_summary">تفضل بزيارة موقع Gemini للحصول على مفتاح API الخاص بك</string>
     <string name="donate">تبرع</string>
+    <string name="restored_renamed_toast">تم تغيير اسم الملف المستعاد إلى %1$s لوجود ملف آخر في نفس المكان بنفس الاسم</string>
+    <string name="recycle_bin_reason_overwrite">مستبدل</string>
+    <string name="recycle_bin_reason_delete">محذوف</string>
+    <string name="recycle_bin_options">خيارات سلة المحذوفات</string>
+    <string name="enable_recycle_bin">تفعيل سلة المحذوفات</string>
 </resources>
