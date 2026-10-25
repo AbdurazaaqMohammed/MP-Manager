@@ -460,6 +460,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 Log.e("EditorFragment", "Smali language load error", e);
             }
             cachedColorScheme = TextMateColorScheme.create(registry);
+            cachedColorScheme.setColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) {
             Log.e("EditorFragment", "Static init error", e);

@@ -48,6 +48,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -89,6 +90,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -1981,6 +1983,16 @@ public class DexEditorActivity extends BaseActivity {
                             activity.pendingSearchPath = node.getFullName() + "/";
                             activity.explorerViewPager.setCurrentItem(2);
                         }
+
+                        @Override
+                        public void onAddClass(TreeNode node) {
+                            activity.showAddClassDialog(node);
+                        }
+
+                        @Override
+                        public void onImportClass(TreeNode node) {
+                            activity.showImportClassDialog(node);
+                        }
                     }, false);
                     break;
                 case 1:
@@ -2484,8 +2496,17 @@ public class DexEditorActivity extends BaseActivity {
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
 
+                int loadedDexVer = 35;
+                try {
+                    loadedDexVer = classTree.getOpenedDexVersion();
+                } catch (Exception ignored) {
+                }
+                if (loadedDexVer <= 0) loadedDexVer = dexPref.getInt("dexVer", 35);
+                final int finalVer = loadedDexVer > 0 ? loadedDexVer : 35;
+
                 runOnUiThread(() -> {
                     try {
+                        dexVersion = finalVer;
                         treeRoots.clear();
                         treeRoots.addAll(roots);
                         modifiedNodes.clear();
@@ -2770,6 +2791,240 @@ public class DexEditorActivity extends BaseActivity {
                 }
             }.start();
         }
+    }
+
+    public void showAddClassDialog(TreeNode node) {
+        String defaultPkg = "";
+        if (node != null) {
+            String full = node.getFullName();
+            if (node.isDirectory()) {
+                defaultPkg = full.replace('/', '.');
+            } else if (node.getParent() != null && node.getParent().getFullName() != null) {
+                defaultPkg = node.getParent().getFullName().replace('/', '.');
+            } else {
+                int lastSlash = full.lastIndexOf('/');
+                if (lastSlash > 0) defaultPkg = full.substring(0, lastSlash).replace('/', '.');
+            }
+        }
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density + 0.5f);
+        layout.setPadding(pad, pad / 2, pad, 0);
+
+        TextInputLayout pkgBox = UiFields.box(this, "Package name");
+        EditText etPkg = UiFields.field(pkgBox, InputType.TYPE_CLASS_TEXT);
+        etPkg.setText(defaultPkg);
+        layout.addView(pkgBox);
+
+        TextInputLayout classBox = UiFields.box(this, "Class name");
+        EditText etClass = UiFields.field(classBox, InputType.TYPE_CLASS_TEXT);
+        layout.addView(classBox);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Add")
+                .setView(layout)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String pkg = etPkg.getText() != null ? etPkg.getText().toString().trim() : "";
+                    String cls = etClass.getText() != null ? etClass.getText().toString().trim() : "";
+                    if (cls.isEmpty()) {
+                        Extensions.showMessage(this, "Class name cannot be empty");
+                        return;
+                    }
+                    if (cls.endsWith(".smali")) cls = cls.substring(0, cls.length() - 6);
+                    String fullPath = pkg.isEmpty() ? cls : pkg.replace('.', '/') + "/" + cls;
+                    createAndSaveNewClass(fullPath, cls);
+                })
+                .show();
+    }
+
+    private void createAndSaveNewClass(String fullPath, String simpleName) {
+        String smali = ".class public L" + fullPath + ";\n"
+                + ".super Ljava/lang/Object;\n"
+                + ".source \"" + simpleName + ".java\"\n\n"
+                + "# direct methods\n"
+                + ".method public constructor <init>()V\n"
+                + "    .registers 1\n\n"
+                + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
+                + "    return-void\n"
+                + ".end method\n";
+        progressDialog = new AlertProgress(this);
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setMessage("Adding class...");
+        progressDialog.show();
+        new Thread(() -> {
+            try {
+                int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
+                if (targetVer <= 0) targetVer = 35;
+                ClassDef def = Smali.assemble(smali, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
+                classTree.saveClassDef(def);
+                final List<TreeNode> roots = classTree.buildFullTree();
+                final List<TreeNode> modified = classTree.buildEditedFullTree();
+                runOnUiThread(() -> {
+                    treeRoots.clear();
+                    treeRoots.addAll(roots);
+                    modifiedNodes.clear();
+                    modifiedNodes.addAll(modified);
+                    needsModifiedTreeRebuild = false;
+                    needsExplorerRefresh = true;
+                    isChanged = true;
+                    refreshExplorerPage(0);
+                    refreshExplorerPage(1);
+                    tabsAdapter.notifyDataSetChanged();
+                    progressDialog.dismiss();
+                    openClass(fullPath);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressDialog.dismiss();
+                    showErrorDialog(e.getMessage() != null ? e.getMessage() : e.toString());
+                });
+            }
+        }).start();
+    }
+
+    public void showImportClassDialog(TreeNode node) {
+        String defaultPkg = "";
+        if (node != null) {
+            String full = node.getFullName();
+            if (node.isDirectory()) {
+                defaultPkg = full.replace('/', '.');
+            } else if (node.getParent() != null && node.getParent().getFullName() != null) {
+                defaultPkg = node.getParent().getFullName().replace('/', '.');
+            } else {
+                int lastSlash = full.lastIndexOf('/');
+                if (lastSlash > 0) defaultPkg = full.substring(0, lastSlash).replace('/', '.');
+            }
+        }
+        final String targetPkg = defaultPkg;
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
+        props.selection_mode = FilePickerDialog.MULTI_MODE;
+        props.extensions = new String[]{".smali", ".class"};
+        props.preferenceKey = "dex_import";
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle("Import");
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0) return;
+            importSmaliFiles(files, targetPkg);
+        });
+        picker.show();
+    }
+
+    private void collectImportFiles(File f, List<File> out) {
+        if (f == null || !f.exists()) return;
+        if (f.isDirectory()) {
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    collectImportFiles(child, out);
+                }
+            }
+        } else if (f.isFile()) {
+            String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (lower.endsWith(".smali") || lower.endsWith(".class")) {
+                out.add(f);
+            }
+        }
+    }
+
+    private List<ClassDef> translateClassFileToDefs(File f, int targetVer) {
+        try {
+            byte[] classBytes = java.nio.file.Files.readAllBytes(f.toPath());
+            com.android.dx.dex.DexOptions dexOptions = new com.android.dx.dex.DexOptions();
+            dexOptions.minSdkVersion = targetVer;
+            com.android.dx.dex.file.DexFile dexFile = new com.android.dx.dex.file.DexFile(dexOptions);
+            com.android.dx.cf.direct.DirectClassFile cf = new com.android.dx.cf.direct.DirectClassFile(
+                    new com.android.dx.util.ByteArray(classBytes), f.getName(), false);
+            com.android.dx.command.dexer.DxContext dxContext = new com.android.dx.command.dexer.DxContext();
+            com.android.dx.dex.cf.CfOptions cfOptions = new com.android.dx.dex.cf.CfOptions();
+            com.android.dx.dex.file.ClassDefItem item = com.android.dx.dex.cf.CfTranslator.translate(dxContext, cf, classBytes, cfOptions, dexOptions, dexFile);
+            dexFile.add(item);
+            byte[] dexBytes = dexFile.toDex(null, false);
+            com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile backedDex =
+                    new com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile(
+                            com.android.tools.smali.dexlib2.Opcodes.forDexVersion(targetVer), dexBytes);
+            List<ClassDef> defs = new ArrayList<>();
+            for (ClassDef def : backedDex.getClasses()) {
+                defs.add(def);
+            }
+            return defs;
+        } catch (Throwable ignored) {
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    private void importSmaliFiles(String[] filePaths, String targetPkg) {
+        progressDialog = new AlertProgress(this);
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setMessage("Importing...");
+        progressDialog.show();
+        new Thread(() -> {
+            int imported = 0;
+            String firstImportedClass = null;
+            try {
+                int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
+                if (targetVer <= 0) targetVer = 35;
+                List<File> filesToProcess = new ArrayList<>();
+                for (String path : filePaths) {
+                    collectImportFiles(new File(path), filesToProcess);
+                }
+                for (File f : filesToProcess) {
+                    String name = f.getName().toLowerCase(java.util.Locale.ROOT);
+                    if (name.endsWith(".smali")) {
+                        String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
+                        if (code == null || code.trim().isEmpty()) continue;
+                        ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
+                        classTree.saveClassDef(def);
+                        String type = def.getType();
+                        if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                            String className = type.substring(1, type.length() - 1);
+                            if (firstImportedClass == null) firstImportedClass = className;
+                        }
+                        imported++;
+                    } else if (name.endsWith(".class")) {
+                        List<ClassDef> defs = translateClassFileToDefs(f, targetVer);
+                        for (ClassDef def : defs) {
+                            classTree.saveClassDef(def);
+                            String type = def.getType();
+                            if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                                String className = type.substring(1, type.length() - 1);
+                                if (firstImportedClass == null) firstImportedClass = className;
+                            }
+                            imported++;
+                        }
+                    }
+                }
+                final int totalImported = imported;
+                final String classToOpen = firstImportedClass;
+                final List<TreeNode> roots = classTree.buildFullTree();
+                final List<TreeNode> modified = classTree.buildEditedFullTree();
+                runOnUiThread(() -> {
+                    treeRoots.clear();
+                    treeRoots.addAll(roots);
+                    modifiedNodes.clear();
+                    modifiedNodes.addAll(modified);
+                    needsModifiedTreeRebuild = false;
+                    needsExplorerRefresh = true;
+                    isChanged = true;
+                    refreshExplorerPage(0);
+                    refreshExplorerPage(1);
+                    tabsAdapter.notifyDataSetChanged();
+                    progressDialog.dismiss();
+                    Extensions.showMessage(DexEditorActivity.this, "Imported " + totalImported + " class(es)");
+                    if (classToOpen != null) {
+                        openClass(classToOpen);
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressDialog.dismiss();
+                    showErrorDialog(e.getMessage() != null ? e.getMessage() : e.toString());
+                });
+            }
+        }).start();
     }
 
     private static class TabAdapter extends FragmentStateAdapter {

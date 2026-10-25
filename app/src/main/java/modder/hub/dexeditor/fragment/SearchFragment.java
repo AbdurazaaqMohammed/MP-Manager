@@ -1483,8 +1483,12 @@ public class SearchFragment extends Fragment {
                                         while (im.find()) {
                                             countInClass++;
                                             try {
-                                                im.appendReplacement(inner, isRegex ? replaceWith : Matcher.quoteReplacement(replaceWith));
-                                            } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
+                                                if (isRegex) {
+                                                    RegexGuard.appendCustomReplacement(im, inner, replaceWith);
+                                                } else {
+                                                    im.appendReplacement(inner, Matcher.quoteReplacement(RegexGuard.unescapeReplacement(replaceWith)));
+                                                }
+                                            } catch (Exception e) {
                                                 errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
                                                 return;
                                             }
@@ -1503,9 +1507,8 @@ public class SearchFragment extends Fragment {
                                         while (m.find()) {
                                             countInClass++;
                                             try {
-                                                m.appendReplacement(sb, replaceWith);
-                                            } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
-                                                // invalid group reference (e.g. $9 when there's no group 9)
+                                                RegexGuard.appendCustomReplacement(m, sb, replaceWith);
+                                            } catch (Exception e) {
                                                 errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
                                                 return;
                                             }
@@ -1514,12 +1517,12 @@ public class SearchFragment extends Fragment {
                                         modifiedText = sb.toString();
                                     } else {
                                         String search = findQuery;
-                                        String replacement = replaceWith;
+                                        String replacement = RegexGuard.unescapeReplacement(replaceWith);
                                         if (matchCase) {
                                             countInClass = countOccurrences(originalText, search);
                                             modifiedText = originalText.replace(search, replacement);
                                         } else {
-                                            Pattern p = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE);
+                                            Pattern p = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
                                             Matcher m = p.matcher(originalText);
                                             StringBuffer sb = new StringBuffer();
                                             while (m.find()) {

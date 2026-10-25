@@ -933,6 +933,12 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                 case "Delete":
                     showDeleteDialog(node, position);
                     break;
+                case "Add":
+                    if (listener != null) listener.onAddClass(node);
+                    break;
+                case "Import":
+                    if (listener != null) listener.onImportClass(node);
+                    break;
                 case "Batch operations":
                     isSelectionMode = true;
                     TreeHelper.setCheckedRecursive(node, true);
@@ -1117,6 +1123,12 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         }
 
         default void onSearch(TreeNode node) {
+        }
+
+        default void onAddClass(TreeNode node) {
+        }
+
+        default void onImportClass(TreeNode node) {
         }
     }
 

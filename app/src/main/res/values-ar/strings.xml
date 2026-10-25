@@ -1688,4 +1688,26 @@
     <string name="edpref_get_api_key">الحصول على مفتاح API</string>
     <string name="edpref_get_api_key_summary">تفضل بزيارة موقع Gemini للحصول على مفتاح API الخاص بك</string>
     <string name="donate">تبرع</string>
+    <string name="restored_renamed_toast">تم تغيير اسم الملف المستعاد إلى %1$s لوجود ملف آخر في نفس المكان بنفس الاسم</string>
+    <string name="recycle_bin_reason_overwrite">مستبدل</string>
+    <string name="recycle_bin_reason_delete">محذوف</string>
+    <string name="recycle_bin_options">خيارات سلة المحذوفات</string>
+    <string name="enable_recycle_bin">تفعيل سلة المحذوفات</string>
+    <string name="startup">بدء التشغيل</string>
+    <string name="request_root_permission">طلب صلاحية الروت</string>
+    <string name="request_root_permission_summary">طلب صلاحيات الروت عند بدء التشغيل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل للتطبيق.</string>
+    <string name="request_shell_permission">طلب صلاحية الشل (شيزوكو)</string>
+    <string name="request_shell_permission_summary">إذا لم يتم الحصول على صلاحية الروت عند بدء التشغيل، فسيحاول MP استدعاء شيزوكو للحصول على صلاحية الشل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل.</string>
+    <string name="sort_by_deletion_time">تاريخ الحذف</string>
+    <string name="sort_by_modified_time">تاريخ آخر تعديل</string>
+    <string name="sort_by_name">اسم الملف</string>
+    <string name="selected_count">تم تحديد %1$d</string>
+    <string name="restore_all">استعادة المحدد</string>
+    <string name="delete_all">حذف المحدد</string>
+    <string name="dex_to_jar">تحويل Dex إلى Jar</string>
+    <string name="jar_saved_to">تم حفظ ملف JAR في %1$s</string>
+    <string name="item_deleted">تم حذف العنصر</string>
+    <string name="renamed">تمت إعادة التسمية</string>
+    <string name="restored">تمت الاستعادة</string>
+    <string name="failed">فشلت العملية</string>
 </resources>

@@ -113,16 +113,30 @@ public final class RecycleBin {
                 .putString("recycle_bin_dir", path == null ? "" : path).apply();
     }
 
+    public static final class RestoreResult {
+        public final File restoredFile;
+        public final boolean wasRenamed;
+
+        public RestoreResult(File restoredFile, boolean wasRenamed) {
+            this.restoredFile = restoredFile;
+            this.wasRenamed = wasRenamed;
+        }
+    }
+
     /** One trashed item: the binned file plus where it came from. */
     public static final class Entry {
         public final File file;
         public final String originPath;
         public final long deletedAt;
+        public final String reason;
+        public final long lastModified;
 
-        Entry(File file, String originPath, long deletedAt) {
+        public Entry(File file, String originPath, long deletedAt, String reason, long lastModified) {
             this.file = file;
             this.originPath = originPath;
             this.deletedAt = deletedAt;
+            this.reason = reason != null ? reason : "delete";
+            this.lastModified = lastModified;
         }
 
         public String displayName() {
@@ -141,7 +155,9 @@ public final class RecycleBin {
             if (k.getName().equals(META_FILE)) continue;
             Meta m = meta.get(k.getName());
             out.add(new Entry(k, m == null ? null : m.origin,
-                    m == null || m.time <= 0 ? k.lastModified() : m.time));
+                    m == null || m.time <= 0 ? k.lastModified() : m.time,
+                    m == null ? "delete" : m.reason,
+                    m == null ? k.lastModified() : m.lastModified));
         }
         return out;
     }
@@ -172,11 +188,19 @@ public final class RecycleBin {
         static final Gson GSON = io.github.abdurazaaqmohammed.utils.AppGson.get();
     }
 
-    private static final class Meta {
+    public static final class Meta {
         @SerializedName("o")
-        String origin;
+        public String origin;
         @SerializedName("t")
-        long time;
+        public long time;
+        @SerializedName("r")
+        public String reason;
+        @SerializedName("lm")
+        public long lastModified;
+    }
+
+    public static boolean moveToBin(Context context, File file) {
+        return moveToBin(context, file, "delete");
     }
 
     /**
@@ -184,18 +208,26 @@ public final class RecycleBin {
      * elevated backend too (root/Shizuku) when a plain move is impossible.
      * Returns true when the item ended up in the bin.
      */
-    public static boolean moveToBin(Context context, File file) {
+    public static boolean moveToBin(Context context, File file, String reason) {
         if (file == null || !file.exists()) return false;
+        long origLastMod = file.lastModified();
         File target = freeName(binDir(context), file.getName());
         try {
-            if (file.renameTo(target)) return record(context, file, target);
-            if (copyTree(file, target) && deleteFile(context, file)) return record(context, file, target);
+            if (file.renameTo(target)) {
+                target.setLastModified(origLastMod);
+                return record(context, file, target, reason, origLastMod);
+            }
+            if (copyTree(file, target) && deleteFile(context, file)) {
+                target.setLastModified(origLastMod);
+                return record(context, file, target, reason, origLastMod);
+            }
             // Plain I/O failed (root-only path): stage through the elevated backend.
             if (AccessManager.fileOpsOn(context)) {
                 try {
                     AccessManager.copyFile(context, file.getAbsolutePath(), target.getAbsolutePath(), true);
                     AccessManager.delete(context, file.getAbsolutePath(), true);
-                    return record(context, file, target);
+                    target.setLastModified(origLastMod);
+                    return record(context, file, target, reason, origLastMod);
                 } catch (Exception ignored) {
                     try {
                         deleteTree(target);
@@ -212,13 +244,15 @@ public final class RecycleBin {
         return false;
     }
 
-    private static boolean record(Context context, File original, File target) {
+    private static boolean record(Context context, File original, File target, String reason, long lastModified) {
         File root = target.getParentFile();
         if (root == null) return true;
         Map<String, Meta> meta = loadMeta(root);
         Meta m = new Meta();
         m.origin = original.getAbsolutePath();
         m.time = System.currentTimeMillis();
+        m.reason = reason != null ? reason : "delete";
+        m.lastModified = lastModified > 0 ? lastModified : original.lastModified();
         meta.put(target.getName(), m);
         saveMeta(root, meta);
         return true;
@@ -242,7 +276,7 @@ public final class RecycleBin {
      * fallback). When the original already exists, the restored item gets a
      * numbered suffix. Returns the restored file, or null on failure.
      */
-    public static File restoreEntry(Context context, Entry entry) {
+    public static RestoreResult restoreEntry(Context context, Entry entry) {
         if (entry == null || entry.file == null || !entry.file.exists()) return null;
         String originPath = entry.originPath;
         if (originPath == null || originPath.isEmpty()) return null;
@@ -260,19 +294,30 @@ public final class RecycleBin {
         String stem = dot <= 0 ? baseName : baseName.substring(0, dot);
         String ext = dot <= 0 ? "" : baseName.substring(dot);
         int n = 1;
+        boolean wasRenamed = false;
         while (target.exists()) {
+            wasRenamed = true;
             target = new File(parent, stem + " (" + (++n) + ")" + ext);
         }
+        long restoreTime = entry.lastModified > 0 ? entry.lastModified : entry.file.lastModified();
         try {
-            if (entry.file.renameTo(target)) return forget(context, entry, target);
+            if (entry.file.renameTo(target)) {
+                target.setLastModified(restoreTime);
+                forget(context, entry, target);
+                return new RestoreResult(target, wasRenamed);
+            }
             if (copyTree(entry.file, target) && deleteFile(context, entry.file)) {
-                return forget(context, entry, target);
+                target.setLastModified(restoreTime);
+                forget(context, entry, target);
+                return new RestoreResult(target, wasRenamed);
             }
             if (AccessManager.fileOpsOn(context)) {
                 try {
                     AccessManager.copyFile(context, entry.file.getAbsolutePath(), target.getAbsolutePath(), true);
                     AccessManager.delete(context, entry.file.getAbsolutePath(), true);
-                    return forget(context, entry, target);
+                    target.setLastModified(restoreTime);
+                    forget(context, entry, target);
+                    return new RestoreResult(target, wasRenamed);
                 } catch (Exception ignored) {
                     try {
                         deleteTree(target);
@@ -283,6 +328,24 @@ public final class RecycleBin {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    public static boolean renameEntry(Context context, Entry entry, String newName) {
+        if (entry == null || entry.file == null || newName == null || newName.trim().isEmpty()) return false;
+        File root = entry.file.getParentFile();
+        if (root == null) return false;
+        File target = new File(root, newName.trim());
+        if (target.exists()) return false;
+        if (entry.file.renameTo(target)) {
+            Map<String, Meta> meta = loadMeta(root);
+            Meta m = meta.remove(entry.file.getName());
+            if (m != null) {
+                meta.put(target.getName(), m);
+                saveMeta(root, meta);
+            }
+            return true;
+        }
+        return false;
     }
 
     private static File forget(Context context, Entry entry, File restored) {

@@ -1811,4 +1811,26 @@ Layout Inspector
     <string name="saved_to_x">Saved copy to %1$s</string>
     <string name="saved_elevated">Saved using elevated access</string>
     <string name="save_elevated">Save with elevated access</string>
+    <string name="restored_renamed_toast">Restored item was renamed to %1$s because an item with the same name already exists in that location.</string>
+    <string name="recycle_bin_reason_overwrite">Overwritten</string>
+    <string name="recycle_bin_reason_delete">Deleted</string>
+    <string name="recycle_bin_options">Recycle bin options</string>
+    <string name="enable_recycle_bin">Enable recycle bin</string>
+    <string name="startup">Startup</string>
+    <string name="request_root_permission">Request root permission</string>
+    <string name="request_root_permission_summary">Request root permissions at startup. After modifying this setting, you need to restart to take effect.</string>
+    <string name="request_shell_permission">Request shell permission</string>
+    <string name="request_shell_permission_summary">If root permission is not obtained at startup, MP will try to call Shizuku to obtain shell permission. After modifying this setting, you need to restart to take effect.</string>
+    <string name="sort_by_deletion_time">Deletion time</string>
+    <string name="sort_by_modified_time">Last modified time</string>
+    <string name="sort_by_name">File name</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="restore_all">Restore all</string>
+    <string name="delete_all">Delete all</string>
+    <string name="dex_to_jar">Dex to Jar</string>
+    <string name="jar_saved_to">JAR saved to %1$s</string>
+    <string name="item_deleted">Item deleted</string>
+    <string name="renamed">Renamed</string>
+    <string name="restored">Restored</string>
+    <string name="failed">Failed</string>
 </resources>

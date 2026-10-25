@@ -543,18 +543,24 @@ public class ClassTree {
 
         String rawType = "L" + type + ";";
         Integer index = classDefIndex.get(rawType);
-        if (index != null) {
+        if (index != null && index >= 0 && index < classDefList.size()) {
             classDefList.set(index, classDef);
         } else {
             synchronized (classDefList) {
+                boolean found = false;
                 for (int i = 0; i < classDefList.size(); i++) {
                     ClassDef existingDef = classDefList.get(i);
                     String existingType = existingDef.getType();
                     if (existingType.equals(rawType)) {
                         classDefList.set(i, classDef);
                         classDefIndex.put(rawType, i);
+                        found = true;
                         break;
                     }
+                }
+                if (!found) {
+                    classDefIndex.put(rawType, classDefList.size());
+                    classDefList.add(classDef);
                 }
             }
         }
@@ -642,15 +648,30 @@ public class ClassTree {
 
     // record the edited classes
     private void recordEditedClass(String type) {
-        String fileName = typeToDexMap.get("L" + type + ";");
-        if (fileName != null) {
-            HashSet<String> edited = editedClassMap.get(fileName);
-            if (edited == null) {
-                edited = new HashSet<>();
-                editedClassMap.put(fileName, edited);
+        String rawType = "L" + type + ";";
+        String fileName = typeToDexMap.get(rawType);
+        if (fileName == null) {
+            if (!dexClassMap.isEmpty()) {
+                fileName = dexClassMap.keySet().iterator().next();
+            } else {
+                fileName = "classes.dex";
             }
-            edited.add(type);
+            typeToDexMap.put(rawType, fileName);
+            List<String> list = dexClassMap.get(fileName);
+            if (list == null) {
+                list = new ArrayList<>();
+                dexClassMap.put(fileName, list);
+            }
+            if (!list.contains(rawType)) {
+                list.add(rawType);
+            }
         }
+        HashSet<String> edited = editedClassMap.get(fileName);
+        if (edited == null) {
+            edited = new HashSet<>();
+            editedClassMap.put(fileName, edited);
+        }
+        edited.add(type);
     }
 
     private void unrecordEditedClass(String type) {

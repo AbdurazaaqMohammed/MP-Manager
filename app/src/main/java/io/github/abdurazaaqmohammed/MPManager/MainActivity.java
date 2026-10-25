@@ -43,6 +43,9 @@ import android.widget.PopupMenu;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.widget.ImageView;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -976,6 +979,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         drawerLayout.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
             @Override
             public void onDrawerOpened(View drawerView) {
+                if (drawerView.getId() == R.id.right_menu_drawer) {
+                    refreshRightMenuDrawer();
+                    return;
+                }
                 // Edge-swipe opens bypass openSidebarDrawer(): ensure data here too.
                 try {
                     ensureSidebarReady();
@@ -992,7 +999,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
             @Override
             public void onDrawerClosed(View drawerView) {
-                isSidebarDrawerOpen = false;
+                if (drawerView.getId() == R.id.sidebar_drawer) {
+                    isSidebarDrawerOpen = false;
+                }
             }
         });
 
@@ -1255,164 +1264,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             View moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
             moreOptionsMenu.setOnLongClickListener(this::showMsgOnLongPress);
             moreOptionsMenu.setOnClickListener(v -> {
-                PopupMenu popup = new PopupMenu(MainActivity.this, v);
-                Menu menu = popup.getMenu();
-                menu.add(0, 0, 0, getString(R.string.menu_refresh)).setIcon(R.drawable.baseline_refresh_24);
-                menu.add(0, 1, 0, getString(R.string.filter)).setIcon(R.drawable.baseline_filter_list_24);
-                menu.add(0, 2, 0, getString(R.string.search)).setIcon(R.drawable.baseline_search_24);
-                menu.add(0, 15, 0, getString(R.string.find_in_files)).setIcon(R.drawable.ic_search_replace);
-                menu.add(0, 17, 0, getString(R.string.xml_search)).setIcon(R.drawable.baseline_search_24);
-                menu.add(0, 3, 0, getString(R.string.menu_select_all)).setIcon(R.drawable.baseline_select_all_24);
-                menu.add(0, 4, 0, getString(R.string.sort)).setIcon(R.drawable.baseline_sort_24);
-
-                SubMenu hiddenMenu = menu.addSubMenu(0, 5, 0, getString(R.string.menu_hidden_files));
-                hiddenMenu.setIcon(R.drawable.visibility_off_24px);
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-                MenuItem sysItem = hiddenMenu.add(0, 6, 0, getString(R.string.menu_show_system_hidden));
-                sysItem.setCheckable(true).setChecked(prefs.getBoolean("show_system_hidden", false));
-                MenuItem manItem = hiddenMenu.add(0, 7, 0, getString(R.string.menu_show_manual_hidden));
-                manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
-
-                RecyclerView.Adapter a = getCurrentPane().getAdapter();
-                if ((a instanceof MainFilesArrayAdapter)) {
-                    MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-                    MenuItem hideSel = hiddenMenu.add(0, 8, 0, getString(R.string.menu_hide_selected));
-                    hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
-                    hiddenMenu.add(0, 9, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
-                }
-
-                if (fileSearch.hasSearchResults()) {
-                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.baseline_search_24);
-                }
-                if (a instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) a).isSearchResultsMode()) {
-                    menu.add(0, 19, 0, getString(R.string.clear_search_results)).setIcon(R.drawable.close_24px);
-                }
-                menu.add(0, 10, 0, getString(R.string.menu_add_bookmark)).setIcon(R.drawable.baseline_bookmark_24);
-                menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
-                menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
-                menu.add(0, 13, 0, getString(R.string.preferences)).setIcon(R.drawable.baseline_settings_24);
-                menu.add(0, 16, 0, getString(R.string.recycle_bin)).setIcon(R.drawable.baseline_delete_24);
-                menu.add(0, 14, 0, getString(R.string.exit)).setIcon(R.drawable.baseline_exit_to_app_24);
-
-                popup.setOnMenuItemClickListener(item -> {
-                    switch (item.getItemId()) {
-                        case 0:
-                            reloadCurrentFolder();
-                            break;
-                        case 1:
-                            LinearLayout topBar = findViewById(R.id.topBar);
-                            LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
-                            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
-                            EditText filterBar = filterBox.getEditText();
-                            if (pathLayout.getVisibility() == View.VISIBLE) {
-                                pathLayout.setVisibility(View.GONE);
-                                filterBox.setVisibility(View.VISIBLE);
-                                if (filterBar != null) {
-                                    filterBar.requestFocus();
-                                    try {
-                                        InputMethodManager imm =
-                                                (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                                        if (imm != null) imm.showSoftInput(filterBar, InputMethodManager.SHOW_IMPLICIT);
-                                    } catch (Exception ignored) {
-                                    }
-                                }
-                            } else {
-                                pathLayout.setVisibility(View.VISIBLE);
-                                filterBox.setVisibility(View.GONE);
-                                if (filterBar != null) filterBar.setText("");
-                                try {
-                                    InputMethodManager imm =
-                                            (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                                    if (imm != null) imm.hideSoftInputFromWindow(topBar.getWindowToken(), 0);
-                                } catch (Exception ignored) {
-                                }
-                            }
-                            break;
-                        case 2:
-                            showSearchDialog();
-                            break;
-                        case 15:
-                            showFindInFilesDialog();
-                            break;
-                        case 17:
-                            fileSearch.showXmlSearchDialog();
-                            break;
-                        case 18:
-                            fileSearch.showLastSearchResultsDialog();
-                            break;
-                        case 19:
-                            clearSearchResults(lastPaneSelected == 1);
-                            break;
-                        case 3:
-                            if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
-                            break;
-                        case 4:
-                            showSortDialog();
-                            break;
-                        case 6: {
-                            boolean isChecked = !item.isChecked();
-                            item.setChecked(isChecked);
-                            prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
-                            reloadCurrentFolder();
-                            break;
-                        }
-                        case 7: {
-                            boolean isChecked = !item.isChecked();
-                            item.setChecked(isChecked);
-                            prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
-                            reloadCurrentFolder();
-                            break;
-                        }
-                        case 8:
-                            Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
-                            for (Object obj : ((MainFilesArrayAdapter) a).getSelectedFiles()) {
-                                if (obj instanceof File)
-                                    manualHidden.add(((File) obj).getPath());
-                                else if (obj instanceof ZipEntryInfo)
-                                    manualHidden.add(((ZipEntryInfo) obj).getFullPath());
-                            }
-                            prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
-                            ((MainFilesArrayAdapter) a).clearSelection();
-                            reloadCurrentFolder();
-                            break;
-                        case 9:
-                            showEditHiddenFilesDialog();
-                            break;
-                        case 10: {
-                            boolean isPane1 = lastPaneSelected == 1;
-                            File toBookmark = isPane1 ? pane1Folder : pane2Folder;
-                            addBookmark(toBookmark);
-                            Extensions.showMessage(MainActivity.this, rss.getString(R.string.added_to_bookmarks, toBookmark.getName()));
-                            break;
-                        }
-                        case 11: {
-                            boolean isPane1 = lastPaneSelected == 1;
-                            prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
-                                    .apply();
-                            Extensions.showMessage(MainActivity.this, R.string.set_as_home);
-                            break;
-                        }
-                        case 12:
-                            File temp = pane1Folder;
-                            pane1Folder = pane2Folder;
-                            pane2Folder = temp;
-                            loadFolderInPane(pane1Folder, true);
-                            loadFolderInPane(pane2Folder, false);
-                            break;
-                        case 13:
-                            showSettingsDialog();
-                            break;
-                        case 16:
-                            showRecycleBinDialog();
-                            break;
-                        case 14:
-                            finishAffinity();
-                            break;
+                if (drawerLayout != null) {
+                    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+                        drawerLayout.closeDrawer(GravityCompat.END);
+                    } else {
+                        refreshRightMenuDrawer();
+                        drawerLayout.openDrawer(GravityCompat.END);
                     }
-                    return true;
-                });
-                PopupMenus.forceShowIcons(popup);
-                popup.show();
+                }
             });
 
             View upButton = findViewById(R.id.upButton);
@@ -1503,7 +1362,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             runWhenIdle(() -> {
                 new Thread(() -> {
                     try {
-                        ShizukuShell.warmUp(MainActivity.this);
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                        if (prefs.getBoolean("startup_request_shell", true)) {
+                            ShizukuShell.warmUp(MainActivity.this);
+                        }
                     } catch (Exception ignored) {
                     }
                 }, "shizuku-warmup").start();
@@ -1515,15 +1377,41 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }, "access-warmup").start();
                 new Thread(() -> {
                     try {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                        boolean reqRoot = prefs.getBoolean("startup_request_root", true);
+                        boolean reqShell = prefs.getBoolean("startup_request_shell", true);
                         RootManager rm = RootManager.getInstance(MainActivity.this);
-                        if (rm.autoEnableRootIfAvailable()) {
-                            handler.post(() -> {
-                                try {
-                                    Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
-                                    refreshSidebarAsync(getSidebarSectionOrder());
-                                } catch (Exception ignored) {
+
+                        boolean gotRoot = false;
+                        if (reqRoot) {
+                            if (rm.autoEnableRootIfAvailable()) {
+                                gotRoot = true;
+                                handler.post(() -> {
+                                    try {
+                                        Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
+                                        refreshSidebarAsync(getSidebarSectionOrder());
+                                    } catch (Exception ignored) {
+                                    }
+                                });
+                            } else if (rm.isRootMode()) {
+                                gotRoot = true;
+                            }
+                        }
+
+                        if (!gotRoot) {
+                            if (reqShell) {
+                                if (io.github.abdurazaaqmohammed.utils.ShizukuManager.hasPermission() || rikka.shizuku.Shizuku.pingBinder()) {
+                                    rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                                    handler.post(() -> {
+                                        try {
+                                            refreshSidebarAsync(getSidebarSectionOrder());
+                                        } catch (Exception ignored) {
+                                        }
+                                    });
                                 }
-                            });
+                            } else {
+                                rm.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+                            }
                         }
                         try {
                             rm.kickNsProbe();
@@ -1531,7 +1419,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }
                     } catch (Exception ignored) {
                     }
-                }, "root-probe").start();
+                }, "privilege-startup").start();
                 new Thread(() -> {
                     try {
                         int purged = io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(MainActivity.this);
@@ -1650,7 +1538,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     @Override
     public void onBackPressed() {
-        if (isSidebarDrawerOpen) closeSidebarDrawer();
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.closeDrawer(GravityCompat.END);
+        } else if (isSidebarDrawerOpen) closeSidebarDrawer();
         else if (isBookmarksDrawerOpen) closeBookmarksDrawer();
         else {
             ViewGroup topBar = findViewById(R.id.topBar);
@@ -2924,6 +2814,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             refreshAllPanes();
         } catch (Exception ignored) {
         }
+        try {
+            fileSearch.onActivityResume();
+        } catch (Exception ignored) {
+        }
     }
 
 
@@ -3036,9 +2930,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 .setItems(actions, (dialog, which) -> {
                     if (which == 0) {
                         new Thread(() -> {
-                            File restored = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
+                            io.github.abdurazaaqmohammed.utils.RecycleBin.RestoreResult res = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
                             handler.post(() -> {
-                                if (restored != null) {
+                                if (res != null && res.restoredFile != null) {
+                                    File restored = res.restoredFile;
                                     Extensions.showMessage(MainActivity.this, rss.getString(R.string.restore_to_x, restored.getAbsolutePath()));
                                     File parent = restored.getParentFile();
                                     if (parent != null
@@ -3092,6 +2987,197 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private void showEditHiddenFilesDialog() {
         sortFilter.showEditHiddenFilesDialog();
+    }
+
+    private void refreshRightMenuDrawer() {
+        LinearLayout container = findViewById(R.id.rightMenuContainer);
+        if (container == null) return;
+        container.removeAllViews();
+
+        // 1. Filter
+        addRightDrawerItem(container, R.drawable.baseline_filter_list_24, getString(R.string.filter), v -> {
+            LinearLayout topBar = findViewById(R.id.topBar);
+            LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
+            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
+            EditText filterBar = filterBox.getEditText();
+            if (pathLayout.getVisibility() == View.VISIBLE) {
+                pathLayout.setVisibility(View.GONE);
+                filterBox.setVisibility(View.VISIBLE);
+                if (filterBar != null) {
+                    filterBar.requestFocus();
+                    try {
+                        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                        if (imm != null) imm.showSoftInput(filterBar, InputMethodManager.SHOW_IMPLICIT);
+                    } catch (Exception ignored) {
+                    }
+                }
+            } else {
+                pathLayout.setVisibility(View.VISIBLE);
+                filterBox.setVisibility(View.GONE);
+                if (filterBar != null) filterBar.setText("");
+                try {
+                    InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.hideSoftInputFromWindow(topBar.getWindowToken(), 0);
+                } catch (Exception ignored) {
+                }
+            }
+        });
+
+        // 2. Search
+        addRightDrawerItem(container, R.drawable.baseline_search_24, getString(R.string.search), v -> showSearchDialog());
+
+        // 3. Find in files
+        addRightDrawerItem(container, R.drawable.ic_search_replace, getString(R.string.find_in_files), v -> showFindInFilesDialog());
+
+        // 4. XML Search
+        addRightDrawerItem(container, R.drawable.baseline_search_24, getString(R.string.xml_search), v -> fileSearch.showXmlSearchDialog());
+
+        // 5. Search Results (if available)
+        if (fileSearch.hasSearchResults()) {
+            addRightDrawerItem(container, R.drawable.ic_eye_mt, getString(R.string.search_results), v -> fileSearch.showLastSearchResultsDialog());
+        }
+
+        // 6. Clear search results (if in results mode)
+        RecyclerView.Adapter curAdapter = getCurrentPane().getAdapter();
+        if (curAdapter instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) curAdapter).isSearchResultsMode()) {
+            addRightDrawerItem(container, R.drawable.close_24px, getString(R.string.clear_search_results), v -> clearSearchResults(lastPaneSelected == 1));
+        }
+
+        // 7. Select all
+        addRightDrawerItem(container, R.drawable.baseline_select_all_24, getString(R.string.menu_select_all), v -> {
+            RecyclerView.Adapter a = getCurrentPane().getAdapter();
+            if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
+        });
+
+        // 8. Sort
+        addRightDrawerItem(container, R.drawable.baseline_sort_24, getString(R.string.sort), v -> showSortDialog());
+
+        // 9. Hidden files
+        addRightDrawerItem(container, R.drawable.visibility_off_24px, getString(R.string.menu_hidden_files), this::showHiddenFilesMenu);
+
+        // 10. Add to bookmarks
+        addRightDrawerItem(container, R.drawable.baseline_bookmark_24, getString(R.string.menu_add_bookmark), v -> {
+            boolean isPane1 = lastPaneSelected == 1;
+            File toBookmark = isPane1 ? pane1Folder : pane2Folder;
+            addBookmark(toBookmark);
+            Extensions.showMessage(MainActivity.this, rss.getString(R.string.added_to_bookmarks, toBookmark.getName()));
+        });
+
+        // 11. Set as home folder
+        addRightDrawerItem(container, R.drawable.baseline_home_24, getString(R.string.set_as_home), v -> {
+            boolean isPane1 = lastPaneSelected == 1;
+            PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit()
+                    .putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
+                    .apply();
+            Extensions.showMessage(MainActivity.this, R.string.set_as_home);
+        });
+
+        // 12. Swap panes
+        addRightDrawerItem(container, R.drawable.baseline_swap_horiz_24, getString(R.string.menu_swap_panes), v -> {
+            File temp = pane1Folder;
+            pane1Folder = pane2Folder;
+            pane2Folder = temp;
+            loadFolderInPane(pane1Folder, true);
+            loadFolderInPane(pane2Folder, false);
+        });
+
+        // 13. Preferences
+        addRightDrawerItem(container, R.drawable.baseline_settings_24, getString(R.string.preferences), v -> showSettingsDialog());
+    }
+
+    private void addRightDrawerItem(LinearLayout container, int iconRes, String title, View.OnClickListener onClick) {
+        LinearLayout itemLayout = new LinearLayout(this);
+        itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (int) (48 * getResources().getDisplayMetrics().density)));
+        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
+        itemLayout.setGravity(Gravity.CENTER_VERTICAL);
+        int padH = (int) (18 * getResources().getDisplayMetrics().density);
+        itemLayout.setPadding(padH, 0, padH, 0);
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        itemLayout.setBackgroundResource(outValue.resourceId);
+
+        ImageView icon = new ImageView(this);
+        int iconSize = (int) (22 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
+        iconLp.setMarginEnd((int) (16 * getResources().getDisplayMetrics().density));
+        icon.setLayoutParams(iconLp);
+        icon.setImageResource(iconRes);
+        TypedValue colorOnSurface = new TypedValue();
+        getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, colorOnSurface, true);
+        icon.setColorFilter(colorOnSurface.data);
+        itemLayout.addView(icon);
+
+        TextView text = new TextView(this);
+        text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        text.setText(title);
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        text.setTextColor(colorOnSurface.data);
+        itemLayout.addView(text);
+
+        itemLayout.setOnClickListener(v -> {
+            if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.END);
+            onClick.onClick(v);
+        });
+
+        container.addView(itemLayout);
+    }
+
+    private void showHiddenFilesMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        Menu menu = popup.getMenu();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        MenuItem sysItem = menu.add(0, 1, 0, getString(R.string.menu_show_system_hidden));
+        sysItem.setCheckable(true).setChecked(prefs.getBoolean("show_system_hidden", false));
+        MenuItem manItem = menu.add(0, 2, 0, getString(R.string.menu_show_manual_hidden));
+        manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
+
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
+        if (a instanceof MainFilesArrayAdapter adapter) {
+            MenuItem hideSel = menu.add(0, 3, 0, getString(R.string.menu_hide_selected));
+            hideSel.setEnabled(adapter.isMultiSelectMode());
+            menu.add(0, 4, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
+        }
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: {
+                    boolean isChecked = !item.isChecked();
+                    item.setChecked(isChecked);
+                    prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
+                    reloadCurrentFolder();
+                    break;
+                }
+                case 2: {
+                    boolean isChecked = !item.isChecked();
+                    item.setChecked(isChecked);
+                    prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
+                    reloadCurrentFolder();
+                    break;
+                }
+                case 3: {
+                    if (a instanceof MainFilesArrayAdapter adapter) {
+                        Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
+                        for (Object obj : adapter.getSelectedFiles()) {
+                            if (obj instanceof File)
+                                manualHidden.add(((File) obj).getPath());
+                            else if (obj instanceof ZipEntryInfo)
+                                manualHidden.add(((ZipEntryInfo) obj).getFullPath());
+                        }
+                        prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
+                        adapter.clearSelection();
+                        reloadCurrentFolder();
+                    }
+                    break;
+                }
+                case 4:
+                    showEditHiddenFilesDialog();
+                    break;
+            }
+            return true;
+        });
+        popup.show();
     }
 
     private void sortFiles(File[] files, String folderPath) {
