@@ -323,8 +323,7 @@ public class FilePickerDialog {
 
     private void handleClick(File f) {
         if (f.isDirectory()) {
-            if (props.selection_mode == MULTI_MODE) toggleSelection(f);
-            else loadDirectory(f);
+            loadDirectory(f);
         } else {
             if (props.selection_mode == MULTI_MODE) toggleSelection(f);
             else selectAndReturn(new String[]{f.getAbsolutePath()});
@@ -332,6 +331,10 @@ public class FilePickerDialog {
     }
 
     private boolean handleLongClick(File f) {
+        if (props.selection_mode == MULTI_MODE) {
+            toggleSelection(f);
+            return true;
+        }
         if (f.isDirectory() && props.selection_mode == SINGLE_MODE
                 && (props.selection_type == DIR_SELECT || props.selection_type == FILE_AND_DIR_SELECT)) {
             selectAndReturn(new String[]{f.getAbsolutePath()});
@@ -371,7 +374,7 @@ public class FilePickerDialog {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(LayoutInflater.from(context).inflate(R.layout.list_file, parent, false));
+            return new ViewHolder(LayoutInflater.from(context).inflate(R.layout.dialog_file_picker_item, parent, false));
         }
 
         @Override
@@ -380,6 +383,7 @@ public class FilePickerDialog {
                 holder.fileNameView.setText("..");
                 holder.fileDateView.setVisibility(View.INVISIBLE);
                 holder.itemView.setBackgroundColor(Color.TRANSPARENT);
+                if (holder.selectIndicatorView != null) holder.selectIndicatorView.setVisibility(View.GONE);
                 holder.itemView.setOnClickListener(v -> {
                     File parent = currentDir.getParentFile();
                     if (parent != null) loadDirectory(parent);
@@ -390,7 +394,17 @@ public class FilePickerDialog {
             iconLoader.setupFileView(f, holder.fileIconView, holder.fileDateView);
             holder.fileNameView.setText(f.getName());
             boolean selected = selectedPaths.contains(f.getAbsolutePath());
-            holder.itemView.setBackgroundColor(selected ? Color.DKGRAY : Color.TRANSPARENT);
+            holder.itemView.setBackgroundColor(selected ? 0x223399FF : Color.TRANSPARENT);
+            if (holder.selectIndicatorView != null) {
+                if (props.selection_mode == MULTI_MODE) {
+                    holder.selectIndicatorView.setVisibility(View.VISIBLE);
+                    holder.selectIndicatorView.setImageResource(selected ? R.drawable.baseline_check_circle_24 : R.drawable.ic_circle_outline_24);
+                    holder.selectIndicatorView.setColorFilter(selected ? 0xFF3399FF : 0xFF888888);
+                    holder.selectIndicatorView.setOnClickListener(v -> toggleSelection(f));
+                } else {
+                    holder.selectIndicatorView.setVisibility(View.GONE);
+                }
+            }
             holder.itemView.setOnClickListener(v -> handleClick(f));
             holder.itemView.setOnLongClickListener(v -> handleLongClick(f));
         }
@@ -398,12 +412,14 @@ public class FilePickerDialog {
         static class ViewHolder extends RecyclerView.ViewHolder {
             final TextView fileNameView, fileDateView;
             final ImageView fileIconView;
+            final ImageView selectIndicatorView;
 
             ViewHolder(View v) {
                 super(v);
                 fileNameView = v.findViewById(R.id.fileName);
                 fileIconView = v.findViewById(R.id.fileIcon);
                 fileDateView = v.findViewById(R.id.fileDate);
+                selectIndicatorView = v.findViewById(R.id.selectIndicator);
             }
         }
     }
