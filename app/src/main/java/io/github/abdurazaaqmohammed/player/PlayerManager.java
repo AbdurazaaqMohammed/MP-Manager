@@ -773,7 +773,13 @@ public class PlayerManager {
     public void seekTo(int msec) {
         if (mediaPlayer != null) {
             msec = Math.max(0, msec);
-            try { mediaPlayer.seekTo(msec); } catch (Exception ignored) {}
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    mediaPlayer.seekTo(msec, android.media.MediaPlayer.SEEK_CLOSEST);
+                } else {
+                    mediaPlayer.seekTo(msec);
+                }
+            } catch (Exception ignored) {}
         }
     }
 

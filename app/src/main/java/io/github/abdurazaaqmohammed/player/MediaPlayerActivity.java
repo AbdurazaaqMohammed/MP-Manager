@@ -363,6 +363,9 @@ public class MediaPlayerActivity extends BaseActivity implements
                         int target = (int) Math.max(0, Math.min(duration > 0 ? duration : Integer.MAX_VALUE, seekStartPosition + deltaMs));
                         seekTargetPosition = target;
 
+                        // Seek MediaPlayer in real-time so the frame at the target time renders on screen
+                        playerManager.seekTo(target);
+
                         if (seekOverlay != null) {
                             seekOverlay.setVisibility(View.VISIBLE);
                             long diffMs = target - seekStartPosition;
