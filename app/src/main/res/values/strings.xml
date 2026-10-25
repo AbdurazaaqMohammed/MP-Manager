@@ -1821,4 +1821,10 @@ Layout Inspector
     <string name="request_root_permission_summary">Request root permissions at startup. After modifying this setting, you need to restart to take effect.</string>
     <string name="request_shell_permission">Request shell permission</string>
     <string name="request_shell_permission_summary">If root permission is not obtained at startup, MP will try to call Shizuku to obtain shell permission. After modifying this setting, you need to restart to take effect.</string>
+    <string name="sort_by_deletion_time">Deletion time</string>
+    <string name="sort_by_modified_time">Last modified time</string>
+    <string name="sort_by_name">File name</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="restore_all">Restore all</string>
+    <string name="delete_all">Delete all</string>
 </resources>

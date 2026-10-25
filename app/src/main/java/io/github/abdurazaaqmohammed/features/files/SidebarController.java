@@ -671,21 +671,63 @@ public class SidebarController {
         }
     }
 
+    private int recycleBinSortMode = 0; // 0 = Deletion time (desc), 1 = Modified time (desc), 2 = Name (asc)
+    private final java.text.SimpleDateFormat recycleDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+
     public void showRecycleBinDialog() {
         List<RecycleBin.Entry> allEntries = RecycleBin.entries(activity);
         List<RecycleBin.Entry> filteredEntries = new ArrayList<>(allEntries);
+        java.util.Set<RecycleBin.Entry> selectedEntries = new java.util.HashSet<>();
+
+        int pad = (int) (12 * activity.getResources().getDisplayMetrics().density);
 
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
 
+        // Header view
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setPadding(pad, (int) (8 * activity.getResources().getDisplayMetrics().density), pad, (int) (8 * activity.getResources().getDisplayMetrics().density));
+
+        TextView titleText = new TextView(activity);
+        titleText.setTextSize(18);
+        titleText.setTypeface(null, Typeface.BOLD);
+        titleText.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        titleText.setText(activity.getString(R.string.recycle_bin) + " (" + allEntries.size() + ")");
+        header.addView(titleText);
+
+        ImageButton filterBtn = new ImageButton(activity, null, android.R.attr.borderlessButtonStyle);
+        filterBtn.setImageResource(R.drawable.baseline_search_24);
+        filterBtn.setContentDescription(activity.getString(R.string.filter));
+        header.addView(filterBtn);
+
+        ImageButton sortBtn = new ImageButton(activity, null, android.R.attr.borderlessButtonStyle);
+        sortBtn.setImageResource(R.drawable.baseline_sort_24);
+        sortBtn.setContentDescription(activity.getString(R.string.sort_by));
+        header.addView(sortBtn);
+
+        root.addView(header);
+
+        // Filter / search input row
         EditText searchInput = new EditText(activity);
         searchInput.setHint(activity.getString(R.string.filter));
         searchInput.setSingleLine(true);
         searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.baseline_search_24, 0, 0, 0);
         searchInput.setCompoundDrawablePadding((int) (8 * activity.getResources().getDisplayMetrics().density));
-        int pad = (int) (12 * activity.getResources().getDisplayMetrics().density);
-        searchInput.setPadding(pad, pad, pad, pad);
+        searchInput.setPadding(pad, (int) (8 * activity.getResources().getDisplayMetrics().density), pad, (int) (8 * activity.getResources().getDisplayMetrics().density));
+        searchInput.setVisibility(View.GONE);
         root.addView(searchInput);
+
+        filterBtn.setOnClickListener(v -> {
+            if (searchInput.getVisibility() == View.VISIBLE) {
+                searchInput.setVisibility(View.GONE);
+                searchInput.setText("");
+            } else {
+                searchInput.setVisibility(View.VISIBLE);
+                searchInput.requestFocus();
+            }
+        });
 
         RecyclerView list = new RecyclerView(activity);
         list.setLayoutManager(new LinearLayoutManager(activity));
@@ -699,43 +741,117 @@ public class SidebarController {
         bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
         bottomBar.setPadding(pad, (int) (4 * activity.getResources().getDisplayMetrics().density), pad, (int) (4 * activity.getResources().getDisplayMetrics().density));
 
-        Button emptyBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
-        emptyBtn.setText(activity.getString(R.string.empty_recycle_bin));
-        emptyBtn.setTextSize(13);
-        bottomBar.addView(emptyBtn);
+        Button actionLeftBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        actionLeftBtn.setText(activity.getString(R.string.empty_recycle_bin));
+        actionLeftBtn.setTextSize(13);
+        bottomBar.addView(actionLeftBtn);
 
         View spacer = new View(activity);
         spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1.0f));
         bottomBar.addView(spacer);
 
-        Button closeBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
-        closeBtn.setText(activity.getString(R.string.close));
-        closeBtn.setTextSize(13);
-        bottomBar.addView(closeBtn);
+        Button actionRightBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        actionRightBtn.setText(activity.getString(R.string.close));
+        actionRightBtn.setTextSize(13);
+        bottomBar.addView(actionRightBtn);
 
         root.addView(bottomBar);
 
         AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
-                .setTitle(activity.getString(R.string.recycle_bin) + " (" + allEntries.size() + ")")
                 .setView(root)
                 .create();
 
-        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        final RecyclerView.Adapter<?>[] adapterHolder = new RecyclerView.Adapter<?>[1];
 
-        emptyBtn.setOnClickListener(v -> {
-            new androidx.appcompat.app.AlertDialog.Builder(activity)
-                    .setTitle(R.string.empty_recycle_bin)
-                    .setMessage(R.string.empty_recycle_bin_confirm)
-                    .setPositiveButton(R.string.delete, (d, w) -> {
-                        RecycleBin.emptyBin(activity);
-                        allEntries.clear();
-                        filteredEntries.clear();
-                        if (list.getAdapter() != null) list.getAdapter().notifyDataSetChanged();
-                        dialog.setTitle(activity.getString(R.string.recycle_bin) + " (0)");
-                        Extensions.showMessage(activity, R.string.recycle_bin_emptied);
-                    })
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
+        Runnable sortAndRefresh = () -> {
+            java.util.Collections.sort(filteredEntries, (a, b) -> {
+                if (recycleBinSortMode == 0) { // Deletion time (newest first)
+                    return Long.compare(b.deletedAt, a.deletedAt);
+                } else if (recycleBinSortMode == 1) { // Modified time (newest first)
+                    return Long.compare(b.lastModified, a.lastModified);
+                } else { // Name (alphabetical)
+                    return a.displayName().compareToIgnoreCase(b.displayName());
+                }
+            });
+            if (adapterHolder[0] != null) adapterHolder[0].notifyDataSetChanged();
+            if (selectedEntries.isEmpty()) {
+                titleText.setText(activity.getString(R.string.recycle_bin) + " (" + filteredEntries.size() + ")");
+                actionLeftBtn.setText(activity.getString(R.string.empty_recycle_bin));
+                actionRightBtn.setText(activity.getString(R.string.close));
+            } else {
+                titleText.setText(activity.getString(R.string.selected_count, selectedEntries.size()));
+                actionLeftBtn.setText(activity.getString(R.string.restore_all));
+                actionRightBtn.setText(activity.getString(R.string.delete_all));
+            }
+        };
+
+        sortBtn.setOnClickListener(v -> {
+            androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(activity, sortBtn);
+            popup.getMenu().add(0, 0, 0, activity.getString(R.string.sort_by_deletion_time));
+            popup.getMenu().add(0, 1, 1, activity.getString(R.string.sort_by_modified_time));
+            popup.getMenu().add(0, 2, 2, activity.getString(R.string.sort_by_name));
+            popup.setOnMenuItemClickListener(item -> {
+                recycleBinSortMode = item.getItemId();
+                sortAndRefresh.run();
+                return true;
+            });
+            popup.show();
+        });
+
+        actionLeftBtn.setOnClickListener(v -> {
+            if (!selectedEntries.isEmpty()) {
+                // Restore selected
+                List<RecycleBin.Entry> toRestore = new ArrayList<>(selectedEntries);
+                for (RecycleBin.Entry e : toRestore) {
+                    RecycleBin.restoreEntry(activity, e);
+                }
+                selectedEntries.clear();
+                allEntries.clear();
+                allEntries.addAll(RecycleBin.entries(activity));
+                filterList(searchInput.getText().toString(), allEntries, filteredEntries, adapterHolder[0], dialog, titleText);
+                sortAndRefresh.run();
+                Extensions.showMessage(activity, R.string.restored);
+            } else {
+                // Empty bin
+                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                        .setTitle(R.string.empty_recycle_bin)
+                        .setMessage(R.string.empty_recycle_bin_confirm)
+                        .setPositiveButton(R.string.delete, (d, w) -> {
+                            RecycleBin.emptyBin(activity);
+                            allEntries.clear();
+                            filteredEntries.clear();
+                            selectedEntries.clear();
+                            sortAndRefresh.run();
+                            Extensions.showMessage(activity, R.string.recycle_bin_emptied);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            }
+        });
+
+        actionRightBtn.setOnClickListener(v -> {
+            if (!selectedEntries.isEmpty()) {
+                // Delete selected
+                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                        .setTitle(R.string.delete_forever)
+                        .setMessage(activity.getString(R.string.confirm_delete_f, selectedEntries.size() + " items"))
+                        .setPositiveButton(R.string.delete, (d, w) -> {
+                            List<RecycleBin.Entry> toDel = new ArrayList<>(selectedEntries);
+                            for (RecycleBin.Entry e : toDel) {
+                                RecycleBin.deleteEntry(activity, e);
+                            }
+                            selectedEntries.clear();
+                            allEntries.clear();
+                            allEntries.addAll(RecycleBin.entries(activity));
+                            filterList(searchInput.getText().toString(), allEntries, filteredEntries, adapterHolder[0], dialog, titleText);
+                            sortAndRefresh.run();
+                            Extensions.showMessage(activity, R.string.item_deleted);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            } else {
+                dialog.dismiss();
+            }
         });
 
         RecyclerView.Adapter<?> adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -746,6 +862,10 @@ public class SidebarController {
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(android.view.Gravity.CENTER_VERTICAL);
                 row.setPadding(pad, (int) (8 * activity.getResources().getDisplayMetrics().density), pad, (int) (8 * activity.getResources().getDisplayMetrics().density));
+
+                CheckBox cb = new CheckBox(activity);
+                cb.setVisibility(View.GONE);
+                row.addView(cb);
 
                 ImageView icon = new ImageView(activity);
                 LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(
@@ -770,9 +890,8 @@ public class SidebarController {
 
                 TextView sub = new TextView(activity);
                 sub.setTextSize(11);
-                sub.setTextColor(Color.GRAY);
                 sub.setSingleLine(true);
-                sub.setEllipsize(TextUtils.TruncateAt.START);
+                sub.setEllipsize(TextUtils.TruncateAt.END);
                 textCol.addView(sub);
 
                 row.addView(textCol);
@@ -783,16 +902,26 @@ public class SidebarController {
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
                 RecycleBin.Entry entry = filteredEntries.get(position);
                 LinearLayout row = (LinearLayout) holder.itemView;
-                ImageView icon = (ImageView) row.getChildAt(0);
-                LinearLayout textCol = (LinearLayout) row.getChildAt(1);
+                CheckBox cb = (CheckBox) row.getChildAt(0);
+                ImageView icon = (ImageView) row.getChildAt(1);
+                LinearLayout textCol = (LinearLayout) row.getChildAt(2);
                 TextView title = (TextView) textCol.getChildAt(0);
                 TextView sub = (TextView) textCol.getChildAt(1);
 
                 title.setText(entry.displayName());
-                String reasonTag = "overwrite".equals(entry.reason)
-                        ? "[" + activity.getString(R.string.recycle_bin_reason_overwrite) + "]"
-                        : "[" + activity.getString(R.string.recycle_bin_reason_delete) + "]";
-                sub.setText(reasonTag + " " + (entry.originPath != null ? entry.originPath : ""));
+
+                // Subtitle: modified date in white, deleted date in red (#FF5252)
+                String modStr = recycleDateFormat.format(new java.util.Date(entry.lastModified));
+                String delStr = recycleDateFormat.format(new java.util.Date(entry.deletedAt));
+                android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
+                int modStart = 0;
+                ssb.append(modStr);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.WHITE), modStart, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.append("    ");
+                int delStart = ssb.length();
+                ssb.append(delStr);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF5252), delStart, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                sub.setText(ssb);
 
                 if (entry.file.isDirectory()) {
                     icon.setImageResource(R.drawable.folder_24px);
@@ -800,11 +929,40 @@ public class SidebarController {
                     icon.setImageResource(R.drawable.baseline_description_24);
                 }
 
-                row.setOnClickListener(v -> showRecycleBinItemActions(entry, () -> {
-                    allEntries.clear();
-                    allEntries.addAll(RecycleBin.entries(activity));
-                    filterList(searchInput.getText().toString(), allEntries, filteredEntries, this, dialog);
-                }));
+                if (!selectedEntries.isEmpty()) {
+                    cb.setVisibility(View.VISIBLE);
+                    cb.setChecked(selectedEntries.contains(entry));
+                } else {
+                    cb.setVisibility(View.GONE);
+                }
+
+                row.setOnClickListener(v -> {
+                    if (!selectedEntries.isEmpty()) {
+                        if (selectedEntries.contains(entry)) {
+                            selectedEntries.remove(entry);
+                        } else {
+                            selectedEntries.add(entry);
+                        }
+                        sortAndRefresh.run();
+                    } else {
+                        showRecycleBinItemActions(entry, () -> {
+                            allEntries.clear();
+                            allEntries.addAll(RecycleBin.entries(activity));
+                            filterList(searchInput.getText().toString(), allEntries, filteredEntries, adapterHolder[0], dialog, titleText);
+                            sortAndRefresh.run();
+                        });
+                    }
+                });
+
+                row.setOnLongClickListener(v -> {
+                    if (selectedEntries.contains(entry)) {
+                        selectedEntries.remove(entry);
+                    } else {
+                        selectedEntries.add(entry);
+                    }
+                    sortAndRefresh.run();
+                    return true;
+                });
             }
 
             @Override
@@ -812,13 +970,18 @@ public class SidebarController {
                 return filteredEntries.size();
             }
         };
+        adapterHolder[0] = adapter;
         list.setAdapter(adapter);
+
+        // Apply initial sort (by deletion time desc)
+        sortAndRefresh.run();
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void afterTextChanged(Editable s) {
-                filterList(s.toString(), allEntries, filteredEntries, adapter, dialog);
+                filterList(s.toString(), allEntries, filteredEntries, adapter, dialog, titleText);
+                sortAndRefresh.run();
             }
         });
 
@@ -826,7 +989,7 @@ public class SidebarController {
     }
 
     private void filterList(String query, List<RecycleBin.Entry> all, List<RecycleBin.Entry> filtered,
-                            RecyclerView.Adapter<?> adapter, AlertDialog dialog) {
+                            RecyclerView.Adapter<?> adapter, AlertDialog dialog, TextView titleText) {
         filtered.clear();
         String q = query != null ? query.trim().toLowerCase(java.util.Locale.ROOT) : "";
         for (RecycleBin.Entry e : all) {
@@ -835,11 +998,26 @@ public class SidebarController {
                 filtered.add(e);
             }
         }
-        adapter.notifyDataSetChanged();
-        dialog.setTitle(activity.getString(R.string.recycle_bin) + " (" + filtered.size() + ")");
+        if (titleText != null) {
+            titleText.setText(activity.getString(R.string.recycle_bin) + " (" + filtered.size() + ")");
+        }
     }
 
     private void showRecycleBinItemActions(RecycleBin.Entry entry, Runnable onUpdated) {
+        String modStr = recycleDateFormat.format(new java.util.Date(entry.lastModified));
+        String delStr = recycleDateFormat.format(new java.util.Date(entry.deletedAt));
+        String reasonStr = "overwrite".equals(entry.reason)
+                ? activity.getString(R.string.recycle_bin_reason_overwrite)
+                : activity.getString(R.string.recycle_bin_reason_delete);
+
+        StringBuilder details = new StringBuilder();
+        if (entry.originPath != null && !entry.originPath.isEmpty()) {
+            details.append(activity.getString(R.string.deleted_from_x, entry.originPath)).append("\n");
+        }
+        details.append(activity.getString(R.string.status_label)).append(": ").append(reasonStr).append("\n");
+        details.append(activity.getString(R.string.show_last_updated)).append(": ").append(modStr).append("\n");
+        details.append(activity.getString(R.string.sort_by_deletion_time)).append(": ").append(delStr);
+
         String[] options = {
                 activity.getString(R.string.delete_forever),
                 activity.getString(R.string.rename),
@@ -847,6 +1025,7 @@ public class SidebarController {
         };
         new androidx.appcompat.app.AlertDialog.Builder(activity)
                 .setTitle(entry.displayName())
+                .setMessage(details.toString())
                 .setItems(options, (d, which) -> {
                     if (which == 0) {
                         RecycleBin.deleteEntry(activity, entry);

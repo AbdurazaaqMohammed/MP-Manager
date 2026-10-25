@@ -1698,4 +1698,10 @@
     <string name="request_root_permission_summary">طلب صلاحيات الروت عند بدء التشغيل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل للتطبيق.</string>
     <string name="request_shell_permission">طلب صلاحية الشل (شيزوكو)</string>
     <string name="request_shell_permission_summary">إذا لم يتم الحصول على صلاحية الروت عند بدء التشغيل، فسيحاول MP استدعاء شيزوكو للحصول على صلاحية الشل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل.</string>
+    <string name="sort_by_deletion_time">تاريخ الحذف</string>
+    <string name="sort_by_modified_time">تاريخ آخر تعديل</string>
+    <string name="sort_by_name">اسم الملف</string>
+    <string name="selected_count">تم تحديد %1$d</string>
+    <string name="restore_all">استعادة المحدد</string>
+    <string name="delete_all">حذف المحدد</string>
 </resources>
