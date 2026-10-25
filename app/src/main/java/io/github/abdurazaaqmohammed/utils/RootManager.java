@@ -158,6 +158,7 @@ public class RootManager {
     public boolean autoEnableRootIfAvailable() {
         try {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            if (!prefs.getBoolean("startup_request_root", true)) return false;
             boolean modeTouched = prefs.contains("working_mode");
             boolean opsTouched = prefs.contains("root_file_ops");
             if (modeTouched && opsTouched) return false;

@@ -1359,7 +1359,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             runWhenIdle(() -> {
                 new Thread(() -> {
                     try {
-                        ShizukuShell.warmUp(MainActivity.this);
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                        if (prefs.getBoolean("startup_request_shell", true)) {
+                            ShizukuShell.warmUp(MainActivity.this);
+                        }
                     } catch (Exception ignored) {
                     }
                 }, "shizuku-warmup").start();
@@ -1371,15 +1374,41 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }, "access-warmup").start();
                 new Thread(() -> {
                     try {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                        boolean reqRoot = prefs.getBoolean("startup_request_root", true);
+                        boolean reqShell = prefs.getBoolean("startup_request_shell", true);
                         RootManager rm = RootManager.getInstance(MainActivity.this);
-                        if (rm.autoEnableRootIfAvailable()) {
-                            handler.post(() -> {
-                                try {
-                                    Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
-                                    refreshSidebarAsync(getSidebarSectionOrder());
-                                } catch (Exception ignored) {
+
+                        boolean gotRoot = false;
+                        if (reqRoot) {
+                            if (rm.autoEnableRootIfAvailable()) {
+                                gotRoot = true;
+                                handler.post(() -> {
+                                    try {
+                                        Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
+                                        refreshSidebarAsync(getSidebarSectionOrder());
+                                    } catch (Exception ignored) {
+                                    }
+                                });
+                            } else if (rm.isRootMode()) {
+                                gotRoot = true;
+                            }
+                        }
+
+                        if (!gotRoot) {
+                            if (reqShell) {
+                                if (ShizukuManager.isAvailable(MainActivity.this) || rikka.shizuku.Shizuku.pingBinder()) {
+                                    rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                                    handler.post(() -> {
+                                        try {
+                                            refreshSidebarAsync(getSidebarSectionOrder());
+                                        } catch (Exception ignored) {
+                                        }
+                                    });
                                 }
-                            });
+                            } else {
+                                rm.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+                            }
                         }
                         try {
                             rm.kickNsProbe();
@@ -1387,7 +1416,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }
                     } catch (Exception ignored) {
                     }
-                }, "root-probe").start();
+                }, "privilege-startup").start();
                 new Thread(() -> {
                     try {
                         int purged = io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(MainActivity.this);

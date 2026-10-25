@@ -1693,4 +1693,9 @@
     <string name="recycle_bin_reason_delete">محذوف</string>
     <string name="recycle_bin_options">خيارات سلة المحذوفات</string>
     <string name="enable_recycle_bin">تفعيل سلة المحذوفات</string>
+    <string name="startup">بدء التشغيل</string>
+    <string name="request_root_permission">طلب صلاحية الروت</string>
+    <string name="request_root_permission_summary">طلب صلاحيات الروت عند بدء التشغيل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل للتطبيق.</string>
+    <string name="request_shell_permission">طلب صلاحية الشل (شيزوكو)</string>
+    <string name="request_shell_permission_summary">إذا لم يتم الحصول على صلاحية الروت عند بدء التشغيل، فسيحاول MP استدعاء شيزوكو للحصول على صلاحية الشل. بعد تعديل هذا الإعداد، يلزم إعادة التشغيل.</string>
 </resources>
