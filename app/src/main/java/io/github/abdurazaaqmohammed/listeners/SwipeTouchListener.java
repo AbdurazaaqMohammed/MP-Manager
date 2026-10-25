@@ -40,6 +40,8 @@ public class SwipeTouchListener implements View.OnTouchListener {
 
     private boolean swipeDecided;
     private final MainActivity context;
+    /** Row view currently touched; needed for the long-press haptic feedback. */
+    private View touchView;
 
     public SwipeTouchListener(MainActivity context,
                               View.OnClickListener clickListener,
@@ -104,7 +106,10 @@ public class SwipeTouchListener implements View.OnTouchListener {
                     public void onLongPress(@NonNull MotionEvent e) {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
-                            originalLongClickListener.onLongClick(null);
+                            if (touchView != null) {
+                                touchView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                            }
+                            originalLongClickListener.onLongClick(touchView);
                         }
                     }
                 });
@@ -144,6 +149,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
 
             case MotionEvent.ACTION_DOWN:
                 context.onPaneTouched(pane);
+                touchView = v;
                 initialX = event.getRawX();
                 initialY = event.getRawY();
                 isSwiping = false;

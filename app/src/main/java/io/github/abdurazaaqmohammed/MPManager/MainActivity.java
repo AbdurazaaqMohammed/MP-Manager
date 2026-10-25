@@ -1168,20 +1168,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             String inputStr = input.getText().toString();
                             if (new File(ogFolder, inputStr).mkdir()) loadFolderInPane(ogFolder, isPane1);
                             else if (mkdirViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                            else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_folder, inputStr));
+                            else Extensions.showMessage(MainActivity.this,
+                                    rss.getString(R.string.failed_to_create_folder, inputStr),
+                                    FileUtils.describeWriteProblem(this, new File(ogFolder, inputStr)));
                         })
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
                         .setPositiveButton(rss.getString(R.string.file), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
                             String inputStr = input.getText().toString();
+                            File newFile = new File(ogFolder, inputStr);
                             try {
-                                if (new File(ogFolder, inputStr).createNewFile()) loadFolderInPane(ogFolder, isPane1);
+                                if (newFile.createNewFile()) loadFolderInPane(ogFolder, isPane1);
                                 else if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                                else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
+                                else Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.failed_to_create_file, inputStr),
+                                        FileUtils.describeWriteProblem(this, newFile));
                             } catch (IOException e) {
                                 if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                                else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
+                                else Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.failed_to_create_file, inputStr),
+                                        e.toString() + "\n" + FileUtils.describeWriteProblem(this, newFile));
                             }
                         }).create();
                 io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, false);
@@ -2451,6 +2458,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private boolean showMsgOnLongPress(View v) {
+        v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
