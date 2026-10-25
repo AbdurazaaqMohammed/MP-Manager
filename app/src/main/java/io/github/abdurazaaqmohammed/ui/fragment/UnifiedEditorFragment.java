@@ -1263,7 +1263,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         switch (n.substring(dot + 1)) {
             case "xml":
             case "axml": return "text.xml";
-            case "java": return "source.java";
+            case "java":
+            case "class": return "source.java";
+            case "smali": return "source.smali";
             case "c":
             case "h": return "source.c";
             case "cpp":

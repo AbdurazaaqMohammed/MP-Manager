@@ -1121,6 +1121,38 @@ public class FileOpener {
                             .putExtra(io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
                     context.startActivity(intent);
                 });
+            } else if (fileName.endsWith(".class")) {
+                withReadableCopy(file, readable -> {
+                    new Thread(() -> {
+                        try {
+                            jadx.api.JadxArgs args = new jadx.api.JadxArgs();
+                            args.setSkipResources(true);
+                            args.setShowInconsistentCode(true);
+                            args.setInputFiles(com.google.common.collect.ImmutableList.of(readable));
+                            jadx.api.JadxDecompiler decompiler = new jadx.api.JadxDecompiler(args);
+                            try {
+                                decompiler.load();
+                                StringBuilder sb = new StringBuilder();
+                                for (jadx.api.JavaClass jc : decompiler.getClasses()) {
+                                    jc.decompile();
+                                    sb.append(jc.getCode()).append("\n\n");
+                                }
+                                String decompiled = sb.toString().trim();
+                                if (decompiled.isEmpty()) decompiled = "// No classes found or decompiled";
+                                String finalCode = decompiled;
+                                context.runOnUiThread(() -> {
+                                    context.startActivity(rootAwareEditorIntent(readable, file)
+                                            .putExtra(Intent.EXTRA_TEXT, finalCode)
+                                            .putExtra("path", readable.getPath()));
+                                });
+                            } finally {
+                                try { decompiler.close(); } catch (Exception ignored) {}
+                            }
+                        } catch (Exception e) {
+                            new ErrorUtil(context).showError(e);
+                        }
+                    }).start();
+                });
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
