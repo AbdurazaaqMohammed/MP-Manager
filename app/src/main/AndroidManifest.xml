@@ -158,6 +158,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
+            android:name="io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
+        <activity
             android:name="io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"

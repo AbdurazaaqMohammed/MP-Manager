@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
+import io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -195,6 +196,12 @@ public class FileOpener {
             actionNames.add(context.getString(R.string.pdf_viewer));
             actionIcons.add(R.drawable.pdf_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_PDF, file, fileName, zipFile, zipEntryPath));
+        }
+        if (FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.HTML_EXTS)) {
+            actionIds.add(BUILTIN_HTML);
+            actionNames.add(context.getString(R.string.html_viewer));
+            actionIcons.add(R.drawable.language_24px);
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_HTML, file, fileName, zipFile, zipEntryPath));
         }
         if (lower.endsWith(".arsc")) {
             actionIds.add(BUILTIN_ARSC);
@@ -331,6 +338,7 @@ public class FileOpener {
     private static final String BUILTIN_APK = "apk";
     private static final String BUILTIN_FONT = "font";
     private static final String BUILTIN_PDF = "pdf";
+    private static final String BUILTIN_HTML = "html";
     private static final String BUILTIN_ARSC = "arsc";
     private static final String BUILTIN_XML = "xml";
     private static final String BUILTIN_SIG = "sig";
@@ -393,6 +401,10 @@ public class FileOpener {
                 if (file == null) return;
                 showPdfViewer(file, fileName);
                 return;
+            case BUILTIN_HTML:
+                if (file == null) return;
+                showHtmlViewer(file, fileName);
+                return;
             case BUILTIN_ARSC:
                 if (file == null) return;
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
@@ -424,6 +436,7 @@ public class FileOpener {
             case BUILTIN_APK:
             case BUILTIN_FONT:
             case BUILTIN_PDF:
+            case BUILTIN_HTML:
             case BUILTIN_ARSC:
             case BUILTIN_XML:
             case BUILTIN_SIG:
@@ -765,6 +778,12 @@ public class FileOpener {
                 new ErrorUtil(context).showError(e);
             }
         });
+    }
+
+    private void showHtmlViewer(File readable, String fileName) {
+        context.startActivity(new Intent(context, HtmlViewerActivity.class)
+                .putExtra(HtmlViewerActivity.EXTRA_PATH, readable.getAbsolutePath())
+                .putExtra(HtmlViewerActivity.EXTRA_NAME, fileName));
     }
 
     private void showXmlFunctions(File file, String fileName) {
@@ -1115,6 +1134,8 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showFontPreview(readable, fileName));
             } else if (ext.equals(".pdf")) {
                 withReadableCopy(file, readable -> showPdfViewer(readable, fileName));
+            } else if (FileUtils.matchExt(ext, FileUtils.HTML_EXTS)) {
+                withReadableCopy(file, readable -> showHtmlViewer(readable, fileName));
             } else if (fileName.endsWith(".mtcr") || fileName.endsWith(".dexdiff")) {
                 withReadableCopy(file, readable -> {
                     Intent intent = new Intent(context, io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.class)

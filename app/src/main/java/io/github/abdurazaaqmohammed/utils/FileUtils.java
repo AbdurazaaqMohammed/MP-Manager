@@ -31,6 +31,7 @@ public class FileUtils {
     public static final String[] AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"};
     public static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"};
     public static final String[] TEXT_EXTS = {".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".java", ".kt", ".md", ".smali", ".pro", ".gradle", ".properties"};
+    public static final String[] HTML_EXTS = {".html", ".htm", ".xhtml"};
 
     public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
         if (files1 == null || files2 == null)

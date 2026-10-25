@@ -252,6 +252,14 @@
     <string name="media_player">Media player</string>
     <string name="apk_info">APK info</string>
     <string name="pdf_viewer">PDF viewer</string>
+    <string name="html_viewer">HTML preview</string>
+    <string name="html_menu_refresh">Reload</string>
+    <string name="html_menu_view_source">View source</string>
+    <string name="html_menu_open_external">Open in browser</string>
+    <string name="html_source_truncated">truncated, file is larger than the preview limit</string>
+    <string name="html_warn_proceed">I understand, open it</string>
+    <string name="html_warning_title">Security warning</string>
+    <string name="html_warning_message">You are about to render an HTML file in the built-in browser.\n\nThis file is UNTRUSTED content. Although the preview disables JavaScript, cookies and storage, the browser engine itself can be exploited by a malicious page to run code, read files or steal data. This risk is much higher on older Android versions, whose system WebView no longer receives security updates.\n\nOnly continue if you trust the source of this file. When in doubt, open it as text instead.</string>
     <string name="not_an_apk">Not an APK file</string>
     <string name="cannot_open_item">This item cannot be opened with the selected function</string>
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
