@@ -219,6 +219,46 @@ public class FileUtils {
                 : new FileOutputStream(file);
     }
 
+    /**
+     * Human-readable diagnostics for a failed create/rename/delete on
+     * {@code target}: existence/writability of the target and its parent, plus
+     * a hint when the path sits on a removable (secondary) storage volume,
+     * which Android only lets apps write through SAF or an elevated backend.
+     */
+    public static String describeWriteProblem(Context context, File target) {
+        StringBuilder sb = new StringBuilder("Path: ").append(target.getAbsolutePath());
+        try {
+            sb.append("\nExists: ").append(target.exists());
+            File parent = target.getParentFile();
+            if (parent == null) {
+                sb.append("\nParent: (none)");
+            } else {
+                sb.append("\nParent exists: ").append(parent.exists());
+                sb.append("\nParent writable: ").append(parent.canWrite());
+            }
+            sb.append("\nElevated access available: ").append(AccessManager.fileOpsOn(context));
+        } catch (Exception ignored) {
+        }
+        if (isOnSecondaryVolume(target)) {
+            sb.append("\nThis is a removable storage volume (SD card). Android restricts writes there; try root/Shizuku access, or on Android 10 the system only allows SAF access to it.");
+        }
+        return sb.toString();
+    }
+
+    /** True for paths like /storage/0000-0000/... (removable/secondary volumes). */
+    public static boolean isOnSecondaryVolume(File f) {
+        try {
+            String p = f.getAbsolutePath();
+            if (!p.startsWith("/storage/")) return false;
+            String rest = p.substring("/storage/".length());
+            int slash = rest.indexOf('/');
+            String vol = slash == -1 ? rest : rest.substring(0, slash);
+            return vol.matches("[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static void copyFile(File sourceFile, File destinationFile) throws IOException {
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {

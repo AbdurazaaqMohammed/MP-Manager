@@ -205,7 +205,9 @@ public class EntryDialogs {
                             context.refreshPaneAfterChange(pane1, s);
                             context.flashPaneItem(pane1, s);
                         } else {
-                            Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                            Extensions.showMessage(context,
+                                    context.rss.getString(R.string.failed_to_renamex, fileName),
+                                    FileUtils.describeWriteProblem(context, dest));
                         }
                     }
                 });
@@ -346,6 +348,28 @@ public class EntryDialogs {
                                     }
                                 }
                                 pm.setProgress(totalSelected, totalSelected);
+                                int failures = 0;
+                                File firstFailure = null;
+                                for (File f : selectedFiles) {
+                                    boolean gone;
+                                    try {
+                                        gone = !f.exists() && !AccessManager.exists(context, f.getAbsolutePath());
+                                    } catch (Exception e) {
+                                        gone = true;
+                                    }
+                                    if (!gone) {
+                                        failures++;
+                                        if (firstFailure == null) firstFailure = f;
+                                    }
+                                }
+                                if (failures > 0 && firstFailure != null) {
+                                    final int failedCount = failures;
+                                    final File failedFile = firstFailure;
+                                    String details = FileUtils.describeWriteProblem(context, failedFile);
+                                    context.handler.post(() -> Extensions.showMessage(context,
+                                            context.rss.getString(R.string.delete_failed_x, failedCount),
+                                            details));
+                                }
                                 context.handler.post(() -> {
                                     state.clearSelection();
                                     context.refreshPaneAfterChange(pane1, null);
@@ -379,6 +403,18 @@ public class EntryDialogs {
                             } else {
                                 if (file.isDirectory()) Util.deleteDir(file);
                                 else file.delete();
+                            }
+                            boolean stillThere;
+                            try {
+                                stillThere = file.exists() || AccessManager.exists(context, file.getAbsolutePath());
+                            } catch (Exception e) {
+                                stillThere = false;
+                            }
+                            if (stillThere) {
+                                String details = FileUtils.describeWriteProblem(context, file);
+                                context.handler.post(() -> Extensions.showMessage(context,
+                                        context.rss.getString(R.string.delete_failed, file.getName()),
+                                        details));
                             }
                             pm.setProgress(total, total);
                             context.handler.post(() -> {

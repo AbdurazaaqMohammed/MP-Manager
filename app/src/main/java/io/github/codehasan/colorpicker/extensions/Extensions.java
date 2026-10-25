@@ -49,6 +49,26 @@ public final class Extensions {
         }
     }
 
+    /**
+     * Message with a "Details" action that opens a dialog with the full
+     * diagnostics/stack trace, for failures whose one-line text ("Failed to
+     * create folder X") hides the actual cause.
+     */
+    public static void showMessage(Activity activity, CharSequence message, CharSequence details) {
+        boolean anchored = activity instanceof MainActivity && activity.hasWindowFocus();
+        View anchor = activity.findViewById(anchored ? R.id.bottomBar : android.R.id.content);
+        if (details == null || details.length() == 0) {
+            showMessage(activity, message);
+            return;
+        }
+        Snackbar.make(anchor, message, Snackbar.LENGTH_LONG)
+                .setAnchorView(anchored ? anchor : null)
+                .setAction(R.string.details, v ->
+                        new io.github.abdurazaaqmohammed.utils.ErrorUtil(activity)
+                                .showError(String.valueOf(details)))
+                .show();
+    }
+
     public static void showMessage(Dialog d, CharSequence message) {
         Snackbar.make(d.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
     }
