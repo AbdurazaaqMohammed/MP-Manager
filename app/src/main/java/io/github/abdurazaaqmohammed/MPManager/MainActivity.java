@@ -2811,6 +2811,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             refreshAllPanes();
         } catch (Exception ignored) {
         }
+        try {
+            fileSearch.onActivityResume();
+        } catch (Exception ignored) {
+        }
     }
 
 

@@ -78,12 +78,31 @@ public class FileSearchController {
         return lastSearchStartDir;
     }
 
+    private AlertDialog activeSearchDialog = null;
+    private boolean shouldRestoreSearchDialogOnResume = false;
+
+    public void onActivityResume() {
+        if (shouldRestoreSearchDialogOnResume && hasSearchResults()) {
+            if (activeSearchDialog == null || !activeSearchDialog.isShowing()) {
+                showLastSearchResultsDialog();
+            }
+        }
+    }
+
     public void clearLastSearchResults() {
         lastSearchResults = null;
         lastSearchStartDir = null;
         lastXmlHits = null;
         lastXmlQuery = null;
         lastSearchType = SearchType.NONE;
+        shouldRestoreSearchDialogOnResume = false;
+        searchResultsScrollState = null;
+        if (activeSearchDialog != null && activeSearchDialog.isShowing()) {
+            try {
+                activeSearchDialog.dismiss();
+            } catch (Exception ignored) {}
+        }
+        activeSearchDialog = null;
     }
 
     public void showLastSearchResultsDialog() {
@@ -420,18 +439,30 @@ public class FileSearchController {
                 .setView(root)
                 .create();
 
+        activeSearchDialog = dialog;
+        shouldRestoreSearchDialogOnResume = true;
+
+        dialog.setOnDismissListener(d -> {
+            if (activeSearchDialog == dialog) {
+                activeSearchDialog = null;
+            }
+        });
+
         expandBtn.setOnClickListener(v -> {
+            shouldRestoreSearchDialogOnResume = false;
             dialog.dismiss();
             openSearchResultsInPane(startDir, results, isPane1);
         });
 
         clearBtn.setOnClickListener(v -> {
+            shouldRestoreSearchDialogOnResume = false;
             searchResultsScrollState = null;
             clearLastSearchResults();
             dialog.dismiss();
         });
 
         closeBtn.setOnClickListener(v -> {
+            shouldRestoreSearchDialogOnResume = false;
             if (list.getLayoutManager() != null) {
                 searchResultsScrollState = list.getLayoutManager().onSaveInstanceState();
             }
@@ -741,12 +772,24 @@ public class FileSearchController {
         AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
                 .setTitle("search results (" + groupList.size() + ")")
                 .setView(list)
-                .setNegativeButton(R.string.close, null)
+                .setNegativeButton(R.string.close, (d, w) -> {
+                    shouldRestoreSearchDialogOnResume = false;
+                })
                 .setNeutralButton("CLEAR", (d, w) -> {
+                    shouldRestoreSearchDialogOnResume = false;
                     lastXmlHits = null;
                     lastXmlQuery = null;
                 })
                 .create();
+
+        activeSearchDialog = dialog;
+        shouldRestoreSearchDialogOnResume = true;
+
+        dialog.setOnDismissListener(d -> {
+            if (activeSearchDialog == dialog) {
+                activeSearchDialog = null;
+            }
+        });
         list.setAdapter(new RecyclerView.Adapter<>() {
             @NonNull
             @Override
