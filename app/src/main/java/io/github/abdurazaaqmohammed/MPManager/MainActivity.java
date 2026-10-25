@@ -1400,7 +1400,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
                         if (!gotRoot) {
                             if (reqShell) {
-                                if (io.github.abdurazaaqmohammed.utils.ShizukuShell.isGranted() || rikka.shizuku.Shizuku.pingBinder()) {
+                                if (io.github.abdurazaaqmohammed.utils.ShizukuManager.hasPermission() || rikka.shizuku.Shizuku.pingBinder()) {
                                     rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
                                     handler.post(() -> {
                                         try {

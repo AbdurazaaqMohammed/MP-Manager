@@ -2937,9 +2937,8 @@ public class DexEditorActivity extends BaseActivity {
             com.android.dx.dex.file.DexFile dexFile = new com.android.dx.dex.file.DexFile(dexOptions);
             com.android.dx.cf.direct.DirectClassFile cf = new com.android.dx.cf.direct.DirectClassFile(
                     new com.android.dx.util.ByteArray(classBytes), f.getName(), false);
-            cf.setAttributeFactory(com.android.dx.cf.direct.StdAttributeFactory.THE_ONE);
-            com.android.dx.command.DxContext dxContext = new com.android.dx.command.DxContext();
-            com.android.dx.dex.file.ClassDefItem item = com.android.dx.dex.cf.CfTranslator.translate(dxContext, cf, classBytes, cfOptions, dexOptions, dexFile);
+            com.android.dx.dex.cf.CfOptions cfOptions = new com.android.dx.dex.cf.CfOptions();
+            com.android.dx.dex.file.ClassDefItem item = com.android.dx.dex.cf.CfTranslator.translate(cf, classBytes, cfOptions, dexOptions, dexFile);
             dexFile.add(item);
             byte[] dexBytes = dexFile.toDex(null, false);
             com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile backedDex =
