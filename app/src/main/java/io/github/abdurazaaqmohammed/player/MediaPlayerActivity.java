@@ -380,7 +380,7 @@ public class MediaPlayerActivity extends BaseActivity implements
                         isSwipeSeeking = false;
                         if (seekOverlay != null) seekOverlay.setVisibility(View.GONE);
                         playerManager.seekTo(seekTargetPosition);
-                        if (action == MotionEvent.ACTION_UP && !playerManager.isPlaying()) {
+                        if (action == MotionEvent.ACTION_UP && playerManager.getState() != PlayerManager.PlayState.PLAYING) {
                             playerManager.play();
                         }
                         showControlsTemporarily();

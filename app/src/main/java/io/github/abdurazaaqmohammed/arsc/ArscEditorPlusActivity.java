@@ -53,7 +53,9 @@ import com.reandroid.arsc.value.ValueType;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
+import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1099,7 +1101,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
             String typeName = spec.getTypeName();
             File tempXml = new File(getCacheDir(), (typeName != null ? typeName : "type") + "_type_info.xml");
-            FileUtils.writeText(tempXml, sb.toString());
+            try (FileOutputStream fos = new FileOutputStream(tempXml)) {
+                fos.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
 
             Intent intent = new Intent(this, TextEditorActivity.class);
             intent.setAction(Intent.ACTION_VIEW);

@@ -48,6 +48,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -89,6 +90,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -2800,12 +2802,12 @@ public class DexEditorActivity extends BaseActivity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density + 0.5f);
         layout.setPadding(pad, pad / 2, pad, 0);
 
-        TextInputLayout pkgBox = UiFields.box(this, getString(R.string.package_name));
+        TextInputLayout pkgBox = UiFields.box(this, "Package name");
         EditText etPkg = UiFields.field(pkgBox, InputType.TYPE_CLASS_TEXT);
         etPkg.setText(defaultPkg);
         layout.addView(pkgBox);
 
-        TextInputLayout classBox = UiFields.box(this, getString(R.string.class_name));
+        TextInputLayout classBox = UiFields.box(this, "Class name");
         EditText etClass = UiFields.field(classBox, InputType.TYPE_CLASS_TEXT);
         layout.addView(classBox);
 
@@ -2912,7 +2914,7 @@ public class DexEditorActivity extends BaseActivity {
                 for (String path : filePaths) {
                     File f = new File(path);
                     if (!f.isFile()) continue;
-                    String code = FileUtils.readText(f);
+                    String code = modder.hub.dexeditor.utils.FileUtil.readFile(path);
                     if (code == null || code.trim().isEmpty()) continue;
                     ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
                     classTree.saveClassDef(def);
