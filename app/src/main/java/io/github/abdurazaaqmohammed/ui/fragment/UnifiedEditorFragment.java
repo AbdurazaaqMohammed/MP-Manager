@@ -1348,6 +1348,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             if (cachedColorScheme == null) {
                 cachedColorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
+                cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
             }
             editor.setColorScheme(cachedColorScheme);
         } catch (Exception e) {
@@ -1690,6 +1691,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         themeSource);
             } catch (Exception e) { Log.e("UnifiedEditor", "Smali language load error", e); }
             cachedColorScheme = TextMateColorScheme.create(registry);
+            cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) { Log.e("UnifiedEditor", "Static init error", e); }
     }

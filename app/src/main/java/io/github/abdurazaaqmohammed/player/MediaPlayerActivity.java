@@ -16,7 +16,9 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -77,6 +79,12 @@ public class MediaPlayerActivity extends BaseActivity implements
     private int fitRetryCount;
     private SharedPreferences prefs;
     private GestureDetector gestureDetector;
+    private View seekOverlay;
+    private TextView seekDeltaText, seekTargetText;
+    private boolean isSwipeSeeking;
+    private float touchStartX, touchStartY;
+    private int seekStartPosition, seekTargetPosition;
+    private VelocityTracker velocityTracker;
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable autoHideRunnable = this::hideControls;
     private final Runnable autoHideUnlockRunnable = this::hideUnlock;
@@ -140,6 +148,9 @@ public class MediaPlayerActivity extends BaseActivity implements
         bufferingIndicator = findViewById(R.id.bufferingIndicator);
         subtitleView = findViewById(R.id.subtitleView);
         applySubtitleStyle();
+        seekOverlay = findViewById(R.id.seekOverlay);
+        seekDeltaText = findViewById(R.id.seekDeltaText);
+        seekTargetText = findViewById(R.id.seekTargetText);
         toolbar = findViewById(R.id.toolbar);
 
         btnPlayPause = findViewById(R.id.btnPlayPause);
@@ -312,6 +323,80 @@ public class MediaPlayerActivity extends BaseActivity implements
         });
 
         videoContainer.setOnTouchListener((v, event) -> {
+            if (controlsLocked) {
+                gestureDetector.onTouchEvent(event);
+                return true;
+            }
+            if (velocityTracker == null) {
+                velocityTracker = VelocityTracker.obtain();
+            }
+            velocityTracker.addMovement(event);
+
+            int action = event.getActionMasked();
+            switch (action) {
+                case MotionEvent.ACTION_DOWN:
+                    touchStartX = event.getX();
+                    touchStartY = event.getY();
+                    seekStartPosition = playerManager.getCurrentPosition();
+                    seekTargetPosition = seekStartPosition;
+                    isSwipeSeeking = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    float dx = event.getX() - touchStartX;
+                    float dy = event.getY() - touchStartY;
+                    if (!isSwipeSeeking) {
+                        float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+                        if (Math.abs(dx) > touchSlop && Math.abs(dx) > Math.abs(dy) * 1.2f) {
+                            isSwipeSeeking = true;
+                            if (controlsVisible) hideControls();
+                            if (seekOverlay != null) seekOverlay.setVisibility(View.VISIBLE);
+                        }
+                    }
+                    if (isSwipeSeeking) {
+                        velocityTracker.computeCurrentVelocity(1000);
+                        float vx = velocityTracker.getXVelocity();
+                        float speedFactor = 1.0f + Math.min(Math.abs(vx) / 600f, 4.0f);
+                        int duration = playerManager.getDuration();
+                        float screenWidth = Math.max(1, v.getWidth());
+                        float progressFraction = (dx / screenWidth) * speedFactor;
+                        long deltaMs = (long) (progressFraction * Math.min(duration > 0 ? duration : 300000, 180000));
+                        int target = (int) Math.max(0, Math.min(duration > 0 ? duration : Integer.MAX_VALUE, seekStartPosition + deltaMs));
+                        seekTargetPosition = target;
+
+                        if (seekOverlay != null) {
+                            seekOverlay.setVisibility(View.VISIBLE);
+                            long diffMs = target - seekStartPosition;
+                            String sign = diffMs >= 0 ? "+" : "-";
+                            long absDiff = Math.abs(diffMs);
+                            seekDeltaText.setText(sign + formatTime(absDiff));
+                            seekTargetText.setText(formatTime(target) + " / " + formatTime(duration));
+                        }
+                        return true;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (isSwipeSeeking) {
+                        isSwipeSeeking = false;
+                        if (seekOverlay != null) seekOverlay.setVisibility(View.GONE);
+                        playerManager.seekTo(seekTargetPosition);
+                        if (action == MotionEvent.ACTION_UP && !playerManager.isPlaying()) {
+                            playerManager.play();
+                        }
+                        showControlsTemporarily();
+                        if (velocityTracker != null) {
+                            velocityTracker.recycle();
+                            velocityTracker = null;
+                        }
+                        return true;
+                    }
+                    if (velocityTracker != null) {
+                        velocityTracker.recycle();
+                        velocityTracker = null;
+                    }
+                    break;
+            }
+
             gestureDetector.onTouchEvent(event);
             return true;
         });

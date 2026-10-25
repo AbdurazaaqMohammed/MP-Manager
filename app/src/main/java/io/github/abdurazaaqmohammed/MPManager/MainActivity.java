@@ -1282,7 +1282,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
 
                 if (fileSearch.hasSearchResults()) {
-                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.baseline_search_24);
+                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.ic_eye_mt);
                 }
                 if (a instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) a).isSearchResultsMode()) {
                     menu.add(0, 19, 0, getString(R.string.clear_search_results)).setIcon(R.drawable.close_24px);

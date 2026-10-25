@@ -174,6 +174,11 @@ public final class FileSearch {
     }
 
     public static List<ContentHit> searchInXmlFiles(File root, String query, boolean matchCase, boolean regex, Progress progress) {
+        return searchInXmlFiles(root, query, "Xml", false, matchCase, regex, progress);
+    }
+
+    public static List<ContentHit> searchInXmlFiles(File root, String query, String searchType, boolean id2Name,
+            boolean matchCase, boolean regex, Progress progress) {
         List<ContentHit> hits = new ArrayList<>();
         Pattern pattern = null;
         if (regex) {
