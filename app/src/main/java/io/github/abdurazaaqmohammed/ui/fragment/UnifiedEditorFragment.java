@@ -646,13 +646,18 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             case "np" -> new SchemeNotepadXX();
             default -> null;
         };
-        if (ecs != null) editor.setColorScheme(ecs);
+        if (ecs != null) {
+            ecs.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            editor.setColorScheme(ecs);
+        }
     }
 
     public void applyPreferences() {
         SharedPreferences editorPrefs = requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
         if (!isSmali && currentSyntaxScope == null) {
             applySchemePreference();
+        } else if (editor != null && editor.getColorScheme() != null) {
+            editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
         }
         String fontType = editorPrefs.getString("font_type", "normal");
         Typeface typeface = fontType.equals("normal") ? Typeface.DEFAULT : Typeface.MONOSPACE;
@@ -775,6 +780,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void startSearch(String query, int type, boolean ignoreCase, boolean next) {
         try {
+            if (editor != null && editor.getColorScheme() != null) {
+                editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            }
             EditorSearcher searcher = editor.getSearcher();
             searcher.setCyclicJumping(true); // Find wraps around instead of dying at the last match
             lastSearchQuery = query;
