@@ -1055,7 +1055,14 @@ public class FileOpener {
             withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
         } else {
             String bak = ".bak";
-            if(ext.equals(bak)) {
+            if (ext.equals(bak) && ArchiveUtil.isMiuiOrAndroidBackup(file)) {
+                dialogUtil.styleAlertDialog(
+                        dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
+                            dialog.dismiss();
+                            if (which == 0) withReadableCopy(file, fileOps::extractArchive);
+                            else showOpenWithDialog(file, fileName);
+                        }).create());
+            } else if(ext.equals(bak)) {
                 View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
                 context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
                 EditText tv = et.findViewById(R.id.m_et_edittext);
@@ -1108,6 +1115,12 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showFontPreview(readable, fileName));
             } else if (ext.equals(".pdf")) {
                 withReadableCopy(file, readable -> showPdfViewer(readable, fileName));
+            } else if (fileName.endsWith(".mtcr") || fileName.endsWith(".dexdiff")) {
+                withReadableCopy(file, readable -> {
+                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.class)
+                            .putExtra(io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
+                    context.startActivity(intent);
+                });
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }

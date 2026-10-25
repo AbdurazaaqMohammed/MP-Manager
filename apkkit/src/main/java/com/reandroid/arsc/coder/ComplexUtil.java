@@ -92,7 +92,12 @@ public class ComplexUtil {
             if(scale){
                 value = value * 100.0f;
             }
-            return Float.toString(value);
+            float rounded = Math.round(value);
+            if (Math.abs(value - rounded) < 0.0005f) {
+                return Integer.toString((int) rounded);
+            }
+            String s = Float.toString(value);
+            return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
         }
         public static Radix forFlag(int flag){
             if(flag == 0){

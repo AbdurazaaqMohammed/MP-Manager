@@ -298,39 +298,46 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (useActivity) MediaPlayerActivity.openAndPlay(this, filePath);
         else {
             PlayerManager pm = PlayerManager.getInstance(this);
-            try {
-                File cur = new File(filePath);
-                File dir = cur.getParentFile();
-                if (dir != null && dir.isDirectory()) {
-                    File[] all = dir.listFiles();
-                    if (all != null) {
-                        List<File> media = new ArrayList<>();
-                        for (File f : all) {
-                            if (f == null || !f.isFile()) continue;
-                            String n = f.getName().toLowerCase(Locale.ROOT);
-                            if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
-                                    || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
-                                    || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
-                                    || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
-                                    || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
-                        }
-                        media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
-                        if (!media.isEmpty()) {
-                            List<MediaItem> q = new ArrayList<>();
-                            int start = 0;
-                            for (int i = 0; i < media.size(); i++) {
-                                q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
-                                if (media.get(i).getAbsolutePath().equals(cur.getAbsolutePath())) start = i;
-                            }
-                            pm.play(q, start);
-                            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
-                            return;
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
             pm.play(PlayerManager.buildMediaItem(this, filePath));
             if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
+            new Thread(() -> {
+                try {
+                    File cur = new File(filePath);
+                    File dir = cur.getParentFile();
+                    if (dir != null && dir.isDirectory()) {
+                        File[] all = dir.listFiles();
+                        if (all != null) {
+                            List<File> media = new ArrayList<>();
+                            for (File f : all) {
+                                if (f == null || !f.isFile()) continue;
+                                String n = f.getName().toLowerCase(Locale.ROOT);
+                                if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
+                                        || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
+                                        || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
+                                        || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
+                                        || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
+                            }
+                            media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                            if (media.size() > 1) {
+                                List<MediaItem> q = new ArrayList<>();
+                                int start = 0;
+                                for (int i = 0; i < media.size(); i++) {
+                                    String path = media.get(i).getAbsolutePath();
+                                    if (path.equals(cur.getAbsolutePath())) {
+                                        q.add(pm.getCurrentItem() != null ? pm.getCurrentItem() : PlayerManager.buildMediaItemFast(path));
+                                        start = i;
+                                    } else {
+                                        q.add(PlayerManager.buildMediaItemFast(path));
+                                    }
+                                }
+                                final int startIdx = start;
+                                final List<MediaItem> fullQueue = q;
+                                runOnUiThread(() -> pm.setQueue(fullQueue, startIdx));
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }).start();
         }
     }
 
@@ -1247,6 +1254,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 menu.add(0, 1, 0, getString(R.string.filter)).setIcon(R.drawable.baseline_filter_list_24);
                 menu.add(0, 2, 0, getString(R.string.search)).setIcon(R.drawable.baseline_search_24);
                 menu.add(0, 15, 0, getString(R.string.find_in_files)).setIcon(R.drawable.ic_search_replace);
+                menu.add(0, 17, 0, getString(R.string.xml_search)).setIcon(R.drawable.baseline_search_24);
                 menu.add(0, 3, 0, getString(R.string.menu_select_all)).setIcon(R.drawable.baseline_select_all_24);
                 menu.add(0, 4, 0, getString(R.string.sort)).setIcon(R.drawable.baseline_sort_24);
 
@@ -1266,6 +1274,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     hiddenMenu.add(0, 9, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
                 }
 
+                if (fileSearch.hasSearchResults()) {
+                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.baseline_search_24);
+                }
+                if (a instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) a).isSearchResultsMode()) {
+                    menu.add(0, 19, 0, getString(R.string.clear_search_results)).setIcon(R.drawable.close_24px);
+                }
                 menu.add(0, 10, 0, getString(R.string.menu_add_bookmark)).setIcon(R.drawable.baseline_bookmark_24);
                 menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
                 menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
@@ -1312,6 +1326,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             break;
                         case 15:
                             showFindInFilesDialog();
+                            break;
+                        case 17:
+                            fileSearch.showXmlSearchDialog();
+                            break;
+                        case 18:
+                            fileSearch.showLastSearchResultsDialog();
+                            break;
+                        case 19:
+                            clearSearchResults(lastPaneSelected == 1);
                             break;
                         case 3:
                             if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
@@ -1634,7 +1657,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if(a instanceof MainFilesArrayAdapter adapter) {
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
-                    else {
+                    else if (adapter.isSearchResultsMode()) {
+                        clearSearchResults(adapter.pane1);
+                    } else {
                         String s = adapter.currentZipPath;
                         if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
                             char[] chars = s.toCharArray();
@@ -1683,6 +1708,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void navigateForward(boolean pane1) {
         navigation.navigateForward(pane1);
+    }
+
+    public void clearSearchResults(boolean pane1) {
+        File dir = fileSearch.getLastSearchStartDir();
+        if (dir == null) dir = pane1 ? pane1Folder : pane2Folder;
+        loadFolderInPaneAsync(dir, pane1);
     }
 
     private void updateNavigationButtons() {
@@ -1815,7 +1846,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             .toArray(File[]::new);
                     if (viaRoot.length > 0 || files == null) files = viaRoot;
                 }
-                if ((files == null || files.length == 0) && shizukuDir) {
+                if ((files == null || files.length == 0) && (shizukuDir || rootListingPath || !folder.canRead())) {
                     try {
                         if (RootManager.getInstance(this).isRootAvailable()) {
                             File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
@@ -1826,6 +1857,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }
                     } catch (Exception ignored) {}
                 }
+            } else {
+                try {
+                    if (RootManager.getInstance(this).isRootAvailable()) {
+                        File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                        if (directRoot != null) {
+                            directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
+                            if (directRoot.length > 0 || files == null) files = directRoot;
+                        }
+                    }
+                } catch (Exception ignored) {}
             }
             if (files == null && shizukuDir && AccessManager.active(this) != AccessManager.Backend.ROOT) {
                 boolean rootAvailable = false;
@@ -2629,7 +2670,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (outer != null) loadFolderInPane(outer, pane1);
     }
 
-    private MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {
+    public MainFilesArrayAdapter getCurrentFilesAdapter() {
+        return paneFilesAdapter(lastPaneSelected == 1);
+    }
+
+    public MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         if (pane != null && pane.getAdapter() instanceof MainFilesArrayAdapter adapter) return adapter;
         return null;

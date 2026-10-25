@@ -126,7 +126,7 @@ public final class DexCompareEngine {
         public final String type;
         public final Status status;
 
-        ComparedClass(String type, Status status) {
+        public ComparedClass(String type, Status status) {
             this.type = type;
             this.status = status;
         }

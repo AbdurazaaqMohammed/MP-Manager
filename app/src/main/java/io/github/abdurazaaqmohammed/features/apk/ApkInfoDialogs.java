@@ -1022,8 +1022,9 @@ public class ApkInfoDialogs {
                 else if (ApkInfoUtil.isDowngrade(context, packageInfo))
                     comparisonText += " (" + context.getString(R.string.downgrade) + ")";
                 final String comparison = comparisonText;
-                final String finalVerName = TextUtils.isEmpty(verName)
-                        ? context.getString(R.string.version_name_unset) : verName;
+                final String finalVerName = (TextUtils.isEmpty(verName)
+                        ? context.getString(R.string.version_name_unset) : verName)
+                        + (TextUtils.isEmpty(vCode) ? "" : " (" + vCode + ")");
                 context.handler.post(() -> {
                     apkIcon.setImageDrawable(icon);
                     apkTitle.setText(label);

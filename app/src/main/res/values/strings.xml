@@ -1000,6 +1000,7 @@ Layout Inspector
     <string name="no_files_found">No files found</string>
     <string name="find_needs_folder">Find in files needs a local folder</string>
     <string name="find_in_files">Find in files</string>
+    <string name="xml_search">XML Search</string>
     <string name="matches_x">%1$d matches</string>
     <string name="querier_enter_query">Enter a query</string>
     <string name="querier_no_res_id">No resource with id 0x%1$s</string>

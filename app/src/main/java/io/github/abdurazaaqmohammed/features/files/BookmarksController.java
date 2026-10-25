@@ -102,6 +102,11 @@ public class BookmarksController {
         }
 
         @Override
+        public void onItemLongPressed(View row, int position, MotionEvent initialEvent) {
+            startBookmarkDrag(this, row, position, initialEvent);
+        }
+
+        @Override
         public boolean isBatchMode() {
             return batchController == this;
         }
@@ -635,35 +640,36 @@ public class BookmarksController {
                 }).show();
     }
 
-    private void startBookmarkDrag(BookmarkListController controller, View handle, int position, MotionEvent downEvent) {
+    private void startBookmarkDrag(BookmarkListController controller, View targetView, int position, MotionEvent downEvent) {
         ListView listView = controller.listView;
-        View row = (View) handle.getParent();
+        View row = (targetView.getParent() instanceof ListView) ? targetView : (View) targetView.getParent();
         float density = activity.getResources().getDisplayMetrics().density;
         int rowH = row.getHeight() > 0 ? row.getHeight() : (int) (48 * density + 0.5f);
         int[] dragPos = {position};
+        int[] initialPos = {position};
         int[] startSlot = {position};
         int[] lastFirst = {listView.getFirstVisiblePosition()};
-        float[] lastRawY = {downEvent.getRawY()};
+        float[] lastRawY = {downEvent != null ? downEvent.getRawY() : row.getY() + rowH / 2f};
+        float[] totalMovement = {0f};
         int[] lastTop = {row.getTop()};
         float[] dragOffset = {0f};
         bookmarkDragging = true;
+        row.setElevation(8f * density);
         listView.requestDisallowInterceptTouchEvent(true);
-        handle.getParent().requestDisallowInterceptTouchEvent(true);
         ViewParent pagerParent = listView.getParent();
         if (pagerParent != null) pagerParent.requestDisallowInterceptTouchEvent(true);
 
-        handle.setOnTouchListener((v, event) -> {
+        View.OnTouchListener dragTouchListener = (v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE: {
                     float dy = event.getRawY() - lastRawY[0];
                     lastRawY[0] = event.getRawY();
-                    // compensate list scrolling so the held row stays glued to the finger
+                    totalMovement[0] += Math.abs(dy);
                     int topDelta = row.getTop() - lastTop[0];
                     lastTop[0] = row.getTop();
                     dragOffset[0] += dy - topDelta;
-                    row.setTranslationY(dragOffset[0]); // the held row ONLY follows the finger
+                    row.setTranslationY(dragOffset[0]);
 
-                    // which slot is the held row's center over?
                     int first = listView.getFirstVisiblePosition();
                     startSlot[0] += first - lastFirst[0];
                     lastFirst[0] = first;
@@ -675,7 +681,6 @@ public class BookmarksController {
                             controller.items.size() - 1 - first);
                     targetChild = Math.max(0, Math.min(maxChild, targetChild));
 
-                    // silent data swaps toward the target slot
                     while (targetChild > childIndex && dragPos[0] + 1 < controller.items.size()) {
                         controller.items.add(dragPos[0] + 1, controller.items.remove(dragPos[0]));
                         dragPos[0]++;
@@ -687,8 +692,6 @@ public class BookmarksController {
                         childIndex--;
                     }
 
-                    // displacement invariant: every slot between the anchor and the current slot is
-                    // offset exactly one row in the drag direction - overlaps are impossible
                     for (int i = 0; i < listView.getChildCount(); i++) {
                         View child = listView.getChildAt(i);
                         if (child == row) continue;
@@ -701,7 +704,6 @@ public class BookmarksController {
                                     .setInterpolator(new DecelerateInterpolator()).start();
                     }
 
-                    // auto-scroll near the edges
                     int[] location = new int[2];
                     listView.getLocationOnScreen(location);
                     float fingerY = event.getRawY() - location[1];
@@ -712,16 +714,29 @@ public class BookmarksController {
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL: {
                     bookmarkDragging = false;
+                    row.setElevation(0f);
+                    row.setTranslationY(0f);
                     for (int i = 0; i < listView.getChildCount(); i++) {
                         listView.getChildAt(i).setTranslationY(0);
                     }
-                    persistBookmarkOrder(controller);
-                    controller.adapter.notifyDataSetChanged(); // normalize rows + restore standard handle listeners
+                    listView.setOnTouchListener(getSwipeDownCloseListener());
+                    if (targetView != row) targetView.setOnTouchListener(null);
+                    row.setOnTouchListener(null);
+                    if (initialPos[0] != dragPos[0]) {
+                        persistBookmarkOrder(controller);
+                    } else if (totalMovement[0] < 8 * density) {
+                        showBookmarkItemMenu(controller, dragPos[0], row);
+                    }
+                    controller.adapter.notifyDataSetChanged();
                     return true;
                 }
             }
             return false;
-        });
+        };
+
+        listView.setOnTouchListener(dragTouchListener);
+        targetView.setOnTouchListener(dragTouchListener);
+        if (targetView != row) row.setOnTouchListener(dragTouchListener);
     }
 
     private void persistBookmarkOrder(BookmarkListController controller) {

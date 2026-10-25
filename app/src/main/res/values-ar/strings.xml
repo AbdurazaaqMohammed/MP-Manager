@@ -907,6 +907,7 @@
     <string name="no_files_found">لم يتم العثور على ملفات</string>
     <string name="find_needs_folder">البحث في الملفات يحتاج إلى مجلد محلي</string>
     <string name="find_in_files">البحث في الملفات</string>
+    <string name="xml_search">بحث XML</string>
     <string name="matches_x">%1$d تطابقات</string>
     <string name="querier_enter_query">أدخل استعلاماً</string>
     <string name="querier_no_res_id">لا يوجد مورد بالمعرف 0x%1$s</string>

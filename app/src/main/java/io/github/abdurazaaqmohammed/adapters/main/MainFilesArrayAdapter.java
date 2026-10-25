@@ -56,6 +56,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
@@ -72,6 +73,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public final Object[] values;
     public final boolean isInZip;
     public final String currentZipPath;
+    private boolean isSearchResultsMode = false;
+
+    public void setSearchResultsMode(boolean mode) {
+        this.isSearchResultsMode = mode;
+    }
+
+    public boolean isSearchResultsMode() {
+        return isSearchResultsMode;
+    }
     public final boolean pane1; //THIS IS WHETHER THE ADAPTER IS FOR PANE 1 OR 2 NOT THE LAST CLICKED PANE
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;
@@ -84,6 +94,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final CommandHelper commandHelper;
     private final BatchImageTools batchImages;
     private final FileOpener fileOpener;
+    public FileOpener getFileOpener() {
+        return fileOpener;
+    }
     private final EntryDialogs entryDialogs;
 
     /** Row metrics snapshotted once: bind previously re-read prefs per row. */
@@ -124,6 +137,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public void goUp() {
         context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
+        if (isSearchResultsMode) {
+            context.clearSearchResults(pane1);
+            return;
+        }
         if (isInZip) {
             if (upZipFile == null) return;
             if (upZipPath == null) {
@@ -204,6 +221,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * {@code RootManager.streamFromRoot}. Ask the elevated backend instead.
      */
     private boolean isDir(File f) {
+        if (f instanceof RootFile rf) return rf.isDirectory();
         try {
             return f != null && f.isDirectory();
         } catch (Exception e) {
@@ -236,7 +254,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         try {
             String path = f.getAbsolutePath();
             AccessManager.Backend backend = AccessManager.active(context);
-            if (backend == AccessManager.Backend.ROOT) {
+            if (backend == AccessManager.Backend.ROOT || RootManager.getInstance(context).isRootAvailable()) {
                 return RootManager.getInstance(context).isDirectory(path);
             }
             if (backend == AccessManager.Backend.SHIZUKU) {
@@ -262,7 +280,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (f.isFile()) {
             context.clearGreen(pane1);
             context.setSelectedPane(pane1 ? 1 : 2);
-            context.setCurrentFolder(f.getParentFile(), getOldValues());
+            if (!isSearchResultsMode) {
+                context.setCurrentFolder(f.getParentFile(), getOldValues());
+            }
             fileOpener.handleFileClick(f, fileName);
             return;
         }
@@ -577,6 +597,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             if (position == 0) {
                 holder.fileDateView.setVisibility(View.GONE);
                 holder.fileDateView.setTag(null);
+            } else if (isSearchResultsMode) {
+                holder.fileDateView.setVisibility(View.VISIBLE);
+                holder.fileDateView.setText(file.getParent() != null ? file.getParent() : "");
+                if (holder.appBadgeView != null) {
+                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                    holder.appBadgeView.setVisibility(View.VISIBLE);
+                }
             } else if (holder.appBadgeView != null && file.getParent() != null) {
                 if (isSymlink(file)) {
                     holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
@@ -697,7 +724,7 @@ final View.OnClickListener originalClickListener;
                     }
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
+                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
