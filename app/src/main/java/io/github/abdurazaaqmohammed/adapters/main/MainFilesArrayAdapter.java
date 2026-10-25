@@ -979,9 +979,21 @@ final View.OnClickListener originalClickListener;
                                 }
                                 List<File> checksumFiles = new ArrayList<>();
                                 if (multi) {
-                                    for (int cmdPos : selectedPositions) checksumFiles.add((File) values[cmdPos]);
+                                    for (int cmdPos : selectedPositions) {
+                                        Object sel = values[cmdPos];
+                                        if (sel instanceof File cf && cf.isFile()) checksumFiles.add(cf);
+                                    }
+                                } else if (file.isDirectory()) {
+                                    // A folder has no hash of its own; hash each
+                                    // file directly inside it instead.
+                                    File[] kids = file.listFiles();
+                                    if (kids != null) for (File k : kids) if (k.isFile()) checksumFiles.add(k);
                                 } else {
                                     checksumFiles.add(file);
+                                }
+                                if (checksumFiles.isEmpty()) {
+                                    Extensions.showMessage(context, R.string.no_files_found);
+                                    return;
                                 }
                                 checksumDialogs.showChecksumsDialog(checksumFiles);
                                 return;
