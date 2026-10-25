@@ -30,6 +30,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -926,7 +927,7 @@ public class SidebarController {
                 if (entry.file.isDirectory()) {
                     icon.setImageResource(R.drawable.folder_24px);
                 } else {
-                    icon.setImageResource(R.drawable.baseline_description_24);
+                    icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
                 }
 
                 if (!selectedEntries.isEmpty()) {

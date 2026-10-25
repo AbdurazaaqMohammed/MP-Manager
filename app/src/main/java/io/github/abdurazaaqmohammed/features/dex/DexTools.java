@@ -516,13 +516,23 @@ public class DexTools {
         pm.show();
         new Thread(() -> {
             try {
+                byte[] dexBytes;
+                try (java.io.InputStream in = new java.io.FileInputStream(dexFile);
+                     java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                    byte[] buf = new byte[8192];
+                    int r;
+                    while ((r = in.read(buf)) != -1) {
+                        out.write(buf, 0, r);
+                    }
+                    dexBytes = out.toByteArray();
+                }
                 com.googlecode.d2j.reader.BaseDexFileReader reader =
-                        com.googlecode.d2j.reader.MultiDexFileReader.open(FileUtils.toByteArray(dexFile));
+                        com.googlecode.d2j.reader.MultiDexFileReader.open(dexBytes);
                 com.googlecode.d2j.dex.Dex2jar.from(reader)
                         .reUseReg(false)
                         .topoLogicalSort()
                         .skipDebug(false)
-                        .to(outJar);
+                        .to(outJar.toPath());
 
                 pm.dismiss();
                 context.handler.post(() -> {

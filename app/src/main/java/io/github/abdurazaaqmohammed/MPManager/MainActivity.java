@@ -43,6 +43,9 @@ import android.widget.PopupMenu;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.widget.ImageView;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -1397,7 +1400,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
                         if (!gotRoot) {
                             if (reqShell) {
-                                if (ShizukuManager.isAvailable(MainActivity.this) || rikka.shizuku.Shizuku.pingBinder()) {
+                                if (io.github.abdurazaaqmohammed.utils.ShizukuShell.isGranted() || rikka.shizuku.Shizuku.pingBinder()) {
                                     rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
                                     handler.post(() -> {
                                         try {
@@ -2927,9 +2930,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 .setItems(actions, (dialog, which) -> {
                     if (which == 0) {
                         new Thread(() -> {
-                            File restored = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
+                            io.github.abdurazaaqmohammed.utils.RecycleBin.RestoreResult res = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
                             handler.post(() -> {
-                                if (restored != null) {
+                                if (res != null && res.restoredFile != null) {
+                                    File restored = res.restoredFile;
                                     Extensions.showMessage(MainActivity.this, rss.getString(R.string.restore_to_x, restored.getAbsolutePath()));
                                     File parent = restored.getParentFile();
                                     if (parent != null

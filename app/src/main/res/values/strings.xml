@@ -1829,4 +1829,8 @@ Layout Inspector
     <string name="delete_all">Delete all</string>
     <string name="dex_to_jar">Dex to Jar</string>
     <string name="jar_saved_to">JAR saved to %1$s</string>
+    <string name="item_deleted">Item deleted</string>
+    <string name="renamed">Renamed</string>
+    <string name="restored">Restored</string>
+    <string name="failed">Failed</string>
 </resources>

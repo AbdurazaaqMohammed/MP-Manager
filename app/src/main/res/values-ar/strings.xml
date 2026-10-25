@@ -1706,4 +1706,8 @@
     <string name="delete_all">حذف المحدد</string>
     <string name="dex_to_jar">تحويل Dex إلى Jar</string>
     <string name="jar_saved_to">تم حفظ ملف JAR في %1$s</string>
+    <string name="item_deleted">تم حذف العنصر</string>
+    <string name="renamed">تمت إعادة التسمية</string>
+    <string name="restored">تمت الاستعادة</string>
+    <string name="failed">فشلت العملية</string>
 </resources>
