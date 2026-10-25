@@ -64,9 +64,12 @@ public class FileSearchController {
     private String lastXmlQuery = null;
     private boolean lastXmlRegex = false;
     private boolean lastXmlMatchCase = false;
+    private enum SearchType { NONE, REGULAR, XML }
+    private SearchType lastSearchType = SearchType.NONE;
 
     public boolean hasSearchResults() {
-        return (lastSearchResults != null && !lastSearchResults.isEmpty()) || (lastXmlHits != null && !lastXmlHits.isEmpty());
+        return (lastSearchType == SearchType.REGULAR && lastSearchResults != null && !lastSearchResults.isEmpty())
+                || (lastSearchType == SearchType.XML && lastXmlHits != null && !lastXmlHits.isEmpty());
     }
 
     public File getLastSearchStartDir() {
@@ -78,10 +81,15 @@ public class FileSearchController {
         lastSearchStartDir = null;
         lastXmlHits = null;
         lastXmlQuery = null;
+        lastSearchType = SearchType.NONE;
     }
 
     public void showLastSearchResultsDialog() {
-        if (lastXmlHits != null && !lastXmlHits.isEmpty()) {
+        if (lastSearchType == SearchType.XML && lastXmlHits != null && !lastXmlHits.isEmpty()) {
+            showContentHitsDialog(lastXmlHits, lastXmlQuery, lastXmlRegex, lastXmlMatchCase);
+        } else if (lastSearchType == SearchType.REGULAR && lastSearchResults != null && !lastSearchResults.isEmpty()) {
+            showSearchResultsDialog(lastSearchStartDir, lastSearchResults, lastSearchIsPane1);
+        } else if (lastXmlHits != null && !lastXmlHits.isEmpty()) {
             showContentHitsDialog(lastXmlHits, lastXmlQuery, lastXmlRegex, lastXmlMatchCase);
         } else if (lastSearchResults != null && !lastSearchResults.isEmpty()) {
             showSearchResultsDialog(lastSearchStartDir, lastSearchResults, lastSearchIsPane1);
@@ -365,6 +373,7 @@ public class FileSearchController {
         lastSearchResults = results;
         lastSearchStartDir = startDir;
         lastSearchIsPane1 = isPane1;
+        lastSearchType = SearchType.REGULAR;
 
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -617,20 +626,6 @@ public class FileSearchController {
         }
         root.addView(box);
 
-        TextView typeLabel = new TextView(activity);
-        typeLabel.setText("Search type");
-        typeLabel.setTextSize(14);
-        typeLabel.setPadding(0, dp(8), 0, dp(4));
-        root.addView(typeLabel);
-
-        android.widget.Spinner typeSpinner = new android.widget.Spinner(activity);
-        String[] searchTypes = new String[]{"Xml", "String", "Resource Id", "Color", "Integer"};
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_spinner_dropdown_item, searchTypes);
-        typeSpinner.setAdapter(typeAdapter);
-        root.addView(typeSpinner);
-
-        CheckBox cbId2Name = new CheckBox(activity);
-        cbId2Name.setText("ID2Name");
         CheckBox cbCase = new CheckBox(activity);
         cbCase.setText(activity.getString(R.string.match_case));
         cbCase.setChecked(lastXmlMatchCase);
@@ -638,7 +633,6 @@ public class FileSearchController {
         cbRegex.setText(activity.getString(R.string.regex));
         cbRegex.setChecked(lastXmlRegex);
 
-        root.addView(cbId2Name);
         root.addView(cbCase);
         root.addView(cbRegex);
 
@@ -652,14 +646,13 @@ public class FileSearchController {
                         Extensions.showMessage(activity, R.string.search_query_needed);
                         return;
                     }
-                    String selectedType = (String) typeSpinner.getSelectedItem();
-                    runXmlSearch(searchTarget, q, selectedType != null ? selectedType : "Xml", cbId2Name.isChecked(), cbCase.isChecked(), cbRegex.isChecked());
+                    runXmlSearch(searchTarget, q, cbCase.isChecked(), cbRegex.isChecked());
                 }).create();
         io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(xmlDialog, queryInput, false);
         xmlDialog.show();
     }
 
-    private void runXmlSearch(File searchTarget, String query, String searchType, boolean id2Name, boolean matchCase, boolean regex) {
+    private void runXmlSearch(File searchTarget, String query, boolean matchCase, boolean regex) {
         if (regex) {
             try {
                 Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
@@ -671,7 +664,7 @@ public class FileSearchController {
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.rss.getString(R.string.searching));
         new Thread(() -> {
-            List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, searchType, id2Name, matchCase, regex,
+            List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
                             pm.setText(scanned + " XML files…");
@@ -687,6 +680,7 @@ public class FileSearchController {
                 lastXmlQuery = query;
                 lastXmlRegex = regex;
                 lastXmlMatchCase = matchCase;
+                lastSearchType = SearchType.XML;
                 showContentHitsDialog(hits, query, regex, matchCase);
             });
         }).start();

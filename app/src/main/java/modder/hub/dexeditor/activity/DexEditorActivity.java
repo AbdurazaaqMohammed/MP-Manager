@@ -2496,8 +2496,17 @@ public class DexEditorActivity extends BaseActivity {
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
 
+                int loadedDexVer = 35;
+                try {
+                    loadedDexVer = classTree.getOpenedDexVersion();
+                } catch (Exception ignored) {
+                }
+                if (loadedDexVer <= 0) loadedDexVer = dexPref.getInt("dexVer", 35);
+                final int finalVer = loadedDexVer > 0 ? loadedDexVer : 35;
+
                 runOnUiThread(() -> {
                     try {
+                        dexVersion = finalVer;
                         treeRoots.clear();
                         treeRoots.addAll(roots);
                         modifiedNodes.clear();
@@ -2846,7 +2855,9 @@ public class DexEditorActivity extends BaseActivity {
         progressDialog.show();
         new Thread(() -> {
             try {
-                ClassDef def = Smali.assemble(smali, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
+                int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
+                if (targetVer <= 0) targetVer = 35;
+                ClassDef def = Smali.assemble(smali, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
                 classTree.saveClassDef(def);
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
@@ -2911,12 +2922,14 @@ public class DexEditorActivity extends BaseActivity {
             int imported = 0;
             String firstImportedClass = null;
             try {
+                int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
+                if (targetVer <= 0) targetVer = 35;
                 for (String path : filePaths) {
                     File f = new File(path);
                     if (!f.isFile()) continue;
                     String code = modder.hub.dexeditor.utils.FileUtil.readFile(path);
                     if (code == null || code.trim().isEmpty()) continue;
-                    ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
+                    ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
                     classTree.saveClassDef(def);
                     String type = def.getType();
                     if (type != null && type.startsWith("L") && type.endsWith(";")) {

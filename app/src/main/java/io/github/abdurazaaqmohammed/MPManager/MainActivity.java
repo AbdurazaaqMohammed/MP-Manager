@@ -1262,6 +1262,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 menu.add(0, 2, 0, getString(R.string.search)).setIcon(R.drawable.baseline_search_24);
                 menu.add(0, 15, 0, getString(R.string.find_in_files)).setIcon(R.drawable.ic_search_replace);
                 menu.add(0, 17, 0, getString(R.string.xml_search)).setIcon(R.drawable.baseline_search_24);
+                if (fileSearch.hasSearchResults()) {
+                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.ic_eye_mt);
+                }
                 menu.add(0, 3, 0, getString(R.string.menu_select_all)).setIcon(R.drawable.baseline_select_all_24);
                 menu.add(0, 4, 0, getString(R.string.sort)).setIcon(R.drawable.baseline_sort_24);
 
@@ -1281,9 +1284,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     hiddenMenu.add(0, 9, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
                 }
 
-                if (fileSearch.hasSearchResults()) {
-                    menu.add(0, 18, 0, getString(R.string.search_results)).setIcon(R.drawable.ic_eye_mt);
-                }
                 if (a instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) a).isSearchResultsMode()) {
                     menu.add(0, 19, 0, getString(R.string.clear_search_results)).setIcon(R.drawable.close_24px);
                 }
