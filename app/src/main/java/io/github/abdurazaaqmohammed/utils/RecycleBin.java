@@ -113,6 +113,25 @@ public final class RecycleBin {
                 .putString("recycle_bin_dir", path == null ? "" : path).apply();
     }
 
+    public static boolean isInsideBin(Context context, File file) {
+        if (file == null || context == null) return false;
+        try {
+            File bin = binDir(context);
+            if (bin == null) return false;
+            String binPath = bin.getCanonicalPath();
+            String filePath = file.getCanonicalPath();
+            return filePath.equals(binPath) || filePath.startsWith(binPath + File.separator);
+        } catch (Exception e) {
+            try {
+                String binPath = binDir(context).getAbsolutePath();
+                String filePath = file.getAbsolutePath();
+                return filePath.equals(binPath) || filePath.startsWith(binPath + File.separator);
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+    }
+
     public static final class RestoreResult {
         public final File restoredFile;
         public final boolean wasRenamed;
@@ -209,7 +228,7 @@ public final class RecycleBin {
      * Returns true when the item ended up in the bin.
      */
     public static boolean moveToBin(Context context, File file, String reason) {
-        if (file == null || !file.exists()) return false;
+        if (file == null || !file.exists() || isInsideBin(context, file)) return false;
         long origLastMod = file.lastModified();
         File target = freeName(binDir(context), file.getName());
         try {

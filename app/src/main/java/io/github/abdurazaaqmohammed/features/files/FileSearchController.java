@@ -396,8 +396,46 @@ public class FileSearchController {
         lastSearchIsPane1 = isPane1;
         lastSearchType = SearchType.REGULAR;
 
-        LinearLayout root = new LinearLayout(activity);
-        root.setOrientation(LinearLayout.VERTICAL);
+        List<File> allResults = new ArrayList<>(results);
+        List<File> filteredResults = new ArrayList<>(results);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pad = dp(16);
+        header.setPadding(pad, pad, pad, dp(8));
+
+        TextView titleText = new TextView(activity);
+        titleText.setText("search results (" + filteredResults.size() + ")");
+        titleText.setTextSize(18);
+        titleText.setTypeface(null, Typeface.BOLD);
+        titleText.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        header.addView(titleText);
+
+        ImageButton filterBtn = new ImageButton(activity, null, android.R.attr.borderlessButtonStyle);
+        filterBtn.setImageResource(R.drawable.baseline_search_24);
+        filterBtn.setContentDescription(activity.getString(R.string.filter));
+        header.addView(filterBtn);
+        root.addView(header);
+
+        EditText searchInput = new EditText(activity);
+        searchInput.setHint(activity.getString(R.string.filter));
+        searchInput.setSingleLine(true);
+        searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.baseline_search_24, 0, 0, 0);
+        searchInput.setCompoundDrawablePadding(dp(8));
+        searchInput.setPadding(pad, dp(8), pad, dp(8));
+        searchInput.setVisibility(View.GONE);
+        root.addView(searchInput);
+
+        filterBtn.setOnClickListener(v -> {
+            if (searchInput.getVisibility() == View.VISIBLE) {
+                searchInput.setVisibility(View.GONE);
+                searchInput.setText("");
+            } else {
+                searchInput.setVisibility(View.VISIBLE);
+                searchInput.requestFocus();
+            }
+        });
 
         RecyclerView list = new RecyclerView(activity);
         list.setLayoutManager(new LinearLayoutManager(activity));
@@ -409,8 +447,7 @@ public class FileSearchController {
         LinearLayout bottomBar = new LinearLayout(activity);
         bottomBar.setOrientation(LinearLayout.HORIZONTAL);
         bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        int pad = dp(12);
-        bottomBar.setPadding(pad, dp(4), pad, dp(4));
+        bottomBar.setPadding(dp(12), dp(4), dp(12), dp(4));
 
         Button expandBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
         expandBtn.setText("⤢ Open in Pane");
@@ -435,7 +472,6 @@ public class FileSearchController {
         root.addView(bottomBar);
 
         AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
-                .setTitle("search results (" + results.size() + ")")
                 .setView(root)
                 .create();
 
@@ -469,7 +505,7 @@ public class FileSearchController {
             dialog.dismiss();
         });
 
-        list.setAdapter(new RecyclerView.Adapter<>() {
+        RecyclerView.Adapter<?> adapter = new RecyclerView.Adapter<>() {
             @NonNull
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -511,7 +547,7 @@ public class FileSearchController {
 
             @Override
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-                File f = results.get(position);
+                File f = filteredResults.get(position);
                 LinearLayout row = (LinearLayout) holder.itemView;
                 ImageView icon = (ImageView) row.getChildAt(0);
                 LinearLayout textCol = (LinearLayout) row.getChildAt(1);
@@ -535,10 +571,10 @@ public class FileSearchController {
                         activity.setSelectedPane(isPane1 ? 1 : 2);
                         activity.loadFolderInPaneAsync(f, isPane1);
                     } else {
-                        MainFilesArrayAdapter adapter = activity.getCurrentFilesAdapter();
-                        if (adapter == null) adapter = activity.paneFilesAdapter(isPane1);
-                        if (adapter != null && adapter.getFileOpener() != null) {
-                            adapter.getFileOpener().handleFileClick(f, f.getName());
+                        MainFilesArrayAdapter a = activity.getCurrentFilesAdapter();
+                        if (a == null) a = activity.paneFilesAdapter(isPane1);
+                        if (a != null && a.getFileOpener() != null) {
+                            a.getFileOpener().handleFileClick(f, f.getName());
                         }
                     }
                 });
@@ -546,7 +582,25 @@ public class FileSearchController {
 
             @Override
             public int getItemCount() {
-                return results.size();
+                return filteredResults.size();
+            }
+        };
+        list.setAdapter(adapter);
+
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                String q = s != null ? s.toString().trim().toLowerCase(java.util.Locale.ROOT) : "";
+                filteredResults.clear();
+                for (File f : allResults) {
+                    if (q.isEmpty() || f.getName().toLowerCase(java.util.Locale.ROOT).contains(q)
+                            || (f.getParent() != null && f.getParent().toLowerCase(java.util.Locale.ROOT).contains(q))) {
+                        filteredResults.add(f);
+                    }
+                }
+                titleText.setText("search results (" + filteredResults.size() + ")");
+                adapter.notifyDataSetChanged();
             }
         });
 
@@ -577,15 +631,20 @@ public class FileSearchController {
     public void showFindInFilesDialog() {
         boolean isPane1 = activity.lastPaneSelected == 1;
         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
-        if (!(a instanceof MainFilesArrayAdapter)) {
+        File targetFile = null;
+        if (a instanceof MainFilesArrayAdapter adapter) {
+            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) {
+                targetFile = ((io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) adapter.values[0]).getZipFile();
+            }
+        }
+        if (targetFile == null) {
+            targetFile = isPane1 ? activity.pane1Folder : activity.pane2Folder;
+        }
+        if (targetFile == null) {
             Extensions.showMessage(activity, R.string.find_needs_folder);
             return;
         }
-        if (((MainFilesArrayAdapter) a).isInZip) {
-            Extensions.showMessage(activity, R.string.find_needs_folder);
-            return;
-        }
-        File startDir = isPane1 ? activity.pane1Folder : activity.pane2Folder;
+        File startDir = targetFile;
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density + 0.5f);
@@ -764,22 +823,94 @@ public class FileSearchController {
             }
             group.hits.add(hit);
         }
-        List<XmlFileGroup> groupList = new ArrayList<>(groupsMap.values());
+        List<XmlFileGroup> allGroups = new ArrayList<>(groupsMap.values());
+        List<XmlFileGroup> filteredGroups = new ArrayList<>(allGroups);
+
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pad = dp(16);
+        header.setPadding(pad, pad, pad, dp(8));
+
+        TextView titleText = new TextView(activity);
+        titleText.setText("search results (" + filteredGroups.size() + ")");
+        titleText.setTextSize(18);
+        titleText.setTypeface(null, Typeface.BOLD);
+        titleText.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        header.addView(titleText);
+
+        ImageButton filterBtn = new ImageButton(activity, null, android.R.attr.borderlessButtonStyle);
+        filterBtn.setImageResource(R.drawable.baseline_search_24);
+        filterBtn.setContentDescription(activity.getString(R.string.filter));
+        header.addView(filterBtn);
+        root.addView(header);
+
+        EditText searchInput = new EditText(activity);
+        searchInput.setHint(activity.getString(R.string.filter));
+        searchInput.setSingleLine(true);
+        searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.baseline_search_24, 0, 0, 0);
+        searchInput.setCompoundDrawablePadding(dp(8));
+        searchInput.setPadding(pad, dp(8), pad, dp(8));
+        searchInput.setVisibility(View.GONE);
+        root.addView(searchInput);
+
+        filterBtn.setOnClickListener(v -> {
+            if (searchInput.getVisibility() == View.VISIBLE) {
+                searchInput.setVisibility(View.GONE);
+                searchInput.setText("");
+            } else {
+                searchInput.setVisibility(View.VISIBLE);
+                searchInput.requestFocus();
+            }
+        });
 
         RecyclerView list = new RecyclerView(activity);
         list.setLayoutManager(new LinearLayoutManager(activity));
+        LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+        list.setLayoutParams(listParams);
+        root.addView(list);
+
+        LinearLayout bottomBar = new LinearLayout(activity);
+        bottomBar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bottomBar.setPadding(dp(12), dp(4), dp(12), dp(4));
+
+        View spacer = new View(activity);
+        LinearLayout.LayoutParams spacerLp = new LinearLayout.LayoutParams(0, 1, 1.0f);
+        spacer.setLayoutParams(spacerLp);
+        bottomBar.addView(spacer);
+
+        Button clearBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        clearBtn.setText("CLEAR");
+        clearBtn.setTextSize(13);
+        bottomBar.addView(clearBtn);
+
+        Button closeBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
+        closeBtn.setText("CLOSE");
+        closeBtn.setTextSize(13);
+        bottomBar.addView(closeBtn);
+
+        root.addView(bottomBar);
+
         AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
-                .setTitle("search results (" + groupList.size() + ")")
-                .setView(list)
-                .setNegativeButton(R.string.close, (d, w) -> {
-                    shouldRestoreSearchDialogOnResume = false;
-                })
-                .setNeutralButton("CLEAR", (d, w) -> {
-                    shouldRestoreSearchDialogOnResume = false;
-                    lastXmlHits = null;
-                    lastXmlQuery = null;
-                })
+                .setView(root)
                 .create();
+
+        clearBtn.setOnClickListener(v -> {
+            shouldRestoreSearchDialogOnResume = false;
+            lastXmlHits = null;
+            lastXmlQuery = null;
+            dialog.dismiss();
+        });
+
+        closeBtn.setOnClickListener(v -> {
+            shouldRestoreSearchDialogOnResume = false;
+            dialog.dismiss();
+        });
 
         activeSearchDialog = dialog;
         shouldRestoreSearchDialogOnResume = true;
@@ -789,7 +920,7 @@ public class FileSearchController {
                 activeSearchDialog = null;
             }
         });
-        list.setAdapter(new RecyclerView.Adapter<>() {
+        RecyclerView.Adapter<?> adapter = new RecyclerView.Adapter<>() {
             @NonNull
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -835,7 +966,7 @@ public class FileSearchController {
 
             @Override
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-                XmlFileGroup group = groupList.get(position);
+                XmlFileGroup group = filteredGroups.get(position);
                 LinearLayout row = (LinearLayout) holder.itemView;
                 LinearLayout textCol = (LinearLayout) row.getChildAt(1);
                 TextView title = (TextView) textCol.getChildAt(0);
@@ -854,9 +985,28 @@ public class FileSearchController {
 
             @Override
             public int getItemCount() {
-                return groupList.size();
+                return filteredGroups.size();
+            }
+        };
+        list.setAdapter(adapter);
+
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                String q = s != null ? s.toString().trim().toLowerCase(java.util.Locale.ROOT) : "";
+                filteredGroups.clear();
+                for (XmlFileGroup g : allGroups) {
+                    if (q.isEmpty() || g.fileName.toLowerCase(java.util.Locale.ROOT).contains(q)
+                            || g.directoryPath.toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                        filteredGroups.add(g);
+                    }
+                }
+                titleText.setText("search results (" + filteredGroups.size() + ")");
+                adapter.notifyDataSetChanged();
             }
         });
+
         activity.dialogUtil.styleAlertDialog(dialog);
         dialog.show();
     }
@@ -867,8 +1017,17 @@ public class FileSearchController {
                 File target = hit.file();
                 String entryPath = hit.displayPath();
                 Intent intent = new Intent(activity, TextEditorActivity.class);
-                intent.putExtra("search", query);
-                intent.putExtra("searchRegex", regex);
+                String searchQuery = query;
+                boolean isRegex = regex;
+                if (!isRegex && (query.contains("*") || query.contains("?"))) {
+                    java.util.regex.Pattern p = io.github.abdurazaaqmohammed.domain.files.FileSearch.compilePattern(query, matchCase, false);
+                    if (p != null) {
+                        searchQuery = p.pattern();
+                        isRegex = true;
+                    }
+                }
+                intent.putExtra("search", searchQuery);
+                intent.putExtra("searchRegex", isRegex);
                 intent.putExtra("searchMatchCase", matchCase);
 
                 boolean isArchive = target.isFile() && (target.getName().toLowerCase().endsWith(".apk")

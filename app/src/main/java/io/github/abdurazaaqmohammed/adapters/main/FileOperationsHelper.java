@@ -389,9 +389,13 @@ public class FileOperationsHelper {
      * really replaces instead of failing the rename or appending into the old
      * folder.
      */
-private void clearReplacedDestination(File dest, boolean useElevated) {
+    private void clearReplacedDestination(File dest, boolean useElevated) {
         if (dest == null) return;
         try {
+            String binMode = RecycleBin.mode(context);
+            if (!RecycleBin.MODE_NEVER.equals(binMode) && !RecycleBin.isInsideBin(context, dest)) {
+                RecycleBin.moveToBin(context, dest, "overwrite");
+            }
             if (useElevated) {
                 if (!AccessManager.exists(context, dest.getAbsolutePath())) return;
                 AccessManager.delete(context, dest.getAbsolutePath(), true);

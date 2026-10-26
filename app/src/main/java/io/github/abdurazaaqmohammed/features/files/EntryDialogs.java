@@ -248,7 +248,19 @@ public class EntryDialogs {
         File zipFile = isInZip ? entry.getZipFile() : null;
         TextView customMsgView = null;
         String binMode = RecycleBin.mode(context);
-        final CheckBox recycleCb;
+        boolean isTargetInsideBin = false;
+        if (!isInZip) {
+            if (multi) {
+                for (int i : state.selectedPositions()) {
+                    if (values[i] instanceof File f && RecycleBin.isInsideBin(context, f)) {
+                        isTargetInsideBin = true;
+                        break;
+                    }
+                }
+            } else if (file != null && RecycleBin.isInsideBin(context, file)) {
+                isTargetInsideBin = true;
+            }
+        }
         if (isInZip && zipFile.getName().endsWith(".apk")) {
             recycleCb = null;
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
@@ -259,7 +271,7 @@ public class EntryDialogs {
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else if (!isInZip && RecycleBin.MODE_ASK.equals(binMode)) {
+        } else if (!isInZip && !isTargetInsideBin && RecycleBin.MODE_ASK.equals(binMode)) {
             recycleCb = new CheckBox(context);
             recycleCb.setText(R.string.recycle_bin);
             recycleCb.setChecked(RecycleBin.lastChoiceEnabled(context));
@@ -278,6 +290,7 @@ public class EntryDialogs {
         }
         deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
+            final boolean targetInsideBin = isTargetInsideBin;
             Runnable doDelete = () -> {
                 pm.show();
                 new Thread(() -> {
@@ -290,7 +303,7 @@ public class EntryDialogs {
                         // paths included - the bin stages them through the
                         // elevated backend). In-archive deletes are permanent.
                         boolean toBin;
-                        if (isInZip) toBin = false;
+                        if (isInZip || targetInsideBin) toBin = false;
                         else if (RecycleBin.MODE_ALWAYS.equals(binMode)) toBin = true;
                         else if (RecycleBin.MODE_NEVER.equals(binMode)) toBin = false;
                         else {

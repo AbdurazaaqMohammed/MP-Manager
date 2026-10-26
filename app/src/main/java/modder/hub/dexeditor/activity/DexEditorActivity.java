@@ -2835,10 +2835,10 @@ public class DexEditorActivity extends BaseActivity {
             FilePickerDialog.Properties props = new FilePickerDialog.Properties();
             props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
             props.selection_mode = FilePickerDialog.MULTI_MODE;
-            props.extensions = new String[]{".smali"};
+            props.extensions = new String[]{".smali", ".zip", ".apk", ".jar"};
             props.preferenceKey = "dex_add_browse";
             FilePickerDialog picker = new FilePickerDialog(DexEditorActivity.this, props);
-            picker.setTitle("Select Smali File or Folder");
+            picker.setTitle("Select Smali File, Folder, or Zip");
             picker.setDialogSelectionListener(files -> {
                 if (files == null || files.length == 0) return;
                 if (addDialogHolder[0] != null && addDialogHolder[0].isShowing()) {
@@ -2945,6 +2945,30 @@ public class DexEditorActivity extends BaseActivity {
             String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
             if (lower.endsWith(".smali")) {
                 out.add(f);
+            } else if (lower.endsWith(".zip") || lower.endsWith(".apk") || lower.endsWith(".jar")) {
+                try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f)) {
+                    java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+                    File tempDexDir = new File(getCacheDir(), "dex_import_" + System.currentTimeMillis());
+                    tempDexDir.mkdirs();
+                    while (en.hasMoreElements()) {
+                        java.util.zip.ZipEntry ze = en.nextElement();
+                        if (!ze.isDirectory() && ze.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".smali")) {
+                            File target = new File(tempDexDir, ze.getName());
+                            File parent = target.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
+                            try (java.io.InputStream is = zf.getInputStream(ze);
+                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(target)) {
+                                byte[] buf = new byte[8192];
+                                int n;
+                                while ((n = is.read(buf)) != -1) {
+                                    fos.write(buf, 0, n);
+                                }
+                            }
+                            out.add(target);
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
             }
         }
     }

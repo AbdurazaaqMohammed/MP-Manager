@@ -147,7 +147,11 @@ public final class FileSearch {
         }
         String normNeedle = matchCase ? needle : needle.toLowerCase();
         int[] scanned = {0};
-        findRecursive(dir, normNeedle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+        if (dir.isFile() && (dir.getName().toLowerCase().endsWith(".zip") || dir.getName().toLowerCase().endsWith(".apk") || dir.getName().toLowerCase().endsWith(".jar"))) {
+            findInArchiveFiles(dir, normNeedle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+        } else {
+            findRecursive(dir, normNeedle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+        }
         return hits;
     }
 
@@ -190,7 +194,59 @@ public final class FileSearch {
                     }
                 } catch (Exception ignored) {
                 }
+            } else if (f.isFile() && (f.getName().toLowerCase().endsWith(".zip") || f.getName().toLowerCase().endsWith(".apk") || f.getName().toLowerCase().endsWith(".jar"))) {
+                if (subfolders) {
+                    findInArchiveFiles(f, needle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+                }
             }
+        }
+    }
+
+    private static void findInArchiveFiles(File archive, String needle, boolean searchSubfolders, boolean matchCase,
+                                           boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(archive)) {
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                if (hits.size() >= MAX_HITS) return;
+                java.util.zip.ZipEntry ze = en.nextElement();
+                String name = ze.getName();
+                if (ze.isDirectory() || ze.getSize() > MAX_CONTENT_BYTES) continue;
+                if (!searchSubfolders && name.contains("/")) continue;
+
+                // Check text file extensions
+                String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+                if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".webp")
+                        || lowerName.endsWith(".so") || lowerName.endsWith(".dex") || lowerName.endsWith(".arsc")
+                        || lowerName.endsWith(".pdf") || lowerName.endsWith(".gif") || lowerName.endsWith(".mp3")
+                        || lowerName.endsWith(".mp4") || lowerName.endsWith(".ogg") || lowerName.endsWith(".wav")) {
+                    continue;
+                }
+
+                scanned[0]++;
+                if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
+
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), java.nio.charset.StandardCharsets.UTF_8))) {
+                    String line;
+                    int lineNo = 0;
+                    while ((line = br.readLine()) != null) {
+                        lineNo++;
+                        if (lineNo == 1 && line.indexOf('\0') >= 0) break; // binary check
+                        boolean hit;
+                        if (pattern != null) hit = pattern.matcher(line).find();
+                        else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
+                        if (hit) {
+                            String snippet = line.trim();
+                            if (snippet.length() > SNIPPET_LEN)
+                                snippet = snippet.substring(0, SNIPPET_LEN) + "\u2026";
+                            hits.add(new ContentHit(archive, lineNo, snippet, name));
+                            if (hits.size() >= MAX_HITS) return;
+                        }
+                        if (lineNo > MAX_LINES_PER_FILE) break;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
         }
     }
 
