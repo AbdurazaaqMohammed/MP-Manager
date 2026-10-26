@@ -3011,9 +3011,13 @@ public class DexEditorActivity extends BaseActivity {
                     String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
                     if (code == null || code.trim().isEmpty()) continue;
 
+                    String cleanPkg = targetPkg == null ? "" : targetPkg.trim();
+                    while (cleanPkg.startsWith("/")) cleanPkg = cleanPkg.substring(1).trim();
+                    while (cleanPkg.endsWith("/")) cleanPkg = cleanPkg.substring(0, cleanPkg.length() - 1).trim();
+
                     String desiredPath;
-                    if (targetPkg != null && !targetPkg.trim().isEmpty()) {
-                        desiredPath = targetPkg.trim().replace('.', '/') + "/" + relPath;
+                    if (!cleanPkg.isEmpty()) {
+                        desiredPath = cleanPkg.replace('.', '/') + "/" + relPath;
                     } else {
                         desiredPath = relPath;
                     }
@@ -3022,7 +3026,7 @@ public class DexEditorActivity extends BaseActivity {
                     java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
                     if (m.find()) {
                         String originalType = m.group(2); // e.g. "La0;"
-                        if (targetPkg != null && !targetPkg.trim().isEmpty()) {
+                        if (!cleanPkg.isEmpty()) {
                             String newType = "L" + desiredPath + ";";
                             code = code.replace(originalType, newType);
                         }
