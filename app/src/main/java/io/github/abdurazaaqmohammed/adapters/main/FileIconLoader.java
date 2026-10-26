@@ -461,13 +461,14 @@ public class FileIconLoader {
                             return cPkg;
                         }
                     }
-                } else if (context.isRootMode()) {
+                } else if (io.github.abdurazaaqmohammed.utils.AccessManager.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
                         io.github.abdurazaaqmohammed.utils.RootManager.ShellResult r =
-                                context.getRootManager().executeFs("ls -1 -- " + io.github.abdurazaaqmohammed.utils.RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
-                        if (r.isSuccess() && r.output != null) {
-                            for (String line : r.output.split("\\r?\\n")) {
+                                io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context)
+                                        .executeFs("ls -1 -- " + io.github.abdurazaaqmohammed.utils.RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
+                        if (r != null && r.isSuccess() && r.output() != null) {
+                            for (String line : r.output().split("\\r?\\n")) {
                                 String cn = line.trim();
                                 int cDash = cn.indexOf('-');
                                 String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
