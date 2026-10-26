@@ -593,6 +593,10 @@ public class FileSearchController {
         TextInputLayout box = UiFields.box(activity, "Text to find");
         EditText queryInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
         root.addView(box);
+        CheckBox cbSubfolders = new CheckBox(activity);
+        cbSubfolders.setText(activity.getString(R.string.search_subfolders));
+        cbSubfolders.setChecked(true);
+        root.addView(cbSubfolders);
         CheckBox cbCase = new CheckBox(activity);
         cbCase.setText(activity.getString(R.string.match_case));
         CheckBox cbRegex = new CheckBox(activity);
@@ -613,13 +617,13 @@ public class FileSearchController {
                         Extensions.showMessage(activity, R.string.search_query_needed);
                         return;
                     }
-                    runFindInFiles(startDir, q, cbCase.isChecked(), cbRegex.isChecked());
+                    runFindInFiles(startDir, q, cbSubfolders.isChecked(), cbCase.isChecked(), cbRegex.isChecked());
                 }).create();
         io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(findDialog, queryInput, false);
         findDialog.show();
     }
 
-    private void runFindInFiles(File startDir, String query, boolean matchCase, boolean regex) {
+    private void runFindInFiles(File startDir, String query, boolean subfolders, boolean matchCase, boolean regex) {
         if (regex) {
             try {
                 Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
@@ -631,7 +635,7 @@ public class FileSearchController {
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.rss.getString(R.string.searching));
         new Thread(() -> {
-            List<ContentHit> hits = FileSearch.findInFiles(startDir, query, matchCase, regex,
+            List<ContentHit> hits = FileSearch.findInFiles(startDir, query, subfolders, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
                             pm.setText(scanned + " files…");
@@ -675,15 +679,10 @@ public class FileSearchController {
         }
         root.addView(box);
 
-        CheckBox cbCase = new CheckBox(activity);
-        cbCase.setText(activity.getString(R.string.match_case));
-        cbCase.setChecked(lastXmlMatchCase);
-        CheckBox cbRegex = new CheckBox(activity);
-        cbRegex.setText(activity.getString(R.string.regex));
-        cbRegex.setChecked(lastXmlRegex);
-
-        root.addView(cbCase);
-        root.addView(cbRegex);
+        CheckBox cbSubfolders = new CheckBox(activity);
+        cbSubfolders.setText(activity.getString(R.string.search_subfolders));
+        cbSubfolders.setChecked(true);
+        root.addView(cbSubfolders);
 
         AlertDialog xmlDialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.xml_search))
@@ -695,13 +694,13 @@ public class FileSearchController {
                         Extensions.showMessage(activity, R.string.search_query_needed);
                         return;
                     }
-                    runXmlSearch(searchTarget, q, cbCase.isChecked(), cbRegex.isChecked());
+                    runXmlSearch(searchTarget, q, cbSubfolders.isChecked(), false, false);
                 }).create();
         io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(xmlDialog, queryInput, false);
         xmlDialog.show();
     }
 
-    private void runXmlSearch(File searchTarget, String query, boolean matchCase, boolean regex) {
+    private void runXmlSearch(File searchTarget, String query, boolean searchSubfolders, boolean matchCase, boolean regex) {
         if (regex) {
             try {
                 Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
@@ -713,7 +712,7 @@ public class FileSearchController {
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.rss.getString(R.string.searching));
         new Thread(() -> {
-            List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, matchCase, regex,
+            List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, searchSubfolders, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
                             pm.setText(scanned + " XML files…");

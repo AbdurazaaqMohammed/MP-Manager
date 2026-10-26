@@ -359,8 +359,11 @@ public class FileOperationsHelper {
                 deleteRecursive(f);
                 done += itemTotal;
                 advanceActiveProgress(done, totalFiles);
-            } else if (item instanceof ZipEntryInfo) {
-                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+            } else if (item instanceof ZipEntryInfo z) {
+                File dest = plan.get(z);
+                if (dest != null) {
+                    extractZipEntry(z, destinationFolder, dest.getName());
+                }
                 done++;
                 advanceActiveProgress(done, totalFiles);
             }
@@ -588,8 +591,10 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
             advanceActiveProgress(done, totalFiles);
         }
         for (Object item : items) {
-            if (item instanceof ZipEntryInfo) {
-                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+            if (item instanceof ZipEntryInfo z) {
+                File dest = plan.get(z);
+                if (dest == null) continue; // skipped by user conflict choice
+                extractZipEntry(z, destinationFolder, dest.getName());
                 advanceActiveProgress(++done, totalFiles);
             }
         }
@@ -631,13 +636,22 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
         Map<Object, File> plan = new LinkedHashMap<>();
         List<CopyConflictDialog.Conflict> conflicts = new ArrayList<>();
         for (Object item : items) {
-            if (!(item instanceof File f)) continue;
-            plan.put(f, null);
-            File existing = new File(destinationFolder, f.getName());
-            if (existsAt(destinationFolder, f, existing, useElevated)) {
-                conflicts.add(describeConflict(f, existing, destinationFolder, useElevated));
-            } else {
-                plan.put(f, getUnusedDest(destinationFolder, f.getName(), useElevated));
+            if (item instanceof File f) {
+                plan.put(f, null);
+                File existing = new File(destinationFolder, f.getName());
+                if (existsAt(destinationFolder, f, existing, useElevated)) {
+                    conflicts.add(describeConflict(f, existing, destinationFolder, useElevated));
+                } else {
+                    plan.put(f, getUnusedDest(destinationFolder, f.getName(), useElevated));
+                }
+            } else if (item instanceof ZipEntryInfo z) {
+                plan.put(z, null);
+                File existing = new File(destinationFolder, z.getName());
+                if (candidateExists(destinationFolder, z.getName(), existing, useElevated)) {
+                    conflicts.add(describeZipConflict(z, existing, destinationFolder, useElevated));
+                } else {
+                    plan.put(z, getUnusedDest(destinationFolder, z.getName(), useElevated));
+                }
             }
         }
         if (conflicts.isEmpty()) return plan;
@@ -714,20 +728,49 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
                 getDuplicateName(source.getName(), destinationFolder, useElevated));
     }
 
-    /** True when the natural destination name is already taken (or is the source itself). */
-    private boolean existsAt(File destinationFolder, File source, File candidate, boolean useElevated) {
-        if (isSameDirectory(source, destinationFolder)) return true;
+    private CopyConflictDialog.Conflict describeZipConflict(ZipEntryInfo source, File existing,
+                                                             File destinationFolder, boolean useElevated) {
+        long sourceSize = -1, sourceTime = 0;
+        try {
+            sourceSize = source.getSize();
+        } catch (Exception ignored) {
+        }
+        try {
+            sourceTime = source.getLastModified();
+        } catch (Exception ignored) {
+        }
+        long existingSize = -1, existingTime = 0;
+        try {
+            existingSize = existing.length();
+        } catch (Exception ignored) {
+        }
+        try {
+            existingTime = existing.lastModified();
+        } catch (Exception ignored) {
+        }
+        return new CopyConflictDialog.Conflict(source, source.getName(), sourceSize, sourceTime,
+                existing.getName(), existingSize, existingTime,
+                getDuplicateName(source.getName(), destinationFolder, useElevated));
+    }
+
+    private boolean candidateExists(File destinationFolder, String name, File candidate, boolean useElevated) {
         try {
             if (candidate.exists()) return true;
         } catch (Exception ignored) {
         }
         if (useElevated) {
             try {
-                return dirHasEntry(destinationFolder, source.getName());
+                return dirHasEntry(destinationFolder, name);
             } catch (Exception ignored) {
             }
         }
         return false;
+    }
+
+    /** True when the natural destination name is already taken (or is the source itself). */
+    private boolean existsAt(File destinationFolder, File source, File candidate, boolean useElevated) {
+        if (isSameDirectory(source, destinationFolder)) return true;
+        return candidateExists(destinationFolder, source.getName(), candidate, useElevated);
     }
 
     private boolean isSameDirectory(File file, File destinationFolder) {
@@ -1063,9 +1106,14 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
     }
 
     public void extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder) throws IOException {
+        extractZipEntry(zipEntry, destinationFolder, null);
+    }
+
+    public void extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder, String targetName) throws IOException {
         String zipEntryPath = zipEntry.getFullPath();
         if (zipEntryPath == null) return;
         File zipFile = zipEntry.getZipFile();
+        String entryName = (targetName != null && !targetName.isEmpty()) ? targetName : zipEntry.getName();
         // Entries are written under the display name only, so a file inside
         // "docs/" does not land in destination/docs/.
         if (zipEntry.isDirectory()) {
@@ -1073,14 +1121,14 @@ private void clearReplacedDestination(File dest, boolean useElevated) {
             for (FileHeader fh : ZipCompat.listHeaders(zipFile)) {
                 String name = fh.getFileName().replace('\\', '/');
                 if (!name.startsWith(prefix) || fh.isDirectory()) continue;
-                File target = new File(destinationFolder, zipEntry.getName() + "/" + name.substring(prefix.length()));
+                File target = new File(destinationFolder, entryName + "/" + name.substring(prefix.length()));
                 if (target.exists()) {
                     RecycleBin.moveToBin(context, target, "overwrite");
                 }
                 ZipCompat.extractEntry(zipFile, name, target);
             }
         } else {
-            File target = new File(destinationFolder, zipEntry.getName());
+            File target = new File(destinationFolder, entryName);
             if (target.exists()) {
                 RecycleBin.moveToBin(context, target, "overwrite");
             }
