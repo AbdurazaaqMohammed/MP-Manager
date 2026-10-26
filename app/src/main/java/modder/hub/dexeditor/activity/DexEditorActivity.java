@@ -2958,6 +2958,7 @@ public class DexEditorActivity extends BaseActivity {
         new Thread(() -> {
             int imported = 0;
             String firstImportedClass = null;
+            String firstImportedCode = null;
             try {
                 int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
                 if (targetVer <= 0) targetVer = 35;
@@ -2970,18 +2971,47 @@ public class DexEditorActivity extends BaseActivity {
                     if (name.endsWith(".smali")) {
                         String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
                         if (code == null || code.trim().isEmpty()) continue;
+
+                        String simpleName = f.getName().substring(0, f.getName().length() - 6);
+                        String desiredPath;
+                        if (targetPkg != null && !targetPkg.trim().isEmpty()) {
+                            desiredPath = targetPkg.trim().replace('.', '/') + "/" + simpleName;
+                        } else {
+                            desiredPath = simpleName;
+                        }
+
+                        // Check existing .class definition
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
+                        if (m.find()) {
+                            String originalType = m.group(2); // e.g. "La0;"
+                            if (targetPkg != null && !targetPkg.trim().isEmpty()) {
+                                String newType = "L" + desiredPath + ";";
+                                code = code.replace(originalType, newType);
+                            }
+                        } else {
+                            code = ".class public L" + desiredPath + ";\n.super Ljava/lang/Object;\n\n" + code;
+                        }
+
                         ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
                         classTree.saveClassDef(def);
+
+                        String finalClassName = desiredPath;
                         String type = def.getType();
                         if (type != null && type.startsWith("L") && type.endsWith(";")) {
-                            String className = type.substring(1, type.length() - 1);
-                            if (firstImportedClass == null) firstImportedClass = className;
+                            finalClassName = type.substring(1, type.length() - 1);
+                        }
+                        classTree.getPendingSmaliMap().put(finalClassName, code);
+
+                        if (firstImportedClass == null) {
+                            firstImportedClass = finalClassName;
+                            firstImportedCode = code;
                         }
                         imported++;
                     }
                 }
                 final int totalImported = imported;
                 final String classToOpen = firstImportedClass;
+                final String codeToOpen = firstImportedCode;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
                 runOnUiThread(() -> {
