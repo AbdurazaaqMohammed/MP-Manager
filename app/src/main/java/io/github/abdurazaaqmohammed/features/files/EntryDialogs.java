@@ -249,19 +249,20 @@ public class EntryDialogs {
         TextView customMsgView = null;
         String binMode = RecycleBin.mode(context);
         final CheckBox recycleCb;
-        boolean isTargetInsideBin = false;
+        boolean targetInsideBinCalc = false;
         if (!isInZip) {
             if (multi) {
                 for (int i : state.selectedPositions()) {
                     if (values[i] instanceof File f && RecycleBin.isInsideBin(context, f)) {
-                        isTargetInsideBin = true;
+                        targetInsideBinCalc = true;
                         break;
                     }
                 }
             } else if (file != null && RecycleBin.isInsideBin(context, file)) {
-                isTargetInsideBin = true;
+                targetInsideBinCalc = true;
             }
         }
+        final boolean isTargetInsideBin = targetInsideBinCalc;
         if (isInZip && zipFile.getName().endsWith(".apk")) {
             recycleCb = null;
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
