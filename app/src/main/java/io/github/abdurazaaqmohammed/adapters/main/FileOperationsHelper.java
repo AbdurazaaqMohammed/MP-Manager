@@ -360,7 +360,6 @@ public class FileOperationsHelper {
                 done += itemTotal;
                 advanceActiveProgress(done, totalFiles);
             } else if (item instanceof ZipEntryInfo z) {
-                File dest = plan.get(z);
                 if (dest != null) {
                     extractZipEntry(z, destinationFolder, dest.getName());
                 }
