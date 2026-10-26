@@ -2440,7 +2440,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) { }
     }
 
-    private void reloadPane(boolean pane1) {
+    public void reloadPane(boolean pane1) {
         reloadPane(pane1, false);
     }
 
@@ -2449,7 +2449,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * Programmatic (non-user) refreshes should pass true so the list
      * does not jump to the top while the user is browsing.
      */
-    private void reloadPane(boolean pane1, boolean preserveScroll) {
+    public void reloadPane(boolean pane1, boolean preserveScroll) {
         // When both panes point at the same listing, a change made through
         // either one is visible in both, so the other pane has to be reloaded
         // too. Decided before the first reload, since that rewrites the pane's

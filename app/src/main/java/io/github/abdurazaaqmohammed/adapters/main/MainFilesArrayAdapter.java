@@ -1111,14 +1111,11 @@ final View.OnClickListener originalClickListener;
                                         entryDialogs.showDeleteDialog(finalPosition, file, entry, multi);
                                         break;
                                     case FileMenuOrder.HIDE:
-                                        Set<String> updatedHidden = new HashSet<>(listPrefs.manuallyHidden());
                                         if (finalAllAlreadyHidden) {
-                                            for (String tp : targetPaths) updatedHidden.remove(tp);
+                                            for (String tp : targetPaths) listPrefs.unhide(tp);
                                         } else {
-                                            for (String tp : targetPaths) updatedHidden.add(tp);
+                                            for (String tp : targetPaths) listPrefs.hide(tp);
                                         }
-                                        PreferenceManager.getDefaultSharedPreferences(context)
-                                                .edit().putStringSet("manually_hidden_files", updatedHidden).apply();
                                         if (multi) {
                                             clearSelection();
                                         }
