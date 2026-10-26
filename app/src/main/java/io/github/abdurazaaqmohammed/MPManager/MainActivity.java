@@ -3117,8 +3117,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         itemLayout.addView(text);
 
         itemLayout.setOnClickListener(v -> {
-            if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.END);
-            onClick.onClick(v);
+            if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
+                drawerLayout.closeDrawer(GravityCompat.END);
+                drawerLayout.postDelayed(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        onClick.onClick(v);
+                    }
+                }, 220);
+            } else {
+                onClick.onClick(v);
+            }
         });
 
         container.addView(itemLayout);

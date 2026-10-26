@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.domain.files;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -31,6 +32,29 @@ public final class FileSearch {
         boolean isCancelled();
     }
 
+    public static Pattern compilePattern(String query, boolean matchCase, boolean regex) {
+        if (query == null || query.isEmpty()) return null;
+        if (regex) {
+            return Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+        }
+        if (query.contains("*") || query.contains("?")) {
+            // Wildcard smart pattern
+            StringBuilder sb = new StringBuilder();
+            String[] parts = query.split("(?<=[*?])|(?=[*?])");
+            for (String part : parts) {
+                if ("*".equals(part)) {
+                    sb.append(".*");
+                } else if ("?".equals(part)) {
+                    sb.append(".");
+                } else {
+                    sb.append(Pattern.quote(part));
+                }
+            }
+            return Pattern.compile(sb.toString(), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+        }
+        return null;
+    }
+
     public static List<File> searchByName(File dir, String query, boolean subfolders,
             boolean matchCase, boolean regex, String textInside,
             long minSize, long maxSize, Function<File, File[]> lister) {
@@ -41,13 +65,11 @@ public final class FileSearch {
             boolean matchCase, boolean regex, String textInside,
             long minSize, long maxSize, Function<File, File[]> lister, SearchCallback callback) {
         List<File> results = new ArrayList<>();
-        Pattern pattern = null;
-        if (regex) {
-            try {
-                pattern = Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-            } catch (Exception e) {
-                return results;
-            }
+        Pattern pattern;
+        try {
+            pattern = compilePattern(query, matchCase, regex);
+        } catch (Exception e) {
+            return results;
         }
         searchRecursive(dir, results, matchCase ? query : query.toLowerCase(),
                 subfolders, matchCase, regex, pattern, textInside, minSize, maxSize, lister, callback);
@@ -72,7 +94,7 @@ public final class FileSearch {
             if (callback != null) callback.onFileChecking(f);
             boolean matchName;
             String name = f.getName();
-            if (regex && pattern != null) {
+            if (pattern != null) {
                 matchName = pattern.matcher(name).find();
             } else {
                 matchName = mCase ? name.contains(query) : name.toLowerCase().contains(query);
@@ -116,23 +138,30 @@ public final class FileSearch {
     }
 
     public static List<ContentHit> findInFiles(File dir, String needle,
-            boolean matchCase, boolean regex, Progress progress) {
+            boolean subfolders, boolean matchCase, boolean regex, Progress progress) {
         List<ContentHit> hits = new ArrayList<>();
-        Pattern pattern = null;
-        if (regex) {
-            try {
-                pattern = Pattern.compile(needle, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-            } catch (Exception e) {
-                return hits;
-            }
+        Pattern pattern;
+        try {
+            pattern = compilePattern(needle, matchCase, regex);
+        } catch (Exception e) {
+            return hits;
         }
         String normNeedle = matchCase ? needle : needle.toLowerCase();
         int[] scanned = {0};
-        findRecursive(dir, normNeedle, matchCase, regex, pattern, hits, scanned, progress);
+        if (dir.isFile() && (dir.getName().toLowerCase().endsWith(".zip") || dir.getName().toLowerCase().endsWith(".apk") || dir.getName().toLowerCase().endsWith(".jar"))) {
+            findInArchiveFiles(dir, normNeedle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+        } else {
+            findRecursive(dir, normNeedle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+        }
         return hits;
     }
 
-    private static void findRecursive(File dir, String needle, boolean matchCase,
+    public static List<ContentHit> findInFiles(File dir, String needle,
+            boolean matchCase, boolean regex, Progress progress) {
+        return findInFiles(dir, needle, true, matchCase, regex, progress);
+    }
+
+    private static void findRecursive(File dir, String needle, boolean subfolders, boolean matchCase,
             boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned,
             Progress progress) {
         File[] files = dir.listFiles();
@@ -140,7 +169,9 @@ public final class FileSearch {
         for (File f : files) {
             if (hits.size() >= MAX_HITS) return;
             if (f.isDirectory()) {
-                findRecursive(f, needle, matchCase, regex, pattern, hits, scanned, progress);
+                if (subfolders) {
+                    findRecursive(f, needle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+                }
             } else if (f.isFile() && f.length() < MAX_CONTENT_BYTES) {
                 scanned[0]++;
                 if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
@@ -151,7 +182,7 @@ public final class FileSearch {
                         lineNo++;
                         if (lineNo == 1 && line.indexOf('\0') >= 0) break;
                         boolean hit;
-                        if (regex && pattern != null) hit = pattern.matcher(line).find();
+                        if (pattern != null) hit = pattern.matcher(line).find();
                         else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
                         if (hit) {
                             String snippet = line.trim();
@@ -164,7 +195,59 @@ public final class FileSearch {
                     }
                 } catch (Exception ignored) {
                 }
+            } else if (f.isFile() && (f.getName().toLowerCase().endsWith(".zip") || f.getName().toLowerCase().endsWith(".apk") || f.getName().toLowerCase().endsWith(".jar"))) {
+                if (subfolders) {
+                    findInArchiveFiles(f, needle, subfolders, matchCase, regex, pattern, hits, scanned, progress);
+                }
             }
+        }
+    }
+
+    private static void findInArchiveFiles(File archive, String needle, boolean searchSubfolders, boolean matchCase,
+                                           boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(archive)) {
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                if (hits.size() >= MAX_HITS) return;
+                java.util.zip.ZipEntry ze = en.nextElement();
+                String name = ze.getName();
+                if (ze.isDirectory() || ze.getSize() > MAX_CONTENT_BYTES) continue;
+                if (!searchSubfolders && name.contains("/")) continue;
+
+                // Check text file extensions
+                String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+                if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".webp")
+                        || lowerName.endsWith(".so") || lowerName.endsWith(".dex") || lowerName.endsWith(".arsc")
+                        || lowerName.endsWith(".pdf") || lowerName.endsWith(".gif") || lowerName.endsWith(".mp3")
+                        || lowerName.endsWith(".mp4") || lowerName.endsWith(".ogg") || lowerName.endsWith(".wav")) {
+                    continue;
+                }
+
+                scanned[0]++;
+                if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
+
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), java.nio.charset.StandardCharsets.UTF_8))) {
+                    String line;
+                    int lineNo = 0;
+                    while ((line = br.readLine()) != null) {
+                        lineNo++;
+                        if (lineNo == 1 && line.indexOf('\0') >= 0) break; // binary check
+                        boolean hit;
+                        if (pattern != null) hit = pattern.matcher(line).find();
+                        else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
+                        if (hit) {
+                            String snippet = line.trim();
+                            if (snippet.length() > SNIPPET_LEN)
+                                snippet = snippet.substring(0, SNIPPET_LEN) + "\u2026";
+                            hits.add(new ContentHit(archive, lineNo, snippet, name));
+                            if (hits.size() >= MAX_HITS) return;
+                        }
+                        if (lineNo > MAX_LINES_PER_FILE) break;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -173,35 +256,40 @@ public final class FileSearch {
         void onProgress(int scannedFiles);
     }
 
-    public static List<ContentHit> searchInXmlFiles(File root, String query, boolean matchCase, boolean regex, Progress progress) {
+    public static List<ContentHit> searchInXmlFiles(File root, String query,
+            boolean searchSubfolders, boolean matchCase, boolean regex, Progress progress) {
         List<ContentHit> hits = new ArrayList<>();
-        Pattern pattern = null;
-        if (regex) {
-            try {
-                pattern = Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-            } catch (Exception e) {
-                return hits;
-            }
+        Pattern pattern;
+        try {
+            pattern = compilePattern(query, matchCase, regex);
+        } catch (Exception e) {
+            return hits;
         }
         String normQuery = matchCase ? query : query.toLowerCase();
         int[] scanned = {0};
 
         if (root.isFile() && (root.getName().toLowerCase().endsWith(".apk") || root.getName().toLowerCase().endsWith(".zip"))) {
-            searchInArchiveXml(root, normQuery, matchCase, regex, pattern, hits, scanned, progress);
+            searchInArchiveXml(root, normQuery, searchSubfolders, matchCase, regex, pattern, hits, scanned, progress);
         } else {
-            searchInDirectoryXml(root, normQuery, matchCase, regex, pattern, hits, scanned, progress);
+            searchInDirectoryXml(root, normQuery, searchSubfolders, matchCase, regex, pattern, hits, scanned, progress);
         }
         return hits;
     }
 
-    private static void searchInDirectoryXml(File dir, String query, boolean matchCase, boolean regex,
+    public static List<ContentHit> searchInXmlFiles(File root, String query, boolean matchCase, boolean regex, Progress progress) {
+        return searchInXmlFiles(root, query, true, matchCase, regex, progress);
+    }
+
+    private static void searchInDirectoryXml(File dir, String query, boolean searchSubfolders, boolean matchCase, boolean regex,
             Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
         File[] files = dir.listFiles();
         if (files == null) return;
         for (File f : files) {
             if (hits.size() >= MAX_HITS) return;
             if (f.isDirectory()) {
-                searchInDirectoryXml(f, query, matchCase, regex, pattern, hits, scanned, progress);
+                if (searchSubfolders) {
+                    searchInDirectoryXml(f, query, searchSubfolders, matchCase, regex, pattern, hits, scanned, progress);
+                }
             } else if (f.isFile() && f.getName().toLowerCase().endsWith(".xml") && f.length() < MAX_CONTENT_BYTES) {
                 scanned[0]++;
                 if (progress != null) progress.onProgress(scanned[0]);
@@ -234,7 +322,7 @@ public final class FileSearch {
                     while ((line = br.readLine()) != null) {
                         lineNo++;
                         boolean hit;
-                        if (regex && pattern != null) hit = pattern.matcher(line).find();
+                        if (pattern != null) hit = pattern.matcher(line).find();
                         else hit = matchCase ? line.contains(query) : line.toLowerCase().contains(query);
                         if (hit) {
                             String snippet = line.trim();
@@ -250,7 +338,7 @@ public final class FileSearch {
         }
     }
 
-    private static void searchInArchiveXml(File archive, String query, boolean matchCase, boolean regex,
+    private static void searchInArchiveXml(File archive, String query, boolean searchSubfolders, boolean matchCase, boolean regex,
             Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
         try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(archive)) {
             java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
@@ -259,6 +347,10 @@ public final class FileSearch {
                 java.util.zip.ZipEntry ze = en.nextElement();
                 String name = ze.getName();
                 if (!ze.isDirectory() && name.toLowerCase().endsWith(".xml") && ze.getSize() < MAX_CONTENT_BYTES) {
+                    if (!searchSubfolders && name.contains("/")) {
+                        // Skip subfolder entries if not searching subfolders
+                        continue;
+                    }
                     scanned[0]++;
                     if (progress != null) progress.onProgress(scanned[0]);
                     try (java.io.InputStream is = new java.io.BufferedInputStream(zf.getInputStream(ze))) {
@@ -292,7 +384,7 @@ public final class FileSearch {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             boolean hit;
-            if (regex && pattern != null) hit = pattern.matcher(line).find();
+            if (pattern != null) hit = pattern.matcher(line).find();
             else hit = matchCase ? line.contains(query) : line.toLowerCase().contains(query);
             if (hit) {
                 String snippet = line.trim();

@@ -916,7 +916,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             popup.getMenu().add("Copy");
         }
         popup.getMenu().add("Add");
-        popup.getMenu().add("Import");
         popup.getMenu().add("Delete");
         popup.getMenu().add("Rename");
         popup.getMenu().add("Batch operations");
@@ -935,9 +934,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                     break;
                 case "Add":
                     if (listener != null) listener.onAddClass(node);
-                    break;
-                case "Import":
-                    if (listener != null) listener.onImportClass(node);
                     break;
                 case "Batch operations":
                     isSelectionMode = true;
@@ -1126,9 +1122,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         }
 
         default void onAddClass(TreeNode node) {
-        }
-
-        default void onImportClass(TreeNode node) {
         }
     }
 

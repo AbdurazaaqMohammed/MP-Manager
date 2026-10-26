@@ -1378,7 +1378,8 @@ public class RootManager {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
-        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 15);
+        String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
+        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(listTarget) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();
@@ -1636,9 +1637,10 @@ public class RootManager {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
-        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 30);
+        String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
+        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(listTarget) + " 2>/dev/null", 30);
         if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
-            result = executeFs("ls -1Ap -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 30);
+            result = executeFs("ls -1Ap -- " + escapeShellArg(listTarget) + " 2>/dev/null", 30);
         }
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();

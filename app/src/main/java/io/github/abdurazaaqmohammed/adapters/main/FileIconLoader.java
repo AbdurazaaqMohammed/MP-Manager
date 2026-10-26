@@ -422,16 +422,83 @@ public class FileIconLoader {
         return total;
     }
 
+    private static boolean isDataAppRoot(String path) {
+        if (path == null || path.isEmpty()) return false;
+        String p = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
+        return p.equals("/data/app");
+    }
+
+    private static boolean isInsideDataApp(String path) {
+        if (path == null || path.isEmpty()) return false;
+        String p = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
+        return p.startsWith("/data/app/");
+    }
+
+    private String resolvePackageName(File file, String listedDir) {
+        String name = file.getName();
+        if (name == null || name.isEmpty()) return null;
+        if (isDataRoot(listedDir)) {
+            return io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(name) ? name : null;
+        }
+        if (isDataAppRoot(listedDir)) {
+            // Android 8+: /data/app/~~.../com.pkg-... or legacy /data/app/com.pkg-...
+            int dash = name.indexOf('-');
+            String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
+            if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(possiblePkg)) {
+                return possiblePkg;
+            }
+            if (file.isDirectory()) {
+                File[] children = null;
+                try {
+                    children = file.listFiles();
+                } catch (Exception ignored) {}
+                if (children != null && children.length > 0) {
+                    for (File c : children) {
+                        String cn = c.getName();
+                        int cDash = cn.indexOf('-');
+                        String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
+                        if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(cPkg)) {
+                            return cPkg;
+                        }
+                    }
+                } else if (io.github.abdurazaaqmohammed.utils.AccessManager.fileOpsOn(context)) {
+                    // Try fast shell lookup if unreadable by normal user
+                    try {
+                        io.github.abdurazaaqmohammed.utils.RootManager.ShellResult r =
+                                io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context)
+                                        .executeFs("ls -1 -- " + io.github.abdurazaaqmohammed.utils.RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
+                        if (r != null && r.isSuccess() && r.output() != null) {
+                            for (String line : r.output().split("\\r?\\n")) {
+                                String cn = line.trim();
+                                int cDash = cn.indexOf('-');
+                                String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
+                                if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(cPkg)) {
+                                    return cPkg;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        } else if (isInsideDataApp(listedDir)) {
+            // Inside ~~...: folders like com.example.app-hash
+            int dash = name.indexOf('-');
+            String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
+            if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(possiblePkg)) {
+                return possiblePkg;
+            }
+        }
+        return null;
+    }
+
     public void requestRowBadge(File file, ImageView badgeView, String listedDir) {
         if (file == null || badgeView == null || isInZip) return;
         String name = file.getName();
         if (name == null || name.isEmpty()) return;
-        boolean folderBadge = isDataRoot(listedDir)
-                && io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(name);
+        String targetPkg = resolvePackageName(file, listedDir);
+        boolean folderBadge = targetPkg != null;
         boolean splitBadge = false;
         if (!folderBadge) {
-            // Extension test before isFile(): the stat was previously paid on
-            // every row bind just to rule out a split container.
             String lower = name.toLowerCase(Locale.ROOT);
             if (lower.endsWith(".apks") || lower.endsWith(".xapk")
                     || lower.endsWith(".apkm") || lower.endsWith(".aspk")) {
@@ -439,7 +506,7 @@ public class FileIconLoader {
             }
         }
         if (!folderBadge && !splitBadge) return;
-        String key = (folderBadge ? "pkg:" : "split:") + (folderBadge ? name : file.getPath());
+        String key = (folderBadge ? "pkg:" : "split:") + (folderBadge ? targetPkg : file.getPath());
         Drawable cached = badgeCache.get(key);
         if (cached != null) {
             badgeView.setImageDrawable(cached);
@@ -453,7 +520,7 @@ public class FileIconLoader {
             iconLoaderService.execute(() -> {
                 if (!tag.equals(badgeView.getTag())) return;
                 try {
-                    Drawable icon = folderBadge ? loadInstalledAppIcon(name)
+                    Drawable icon = folderBadge ? loadInstalledAppIcon(targetPkg)
                             : ApkIconHelper.getApkIcon(context, tag);
                     if (icon == null) return;
                     Drawable circled = circleDrawable(context.getResources(), icon);
