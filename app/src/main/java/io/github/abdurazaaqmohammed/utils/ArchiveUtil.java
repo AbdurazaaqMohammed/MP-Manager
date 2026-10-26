@@ -28,6 +28,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 
@@ -169,8 +171,7 @@ public class ArchiveUtil {
         try (SevenZFile sevenZFile = password == null ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
-                String name = sanitizeEntryName(entry.getName());
-                File out = new File(destDir, name);
+                File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
@@ -254,8 +255,7 @@ public class ArchiveUtil {
         try (Archive rar = new Archive(archive)) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
-                String name = sanitizeEntryName(fh.getFileName());
-                File out = new File(destDir, name);
+                File out = resolveDestFile(destDir, fh.getFileName());
                 if (fh.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
@@ -278,8 +278,7 @@ public class ArchiveUtil {
         try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
-                String name = sanitizeEntryName(entry.getName());
-                File out = new File(destDir, name);
+                File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
@@ -366,11 +365,36 @@ public class ArchiveUtil {
         }
     }
 
+    /**
+     * Resolves an archive entry name to a path relative to the destination.
+     * Path components are processed left to right so a single pass cannot
+     * resurrect "..": a crafted name like "....//file" (which the old
+     * single-pass regex turned back into "..//file") is kept as the literal
+     * name "..../file" instead of normalizing to "../file".
+     */
     private static String sanitizeEntryName(String entryName) {
         String cleaned = entryName.replace('\\', '/');
-        while (cleaned.startsWith("/")) cleaned = cleaned.substring(1);
-        cleaned = cleaned.replaceAll("\\.\\./", "");
-        return cleaned;
+        Deque<String> parts = new ArrayDeque<>();
+        for (String part : cleaned.split("/")) {
+            if (part.isEmpty() || part.equals(".")) continue;
+            if (part.equals("..")) parts.pollLast();
+            else parts.addLast(part);
+        }
+        return String.join("/", parts);
+    }
+
+    /**
+     * Final traversal guard: the sanitized entry must resolve inside destDir.
+     * Throws when an entry still tries to escape it.
+     */
+    private static File resolveDestFile(File destDir, String entryName) throws IOException {
+        File out = new File(destDir, sanitizeEntryName(entryName));
+        String canonicalDest = destDir.getCanonicalPath();
+        String canonicalOut = out.getCanonicalPath();
+        if (!canonicalOut.equals(canonicalDest) && !canonicalOut.startsWith(canonicalDest + File.separator)) {
+            throw new IOException("Blocked archive entry escaping the destination: " + entryName);
+        }
+        return out;
     }
 
     private static void copy(InputStream is, OutputStream os) throws IOException {

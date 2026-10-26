@@ -174,7 +174,7 @@ public final class ShizukuManager {
         try {
             String arg = shellArg(dirPath);
             ShizukuShell.Result r = ShizukuShell.exec(
-                    "test -d " + arg + " || exit 4; LC_ALL=C ls -la -- " + arg + " 2>/dev/null", 30);
+                    "test -d " + arg + " || exit 4; LC_ALL=C ls -laH -- " + arg + " 2>/dev/null", 30);
             if (r == null || !r.success || r.stdout == null) return null;
             List<File> files = new ArrayList<>();
             for (String line : r.stdout.split("\\r?\\n")) {

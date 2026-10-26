@@ -1293,7 +1293,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         final File startHome2 = homeDir2;
         handler.post(() -> {
             try {
-                sortFilter.setupFilterBar();
+                // Filter bar is created lazily on first use (menu/back press);
+                // it ships GONE so building it eagerly only delayed first frame.
                 setupNavigationButtons();
                 refreshSidebar(getSidebarSectionOrder());
                 boolean restored = false;
@@ -1434,7 +1435,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 runWhenIdle(() -> {
                     try {
                         UpdateUtil.checkForUpdates(false, MainActivity.this);
-                    } catch (Exception ignored) {
+                        } catch (Exception ignored) {
                     }
                 }, 2500);
             }
@@ -1544,9 +1545,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         else if (isBookmarksDrawerOpen) closeBookmarksDrawer();
         else {
             ViewGroup topBar = findViewById(R.id.topBar);
-            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
-            EditText filterBar = filterBox.getEditText();
-            if (filterBox.getVisibility() == View.VISIBLE) {
+            TextInputLayout filterBox = sortFilter.filterBarIfCreated();
+            EditText filterBar = filterBox == null ? null : filterBox.getEditText();
+            if (filterBox != null && filterBox.getVisibility() == View.VISIBLE) {
                 topBar.getChildAt(1).setVisibility(View.VISIBLE);
                 filterBox.setVisibility(View.GONE);
                 if (filterBar != null) filterBar.setText("");
@@ -2998,18 +2999,23 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         addRightDrawerItem(container, R.drawable.baseline_filter_list_24, getString(R.string.filter), v -> {
             LinearLayout topBar = findViewById(R.id.topBar);
             LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
-            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
+            TextInputLayout filterBox = sortFilter.filterBarBox();
             EditText filterBar = filterBox.getEditText();
             if (pathLayout.getVisibility() == View.VISIBLE) {
                 pathLayout.setVisibility(View.GONE);
                 filterBox.setVisibility(View.VISIBLE);
                 if (filterBar != null) {
                     filterBar.requestFocus();
-                    try {
-                        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                        if (imm != null) imm.showSoftInput(filterBar, InputMethodManager.SHOW_IMPLICIT);
-                    } catch (Exception ignored) {
-                    }
+                    // The field only becomes visible this frame, so the IME
+                    // ignores an immediate show request; retry once attached.
+                    filterBar.post(() -> {
+                        try {
+                            InputMethodManager imm =
+                                    (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                            if (imm != null) imm.showSoftInput(filterBar, InputMethodManager.SHOW_IMPLICIT);
+                        } catch (Exception ignored) {
+                        }
+                    });
                 }
             } else {
                 pathLayout.setVisibility(View.VISIBLE);

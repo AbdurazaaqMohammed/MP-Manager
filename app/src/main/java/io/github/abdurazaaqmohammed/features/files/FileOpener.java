@@ -50,6 +50,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -97,6 +98,7 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -1456,6 +1458,13 @@ public class FileOpener {
                                                         byte[] buf = new byte[65536];
                                                         int n;
                                                         while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                                                    } catch (EOFException | net.lingala.zip4j.exception.ZipException cappedRead) {
+                                                        // zip4j caps entry reads at the central directory's
+                                                        // declared compressed size and aborts with
+                                                        // "Unexpected end of input stream" when the archive
+                                                        // under-declares it (reported on large .apks). Re-read
+                                                        // the entry from its real local header without that cap.
+                                                        ZipCompat.extractEntryTolerant(readable, fh.getFileName(), tmpApk);
                                                     }
                                                     apkFiles.add(tmpApk);
                                                 }

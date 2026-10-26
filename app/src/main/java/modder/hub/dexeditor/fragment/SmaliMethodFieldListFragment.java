@@ -701,7 +701,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                     DexEditorActivity.classTree.saveSmali(slashClass, newSmali);
                 }
                 try {
-                    String pure = newSmali.replaceFirst("(?s)^#.*?\\n\\n", "");
+                    String pure = SmaliHelper.stripSmaliHeaderUnchecked(newSmali);
                     FileWriter fw = new FileWriter(smaliFilePath);
                     fw.write(pure);
                     fw.close();

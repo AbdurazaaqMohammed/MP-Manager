@@ -184,6 +184,8 @@ public class FileSearchController {
         dialog.setOnShowListener(d -> {
             searchQuery.requestFocus();
             try {
+                if (dialog.getWindow() != null)
+                    dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
                 android.view.inputmethod.InputMethodManager imm =
                         (android.view.inputmethod.InputMethodManager) activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
                 if (imm != null) imm.showSoftInput(searchQuery, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);

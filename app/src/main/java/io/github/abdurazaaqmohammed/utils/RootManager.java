@@ -1378,7 +1378,7 @@ public class RootManager {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
-        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 15);
+        ShellResult result = executeFs("LC_ALL=C ls -laH -- " + escapeShellArg(cleanPath) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();

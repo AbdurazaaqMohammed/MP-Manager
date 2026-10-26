@@ -102,7 +102,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -110,6 +113,7 @@ import javax.annotation.Nullable;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
+import modder.hub.dexeditor.smali.SmaliHelper;
 
 public class ClassTree {
 	
@@ -129,8 +133,10 @@ public class ClassTree {
     private String DELETED_CLASSES_JSON;
     private String EDITED_CLASSES_JSON;
     private final String workDir;
-    private final Map<String, HashSet<String>> editedClassMap = new HashMap<>();
-    private final Map<String, String> pendingSmaliMap = new HashMap<>();
+    // Concurrent so the hot edit path (saveClassDef / saveAllDexFiles) needs no monitor, and so a
+    // background auto-save pass can read them while the user keeps editing.
+    private final Map<String, HashSet<String>> editedClassMap = new ConcurrentHashMap<>();
+    private final Map<String, String> pendingSmaliMap = new ConcurrentHashMap<>();
     public Tree tree;
     public HashMap<String, ClassDef> classMap;
     public List<DexBackedDexFile> dexFiles;
@@ -146,14 +152,76 @@ public class ClassTree {
     final Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
     byte[] input;
 
-    private Map<String, HashSet<String>> deletedClassJson = new HashMap<>();
+    private Map<String, HashSet<String>> deletedClassJson = new ConcurrentHashMap<>();
     private final Map<String, String> typeToDexMap = new HashMap<>();
     private final Map<String, DexBackedDexFile> dexFileByName = new HashMap<>();
     // Concurrent so the hot edit path (saveClassDef / saveAllDexFiles) needs no monitor.
     private final ConcurrentMap<String, Integer> classDefIndex = new ConcurrentHashMap<>(1 << 14);
 
+    // =====================================================================
+    // Background auto-save (pipelined dex compilation)
+    //
+    // Every modification bumps the touched dex's generation (before any state is mutated,
+    // under editLock). A background pass compiles dirty dexes into session-scoped autosave
+    // files; the foreground save applies any autosave whose generation still matches - a file
+    // copy instead of a multi-second recompile - and compiles the rest exactly as before.
+    //
+    // A generation mismatch means the dex changed while that autosave was being produced, so
+    // the autosave is discarded and the dex recompiled: an edit made during a background save
+    // can never be silently lost. Autosave files live under the session workDir, which is
+    // deleted when the editor exits, so nothing accumulates on the user's storage and an
+    // exit-without-saving leaves the original dexes untouched.
+    // =====================================================================
+
     /**
-     * Bounded LRU cache of disassembled classes.
+     * Orders state mutations (bump generation, update pendingSmaliMap / classMap / classDefList)
+     * against a compiling pass's generation snapshot. Writers hold it briefly; a compiling pass
+     * takes its snapshot under it and then works lock-free, re-checking the generation before
+     * using its result.
+     */
+    private final Object editLock = new Object();
+
+    /** Only one save pass (background or foreground) may run at a time. */
+    private final Object saveCoordinator = new Object();
+
+    /** Set while the user is waiting on the real save; a background pass yields between dexes. */
+    private volatile boolean foregroundWaiting = false;
+
+    /** Current generation of each dex file; bumped (under editLock) before any state mutation. */
+    private final ConcurrentHashMap<String, AtomicLong> dexGenerations = new ConcurrentHashMap<>();
+
+    /** Generation of each dex as last persisted - to the real file (foreground) or an autosave. */
+    private final ConcurrentHashMap<String, Long> persistedGenerations = new ConcurrentHashMap<>();
+
+    /** A completed background compilation of one dex, usable by the foreground save if still current. */
+    private static final class AutosavedDex {
+        final long generation;
+        final File file;
+        AutosavedDex(long generation, File file) {
+            this.generation = generation;
+            this.file = file;
+        }
+    }
+
+    private final ConcurrentHashMap<String, AutosavedDex> autosavedDexes = new ConcurrentHashMap<>();
+
+    private volatile boolean autoSaveEnabled = false;
+
+    /** Debounce: coalesces bursts of edits (typing, batch replace) into one background pass. */
+    private static final long AUTO_SAVE_DEBOUNCE_MS = 1500;
+
+    private final java.util.concurrent.ScheduledExecutorService autoSaveExecutor =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "dex-autosave");
+                t.setDaemon(true);
+                return t;
+            });
+
+    private final AtomicBoolean autoSaveScheduled = new AtomicBoolean(false);
+
+
+    /**
+     * Byte-budgeted LRU cache of disassembled classes.
      *
      * <p>The previous implementation was a {@link ConcurrentHashMap} that called {@code clear()}
      * the moment it reached {@code SMALI_CACHE_MAX} entries. That is the worst possible policy for
@@ -161,20 +229,67 @@ public class ClassTree {
      * the entries it is actively re-reading, so classes get disassembled over and over. An LRU keeps
      * the hot working set instead of flushing it wholesale.
      *
+     * <p>The budget is measured in characters (the real cost of a cached smali text on ART, where a
+     * char is two bytes) rather than entries, so a device with a large heap can afford to keep the
+     * disassembly of a whole dex resident - which makes a repeat search a pure scan - while a small
+     * heap degrades gracefully to the hottest subset instead of OOM-ing. Evicting or clearing only
+     * changes speed, never results.
+     *
      * <p>Thread-safe: search fans out over a pool of workers that all read through this cache.
      */
+    private long smaliCacheChars = 0;
+
     private final Map<String, String> pureSmaliCache =
-            Collections.synchronizedMap(new LinkedHashMap<>(256, 0.75f, true) {
+            Collections.synchronizedMap(new LinkedHashMap<String, String>(256, 0.75f, true) {
+                private void addCost(String key, String value, int sign) {
+                    smaliCacheChars += sign * (key.length() + value.length() + 64L);
+                }
+
+                @Override
+                public String put(String key, String value) {
+                    String prev = super.put(key, value);
+                    if (prev == null) {
+                        addCost(key, value, 1);
+                    } else {
+                        smaliCacheChars += value.length() - prev.length();
+                    }
+                    return prev;
+                }
+
+                @Override
+                public String remove(Object key) {
+                    String prev = super.remove(key);
+                    if (prev != null && key instanceof String) {
+                        addCost((String) key, prev, -1);
+                    }
+                    return prev;
+                }
+
+                @Override
+                public void clear() {
+                    super.clear();
+                    smaliCacheChars = 0;
+                }
+
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
-                    return size() > smaliCacheMax();
+                    if (smaliCacheChars > smaliCacheBudget()) {
+                        smaliCacheChars -= eldest.getKey().length() + eldest.getValue().length() + 64L;
+                        return true;
+                    }
+                    return false;
                 }
             });
 
-    /** Cap scales with the heap so a large device can cache more disassembly and a small one cannot OOM. */
-    private static int smaliCacheMax() {
-        long maxMb = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
-        return (int) Math.max(256L, Math.min(4096L, maxMb / 8L));
+    /**
+     * Character budget for {@link #pureSmaliCache}. Scales with the heap (the dex editor runs with
+     * {@code largeHeap}), leaving the majority of the heap for the dex buffers, class definitions
+     * and open editors.
+     */
+    private static long smaliCacheBudget() {
+        long maxBytes = Runtime.getRuntime().maxMemory();
+        long budgetBytes = Math.min(256L * 1024 * 1024, Math.max(8L * 1024 * 1024, maxBytes / 3));
+        return budgetBytes / 2; // one char of smali text costs 2 bytes on ART
     }
 
     private static final Set<String> activeWorkDirs = new HashSet<>();
@@ -201,10 +316,32 @@ public class ClassTree {
         public boolean removeDebugLocal = false;
     }
 
-    private CompilationOptions compilationOptions = new CompilationOptions();
+    private volatile CompilationOptions compilationOptions = new CompilationOptions();
 
     public void setCompilationOptions(CompilationOptions options) {
+        CompilationOptions old = this.compilationOptions;
         this.compilationOptions = options;
+        if (optionsChanged(old, options)) {
+            // The bytes a save would produce just changed for every dex, not just edited ones
+            // (e.g. removing debug info rewrites every class), so every dex becomes dirty.
+            synchronized (editLock) {
+                for (String fileName : dexClassMap.keySet()) {
+                    dexGen(fileName).incrementAndGet();
+                }
+            }
+            scheduleAutoSave();
+        }
+    }
+
+    private static boolean optionsChanged(CompilationOptions a, CompilationOptions b) {
+        return a == null || b == null
+                || a.removeAllDebug != b.removeAllDebug
+                || a.removeDebugSource != b.removeDebugSource
+                || a.removeDebugLine != b.removeDebugLine
+                || a.removeDebugParam != b.removeDebugParam
+                || a.removeDebugPrologue != b.removeDebugPrologue
+                || a.removeDebugLocal != b.removeDebugLocal
+                || !a.dexVersion.equals(b.dexVersion);
     }
 
     public ClassTree(List<String> mPaths, String cacheDir) throws Exception {
@@ -438,6 +575,14 @@ public class ClassTree {
     public void removeClasses(List<String> classNames) {
         if (classNames == null || classNames.isEmpty()) return;
 
+        synchronized (editLock) {
+            removeClassesLocked(classNames);
+        }
+        scheduleAutoSave();
+    }
+
+    private void removeClassesLocked(List<String> classNames) {
+
         List<String> folderPrefixes = new ArrayList<>();
         Set<String> individualClasses = new HashSet<>();
 
@@ -448,9 +593,17 @@ public class ClassTree {
                 individualClasses.add(name);
             }
         }
-        pureSmaliCache.keySet().removeAll(individualClasses);
+        // Go through pureSmaliCache.remove (not keySet().removeAll/removeIf) so the cache's
+        // byte bookkeeping sees every eviction; the keySet views bypass the overridden remove.
+        for (String name : individualClasses) {
+            pureSmaliCache.remove(name);
+        }
         for (String prefix : folderPrefixes) {
-            pureSmaliCache.keySet().removeIf(key -> key.startsWith(prefix));
+            for (String key : new ArrayList<>(pureSmaliCache.keySet())) {
+                if (key.startsWith(prefix)) {
+                    pureSmaliCache.remove(key);
+                }
+            }
         }
 
         // Optimization: Use a single pass over the map when folders are involved (O(N))
@@ -514,21 +667,29 @@ public class ClassTree {
     private void recordRemovedClass(String type) {
         String fileName = typeToDexMap.get("L" + type + ";");
         if (fileName != null) {
+            dexGen(fileName).incrementAndGet();
             HashSet<String> deleted = deletedClassJson.get(fileName);
             if (deleted == null) {
                 deleted = new HashSet<>();
                 deletedClassJson.put(fileName, deleted);
             }
-            deleted.add(type);
+            synchronized (deleted) {
+                deleted.add(type);
+            }
         }
     }
 
     // save smali according to the class and its content
     // it's just a mapping way to preserve  smali data in memeory, but it's not a good way it may cause self kill app like situation and mt manager never do like this
     public void saveSmali(String type, String smali) {
-        pendingSmaliMap.put(type, smali);
-        pureSmaliCache.remove(type);
-        recordEditedClass(type);
+        synchronized (editLock) {
+            // The generation is bumped before the mutation: a compiling pass that snapshot the
+            // old generation is guaranteed to see the bump and discard its result.
+            bumpDexForType(type);
+            pendingSmaliMap.put(type, smali);
+            pureSmaliCache.remove(type);
+            recordEditedClass(type);
+        }
         DexEditorActivity.isChanged = true;
         DexEditorActivity.isSaved = false;
     }
@@ -536,36 +697,41 @@ public class ClassTree {
     // save class def to the main node o the dex and record the changes classes
     public void saveClassDef(ClassDef classDef) {
         String type = classDef.getType().substring(1, classDef.getType().length() - 1);
-        pendingSmaliMap.remove(type);
-        pureSmaliCache.remove(type);
+        synchronized (editLock) {
+            // Bump before mutating, so a pass that is compiling this dex from an earlier
+            // generation will discard its (now stale) result instead of overwriting this save.
+            bumpDexForType(type);
+            pendingSmaliMap.remove(type);
+            pureSmaliCache.remove(type);
 
-        classMap.put(type, classDef);
+            classMap.put(type, classDef);
 
-        String rawType = "L" + type + ";";
-        Integer index = classDefIndex.get(rawType);
-        if (index != null && index >= 0 && index < classDefList.size()) {
-            classDefList.set(index, classDef);
-        } else {
-            synchronized (classDefList) {
-                boolean found = false;
-                for (int i = 0; i < classDefList.size(); i++) {
-                    ClassDef existingDef = classDefList.get(i);
-                    String existingType = existingDef.getType();
-                    if (existingType.equals(rawType)) {
-                        classDefList.set(i, classDef);
-                        classDefIndex.put(rawType, i);
-                        found = true;
-                        break;
+            String rawType = "L" + type + ";";
+            Integer index = classDefIndex.get(rawType);
+            if (index != null && index >= 0 && index < classDefList.size()) {
+                classDefList.set(index, classDef);
+            } else {
+                synchronized (classDefList) {
+                    boolean found = false;
+                    for (int i = 0; i < classDefList.size(); i++) {
+                        ClassDef existingDef = classDefList.get(i);
+                        String existingType = existingDef.getType();
+                        if (existingType.equals(rawType)) {
+                            classDefList.set(i, classDef);
+                            classDefIndex.put(rawType, i);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        classDefIndex.put(rawType, classDefList.size());
+                        classDefList.add(classDef);
                     }
                 }
-                if (!found) {
-                    classDefIndex.put(rawType, classDefList.size());
-                    classDefList.add(classDef);
-                }
             }
-        }
 
-        recordEditedClass(type);
+            recordEditedClass(type);
+        }
         DexEditorActivity.isChanged = true;
         DexEditorActivity.isSaved = false;
     }
@@ -582,11 +748,7 @@ public class ClassTree {
     public boolean isSameAsCachedSmali(String typeKey, String smaliWithHeader) {
         String cached = pureSmaliCache.get(typeKey);
         if (cached == null || pendingSmaliMap.containsKey(typeKey)) return false;
-        String body = smaliWithHeader;
-        if (body.trim().startsWith("# ")) {
-            body = body.replaceFirst("(?s)^#.*?\\n\\n", "");
-        }
-        return cached.equals(body);
+        return cached.equals(SmaliHelper.stripSmaliHeader(smaliWithHeader));
     }
 
     public String getSmaliByType(ClassDef classDef) throws Exception {
@@ -605,8 +767,8 @@ public class ClassTree {
 
         // We strip any existing header to avoid "# classes.dex" appearing multiple times
         // This usually happens during search and replace operations
-        if (smali != null && smali.trim().startsWith("# ")) {
-            smali = smali.replaceFirst("(?s)^#.*?\\n\\n", "");
+        if (smali != null) {
+            smali = SmaliHelper.stripSmaliHeader(smali);
         }
 
         String dexFileName = findDexFileNameForClass(classDef);
@@ -705,7 +867,88 @@ public class ClassTree {
     @SuppressLint("SdCardPath")
     public void saveAllDexFiles(DexSaveProgress dexSaveProgress) throws Exception {
         if (dexClassMap == null || dexClassMap.isEmpty()) return;
+        // Ask any running background pass to yield after the dex it is currently writing, then
+        // take the coordinator so only one pass is ever saving at a time.
+        foregroundWaiting = true;
+        try {
+            dexSaveProgress.onMessage("Finishing background save...");
+            synchronized (saveCoordinator) {
+                saveAllDexFilesLocked(dexSaveProgress, false);
+            }
+        } finally {
+            foregroundWaiting = false;
+        }
+    }
 
+    /** Progress listener for background passes: no UI, cannot cancel. */
+    private static final DexSaveProgress SILENT_PROGRESS = new DexSaveProgress() {
+        @Override public void onProgress(int progress, int total) { }
+        @Override public void onMessage(String name) { }
+        @Override public void onTitle(String title) { }
+    };
+
+    /** Runs one background pass: compiles dirty dexes into autosave files. Never touches UI state. */
+    private void runAutoSavePass() {
+        if (!autoSaveEnabled || foregroundWaiting) return;
+        try {
+            synchronized (saveCoordinator) {
+                if (!autoSaveEnabled || foregroundWaiting) return;
+                saveAllDexFilesLocked(SILENT_PROGRESS, true);
+            }
+        } catch (Throwable t) {
+            // A failed background pass costs nothing: the foreground save recompiles the dex.
+            t.printStackTrace();
+        }
+    }
+
+    private AtomicLong dexGen(String fileName) {
+        return dexGenerations.computeIfAbsent(fileName, k -> new AtomicLong());
+    }
+
+    /** Bumps the generation of the dex owning {@code type} and schedules a background save. */
+    private void bumpDexForType(String type) {
+        String fileName = typeToDexMap.get("L" + type + ";");
+        if (fileName != null) {
+            dexGen(fileName).incrementAndGet();
+            scheduleAutoSave();
+        }
+    }
+
+    /** Enables or disables pipelined background compilation. Enabling catches up immediately. */
+    public void setAutoSaveEnabled(boolean enabled) {
+        autoSaveEnabled = enabled;
+        if (enabled) scheduleAutoSave(0L);
+    }
+
+    public boolean isAutoSaveEnabled() {
+        return autoSaveEnabled;
+    }
+
+    /** Debounced request for a background pass; bursts of edits coalesce into one pass. */
+    public void scheduleAutoSave() {
+        scheduleAutoSave(AUTO_SAVE_DEBOUNCE_MS);
+    }
+
+    private void scheduleAutoSave(long delayMs) {
+        if (!autoSaveEnabled) return;
+        if (autoSaveScheduled.getAndSet(true)) return;
+        try {
+            autoSaveExecutor.schedule(() -> {
+                autoSaveScheduled.set(false);
+                runAutoSavePass();
+            }, delayMs, TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            autoSaveScheduled.set(false);
+        }
+    }
+
+    private File autoSaveDir() {
+        File dir = new File(workDir, "autosave");
+        if (!dir.exists()) dir.mkdirs();
+        return dir;
+    }
+
+    private void saveAllDexFilesLocked(DexSaveProgress dexSaveProgress, boolean background) throws Exception {
         final long saveStart = System.nanoTime();
         long compileNanos = 0L;
         long writeFileNanos = 0L;
@@ -722,8 +965,8 @@ public class ClassTree {
 
         final Opcodes opcodes = Opcodes.forDexVersion(targetDexVersion);
 
-        boolean forceCompileAll = compilationOptions.removeAllDebug || compilationOptions.removeDebugSource || 
-                                 compilationOptions.removeDebugLine || compilationOptions.removeDebugParam || 
+        boolean forceCompileAll = compilationOptions.removeAllDebug || compilationOptions.removeDebugSource ||
+                                 compilationOptions.removeDebugLine || compilationOptions.removeDebugParam ||
                                  compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal ||
                                  !compilationOptions.dexVersion.equals("Keep the same");
 
@@ -734,243 +977,358 @@ public class ClassTree {
             int current = 1;
             for (Entry<String, List<String>> entry : dexClassMap.entrySet()) {
             String fileName = entry.getKey();
-            dexSaveProgress.onTitle(fileName + " (" + current + "/" + total + ")");
 
-            boolean isTouched = forceCompileAll || deletedClassJson.containsKey(fileName) || editedClassMap.containsKey(fileName);
-            if (!isTouched) {
-                current++;
-                continue;
-            }
+            // A background pass yields as soon as the user asks for the real save.
+            if (background && foregroundWaiting) break;
 
-            List<String> classNames = entry.getValue();
-            int classCount = classNames.size();
-            AtomicInteger processed = new AtomicInteger(0);
-            final Exception[] threadException = {null};
+            long gen = dexGen(fileName).get();
+            // persistedGenerations tracks what is in the REAL dex file; an autosave file is
+            // only a candidate the foreground save applies - it never counts as persisted.
+            long realGen = persistedGenerations.getOrDefault(fileName, 0L);
 
-            DexBuilder dexBuilder = new DexBuilder(opcodes);
-            dexBuilder.setIgnoreMethodAndFieldError(true);
+            if (background) {
+                AutosavedDex savedSoFar = autosavedDexes.get(fileName);
+                long savedGen = savedSoFar != null ? savedSoFar.generation : 0L;
+                if (gen <= savedGen || gen <= realGen) {
+                    // Already compiled to an autosave, or already in the real file.
+                    current++;
+                    continue;
+                }
+            } else {
+                if (gen <= realGen) {
+                    current++;
+                    continue;
+                }
+                dexSaveProgress.onTitle(fileName + " (" + current + "/" + total + ")");
 
-            final Map<String, ClassDef> assembledDefs = new ConcurrentHashMap<>();
-            HashSet<String> deleted = deletedClassJson.get(fileName);
-            final HashSet<String> deletedSet = deleted;
-
-            // Chunk the work instead of submitting one Future per class.
-            // A 30k-class dex used to allocate 30k FutureTask objects plus 30k queue entries and
-            // 30k ThreadPoolExecutor queue offers, all to do ~30k tiny intern() calls. Handing each
-            // worker a contiguous slice collapses that to a handful of tasks while keeping every
-            // worker busy and the per-class work identical.
-            final int chunkSize = Math.max(64, (classCount + (numThreads * 8) - 1) / (numThreads * 8));
-            List<Future<?>> futures = new ArrayList<>((classCount + chunkSize - 1) / chunkSize);
-            final long compileStart = System.nanoTime();
-            for (int start = 0; start < classCount; start += chunkSize) {
-                final int from = start;
-                final int to = Math.min(start + chunkSize, classCount);
-                futures.add(executor.submit(() -> {
+                // Fast path: this exact state was already compiled in the background - apply
+                // it with a file copy instead of recompiling for seconds.
+                AutosavedDex saved = autosavedDexes.get(fileName);
+                if (saved != null && saved.generation == dexGen(fileName).get()) {
+                    boolean applied = false;
                     try {
-                        for (int idx = from; idx < to; idx++) {
-                            if (threadException[0] != null) return null;
-                            final String rawType = classNames.get(idx);
-                            final String type = rawType.substring(1, rawType.length() - 1);
-
-                            if (deletedSet != null && deletedSet.contains(type)) {
-                                int p = processed.incrementAndGet();
-                                if (p % 100 == 0 || p == classCount) {
-                                    dexSaveProgress.onProgress(p, classCount);
-                                }
-                                continue;
-                            }
-
-                            final ClassDef defToIntern;
-                            String pending = pendingSmaliMap.get(type);
-                            if (pending != null) {
-                                if (processed.get() % 50 == 0) {
-                                    dexSaveProgress.onMessage("Assembling " + type + "...");
-                                }
-                                defToIntern = Smali.assemble(pending, SharedSmaliUtils.ASSEMBLE_OPTIONS, finalTargetDexVersion);
-                                assembledDefs.put(type, defToIntern);
-                            } else {
-                                defToIntern = classMap.get(type);
-                            }
-
-                            if (defToIntern == null) {
-                                int p = processed.incrementAndGet();
-                                if (p % 100 == 0 || p == classCount) {
-                                    dexSaveProgress.onProgress(p, classCount);
-                                }
-                                continue;
-                            }
-
-                            ClassDef strippedDef = defToIntern;
-                            if (compilationOptions.removeAllDebug || compilationOptions.removeDebugSource ||
-                                compilationOptions.removeDebugLine || compilationOptions.removeDebugParam ||
-                                compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal) {
-                                strippedDef = new DebugInfoStripper(defToIntern, compilationOptions);
-                            }
-
-                            dexBuilder.internClassDef(strippedDef);
-
-                            int p = processed.incrementAndGet();
-                            if (p % 200 == 0 || p == classCount) {
-                                dexSaveProgress.onMessage("Compiling...");
-                            }
-                            if (p % 100 == 0 || p == classCount) {
-                                dexSaveProgress.onProgress(p, classCount);
-                            }
-                        }
-                    } catch (final Throwable t) {
-                        synchronized (threadException) {
-                            if (threadException[0] == null) threadException[0] = asException(t);
-                        }
+                        applyAutosavedDex(fileName, saved, dexSaveProgress);
+                        applied = true;
+                    } catch (SaveCancelledException cancel) {
+                        throw cancel;
+                    } catch (Exception applyFailed) {
+                        // The autosave file is dispensable; fall through to a real compile.
+                        applyFailed.printStackTrace();
+                        autosavedDexes.remove(fileName);
                     }
-                    return null;
-                }));
-            }
-
-            for (Future<?> f : futures) {
-                try {
-                    f.get();
-                } catch (InterruptedException e) {
-                    // A cancelled save is not a compile failure; record it as such
-                    // so the caller can report it without an error dialog.
-                    Thread.currentThread().interrupt();
-                    synchronized (threadException) {
-                        if (threadException[0] == null) threadException[0] = new SaveCancelledException();
+                    if (applied && dexGen(fileName).get() != saved.generation) {
+                        // An edit landing mid-apply invalidates the applied bytes: recompile.
+                        compileAndWriteDex(fileName, entry.getValue(), dexSaveProgress, false,
+                                dexGen(fileName).get(), executor, numThreads, opcodes,
+                                finalTargetDexVersion, forceCompileAll);
+                    } else if (!applied) {
+                        compileAndWriteDex(fileName, entry.getValue(), dexSaveProgress, false,
+                                dexGen(fileName).get(), executor, numThreads, opcodes,
+                                finalTargetDexVersion, forceCompileAll);
                     }
-                    break;
-                } catch (Exception e) {
-                    Throwable cause = e;
-                    if (e instanceof ExecutionException && e.getCause() != null) {
-                        cause = e.getCause();
-                    }
-                    synchronized (threadException) {
-                        if (threadException[0] == null) threadException[0] = asException(cause);
-                    }
-                    break;
-                }
-                if (threadException[0] != null) break;
-            }
-            if (threadException[0] != null) {
-                throw threadException[0];
-            }
-
-            // Assemble-to-intern phase of this dex file is done.
-            compileNanos += System.nanoTime() - compileStart;
-
-            if (!assembledDefs.isEmpty()) {
-                classMap.putAll(assembledDefs);
-                for (Map.Entry<String, ClassDef> e : assembledDefs.entrySet()) {
-                    String typeKey = e.getKey();
-                    String rawType = "L" + typeKey + ";";
-                    Integer index = classDefIndex.get(rawType);
-                    if (index != null) {
-                        classDefList.set(index, e.getValue());
-                    }
-                    String pending = pendingSmaliMap.remove(typeKey);
-                    if (pending != null) {
-                        pureSmaliCache.put(typeKey, pending.trim().startsWith("# ") ? pending.replaceFirst("(?s)^#.*?\\n\\n", "") : pending);
-                    }
+                    current++;
+                    continue;
                 }
             }
 
-            dexSaveProgress.onMessage("Writing file...");
-            final long writeStart = System.nanoTime();
-            boolean committed = false;
-            File backupOfThisDex = null;
-            File outFile = null;
-            try {
-                // Size the scratch buffer from the original dex when we know it, and otherwise
-                // from a per-class estimate. MemoryDataStore grows by copying in fixed steps, so
-                // starting too small means repeatedly copying the whole buffer. The 512 B/class
-                // guess badly under-shoots for any dex with real code.
-                DexBackedDexFile original = dexFileByName.get(fileName);
-                int estimate = original != null && original.getFileSize() > 0
-                        ? (int) Math.min(Integer.MAX_VALUE - 64L, (long) original.getFileSize() * 12L / 10L + (1 << 20))
-                        : classCount * 1024;
-                MemoryDataStore memoryDataStore = new MemoryDataStore(Math.max(1 << 16, estimate));
-                byte[] buf;
-                int size;
-                try {
-                    // Write the live buffer slice directly. Anything that copies it
-                    // first (a byte[] clone, a buffered stream, a channel transfer)
-                    // only pays for a second full-dex memory pass before the bytes
-                    // even reach the disk.
-                    dexBuilder.writeTo(memoryDataStore);
-                    buf = memoryDataStore.getBuffer();
-                    size = memoryDataStore.getSize();
-                } catch (OutOfMemoryError tooBig) {
-                    // The preallocated buffer is one contiguous array sized from the
-                    // original dex, which a low-RAM device cannot always hold. Drop
-                    // it before retrying so the collector can actually reclaim it,
-                    // then let the store grow in fixed steps instead of failing the
-                    // whole save.
-                    memoryDataStore = null;
-                    System.gc();
-                    memoryDataStore = new MemoryDataStore(1 << 16);
-                    dexBuilder.writeTo(memoryDataStore);
-                    buf = memoryDataStore.getBuffer();
-                    size = memoryDataStore.getSize();
-                }
-
-                String outputDir = paths != null && !paths.isEmpty() && paths.get(0) != null
-                        ? new File(paths.get(0)).getParent()
-                        : "/sdcard";
-                outFile = new File(outputDir, fileName);
-                File bakFile = new File(outFile.getAbsolutePath() + ".bak");
-                backupOfThisDex = bakFile.exists() ? null : bakFile;
-
-                if (outFile.exists() && !bakFile.exists()) {
-                    // Instant backup: rename the inode instead of byte-copying the whole
-                    // file and then deleting the original. Same end state (previous bytes
-                    // at .bak, new bytes at outFile) for ~free in the same directory.
-                    // Falls back to the old copy+delete when rename is unsupported.
-                    if (bakFile.exists()) bakFile.delete();
-                    if (!outFile.renameTo(bakFile)) {
-                        FileUtil.copyFile(outFile.getAbsolutePath(), bakFile.getAbsolutePath());
-                        outFile.delete();
-                    }
-                }
-
-                try (FileOutputStream out = new FileOutputStream(outFile)) {
-                    out.write(buf, 0, size);
-                    out.flush();
-                }
-                // Nothing may throw after this point: the dex on disk is now the new one.
-                committed = true;
-            } catch (final Throwable e) {
-                e.printStackTrace();
-                if (e instanceof Exception) throw (Exception) e;
-                throw new Exception(e);
-            } finally {
-                writeFileNanos += System.nanoTime() - writeStart;
-                if (!committed && backupOfThisDex != null && backupOfThisDex.exists() && outFile != null) {
-                    // The old bytes were renamed aside before writing, so a failure here would
-                    // otherwise leave a truncated or missing dex. Put the backup back.
-                    try {
-                        if (outFile.exists() && !outFile.delete()) outFile.deleteOnExit();
-                        if (!backupOfThisDex.renameTo(outFile)) {
-                            FileUtil.copyFile(backupOfThisDex.getAbsolutePath(), outFile.getAbsolutePath());
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
+            compileAndWriteDex(fileName, entry.getValue(), dexSaveProgress, background,
+                    gen, executor, numThreads, opcodes, finalTargetDexVersion, forceCompileAll);
+            if (!background && dexGen(fileName).get() != gen) {
+                // An edit landed on this dex while it was being compiled: redo it once so the
+                // bytes on disk are guaranteed to include everything the user changed.
+                compileAndWriteDex(fileName, entry.getValue(), dexSaveProgress, false,
+                        dexGen(fileName).get(), executor, numThreads, opcodes,
+                        finalTargetDexVersion, forceCompileAll);
             }
-
             current++;
             }
         } finally {
             executor.shutdownNow();
         }
 
-        // The dexes on disk now already contain every pending edit and deletion, so stop
-        // reporting those dex files as "touched". Without this, every subsequent save would
-        // recompile each dex all over again even when nothing changed since the last save.
-        editedClassMap.clear();
+        if (!background) {
+            // The dexes on disk now already contain every pending edit and deletion, so stop
+            // reporting those dex files as "touched". Without this, every subsequent save would
+            // recompile each dex all over again even when nothing changed since the last save.
+            editedClassMap.clear();
 
-        DexEditorActivity.isChanged = false;
-        DexEditorActivity.isSaved = true;
+            DexEditorActivity.isChanged = false;
+            DexEditorActivity.isSaved = true;
+        }
 
         dexSaveProgress.onFinished((System.nanoTime() - saveStart) / 1_000_000L,
                 compileNanos / 1_000_000L, writeFileNanos / 1_000_000L);
+    }
+
+    /**
+     * Applies a completed background compilation to the real dex file: backup dance, byte write,
+     * rollback on failure - the same commit sequence a foreground compile performs.
+     */
+    private void applyAutosavedDex(String fileName, AutosavedDex saved, DexSaveProgress dexSaveProgress) throws Exception {
+        dexSaveProgress.onMessage("Applying saved " + fileName + "...");
+        byte[] bytes = read(saved.file.getAbsolutePath());
+        commitDexBytes(fileName, bytes, bytes.length);
+        persistedGenerations.put(fileName, saved.generation);
+        autosavedDexes.remove(fileName);
+        try {
+            saved.file.delete();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * The commit sequence shared by the compile and apply paths: back the current file up once
+     * ({@code .bak}), write the new bytes, and restore the backup if the write fails partway.
+     */
+    @SuppressLint("SdCardPath")
+    private void commitDexBytes(String fileName, byte[] buf, int size) throws Exception {
+        boolean committed = false;
+        File backupOfThisDex = null;
+        File outFile = null;
+        try {
+            String outputDir = paths != null && !paths.isEmpty() && paths.get(0) != null
+                    ? new File(paths.get(0)).getParent()
+                    : "/sdcard";
+            outFile = new File(outputDir, fileName);
+            File bakFile = new File(outFile.getAbsolutePath() + ".bak");
+            backupOfThisDex = bakFile.exists() ? null : bakFile;
+
+            if (outFile.exists() && !bakFile.exists()) {
+                // Instant backup: rename the inode instead of byte-copying the whole
+                // file and then deleting the original. Same end state (previous bytes
+                // at .bak, new bytes at outFile) for ~free in the same directory.
+                // Falls back to the old copy+delete when rename is unsupported.
+                if (bakFile.exists()) bakFile.delete();
+                if (!outFile.renameTo(bakFile)) {
+                    FileUtil.copyFile(outFile.getAbsolutePath(), bakFile.getAbsolutePath());
+                    outFile.delete();
+                }
+            }
+
+            try (FileOutputStream out = new FileOutputStream(outFile)) {
+                out.write(buf, 0, size);
+                out.flush();
+            }
+            // Nothing may throw after this point: the dex on disk is now the new one.
+            committed = true;
+        } catch (final Throwable e) {
+            e.printStackTrace();
+            if (e instanceof Exception) throw (Exception) e;
+            throw new Exception(e);
+        } finally {
+            if (!committed && backupOfThisDex != null && backupOfThisDex.exists() && outFile != null) {
+                // The old bytes were renamed aside before writing, so a failure here would
+                // otherwise leave a truncated or missing dex. Put the backup back.
+                try {
+                    if (outFile.exists() && !outFile.delete()) outFile.deleteOnExit();
+                    if (!backupOfThisDex.renameTo(outFile)) {
+                        FileUtil.copyFile(backupOfThisDex.getAbsolutePath(), outFile.getAbsolutePath());
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Compiles one dex and writes it - to the real file (foreground) or to a session autosave
+     * file (background). The compile body is unchanged from the original saveAllDexFiles loop;
+     * only the write target and the post-processing guard are new.
+     *
+     * @param genSnapshot the dex's generation when this pass decided to save it
+     */
+    private void compileAndWriteDex(String fileName, List<String> classNames,
+                                    DexSaveProgress dexSaveProgress, boolean background,
+                                    long genSnapshot, ExecutorService executor, int numThreads,
+                                    Opcodes opcodes, int finalTargetDexVersion,
+                                    boolean forceCompileAll) throws Exception {
+        int classCount = classNames.size();
+        AtomicInteger processed = new AtomicInteger(0);
+        final Exception[] threadException = {null};
+
+        DexBuilder dexBuilder = new DexBuilder(opcodes);
+        dexBuilder.setIgnoreMethodAndFieldError(true);
+
+        final Map<String, ClassDef> assembledDefs = new ConcurrentHashMap<>();
+        HashSet<String> deleted = deletedClassJson.get(fileName);
+        final HashSet<String> deletedSet = deleted;
+
+        // Chunk the work instead of submitting one Future per class.
+        // A 30k-class dex used to allocate 30k FutureTask objects plus 30k queue entries and
+        // 30k ThreadPoolExecutor queue offers, all to do ~30k tiny intern() calls. Handing each
+        // worker a contiguous slice collapses that to a handful of tasks while keeping every
+        // worker busy and the per-class work identical.
+        final int chunkSize = Math.max(64, (classCount + (numThreads * 8) - 1) / (numThreads * 8));
+        List<Future<?>> futures = new ArrayList<>((classCount + chunkSize - 1) / chunkSize);
+        for (int start = 0; start < classCount; start += chunkSize) {
+            final int from = start;
+            final int to = Math.min(start + chunkSize, classCount);
+            futures.add(executor.submit(() -> {
+                try {
+                    for (int idx = from; idx < to; idx++) {
+                        if (threadException[0] != null) return null;
+                        final String rawType = classNames.get(idx);
+                        final String type = rawType.substring(1, rawType.length() - 1);
+
+                        if (deletedSet != null && deletedSet.contains(type)) {
+                            int p = processed.incrementAndGet();
+                            if (p % 100 == 0 || p == classCount) {
+                                dexSaveProgress.onProgress(p, classCount);
+                            }
+                            continue;
+                        }
+
+                        final ClassDef defToIntern;
+                        String pending = pendingSmaliMap.get(type);
+                        if (pending != null) {
+                            if (processed.get() % 50 == 0) {
+                                dexSaveProgress.onMessage("Assembling " + type + "...");
+                            }
+                            defToIntern = Smali.assemble(pending, SharedSmaliUtils.ASSEMBLE_OPTIONS, finalTargetDexVersion);
+                            assembledDefs.put(type, defToIntern);
+                        } else {
+                            defToIntern = classMap.get(type);
+                        }
+
+                        if (defToIntern == null) {
+                            int p = processed.incrementAndGet();
+                            if (p % 100 == 0 || p == classCount) {
+                                dexSaveProgress.onProgress(p, classCount);
+                            }
+                            continue;
+                        }
+
+                        ClassDef strippedDef = defToIntern;
+                        if (forceCompileAll) {
+                            strippedDef = new DebugInfoStripper(defToIntern, compilationOptions);
+                        }
+
+                        dexBuilder.internClassDef(strippedDef);
+
+                        int p = processed.incrementAndGet();
+                        if (p % 200 == 0 || p == classCount) {
+                            dexSaveProgress.onMessage("Compiling...");
+                        }
+                        if (p % 100 == 0 || p == classCount) {
+                            dexSaveProgress.onProgress(p, classCount);
+                        }
+                    }
+                } catch (final Throwable t) {
+                    synchronized (threadException) {
+                        if (threadException[0] == null) threadException[0] = asException(t);
+                    }
+                }
+                return null;
+            }));
+        }
+
+        for (Future<?> f : futures) {
+            try {
+                f.get();
+            } catch (InterruptedException e) {
+                // A cancelled save is not a compile failure; record it as such
+                // so the caller can report it without an error dialog.
+                Thread.currentThread().interrupt();
+                synchronized (threadException) {
+                    if (threadException[0] == null) threadException[0] = new SaveCancelledException();
+                }
+                break;
+            } catch (Exception e) {
+                Throwable cause = e;
+                if (e instanceof ExecutionException && e.getCause() != null) {
+                    cause = e.getCause();
+                }
+                synchronized (threadException) {
+                    if (threadException[0] == null) threadException[0] = asException(cause);
+                }
+                break;
+            }
+            if (threadException[0] != null) break;
+        }
+        if (threadException[0] != null) {
+            throw threadException[0];
+        }
+
+        // Post the assembled definitions back into the live state. A background pass must not
+        // post if the dex changed while it was compiling - that would overwrite a newer in-memory
+        // edit with the older bytes it compiled from. The generation check under editLock makes
+        // "still current" and "post" atomic with respect to new edits. A foreground pass posts
+        // unconditionally, exactly as it always did.
+        if (!background || dexGen(fileName).get() == genSnapshot) {
+            synchronized (editLock) {
+                if (background && dexGen(fileName).get() != genSnapshot) {
+                    // Lost the race between the check and the lock: leave the state alone.
+                } else if (!assembledDefs.isEmpty()) {
+                    classMap.putAll(assembledDefs);
+                    for (Map.Entry<String, ClassDef> e : assembledDefs.entrySet()) {
+                        String typeKey = e.getKey();
+                        String rawType = "L" + typeKey + ";";
+                        Integer index = classDefIndex.get(rawType);
+                        if (index != null) {
+                            classDefList.set(index, e.getValue());
+                        }
+                        String pending = pendingSmaliMap.remove(typeKey);
+                        if (pending != null) {
+                            pureSmaliCache.put(typeKey, SmaliHelper.stripSmaliHeader(pending));
+                        }
+                    }
+                }
+            }
+        }
+
+        dexSaveProgress.onMessage("Writing file...");
+
+        // Size the scratch buffer from the original dex when we know it, and otherwise
+        // from a per-class estimate. MemoryDataStore grows by copying in fixed steps, so
+        // starting too small means repeatedly copying the whole buffer. The 512 B/class
+        // guess badly under-shoots for any dex with real code.
+        DexBackedDexFile original = dexFileByName.get(fileName);
+        int estimate = original != null && original.getFileSize() > 0
+                ? (int) Math.min(Integer.MAX_VALUE - 64L, (long) original.getFileSize() * 12L / 10L + (1 << 20))
+                : classCount * 1024;
+        MemoryDataStore memoryDataStore = new MemoryDataStore(Math.max(1 << 16, estimate));
+        byte[] buf;
+        int size;
+        try {
+            // Write the live buffer slice directly. Anything that copies it
+            // first (a byte[] clone, a buffered stream, a channel transfer)
+            // only pays for a second full-dex memory pass before the bytes
+            // even reach the disk.
+            dexBuilder.writeTo(memoryDataStore);
+            buf = memoryDataStore.getBuffer();
+            size = memoryDataStore.getSize();
+        } catch (OutOfMemoryError tooBig) {
+            // The preallocated buffer is one contiguous array sized from the
+            // original dex, which a low-RAM device cannot always hold. Drop
+            // it before retrying so the collector can actually reclaim it,
+            // then let the store grow in fixed steps instead of failing the
+            // whole save.
+            memoryDataStore = null;
+            System.gc();
+            memoryDataStore = new MemoryDataStore(1 << 16);
+            dexBuilder.writeTo(memoryDataStore);
+            buf = memoryDataStore.getBuffer();
+            size = memoryDataStore.getSize();
+        }
+
+        if (background) {
+            File target = new File(autoSaveDir(), fileName);
+            try (FileOutputStream out = new FileOutputStream(target)) {
+                out.write(buf, 0, size);
+                out.flush();
+            }
+            if (dexGen(fileName).get() == genSnapshot) {
+                autosavedDexes.put(fileName, new AutosavedDex(genSnapshot, target));
+            } else {
+                // Compiled from a state the user has already moved past: keep it out of the way.
+                target.delete();
+            }
+            return;
+        }
+
+        commitDexBytes(fileName, buf, size);
+        persistedGenerations.put(fileName, dexGen(fileName).get());
+        autosavedDexes.remove(fileName);
     }
 
     public List<TreeNode> buildFullTree() {
@@ -1093,6 +1451,11 @@ public class ClassTree {
     }
 
     public void clearAll() {
+        try {
+            autoSaveExecutor.shutdownNow();
+        } catch (Exception ignored) {
+        }
+        foregroundWaiting = false;
         if (classMap != null) classMap.clear();
         classMap = null;
         path = null;

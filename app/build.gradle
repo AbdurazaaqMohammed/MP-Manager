@@ -51,6 +51,7 @@ android {
 dependencies {
     implementation project(':sdk')
     implementation project(':apkkit')
+    implementation project(':zero-symbol-input-view')
     //implementation files('libs/APKEditor-1.4.8.jar')
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation("androidx.multidex:multidex:2.0.1")
