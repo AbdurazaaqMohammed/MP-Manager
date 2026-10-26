@@ -248,6 +248,7 @@ public class EntryDialogs {
         File zipFile = isInZip ? entry.getZipFile() : null;
         TextView customMsgView = null;
         String binMode = RecycleBin.mode(context);
+        final CheckBox recycleCb;
         boolean isTargetInsideBin = false;
         if (!isInZip) {
             if (multi) {
