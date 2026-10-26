@@ -65,5 +65,5 @@
         android:layout_width="match_parent"
         android:layout_height="400dp"
         android:clipToPadding="false"
-        android:paddingBottom="8dp"/>
+        android:paddingBottom="64dp"/>
 </LinearLayout>

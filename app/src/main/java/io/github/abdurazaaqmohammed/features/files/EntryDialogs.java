@@ -251,7 +251,10 @@ public class EntryDialogs {
         final CheckBox recycleCb;
         boolean targetInsideBinCalc = false;
         if (!isInZip) {
-            if (multi) {
+            File curDir = context.getCurrentFolder(pane1);
+            if (curDir != null && RecycleBin.isInsideBin(context, curDir)) {
+                targetInsideBinCalc = true;
+            } else if (multi) {
                 for (int i : state.selectedPositions()) {
                     if (values[i] instanceof File f && RecycleBin.isInsideBin(context, f)) {
                         targetInsideBinCalc = true;

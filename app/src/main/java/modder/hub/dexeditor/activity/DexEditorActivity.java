@@ -2932,19 +2932,32 @@ public class DexEditorActivity extends BaseActivity {
         }).start();
     }
 
-    private void collectImportFiles(File f, List<File> out) {
+    private static class ImportItem {
+        final File file;
+        final String relativePath; // e.g. "myfolder/sub/Hello" (without .smali)
+
+        ImportItem(File file, String relativePath) {
+            this.file = file;
+            this.relativePath = relativePath;
+        }
+    }
+
+    private void collectImportFiles(File f, String basePrefix, List<ImportItem> out) {
         if (f == null || !f.exists()) return;
         if (f.isDirectory()) {
             File[] children = f.listFiles();
             if (children != null) {
+                String nextPrefix = (basePrefix == null || basePrefix.isEmpty()) ? f.getName() : basePrefix + "/" + f.getName();
                 for (File child : children) {
-                    collectImportFiles(child, out);
+                    collectImportFiles(child, nextPrefix, out);
                 }
             }
         } else if (f.isFile()) {
             String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
             if (lower.endsWith(".smali")) {
-                out.add(f);
+                String simpleName = f.getName().substring(0, f.getName().length() - 6);
+                String rel = (basePrefix == null || basePrefix.isEmpty()) ? simpleName : basePrefix + "/" + simpleName;
+                out.add(new ImportItem(f, rel));
             } else if (lower.endsWith(".zip") || lower.endsWith(".apk") || lower.endsWith(".jar")) {
                 try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f)) {
                     java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
@@ -2952,8 +2965,9 @@ public class DexEditorActivity extends BaseActivity {
                     tempDexDir.mkdirs();
                     while (en.hasMoreElements()) {
                         java.util.zip.ZipEntry ze = en.nextElement();
-                        if (!ze.isDirectory() && ze.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".smali")) {
-                            File target = new File(tempDexDir, ze.getName());
+                        String entryName = ze.getName();
+                        if (!ze.isDirectory() && entryName.toLowerCase(java.util.Locale.ROOT).endsWith(".smali")) {
+                            File target = new File(tempDexDir, entryName);
                             File parent = target.getParentFile();
                             if (parent != null && !parent.exists()) parent.mkdirs();
                             try (java.io.InputStream is = zf.getInputStream(ze);
@@ -2964,7 +2978,8 @@ public class DexEditorActivity extends BaseActivity {
                                     fos.write(buf, 0, n);
                                 }
                             }
-                            out.add(target);
+                            String smaliPath = entryName.substring(0, entryName.length() - 6);
+                            out.add(new ImportItem(target, smaliPath));
                         }
                     }
                 } catch (Exception ignored) {
@@ -2986,52 +3001,50 @@ public class DexEditorActivity extends BaseActivity {
             try {
                 int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
                 if (targetVer <= 0) targetVer = 35;
-                List<File> filesToProcess = new ArrayList<>();
+                List<ImportItem> filesToProcess = new ArrayList<>();
                 for (String path : filePaths) {
-                    collectImportFiles(new File(path), filesToProcess);
+                    collectImportFiles(new File(path), "", filesToProcess);
                 }
-                for (File f : filesToProcess) {
-                    String name = f.getName().toLowerCase(java.util.Locale.ROOT);
-                    if (name.endsWith(".smali")) {
-                        String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
-                        if (code == null || code.trim().isEmpty()) continue;
+                for (ImportItem item : filesToProcess) {
+                    File f = item.file;
+                    String relPath = item.relativePath;
+                    String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
+                    if (code == null || code.trim().isEmpty()) continue;
 
-                        String simpleName = f.getName().substring(0, f.getName().length() - 6);
-                        String desiredPath;
-                        if (targetPkg != null && !targetPkg.trim().isEmpty()) {
-                            desiredPath = targetPkg.trim().replace('.', '/') + "/" + simpleName;
-                        } else {
-                            desiredPath = simpleName;
-                        }
-
-                        // Check existing .class definition
-                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
-                        if (m.find()) {
-                            String originalType = m.group(2); // e.g. "La0;"
-                            if (targetPkg != null && !targetPkg.trim().isEmpty()) {
-                                String newType = "L" + desiredPath + ";";
-                                code = code.replace(originalType, newType);
-                            }
-                        } else {
-                            code = ".class public L" + desiredPath + ";\n.super Ljava/lang/Object;\n\n" + code;
-                        }
-
-                        ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
-                        classTree.saveClassDef(def);
-
-                        String finalClassName = desiredPath;
-                        String type = def.getType();
-                        if (type != null && type.startsWith("L") && type.endsWith(";")) {
-                            finalClassName = type.substring(1, type.length() - 1);
-                        }
-                        classTree.getPendingSmaliMap().put(finalClassName, code);
-
-                        if (firstImportedClass == null) {
-                            firstImportedClass = finalClassName;
-                            firstImportedCode = code;
-                        }
-                        imported++;
+                    String desiredPath;
+                    if (targetPkg != null && !targetPkg.trim().isEmpty()) {
+                        desiredPath = targetPkg.trim().replace('.', '/') + "/" + relPath;
+                    } else {
+                        desiredPath = relPath;
                     }
+
+                    // Check existing .class definition
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
+                    if (m.find()) {
+                        String originalType = m.group(2); // e.g. "La0;"
+                        if (targetPkg != null && !targetPkg.trim().isEmpty()) {
+                            String newType = "L" + desiredPath + ";";
+                            code = code.replace(originalType, newType);
+                        }
+                    } else {
+                        code = ".class public L" + desiredPath + ";\n.super Ljava/lang/Object;\n\n" + code;
+                    }
+
+                    ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
+                    classTree.saveClassDef(def);
+
+                    String finalClassName = desiredPath;
+                    String type = def.getType();
+                    if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                        finalClassName = type.substring(1, type.length() - 1);
+                    }
+                    classTree.getPendingSmaliMap().put(finalClassName, code);
+
+                    if (firstImportedClass == null) {
+                        firstImportedClass = finalClassName;
+                        firstImportedCode = code;
+                    }
+                    imported++;
                 }
                 final int totalImported = imported;
                 final String classToOpen = firstImportedClass;

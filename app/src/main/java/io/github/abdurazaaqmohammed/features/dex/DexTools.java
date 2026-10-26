@@ -267,6 +267,10 @@ public class DexTools {
             Extensions.showMessage(context, R.string.no_files_found);
             return;
         }
+        if (dexFiles.size() == 1) {
+            proceedWithSelectedDex(zipFile, session, dexFiles);
+            return;
+        }
         File tempFolder = session.outputDir;
         List<String> dexNames = new ArrayList<>(dexFiles);
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
@@ -286,49 +290,7 @@ public class DexTools {
                 if (selectedItems[k]) selectedNames.add(dexNames.get(k));
             }
             if (selectedNames.isEmpty()) return;
-            DexPreExtract useSession = session;
-            boolean allThere = useSession.error == null;
-            if (allThere) {
-                for (String n : selectedNames) {
-                    if (!new File(useSession.outputDir, n).isFile()) {
-                        allThere = false;
-                        break;
-                    }
-                }
-            }
-            if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
-            final DexPreExtract waitSession = useSession;
-            if (waitSession.done.getCount() == 0 && waitSession.error == null) {
-                openExtractedDex(waitSession, selectedNames);
-                return;
-            }
-            ProgressManager pm = new ProgressManager(context, false);
-            pm.show();
-            int total = Math.max(1, selectedNames.size());
-            pm.setProgress(0, total);
-            pm.setText(context.rss.getString(R.string.extracting, selectedNames.get(0)));
-            new Thread(() -> {
-                while (waitSession.done.getCount() > 0) {
-                    int done = Math.min(waitSession.extracted, total);
-                    context.handler.post(() -> {
-                        pm.setProgress(done, total);
-                        pm.setText(context.rss.getString(R.string.extracting, done + "/" + total));
-                    });
-                    try {
-                        Thread.sleep(150);
-                    } catch (InterruptedException ignored) {
-                        break;
-                    }
-                }
-                context.handler.post(() -> {
-                    pm.dismiss();
-                    if (waitSession.error != null) {
-                        new ErrorUtil(context).showError(new Exception(waitSession.error));
-                        return;
-                    }
-                    openExtractedDex(waitSession, selectedNames);
-                });
-            }).start();
+            proceedWithSelectedDex(zipFile, session, selectedNames);
         });
         builder.setNegativeButton(android.R.string.cancel, null);
         AlertDialog dialog = builder.create();
@@ -352,6 +314,52 @@ public class DexTools {
         });
         dialog.show();
         DialogUtil.keepButtonsHorizontal(dialog);
+    }
+
+    private void proceedWithSelectedDex(File zipFile, DexPreExtract session, List<String> selectedNames) {
+        DexPreExtract useSession = session;
+        boolean allThere = useSession.error == null;
+        if (allThere) {
+            for (String n : selectedNames) {
+                if (!new File(useSession.outputDir, n).isFile()) {
+                    allThere = false;
+                    break;
+                }
+            }
+        }
+        if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
+        final DexPreExtract waitSession = useSession;
+        if (waitSession.done.getCount() == 0 && waitSession.error == null) {
+            openExtractedDex(waitSession, selectedNames);
+            return;
+        }
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.show();
+        int total = Math.max(1, selectedNames.size());
+        pm.setProgress(0, total);
+        pm.setText(context.rss.getString(R.string.extracting, selectedNames.get(0)));
+        new Thread(() -> {
+            while (waitSession.done.getCount() > 0) {
+                int done = Math.min(waitSession.extracted, total);
+                context.handler.post(() -> {
+                    pm.setProgress(done, total);
+                    pm.setText(context.rss.getString(R.string.extracting, done + "/" + total));
+                });
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException ignored) {
+                    break;
+                }
+            }
+            context.handler.post(() -> {
+                pm.dismiss();
+                if (waitSession.error != null) {
+                    new ErrorUtil(context).showError(new Exception(waitSession.error));
+                    return;
+                }
+                openExtractedDex(waitSession, selectedNames);
+            });
+        }).start();
     }
 
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
