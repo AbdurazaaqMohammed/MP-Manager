@@ -53,7 +53,9 @@ import com.reandroid.arsc.value.ValueType;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
+import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -221,6 +223,10 @@ public class ArscEditorPlusActivity extends BaseActivity {
         explorerRv.setLayoutManager(new LinearLayoutManager(this));
         explorerAdapter = new ArscTreeAdapter(this, new ArscTreeAdapter.Listener() {
             public void onNodeClick(ArscData.Node node) {
+                if (node.tag instanceof String && ((String) node.tag).startsWith("type-info:")) {
+                    openTypeInfo(node);
+                    return;
+                }
                 if (node.dir && node.tag instanceof TypeBlock) {
                     openTextPage((TypeBlock) node.tag, null);
                 }
@@ -1073,6 +1079,39 @@ public class ArscEditorPlusActivity extends BaseActivity {
                         Extensions.showMessage(this, R.string.nothing_deleted);
                     }
                 }).show();
+    }
+
+    private void openTypeInfo(ArscData.Node node) {
+        if (node == null || node.parent == null || !(node.parent.tag instanceof SpecTypePair spec)) return;
+        try {
+            int typeId = spec.getId();
+            StringBuilder sb = new StringBuilder();
+            sb.append("<?xml version='1.0' encoding='utf-8' ?>\n");
+            sb.append(String.format(java.util.Locale.US, "<type id=\"0x%02x\">\n", typeId));
+
+            List<ResourceEntry> entries = ArscData.resourcesOf(spec);
+            java.util.Collections.sort(entries, (a, b) -> Integer.compare(a.getResourceId(), b.getResourceId()));
+            for (ResourceEntry entry : entries) {
+                if (entry == null) continue;
+                String name = entry.getName();
+                int resId = entry.getResourceId();
+                sb.append(String.format(java.util.Locale.US, "  <entry id=\"0x%08x\" name=\"%s\" />\n", resId, name != null ? name : ""));
+            }
+            sb.append("</type>\n");
+
+            String typeName = spec.getTypeName();
+            File tempXml = new File(getCacheDir(), (typeName != null ? typeName : "type") + "_type_info.xml");
+            try (FileOutputStream fos = new FileOutputStream(tempXml)) {
+                fos.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+
+            Intent intent = new Intent(this, TextEditorActivity.class);
+            intent.setAction(Intent.ACTION_VIEW);
+            intent.setData(android.net.Uri.fromFile(tempXml));
+            startActivity(intent);
+        } catch (Exception e) {
+            Extensions.showMessage(this, "Failed to generate type-info: " + e.getMessage());
+        }
     }
 
     void openTextPage(TypeBlock tb, String highlightName) {

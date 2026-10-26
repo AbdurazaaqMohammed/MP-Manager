@@ -26,7 +26,75 @@ public final class RegexGuard {
     }
 
     public static Pattern compile(String regex, boolean matchCase) throws PatternSyntaxException {
-        return Pattern.compile(regex, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+        return Pattern.compile(regex, (matchCase ? 0 : Pattern.CASE_INSENSITIVE) | Pattern.MULTILINE);
+    }
+
+    /**
+     * Appends replacement safely handling escape sequences (\n, \t, \r, \\),
+     * valid capture groups ($1..$N), and graceful fallback for literal $ or unassigned groups.
+     */
+    public static void appendCustomReplacement(Matcher matcher, StringBuffer sb, String replacement) {
+        String unescaped = unescapeReplacement(replacement);
+        int cursor = 0;
+        int len = unescaped.length();
+        StringBuilder res = new StringBuilder();
+        while (cursor < len) {
+            char c = unescaped.charAt(cursor);
+            if (c == '\\') {
+                cursor++;
+                if (cursor < len) {
+                    char next = unescaped.charAt(cursor);
+                    if (next == '$' || next == '\\') {
+                        res.append(next);
+                    } else {
+                        res.append('\\').append(next);
+                    }
+                    cursor++;
+                } else {
+                    res.append('\\');
+                }
+            } else if (c == '$') {
+                cursor++;
+                if (cursor < len && Character.isDigit(unescaped.charAt(cursor))) {
+                    int start = cursor;
+                    while (cursor < len && Character.isDigit(unescaped.charAt(cursor))) {
+                        cursor++;
+                    }
+                    int groupNum = Integer.parseInt(unescaped.substring(start, cursor));
+                    if (groupNum <= matcher.groupCount()) {
+                        String groupVal = matcher.group(groupNum);
+                        if (groupVal != null) res.append(groupVal);
+                    } else {
+                        res.append('$').append(unescaped.substring(start, cursor));
+                    }
+                } else {
+                    res.append('$');
+                }
+            } else {
+                res.append(c);
+                cursor++;
+            }
+        }
+        matcher.appendReplacement(sb, Matcher.quoteReplacement(res.toString()));
+    }
+
+    public static String unescapeReplacement(String str) {
+        if (str == null || str.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(str.length());
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c == '\\' && i + 1 < str.length()) {
+                char next = str.charAt(i + 1);
+                if (next == 'n') { sb.append('\n'); i++; }
+                else if (next == 't') { sb.append('\t'); i++; }
+                else if (next == 'r') { sb.append('\r'); i++; }
+                else if (next == '\\') { sb.append('\\'); i++; }
+                else { sb.append(c); }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /** Returns null when the pattern is usable, otherwise a readable reason. */

@@ -1343,7 +1343,8 @@ public class CompareDexActivity extends BaseActivity {
 
         new Thread(() -> {
             try {
-                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(outFile))) {
+                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new java.io.BufferedOutputStream(new java.io.FileOutputStream(outFile), 65536))) {
+                    zos.setLevel(1);
                     org.json.JSONObject info = new org.json.JSONObject();
                     List<String> paths1 = getIntent().getStringArrayListExtra(EXTRA_FILES1);
                     List<String> paths2 = getIntent().getStringArrayListExtra(EXTRA_FILES2);

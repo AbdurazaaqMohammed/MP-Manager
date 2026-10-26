@@ -68,6 +68,11 @@
       "grammar": "syntaxes/grammars/prop.tmLanguage.json",
       "name": "Prop",
       "scopeName": "source.prop"
+    },
+    {
+      "grammar": "smali/syntaxes/smali.tmLanguage.json",
+      "name": "Smali",
+      "scopeName": "source.smali"
     }
   ]
 }

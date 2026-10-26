@@ -78,6 +78,15 @@ dependencies {
     implementation 'io.github.skylot:jadx-core:1.4.7'
     implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
     implementation 'io.github.skylot:jadx-dex-input:1.4.7'
+    implementation 'io.github.skylot:jadx-java-input:1.4.7'
+    implementation 'com.jakewharton.android.repackaged:dalvik-dx:14.0.0_r21'
+    implementation('de.femtopedia.dex2jar:dex2jar:2.4.28') {
+        exclude group: 'de.femtopedia.dex2jar', module: 'd2j-external'
+        exclude group: 'org.antlr', module: 'antlr-runtime'
+        exclude group: 'org.ow2.asm', module: 'asm'
+        exclude group: 'org.ow2.asm', module: 'asm-tree'
+        exclude group: 'org.ow2.asm', module: 'asm-commons'
+    }
     implementation 'org.slf4j:slf4j-android:1.7.36'
     implementation "androidx.preference:preference:1.2.1"
     implementation "androidx.collection:collection:1.7.0"

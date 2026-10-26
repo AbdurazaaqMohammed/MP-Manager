@@ -93,6 +93,16 @@ public class ArscData {
                 typeNode.dir = true;
                 typeNode.tag = spec;
                 typeNode.parent = pkgNode;
+
+                Node typeInfoNode = new Node();
+                typeInfoNode.label = "type-info";
+                typeInfoNode.key = pkg.getName() + "/" + spec.getTypeName() + "/type-info";
+                typeInfoNode.depth = 2;
+                typeInfoNode.dir = false;
+                typeInfoNode.tag = "type-info:" + spec.getTypeName();
+                typeInfoNode.parent = typeNode;
+                typeNode.children.add(typeInfoNode);
+
                 try {
                     Iterator<TypeBlock> blocks = spec.getTypeBlocks();
                     while (blocks.hasNext()) {
