@@ -97,5 +97,32 @@
             android:paddingBottom="4dp"
             android:text="@string/remove_debug_info_local" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"
+            android:background="#3DFFFFFF" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/sw_remember_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="@string/remember_settings" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/sw_autosave_background"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="@string/save_in_background" />
+
     </LinearLayout>
 </ScrollView>

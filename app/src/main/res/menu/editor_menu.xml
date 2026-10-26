@@ -3,6 +3,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:icon="@drawable/baseline_search_24"
+        android:id="@+id/search"
+        android:title="@string/search"
+        app:showAsAction="always" />
+    <item
         android:icon="@drawable/ic_navigation"
         android:id="@+id/navigation"
         android:title="Navigation"
@@ -85,11 +90,31 @@
             <item
                 android:id="@+id/smali_instruction"
                 android:icon="@drawable/ic_instruction_query_mt"
-                android:title="Instructions query" />    
+                android:title="Instructions query" />
+            <item
+                android:id="@+id/syntax"
+                android:icon="@drawable/baseline_text_snippet_24"
+                android:title="@string/syntax" />
+            <item
+                android:id="@+id/previous_position"
+                android:icon="@drawable/keyboard_double_arrow_left_24px"
+                android:title="@string/previous_position" />
+            <item
+                android:id="@+id/next_position"
+                android:icon="@drawable/keyboard_double_arrow_right_24px"
+                android:title="@string/next_position" />
             <item
                 android:id="@+id/jumpToLine"
                 android:icon="@drawable/ic_jump_line_mt"
                 android:title="Jump to line" />
+            <item
+                android:id="@+id/start_of_line"
+                android:icon="@drawable/text_select_jump_to_beginning_24px"
+                android:title="@string/start_of_line" />
+            <item
+                android:id="@+id/end_of_line"
+                android:icon="@drawable/text_select_jump_to_end_24px"
+                android:title="@string/end_of_line" />
             <group android:checkableBehavior="all">
                 <item
                     android:id="@+id/wrap_text"

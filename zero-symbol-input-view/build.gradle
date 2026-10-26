@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.library'
+    // Kotlin is compiled via AGP 9 built-in Kotlin (see this module's gradle.properties);
+    // do NOT apply org.jetbrains.kotlin.android here, it is incompatible with AGP 9's new DSL.
+}
+
+android {
+    namespace 'android.zero.studio.widget.editor.symbolinput'
+    compileSdk 37
+
+    defaultConfig {
+        minSdk 23
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Sora CodeEditor is provided at runtime by :app (app/libs/editor-debug.aar);
+    // compile against the extracted classes only to avoid local-aar packaging limits in libraries.
+    compileOnly files('libs/editor-classes.jar')
+
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.viewpager:viewpager:1.1.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.6.2'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'com.google.code.gson:gson:2.14.0'
+}

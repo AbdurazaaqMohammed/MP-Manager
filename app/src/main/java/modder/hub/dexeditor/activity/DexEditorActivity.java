@@ -95,7 +95,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -650,6 +650,15 @@ public class DexEditorActivity extends BaseActivity {
             MenuItem jumpToLine = menu.findItem(R.id.jumpToLine);
             if (jumpToLine != null) jumpToLine.setVisible(!isGraph);
 
+            // Same options the regular text editor offers, available for smali
+            // and plain text tabs alike (graph tabs have no text cursor).
+            int[] commonItems = {R.id.search, R.id.syntax, R.id.previous_position,
+                    R.id.next_position, R.id.start_of_line, R.id.end_of_line};
+            for (int commonId : commonItems) {
+                MenuItem commonItem = menu.findItem(commonId);
+                if (commonItem != null) commonItem.setVisible(!isGraph);
+            }
+
             MenuItem readOnlyItem = menu.findItem(R.id.read_only);
             readOnlyItem.setVisible(isSmali);
             readOnlyItem.setChecked(tab.isReadOnly);// preserve the read-only feature for targeted tab only
@@ -718,14 +727,22 @@ public class DexEditorActivity extends BaseActivity {
                 saveCurrentTab();
                 return true;
             } else if (id == R.id.search) {
-                // testing , i willl add a search bar like my modder hub app have.
-                // but I have plan to replace the sora editor with my custom MH-Texteditor
-                try {
-                    Method method = editor.getSearcher().getClass().getMethod("showSearchPanel");
-                    method.invoke(editor.getSearcher());
-                } catch (Exception ignored) {
-                    // ignored
-                }
+                editorFragment.showSearchPanel();
+                return true;
+            } else if (id == R.id.syntax) {
+                editorFragment.showSyntaxDialog();
+                return true;
+            } else if (id == R.id.previous_position) {
+                editorFragment.navigateHistory(false);
+                return true;
+            } else if (id == R.id.next_position) {
+                editorFragment.navigateHistory(true);
+                return true;
+            } else if (id == R.id.start_of_line) {
+                editorFragment.jumpToStartOfLine();
+                return true;
+            } else if (id == R.id.end_of_line) {
+                editorFragment.jumpToEndOfLine();
                 return true;
             } else if (id == R.id.navigation) {
                 editorFragment.showMethodFieldList();
@@ -1303,6 +1320,8 @@ public class DexEditorActivity extends BaseActivity {
         SwitchCompat swRemoveDebugParam = dialogView.findViewById(R.id.sw_remove_debug_param);
         SwitchCompat swRemoveDebugPrologue = dialogView.findViewById(R.id.sw_remove_debug_prologue);
         SwitchCompat swRemoveDebugLocal = dialogView.findViewById(R.id.sw_remove_debug_local);
+        SwitchCompat swRememberOptions = dialogView.findViewById(R.id.sw_remember_options);
+        SwitchCompat swAutoSave = dialogView.findViewById(R.id.sw_autosave_background);
 
         String[] versions = {"Keep the same", "35", "37", "38", "39"}; // upto 39 is okk
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, versions);
@@ -1323,6 +1342,8 @@ public class DexEditorActivity extends BaseActivity {
         swRemoveDebugParam.setChecked(sessionOptions.removeDebugParam);
         swRemoveDebugPrologue.setChecked(sessionOptions.removeDebugPrologue);
         swRemoveDebugLocal.setChecked(sessionOptions.removeDebugLocal);
+        swRememberOptions.setChecked(dexPref.getBoolean("compile_remember_options", true));
+        swAutoSave.setChecked(dexPref.getBoolean("compile_autosave_background", false));
 
         swRemoveAllDebug.setOnCheckedChangeListener((buttonView, isChecked) -> {
             swRemoveDebugSource.setEnabled(!isChecked);
@@ -1357,10 +1378,51 @@ public class DexEditorActivity extends BaseActivity {
             sessionOptions.removeDebugParam = swRemoveDebugParam.isChecked();
             sessionOptions.removeDebugPrologue = swRemoveDebugPrologue.isChecked();
             sessionOptions.removeDebugLocal = swRemoveDebugLocal.isChecked();
+
+            boolean remember = swRememberOptions.isChecked();
+            boolean autoSave = swAutoSave.isChecked();
+            dexPref.edit()
+                    .putBoolean("compile_remember_options", remember)
+                    .putBoolean("compile_autosave_background", autoSave)
+                    .putString("compile_dex_version", remember ? sessionOptions.dexVersion : "Keep the same")
+                    .putBoolean("compile_remove_all_debug", remember && sessionOptions.removeAllDebug)
+                    .putBoolean("compile_remove_debug_source", remember && sessionOptions.removeDebugSource)
+                    .putBoolean("compile_remove_debug_line", remember && sessionOptions.removeDebugLine)
+                    .putBoolean("compile_remove_debug_param", remember && sessionOptions.removeDebugParam)
+                    .putBoolean("compile_remove_debug_prologue", remember && sessionOptions.removeDebugPrologue)
+                    .putBoolean("compile_remove_debug_local", remember && sessionOptions.removeDebugLocal)
+                    .apply();
+
+            // Apply immediately: option changes recompile every dex, and the background
+            // compiler turns that into an instant save. Both are no-ops when unchanged.
+            if (classTree != null) {
+                classTree.setCompilationOptions(sessionOptions);
+                classTree.setAutoSaveEnabled(autoSave);
+            }
         });
         builder.setNegativeButton(android.R.string.cancel, null);
         AlertDialog dialog = builder.create();
         dialog.show();
+    }
+
+    /**
+     * Restores the persisted compilation options (and starts the background compiler when the
+     * user left it on). Called once the dex tree exists; applying the options marks every dex
+     * dirty only when the persisted options actually differ from the defaults.
+     */
+    private void applyPersistedCompilationOptions() {
+        if (classTree == null) return;
+        if (dexPref.getBoolean("compile_remember_options", true)) {
+            sessionOptions.dexVersion = dexPref.getString("compile_dex_version", sessionOptions.dexVersion);
+            sessionOptions.removeAllDebug = dexPref.getBoolean("compile_remove_all_debug", sessionOptions.removeAllDebug);
+            sessionOptions.removeDebugSource = dexPref.getBoolean("compile_remove_debug_source", sessionOptions.removeDebugSource);
+            sessionOptions.removeDebugLine = dexPref.getBoolean("compile_remove_debug_line", sessionOptions.removeDebugLine);
+            sessionOptions.removeDebugParam = dexPref.getBoolean("compile_remove_debug_param", sessionOptions.removeDebugParam);
+            sessionOptions.removeDebugPrologue = dexPref.getBoolean("compile_remove_debug_prologue", sessionOptions.removeDebugPrologue);
+            sessionOptions.removeDebugLocal = dexPref.getBoolean("compile_remove_debug_local", sessionOptions.removeDebugLocal);
+        }
+        classTree.setCompilationOptions(sessionOptions);
+        classTree.setAutoSaveEnabled(dexPref.getBoolean("compile_autosave_background", false));
     }
 
     public void showSmaliNavigation(String tempSmaliPath, String title, int lineNo) {
@@ -2145,6 +2207,7 @@ public class DexEditorActivity extends BaseActivity {
                 .setNeutralButton(android.R.string.search_go, null)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, editText, false);
         dialog.show();
 
         // Custom click listeners so "Search" doesn't auto-dismiss before we can read the field.
@@ -2173,12 +2236,14 @@ public class DexEditorActivity extends BaseActivity {
         container.setLayoutParams(params);
         container.addView(UiFields.wrap(this, editText, null, 0));
 
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog filterDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.filter_strings)
                 .setView(container)
                 .setPositiveButton(R.string.apply, (d, w) -> adapter.setFilter(editText.getText().toString()))
                 .setNegativeButton(R.string.clear, (d, w) -> adapter.setFilter(null))
-                .show();
+                .create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(filterDialog, editText, false);
+        filterDialog.show();
     }
 
     public void showStringReplaceAllDialog() {
@@ -2199,7 +2264,7 @@ public class DexEditorActivity extends BaseActivity {
         container.addView(UiFields.wrap(this, etReplace, null, 0));
         container.addView(swMatchCase);
 
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog replaceAllDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.replace_in_all_strings)
                 .setView(container)
                 .setPositiveButton(R.string.replace, (d, w) -> {
@@ -2209,7 +2274,9 @@ public class DexEditorActivity extends BaseActivity {
                     new StringBatchTask(this, null, find, replace, swMatchCase.isChecked(), null).start();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(replaceAllDialog, etFind, false);
+        replaceAllDialog.show();
     }
 
     public void applyStringChanges(final StringAdapter adapter, final View btnApply) {
@@ -2480,6 +2547,7 @@ public class DexEditorActivity extends BaseActivity {
             ClassTree.claimWorkDir(cachePath);
             try {
                 classTree = new ClassTree(paths, cachePath);
+                applyPersistedCompilationOptions();
                 // Pre-build trees in background to avoid UI lag
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();

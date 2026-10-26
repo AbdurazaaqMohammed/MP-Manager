@@ -139,6 +139,164 @@ public class BaksmaliWriter extends DexFormattedWriter {
     public BaksmaliWriter(Writer writer, @Nullable String classContext) {
         super(writer instanceof IndentingWriter ? writer : new IndentingWriter(writer));
         this.classContext = classContext;
+        this.indentingWriter = (IndentingWriter) this.writer;
+    }
+
+    /**
+     * The {@link IndentingWriter} this writer is bound to; {@link DexFormattedWriter}'s {@code
+     * writer} field is always an IndentingWriter after this class's constructor runs.
+     */
+    private final IndentingWriter indentingWriter;
+
+    /**
+     * Memo of formatted type descriptors. A dex references the same handful of types (and the
+     * same method/field names) millions of times; formatting is a per-character scan, so the
+     * formatted text is computed once per distinct string and then written through the
+     * scan-free {@link IndentingWriter#writeNoNewline} path. Purely a memo: evicting or
+     * clearing it never changes output, only speed.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, String> TYPE_FORMAT_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Same memo for simple names (quoted form when the name contains a space separator). */
+    private static final java.util.concurrent.ConcurrentHashMap<String, String> NAME_FORMAT_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Coarse cap: the caches hold at most this many entries before being cleared wholesale. */
+    private static final int FORMAT_CACHE_MAX = 1 << 15;
+
+    @Override public void writeType(CharSequence type) throws IOException {
+        String key = type.toString();
+        String formatted = TYPE_FORMAT_CACHE.get(key);
+        if (formatted == null) {
+            formatted = formatType(key);
+            if (TYPE_FORMAT_CACHE.size() >= FORMAT_CACHE_MAX) TYPE_FORMAT_CACHE.clear();
+            TYPE_FORMAT_CACHE.put(key, formatted);
+        }
+        indentingWriter.writeNoNewline(formatted);
+    }
+
+    @Override
+    protected void writeClass(CharSequence type) throws IOException {
+        String key = type.toString();
+        String formatted = TYPE_FORMAT_CACHE.get(key);
+        if (formatted == null) {
+            formatted = formatClass(type);
+            if (TYPE_FORMAT_CACHE.size() >= FORMAT_CACHE_MAX) TYPE_FORMAT_CACHE.clear();
+            TYPE_FORMAT_CACHE.put(key, formatted);
+        }
+        indentingWriter.writeNoNewline(formatted);
+    }
+
+    @Override
+    public void writeSimpleName(CharSequence simpleName) throws IOException {
+        String key = simpleName.toString();
+        String formatted = NAME_FORMAT_CACHE.get(key);
+        if (formatted == null) {
+            boolean hasSpace = false;
+            for (int i = 0; i < key.length(); i++) {
+                if (isSpaceSeparator(key.charAt(i))) {
+                    hasSpace = true;
+                    break;
+                }
+            }
+            formatted = hasSpace ? "`" + key + "`" : key;
+            if (NAME_FORMAT_CACHE.size() >= FORMAT_CACHE_MAX) NAME_FORMAT_CACHE.clear();
+            NAME_FORMAT_CACHE.put(key, formatted);
+        }
+        indentingWriter.writeNoNewline(formatted);
+    }
+
+    /**
+     * Formats a type descriptor exactly as {@link DexFormattedWriter#writeType} renders it:
+     * array dimensions, primitive shorthand, or a class descriptor via {@link #formatClass}.
+     */
+    private static String formatType(String type) {
+        StringBuilder sb = new StringBuilder(type.length() + 8);
+        for (int i = 0; i < type.length(); i++) {
+            char c = type.charAt(i);
+            if (c == 'L') {
+                formatClassInto(sb, type.subSequence(i, type.length()));
+                return sb.toString();
+            } else if (c == '[') {
+                sb.append('[');
+            } else if (c == 'Z' || c == 'B' || c == 'S' || c == 'C' || c == 'I'
+                    || c == 'J' || c == 'F' || c == 'D' || c == 'V') {
+                if (i != type.length() - 1) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid type string: %s", type));
+                }
+                sb.append(c);
+                return sb.toString();
+            } else {
+                throw new IllegalArgumentException(
+                        String.format("Invalid type string: %s", type));
+            }
+        }
+        // Any valid type would have returned from within the loop.
+        throw new IllegalArgumentException(
+                String.format("Invalid type string: %s", type));
+    }
+
+    /**
+     * Formats a class descriptor exactly as {@link BaksmaliWriter#writeClass} renders it,
+     * including backtick-quoting of package segments that contain a space separator.
+     */
+    private static String formatClass(CharSequence type) {
+        StringBuilder sb = new StringBuilder(type.length() + 8);
+        formatClassInto(sb, type);
+        return sb.toString();
+    }
+
+    private static void formatClassInto(StringBuilder sb, CharSequence type) {
+        sb.append(type.charAt(0));
+
+        int startIndex = 1;
+        boolean hasSpace = false;
+        int i;
+        for (i = startIndex; i < type.length(); i++) {
+            char c = type.charAt(i);
+
+            // '/' and ';' are never space separators, so checking them before the space separator
+            // test is equivalent to (and faster than) testing for a space separator first.
+            if (c == '/') {
+                if (i == startIndex) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid type string: %s", type));
+                }
+
+                appendSimpleName(sb, type, startIndex, i, hasSpace);
+                sb.append(c);
+                hasSpace = false;
+                startIndex = i + 1;
+            } else if (c == ';') {
+                if (i == startIndex) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid type string: %s", type));
+                }
+
+                appendSimpleName(sb, type, startIndex, i, hasSpace);
+                sb.append(c);
+                break;
+            } else if (isSpaceSeparator(c)) {
+                hasSpace = true;
+            }
+        }
+
+        if (i != type.length() - 1 || type.charAt(i) != ';') {
+            throw new IllegalArgumentException(
+                    String.format("Invalid type string: %s", type));
+        }
+    }
+
+    private static void appendSimpleName(StringBuilder sb, CharSequence type, int start, int end, boolean quoted) {
+        if (quoted) {
+            sb.append('`');
+        }
+        sb.append(type, start, end);
+        if (quoted) {
+            sb.append('`');
+        }
     }
 
     @Override public void writeMethodDescriptor(MethodReference methodReference) throws IOException {
@@ -155,62 +313,6 @@ public class BaksmaliWriter extends DexFormattedWriter {
         } else {
             super.writeFieldDescriptor(fieldReference);
         }
-    }
-
-    @Override
-    protected void writeClass(CharSequence type) throws IOException {
-        assert type.charAt(0) == 'L';
-
-        writer.write(type.charAt(0));
-
-        int startIndex = 1;
-        boolean hasSpace = false;
-        int i;
-        for (i = startIndex; i < type.length(); i++) {
-            char c = type.charAt(i);
-
-            // '/' and ';' are never space separators, so checking them before the space separator
-            // test is equivalent to (and faster than) testing for a space separator first.
-            if (c == '/') {
-                if (i == startIndex) {
-                    throw new IllegalArgumentException(
-                            String.format("Invalid type string: %s", type));
-                }
-
-                writeSimpleName(type.subSequence(startIndex, i), hasSpace);
-                writer.write(type.charAt(i));
-                hasSpace = false;
-                startIndex = i+1;
-            } else if (c == ';') {
-                if (i == startIndex) {
-                    throw new IllegalArgumentException(
-                            String.format("Invalid type string: %s", type));
-                }
-
-                writeSimpleName(type.subSequence(startIndex, i), hasSpace);
-                writer.write(type.charAt(i));
-                break;
-            } else if (isSpaceSeparator(c)) {
-                hasSpace = true;
-            }
-        }
-
-        if (i != type.length() - 1 || type.charAt(i) != ';') {
-            throw new IllegalArgumentException(
-                    String.format("Invalid type string: %s", type));
-        }
-    }
-
-    @Override
-    public void writeSimpleName(CharSequence simpleName) throws IOException {
-        boolean hasSpace = false;
-        for (int i = 0; i < simpleName.length(); i++) {
-            if (isSpaceSeparator(simpleName.charAt(i))) {
-                hasSpace = true;
-                break;
-            }
-        }
-        writeSimpleName(simpleName, hasSpace);
     }
 
     /**

@@ -182,6 +182,8 @@
     <string name="remove_debug_info_param">Remove debug info .param</string>
     <string name="remove_debug_info_prologue">Remove debug info .prologue</string>
     <string name="remove_debug_info_local">Remove debug info .xxx local</string>
+    <string name="remember_settings">Remember these settings</string>
+    <string name="save_in_background">Compile in background (faster saving, uses more battery)</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="press_again_msg">Press back again to cancel</string>

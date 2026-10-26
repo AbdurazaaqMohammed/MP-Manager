@@ -44,16 +44,33 @@ public class SortFilterController {
     private final ListPrefs prefs;
     private String currentPane1Filter = "";
     private String currentPane2Filter = "";
+    private TextInputLayout filterBox;
 
     public SortFilterController(MainActivity activity) {
         this.activity = activity;
         this.prefs = new ListPrefs(activity);
     }
 
+    /**
+     * TextInputLayout of the filter field, created on first use. It ships GONE
+     * and is only revealed from the overflow menu, so building it lazily keeps
+     * ~150ms of Material inflation off the cold-start path.
+     */
+    public TextInputLayout filterBarBox() {
+        if (filterBox == null) setupFilterBar();
+        return filterBox;
+    }
+
+    /** Same as {@link #filterBarBox()} but never triggers creation (back-press peek). */
+    public TextInputLayout filterBarIfCreated() {
+        return filterBox;
+    }
+
     public void setupFilterBar() {
         LinearLayout topBar = activity.findViewById(R.id.topBar);
         TextInputLayout filterBox =
                 UiFields.box(activity, "Filter...");
+        this.filterBox = filterBox;
         EditText filterBar = UiFields.field(filterBox, 0);
         filterBox.setVisibility(View.GONE);
         filterBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));

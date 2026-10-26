@@ -651,6 +651,8 @@ public class SearchFragment extends Fragment {
                 .setPositiveButton(android.R.string.ok, null)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(replaceDialog, etFind,
+                lastSearchQuery != null && !lastSearchQuery.isEmpty());
         replaceDialog.show();
 
         // Set after show() so an unusable pattern keeps the dialog open instead
@@ -2538,9 +2540,7 @@ public class SearchFragment extends Fragment {
                 String typeKey = type.substring(1, type.length() - 1);
                 String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(typeKey);
                 if (pending != null) {
-                    if (pending.trim().startsWith("# ")) {
-                        pending = pending.replaceFirst("(?s)^#.*?\\n\\n", "");
-                    }
+                    pending = modder.hub.dexeditor.smali.SmaliHelper.stripSmaliHeader(pending);
                     String dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
                     return "# " + dexFileName + "\n\n" + pending;
                 }

@@ -110,6 +110,23 @@ public class IndentingWriter extends Writer {
         writer.write(str, start, len);
     }
 
+    /**
+     * Writes a block of text that is known to contain no newline characters, skipping the
+     * per-call newline scan that {@link #write(String)} performs. For a string without
+     * newlines the bytes written are identical; the caller must guarantee that {@code str}
+     * contains no {@code \n}.
+     */
+    public void writeNoNewline(String str) throws IOException {
+        if (str.isEmpty()) {
+            return;
+        }
+        if (beginningOfLine) {
+            writeIndent();
+            beginningOfLine = false;
+        }
+        writer.write(str);
+    }
+
     @Override
     public void write(char[] chars) throws IOException {
         write(chars, 0, chars.length);

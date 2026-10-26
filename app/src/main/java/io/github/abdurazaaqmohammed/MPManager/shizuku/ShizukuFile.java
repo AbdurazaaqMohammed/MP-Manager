@@ -111,7 +111,7 @@ public class ShizukuFile extends File {
         // (tapping it then failed with "cat: .../build.prop/build.prop:
         // Not a directory"). Bail out so callers show an error instead.
         ShizukuShell.Result r = ShizukuShell.exec("test -d " + RootManager.escapeShellArg(path)
-                + " || exit 4; LC_ALL=C ls -lA " + RootManager.escapeShellArg(path));
+                + " || exit 4; LC_ALL=C ls -lAH " + RootManager.escapeShellArg(path));
         if (!r.success) return null;
         List<ShizukuFile> links = new ArrayList<>();
         for (String line : r.stdout.split("\n")) {

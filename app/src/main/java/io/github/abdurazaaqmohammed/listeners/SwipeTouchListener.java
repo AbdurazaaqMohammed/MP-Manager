@@ -150,6 +150,12 @@ public class SwipeTouchListener implements View.OnTouchListener {
             case MotionEvent.ACTION_DOWN:
                 context.onPaneTouched(pane);
                 touchView = v;
+                // Rows route clicks through this listener and have no
+                // OnClickListener, so View.onTouchEvent never marks them
+                // pressed and the selectableItemBackground ripple would never
+                // show. Drive the pressed state here instead.
+                v.drawableHotspotChanged(event.getX(), event.getY());
+                v.setPressed(true);
                 initialX = event.getRawX();
                 initialY = event.getRawY();
                 isSwiping = false;
@@ -168,6 +174,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         swipeDecided = true;
                         if (Math.abs(dx) > Math.abs(dy)) {
                             isSwiping = true;
+                            v.setPressed(false);
                             v.getParent().requestDisallowInterceptTouchEvent(true);
                             MotionEvent cancel = MotionEvent.obtain(event);
                             cancel.setAction(MotionEvent.ACTION_CANCEL);
@@ -191,6 +198,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
+                v.setPressed(false);
                 if (isSwiping) {
                     v.onTouchEvent(event);
                     float translation = Math.abs(v.getTranslationX());
