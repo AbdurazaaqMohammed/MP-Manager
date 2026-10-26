@@ -77,6 +77,24 @@
                         style="@style/Widget.Material3.Button.IconButton"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/darkThemeButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/dark"
+                        app:tooltipText="@string/dark_theme"
+                        android:contentDescription="@string/dark_theme"
+                        style="@style/Widget.Material3.Button.IconButton"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/blackThemeButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/black"
+                        app:tooltipText="@string/black_theme"
+                        android:contentDescription="@string/black_theme"
+                        style="@style/Widget.Material3.Button.IconButton"/>
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/systemThemeButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

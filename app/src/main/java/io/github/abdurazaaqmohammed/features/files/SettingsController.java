@@ -155,7 +155,15 @@ public class SettingsController {
 
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         String currentThemeId = ThemeRegistry.getCurrentId(activity);
-        themeButtons.check(BuiltInThemes.LIGHT_ID.equals(currentThemeId) ? R.id.lightThemeButton : R.id.systemThemeButton);
+        if (BuiltInThemes.LIGHT_ID.equals(currentThemeId)) {
+            themeButtons.check(R.id.lightThemeButton);
+        } else if (BuiltInThemes.DARK_ID.equals(currentThemeId)) {
+            themeButtons.check(R.id.darkThemeButton);
+        } else if (BuiltInThemes.BLACK_ID.equals(currentThemeId)) {
+            themeButtons.check(R.id.blackThemeButton);
+        } else {
+            themeButtons.check(R.id.systemThemeButton);
+        }
         for (int i = 0; i < themeButtons.getChildCount(); i++) {
             View child = themeButtons.getChildAt(i);
             if (child instanceof MaterialButton) {
@@ -163,6 +171,10 @@ public class SettingsController {
                     int buttonId = v3.getId();
                     if (buttonId == R.id.lightThemeButton) {
                         Extensions.showMessage(activity, R.string.light_theme);
+                    } else if (buttonId == R.id.darkThemeButton) {
+                        Extensions.showMessage(activity, R.string.dark_theme);
+                    } else if (buttonId == R.id.blackThemeButton) {
+                        Extensions.showMessage(activity, R.string.black_theme);
                     } else if (buttonId == R.id.systemThemeButton) {
                         Extensions.showMessage(activity, R.string.system_theme);
                     }
@@ -178,6 +190,12 @@ public class SettingsController {
                 if (checkedId == R.id.lightThemeButton) {
                     themeButtons.check(R.id.lightThemeButton);
                     pluginId = BuiltInThemes.LIGHT_ID;
+                } else if (checkedId == R.id.darkThemeButton) {
+                    themeButtons.check(R.id.darkThemeButton);
+                    pluginId = BuiltInThemes.DARK_ID;
+                } else if (checkedId == R.id.blackThemeButton) {
+                    themeButtons.check(R.id.blackThemeButton);
+                    pluginId = BuiltInThemes.BLACK_ID;
                 } else {
                     system = true;
                     themeButtons.check(R.id.systemThemeButton);
