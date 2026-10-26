@@ -2982,9 +2982,6 @@ public class DexEditorActivity extends BaseActivity {
                     tabsAdapter.notifyDataSetChanged();
                     progressDialog.dismiss();
                     Extensions.showMessage(DexEditorActivity.this, "Imported " + totalImported + " class(es)");
-                    if (classToOpen != null) {
-                        openClass(classToOpen);
-                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
