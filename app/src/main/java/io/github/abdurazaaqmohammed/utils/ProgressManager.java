@@ -40,6 +40,24 @@ public class ProgressManager {
     private static final String CHANNEL_ID = "progress_channel";
     private static final int NOTIFICATION_ID = 1001;
 
+    private final long startTime = System.currentTimeMillis();
+    private static final java.util.List<ProgressManager> activeInstances = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void restoreHidden() {
+        for (ProgressManager pm : activeInstances) {
+            if (pm.hidden && !pm.dismissed) {
+                pm.restore();
+            }
+        }
+    }
+
+    public static boolean hasHidden() {
+        for (ProgressManager pm : activeInstances) {
+            if (pm.hidden && !pm.dismissed) return true;
+        }
+        return false;
+    }
+
     public ProgressManager(AppCompatActivity activity, boolean indeterminate) {
         this.activity = activity;
         this.handler = new Handler(Looper.getMainLooper());
@@ -58,8 +76,8 @@ public class ProgressManager {
             if (!indeterminate && maxVal > 0) {
                 pb.setMax(maxVal);
                 pb.setProgress(progressVal);
-                applyCount(v.findViewById(R.id.progressCount));
             }
+            applyCount(v.findViewById(R.id.progressCount));
             dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
         });
         return this;
@@ -73,8 +91,11 @@ public class ProgressManager {
         this.currentText = text;
         handler.post(() -> {
             if (dismissed) return;
-            if (dialog != null && dialog.isShowing())
-                ((TextView) dialog.findViewById(R.id.dialogTitle)).setText(text);
+            if (dialog != null && dialog.isShowing()) {
+                TextView title = dialog.findViewById(R.id.dialogTitle);
+                if (title != null) title.setText(text);
+                applyCount(dialog.findViewById(R.id.progressCount));
+            }
             if (hidden) updateNotification();
         });
         return this;
@@ -103,8 +124,7 @@ public class ProgressManager {
     }
 
     /**
-     * Turns on the "n / total (x%)" line. Only shown when a total is known, so
-     * indeterminate operations keep the plain spinner.
+     * Turns on the "n / total (x%)" line.
      */
     public ProgressManager showCount(boolean show) {
         this.showCount = show;
@@ -116,19 +136,38 @@ public class ProgressManager {
     }
 
     private void applyCount(TextView count) {
-        if (count == null) return;
-        if (!showCount || indeterminate || maxVal <= 0) {
-            count.setVisibility(View.GONE);
+        if (count == null || dismissed) return;
+        if (indeterminate || maxVal <= 0) {
+            long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+            if (elapsed > 0) {
+                count.setVisibility(View.VISIBLE);
+                count.setText(elapsed + "s elapsed");
+            } else {
+                count.setVisibility(View.GONE);
+            }
             return;
         }
         int percent = (int) ((progressVal * 100L) / maxVal);
         count.setVisibility(View.VISIBLE);
-        count.setText(progressVal + " / " + maxVal + " (" + Math.min(100, Math.max(0, percent)) + "%)");
+        StringBuilder sb = new StringBuilder();
+        sb.append(progressVal).append(" / ").append(maxVal)
+                .append(" (").append(Math.min(100, Math.max(0, percent))).append("%)");
+        if (progressVal > 0) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            long remainingMs = (elapsed / progressVal) * (maxVal - progressVal);
+            long sec = remainingMs / 1000;
+            if (sec > 0) {
+                String eta = sec < 60 ? (sec + "s left") : ((sec / 60) + "m " + (sec % 60) + "s left");
+                sb.append(" • ").append(eta);
+            }
+        }
+        count.setText(sb.toString());
     }
 
     public void dismiss() {
         handler.post(() -> {
             dismissed = true;
+            activeInstances.remove(this);
             if (dialog != null) dialog.dismiss();
             cancelNotification();
         });
@@ -149,10 +188,22 @@ public class ProgressManager {
         };
     }
 
-    private void hide() {
+    public void hide() {
         hidden = true;
         if (dialog != null) dialog.hide();
+        if (!activeInstances.contains(this)) activeInstances.add(this);
         showNotification();
+    }
+
+    public void restore() {
+        handler.post(() -> {
+            if (dismissed) return;
+            hidden = false;
+            cancelNotification();
+            if (dialog != null && !dialog.isShowing()) {
+                dialog.show();
+            }
+        });
     }
 
     private void initChannel() {
@@ -173,12 +224,19 @@ public class ProgressManager {
     }
 
     private NotificationCompat.Builder buildNotif() {
+        Intent intent = new Intent(activity, activity.getClass());
+        intent.setAction("io.github.abdurazaaqmohammed.RESTORE_PROGRESS");
+        intent.putExtra("restore_progress", true);
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        PendingIntent pi = PendingIntent.getActivity(activity, NOTIFICATION_ID, intent,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+
         NotificationCompat.Builder b = new NotificationCompat.Builder(activity, CHANNEL_ID)
                 .setContentTitle(activity.getString(R.string.app_name))
                 .setContentText(currentText != null ? currentText : activity.getString(R.string.progress_working))
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
-                .setContentIntent(PendingIntent.getActivity(activity, 0, new Intent(activity, activity.getClass()), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+                .setContentIntent(pi);
         if (!indeterminate && maxVal > 0) b.setProgress(maxVal, progressVal, false);
         else b.setProgress(0, 0, true);
         return b;

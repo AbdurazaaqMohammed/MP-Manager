@@ -40,9 +40,10 @@ public final class FileMenuOrder {
     public static final String BATCH_CROP = "batch_crop";
     public static final String BATCH_EXIF = "batch_exif";
     public static final String BATCH_STRIP_META = "batch_strip_meta";
+    public static final String HIDE = "hide";
 
     public static final String[] DEFAULT_ORDER = {
-            COPY, MOVE, RENAME, DELETE, COMPRESS, PROPERTIES, SHARE, OPEN_WITH,
+            COPY, MOVE, RENAME, DELETE, HIDE, COMPRESS, PROPERTIES, SHARE, OPEN_WITH,
             BOOKMARK, CMD, CHECK, EXTRACT, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
             CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX,
             BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
@@ -153,6 +154,7 @@ public final class FileMenuOrder {
             case BATCH_CROP -> context.getString(R.string.crop_images);
             case BATCH_EXIF -> context.getString(R.string.set_exif_tags);
             case BATCH_STRIP_META -> context.getString(R.string.remove_metadata);
+            case HIDE -> context.getString(R.string.hide);
             default -> {
                 String pluginTitle = null;
                 try {
@@ -191,6 +193,7 @@ public final class FileMenuOrder {
             case BATCH_CROP -> R.drawable.edit_24px;
             case BATCH_EXIF -> R.drawable.baseline_text_snippet_24;
             case BATCH_STRIP_META -> R.drawable.baseline_delete_24;
+            case HIDE -> R.drawable.visibility_off_24px;
             default -> {
                 try {
                     int icon = ExtensionIcons.resId(context,

@@ -659,26 +659,23 @@ public class FileOperationsHelper {
         }
         if (conflicts.isEmpty()) return plan;
 
-        int bulk = CopyConflictDialog.askBulk(context, dialogUtil, singleTitle, allTitle, conflicts,
-                () -> showActiveProgress(transferLabel(isMove, summarizeItems(items))));
-        if (bulk == CopyConflictDialog.ACTION_CANCEL) return null;
-
-        int applied = -1;
-        for (CopyConflictDialog.Conflict c : conflicts) {
+        int bulkAction = -1;
+        for (int i = 0; i < conflicts.size(); i++) {
+            CopyConflictDialog.Conflict c = conflicts.get(i);
             int action;
-            if (CopyConflictDialog.isBulkAction(bulk)) {
-                action = bulk;
-            } else if (applied >= 0) {
-                action = applied;
+            if (bulkAction >= 0) {
+                action = bulkAction;
             } else {
                 dismissActiveProgress();
-                action = CopyConflictDialog.askSingle(context, dialogUtil, singleTitle, c,
-                        () -> showActiveProgress(transferLabel(isMove, c.sourceName)));
-                showActiveProgress(transferLabel(isMove, summarizeItems(items)));
-                if (!CopyConflictDialog.isBulkAction(action)) return null;
-                // One decision covers the rest of the batch, matching the
-                // "applies to all the further files" expectation.
-                applied = action;
+                List<CopyConflictDialog.Conflict> remaining = conflicts.subList(i, conflicts.size());
+                CopyConflictDialog.Decision decision = CopyConflictDialog.askConflict(
+                        context, dialogUtil, singleTitle, allTitle, remaining,
+                        () -> showActiveProgress(transferLabel(isMove, summarizeItems(items))));
+                if (decision == null || decision.action == CopyConflictDialog.ACTION_CANCEL) return null;
+                action = decision.action;
+                if (decision.applyToAll) {
+                    bulkAction = action;
+                }
             }
             plan.put(c.source, resolveDestination(c, destinationFolder, action, useElevated));
         }

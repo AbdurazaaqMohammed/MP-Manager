@@ -13,6 +13,7 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
@@ -1174,30 +1175,42 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .setNegativeButton(rss.getString(R.string.folder), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                            String inputStr = input.getText().toString();
-                            if (new File(ogFolder, inputStr).mkdir()) loadFolderInPane(ogFolder, isPane1);
-                            else if (mkdirViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                            else Extensions.showMessage(MainActivity.this,
-                                    rss.getString(R.string.failed_to_create_folder, inputStr),
-                                    FileUtils.describeWriteProblem(this, new File(ogFolder, inputStr)));
+                            String name = resolveNewEntryName(ogFolder, input.getText().toString(), true);
+                            File newDir = new File(ogFolder, name);
+                            boolean success = newDir.mkdir() || mkdirViaRoot(ogFolder, name);
+                            if (success) {
+                                loadFolderInPane(ogFolder, isPane1);
+                                if (isSameLocationInPanes()) {
+                                    loadFolderInPane(ogFolder, !isPane1);
+                                }
+                            } else {
+                                Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.failed_to_create_folder, name),
+                                        FileUtils.describeWriteProblem(this, newDir));
+                            }
                         })
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
                         .setPositiveButton(rss.getString(R.string.file), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                            String inputStr = input.getText().toString();
-                            File newFile = new File(ogFolder, inputStr);
+                            String name = resolveNewEntryName(ogFolder, input.getText().toString(), false);
+                            File newFile = new File(ogFolder, name);
+                            boolean success = false;
                             try {
-                                if (newFile.createNewFile()) loadFolderInPane(ogFolder, isPane1);
-                                else if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                                else Extensions.showMessage(MainActivity.this,
-                                        rss.getString(R.string.failed_to_create_file, inputStr),
+                                success = newFile.createNewFile();
+                            } catch (IOException ignored) {}
+                            if (!success) {
+                                success = touchViaRoot(ogFolder, name);
+                            }
+                            if (success) {
+                                loadFolderInPane(ogFolder, isPane1);
+                                if (isSameLocationInPanes()) {
+                                    loadFolderInPane(ogFolder, !isPane1);
+                                }
+                            } else {
+                                Extensions.showMessage(MainActivity.this,
+                                        rss.getString(R.string.failed_to_create_file, name),
                                         FileUtils.describeWriteProblem(this, newFile));
-                            } catch (IOException e) {
-                                if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
-                                else Extensions.showMessage(MainActivity.this,
-                                        rss.getString(R.string.failed_to_create_file, inputStr),
-                                        e.toString() + "\n" + FileUtils.describeWriteProblem(this, newFile));
                             }
                         }).create();
                 io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, false);
@@ -1534,6 +1547,48 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         backButton.setOnClickListener(v -> navigateBack(lastPaneSelected == 1));
         forwardButton.setOnClickListener(v -> navigateForward(lastPaneSelected == 1));
         updateNavigationButtons();
+    }
+
+    private String resolveNewEntryName(File parent, String inputStr, boolean isFolder) {
+        String baseName = inputStr != null ? inputStr.trim() : "";
+        String ext = "";
+        if (baseName.isEmpty()) {
+            baseName = isFolder ? "New folder" : "New file";
+        } else if (!isFolder) {
+            int dot = baseName.lastIndexOf('.');
+            if (dot > 0) {
+                ext = baseName.substring(dot);
+                baseName = baseName.substring(0, dot);
+            }
+        }
+        File candidate = new File(parent, baseName + ext);
+        if (!candidate.exists()) {
+            return baseName + ext;
+        }
+        int counter = 1;
+        while (true) {
+            String candidateName = baseName + " " + counter + ext;
+            if (!new File(parent, candidateName).exists()) {
+                return candidateName;
+            }
+            counter++;
+        }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (isBookmarksDrawerOpen && ev.getAction() == MotionEvent.ACTION_DOWN) {
+            View drawer = findViewById(R.id.bookmarks_drawer);
+            if (drawer != null && drawer.getVisibility() == View.VISIBLE) {
+                Rect outRect = new Rect();
+                drawer.getGlobalVisibleRect(outRect);
+                if (!outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                    closeBookmarksDrawer();
+                    return true;
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev);
     }
 
     @Override
@@ -2454,6 +2509,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    public boolean isSameLocationInPanes() {
+        if (pane1Folder == null || pane2Folder == null) return false;
+        if (!pane1Folder.equals(pane2Folder)) return false;
+        try {
+            RecyclerView p1 = findViewById(R.id.listViewPane1);
+            RecyclerView p2 = findViewById(R.id.listViewPane2);
+            if (p1 != null && p2 != null
+                    && p1.getAdapter() instanceof MainFilesArrayAdapter a1
+                    && p2.getAdapter() instanceof MainFilesArrayAdapter a2) {
+                if (a1.isInZip != a2.isInZip) return false;
+                if (a1.isInZip) {
+                    return Objects.equals(a1.currentZipPath, a2.currentZipPath);
+                }
+            }
+        } catch (Exception ignored) {}
+        return true;
+    }
+
     public void refreshPaneAfterChange(boolean pane1, String followName) {
         int[] saved = capturePaneScroll(pane1);
         reloadPane(pane1, false);
@@ -2474,6 +2547,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (Exception ignored) {
             }
         });
+        if (isSameLocationInPanes()) {
+            reloadPane(!pane1, false);
+        }
     }
 
     public void flashPaneItem(boolean pane1, String name) {

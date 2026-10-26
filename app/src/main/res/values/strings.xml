@@ -241,6 +241,10 @@
     <string name="folder">Folder</string>
     <string name="file">File</string>
     <string name="hide">Hide</string>
+    <string name="unhide">Unhide</string>
+    <string name="keep">Keep</string>
+    <string name="all_checkbox">All</string>
+    <string name="hidden_toast">Item hidden</string>
     <string name="added_to_bookmarks">Added %1$s to bookmarks</string>
     <string name="filepath">File path</string>
     <string name="confirm_delete_bookmark">Are you sure you want to delete bookmark %1$s?</string>

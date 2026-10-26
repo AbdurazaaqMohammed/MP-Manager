@@ -225,6 +225,10 @@
     <string name="folder">مجلد</string>
     <string name="file">ملف</string>
     <string name="hide">إخفاء</string>
+    <string name="unhide">إظهار</string>
+    <string name="keep">إبقاء</string>
+    <string name="all_checkbox">الكل</string>
+    <string name="hidden_toast">تم إخفاء العنصر</string>
     <string name="added_to_bookmarks">تمت إضافة %1$s إلى الإشارات المرجعية</string>
     <string name="filepath">مسار الملف</string>
     <string name="confirm_delete_bookmark">هل أنت متأكد أنك تريد حذف الإشارة المرجعية %1$s؟</string>
