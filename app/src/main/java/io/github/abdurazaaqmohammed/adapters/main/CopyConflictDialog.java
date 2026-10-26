@@ -38,7 +38,7 @@ public final class CopyConflictDialog {
 
     /** One name collision, with everything needed to describe it to the user. */
     public static final class Conflict {
-        public final File source;
+        public final Object source;
         public final String sourceName;
         public final long sourceSize;
         public final long sourceTime;
@@ -47,7 +47,7 @@ public final class CopyConflictDialog {
         public final long existingTime;
         public final String suggestedName;
 
-        public Conflict(File source, String sourceName, long sourceSize, long sourceTime,
+        public Conflict(Object source, String sourceName, long sourceSize, long sourceTime,
                         String existingName, long existingSize, long existingTime,
                         String suggestedName) {
             this.source = source;

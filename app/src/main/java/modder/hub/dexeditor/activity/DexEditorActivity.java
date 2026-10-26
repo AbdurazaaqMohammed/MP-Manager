@@ -2050,11 +2050,6 @@ public class DexEditorActivity extends BaseActivity {
                         public void onAddClass(TreeNode node) {
                             activity.showAddClassDialog(node);
                         }
-
-                        @Override
-                        public void onImportClass(TreeNode node) {
-                            activity.showImportClassDialog(node);
-                        }
                     }, false);
                     break;
                 case 1:
@@ -2884,11 +2879,49 @@ public class DexEditorActivity extends BaseActivity {
         etPkg.setText(defaultPkg);
         layout.addView(pkgBox);
 
+        LinearLayout classRow = new LinearLayout(this);
+        classRow.setOrientation(LinearLayout.HORIZONTAL);
+        classRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextInputLayout classBox = UiFields.box(this, "Class name");
         EditText etClass = UiFields.field(classBox, InputType.TYPE_CLASS_TEXT);
-        layout.addView(classBox);
+        LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        classBox.setLayoutParams(boxLp);
+        classRow.addView(classBox);
 
-        new MaterialAlertDialogBuilder(this)
+        ImageView browseBtn = new ImageView(this);
+        int btnPad = (int) (10 * getResources().getDisplayMetrics().density + 0.5f);
+        browseBtn.setPadding(btnPad, btnPad, btnPad, btnPad);
+        browseBtn.setImageResource(R.drawable.folder_24px);
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        browseBtn.setBackgroundResource(outValue.resourceId);
+        browseBtn.setContentDescription("Browse Smali");
+
+        androidx.appcompat.app.AlertDialog[] addDialogHolder = new androidx.appcompat.app.AlertDialog[1];
+        browseBtn.setOnClickListener(v -> {
+            FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+            props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
+            props.selection_mode = FilePickerDialog.MULTI_MODE;
+            props.extensions = new String[]{".smali", ".zip", ".apk", ".jar"};
+            props.preferenceKey = "dex_add_browse";
+            FilePickerDialog picker = new FilePickerDialog(DexEditorActivity.this, props);
+            picker.setTitle("Select Smali File, Folder, or Zip");
+            picker.setDialogSelectionListener(files -> {
+                if (files == null || files.length == 0) return;
+                if (addDialogHolder[0] != null && addDialogHolder[0].isShowing()) {
+                    addDialogHolder[0].dismiss();
+                }
+                String currentPkg = etPkg.getText() != null ? etPkg.getText().toString().trim() : "";
+                importSmaliFiles(files, currentPkg);
+            });
+            picker.show();
+        });
+        classRow.addView(browseBtn);
+
+        layout.addView(classRow);
+
+        addDialogHolder[0] = new MaterialAlertDialogBuilder(this)
                 .setTitle("Add")
                 .setView(layout)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -2907,15 +2940,24 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     private void createAndSaveNewClass(String fullPath, String simpleName) {
-        String smali = ".class public L" + fullPath + ";\n"
-                + ".super Ljava/lang/Object;\n"
-                + ".source \"" + simpleName + ".java\"\n\n"
-                + "# direct methods\n"
-                + ".method public constructor <init>()V\n"
-                + "    .registers 1\n\n"
-                + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
-                + "    return-void\n"
-                + ".end method\n";
+        createAndSaveNewClass(fullPath, simpleName, null);
+    }
+
+    private void createAndSaveNewClass(String fullPath, String simpleName, String customSmali) {
+        String smali;
+        if (customSmali != null && !customSmali.trim().isEmpty()) {
+            smali = customSmali;
+        } else {
+            smali = ".class public L" + fullPath + ";\n"
+                    + ".super Ljava/lang/Object;\n"
+                    + ".source \"" + simpleName + ".java\"\n\n"
+                    + "# direct methods\n"
+                    + ".method public constructor <init>()V\n"
+                    + "    .registers 1\n\n"
+                    + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
+                    + "    return-void\n"
+                    + ".end method\n";
+        }
         progressDialog = new AlertProgress(this);
         progressDialog.setCancelable(false);
         progressDialog.setCanceledOnTouchOutside(false);
@@ -2927,6 +2969,12 @@ public class DexEditorActivity extends BaseActivity {
                 if (targetVer <= 0) targetVer = 35;
                 ClassDef def = Smali.assemble(smali, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
                 classTree.saveClassDef(def);
+                String actualClass = fullPath;
+                String type = def.getType();
+                if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                    actualClass = type.substring(1, type.length() - 1);
+                }
+                final String classToOpen = actualClass;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
                 runOnUiThread(() -> {
@@ -2941,7 +2989,7 @@ public class DexEditorActivity extends BaseActivity {
                     refreshExplorerPage(1);
                     tabsAdapter.notifyDataSetChanged();
                     progressDialog.dismiss();
-                    openClass(fullPath);
+                    openClass(classToOpen);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -2952,74 +3000,59 @@ public class DexEditorActivity extends BaseActivity {
         }).start();
     }
 
-    public void showImportClassDialog(TreeNode node) {
-        String defaultPkg = "";
-        if (node != null) {
-            String full = node.getFullName();
-            if (node.isDirectory()) {
-                defaultPkg = full.replace('/', '.');
-            } else if (node.getParent() != null && node.getParent().getFullName() != null) {
-                defaultPkg = node.getParent().getFullName().replace('/', '.');
-            } else {
-                int lastSlash = full.lastIndexOf('/');
-                if (lastSlash > 0) defaultPkg = full.substring(0, lastSlash).replace('/', '.');
-            }
+    private static class ImportItem {
+        final File file;
+        final String relativePath; // e.g. "myfolder/sub/Hello" (without .smali)
+
+        ImportItem(File file, String relativePath) {
+            this.file = file;
+            this.relativePath = relativePath;
         }
-        final String targetPkg = defaultPkg;
-        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
-        props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
-        props.selection_mode = FilePickerDialog.MULTI_MODE;
-        props.extensions = new String[]{".smali", ".class"};
-        props.preferenceKey = "dex_import";
-        FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Import");
-        picker.setDialogSelectionListener(files -> {
-            if (files == null || files.length == 0) return;
-            importSmaliFiles(files, targetPkg);
-        });
-        picker.show();
     }
 
-    private void collectImportFiles(File f, List<File> out) {
+    private void collectImportFiles(File f, String basePrefix, List<ImportItem> out) {
         if (f == null || !f.exists()) return;
         if (f.isDirectory()) {
             File[] children = f.listFiles();
             if (children != null) {
+                String nextPrefix = (basePrefix == null || basePrefix.isEmpty()) ? f.getName() : basePrefix + "/" + f.getName();
                 for (File child : children) {
-                    collectImportFiles(child, out);
+                    collectImportFiles(child, nextPrefix, out);
                 }
             }
         } else if (f.isFile()) {
             String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
-            if (lower.endsWith(".smali") || lower.endsWith(".class")) {
-                out.add(f);
+            if (lower.endsWith(".smali")) {
+                String simpleName = f.getName().substring(0, f.getName().length() - 6);
+                String rel = (basePrefix == null || basePrefix.isEmpty()) ? simpleName : basePrefix + "/" + simpleName;
+                out.add(new ImportItem(f, rel));
+            } else if (lower.endsWith(".zip") || lower.endsWith(".apk") || lower.endsWith(".jar")) {
+                try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f)) {
+                    java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+                    File tempDexDir = new File(getCacheDir(), "dex_import_" + System.currentTimeMillis());
+                    tempDexDir.mkdirs();
+                    while (en.hasMoreElements()) {
+                        java.util.zip.ZipEntry ze = en.nextElement();
+                        String entryName = ze.getName();
+                        if (!ze.isDirectory() && entryName.toLowerCase(java.util.Locale.ROOT).endsWith(".smali")) {
+                            File target = new File(tempDexDir, entryName);
+                            File parent = target.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
+                            try (java.io.InputStream is = zf.getInputStream(ze);
+                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(target)) {
+                                byte[] buf = new byte[8192];
+                                int n;
+                                while ((n = is.read(buf)) != -1) {
+                                    fos.write(buf, 0, n);
+                                }
+                            }
+                            String smaliPath = entryName.substring(0, entryName.length() - 6);
+                            out.add(new ImportItem(target, smaliPath));
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
             }
-        }
-    }
-
-    private List<ClassDef> translateClassFileToDefs(File f, int targetVer) {
-        try {
-            byte[] classBytes = java.nio.file.Files.readAllBytes(f.toPath());
-            com.android.dx.dex.DexOptions dexOptions = new com.android.dx.dex.DexOptions();
-            dexOptions.minSdkVersion = targetVer;
-            com.android.dx.dex.file.DexFile dexFile = new com.android.dx.dex.file.DexFile(dexOptions);
-            com.android.dx.cf.direct.DirectClassFile cf = new com.android.dx.cf.direct.DirectClassFile(
-                    new com.android.dx.util.ByteArray(classBytes), f.getName(), false);
-            com.android.dx.command.dexer.DxContext dxContext = new com.android.dx.command.dexer.DxContext();
-            com.android.dx.dex.cf.CfOptions cfOptions = new com.android.dx.dex.cf.CfOptions();
-            com.android.dx.dex.file.ClassDefItem item = com.android.dx.dex.cf.CfTranslator.translate(dxContext, cf, classBytes, cfOptions, dexOptions, dexFile);
-            dexFile.add(item);
-            byte[] dexBytes = dexFile.toDex(null, false);
-            com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile backedDex =
-                    new com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile(
-                            com.android.tools.smali.dexlib2.Opcodes.forDexVersion(targetVer), dexBytes);
-            List<ClassDef> defs = new ArrayList<>();
-            for (ClassDef def : backedDex.getClasses()) {
-                defs.add(def);
-            }
-            return defs;
-        } catch (Throwable ignored) {
-            return java.util.Collections.emptyList();
         }
     }
 
@@ -3032,41 +3065,62 @@ public class DexEditorActivity extends BaseActivity {
         new Thread(() -> {
             int imported = 0;
             String firstImportedClass = null;
+            String firstImportedCode = null;
             try {
                 int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
                 if (targetVer <= 0) targetVer = 35;
-                List<File> filesToProcess = new ArrayList<>();
+                List<ImportItem> filesToProcess = new ArrayList<>();
                 for (String path : filePaths) {
-                    collectImportFiles(new File(path), filesToProcess);
+                    collectImportFiles(new File(path), "", filesToProcess);
                 }
-                for (File f : filesToProcess) {
-                    String name = f.getName().toLowerCase(java.util.Locale.ROOT);
-                    if (name.endsWith(".smali")) {
-                        String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
-                        if (code == null || code.trim().isEmpty()) continue;
-                        ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
-                        classTree.saveClassDef(def);
-                        String type = def.getType();
-                        if (type != null && type.startsWith("L") && type.endsWith(";")) {
-                            String className = type.substring(1, type.length() - 1);
-                            if (firstImportedClass == null) firstImportedClass = className;
-                        }
-                        imported++;
-                    } else if (name.endsWith(".class")) {
-                        List<ClassDef> defs = translateClassFileToDefs(f, targetVer);
-                        for (ClassDef def : defs) {
-                            classTree.saveClassDef(def);
-                            String type = def.getType();
-                            if (type != null && type.startsWith("L") && type.endsWith(";")) {
-                                String className = type.substring(1, type.length() - 1);
-                                if (firstImportedClass == null) firstImportedClass = className;
-                            }
-                            imported++;
-                        }
+                for (ImportItem item : filesToProcess) {
+                    File f = item.file;
+                    String relPath = item.relativePath;
+                    String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
+                    if (code == null || code.trim().isEmpty()) continue;
+
+                    String cleanPkg = targetPkg == null ? "" : targetPkg.trim();
+                    while (cleanPkg.startsWith("/")) cleanPkg = cleanPkg.substring(1).trim();
+                    while (cleanPkg.endsWith("/")) cleanPkg = cleanPkg.substring(0, cleanPkg.length() - 1).trim();
+
+                    String desiredPath;
+                    if (!cleanPkg.isEmpty()) {
+                        desiredPath = cleanPkg.replace('.', '/') + "/" + relPath;
+                    } else {
+                        desiredPath = relPath;
                     }
+
+                    // Check existing .class definition
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
+                    if (m.find()) {
+                        String originalType = m.group(2); // e.g. "La0;"
+                        if (!cleanPkg.isEmpty()) {
+                            String newType = "L" + desiredPath + ";";
+                            code = code.replace(originalType, newType);
+                        }
+                    } else {
+                        code = ".class public L" + desiredPath + ";\n.super Ljava/lang/Object;\n\n" + code;
+                    }
+
+                    ClassDef def = Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
+                    classTree.saveClassDef(def);
+
+                    String finalClassName = desiredPath;
+                    String type = def.getType();
+                    if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                        finalClassName = type.substring(1, type.length() - 1);
+                    }
+                    classTree.getPendingSmaliMap().put(finalClassName, code);
+
+                    if (firstImportedClass == null) {
+                        firstImportedClass = finalClassName;
+                        firstImportedCode = code;
+                    }
+                    imported++;
                 }
                 final int totalImported = imported;
                 final String classToOpen = firstImportedClass;
+                final String codeToOpen = firstImportedCode;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
                 runOnUiThread(() -> {

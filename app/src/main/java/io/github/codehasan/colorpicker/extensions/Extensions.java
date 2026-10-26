@@ -40,13 +40,18 @@ public final class Extensions {
     }
 
     public static void showMessage(Activity activity, CharSequence message) {
+        Snackbar snackbar;
         if (activity instanceof MainActivity && activity.hasWindowFocus()) {
             View bottomBar = activity.findViewById(R.id.bottomBar);
-            Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT).setAnchorView(bottomBar).show();
+            snackbar = Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT).setAnchorView(bottomBar);
         } else {
-            Snackbar.make(activity.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
-            // When dialog is open visibility is still reduced and can get cut off need to check all usages of this and change it or something
+            snackbar = Snackbar.make(activity.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT);
         }
+        snackbar.getView().setOnTouchListener((v, event) -> {
+            snackbar.dismiss();
+            return false;
+        });
+        snackbar.show();
     }
 
     /**

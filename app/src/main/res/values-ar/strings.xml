@@ -53,6 +53,7 @@
     <string name="display_nfo">عرض المعلومات</string>
     <string name="display_functions">عرض الوظائف</string>
     <string name="confirm">تأكيد</string>
+    <string name="theme">المظهر</string>
     <string name="black_theme">مظهر أسود</string>
     <string name="dark_theme">مظهر داكن</string>
     <string name="light_theme">مظهر فاتح</string>
