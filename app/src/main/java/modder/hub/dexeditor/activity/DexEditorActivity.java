@@ -2872,15 +2872,24 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     private void createAndSaveNewClass(String fullPath, String simpleName) {
-        String smali = ".class public L" + fullPath + ";\n"
-                + ".super Ljava/lang/Object;\n"
-                + ".source \"" + simpleName + ".java\"\n\n"
-                + "# direct methods\n"
-                + ".method public constructor <init>()V\n"
-                + "    .registers 1\n\n"
-                + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
-                + "    return-void\n"
-                + ".end method\n";
+        createAndSaveNewClass(fullPath, simpleName, null);
+    }
+
+    private void createAndSaveNewClass(String fullPath, String simpleName, String customSmali) {
+        String smali;
+        if (customSmali != null && !customSmali.trim().isEmpty()) {
+            smali = customSmali;
+        } else {
+            smali = ".class public L" + fullPath + ";\n"
+                    + ".super Ljava/lang/Object;\n"
+                    + ".source \"" + simpleName + ".java\"\n\n"
+                    + "# direct methods\n"
+                    + ".method public constructor <init>()V\n"
+                    + "    .registers 1\n\n"
+                    + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
+                    + "    return-void\n"
+                    + ".end method\n";
+        }
         progressDialog = new AlertProgress(this);
         progressDialog.setCancelable(false);
         progressDialog.setCanceledOnTouchOutside(false);
@@ -2892,6 +2901,12 @@ public class DexEditorActivity extends BaseActivity {
                 if (targetVer <= 0) targetVer = 35;
                 ClassDef def = Smali.assemble(smali, SharedSmaliUtils.ASSEMBLE_OPTIONS, targetVer);
                 classTree.saveClassDef(def);
+                String actualClass = fullPath;
+                String type = def.getType();
+                if (type != null && type.startsWith("L") && type.endsWith(";")) {
+                    actualClass = type.substring(1, type.length() - 1);
+                }
+                final String classToOpen = actualClass;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
                 runOnUiThread(() -> {
@@ -2906,7 +2921,7 @@ public class DexEditorActivity extends BaseActivity {
                     refreshExplorerPage(1);
                     tabsAdapter.notifyDataSetChanged();
                     progressDialog.dismiss();
-                    openClass(fullPath);
+                    openClass(classToOpen);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -2982,6 +2997,9 @@ public class DexEditorActivity extends BaseActivity {
                     tabsAdapter.notifyDataSetChanged();
                     progressDialog.dismiss();
                     Extensions.showMessage(DexEditorActivity.this, "Imported " + totalImported + " class(es)");
+                    if (classToOpen != null) {
+                        openClass(classToOpen);
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {

@@ -1122,12 +1122,11 @@ public class SidebarController {
         retentionLabel.setPadding(0, pad, 0, (int) (8 * activity.getResources().getDisplayMetrics().density));
         layout.addView(retentionLabel);
 
-        int[] dayOptions = {1, 7, 30, 90, 0};
+        int[] dayOptions = {1, 7, 30, 0};
         String[] dayLabels = {
                 activity.getString(R.string.days_x, 1),
                 activity.getString(R.string.days_x, 7),
                 activity.getString(R.string.days_x, 30),
-                activity.getString(R.string.days_x, 90),
                 activity.getString(R.string.forever)
         };
         int currentDays = RecycleBin.retentionDays(activity);

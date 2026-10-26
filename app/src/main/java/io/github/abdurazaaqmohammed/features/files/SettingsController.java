@@ -898,7 +898,7 @@ public class SettingsController {
                         : pos == 2 ? RecycleBin.MODE_NEVER : RecycleBin.MODE_ASK));
 
         AutoCompleteTextView retentionTv = root.findViewById(R.id.recycleBinRetentionTv);
-        int[] retentionChoices = {1, 7, 30, 90, 0};
+        int[] retentionChoices = {1, 7, 30, 0};
         List<String> retentionLabels = new ArrayList<>();
         for (int d : retentionChoices) {
             retentionLabels.add(d == 0 ? activity.getString(R.string.forever)
