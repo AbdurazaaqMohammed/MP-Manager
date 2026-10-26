@@ -818,7 +818,7 @@ public class SidebarController {
                         .setTitle(R.string.empty_recycle_bin)
                         .setMessage(R.string.empty_recycle_bin_confirm)
                         .setPositiveButton(R.string.delete, (d, w) -> {
-                            io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager pm = new io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager(activity, false);
+                            io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(activity, false);
                             pm.show();
                             new Thread(() -> {
                                 RecycleBin.emptyBin(activity);
@@ -845,7 +845,7 @@ public class SidebarController {
                         .setMessage(activity.getString(R.string.confirm_delete_f, selectedEntries.size() + " items"))
                         .setPositiveButton(R.string.delete, (d, w) -> {
                             List<RecycleBin.Entry> toDel = new ArrayList<>(selectedEntries);
-                            io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager pm = new io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager(activity, false);
+                            io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(activity, false);
                             pm.show();
                             new Thread(() -> {
                                 for (RecycleBin.Entry e : toDel) {
