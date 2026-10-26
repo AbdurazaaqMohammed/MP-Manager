@@ -1988,11 +1988,6 @@ public class DexEditorActivity extends BaseActivity {
                         public void onAddClass(TreeNode node) {
                             activity.showAddClassDialog(node);
                         }
-
-                        @Override
-                        public void onImportClass(TreeNode node) {
-                            activity.showImportClassDialog(node);
-                        }
                     }, false);
                     break;
                 case 1:
@@ -2816,11 +2811,49 @@ public class DexEditorActivity extends BaseActivity {
         etPkg.setText(defaultPkg);
         layout.addView(pkgBox);
 
+        LinearLayout classRow = new LinearLayout(this);
+        classRow.setOrientation(LinearLayout.HORIZONTAL);
+        classRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextInputLayout classBox = UiFields.box(this, "Class name");
         EditText etClass = UiFields.field(classBox, InputType.TYPE_CLASS_TEXT);
-        layout.addView(classBox);
+        LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        classBox.setLayoutParams(boxLp);
+        classRow.addView(classBox);
 
-        new MaterialAlertDialogBuilder(this)
+        ImageView browseBtn = new ImageView(this);
+        int btnPad = (int) (10 * getResources().getDisplayMetrics().density + 0.5f);
+        browseBtn.setPadding(btnPad, btnPad, btnPad, btnPad);
+        browseBtn.setImageResource(R.drawable.folder_24px);
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        browseBtn.setBackgroundResource(outValue.resourceId);
+        browseBtn.setContentDescription("Browse Smali");
+
+        androidx.appcompat.app.AlertDialog[] addDialogHolder = new androidx.appcompat.app.AlertDialog[1];
+        browseBtn.setOnClickListener(v -> {
+            FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+            props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
+            props.selection_mode = FilePickerDialog.MULTI_MODE;
+            props.extensions = new String[]{".smali"};
+            props.preferenceKey = "dex_add_browse";
+            FilePickerDialog picker = new FilePickerDialog(DexEditorActivity.this, props);
+            picker.setTitle("Select Smali File or Folder");
+            picker.setDialogSelectionListener(files -> {
+                if (files == null || files.length == 0) return;
+                if (addDialogHolder[0] != null && addDialogHolder[0].isShowing()) {
+                    addDialogHolder[0].dismiss();
+                }
+                String currentPkg = etPkg.getText() != null ? etPkg.getText().toString().trim() : "";
+                importSmaliFiles(files, currentPkg);
+            });
+            picker.show();
+        });
+        classRow.addView(browseBtn);
+
+        layout.addView(classRow);
+
+        addDialogHolder[0] = new MaterialAlertDialogBuilder(this)
                 .setTitle("Add")
                 .setView(layout)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -2884,34 +2917,6 @@ public class DexEditorActivity extends BaseActivity {
         }).start();
     }
 
-    public void showImportClassDialog(TreeNode node) {
-        String defaultPkg = "";
-        if (node != null) {
-            String full = node.getFullName();
-            if (node.isDirectory()) {
-                defaultPkg = full.replace('/', '.');
-            } else if (node.getParent() != null && node.getParent().getFullName() != null) {
-                defaultPkg = node.getParent().getFullName().replace('/', '.');
-            } else {
-                int lastSlash = full.lastIndexOf('/');
-                if (lastSlash > 0) defaultPkg = full.substring(0, lastSlash).replace('/', '.');
-            }
-        }
-        final String targetPkg = defaultPkg;
-        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
-        props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
-        props.selection_mode = FilePickerDialog.MULTI_MODE;
-        props.extensions = new String[]{".smali", ".class"};
-        props.preferenceKey = "dex_import";
-        FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Import");
-        picker.setDialogSelectionListener(files -> {
-            if (files == null || files.length == 0) return;
-            importSmaliFiles(files, targetPkg);
-        });
-        picker.show();
-    }
-
     private void collectImportFiles(File f, List<File> out) {
         if (f == null || !f.exists()) return;
         if (f.isDirectory()) {
@@ -2923,35 +2928,9 @@ public class DexEditorActivity extends BaseActivity {
             }
         } else if (f.isFile()) {
             String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
-            if (lower.endsWith(".smali") || lower.endsWith(".class")) {
+            if (lower.endsWith(".smali")) {
                 out.add(f);
             }
-        }
-    }
-
-    private List<ClassDef> translateClassFileToDefs(File f, int targetVer) {
-        try {
-            byte[] classBytes = java.nio.file.Files.readAllBytes(f.toPath());
-            com.android.dx.dex.DexOptions dexOptions = new com.android.dx.dex.DexOptions();
-            dexOptions.minSdkVersion = targetVer;
-            com.android.dx.dex.file.DexFile dexFile = new com.android.dx.dex.file.DexFile(dexOptions);
-            com.android.dx.cf.direct.DirectClassFile cf = new com.android.dx.cf.direct.DirectClassFile(
-                    new com.android.dx.util.ByteArray(classBytes), f.getName(), false);
-            com.android.dx.command.dexer.DxContext dxContext = new com.android.dx.command.dexer.DxContext();
-            com.android.dx.dex.cf.CfOptions cfOptions = new com.android.dx.dex.cf.CfOptions();
-            com.android.dx.dex.file.ClassDefItem item = com.android.dx.dex.cf.CfTranslator.translate(dxContext, cf, classBytes, cfOptions, dexOptions, dexFile);
-            dexFile.add(item);
-            byte[] dexBytes = dexFile.toDex(null, false);
-            com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile backedDex =
-                    new com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile(
-                            com.android.tools.smali.dexlib2.Opcodes.forDexVersion(targetVer), dexBytes);
-            List<ClassDef> defs = new ArrayList<>();
-            for (ClassDef def : backedDex.getClasses()) {
-                defs.add(def);
-            }
-            return defs;
-        } catch (Throwable ignored) {
-            return java.util.Collections.emptyList();
         }
     }
 
@@ -2984,17 +2963,6 @@ public class DexEditorActivity extends BaseActivity {
                             if (firstImportedClass == null) firstImportedClass = className;
                         }
                         imported++;
-                    } else if (name.endsWith(".class")) {
-                        List<ClassDef> defs = translateClassFileToDefs(f, targetVer);
-                        for (ClassDef def : defs) {
-                            classTree.saveClassDef(def);
-                            String type = def.getType();
-                            if (type != null && type.startsWith("L") && type.endsWith(";")) {
-                                String className = type.substring(1, type.length() - 1);
-                                if (firstImportedClass == null) firstImportedClass = className;
-                            }
-                            imported++;
-                        }
                     }
                 }
                 final int totalImported = imported;

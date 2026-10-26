@@ -153,22 +153,6 @@ public class SettingsController {
     public void attach(ScrollView settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
-        MaterialSwitch switchRequestRoot = settingsDialog.findViewById(R.id.switchRequestRoot);
-        if (switchRequestRoot != null) {
-            switchRequestRoot.setChecked(settings.getBoolean("startup_request_root", true));
-            switchRequestRoot.setOnCheckedChangeListener((btn, isChecked) -> {
-                settings.edit().putBoolean("startup_request_root", isChecked).apply();
-            });
-        }
-
-        MaterialSwitch switchRequestShell = settingsDialog.findViewById(R.id.switchRequestShell);
-        if (switchRequestShell != null) {
-            switchRequestShell.setChecked(settings.getBoolean("startup_request_shell", true));
-            switchRequestShell.setOnCheckedChangeListener((btn, isChecked) -> {
-                settings.edit().putBoolean("startup_request_shell", isChecked).apply();
-            });
-        }
-
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         String currentThemeId = ThemeRegistry.getCurrentId(activity);
         themeButtons.check(BuiltInThemes.LIGHT_ID.equals(currentThemeId) ? R.id.lightThemeButton : R.id.systemThemeButton);

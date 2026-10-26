@@ -124,7 +124,6 @@ public class DexTools {
                 context.rss.getString(R.string.repair_dex),
                 context.rss.getString(R.string.dex_properties),
                 context.rss.getString(R.string.dex_to_smali),
-                context.rss.getString(R.string.dex_to_jar),
                 context.rss.getString(R.string.translation_mode),
                 context.rss.getString(R.string.dex_replace_strings),
                 context.rss.getString(R.string.dex_merge)};
@@ -138,16 +137,14 @@ public class DexTools {
                         showDexProperties(dexFile);
                     } else if (which == 3) {
                         dexToSmali(dexFile, zipFile);
-                    } else if (which == 4) {
-                        dexToJar(dexFile, zipFile);
-                    } else if (which == 6) {
+                    } else if (which == 5) {
                         showDexStringReplaceDialog(dexFile, zipFile);
-                    } else if (which == 7) {
+                    } else if (which == 6) {
                         mergeDexOption(dexFile, zipFile);
                     } else if (which == 0 && zipFile != null) {
                         openDexPlusInZip(zipFile, dexFile.getName());
                     } else {
-                        openDexPlusFiles(singleDexList(dexFile), which == 5 ? 3 : null);
+                        openDexPlusFiles(singleDexList(dexFile), which == 4 ? 3 : null);
                     }
                 }).create());
     }
@@ -456,7 +453,7 @@ public class DexTools {
     private void dexToSmali(File dexFile, File zipFile) {
         File base = zipFile != null ? zipFile.getParentFile() : dexFile.getParentFile();
         String baseName = (zipFile != null ? zipFile.getName() : dexFile.getName()).replaceFirst("\\.[^.]+$", "");
-        File outZip = FileUtils.getUnusedFile(new File(base, baseName + ".smali.zip"));
+        File outDir = FileUtils.getUnusedFile(new File(base, baseName + "_smali"));
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
         new Thread(() -> {
@@ -474,70 +471,11 @@ public class DexTools {
                 BaksmaliOptions options = new BaksmaliOptions();
                 options.apiLevel = api;
                 DexBackedDexFile dex = new DexBackedDexFile(Opcodes.forApi(api), bytes);
-
-                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(
-                        new java.io.BufferedOutputStream(new java.io.FileOutputStream(outZip), 65536))) {
-                    zos.setLevel(1);
-                    java.io.OutputStreamWriter osw = new java.io.OutputStreamWriter(zos, java.nio.charset.StandardCharsets.UTF_8);
-
-                    for (ClassDef classDef : dex.getClasses()) {
-                        String desc = classDef.getType();
-                        if (desc.startsWith("L") && desc.endsWith(";")) {
-                            desc = desc.substring(1, desc.length() - 1);
-                        }
-                        String entryName = desc + ".smali";
-                        zos.putNextEntry(new java.util.zip.ZipEntry(entryName));
-
-                        com.android.tools.smali.baksmali.formatter.BaksmaliWriter bw =
-                                new com.android.tools.smali.baksmali.formatter.BaksmaliWriter(osw);
-                        new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(options, classDef).writeTo(bw);
-                        osw.flush();
-                        zos.closeEntry();
-                    }
-                }
-
+                Baksmali.disassembleDexFile(dex, outDir, Math.max(1, Runtime.getRuntime().availableProcessors()), options);
                 pm.dismiss();
                 context.handler.post(() -> {
-                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outZip.getName()));
-                    context.loadFolderInPane(outZip.getParentFile(), pane1);
-                });
-            } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
-            }
-        }).start();
-    }
-
-    private void dexToJar(File dexFile, File zipFile) {
-        File base = zipFile != null ? zipFile.getParentFile() : dexFile.getParentFile();
-        String baseName = (zipFile != null ? zipFile.getName() : dexFile.getName()).replaceFirst("\\.[^.]+$", "");
-        File outJar = FileUtils.getUnusedFile(new File(base, baseName + ".jar"));
-        ProgressManager pm = new ProgressManager(context, true);
-        pm.show();
-        new Thread(() -> {
-            try {
-                byte[] dexBytes;
-                try (java.io.InputStream in = new java.io.FileInputStream(dexFile);
-                     java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-                    byte[] buf = new byte[8192];
-                    int r;
-                    while ((r = in.read(buf)) != -1) {
-                        out.write(buf, 0, r);
-                    }
-                    dexBytes = out.toByteArray();
-                }
-                com.googlecode.d2j.reader.BaseDexFileReader reader =
-                        com.googlecode.d2j.reader.MultiDexFileReader.open(dexBytes);
-                com.googlecode.d2j.dex.Dex2jar.from(reader)
-                        .reUseReg(false)
-                        .topoLogicalSort()
-                        .skipDebug(false)
-                        .to(outJar.toPath());
-
-                pm.dismiss();
-                context.handler.post(() -> {
-                    Extensions.showMessage(context, context.rss.getString(R.string.jar_saved_to, outJar.getName()));
-                    context.loadFolderInPane(outJar.getParentFile(), pane1);
+                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outDir.getName()));
+                    context.loadFolderInPane(outDir.getParentFile(), pane1);
                 });
             } catch (Exception e) {
                 pm.dismiss();

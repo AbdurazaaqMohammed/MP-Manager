@@ -818,12 +818,19 @@ public class SidebarController {
                         .setTitle(R.string.empty_recycle_bin)
                         .setMessage(R.string.empty_recycle_bin_confirm)
                         .setPositiveButton(R.string.delete, (d, w) -> {
-                            RecycleBin.emptyBin(activity);
-                            allEntries.clear();
-                            filteredEntries.clear();
-                            selectedEntries.clear();
-                            sortAndRefresh.run();
-                            Extensions.showMessage(activity, R.string.recycle_bin_emptied);
+                            io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager pm = new io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager(activity, false);
+                            pm.show();
+                            new Thread(() -> {
+                                RecycleBin.emptyBin(activity);
+                                activity.runOnUiThread(() -> {
+                                    pm.dismiss();
+                                    allEntries.clear();
+                                    filteredEntries.clear();
+                                    selectedEntries.clear();
+                                    sortAndRefresh.run();
+                                    Extensions.showMessage(activity, R.string.recycle_bin_emptied);
+                                });
+                            }).start();
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -838,15 +845,22 @@ public class SidebarController {
                         .setMessage(activity.getString(R.string.confirm_delete_f, selectedEntries.size() + " items"))
                         .setPositiveButton(R.string.delete, (d, w) -> {
                             List<RecycleBin.Entry> toDel = new ArrayList<>(selectedEntries);
-                            for (RecycleBin.Entry e : toDel) {
-                                RecycleBin.deleteEntry(activity, e);
-                            }
-                            selectedEntries.clear();
-                            allEntries.clear();
-                            allEntries.addAll(RecycleBin.entries(activity));
-                            filterList(searchInput.getText().toString(), allEntries, filteredEntries, adapterHolder[0], dialog, titleText);
-                            sortAndRefresh.run();
-                            Extensions.showMessage(activity, R.string.item_deleted);
+                            io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager pm = new io.github.abdurazaaqmohammed.ui.dialogs.ProgressManager(activity, false);
+                            pm.show();
+                            new Thread(() -> {
+                                for (RecycleBin.Entry e : toDel) {
+                                    RecycleBin.deleteEntry(activity, e);
+                                }
+                                activity.runOnUiThread(() -> {
+                                    pm.dismiss();
+                                    selectedEntries.clear();
+                                    allEntries.clear();
+                                    allEntries.addAll(RecycleBin.entries(activity));
+                                    filterList(searchInput.getText().toString(), allEntries, filteredEntries, adapterHolder[0], dialog, titleText);
+                                    sortAndRefresh.run();
+                                    Extensions.showMessage(activity, R.string.item_deleted);
+                                });
+                            }).start();
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -1108,16 +1122,16 @@ public class SidebarController {
         retentionLabel.setPadding(0, pad, 0, (int) (8 * activity.getResources().getDisplayMetrics().density));
         layout.addView(retentionLabel);
 
-        int[] dayOptions = {0, 7, 14, 30, 60};
+        int[] dayOptions = {1, 7, 30, 90, 0};
         String[] dayLabels = {
-                activity.getString(R.string.forever),
+                activity.getString(R.string.days_x, 1),
                 activity.getString(R.string.days_x, 7),
-                activity.getString(R.string.days_x, 14),
                 activity.getString(R.string.days_x, 30),
-                activity.getString(R.string.days_x, 60)
+                activity.getString(R.string.days_x, 90),
+                activity.getString(R.string.forever)
         };
         int currentDays = RecycleBin.retentionDays(activity);
-        int checkedIdx = 3; // default 30
+        int checkedIdx = 2; // default 30
         for (int i = 0; i < dayOptions.length; i++) {
             if (dayOptions[i] == currentDays) {
                 checkedIdx = i;
