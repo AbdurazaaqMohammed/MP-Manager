@@ -929,6 +929,8 @@ public class FileSearchController {
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 LinearLayout row = new LinearLayout(activity);
+                row.setLayoutParams(new RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(android.view.Gravity.CENTER_VERTICAL);
                 int pad = (int) (12 * activity.getResources().getDisplayMetrics().density + 0.5f);
@@ -952,13 +954,13 @@ public class FileSearchController {
                 title.setTextSize(14);
                 title.setTypeface(null, Typeface.BOLD);
                 title.setSingleLine(true);
-                title.setEllipsize(TextUtils.TruncateAt.END);
+                title.setEllipsize(TextUtils.TruncateAt.MIDDLE);
 
                 TextView sub = new TextView(activity);
                 sub.setTextSize(12);
                 sub.setTextColor(0xFF888888);
                 sub.setSingleLine(true);
-                sub.setEllipsize(TextUtils.TruncateAt.END);
+                sub.setEllipsize(TextUtils.TruncateAt.START);
 
                 textCol.addView(title);
                 textCol.addView(sub);
@@ -1012,7 +1014,11 @@ public class FileSearchController {
         });
 
         activity.dialogUtil.styleAlertDialog(dialog);
-        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(
+                    (int) (activity.getResources().getDisplayMetrics().widthPixels * 0.94f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void openContentHit(ContentHit hit, String query, boolean regex, boolean matchCase) {
@@ -1115,7 +1121,7 @@ public class FileSearchController {
                         } catch (Exception ignored) {}
                     }
                 }
-                activity.runOnUiThread(() -> activity.startActivity(intent));
+                activity.runOnUiThread(() -> activity.startActivityForResult(intent, 757));
             } catch (Exception e) {
                 new ErrorUtil(activity).showError(e);
             }
