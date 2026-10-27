@@ -23,7 +23,7 @@ public final class BuiltInThemes {
 
     public static void registerAll() {
         ThemeRegistry.register(new Simple(SYSTEM_DEFAULT_ID, "System default",
-                com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar,
+                R.style.Theme_MyApp_System,
                 AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM));
         ThemeRegistry.register(new Simple(LIGHT_ID, "Light",
                 R.style.Theme_MyApp_Light, AppCompatDelegate.MODE_NIGHT_NO));
