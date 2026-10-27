@@ -1672,6 +1672,7 @@ Layout Inspector
     <string name="regex_find_replace">Regex find and replace</string>
     <string name="replace_line">Replace line</string>
     <string name="no_matches_found">No matches found</string>
+    <string name="symbol_replaced_matches">Replaced %1$d matches</string>
     <string name="reload_file">Reload file</string>
     <string name="save_as_axml">Save as AXML (compiled)</string>
     <string name="save_as_plain_xml">Save as plain XML</string>

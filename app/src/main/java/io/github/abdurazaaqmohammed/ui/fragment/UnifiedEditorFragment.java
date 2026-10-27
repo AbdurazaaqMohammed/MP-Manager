@@ -309,11 +309,14 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             symbolInputView.bindEditor(editor);
             symbolInputView.setOnOpenManagerListener(() -> {
                 if (getContext() != null)
-                    startActivity(new Intent(requireContext(), SymbolManagerActivity.class));
+                    startActivity(new Intent(requireContext(), SymbolManagerActivity.class)
+                            .putExtra(SymbolManagerActivity.EXTRA_THEME_STYLE,
+                                    io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry
+                                            .currentStyleRes(requireContext())));
                 return Unit.INSTANCE;
             });
-            symbolInputView.setOnCustomActionListener((actionId, text, secondText) -> {
-                executeBottomBarCustomAction(actionId, text, secondText);
+            symbolInputView.setOnCustomActionListener((actionId, text, secondText, options) -> {
+                executeBottomBarCustomAction(actionId, text, secondText, options);
                 return Unit.INSTANCE;
             });
 
@@ -901,14 +904,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
     }
 
-    private void executeBottomBarCustomAction(int actionId, String text, String secondText) {
+    private void executeBottomBarCustomAction(int actionId, String text, String secondText, String options) {
         try {
             switch (actionId) {
                 case BottomBarMigration.ACTION_SEARCH:
                     goToMatch(true);
                     break;
-                case BottomBarMigration.ACTION_REGEX_REPLACE:
-                    regexFindAndReplace(text, secondText);
+                case BottomBarMigration.ACTION_FIND_REPLACE:
+                    // Buttons created before the options feature behaved as regex + match case
+                    performFindAndReplace(text, secondText, options == null ? "rc" : options);
                     break;
                 case BottomBarMigration.ACTION_REPLACE_LINE_CLIPBOARD: {
                     Cursor cursor = editor.getCursor();
@@ -925,31 +929,80 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
     }
 
-    private void regexFindAndReplace(String findRegex, String replaceStr) {
+    private void performFindAndReplace(String findText, String replaceWith, String options) {
+        if (TextUtils.isEmpty(findText)) return;
         Cursor cursor = editor.getCursor();
         Content content = editor.getText();
-        if (TextUtils.isEmpty(findRegex)) return;
+        boolean regex = options != null && options.indexOf('r') >= 0;
+        boolean matchCase = options != null && options.indexOf('c') >= 0;
+        boolean replaceAll = options != null && options.indexOf('a') >= 0;
+
         String allText = content.toString();
-        Matcher m = Pattern.compile(findRegex).matcher(allText);
-        int cursorOffset = Math.min(cursor.getLeft(), allText.length());
-        boolean found = false;
-        while (m.find()) {
-            if (m.end() > cursorOffset) { found = true; break; }
+        try {
+            String pattern = regex ? findText : java.util.regex.Pattern.quote(findText);
+            int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+            Matcher m = Pattern.compile(pattern, flags).matcher(allText);
+            String replacementSource = replaceWith == null ? "" : replaceWith;
+
+            if (replaceAll) {
+                StringBuffer sb = new StringBuffer();
+                int count = 0;
+                while (m.find()) {
+                    m.appendReplacement(sb, regex ? replacementSource : Matcher.quoteReplacement(replacementSource));
+                    count++;
+                }
+                if (count == 0) {
+                    Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
+                    return;
+                }
+                m.appendTail(sb);
+                int lastLine = content.getLineCount() - 1;
+                content.beginBatchEdit();
+                content.replace(0, 0, lastLine, content.getColumnCount(lastLine), sb.toString());
+                content.endBatchEdit();
+                // jumpToLine moves the caret to (line, 0); always re-apply the
+                // exact caret AFTER it or the position is silently lost.
+                editor.jumpToLine(0);
+                editor.setSelection(0, 0);
+                Extensions.showMessage(requireActivity(), getString(R.string.symbol_replaced_matches, count));
+                return;
+            }
+
+            // Replace next: the caret is left at the END of the previous replacement, and the
+            // next search starts from there, so a replacement that still matches the pattern
+            // (e.g. const/4 v0 -> const/4 v0, 0x1#) is never re-matched on the same spot.
+            int from = Math.min(cursor.getRight(), allText.length());
+            boolean found = m.find(from);
+            if (!found && from > 0) found = m.find(0); // wrap around to the start once
+            if (!found) {
+                Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
+                return;
+            }
+            String replacement;
+            if (regex) {
+                StringBuffer sb = new StringBuffer();
+                m.appendReplacement(sb, replacementSource);
+                replacement = sb.substring(m.start()); // strip the untouched prefix
+            } else {
+                replacement = replacementSource;
+            }
+            CharPosition start = content.getIndexer().getCharPosition(m.start());
+            CharPosition end = content.getIndexer().getCharPosition(m.end());
+            content.beginBatchEdit();
+            content.replace(start.line, start.column, end.line, end.column, replacement);
+            content.endBatchEdit();
+            // Caret after the replacement + scroll there, so repeated taps walk forward.
+            // Select the replacement exactly like EditorSearcher.gotoNext() selects a
+            // match (position 6 = caret at the region end): identical snap/scroll
+            // animation to the regular search arrows, and cursor.getRight() — the
+            // anchor of the next search below — lands at the END of the replacement
+            // so the next press continues after it instead of re-replacing this one.
+            CharPosition newEnd = content.getIndexer().getCharPosition(
+                    m.start() + replacement.length());
+            editor.setSelectionRegion(start.line, start.column, newEnd.line, newEnd.column, 6);
+        } catch (Exception e) {
+            new ErrorUtil(getActivity()).showError(e);
         }
-        if (!found) {
-            Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
-            return;
-        }
-        StringBuffer sb = new StringBuffer();
-        m.appendReplacement(sb, replaceStr == null ? "" : replaceStr);
-        String replacement = sb.substring(m.start()); // strip the untouched prefix
-        CharPosition s =
-                content.getIndexer().getCharPosition(m.start());
-        CharPosition e =
-                content.getIndexer().getCharPosition(m.end());
-        content.beginBatchEdit();
-        content.replace(s.line, s.column, e.line, e.column, replacement);
-        content.endBatchEdit();
     }
 
     public void showEditMenu(View anchor) {

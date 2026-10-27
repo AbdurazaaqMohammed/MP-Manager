@@ -36,8 +36,10 @@ import androidx.viewpager.widget.PagerAdapter
 import androidx.viewpager.widget.ViewPager
 import androidx.appcompat.widget.SwitchCompat
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.tabs.TabLayout
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -79,6 +81,7 @@ class SymbolManagerActivity : AppCompatActivity() {
      * 初始化界面、数据与交互事件。
      */
     override fun onCreate(savedInstanceState: Bundle?) {
+        intent.getIntExtra(EXTRA_THEME_STYLE, 0).takeIf { it != 0 }?.let(::setTheme)
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, true)
         setContentView(R.layout.activity_symbol_manager)
@@ -103,8 +106,17 @@ class SymbolManagerActivity : AppCompatActivity() {
             insets
         }
 
-        actionValues = resources.getIntArray(R.array.symbol_action_values)
-        actionNames = resources.getStringArray(R.array.symbol_action_names)
+        val rawValues = resources.getIntArray(R.array.symbol_action_values)
+        val rawNames = resources.getStringArray(R.array.symbol_action_names)
+        val order = rawValues.indices.sortedBy { idx ->
+            when (rawValues[idx]) {
+                0 -> 0
+                BottomBarMigration.ACTION_FIND_REPLACE -> 1
+                else -> 2
+            }
+        }
+        actionValues = IntArray(order.size) { rawValues[order[it]] }
+        actionNames = Array(order.size) { rawNames[order[it]] }
 
         tabLayout = findViewById(R.id.tab_layout)
         viewPager = findViewById(R.id.view_pager)
@@ -193,7 +205,8 @@ class SymbolManagerActivity : AppCompatActivity() {
             val copied = source.items.map {
                 SymbolItem(
                     it.shortAction, it.display, it.shortText,
-                    it.longAction, it.longText, it.secondText, it.longSecondText
+                    it.longAction, it.longText, it.secondText, it.longSecondText,
+                    it.options, it.longOptions
                 )
             }
             symbolGroups[targetIndex].items.addAll(copied)
@@ -506,6 +519,10 @@ class SymbolManagerActivity : AppCompatActivity() {
         val etShortText2 = view.findViewById<EditText>(R.id.et_short_text2)
         val tilLongText2 = view.findViewById<View>(R.id.til_long_text2)
         val etLongText2 = view.findViewById<EditText>(R.id.et_long_text2)
+        val tilShortText1 = etShortText.findParentInputLayout()
+        val tilLongText1 = etLongText.findParentInputLayout()
+        val rowShort = OptionCheckboxRow(etShortText)
+        val rowLong = OptionCheckboxRow(etLongText)
 
         val shortActionItems = actionNames.toList()
         val longActionItems = listOf(getString(R.string.action_no_long_press)) + actionNames.toList()
@@ -523,6 +540,12 @@ class SymbolManagerActivity : AppCompatActivity() {
             etLongText2.setText(initialItem.longSecondText)
             shortIndex = actionValues.indexOf(initialItem.shortAction).coerceAtLeast(0)
             longIndex = initialItem.longAction?.let { actionValues.indexOf(it).coerceAtLeast(0) + 1 } ?: 0
+            rowShort.regex.isChecked = initialItem.options?.contains('r') == true
+            rowShort.case.isChecked = initialItem.options?.contains('c') == true
+            rowShort.replaceAll.isChecked = initialItem.options?.contains('a') == true
+            rowLong.regex.isChecked = initialItem.longOptions?.contains('r') == true
+            rowLong.case.isChecked = initialItem.longOptions?.contains('c') == true
+            rowLong.replaceAll.isChecked = initialItem.longOptions?.contains('a') == true
         }
 
         acShortAction.setText(shortActionItems[shortIndex], false)
@@ -534,22 +557,33 @@ class SymbolManagerActivity : AppCompatActivity() {
             return actionValues.getOrNull(index - offset)
         }
 
-        fun syncSecondTextVisibility() {
+        fun syncActionUi() {
             val shortAct = actionAt(shortIndex, isLong = false) ?: 0
             val longAct = actionAt(longIndex, isLong = true)
-            tilShortText2.visibility = if (shortAct >= 100) View.VISIBLE else View.GONE
-            tilLongText2.visibility = if (longAct != null && longAct >= 100) View.VISIBLE else View.GONE
+            val findReplace = BottomBarMigration.ACTION_FIND_REPLACE
+
+            val shortIsFr = shortAct == findReplace
+            tilShortText1.visibility = if (shortAct == 0 || shortIsFr) View.VISIBLE else View.GONE
+            tilShortText1.hint = getString(if (shortIsFr) R.string.hint_find_text else R.string.hint_insert_text_for_insert_action)
+            tilShortText2.visibility = if (shortIsFr) View.VISIBLE else View.GONE
+            rowShort.row.visibility = if (shortIsFr) View.VISIBLE else View.GONE
+
+            val longIsFr = longAct == findReplace
+            tilLongText1.visibility = if (longAct == null || longAct == 0 || longIsFr) View.VISIBLE else View.GONE
+            tilLongText1.hint = getString(if (longIsFr) R.string.hint_find_text else R.string.hint_insert_text_for_insert_action)
+            tilLongText2.visibility = if (longIsFr) View.VISIBLE else View.GONE
+            rowLong.row.visibility = if (longIsFr) View.VISIBLE else View.GONE
         }
 
         acShortAction.setOnItemClickListener { _, _, position, _ ->
             shortIndex = position
-            syncSecondTextVisibility()
+            syncActionUi()
         }
         acLongAction.setOnItemClickListener { _, _, position, _ ->
             longIndex = position
-            syncSecondTextVisibility()
+            syncActionUi()
         }
-        syncSecondTextVisibility()
+        syncActionUi()
 
         val builder = MaterialAlertDialogBuilder(this)
             .setTitle(title)
@@ -558,6 +592,7 @@ class SymbolManagerActivity : AppCompatActivity() {
                 val shortAct = actionValues.getOrElse(shortIndex) { actionValues.firstOrNull() ?: 0 }
                 val longAct = if (longIndex > 0) actionValues.getOrNull(longIndex - 1) else null
 
+                val findReplace = BottomBarMigration.ACTION_FIND_REPLACE
                 val newItem = SymbolItem(
                     shortAction = shortAct,
                     display = etDisplay.text.toString(),
@@ -565,7 +600,17 @@ class SymbolManagerActivity : AppCompatActivity() {
                     longAction = longAct,
                     longText = etLongText.text.toString().takeIf { longAct != null && (longAct == 0 || longAct >= 100) },
                     secondText = etShortText2.text.toString().takeIf { shortAct >= 100 },
-                    longSecondText = etLongText2.text.toString().takeIf { longAct != null && longAct >= 100 }
+                    longSecondText = etLongText2.text.toString().takeIf { longAct != null && longAct >= 100 },
+                    options = if (shortAct == findReplace)
+                        (if (rowShort.regex.isChecked) "r" else "") +
+                            (if (rowShort.case.isChecked) "c" else "") +
+                            (if (rowShort.replaceAll.isChecked) "a" else "")
+                    else null,
+                    longOptions = if (longAct == findReplace)
+                        (if (rowLong.regex.isChecked) "r" else "") +
+                            (if (rowLong.case.isChecked) "c" else "") +
+                            (if (rowLong.replaceAll.isChecked) "a" else "")
+                    else null
                 )
                 onSave(newItem)
             }
@@ -722,7 +767,9 @@ class SymbolManagerActivity : AppCompatActivity() {
                     longAction = it.longAction,
                     longText = it.longText,
                     secondText = it.secondText,
-                    longSecondText = it.longSecondText
+                    longSecondText = it.longSecondText,
+                    options = it.options,
+                    longOptions = it.longOptions
                 )
             }
 
@@ -928,6 +975,13 @@ class SymbolManagerActivity : AppCompatActivity() {
         textSizeItem.setOnClickListener { showTextSizeDialog() }
         content.addView(textSizeItem)
 
+        val maxLabelItem = createEntry(
+            getString(R.string.settings_max_label_title),
+            if (settings.maxLabelChars > 0) settings.maxLabelChars.toString() else getString(R.string.settings_max_label_off)
+        )
+        maxLabelItem.setOnClickListener { showMaxLabelDialog() }
+        content.addView(maxLabelItem)
+
         val handleItem = createEntry(getString(R.string.settings_show_drag_handle), getString(R.string.settings_show_drag_handle_desc))
         val handleSwitch = SwitchCompat(this).apply { isChecked = settings.showDragHandle }
         (handleItem as ViewGroup).addView(handleSwitch)
@@ -1021,6 +1075,28 @@ class SymbolManagerActivity : AppCompatActivity() {
             .setPositiveButton(R.string.dialog_save) { _, _ ->
                 val textSize = editText.text.toString().toIntOrNull()?.coerceIn(12, 28) ?: settings.symbolTextSizeSp
                 SymbolDataManager.saveUiSettings(this, settings.copy(symbolTextSizeSp = textSize))
+                pagerAdapter.notifyDataSetChanged()
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    /**
+     * 标签最大字符数设置对话框（0 = 不截断）。
+     */
+    private fun showMaxLabelDialog() {
+        val settings = SymbolDataManager.getUiSettings(this)
+        val editText = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(settings.maxLabelChars.toString())
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.settings_max_label_title)
+            .setMessage(R.string.settings_max_label_desc)
+            .setView(editText)
+            .setPositiveButton(R.string.dialog_save) { _, _ ->
+                val maxChars = editText.text.toString().toIntOrNull()?.coerceIn(0, 30) ?: settings.maxLabelChars
+                SymbolDataManager.saveUiSettings(this, settings.copy(maxLabelChars = maxChars))
                 pagerAdapter.notifyDataSetChanged()
             }
             .setNegativeButton(R.string.dialog_cancel, null)
@@ -1209,7 +1285,10 @@ class SymbolManagerActivity : AppCompatActivity() {
             holder.tvSubtitle.text = shortDesc + longDesc
 
             val selected = isBatchMode && groupIndex == batchGroupIndex && selectedItems.contains(item)
-            holder.itemView.setBackgroundColor(if (selected) Color.parseColor("#66BEEB") else Color.TRANSPARENT)
+            holder.itemView.setBackgroundColor(
+                if (selected) resolveThemeColor(android.R.attr.textColorHighlight, Color.parseColor("#66BEEB"))
+                else Color.TRANSPARENT
+            )
             val uiSettings = SymbolDataManager.getUiSettings(this@SymbolManagerActivity)
             holder.dragHandle.visibility = if (uiSettings.showDragHandle) View.VISIBLE else View.GONE
 
@@ -1242,5 +1321,54 @@ class SymbolManagerActivity : AppCompatActivity() {
          * 执行 getItemCount 方法。
          */
         override fun getItemCount() = group.items.size
+    }
+
+    /**
+     * Material 的 TextInputLayout 会把输入框包进内部 FrameLayout（输入框视图区），
+     * 所以 parent 不是 TextInputLayout 本身，需要沿视图树向上查找。
+     */
+    private fun EditText.findParentInputLayout(): TextInputLayout {
+        var p: Any? = parent
+        while (p != null && p !is TextInputLayout) p = (p as? View)?.parent
+        return p as TextInputLayout
+    }
+
+    /** 动作选项复选框行（Regex / Match case），插入到指定输入框之后 */
+    private inner class OptionCheckboxRow(afterEditText: EditText) {
+        val regex: MaterialCheckBox = MaterialCheckBox(this@SymbolManagerActivity).apply {
+            text = getString(R.string.option_regex)
+        }
+        val case: MaterialCheckBox = MaterialCheckBox(this@SymbolManagerActivity).apply {
+            text = getString(R.string.option_case_sensitive)
+        }
+        val replaceAll: MaterialCheckBox = MaterialCheckBox(this@SymbolManagerActivity).apply {
+            text = getString(R.string.option_replace_all)
+        }
+        val row: View = LinearLayout(this@SymbolManagerActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            visibility = View.GONE
+            addView(regex)
+            addView(
+                case,
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { marginStart = dp(12) }
+            )
+            addView(
+                replaceAll,
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { marginStart = dp(12) }
+            )
+        }
+
+        init {
+            val inputLayout = afterEditText.findParentInputLayout()
+            val container = inputLayout.parent as ViewGroup
+            container.addView(row, container.indexOfChild(inputLayout) + 1)
+        }
+    }
+
+    companion object {
+        /** 宿主 App 主题样式资源 id，经 Intent 传入以保持与 App 一致的明暗主题 */
+        const val EXTRA_THEME_STYLE = "symbol_input_theme_style"
     }
 }

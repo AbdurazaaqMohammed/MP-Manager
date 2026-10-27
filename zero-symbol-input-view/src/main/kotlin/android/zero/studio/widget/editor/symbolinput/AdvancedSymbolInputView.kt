@@ -3,9 +3,12 @@ package android.zero.studio.widget.editor.symbolinput
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.content.SharedPreferences
+import android.text.TextPaint
 import android.text.TextUtils
 import android.util.AttributeSet
+import android.util.DisplayMetrics
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -15,10 +18,11 @@ import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.widget.TextViewCompat
+import androidx.core.graphics.ColorUtils
 import androidx.viewpager.widget.PagerAdapter
 import androidx.viewpager.widget.ViewPager
 import io.github.rosemoe.sora.widget.CodeEditor
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
@@ -60,10 +64,10 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
     var followSystemIme: Boolean = false
 
     /**
-     * 自定义动作回调（动作编号 >= 100），参数为 (动作编号, 文本, 附加文本)。
+     * 自定义动作回调（动作编号 >= 100），参数为 (动作编号, 文本, 附加文本, 选项标志)。
      * 由宿主 App 注入，用于实现组件内置动作之外的编辑操作。
      */
-    var onCustomActionListener: ((Int, String?, String?) -> Unit)? = null
+    var onCustomActionListener: ((Int, String?, String?, String?) -> Unit)? = null
 
     private val groups = mutableListOf<SymbolGroup>()
     private var uiSettings = SymbolUiSettings()
@@ -88,7 +92,7 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
     }
 
     init {
-        addView(indicatorBar, LayoutParams(LayoutParams.MATCH_PARENT, dp(26)))
+        addView(indicatorBar, LayoutParams(LayoutParams.MATCH_PARENT, dp(32)))
         addView(pagerHost, LayoutParams(LayoutParams.MATCH_PARENT, collapsedHeightPx))
         addView(bottomIndicator, LayoutParams(LayoutParams.MATCH_PARENT, dp(14)))
         pagerHost.bindAdapter(pageAdapter)
@@ -285,7 +289,7 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
 
     private fun applyIndicatorReveal(fraction: Float) {
         val reveal = ((fraction - 0.08f) / 0.47f).coerceIn(0f, 1f)
-        indicatorBar.applyReveal(reveal, dp(26), uiSettings.indicatorStyle)
+        indicatorBar.applyReveal(reveal, dp(32), uiSettings.indicatorStyle)
         bottomIndicator.applyReveal(reveal, uiSettings.indicatorStyle)
         requestLayout()
     }
@@ -301,9 +305,11 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
         val collapsedRows = uiSettings.collapsedRows.coerceAtLeast(1)
         collapsedHeightPx = calculateGridHeight(collapsedRows)
 
-        val cols = uiSettings.symbolsPerRow.coerceIn(1, 20)
+        val availablePageWidth = (pagerHost.width.takeIf { it > 0 }
+            ?: resources.displayMetrics.widthPixels) - dp(8)
+        val engine = FlowGridEngine(uiSettings, resources.displayMetrics)
         val maxPageRows = groups.maxOfOrNull { group ->
-            ((group.items.size + cols - 1) / cols).coerceAtLeast(1)
+            engine.rowCount(group.items, availablePageWidth, dp(2)).coerceAtLeast(1)
         } ?: collapsedRows
         expandedHeightPx = calculateGridHeight(maxPageRows.coerceAtLeast(collapsedRows))
 
@@ -329,7 +335,7 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
                     if (action != null) {
                         editor?.let {
                             SymbolActionExecutor.execute(
-                                it, action, item.longText, item.longSecondText,
+                                it, action, item.longText, item.longSecondText, item.longOptions,
                                 onOpenManagerListener, onCustomActionListener
                             )
                         }
@@ -337,7 +343,7 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
                 } else {
                     editor?.let {
                         SymbolActionExecutor.execute(
-                            it, item.shortAction, item.shortText, item.secondText,
+                            it, item.shortAction, item.shortText, item.secondText, item.options,
                             onOpenManagerListener, onCustomActionListener
                         )
                     }
@@ -355,6 +361,17 @@ class AdvancedSymbolInputView @JvmOverloads constructor(
 
         override fun getItemPosition(`object`: Any): Int = POSITION_NONE
     }
+}
+
+/**
+ * 从当前主题解析颜色属性，找不到时回退到 fallback。
+ */
+private fun resolveThemeColor(context: Context, attr: Int, fallback: Int): Int {
+    val value = TypedValue()
+    if (context.theme.resolveAttribute(attr, value, true) && value.type != TypedValue.TYPE_NULL) {
+        return if (value.resourceId != 0) context.getColor(value.resourceId) else value.data
+    }
+    return fallback
 }
 
 /**
@@ -406,6 +423,7 @@ private class GroupIndicatorBar(
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
+                    setTextColor(resolveThemeColor(context, android.R.attr.textColorPrimary, Color.LTGRAY))
                 })
                 row.addView(item, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
             }
@@ -420,10 +438,11 @@ private class GroupIndicatorBar(
                 val line = child.getChildAt(0)
                 val selected = i == index
                 line.alpha = if (selected) 1f else 0.45f
+                val onSurface = resolveThemeColor(context, android.R.attr.textColorPrimary, Color.LTGRAY)
                 line.background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(2).toFloat()
-                    setColor(if (selected) 0xFFFFFFFF.toInt() else 0x99FFFFFF.toInt())
+                    setColor(if (selected) onSurface else ColorUtils.setAlphaComponent(onSurface, 153))
                 }
             }
         }
@@ -496,7 +515,8 @@ private class CompactPageIndicator(
             val size = if (selected) dp(8) else dp(6)
             child.layoutParams = child.layoutParams.apply { width = size; height = size }
             child.alpha = if (selected) 1f else 0.55f
-            val color = if (selected) 0xFFFFFFFF.toInt() else 0x99FFFFFF.toInt()
+            val onSurface = resolveThemeColor(context, android.R.attr.textColorPrimary, Color.LTGRAY)
+            val color = if (selected) onSurface else ColorUtils.setAlphaComponent(onSurface, 153)
             child.background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 cornerRadius = if (style == 1) size / 2f else dp(1).toFloat()
@@ -590,13 +610,82 @@ private class SymbolPagerHost(context: Context) : ViewGroup(context) {
 }
 
 /**
- * 分页内符号网格组件。
+ * 流式布局计算器：按钮宽度按内容自适应，超出容器宽度或达到每行上限时换行。
+ * 页面视图的测量/布局与抽屉展开高度估算共用同一套计算，保证两者一致。
  *
- * 采用自定义测量与布局逻辑，支持：
- * - 固定每行符号数；
- * - 紧凑的行高/间距控制；
+ * @author android_zero
+ * @github msmt2018/zero-Symbol-input-view
+ */
+private class FlowGridEngine(settings: SymbolUiSettings, metrics: DisplayMetrics) {
+    private val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, settings.symbolTextSizeSp.coerceAtLeast(12).toFloat(), metrics
+        )
+    }
+    private val maxPerRow = settings.symbolsPerRow.coerceIn(1, 20)
+    private val maxLabelChars = settings.maxLabelChars
+    private val minChipWidth = (MIN_WIDTH_DP * metrics.density).roundToInt()
+    private val padH = (PAD_H_DP * metrics.density).roundToInt()
+
+    /** 应用标签截断设置后的实际显示文本。 */
+    fun labelOf(item: SymbolItem): String {
+        val label = item.display
+        return if (maxLabelChars > 0 && label.length > maxLabelChars)
+            label.take(maxLabelChars) + "…"
+        else label
+    }
+
+    fun chipWidth(item: SymbolItem): Int {
+        val textWidth = ceil(paint.measureText(labelOf(item))).toInt()
+        return (textWidth + padH * 2).coerceAtLeast(minChipWidth)
+    }
+
+    fun widths(items: List<SymbolItem>): IntArray =
+        IntArray(items.size) { chipWidth(items[it]) }
+
+    fun rowCount(items: List<SymbolItem>, availableWidth: Int, gapX: Int): Int =
+        flow(widths(items), availableWidth, gapX, null)
+
+    /**
+     * 依宽度序列流式换行。
+     *
+     * @param outLefts 每项的 x 偏移（长度需与 w 一致，可空）。
+     * @param outTops 每项的 y 偏移（rowIndex * topStride，可空）。
+     * @return 总行数。
+     */
+    fun flow(w: IntArray, availableWidth: Int, gapX: Int, outLefts: IntArray?, outTops: IntArray? = null, topStride: Int = 0): Int {
+        var x = 0
+        var inRow = 0
+        var rows = 1
+        val avail = availableWidth.coerceAtLeast(1)
+        w.indices.forEach { i ->
+            val cw = w[i].coerceAtMost(avail)
+            if (inRow > 0 && (x + cw > avail || inRow >= maxPerRow)) {
+                x = 0
+                rows++
+                inRow = 0
+            }
+            outLefts?.set(i, x)
+            outTops?.set(i, (rows - 1) * topStride)
+            x += cw + gapX
+            inRow++
+        }
+        return rows
+    }
+
+    companion object {
+        const val PAD_H_DP = 10
+        const val MIN_WIDTH_DP = 40
+    }
+}
+
+/**
+ * 分页内符号流式面板：按钮宽度随内容自适应，逐行排布。
+ *
+ * - 行高固定为 `itemCellHeightPx`，按钮宽度按文本测量（含内边距，含最小宽度）；
+ * - 超出容器宽度或达到“每行符号数”上限时换行；
  * - 点击与长按动作分发。
-  *
+ *
  * @author android_zero
  * @github msmt2018/zero-Symbol-input-view
  */
@@ -606,10 +695,15 @@ private class SymbolPageGridView(
 ) : ViewGroup(context) {
 
     private var settings = SymbolUiSettings()
+    private var engine = FlowGridEngine(settings, resources.displayMetrics)
+    private var items: List<SymbolItem> = emptyList()
+    private val childLeft = ArrayList<Int>()
+    private val childTop = ArrayList<Int>()
 
-    /** 更新页面渲染配置（行列、字体、交互策略等）。 */
+    /** 更新页面渲染配置（字体、截断、每行上限等）。 */
     fun updateConfig(settings: SymbolUiSettings) {
         this.settings = settings
+        engine = FlowGridEngine(settings, resources.displayMetrics)
     }
 
     private val itemHorizontalGapPx: Int get() = dp(2)
@@ -622,23 +716,18 @@ private class SymbolPageGridView(
      * @param items 当前分组下用于展示的符号项集合。
      */
     fun submit(items: List<SymbolItem>) {
+        this.items = items
         removeAllViews()
-        setPadding(paddingLeft, dp(4), paddingRight, dp(4))
+        setPadding(dp(4), dp(4), dp(4), dp(4))
         items.forEach { item ->
             val tv = TextView(context).apply {
-                text = item.display
+                text = engine.labelOf(item)
                 gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
-                minHeight = dp(32)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.symbolTextSizeSp.toFloat())
-                TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                    this,
-                    10,
-                    settings.symbolTextSizeSp.coerceAtLeast(12),
-                    1,
-                    TypedValue.COMPLEX_UNIT_SP
-                )
+                includeFontPadding = false
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.symbolTextSizeSp.coerceAtLeast(12).toFloat())
+                setPadding(dp(FlowGridEngine.PAD_H_DP), 0, dp(FlowGridEngine.PAD_H_DP), 0)
                 val bg = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, bg, true)
                 setBackgroundResource(bg.resourceId)
@@ -657,49 +746,46 @@ private class SymbolPageGridView(
         requestLayout()
     }
 
-    /**
-     * 计算网格尺寸。
-     *
-     * 关键点：
-     * - `cols` 来自设置中的每行符号数量；
-     * - 行高固定为 `itemCellHeightPx`；
-     * - 总高度 = 上下内边距 + 行高总和 + 行间距总和。
-     */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val cols = settings.symbolsPerRow.coerceIn(1, 20)
         val totalContentWidth = (width - paddingLeft - paddingRight).coerceAtLeast(0)
         val gapX = itemHorizontalGapPx
         val gapY = itemVerticalGapPx
-        val cellWidth = ((totalContentWidth - gapX * (cols - 1)).coerceAtLeast(0)) / cols
         val cellHeight = itemCellHeightPx
-        val cw = MeasureSpec.makeMeasureSpec(cellWidth, MeasureSpec.EXACTLY)
-        val ch = MeasureSpec.makeMeasureSpec(cellHeight, MeasureSpec.EXACTLY)
 
-        repeat(childCount) { getChildAt(it).measure(cw, ch) }
+        if (items.size != childCount) {
+            setMeasuredDimension(width, paddingTop + paddingBottom + cellHeight)
+            return
+        }
 
-        val rows = (childCount + cols - 1) / cols
+        val lefts = IntArray(childCount)
+        val tops = IntArray(childCount)
+        val w = engine.widths(items)
+        val rows = engine.flow(w, totalContentWidth, gapX, lefts, tops, cellHeight + gapY)
+
+        childLeft.clear()
+        childTop.clear()
+        repeat(childCount) { i ->
+            val cw = w[i].coerceAtMost(totalContentWidth.coerceAtLeast(1))
+            getChildAt(i).measure(
+                MeasureSpec.makeMeasureSpec(cw, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(cellHeight, MeasureSpec.EXACTLY)
+            )
+            childLeft.add(lefts[i])
+            childTop.add(tops[i])
+        }
+
         val totalHeight = paddingTop + paddingBottom + rows * cellHeight + (rows - 1).coerceAtLeast(0) * gapY
         setMeasuredDimension(width, totalHeight)
     }
 
-    /**
-     * 根据行列索引将符号项定位到对应单元格。
-     */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val cols = settings.symbolsPerRow.coerceIn(1, 20)
-        val totalContentWidth = (width - paddingLeft - paddingRight).coerceAtLeast(0)
-        val gapX = itemHorizontalGapPx
-        val gapY = itemVerticalGapPx
-        val cellWidth = ((totalContentWidth - gapX * (cols - 1)).coerceAtLeast(0)) / cols
-        val cellHeight = itemCellHeightPx
-
-        repeat(childCount) { index ->
-            val row = index / cols
-            val col = index % cols
-            val left = paddingLeft + col * (cellWidth + gapX)
-            val top = paddingTop + row * (cellHeight + gapY)
-            getChildAt(index).layout(left, top, left + cellWidth, top + cellHeight)
+        repeat(childCount) { i ->
+            if (i >= childLeft.size) return
+            val c = getChildAt(i)
+            val left = paddingLeft + childLeft[i]
+            val top = paddingTop + childTop[i]
+            c.layout(left, top, left + c.measuredWidth, top + c.measuredHeight)
         }
     }
 

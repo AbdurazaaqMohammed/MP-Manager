@@ -23,7 +23,8 @@ object SymbolActionExecutor {
      * @param editor 当前绑定的编辑器实例。
      * @param actionId 动作编号。
      * @param text 动作附带文本（可空）。
-     * @param secondText 动作附加文本（可空，仅部分动作使用，如正则替换的替换串）。
+     * @param secondText 动作附加文本（可空，仅部分动作使用，如查找替换的替换串）。
+     * @param options 动作选项标志（如查找替换的 r/c），仅部分动作使用。
      * @param onOpenManager 打开管理器回调。
      * @param onCustomAction 自定义动作（编号 >= 100）回调，交由宿主 App 执行。
      */
@@ -32,11 +33,12 @@ object SymbolActionExecutor {
         actionId: Int,
         text: String?,
         secondText: String? = null,
+        options: String? = null,
         onOpenManager: (() -> Unit)?,
-        onCustomAction: ((Int, String?, String?) -> Unit)? = null
+        onCustomAction: ((Int, String?, String?, String?) -> Unit)? = null
     ) {
         if (actionId >= 100) {
-            onCustomAction?.invoke(actionId, text, secondText)
+            onCustomAction?.invoke(actionId, text, secondText, options)
             return
         }
         if (!editor.isEditable && actionId in listOf(0, 3, 4, 7, 8, 9, 11, 29, 30, 32)) return

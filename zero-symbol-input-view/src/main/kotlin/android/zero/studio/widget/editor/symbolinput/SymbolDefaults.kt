@@ -71,7 +71,8 @@ object SymbolDefaults {
                 group.items.map { item ->
                     SymbolItem(
                         item.shortAction, item.display, item.shortText,
-                        item.longAction, item.longText, item.secondText, item.longSecondText
+                        item.longAction, item.longText, item.secondText, item.longSecondText,
+                        item.options, item.longOptions
                     )
                 }.toMutableList()
             )

@@ -24,6 +24,7 @@ object SymbolDataManager {
     private const val KEY_SHOW_DRAG_HANDLE = "symbol_show_drag_handle"
     private const val KEY_ADVANCED_ACTIONS = "symbol_enable_advanced_actions"
     private const val KEY_REMEMBER_LAST_PAGE = "symbol_remember_last_page"
+    private const val KEY_MAX_LABEL_CHARS = "symbol_max_label_chars"
     private const val KEY_LAST_EXPANDED = "symbol_last_expanded"
     private const val KEY_LAST_PAGE_INDEX = "symbol_last_page_index"
     val gson = Gson()
@@ -75,7 +76,8 @@ object SymbolDataManager {
             symbolTextSizeSp = prefs.getInt(KEY_TEXT_SIZE, 18).coerceIn(12, 28),
             showDragHandle = prefs.getBoolean(KEY_SHOW_DRAG_HANDLE, true),
             enableAdvancedActions = prefs.getBoolean(KEY_ADVANCED_ACTIONS, true),
-            rememberLastPage = prefs.getBoolean(KEY_REMEMBER_LAST_PAGE, true)
+            rememberLastPage = prefs.getBoolean(KEY_REMEMBER_LAST_PAGE, true),
+            maxLabelChars = prefs.getInt(KEY_MAX_LABEL_CHARS, 0).coerceIn(0, 30)
         )
     }
 
@@ -94,6 +96,7 @@ object SymbolDataManager {
             .putBoolean(KEY_SHOW_DRAG_HANDLE, settings.showDragHandle)
             .putBoolean(KEY_ADVANCED_ACTIONS, settings.enableAdvancedActions)
             .putBoolean(KEY_REMEMBER_LAST_PAGE, settings.rememberLastPage)
+            .putInt(KEY_MAX_LABEL_CHARS, settings.maxLabelChars.coerceIn(0, 30))
             .apply()
     }
 
@@ -145,7 +148,8 @@ object SymbolDataManager {
             KEY_TEXT_SIZE,
             KEY_SHOW_DRAG_HANDLE,
             KEY_ADVANCED_ACTIONS,
-            KEY_REMEMBER_LAST_PAGE
+            KEY_REMEMBER_LAST_PAGE,
+            KEY_MAX_LABEL_CHARS
         )
     }
 

@@ -172,7 +172,9 @@ public class EditorSettingsActivity extends BaseActivity {
         }
 
         private void showBottomBarManagementDialog() {
-            startActivity(new Intent(getContext(), SymbolManagerActivity.class));
+            startActivity(new Intent(getContext(), SymbolManagerActivity.class)
+                    .putExtra(SymbolManagerActivity.EXTRA_THEME_STYLE,
+                            io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.currentStyleRes(getContext())));
         }
     }
 }

@@ -26,8 +26,8 @@ object BottomBarMigration {
     /** 继续上一次搜索（对应旧版 Search 按钮） */
     const val ACTION_SEARCH = 100
 
-    /** 正则查找替换（shortText=查找正则，secondText=替换文本） */
-    const val ACTION_REGEX_REPLACE = 101
+    /** 查找替换（shortText=查找串，secondText=替换串，options: r=正则，c=区分大小写） */
+    const val ACTION_FIND_REPLACE = 101
 
     /** 用剪贴板内容替换当前行 */
     const val ACTION_REPLACE_LINE_CLIPBOARD = 102
@@ -115,7 +115,9 @@ object BottomBarMigration {
                     secondText = short.secondText,
                     longAction = longItem?.shortAction,
                     longText = longItem?.shortText,
-                    longSecondText = longItem?.secondText
+                    longSecondText = longItem?.secondText,
+                    options = short.options,
+                    longOptions = longItem?.options
                 )
             )
         }
@@ -179,7 +181,8 @@ object BottomBarMigration {
         return when (action) {
             "Search" -> SymbolItem(ACTION_SEARCH)
             "Insert text" -> SymbolItem(0, "", data1 ?: "")
-            "Regex find and replace" -> SymbolItem(ACTION_REGEX_REPLACE, "", data1 ?: "", null, null, data2)
+            // 旧版为正则+区分大小写，迁移后保持默认勾选
+            "Regex find and replace" -> SymbolItem(ACTION_FIND_REPLACE, "", data1 ?: "", null, null, data2, null, "rc")
             "Copy selection" -> SymbolItem(28)
             "Cut selection" -> SymbolItem(29)
             "Paste selection" -> SymbolItem(30)

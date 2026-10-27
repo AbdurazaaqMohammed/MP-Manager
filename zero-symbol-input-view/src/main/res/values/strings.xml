@@ -126,9 +126,16 @@
     <string name="tab_action_delete">Delete</string>
     <string name="dialog_title_rename_group">Rename Group</string>
     <string name="dialog_confirm_delete_group">Delete this group and all symbols permanently?</string>
-    <string name="hint_second_text">Extra text (for custom actions)</string>
+    <string name="hint_find_text">Find</string>
+    <string name="hint_replace_text">Replace with</string>
+    <string name="option_regex">Regex</string>
+    <string name="option_case_sensitive">Match case</string>
+    <string name="option_replace_all">Replace all</string>
+    <string name="settings_max_label_title">Max label length</string>
+    <string name="settings_max_label_desc">Ellipsize button labels longer than this many characters (0 = no cutoff)</string>
+    <string name="settings_max_label_off">Off</string>
     <string name="action_custom_search">Search (editor)</string>
-    <string name="action_custom_regex_replace">Regex find and replace</string>
+    <string name="action_custom_regex_replace">Find and replace</string>
     <string name="action_custom_replace_line">Replace line from clipboard</string>
     <string name="symbol_macro_help">$$ means $ \n $S sets the selection start position \n $E sets the selection end position \n $T means current selected text \n Example: {$S$T$E}</string>
 </resources>

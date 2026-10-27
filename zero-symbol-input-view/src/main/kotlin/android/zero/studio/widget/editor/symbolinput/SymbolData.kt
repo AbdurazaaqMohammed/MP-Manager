@@ -31,7 +31,11 @@ data class SymbolItem(
     /** 短按动作的附加文本（如自定义正则替换动作的替换串），仅部分动作使用 */
     @SerializedName("f") var secondText: String? = null,
     /** 长按动作的附加文本 */
-    @SerializedName("g") var longSecondText: String? = null
+    @SerializedName("g") var longSecondText: String? = null,
+    /** 动作选项标志（如查找替换的 r=正则、c=区分大小写），仅部分动作使用 */
+    @SerializedName("h") var options: String? = null,
+    /** 长按动作的选项标志 */
+    @SerializedName("i") var longOptions: String? = null
 )
 
 /**
@@ -49,5 +53,7 @@ data class SymbolUiSettings(
     val symbolTextSizeSp: Int = 8,
     val showDragHandle: Boolean = true,
     val enableAdvancedActions: Boolean = true,
-    val rememberLastPage: Boolean = true
+    val rememberLastPage: Boolean = true,
+    /** 单元格标签超过该字符数后截断省略；0 表示不截断 */
+    val maxLabelChars: Int = 0
 )
