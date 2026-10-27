@@ -105,6 +105,8 @@ import java.lang.ref.WeakReference;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2200,6 +2202,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         invalidatePaneLoad(pane1);
         final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
+        final String folderPath = folder.getAbsolutePath();
         saveCurrentPaneScroll(pane1);
         String targetKey = folder == null ? null : "file:" + folder.getAbsolutePath();
         final int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
