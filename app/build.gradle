@@ -105,6 +105,11 @@ dependencies {
     implementation "androidx.window:window:1.5.1"
 
     implementation files('libs/commons-net-3.11.1.jar')
+    // NPatch integrated-mode patcher engine (vendored, see docs/NPATCH_INTEGRATION.md).
+    // Its deps are already provided: gson, jcommander, commons-io, bcprov above;
+    // NeoApk inside the jar is Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
+    implementation files('libs/npatch-patcher.jar')
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("org.apache.ftpserver:ftplet-api:1.2.1")

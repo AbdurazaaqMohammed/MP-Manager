@@ -1857,4 +1857,38 @@ Layout Inspector
     <string name="renamed">Renamed</string>
     <string name="restored">Restored</string>
     <string name="failed">Failed</string>
+
+    <!-- NPatch integrated mode -->
+    <string name="npatch_integrated">NPatch (integrated)</string>
+    <string name="npatch_title">NPatch: %1$s</string>
+    <string name="npatch_hint">Patches the APK with NPatch (integrated mode): an Xposed loader is embedded so selected modules run without NPatch Manager. The output is signed with NPatch\'s built-in key — a new -npatched.apk is created.</string>
+    <string name="npatch_embed_modules">Embed modules (%1$d selected)</string>
+    <string name="npatch_embed_modules_zero">Embed modules — tap to select</string>
+    <string name="npatch_embed_modules_title">Select module APKs to embed</string>
+    <string name="npatch_module_missing">Module not found: %1$s</string>
+    <string name="npatch_sigbypass_title">Signature bypass level</string>
+    <string name="npatch_sigbypass_0">Bypass: None</string>
+    <string name="npatch_sigbypass_1">Bypass: Basic</string>
+    <string name="npatch_sigbypass_2">Bypass: High</string>
+    <string name="npatch_keystore_title">Signing key</string>
+    <string name="npatch_keystore_npatch">Key: NPatch built-in</string>
+    <string name="npatch_keystore_fpa">Key: FPA built-in</string>
+    <string name="npatch_debuggable">Make app debuggable</string>
+    <string name="npatch_injectdex">Inject loader dex into main sequence (sub-process hooks)</string>
+    <string name="npatch_microg">Redirect GMS calls to MicroG</string>
+    <string name="npatch_hidelibs">Hide libs (sanitize ART/system library visibility)</string>
+    <string name="npatch_cleartext">Force usesCleartextTraffic (plain HTTP)</string>
+    <string name="npatch_provider">Inject MT data-files provider</string>
+    <string name="npatch_extractlibs">Force extractNativeLibs=true</string>
+    <string name="npatch_override_targetsdk">Override target SDK version</string>
+    <string name="npatch_targetsdk_value">Target SDK value</string>
+    <string name="npatch_allowdown">Allow downgrade (override versionCode)</string>
+    <string name="npatch_versioncode_value">Overridden versionCode value</string>
+    <string name="npatch_label">Override launcher label (optional)</string>
+    <string name="npatch_patch">Patch</string>
+    <string name="npatch_done_title">NPatch finished</string>
+    <string name="npatch_done">Patched: %1$s</string>
+    <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
+    <string name="npatch_no_output">NPatch produced no output APK. Check the log for details.</string>
+    <string name="npatch_autosign_running">Re-signing with your key…</string>
 </resources>
