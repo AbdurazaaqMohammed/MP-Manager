@@ -88,8 +88,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final FileIconLoader iconLoader;
     private final ApkManifestEditor manifestEditor;
     private final ChecksumDialogs checksumDialogs;
-    private final FilePropertiesDialog propertiesDialog;
     private final FileOperationsHelper fileOps;
+    public FileOperationsHelper getFileOperations() {
+        return fileOps;
+    }
     private final ApkToolsHandler apkTools;
     private final CommandHelper commandHelper;
     private final BatchImageTools batchImages;
