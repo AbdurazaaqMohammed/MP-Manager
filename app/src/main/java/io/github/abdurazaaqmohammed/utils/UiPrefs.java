@@ -232,6 +232,7 @@ public final class UiPrefs {
                 pane.setTranslationY(0f);
             } catch (Exception ignored2) {
             }
+        }
     }
 
     public static final String FOLDER_SIZE_KEY = "show_folder_size_mode";

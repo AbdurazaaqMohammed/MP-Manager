@@ -366,6 +366,7 @@ public class FileOperationsHelper {
                 done++;
                 advanceActiveProgress(done, totalFiles);
             }
+        }
         List<String> affectedNames = new ArrayList<>();
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
@@ -607,6 +608,7 @@ public class FileOperationsHelper {
                 extractZipEntry(z, destinationFolder, dest.getName());
                 advanceActiveProgress(++done, totalFiles);
             }
+        }
         List<String> affectedNames = new ArrayList<>();
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
