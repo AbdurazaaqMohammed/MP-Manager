@@ -15,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
@@ -194,19 +195,21 @@ public class FileUtils {
     public static void copyFolder(File src, File dest) throws IOException {
         if (src.isDirectory()) {
             if (!dest.exists()) {
+                //noinspection ResultOfMethodCallIgnored
                 dest.mkdir();
             }
-
-            String[] files = src.list();
-            if (files == null) return;
-
-            for (String file : files) {
-                File f = new File(file);
-                copyFolder(new File(src, file), f.isDirectory() ? new File(dest, file) : (dest));
+            String[] children = src.list();
+            if (children == null) return;
+            for (String child : children) {
+                File srcChild = new File(src, child);
+                File dstChild = new File(dest, child);
+                copyFolder(srcChild, dstChild);
             }
         } else {
-            File copy = new File(dest, src.getName());
-            copyFile(src, copy);
+            // dest might be the parent dir OR the exact target file (when called
+            // from the recursive case above it is always the exact target file).
+            File target = dest.isDirectory() ? new File(dest, src.getName()) : dest;
+            copyFile(src, target);
         }
     }
 
@@ -261,6 +264,22 @@ public class FileUtils {
     }
 
     public static void copyFile(File sourceFile, File destinationFile) throws IOException {
+        // FileChannel.transferTo delegates to sendfile(2) on Linux — the kernel
+        // copies data without any user-space buffer, making this the fastest
+        // possible file copy on Android internal and shared storage.
+        if (LegacyUtils.supportsFileChannel) {
+            try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ);
+                 FileChannel dst = FileChannel.open(destinationFile.toPath(),
+                         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+                         StandardOpenOption.TRUNCATE_EXISTING)) {
+                long size = src.size();
+                long transferred = 0;
+                while (transferred < size) {
+                    transferred += src.transferTo(transferred, size - transferred, dst);
+                }
+                return;
+            }
+        }
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {
             copyFile(is, os);
@@ -291,9 +310,12 @@ public class FileUtils {
         }
     }
 
+    /** I/O buffer size: 64 KB gives good throughput on FUSE / shared storage. */
+    private static final int IO_BUFFER_SIZE = 65536;
+
     public static void copyFile(InputStream is, OutputStream os) throws IOException {
-        if(LegacyUtils.supportsWriteExternalStorage) {
-            byte[] buffer = new byte[1024];
+        if (LegacyUtils.supportsWriteExternalStorage) {
+            byte[] buffer = new byte[IO_BUFFER_SIZE];
             int length;
             while ((length = is.read(buffer)) > 0) os.write(buffer, 0, length);
         } else android.os.FileUtils.copy(is, os);
