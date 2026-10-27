@@ -397,7 +397,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         abx = t.abx;
         resEntries = t.resEntries;
         if (f != null) f.setAxml(t.axml);
-        if (f != null) f.setFileName(t.title);
+        String fname = t.rootOriginalPath != null ? new File(t.rootOriginalPath).getName()
+                : (t.file != null ? t.file.getName() : t.title);
+        if (f != null) f.setFileName(fname);
 
         if (f != null && f.getEditor() != null && t.loaded) {
             boolean wasModified = t.modified; // setText fires a change event; preserve real state
@@ -797,6 +799,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     boolean wasModified = tab.modified;
                     f.setText(tab.content);
                     tab.modified = wasModified;
+                    String fname = tab.rootOriginalPath != null ? new File(tab.rootOriginalPath).getName()
+                            : (tab.file != null ? tab.file.getName() : tab.title);
+                    f.setFileName(fname);
                     if (tab.pendingSearch != null && !tab.pendingSearch.isEmpty()) {
                         f.searchFor(tab.pendingSearch, tab.pendingSearchRegex, tab.pendingSearchMatchCase);
                         tab.pendingSearch = null;

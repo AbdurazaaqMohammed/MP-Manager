@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -62,8 +63,9 @@ public class FileIconLoader {
      */
     private static final ExecutorService backendStatService = Executors.newFixedThreadPool(2);
     private static final Object STATS_LOCK = new Object();
-    private static final SyncCache<Drawable> iconCache = new SyncCache<>(100);
-    private static final SyncCache<Drawable> badgeCache = new SyncCache<>(200);
+    private static final SyncCache<Drawable> iconCache = new SyncCache<>(300);
+    private static final SyncCache<Drawable> badgeCache = new SyncCache<>(500);
+    private static final SyncCache<String> pkgNameCache = new SyncCache<>(500);
     private static final SyncCache<Long> mtimeCache = new SyncCache<>(400);
     private static final SyncCache<Long> sizeCache = new SyncCache<>(400);
     private static final Set<String> pendingStats = new HashSet<>();
@@ -381,45 +383,101 @@ public class FileIconLoader {
         });
     }
 
+    public static boolean isUserStorage(String path) {
+        if (path == null) return false;
+        return path.startsWith("/storage/")
+                || path.startsWith("/sdcard")
+                || path.startsWith("/mnt/media_rw/")
+                || path.startsWith("/mnt/sdcard")
+                || path.equals("/storage")
+                || path.equals("/sdcard");
+    }
+
+    private static final ExecutorService dirSizeExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "FolderSizeCalculator");
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
+
     private void showFolderSizeAndDate(File file, TextView fileDateView, String dateStr) {
         fileDateView.setVisibility(View.VISIBLE);
         applyDateTextSize(fileDateView);
+        if (file == null) {
+            fileDateView.setText(dateStr);
+            return;
+        }
+        int mode = UiPrefs.folderSizeMode(context);
+        if (mode == UiPrefs.FOLDER_SIZE_NONE) {
+            fileDateView.setText(dateStr);
+            return;
+        }
+        String path = file.getAbsolutePath();
+        if (mode == UiPrefs.FOLDER_SIZE_USER && !isUserStorage(path)) {
+            fileDateView.setText(dateStr);
+            return;
+        }
         Long cached = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(file);
         if (cached != null) {
             fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(cached)));
             return;
         }
         fileDateView.setText(dateStr);
-        String tag = file.getAbsolutePath();
+        String tag = path;
         fileDateView.setTag(tag);
-        backendStatService.execute(() -> {
+        dirSizeExecutor.execute(() -> {
             if (!tag.equals(fileDateView.getTag())) return;
-            long size = calculateFolderSize(file);
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            long size = calculateFolderSize(file, context);
+            if (size >= 0) {
+                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
+                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            }
             context.runOnUiThread(() -> {
-                if (tag.equals(fileDateView.getTag())) {
+                if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
             });
         });
     }
 
-    private static long calculateFolderSize(File dir) {
-        if (dir == null || !dir.isDirectory()) return 0;
-        long total = 0;
-        File[] children = dir.listFiles();
-        if (children != null) {
-            for (File c : children) {
-                if (c == null) continue;
-                if (c.isDirectory()) {
-                    total += calculateFolderSize(c);
-                } else {
-                    total += c.length();
+    private static long calculateFolderSize(File dir, Context ctx) {
+        if (dir == null) return 0;
+        String path = dir.getAbsolutePath();
+        if (isUserStorage(path)) {
+            if (!dir.isDirectory()) return 0;
+            long total = 0;
+            File[] children = dir.listFiles();
+            if (children != null) {
+                for (File c : children) {
+                    if (c == null) continue;
+                    if (c.isDirectory()) {
+                        total += calculateFolderSize(c, ctx);
+                    } else {
+                        total += c.length();
+                    }
                 }
             }
+            return total;
+        } else {
+            try {
+                if (AccessManager.fileOpsOn(ctx)) {
+                    long du = AccessManager.dirSize(ctx, path);
+                    if (du >= 0) return du;
+                }
+            } catch (Exception ignored) {}
+            if (dir.isDirectory()) {
+                long total = 0;
+                File[] children = dir.listFiles();
+                if (children != null) {
+                    for (File c : children) {
+                        if (c == null) continue;
+                        if (c.isDirectory()) total += calculateFolderSize(c, ctx);
+                        else total += c.length();
+                    }
+                    return total;
+                }
+            }
+            return 0;
         }
-        return total;
     }
 
     private static boolean isDataAppRoot(String path) {
@@ -495,46 +553,97 @@ public class FileIconLoader {
         if (file == null || badgeView == null || isInZip) return;
         String name = file.getName();
         if (name == null || name.isEmpty()) return;
-        String targetPkg = resolvePackageName(file, listedDir);
-        boolean folderBadge = targetPkg != null;
-        boolean splitBadge = false;
-        if (!folderBadge) {
-            String lower = name.toLowerCase(Locale.ROOT);
-            if (lower.endsWith(".apks") || lower.endsWith(".xapk")
-                    || lower.endsWith(".apkm") || lower.endsWith(".aspk")) {
-                splitBadge = file.isFile();
+        String tag = file.getAbsolutePath();
+
+        // 1. Check split APK candidates (.apks, .xapk, etc.) first
+        String lower = name.toLowerCase(Locale.ROOT);
+        boolean splitCandidate = lower.endsWith(".apks") || lower.endsWith(".xapk")
+                || lower.endsWith(".apkm") || lower.endsWith(".aspk");
+        if (splitCandidate) {
+            String key = "split:" + tag;
+            Drawable cached = badgeCache.get(key);
+            if (cached != null) {
+                badgeView.setImageDrawable(cached);
+                badgeView.setVisibility(View.VISIBLE);
+                return;
             }
         }
-        if (!folderBadge && !splitBadge) return;
-        String key = (folderBadge ? "pkg:" : "split:") + (folderBadge ? targetPkg : file.getPath());
-        Drawable cached = badgeCache.get(key);
-        if (cached != null) {
-            badgeView.setImageDrawable(cached);
-            badgeView.setVisibility(View.VISIBLE);
-            return;
+
+        // 2. Fast in-memory check for cached package
+        String cachedPkg = pkgNameCache.get(tag);
+        if (cachedPkg != null) {
+            if (!cachedPkg.isEmpty()) {
+                String key = "pkg:" + cachedPkg;
+                Drawable cached = badgeCache.get(key);
+                if (cached != null) {
+                    badgeView.setImageDrawable(cached);
+                    badgeView.setVisibility(View.VISIBLE);
+                    return;
+                }
+            } else if (!splitCandidate) {
+                return;
+            }
         }
-        String tag = file.getAbsolutePath();
+
+        boolean maybeApp = isDataRoot(listedDir) || isDataAppRoot(listedDir) || isInsideDataApp(listedDir);
+        if (!maybeApp && !splitCandidate) return;
+
         badgeView.setTag(tag);
         badgeHandler.postDelayed(() -> {
             if (!tag.equals(badgeView.getTag())) return;
             iconLoaderService.execute(() -> {
                 if (!tag.equals(badgeView.getTag())) return;
                 try {
-                    Drawable icon = folderBadge ? loadInstalledAppIcon(targetPkg)
-                            : ApkIconHelper.getApkIcon(context, tag);
-                    if (icon == null) return;
-                    Drawable circled = circleDrawable(context.getResources(), icon);
-                    if (circled == null) return;
-                    badgeCache.put(key, circled);
-                    context.runOnUiThread(() -> {
-                        if (tag.equals(badgeView.getTag())) {
-                            badgeView.setImageDrawable(circled);
-                            badgeView.setVisibility(View.VISIBLE);
+                    String targetPkg = pkgNameCache.get(tag);
+                    if (targetPkg == null) {
+                        targetPkg = resolvePackageName(file, listedDir);
+                        pkgNameCache.put(tag, targetPkg != null ? targetPkg : "");
+                    }
+                    if (targetPkg == null || targetPkg.isEmpty()) {
+                        if (splitCandidate && file.isFile()) {
+                            String key = "split:" + tag;
+                            Drawable icon = badgeCache.get(key);
+                            if (icon == null) {
+                                Drawable raw = ApkIconHelper.getApkIcon(context, tag);
+                                if (raw != null) {
+                                    icon = circleDrawable(context.getResources(), raw);
+                                    if (icon != null) badgeCache.put(key, icon);
+                                }
+                            }
+                            if (icon != null) {
+                                final Drawable finalIcon = icon;
+                                context.runOnUiThread(() -> {
+                                    if (tag.equals(badgeView.getTag())) {
+                                        badgeView.setImageDrawable(finalIcon);
+                                        badgeView.setVisibility(View.VISIBLE);
+                                    }
+                                });
+                            }
                         }
-                    });
+                        return;
+                    }
+
+                    String key = "pkg:" + targetPkg;
+                    Drawable icon = badgeCache.get(key);
+                    if (icon == null) {
+                        Drawable appIcon = loadInstalledAppIcon(targetPkg);
+                        if (appIcon != null) {
+                            icon = circleDrawable(context.getResources(), appIcon);
+                            if (icon != null) badgeCache.put(key, icon);
+                        }
+                    }
+                    if (icon != null) {
+                        final Drawable finalIcon = icon;
+                        context.runOnUiThread(() -> {
+                            if (tag.equals(badgeView.getTag())) {
+                                badgeView.setImageDrawable(finalIcon);
+                                badgeView.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
                 } catch (Exception ignored) {}
             });
-        }, 350);
+        }, 50);
     }
 
     private Drawable loadInstalledAppIcon(String pkg) {

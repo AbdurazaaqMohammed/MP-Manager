@@ -44,8 +44,20 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (getIntent() != null && getIntent().getBooleanExtra("restore_progress", false)) {
+            getIntent().removeExtra("restore_progress");
+            io.github.abdurazaaqmohammed.utils.ProgressManager.restoreHidden();
+        }
         // Pick up a font changed in Settings while this activity was in background.
         if (appliedFontEpoch != AppFont.currentEpoch()) recreate();
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null && intent.getBooleanExtra("restore_progress", false)) {
+            io.github.abdurazaaqmohammed.utils.ProgressManager.restoreHidden();
+        }
     }
 
     /**

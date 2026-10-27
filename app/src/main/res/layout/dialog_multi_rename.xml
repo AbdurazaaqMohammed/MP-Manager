@@ -54,6 +54,24 @@
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_insert_empty"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="{}"
+                    android:textSize="13sp"
+                    android:insetBottom="0dp"
+                    android:insetTop="0dp"
+                    tools:ignore="HardcodedText" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_insert_prefix"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"

@@ -1213,9 +1213,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private static String detectScope(String name) {
         if (name == null) return null;
-        String n = name.toLowerCase(Locale.ROOT);
+        String n = name.trim().toLowerCase(Locale.ROOT);
         int slash = Math.max(n.lastIndexOf('/'), n.lastIndexOf('\\'));
         if (slash >= 0) n = n.substring(slash + 1);
+        while (n.endsWith(")") && n.contains("(")) {
+            int open = n.lastIndexOf('(');
+            n = n.substring(0, open).trim();
+        }
+        int q = n.indexOf('?');
+        if (q >= 0) n = n.substring(0, q);
         int dot = n.lastIndexOf('.');
         if (dot < 0 || dot == n.length() - 1) return null;
         switch (n.substring(dot + 1)) {
@@ -1249,6 +1255,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             case "sh":
             case "bash": return "source.shell";
             case "prop":
+            case "properties":
             case "ini":
             case "conf":
             case "cfg": return "source.prop";

@@ -90,6 +90,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final ChecksumDialogs checksumDialogs;
     private final FilePropertiesDialog propertiesDialog;
     private final FileOperationsHelper fileOps;
+    public FileOperationsHelper getFileOperations() {
+        return fileOps;
+    }
     private final ApkToolsHandler apkTools;
     private final CommandHelper commandHelper;
     private final BatchImageTools batchImages;
@@ -98,6 +101,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return fileOpener;
     }
     private final EntryDialogs entryDialogs;
+    private final io.github.abdurazaaqmohammed.data.prefs.ListPrefs listPrefs;
 
     /** Row metrics snapshotted once: bind previously re-read prefs per row. */
     private final float nameTextSize;
@@ -332,6 +336,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         uiHelper = context.uiHelper;
         iconLoader = new FileIconLoader(context, isInZip);
         manifestEditor = new ApkManifestEditor(context, dialogUtil, uiHelper);
+        listPrefs = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(context);
         checksumDialogs = new ChecksumDialogs(context, dialogUtil);
         propertiesDialog = new FilePropertiesDialog(context, dialogUtil, checksumDialogs);
         fileOps = new FileOperationsHelper(context, dialogUtil, this);
@@ -623,6 +628,21 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         try {
             holder.fileNameView.setTextColor(context.isGreen(pane1, fileName) ? GREEN_NAME : holder.defaultNameColor);
         } catch (Exception ignored) {}
+        boolean isHidden = false;
+        if (position > 0) {
+            if (file != null) {
+                isHidden = file.getName().startsWith(".") || file.isHidden() || listPrefs.manuallyHidden().contains(file.getPath());
+            } else if (entry != null) {
+                isHidden = entry.getName().startsWith(".") || listPrefs.manuallyHidden().contains(entry.getFullPath());
+            }
+        }
+        if (isHidden) {
+            holder.fileNameView.setAlpha(0.55f);
+            holder.fileIconView.setAlpha(0.55f);
+        } else {
+            holder.fileNameView.setAlpha(1.0f);
+            holder.fileIconView.setAlpha(1.0f);
+        }
         final int finalPosition = position;
         final File finalFile = file;
         final ZipEntryInfo finalEntry = entry;
@@ -687,6 +707,33 @@ final View.OnClickListener originalClickListener;
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+
+                final List<String> targetPaths = new ArrayList<>();
+                if (multi) {
+                    for (int bp : selectedPositions) {
+                        if (bp >= 0 && bp < values.length) {
+                            Object obj = values[bp];
+                            if (obj instanceof File) targetPaths.add(((File) obj).getPath());
+                            else if (obj instanceof ZipEntryInfo) targetPaths.add(((ZipEntryInfo) obj).getFullPath());
+                        }
+                    }
+                } else {
+                    if (file != null) targetPaths.add(file.getPath());
+                    else if (entry != null) targetPaths.add(entry.getFullPath());
+                }
+
+                Set<String> manualHidden = listPrefs.manuallyHidden();
+                boolean allAlreadyHidden = !targetPaths.isEmpty();
+                for (String tp : targetPaths) {
+                    if (!manualHidden.contains(tp)) {
+                        allAlreadyHidden = false;
+                        break;
+                    }
+                }
+                final boolean finalAllAlreadyHidden = allAlreadyHidden;
+                String hideLabel = allAlreadyHidden ? context.getString(R.string.unhide) : context.getString(R.string.hide);
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.HIDE, hideLabel));
+
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COMPRESS, FileMenuOrder.labelFor(context, FileMenuOrder.COMPRESS, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.PROPERTIES, FileMenuOrder.labelFor(context, FileMenuOrder.PROPERTIES, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SHARE, FileMenuOrder.labelFor(context, FileMenuOrder.SHARE, direction)));
@@ -1065,6 +1112,22 @@ final View.OnClickListener originalClickListener;
                                         break;
                                     case FileMenuOrder.DELETE:
                                         entryDialogs.showDeleteDialog(finalPosition, file, entry, multi);
+                                        break;
+                                    case FileMenuOrder.HIDE:
+                                        if (finalAllAlreadyHidden) {
+                                            for (String tp : targetPaths) listPrefs.unhide(tp);
+                                        } else {
+                                            for (String tp : targetPaths) listPrefs.hide(tp);
+                                        }
+                                        if (multi) {
+                                            clearSelection();
+                                        }
+                                        context.runOnUiThread(() -> {
+                                            context.reloadCurrentFolder();
+                                            if (context.isSameLocationInPanes()) {
+                                                context.reloadPane(!pane1, false);
+                                            }
+                                        });
                                         break;
                                     case FileMenuOrder.COMPRESS:
                                         entryDialogs.showCompressDialog(file, fileName, multi);
