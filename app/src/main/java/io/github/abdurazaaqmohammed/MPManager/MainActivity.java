@@ -903,6 +903,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
         io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.init(this);
+        if ("always".equals(androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+                .getString("pref_folder_size_mode", "archive"))) {
+            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.preload();
+        }
         // Applies the custom app dir to REAndroid's framework loader before
         // any decode/build can read the default location.
         UiPrefs.frameworkDir(this);

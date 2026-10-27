@@ -62,6 +62,17 @@ public class FileIconLoader {
      * stat requests starve real icon work.
      */
     private static final ExecutorService backendStatService = Executors.newFixedThreadPool(2);
+    /**
+     * Folder-size walks run alone, delayed and at minimum priority. A recursive
+     * walk of a big tree hammers storage; racing it against listing and icon
+     * I/O on cold start is what made opening the app feel slow.
+     */
+    private static final java.util.concurrent.ScheduledExecutorService folderSizeService =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "folder-size");
+                t.setPriority(Thread.MIN_PRIORITY);
+                return t;
+            });
     private static final Object STATS_LOCK = new Object();
     private static final SyncCache<Drawable> iconCache = new SyncCache<>(300);
     private static final SyncCache<Drawable> badgeCache = new SyncCache<>(500);
@@ -108,6 +119,8 @@ public class FileIconLoader {
     private final int dateTextSizePx;
     private final String datePattern;
     private final boolean elevatedFileOps;
+    /** always: recursive sizes everywhere; archive: zip metadata only; never: no sizes. */
+    private final String folderSizeMode;
     /** Per-listing memo of [isDir, length, mtime] so rebinds do not re-stat. */
     private final Map<String, long[]> metaMemo = new ConcurrentHashMap<>();
     /** Per-listing memo of resolved icons, so classification runs once per path. */
@@ -143,6 +156,14 @@ public class FileIconLoader {
         this.dateTextSizePx = Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
                 this.dateTextSize, context.getResources().getDisplayMetrics()));
         this.datePattern = UiPrefs.getDatePattern(context);
+        String mode;
+        try {
+            mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                    .getString("pref_folder_size_mode", "archive");
+        } catch (Exception e) {
+            mode = "archive";
+        }
+        this.folderSizeMode = mode;
         boolean elevated = false;
         try {
             elevated = AccessManager.fileOpsOn(context);
@@ -167,7 +188,11 @@ public class FileIconLoader {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.VISIBLE);
             applyDateTextSize(fileDateView);
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+            StringBuilder sb = new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified()));
+            if (!"never".equals(folderSizeMode)) {
+                sb.append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize()));
+            }
+            fileDateView.setText(sb);
         } else if (zipEntry.isDirectory()) {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
@@ -175,7 +200,11 @@ public class FileIconLoader {
             setupNonFolderIconView(zipEntry.getFullPath(), fileIconView);
             fileDateView.setVisibility(View.VISIBLE);
             applyDateTextSize(fileDateView);
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+            StringBuilder sb = new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified()));
+            if (!"never".equals(folderSizeMode)) {
+                sb.append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize()));
+            }
+            fileDateView.setText(sb);
         }
     }
 
@@ -333,6 +362,19 @@ public class FileIconLoader {
 
     private void showFolderDate(File file, TextView fileDateView, long[] meta) {
         long mtime = meta[2];
+        if (!"always".equals(folderSizeMode)) {
+            // "Only in archive" / "Never": no recursive walks for real folders,
+            // date-only row (zip listings keep their metadata sizes).
+            fileDateView.setTag(null);
+            if (mtime > 0) {
+                fileDateView.setVisibility(View.VISIBLE);
+                applyDateTextSize(fileDateView);
+                fileDateView.setText(UiPrefs.formatDate(datePattern, mtime));
+            } else {
+                fileDateView.setVisibility(View.INVISIBLE);
+            }
+            return;
+        }
         if (mtime > 0) {
             fileDateView.setTag(null);
             showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, mtime));
@@ -393,12 +435,6 @@ public class FileIconLoader {
                 || path.equals("/sdcard");
     }
 
-    private static final ExecutorService dirSizeExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "FolderSizeCalculator");
-        t.setPriority(Thread.MIN_PRIORITY);
-        return t;
-    });
-
     private void showFolderSizeAndDate(File file, TextView fileDateView, String dateStr) {
         fileDateView.setVisibility(View.VISIBLE);
         applyDateTextSize(fileDateView);
@@ -422,62 +458,71 @@ public class FileIconLoader {
             return;
         }
         fileDateView.setText(dateStr);
+        if (!io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.isReady()) return; // preload in flight; rows rebind and pick it up
         String tag = path;
         fileDateView.setTag(tag);
-        dirSizeExecutor.execute(() -> {
+        folderSizeService.schedule(() -> {
             if (!tag.equals(fileDateView.getTag())) return;
             long size = calculateFolderSize(file, context);
-            if (size >= 0) {
-                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
-                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
-            }
+            if (size < 0) return; // walk aborted; leave uncached so it can retry later
+            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
+            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
             context.runOnUiThread(() -> {
                 if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
             });
-        });
+        }, SIZE_WALK_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
+    /** Delay before a folder-size walk starts, so listing and icons go first. */
+    private static final long SIZE_WALK_DELAY_MS = 500;
+    private static final int SIZE_WALK_MAX_ENTRIES = 20000;
+    private static final long SIZE_WALK_MAX_TIME_MS = 4000;
+
+    /**
+     * Iterative walk with entry and time budgets. A whole-subtree scan of a big
+     * storage root could otherwise run for minutes; an aborted walk returns -1
+     * and is not cached, so it can be retried later. Outside user storage the
+     * backend (root/Shizuku) {@code du} is tried first, since those trees are
+     * not readable by the app user at all.
+     */
     private static long calculateFolderSize(File dir, Context ctx) {
-        if (dir == null) return 0;
+        if (dir == null || !dir.isDirectory()) return 0;
         String path = dir.getAbsolutePath();
-        if (isUserStorage(path)) {
-            if (!dir.isDirectory()) return 0;
-            long total = 0;
-            File[] children = dir.listFiles();
-            if (children != null) {
-                for (File c : children) {
-                    if (c == null) continue;
-                    if (c.isDirectory()) {
-                        total += calculateFolderSize(c, ctx);
-                    } else {
-                        total += c.length();
-                    }
-                }
-            }
-            return total;
-        } else {
+        if (!isUserStorage(path)) {
             try {
                 if (AccessManager.fileOpsOn(ctx)) {
                     long du = AccessManager.dirSize(ctx, path);
                     if (du >= 0) return du;
                 }
             } catch (Exception ignored) {}
-            if (dir.isDirectory()) {
-                long total = 0;
-                File[] children = dir.listFiles();
-                if (children != null) {
-                    for (File c : children) {
-                        if (c == null) continue;
-                        if (c.isDirectory()) total += calculateFolderSize(c, ctx);
-                        else total += c.length();
-                    }
-                    return total;
+        }
+        long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;
+        java.util.ArrayDeque<File> stack = new java.util.ArrayDeque<>();
+        stack.push(dir);
+        long total = 0;
+        int visited = 0;
+        while (!stack.isEmpty()) {
+            if (++visited > SIZE_WALK_MAX_ENTRIES || System.currentTimeMillis() > deadline) return -1;
+            File f = stack.pop();
+            File[] children;
+            try {
+                children = f.listFiles();
+            } catch (Exception e) {
+                children = null;
+            }
+            if (children == null) continue;
+            for (File c : children) {
+                if (c == null) continue;
+                if (c.isDirectory()) {
+                    stack.push(c);
+                } else {
+                    total += c.length();
                 }
             }
-            return 0;
         }
+        return total;
     }
 
     private static boolean isDataAppRoot(String path) {

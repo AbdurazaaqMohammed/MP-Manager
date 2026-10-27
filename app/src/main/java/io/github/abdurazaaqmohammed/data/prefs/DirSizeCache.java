@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.data.prefs;
 
 import android.content.Context;
+import android.os.Looper;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -56,6 +57,24 @@ public final class DirSizeCache {
         if (context != null) appContext = new WeakReference<>(context.getApplicationContext());
     }
 
+    /**
+     * Parses the cache file off the main thread. Only worth doing when folder
+     * sizes are actually shown ("Always" mode) — otherwise the file is never
+     * read at all.
+     */
+    public static void preload() {
+        io.execute(DirSizeCache::ensureLoaded);
+    }
+
+    private static boolean isMainThread() {
+        return Looper.myLooper() == Looper.getMainLooper();
+    }
+
+    /** True once the on-disk cache has been parsed into memory. */
+    public static boolean isReady() {
+        return loaded.get();
+    }
+
     private static File cacheFile() {
         Context c = appContext == null ? null : appContext.get();
         return c == null ? null : new File(c.getFilesDir(), "dir_size_cache.json");
@@ -64,6 +83,9 @@ public final class DirSizeCache {
     /** Cached size for {@code dir}, or null when absent/stale. */
     public static Long peek(File dir) {
         if (dir == null) return null;
+        // Main-thread callers never trigger the parse; they simply miss (the
+        // preload queued in init() finishes long before the first rebind).
+        if (!loaded.get() && isMainThread()) return null;
         ensureLoaded();
         String key;
         long mtime;
@@ -85,6 +107,7 @@ public final class DirSizeCache {
 
     public static void record(File dir, long size) {
         if (dir == null) return;
+        if (!loaded.get() && !isMainThread()) ensureLoaded();
         try {
             String key = dir.getAbsolutePath();
             synchronized (LOCK) {
@@ -141,6 +164,7 @@ public final class DirSizeCache {
     }
 
     private static void save() {
+        if (!loaded.get() && !isMainThread()) ensureLoaded(); // never persist a partial map
         File f = cacheFile();
         if (f == null) return;
         try {

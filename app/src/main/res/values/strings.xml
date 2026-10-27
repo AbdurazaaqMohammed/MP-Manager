@@ -1673,6 +1673,10 @@ Layout Inspector
     <string name="replace_line">Replace line</string>
     <string name="no_matches_found">No matches found</string>
     <string name="symbol_replaced_matches">Replaced %1$d matches</string>
+    <string name="folder_size_mode">Show size on folders</string>
+    <string name="folder_size_always">Always</string>
+    <string name="folder_size_archive">Only in archive</string>
+    <string name="folder_size_never">Never</string>
     <string name="reload_file">Reload file</string>
     <string name="save_as_axml">Save as AXML (compiled)</string>
     <string name="save_as_plain_xml">Save as plain XML</string>

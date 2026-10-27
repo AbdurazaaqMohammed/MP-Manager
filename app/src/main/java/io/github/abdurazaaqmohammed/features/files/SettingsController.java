@@ -551,6 +551,23 @@ public class SettingsController {
     }
 
     private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
+        AutoCompleteTextView folderSizeModeTv = root.findViewById(R.id.folderSizeModeTv);
+        String[] sizeModeTags = {"always", "archive", "never"};
+        String[] sizeModeLabels = {activity.getString(R.string.folder_size_always),
+                activity.getString(R.string.folder_size_archive), activity.getString(R.string.folder_size_never)};
+        folderSizeModeTv.setAdapter(dropdownAdapter(sizeModeLabels));
+        String currentSizeMode = settings.getString("pref_folder_size_mode", "archive");
+        int sizeModeSel = 1;
+        for (int i = 0; i < sizeModeTags.length; i++) {
+            if (sizeModeTags[i].equals(currentSizeMode)) {
+                sizeModeSel = i;
+                break;
+            }
+        }
+        folderSizeModeTv.setText(sizeModeLabels[sizeModeSel], false);
+        folderSizeModeTv.setOnItemClickListener((p, v, pos, id) ->
+                settings.edit().putString("pref_folder_size_mode", sizeModeTags[pos]).apply());
+
         TextView sizeLabel = root.findViewById(R.id.fileSizeLabel);
         SeekBar sizeSeek = root.findViewById(R.id.fileSizeSeek);
         TextView linesLabel = root.findViewById(R.id.fileLinesLabel);
