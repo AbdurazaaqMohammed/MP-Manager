@@ -879,6 +879,10 @@ Layout Inspector
     <string name="folder_anim_fade">Fade</string>
     <string name="folder_anim_slide_fade">Slide + fade</string>
     <string name="folders">Folders</string>
+    <string name="show_folder_size">Show folder sizes</string>
+    <string name="folder_size_user_space">User space only</string>
+    <string name="folder_size_all">Whole system</string>
+    <string name="folder_size_none">Never</string>
     <string name="file_operations">File operations</string>
     <string name="elevated_access">Elevated access</string>
     <string name="elevated_access_mode">Access mode</string>

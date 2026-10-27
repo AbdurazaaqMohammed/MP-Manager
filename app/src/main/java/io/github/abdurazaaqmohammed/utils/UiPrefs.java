@@ -232,6 +232,19 @@ public final class UiPrefs {
                 pane.setTranslationY(0f);
             } catch (Exception ignored2) {
             }
+    }
+
+    public static final String FOLDER_SIZE_KEY = "show_folder_size_mode";
+    public static final int FOLDER_SIZE_USER = 0;
+    public static final int FOLDER_SIZE_ALL = 1;
+    public static final int FOLDER_SIZE_NONE = 2;
+
+    public static int folderSizeMode(Context context) {
+        try {
+            return androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                    .getInt(FOLDER_SIZE_KEY, FOLDER_SIZE_USER);
+        } catch (Exception ignored) {
+            return FOLDER_SIZE_USER;
         }
     }
 }

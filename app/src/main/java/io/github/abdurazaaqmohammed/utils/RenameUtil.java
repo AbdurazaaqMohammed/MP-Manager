@@ -273,11 +273,11 @@ public class RenameUtil {
                 pm.dismiss();
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
-                    context.loadFolderInPane(parent, pane1, false);
-                    File otherFolder = pane1 ? context.pane2Folder : context.pane1Folder;
-                    if (parent.equals(otherFolder)) {
-                        context.loadFolderInPane(parent, !pane1, false);
+                    List<String> newNames = new ArrayList<>();
+                    for (RenamePlan p : plans) {
+                        if (p != null && p.newName != null) newNames.add(p.newName);
                     }
+                    context.highlightAndFocusItems(pane1, newNames);
                 });
             } catch (Exception e) {
                 pm.dismiss();
@@ -412,10 +412,11 @@ public class RenameUtil {
                 pm.dismiss();
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
-                    context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);
-                    if (context.isSameLocationInPanes()) {
-                        context.loadZipFolderInPane(zipFile, currentZipPath, !pane1, false);
+                    List<String> newNames = new ArrayList<>();
+                    for (RenamePlan p : plans) {
+                        if (p != null && p.newName != null) newNames.add(p.newName);
                     }
+                    context.highlightAndFocusItems(pane1, newNames);
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {

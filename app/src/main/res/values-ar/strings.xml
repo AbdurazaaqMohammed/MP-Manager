@@ -792,6 +792,10 @@
     <string name="folder_anim_fade">تلاشي</string>
     <string name="folder_anim_slide_fade">انزلاق + تلاشي</string>
     <string name="folders">المجلدات</string>
+    <string name="show_folder_size">إظهار مساحة المجلدات</string>
+    <string name="folder_size_user_space">في مساحة المستخدم فقط</string>
+    <string name="folder_size_all">في النظام بالكامل</string>
+    <string name="folder_size_none">عدم الإظهار مطلقاً</string>
     <string name="file_operations">عمليات الملفات</string>
     <string name="elevated_access">وصول بصلاحيات عليا</string>
     <string name="behavior">السلوك</string>

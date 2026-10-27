@@ -392,6 +392,12 @@ public class FileIconLoader {
                 || path.equals("/sdcard");
     }
 
+    private static final ExecutorService dirSizeExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "FolderSizeCalculator");
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
+
     private void showFolderSizeAndDate(File file, TextView fileDateView, String dateStr) {
         fileDateView.setVisibility(View.VISIBLE);
         applyDateTextSize(fileDateView);
@@ -399,10 +405,13 @@ public class FileIconLoader {
             fileDateView.setText(dateStr);
             return;
         }
+        int mode = UiPrefs.folderSizeMode(context);
+        if (mode == UiPrefs.FOLDER_SIZE_NONE) {
+            fileDateView.setText(dateStr);
+            return;
+        }
         String path = file.getAbsolutePath();
-        if (!isUserStorage(path)) {
-            // Outside user storage, do not attempt to calculate folder size:
-            // avoids 0B fake size and eliminates backend thread pool starvation / scroll stutter.
+        if (mode == UiPrefs.FOLDER_SIZE_USER && !isUserStorage(path)) {
             fileDateView.setText(dateStr);
             return;
         }
@@ -414,34 +423,60 @@ public class FileIconLoader {
         fileDateView.setText(dateStr);
         String tag = path;
         fileDateView.setTag(tag);
-        backendStatService.execute(() -> {
+        dirSizeExecutor.execute(() -> {
             if (!tag.equals(fileDateView.getTag())) return;
-            long size = calculateFolderSize(file);
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            long size = calculateFolderSize(file, context);
+            if (size >= 0) {
+                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
+                io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            }
             context.runOnUiThread(() -> {
-                if (tag.equals(fileDateView.getTag())) {
+                if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
             });
         });
     }
 
-    private static long calculateFolderSize(File dir) {
-        if (dir == null || !dir.isDirectory()) return 0;
-        long total = 0;
-        File[] children = dir.listFiles();
-        if (children != null) {
-            for (File c : children) {
-                if (c == null) continue;
-                if (c.isDirectory()) {
-                    total += calculateFolderSize(c);
-                } else {
-                    total += c.length();
+    private static long calculateFolderSize(File dir, Context ctx) {
+        if (dir == null) return 0;
+        String path = dir.getAbsolutePath();
+        if (isUserStorage(path)) {
+            if (!dir.isDirectory()) return 0;
+            long total = 0;
+            File[] children = dir.listFiles();
+            if (children != null) {
+                for (File c : children) {
+                    if (c == null) continue;
+                    if (c.isDirectory()) {
+                        total += calculateFolderSize(c, ctx);
+                    } else {
+                        total += c.length();
+                    }
                 }
             }
+            return total;
+        } else {
+            try {
+                if (AccessManager.fileOpsOn(ctx)) {
+                    long du = AccessManager.dirSize(ctx, path);
+                    if (du >= 0) return du;
+                }
+            } catch (Exception ignored) {}
+            if (dir.isDirectory()) {
+                long total = 0;
+                File[] children = dir.listFiles();
+                if (children != null) {
+                    for (File c : children) {
+                        if (c == null) continue;
+                        if (c.isDirectory()) total += calculateFolderSize(c, ctx);
+                        else total += c.length();
+                    }
+                    return total;
+                }
+            }
+            return 0;
         }
-        return total;
     }
 
     private static boolean isDataAppRoot(String path) {

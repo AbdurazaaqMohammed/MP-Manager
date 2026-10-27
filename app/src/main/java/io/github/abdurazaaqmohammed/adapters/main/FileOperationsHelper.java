@@ -366,12 +366,19 @@ public class FileOperationsHelper {
                 done++;
                 advanceActiveProgress(done, totalFiles);
             }
+        List<String> affectedNames = new ArrayList<>();
+        for (File destFile : plan.values()) {
+            if (destFile != null) affectedNames.add(destFile.getName());
         }
         context.handler.post(() -> {
             adapter.clearSelection();
             clearDirListingCache();
-            context.loadFolderInPane(destinationFolder, !adapter.pane1);
-            // Source pane also changed after a move (files deleted) â€” reload it too.
+            if (!affectedNames.isEmpty()) {
+                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+            } else {
+                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            }
+            // Source pane also changed after a move (files deleted) — reload it too.
             try {
                 File sourceFolder = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
                 if (sourceFolder != null && !sourceFolder.equals(destinationFolder)) {
@@ -600,11 +607,18 @@ public class FileOperationsHelper {
                 extractZipEntry(z, destinationFolder, dest.getName());
                 advanceActiveProgress(++done, totalFiles);
             }
+        List<String> affectedNames = new ArrayList<>();
+        for (File destFile : plan.values()) {
+            if (destFile != null) affectedNames.add(destFile.getName());
         }
         context.handler.post(() -> {
-            context.loadFolderInPane(destinationFolder, !adapter.pane1);
             clearDirListingCache();
-            // Copy destination changed too â€” ensure the source pane reflects renames/copies.
+            if (!affectedNames.isEmpty()) {
+                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+            } else {
+                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            }
+            // Copy destination changed too — ensure the source pane reflects renames/copies.
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
@@ -1224,7 +1238,7 @@ public class FileOperationsHelper {
                     }
                 }
                 pm.dismiss();
-                context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
+                context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
             } catch (Exception e) {
                 destDir.delete();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));

@@ -138,6 +138,9 @@ public class FileOpener {
     }
 
     public void showOpenWithDialog(File file, String fileName) {
+        try {
+            context.clearGreen(pane1);
+        } catch (Exception ignored) {}
         showOpenWithDialog(file, fileName, null, null);
     }
 
@@ -1006,6 +1009,9 @@ public class FileOpener {
     }
 
     public void handleFileClick(File file, String fileName) {
+        try {
+            context.clearGreen(pane1);
+        } catch (Exception ignored) {}
         if (tryRunBuiltinDefault(file, fileName)) return;
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
         if (fileName.endsWith(".txt") || fileName.endsWith(".json")
