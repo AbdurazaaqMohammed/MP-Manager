@@ -395,5 +395,86 @@ public final class FileSearch {
             }
         }
     }
+
+    public static List<ZipEntryInfo> searchZipEntries(File zipFile, String currentSubPath, String query,
+            boolean subfolders, boolean matchCase, boolean regex, String textInside,
+            long minSize, long maxSize, SearchCallback callback) {
+        List<ZipEntryInfo> results = new ArrayList<>();
+        Pattern pattern = null;
+        try {
+            pattern = compilePattern(query, matchCase, regex);
+        } catch (Exception ignored) {
+        }
+        String prefix = currentSubPath == null ? "" : currentSubPath.replace('\\', '/');
+        if (prefix.startsWith("/")) prefix = prefix.substring(1);
+        if (!prefix.isEmpty() && !prefix.endsWith("/")) prefix += "/";
+
+        String normQuery = matchCase ? query : query.toLowerCase(java.util.Locale.ROOT);
+
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                if (callback != null && callback.isCancelled()) break;
+                java.util.zip.ZipEntry ze = en.nextElement();
+                String rawName = ze.getName().replace('\\', '/');
+                if (!prefix.isEmpty() && !rawName.startsWith(prefix)) continue;
+
+                String relPath = rawName.substring(prefix.length());
+                if (!subfolders && relPath.contains("/") && !relPath.endsWith("/")) {
+                    continue;
+                }
+
+                boolean isDir = ze.isDirectory() || rawName.endsWith("/");
+                String cleaned = isDir ? rawName.replaceAll("/+$", "") : rawName;
+                String fileName = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
+
+                if (callback != null) {
+                    if (isDir) callback.onFolderEntered(new File(rawName));
+                    else callback.onFileChecking(new File(rawName));
+                }
+
+                boolean matchName;
+                if (pattern != null) {
+                    matchName = pattern.matcher(fileName).find();
+                } else {
+                    matchName = matchCase ? fileName.contains(query) : fileName.toLowerCase(java.util.Locale.ROOT).contains(normQuery);
+                }
+
+                boolean matchSize = true;
+                long len = ze.getSize();
+                if (!isDir && (minSize != -1 || maxSize != -1)) {
+                    if (minSize != -1 && len < minSize) matchSize = false;
+                    if (maxSize != -1 && len > maxSize) matchSize = false;
+                }
+
+                boolean matchText = true;
+                if (!isDir && textInside != null && !textInside.isEmpty()) {
+                    matchText = false;
+                    if (len >= 0 && len < 10485760) {
+                        try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), java.nio.charset.StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                if (matchCase ? line.contains(textInside)
+                                        : line.toLowerCase(java.util.Locale.ROOT).contains(textInside.toLowerCase(java.util.Locale.ROOT))) {
+                                    matchText = true;
+                                    break;
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+
+                if (matchName && matchSize && matchText) {
+                    long size = len < 0 ? 0 : len;
+                    long time = ze.getTime();
+                    results.add(new ZipEntryInfo(fileName, rawName, isDir, size, time >= 0 ? time : 0L, zipFile));
+                    if (callback != null) callback.onFileFound(new File(rawName), results.size());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return results;
+    }
 }
 
