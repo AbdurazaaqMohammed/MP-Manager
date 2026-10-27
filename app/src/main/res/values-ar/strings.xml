@@ -225,6 +225,10 @@
     <string name="folder">مجلد</string>
     <string name="file">ملف</string>
     <string name="hide">إخفاء</string>
+    <string name="unhide">إظهار</string>
+    <string name="keep">إبقاء</string>
+    <string name="all_checkbox">الكل</string>
+    <string name="hidden_toast">تم إخفاء العنصر</string>
     <string name="added_to_bookmarks">تمت إضافة %1$s إلى الإشارات المرجعية</string>
     <string name="filepath">مسار الملف</string>
     <string name="confirm_delete_bookmark">هل أنت متأكد أنك تريد حذف الإشارة المرجعية %1$s؟</string>
@@ -788,6 +792,10 @@
     <string name="folder_anim_fade">تلاشي</string>
     <string name="folder_anim_slide_fade">انزلاق + تلاشي</string>
     <string name="folders">المجلدات</string>
+    <string name="show_folder_size">إظهار مساحة المجلدات</string>
+    <string name="folder_size_user_space">في مساحة المستخدم فقط</string>
+    <string name="folder_size_all">في النظام بالكامل</string>
+    <string name="folder_size_none">عدم الإظهار مطلقاً</string>
     <string name="file_operations">عمليات الملفات</string>
     <string name="elevated_access">وصول بصلاحيات عليا</string>
     <string name="behavior">السلوك</string>

@@ -8,6 +8,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -92,8 +93,8 @@ public class RenameUtil {
         MaterialCheckBox caseSensitiveCheck = view.findViewById(R.id.case_sensitive_checkbox);
         patternInput.setText("{P}{S}");
 
-        int[] quickButtonIds = {R.id.btn_insert_prefix, R.id.btn_insert_suffix, R.id.btn_insert_number, R.id.btn_insert_padded_number};
-        String[] quickButtonTokens = {"{P}", "{S}", "{0}", "{z0}"};
+        int[] quickButtonIds = {R.id.btn_insert_empty, R.id.btn_insert_prefix, R.id.btn_insert_suffix, R.id.btn_insert_number, R.id.btn_insert_padded_number};
+        String[] quickButtonTokens = {"{}", "{P}", "{S}", "{0}", "{z0}"};
         for (int i = 0; i < quickButtonIds.length; i++) {
             String token = quickButtonTokens[i];
             view.findViewById(quickButtonIds[i]).setOnClickListener(v -> insertAtCursor(patternInput, token));
@@ -272,7 +273,11 @@ public class RenameUtil {
                 pm.dismiss();
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
-                    context.loadFolderInPane(parent, pane1, false);
+                    List<String> newNames = new ArrayList<>();
+                    for (RenamePlan p : plans) {
+                        if (p != null && p.newName != null) newNames.add(p.newName);
+                    }
+                    context.highlightAndFocusItems(pane1, newNames);
                 });
             } catch (Exception e) {
                 pm.dismiss();
@@ -407,7 +412,11 @@ public class RenameUtil {
                 pm.dismiss();
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
-                    context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);
+                    List<String> newNames = new ArrayList<>();
+                    for (RenamePlan p : plans) {
+                        if (p != null && p.newName != null) newNames.add(p.newName);
+                    }
+                    context.highlightAndFocusItems(pane1, newNames);
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
@@ -501,7 +510,16 @@ public class RenameUtil {
         int end = Math.max(editText.getSelectionEnd(), 0);
         int min = Math.min(start, end), max = Math.max(start, end);
         editText.getText().replace(min, max, s);
-        editText.setSelection(min + s.length());
+        int cursor = min + s.length();
+        if (s.endsWith("}") && s.length() > 1) {
+            cursor = min + s.length() - 1;
+        }
+        editText.setSelection(cursor);
+        editText.requestFocus();
+        InputMethodManager imm = (InputMethodManager) editText.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+        }
     }
 
     private static class RenamePreviewAdapter extends ArrayAdapter<RenamePlan> {

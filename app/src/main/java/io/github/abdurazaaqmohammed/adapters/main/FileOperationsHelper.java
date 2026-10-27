@@ -367,11 +367,19 @@ public class FileOperationsHelper {
                 advanceActiveProgress(done, totalFiles);
             }
         }
+        List<String> affectedNames = new ArrayList<>();
+        for (File destFile : plan.values()) {
+            if (destFile != null) affectedNames.add(destFile.getName());
+        }
         context.handler.post(() -> {
             adapter.clearSelection();
             clearDirListingCache();
-            context.loadFolderInPane(destinationFolder, !adapter.pane1);
-            // Source pane also changed after a move (files deleted) â€” reload it too.
+            if (!affectedNames.isEmpty()) {
+                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+            } else {
+                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            }
+            // Source pane also changed after a move (files deleted) — reload it too.
             try {
                 File sourceFolder = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
                 if (sourceFolder != null && !sourceFolder.equals(destinationFolder)) {
@@ -601,10 +609,18 @@ public class FileOperationsHelper {
                 advanceActiveProgress(++done, totalFiles);
             }
         }
+        List<String> affectedNames = new ArrayList<>();
+        for (File destFile : plan.values()) {
+            if (destFile != null) affectedNames.add(destFile.getName());
+        }
         context.handler.post(() -> {
-            context.loadFolderInPane(destinationFolder, !adapter.pane1);
             clearDirListingCache();
-            // Copy destination changed too â€” ensure the source pane reflects renames/copies.
+            if (!affectedNames.isEmpty()) {
+                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+            } else {
+                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            }
+            // Copy destination changed too — ensure the source pane reflects renames/copies.
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
@@ -659,26 +675,23 @@ public class FileOperationsHelper {
         }
         if (conflicts.isEmpty()) return plan;
 
-        int bulk = CopyConflictDialog.askBulk(context, dialogUtil, singleTitle, allTitle, conflicts,
-                () -> showActiveProgress(transferLabel(isMove, summarizeItems(items))));
-        if (bulk == CopyConflictDialog.ACTION_CANCEL) return null;
-
-        int applied = -1;
-        for (CopyConflictDialog.Conflict c : conflicts) {
+        int bulkAction = -1;
+        for (int i = 0; i < conflicts.size(); i++) {
+            CopyConflictDialog.Conflict c = conflicts.get(i);
             int action;
-            if (CopyConflictDialog.isBulkAction(bulk)) {
-                action = bulk;
-            } else if (applied >= 0) {
-                action = applied;
+            if (bulkAction >= 0) {
+                action = bulkAction;
             } else {
                 dismissActiveProgress();
-                action = CopyConflictDialog.askSingle(context, dialogUtil, singleTitle, c,
-                        () -> showActiveProgress(transferLabel(isMove, c.sourceName)));
-                showActiveProgress(transferLabel(isMove, summarizeItems(items)));
-                if (!CopyConflictDialog.isBulkAction(action)) return null;
-                // One decision covers the rest of the batch, matching the
-                // "applies to all the further files" expectation.
-                applied = action;
+                List<CopyConflictDialog.Conflict> remaining = conflicts.subList(i, conflicts.size());
+                CopyConflictDialog.Decision decision = CopyConflictDialog.askConflict(
+                        context, dialogUtil, singleTitle, allTitle, remaining,
+                        () -> showActiveProgress(transferLabel(isMove, summarizeItems(items))));
+                if (decision == null || decision.action == CopyConflictDialog.ACTION_CANCEL) return null;
+                action = decision.action;
+                if (decision.applyToAll) {
+                    bulkAction = action;
+                }
             }
             plan.put(c.source, resolveDestination(c, destinationFolder, action, useElevated));
         }
@@ -1227,7 +1240,7 @@ public class FileOperationsHelper {
                     }
                 }
                 pm.dismiss();
-                context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
+                context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
             } catch (Exception e) {
                 destDir.delete();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));

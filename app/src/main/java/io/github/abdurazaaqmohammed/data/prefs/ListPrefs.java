@@ -65,6 +65,13 @@ public final class ListPrefs {
         }
     }
 
+    public void hide(String path) {
+        Set<String> current = manuallyHidden();
+        HashSet<String> values = new HashSet<>(current);
+        values.add(path);
+        prefs().edit().putStringSet("manually_hidden_files", values).apply();
+    }
+
     public void unhide(String path) {
         Set<String> current = manuallyHidden();
         HashSet<String> values = new HashSet<>(current);
