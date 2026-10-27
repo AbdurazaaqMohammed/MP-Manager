@@ -99,6 +99,7 @@
     <string name="copy_conflict_suggested">Keeping both would use: %1$s</string>
     <string name="copy_conflict_row">%1$s (%2$s) → %3$s (%4$s)</string>
     <string name="archive_unchanged">Nothing changed, archive left untouched</string>
+    <string name="archive_not_editable">Entries can only be modified inside zip archives; this one is browse-only</string>
     <string name="signing_">signing %1$s</string>
     <string name="signed">Signed %1$s</string>
     <string name="deleting">Deleting %1$s</string>
@@ -1859,9 +1860,25 @@ Layout Inspector
     <string name="failed">Failed</string>
 
     <!-- NPatch integrated mode -->
-    <string name="npatch_integrated">NPatch (integrated)</string>
-    <string name="npatch_title">NPatch: %1$s</string>
-    <string name="npatch_hint">Patches the APK with NPatch (integrated mode): an Xposed loader is embedded so selected modules run without NPatch Manager. The output is signed with NPatch\'s built-in key — a new -npatched.apk is created.</string>
+    <string name="npatch_integrated">Xposed patcher</string>
+    <string name="npatch_title">Patch with Xposed: %1$s</string>
+    <string name="npatch_hint">Patches the APK with NPatch or LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
+    <string name="npatch_engine_npatch">NPatch</string>
+    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_bypass_lsp_0">Bypass: None</string>
+    <string name="npatch_bypass_lsp_1">Bypass: PM</string>
+    <string name="npatch_bypass_lsp_2">Bypass: PM + OpenAT</string>
+    <string name="npatch_bypass_lsp_3">Bypass: PM + OpenAT + SVC</string>
+    <string name="npatch_documents_provider">Inject DocumentsProvider (file picker access to app data)</string>
+    <string name="npatch_fake_signature">Declare original signature as fake-signature</string>
+    <string name="npatch_gms_replacement">GMS replacement package (optional)</string>
+    <string name="npatch_profiles">Patch profiles</string>
+    <string name="npatch_profile_save">Save current as profile</string>
+    <string name="npatch_profile_name">Profile name</string>
+    <string name="npatch_profile_loaded">Loaded profile: %1$s</string>
+    <string name="npatch_profile_saved">Profile saved: %1$s</string>
+    <string name="npatch_profile_deleted">Profile deleted: %1$s</string>
+    <string name="npatch_profile_none">No profiles saved yet. Configure the options below, then save one here.</string>
     <string name="npatch_embed_modules">Embed modules (%1$d selected)</string>
     <string name="npatch_embed_modules_zero">Embed modules — tap to select</string>
     <string name="npatch_embed_modules_title">Select module APKs to embed</string>
@@ -1870,9 +1887,6 @@ Layout Inspector
     <string name="npatch_sigbypass_0">Bypass: None</string>
     <string name="npatch_sigbypass_1">Bypass: Basic</string>
     <string name="npatch_sigbypass_2">Bypass: High</string>
-    <string name="npatch_keystore_title">Signing key</string>
-    <string name="npatch_keystore_npatch">Key: NPatch built-in</string>
-    <string name="npatch_keystore_fpa">Key: FPA built-in</string>
     <string name="npatch_debuggable">Make app debuggable</string>
     <string name="npatch_injectdex">Inject loader dex into main sequence (sub-process hooks)</string>
     <string name="npatch_microg">Redirect GMS calls to MicroG</string>
@@ -1886,9 +1900,9 @@ Layout Inspector
     <string name="npatch_versioncode_value">Overridden versionCode value</string>
     <string name="npatch_label">Override launcher label (optional)</string>
     <string name="npatch_patch">Patch</string>
-    <string name="npatch_done_title">NPatch finished</string>
+    <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="npatch_no_output">NPatch produced no output APK. Check the log for details.</string>
+    <string name="npatch_no_output">The patcher produced no output APK. Check the log for details.</string>
     <string name="npatch_autosign_running">Re-signing with your key…</string>
 </resources>

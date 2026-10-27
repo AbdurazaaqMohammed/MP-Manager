@@ -84,6 +84,7 @@ import io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -1121,17 +1122,10 @@ public class FileOpener {
                     restoreBakRootAware(file, new File(origPath), fileName);
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
-            } else if (fileName.endsWith(".zip")) {
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
-                dialogUtil.styleAlertDialog(
-                        dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
-                            dialog.dismiss();
-                            if (which == 0) withReadableCopy(file, fileOps::extractArchive);
-                            else showOpenWithDialog(file, fileName);
-                        }).create());
+                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else if (fileName.endsWith(".dex")) {
@@ -1159,16 +1153,7 @@ public class FileOpener {
     private File stageZipEntry(ZipEntryInfo zipEntry) throws IOException {
         if (zipEntry == null || zipEntry.isDirectory() || zipEntry.getFullPath() == null) throw new IOException(context.getString(R.string.cannot_open_item));
         File out = new File(context.getCacheDir(), "zip_entry_" + System.currentTimeMillis() + "_" + zipEntry.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
-        try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
-            FileHeader fh = zf.getFileHeader(zipEntry.getFullPath());
-            if (fh == null || fh.isDirectory()) throw new IOException(context.getString(R.string.cannot_open_item));
-            try (InputStream is = zf.getInputStream(fh);
-                 FileOutputStream fos = new FileOutputStream(out)) {
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
-            }
-        }
+        ArchiveBrowseUtil.extractEntry(zipEntry.getZipFile(), zipEntry.getFullPath(), out);
         return out;
     }
 

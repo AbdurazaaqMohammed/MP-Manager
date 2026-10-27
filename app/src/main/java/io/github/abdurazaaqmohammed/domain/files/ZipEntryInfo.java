@@ -54,6 +54,6 @@ public class ZipEntryInfo {
 
     public long computeCrc32() {
         if (isDirectory || zipFile == null || fullPath == null) return -1;
-        return io.github.abdurazaaqmohammed.utils.ZipCompat.crc32(zipFile, fullPath);
+        return io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.entryCrc32(zipFile, fullPath);
     }
 }

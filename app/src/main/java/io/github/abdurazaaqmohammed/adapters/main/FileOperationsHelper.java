@@ -58,6 +58,7 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -226,7 +227,10 @@ public class FileOperationsHelper {
             }
         } else if (adapter.isInZip) {
             if (!copyToDestination(Collections.singletonList(item))) return;
-            deleteZipEntry((ZipEntryInfo) item);
+            // Degrades to a copy when the source archive cannot be rewritten
+            // (7z/rar/tar): the data is already out, nothing more to do.
+            if (ArchiveBrowseUtil.isZipLike(((ZipEntryInfo) item).getZipFile()))
+                deleteZipEntry((ZipEntryInfo) item);
             context.handler.post(adapter::clearSelection);
         } else {
             moveToDestination(Collections.singletonList(item));
@@ -242,6 +246,11 @@ public class FileOperationsHelper {
         }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
+        if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
+            // Browsing a 7z/rar/tar: entries cannot be written back into it.
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            return true;
+        }
         if (destIsZip) {
             if (!copyToZip(items, destinationFolder, otherPaneAdapter.currentZipPath)) return false;
             for (Object item : items) {
@@ -510,6 +519,11 @@ public class FileOperationsHelper {
         }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
+        if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
+            // Browsing a 7z/rar/tar: entries cannot be written back into it.
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            return true;
+        }
         if (destIsZip) {
             return copyToZip(items, destinationFolder, otherPaneAdapter.currentZipPath);
         } else {
@@ -1114,6 +1128,11 @@ public class FileOperationsHelper {
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) ((RecyclerView) context
                 .findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
+        if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
+            // Browsing a 7z/rar/tar: entries cannot be written back into it.
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            return true;
+        }
         if (destIsZip) {
             return copyToZip(items, destinationFolder, otherPaneAdapter.currentZipPath);
         } else {
@@ -1134,21 +1153,21 @@ public class FileOperationsHelper {
         // "docs/" does not land in destination/docs/.
         if (zipEntry.isDirectory()) {
             String prefix = zipEntryPath.endsWith("/") ? zipEntryPath : zipEntryPath + "/";
-            for (FileHeader fh : ZipCompat.listHeaders(zipFile)) {
-                String name = fh.getFileName().replace('\\', '/');
-                if (!name.startsWith(prefix) || fh.isDirectory()) continue;
+            for (ArchiveBrowseUtil.RawEntry re : ArchiveBrowseUtil.listEntries(zipFile)) {
+                String name = re.path();
+                if (!name.startsWith(prefix) || re.isDirectory()) continue;
                 File target = new File(destinationFolder, entryName + "/" + name.substring(prefix.length()));
                 if (target.exists()) {
                     RecycleBin.moveToBin(context, target, "overwrite");
                 }
-                ZipCompat.extractEntry(zipFile, name, target);
+                ArchiveBrowseUtil.extractEntry(zipFile, name, target);
             }
         } else {
             File target = new File(destinationFolder, entryName);
             if (target.exists()) {
                 RecycleBin.moveToBin(context, target, "overwrite");
             }
-            ZipCompat.extractEntry(zipFile, zipEntryPath, target);
+            ArchiveBrowseUtil.extractEntry(zipFile, zipEntryPath, target);
         }
     }
 
@@ -1158,6 +1177,8 @@ public class FileOperationsHelper {
 
     public void deleteZipEntry(ZipEntryInfo... entryToDelete) throws IOException {
         File f = entryToDelete[0].getZipFile();
+        if (!ArchiveBrowseUtil.isZipLike(f))
+            throw new IOException("Entries can only be deleted inside zip archives");
         List<String> toDelete = new ArrayList<>();
         for (FileHeader fh : ZipCompat.listHeaders(f)) {
             String name = fh.getFileName().replace('\\', '/');

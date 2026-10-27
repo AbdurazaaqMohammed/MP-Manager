@@ -56,18 +56,23 @@ dependencies {
     //implementation files('libs/APKEditor-1.4.8.jar')
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation("androidx.multidex:multidex:2.0.1")
-    implementation 'com.android.volley:volley:1.2.1'
     implementation 'androidx.startup:startup-runtime:1.2.0'
     implementation 'androidx.media:media:1.8.0'
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    // NIO variant: commons-compress's 7z reader touches java.nio.file (LinkOption
+    // et al.) in static initializers, which is missing below API 26 otherwise.
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
     //implementation files('libs/animato.jar')
     implementation files('libs/antlr.jar')
+    implementation files('libs/bin-zip.jar')
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.viewpager2:viewpager2:1.1.0'
     implementation files('libs/JCommand.jar')
-    implementation files('libs/bin-zip.jar')
     implementation files('libs/arsc-parser.jar')
-    implementation files('libs/commons-compress-1.21.jar')
+    // commons-compress 1.27.x: the vendored 1.21 jar had to go — its SevenZFile
+    // assembled entries from a HashMap, whose iteration order differs under ART
+    // and scrambled solid 7z blocks. 1.27 builds the list with a LinkedHashMap
+    // and reads 7z correctly on old Android (with the NIO desugar variant).
+    implementation 'org.apache.commons:commons-compress:1.27.1'
     implementation files('libs/xz-1.9.jar')
     implementation files('libs/junrar-7.5.5.jar')
     implementation("com.google.android.material:material:1.14.0")
@@ -81,7 +86,6 @@ dependencies {
     implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
     implementation 'io.github.skylot:jadx-dex-input:1.4.7'
     implementation 'io.github.skylot:jadx-java-input:1.4.7'
-    implementation 'com.jakewharton.android.repackaged:dalvik-dx:14.0.0_r21'
     implementation('de.femtopedia.dex2jar:dex2jar:2.4.28') {
         exclude group: 'de.femtopedia.dex2jar', module: 'd2j-external'
         exclude group: 'org.antlr', module: 'antlr-runtime'
@@ -105,10 +109,12 @@ dependencies {
     implementation "androidx.window:window:1.5.1"
 
     implementation files('libs/commons-net-3.11.1.jar')
-    // NPatch integrated-mode patcher engine (vendored, see docs/NPATCH_INTEGRATION.md).
-    // Its deps are already provided: gson, jcommander, commons-io, bcprov above;
-    // NeoApk inside the jar is Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
+    // NPatch + LSPatch integrated-mode patcher engines (vendored, see
+    // docs/NPATCH_INTEGRATION.md). Their deps are already provided: gson,
+    // jcommander, commons-io, bcprov above; NeoApk inside the NPatch jar is
+    // Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
     implementation files('libs/npatch-patcher.jar')
+    implementation files('libs/lspatch-patcher.jar')
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
@@ -116,9 +122,6 @@ dependencies {
     implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
     implementation("commons-io:commons-io:2.22.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation 'com.squareup.okhttp3:okhttp:5.5.0'
     testImplementation 'junit:junit:4.13.2'
 }

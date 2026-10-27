@@ -73,6 +73,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public final Object[] values;
     public final boolean isInZip;
     public final String currentZipPath;
+    /**
+     * True when the browsed archive is a zip-family container whose entries can
+     * be rewritten in place. 7z/rar/tar are browse-only, so mutating menu items
+     * are hidden inside them.
+     */
+    public final boolean archiveMutable;
     private boolean isSearchResultsMode = false;
 
     public void setSearchResultsMode(boolean mode) {
@@ -323,10 +329,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             this.upZipPath = up != null ? up.getFullPath() : null;
             this.upZipFile = up != null ? up.getZipFile() : null;
             this.upFile = null;
+            this.archiveMutable = io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(this.upZipFile);
         } else {
             this.upFile = (File) parent;
             this.upZipFile = null;
             this.upZipPath = null;
+            this.archiveMutable = false;
         }
         int scale = UiPrefs.getScale(context);
         this.nameTextSize = UiPrefs.nameSize(scale);
@@ -702,11 +710,14 @@ final View.OnClickListener originalClickListener;
             try {
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
+                boolean canMutate = !isInZip || archiveMutable;
                 List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COPY, FileMenuOrder.labelFor(context, FileMenuOrder.COPY, direction)));
-                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
-                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
-                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                if (canMutate) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                }
 
                 final List<String> targetPaths = new ArrayList<>();
                 if (multi) {

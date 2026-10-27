@@ -73,6 +73,12 @@ public class ApkResultHandler {
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
             return;
         }
+        // Save-back rewrites the archive in place, which only zip-family
+        // containers support; browsing a 7z/rar/tar is read-only.
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(zipFile)) {
+            Extensions.showMessage(activity, R.string.archive_not_editable);
+            return;
+        }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
                     String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
                     String modifiedFileName = entryName != null

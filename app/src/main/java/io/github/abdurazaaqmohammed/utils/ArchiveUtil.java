@@ -168,7 +168,9 @@ public class ArchiveUtil {
     }
 
     private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
-        try (SevenZFile sevenZFile = password == null ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
+        // Opened through ArchiveBrowseUtil.openSevenZ: with core library
+        // desugaring (NIO) the SevenZFile(File) machinery works below API 26.
+        try (SevenZFile sevenZFile = ArchiveBrowseUtil.openSevenZ(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 File out = resolveDestFile(destDir, entry.getName());
@@ -227,7 +229,7 @@ public class ArchiveUtil {
             }
         }
         if (lower.endsWith(".7z")) {
-            try (SevenZFile ignored = new SevenZFile(archive)) {
+            try (SevenZFile ignored = ArchiveBrowseUtil.openSevenZ(archive, null)) {
                 return false;
             } catch (org.apache.commons.compress.PasswordRequiredException e) {
                 return true;

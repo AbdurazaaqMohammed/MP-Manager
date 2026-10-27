@@ -24,8 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.model.FileHeader;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -201,19 +200,7 @@ public class ChecksumDialogs {
             File tmpFile = null;
             try {
                 tmpFile = File.createTempFile("zip_entry_", ".tmp", context.getCacheDir());
-                try (ZipFile zf = new ZipFile(zipFile)) {
-                    FileHeader fh = zf.getFileHeader(entryPath);
-                    if (fh == null) {
-                        for (TextView tv : views.values()) tv.setText("—");
-                        return;
-                    }
-                    try (InputStream is = zf.getInputStream(fh);
-                         FileOutputStream fos = new FileOutputStream(tmpFile)) {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
-                    }
-                }
+                ArchiveBrowseUtil.extractEntry(zipFile, entryPath, tmpFile);
                 Map<String, String> hashes = HashUtil.hashAll(tmpFile);
                 if (out != null) {
                     out.clear();

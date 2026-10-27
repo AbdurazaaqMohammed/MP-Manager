@@ -96,8 +96,6 @@ import com.reandroid.apkeditor.compile.Builder;
 import com.reandroid.utils.StringsUtil;
 import com.reandroid.utils.io.FileUtil;
 
-import net.lingala.zip4j.model.FileHeader;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.File;
@@ -143,9 +141,10 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.UpdateUtil;
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -1701,7 +1700,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
             return;
         }
-        if (!folder.isDirectory() && folder.getName().endsWith(".zip")) {
+        if (!folder.isDirectory() && ArchiveUtil.isSupportedArchive(folder.getName())) {
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
@@ -2030,7 +2029,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-    /** Background-safe half of a zip listing: central-directory scan + filter. */
+    /**
+     * Background-safe half of an archive listing: entry scan + filter. Works
+     * for every browsable archive format — zip via the central directory, the
+     * other formats through {@link ArchiveBrowseUtil}.
+     */
     private ZipRead readZipFolder(File zipFile, String path) throws IOException {
         List<ZipEntryInfo> entries = new ArrayList<>();
         ZipEntryInfo parent = null;
@@ -2048,11 +2051,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             parent = new ZipEntryInfo("..", parentFull, true, 0L, 0L, zipFile);
             entries.add(parent);
 
-            List<FileHeader> fhs = ZipCompat.listHeaders(zipFile);
+            List<ZipEntryInfo> all = new ArrayList<>();
+            for (ArchiveBrowseUtil.RawEntry re : ArchiveBrowseUtil.listEntries(zipFile)) {
+                String entryPath = re.path();
+                boolean isDir = re.isDirectory();
+                String cleaned = isDir ? entryPath.replaceAll("/+$", "") : entryPath;
+                String name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
+                all.add(new ZipEntryInfo(name, entryPath, isDir, re.size(), re.lastModified(), zipFile));
+            }
             String prefix = parentPath;
             Map<String, long[]> dirStats = new HashMap<>();
-            for (FileHeader fh : fhs) {
-                String entryPath = fh.getFileName().replace('\\', '/');
+            for (ZipEntryInfo info : all) {
+                String entryPath = info.getFullPath();
                 if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
                 String rest = entryPath.substring(prefix.length());
                 int nextSlash = rest.indexOf('/');
@@ -2063,36 +2073,30 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         st = new long[2];
                         dirStats.put(childFullPath, st);
                     }
-                    try {
-                        long s = fh.getUncompressedSize();
-                        if (s > 0) st[0] += s;
-                    } catch (Exception ignored) {
-                    }
-                    try {
-                        long t = fh.getLastModifiedTime();
-                        if (t > st[1]) st[1] = t;
-                    } catch (Exception ignored) {
-                    }
+                    long s = info.getSize();
+                    if (s > 0) st[0] += s;
+                    long t = info.getLastModified();
+                    if (t > st[1]) st[1] = t;
                 }
             }
-            for (FileHeader fh : fhs) {
-                String entryPath = fh.getFileName().replace('\\', '/');
+            for (ZipEntryInfo info : all) {
+                String entryPath = info.getFullPath();
                 if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
                 String rest = entryPath.substring(prefix.length());
                 int nextSlash = rest.indexOf('/');
                 if (nextSlash == -1) {
-                    ZipEntryInfo info = new ZipEntryInfo(fh, zipFile, path);
                     if (isNotHidden(info)) entries.add(info);
                 } else {
                     String childDirName = rest.substring(0, nextSlash + 1);
                     String childFullPath = prefix + childDirName;
                     if (seenDirs.add(childFullPath)) {
-                        FileHeader syntheticDir = new FileHeader();
-                        syntheticDir.setFileName(childFullPath);
-                        ZipEntryInfo info = new ZipEntryInfo(syntheticDir, zipFile, path);
+                        String cleaned = childFullPath.replaceAll("/+$", "");
+                        ZipEntryInfo info2 = new ZipEntryInfo(
+                                cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1),
+                                childFullPath, true, 0L, 0L, zipFile);
                         long[] st = dirStats.get(childFullPath);
-                        if (st != null) info.setAggregated(st[0], st[1]);
-                        if (isNotHidden(info)) entries.add(info);
+                        if (st != null) info2.setAggregated(st[0], st[1]);
+                        if (isNotHidden(info2)) entries.add(info2);
                     }
                 }
             }
@@ -2163,7 +2167,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      *                  adapter is bound (e.g. scroll restore). Null to skip.
      */
     public void loadFolderInPaneAsync(File folder, boolean pane1, boolean addToHistory, Runnable afterBind) {
-        if (folder instanceof FTPFileWrapper || (!folder.isDirectory() && folder.getName().endsWith(".zip"))) {
+        if (folder instanceof FTPFileWrapper
+                || (!folder.isDirectory() && ArchiveUtil.isSupportedArchive(folder.getName()))) {
             loadFolderInPane(folder, pane1, addToHistory);
             if (afterBind != null) {
                 try {

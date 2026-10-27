@@ -43,22 +43,20 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 
 # 1. Sync the source tree to the space-free build directory (NPatch-dev is the
-#    source of truth; the build dir is disposable).
+#    source of truth; the build dir is disposable). Full delete+copy with count
+#    verification — OneDrive cloud placeholders make robocopy silently skip
+#    files (dirs without contents).
 mkdir -p "$BUILD_DIR"
-(native="$(command -v robocopy || true)"
- if [ -n "$native" ]; then
-   robocopy "$(cygpath -w "$NPATCH_DIR")" "$(cygpath -w "$BUILD_DIR/NPatch-dev")" //MIR //XD build .gradle .git .kotlin //NFL //NDL //NJH //NP >/dev/null || [ $? -le 7 ]
-   if [ -d "$REPO_DIR/NeoApk" ]; then
-     robocopy "$(cygpath -w "$REPO_DIR/NeoApk")" "$(cygpath -w "$BUILD_DIR/NeoApk")" //MIR //XD build .gradle .git .kotlin //NFL //NDL //NJH //NP >/dev/null || [ $? -le 7 ]
-   fi
- else
-   rm -rf "$BUILD_DIR/NPatch-dev" "$BUILD_DIR/NeoApk"
-   mkdir -p "$BUILD_DIR"
-   cp -r "$NPATCH_DIR" "$BUILD_DIR/NPatch-dev"
-   [ -d "$REPO_DIR/NeoApk" ] && cp -r "$REPO_DIR/NeoApk" "$BUILD_DIR/NeoApk"
-   true
- fi
-)
+rm -rf "$BUILD_DIR/NPatch-dev" "$BUILD_DIR/NeoApk"
+mkdir -p "$BUILD_DIR/NPatch-dev"
+cp -r "$NPATCH_DIR/." "$BUILD_DIR/NPatch-dev/"
+[ -d "$REPO_DIR/NeoApk" ] && { mkdir -p "$BUILD_DIR/NeoApk"; cp -r "$REPO_DIR/NeoApk/." "$BUILD_DIR/NeoApk/"; }
+SRC_COUNT=$(find "$NPATCH_DIR" -type f -not -path "*/build/*" -not -path "*/.git/*" -not -path "*/.gradle/*" -not -path "*/.kotlin/*" | wc -l)
+DST_COUNT=$(find "$BUILD_DIR/NPatch-dev" -type f -not -path "*/build/*" -not -path "*/.git/*" -not -path "*/.gradle/*" -not -path "*/.kotlin/*" | wc -l)
+if [ "$SRC_COUNT" != "$DST_COUNT" ]; then
+  echo "ERROR: sync mismatch (source $SRC_COUNT vs build copy $DST_COUNT files)" >&2
+  exit 1
+fi
 
 # 2. Build the fat jar (also produces out/assets/release with loader runtime).
 cd "$BUILD_DIR/NPatch-dev"

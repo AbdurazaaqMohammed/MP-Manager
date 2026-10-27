@@ -45,7 +45,12 @@ public final class ApkZipAlignUtil {
 
     private static int alignFor(String name, int method) {
         if (name.equals("resources.arsc")) return ALIGN_RES_ARSC;
+        // Xposed-patcher engines embed their native libs under assets/ and mmap
+        // them straight out of the APK (base.apk!/...), which needs 4096-aligned
+        // stored entries — same requirement as lib/*.so.
         if (method == 0 && name.startsWith("lib/") && name.endsWith(".so")) return 4096;
+        if (method == 0 && name.startsWith("assets/") && name.endsWith(".so")) return 4096;
+        if (method == 0 && name.startsWith("assets/") && name.endsWith("/origin.apk")) return 4096;
         return 0;
     }
 

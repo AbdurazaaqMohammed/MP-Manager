@@ -554,47 +554,52 @@ public class DexTools {
         String fullPath = zipEntry.getFullPath();
         if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
         else new Thread(() -> {
-            try (ZipFile zf = new ZipFile(zipFile);
-             InputStream is = zf.getInputStream(zf.getFileHeader(fullPath))) {
+            try {
             final String name = zipEntry.getName();
             String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
             File tempFolder = new File(outputDir);
             tempFolder.mkdir();
             File tempFile = new File(tempFolder, name);
             tempFile.createNewFile();
+            // One generic stage covers every browsable archive format; the
+            // special cases below work on the staged copy.
+            io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
             if(name.endsWith(".dex")) {
-                FileUtils.copyFile(is, tempFile);
-                preExtractAllDex(context, zipFile, false);
+                if (io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(zipFile))
+                    preExtractAllDex(context, zipFile, false);
                 context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
             } else if (name.endsWith(".xml")) {
-                boolean isAxml = FileUtils.isAxml(is);
-                if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
-                    //ResourceTableParser rtp = new ResourceTableParser(rssStream);
-                    //List<ResEntry> resEntries = rtp.parse();
-                    File tmpRss = new File(context.getCacheDir(), System.currentTimeMillis() + name);
-                    FileUtils.copyFile(rssStream, tmpRss);
-                    FileUtils.copyFile(is2, tempFile);
-
+                boolean isAxml;
+                try (InputStream is = new FileInputStream(tempFile)) {
+                    isAxml = FileUtils.isAxml(is);
+                }
+                File tmpRss = null;
+                if(isAxml) {
+                    try {
+                        tmpRss = File.createTempFile("rss_", ".arsc", context.getCacheDir());
+                        io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
+                    } catch (Exception rssFailure) {
+                        // No resources.arsc alongside the binary xml: fall back
+                        // to the plain text editor instead of failing the click.
+                        if (tmpRss != null) //noinspection ResultOfMethodCallIgnored
+                            tmpRss.delete();
+                        tmpRss = null;
+                    }
+                }
+                if(tmpRss != null) {
                     context.startActivityForResult(new Intent(context, TextEditorActivity.class)
                         .putExtra("rssPath", tmpRss.getPath())
-                        //.putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, resEntries).decodeAsString())
-                        //.putExtra("resEntries", (Serializable) resEntries)
                         .putExtra("zf", zipFile.getPath())
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("axml", true)
                         .putExtra("path", tempFile.getPath()), 757);
-                } else try (InputStream plainIn = zf.getInputStream(zf.getFileHeader(fullPath))) {
-                    FileUtils.copyFile(plainIn, tempFile);
-                    context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                } else context.startActivityForResult(new Intent(context, TextEditorActivity.class)
                         .putExtra("zf", zipFile.getPath())
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("path", tempFile.getPath()), 757);
-                }
             } else if (name.equals("resources.arsc")) {
-                FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
             } else {
-                FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
             }
         } catch (Exception e) {
