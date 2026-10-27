@@ -294,6 +294,13 @@ public class SignWrapper {
         }
     }
 
+    /** The configured signing key material, for signers that take a
+     *  PrivateKey + certificate chain directly. Call only after
+     *  {@link #requireAuth} succeeded. */
+    public ApkSigner.SignerConfig signerConfig() throws Exception {
+        return createSignerConfig();
+    }
+
     private static File alignedCopyOf(File inputApk, File output) {
         File parent = output.getParentFile() != null ? output.getParentFile() : inputApk.getParentFile();
         if (parent == null) return null;

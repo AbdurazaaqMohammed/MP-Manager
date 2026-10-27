@@ -179,7 +179,41 @@ Notes:
   Kotlin (currently 2.4.20); gson / jcommander 1.82 / commons-io / bcprov must
   stay since both slim jars rely on them.
 
-## 5. Build environment requirements
+## 5. APK data multiplexing (standalone function, full flavor)
+
+The APK dialog's "Multiplex APK (deduplicate)" entry runs MP-Manager's own
+`ApkDataMultiplexer` (full flavor): it detects the stored embedded APK
+(`assets/lspatch/origin.apk`, `assets/npatch/origin.apk`, `assets/base.apk`,
+or the largest stored ZIP entry whose central directory parses), and for every
+outer entry that is byte-identical (same name, data, method, sizes, CRC) to an
+entry inside the host blob it drops the outer local header + data and repoints
+the central-directory offset at the matching local header inside the blob.
+The host bytes are copied verbatim and re-aligned to 4096, and the entry
+region is padded to 4096 before the central directory so the raw-file V2/V3
+signer (NeoApk, vendored with NPatch) can sign the result in place — the only
+signing that preserves the multiplexed layout. Entries that need page
+alignment (`lib/*.so`, `resources.arsc`, stored `assets/*.so`) are never
+redirected, only re-aligned. Works on both materialized and already-multiplexed
+patcher outputs (the latter simply save less).
+
+## 6. Full / lite build variants
+
+The engines are large (~5 MB of assets + classes), so the app ships in two
+product flavors:
+
+- **full** — engines bundled (`fullImplementation` deps in `app/build.gradle`,
+  loader assets under `app/src/full/assets/`, patcher dialog under
+  `app/src/full/java/`).
+- **lite** — no engines. Tapping "Xposed patcher" explains that the feature
+  needs the full version. "Multiplex APK" still works.
+
+Builds: `./gradlew :app:assembleFullDebug` / `:app:assembleLiteDebug`
+(release: `assembleFullRelease` / `assembleLiteRelease`). The seam between
+flavors is `features/apk/XposedPatcherLauncher`, which exists in both
+`src/full` and `src/lite` with the same signature; everything else lives in
+`src/main` untouched.
+
+## 7. Build environment requirements
 
 - JDK 21+ (both engines target Java 21; the vendored jars are Java-21 bytecode,
   which is also why `gradle/gradle-daemon-jvm.properties` pins the MP-Manager
@@ -190,7 +224,7 @@ Notes:
   `sdk.dir`.
 - Network access for the first Gradle run of each engine (maven deps).
 
-## 6. Known limitations / behavior notes
+## 8. Known limitations / behavior notes
 
 - Patched apps require **Android 9+** (both engines; the manifest gets
   `minSdkVersion=28`). Installing an output on Android <9 fails — on some OEM

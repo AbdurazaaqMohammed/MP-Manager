@@ -24,6 +24,19 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    // "full" carries the vendored Xposed-patcher engines (NPatch + LSPatch) and
+    // their loader assets; "lite" omits them entirely (the APK dialog entry
+    // explains where to get the full version). Everything else is shared.
+    flavorDimensions "version"
+    productFlavors {
+        full {
+            dimension "version"
+        }
+        lite {
+            dimension "version"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -110,12 +123,12 @@ dependencies {
 
     implementation files('libs/commons-net-3.11.1.jar')
     // NPatch + LSPatch integrated-mode patcher engines (vendored, see
-    // docs/NPATCH_INTEGRATION.md). Their deps are already provided: gson,
-    // jcommander, commons-io, bcprov above; NeoApk inside the NPatch jar is
-    // Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
-    implementation files('libs/npatch-patcher.jar')
-    implementation files('libs/lspatch-patcher.jar')
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
+    // docs/NPATCH_INTEGRATION.md) — full flavor only. Their deps are already
+    // provided: gson, jcommander, commons-io, bcprov above; NeoApk inside the
+    // NPatch jar is Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
+    fullImplementation files('libs/npatch-patcher.jar')
+    fullImplementation files('libs/lspatch-patcher.jar')
+    fullImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("org.apache.ftpserver:ftplet-api:1.2.1")

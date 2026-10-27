@@ -1873,6 +1873,14 @@ Layout Inspector
     <string name="npatch_fake_signature">Declare original signature as fake-signature</string>
     <string name="npatch_gms_replacement">GMS replacement package (optional)</string>
     <string name="npatch_profiles">Patch profiles</string>
+    <string name="xposed_patcher_lite_title">Xposed patcher</string>
+    <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="multiplex_apk">Multiplex APK (deduplicate)</string>
+    <string name="multiplex_title">Multiplex: %1$s</string>
+    <string name="multiplex_info">Redirects entries that are identical to entries inside the stored embedded APK (%1$s) so the duplicated data is stored only once. The output is signed with the V2/V3 raw-file signer, which preserves the optimization.</string>
+    <string name="multiplex_no_host">No stored embedded APK found inside this file. Multiplexing applies to Xposed-patcher outputs or similar packages that embed the original APK uncompressed.</string>
+    <string name="multiplex_run">Multiplex</string>
+    <string name="multiplex_done">Multiplexed: %1$s (saved %2$s)</string>
     <string name="npatch_profile_save">Save current as profile</string>
     <string name="npatch_profile_name">Profile name</string>
     <string name="npatch_profile_loaded">Loaded profile: %1$s</string>
