@@ -460,8 +460,8 @@ public class DexTools {
 
     private void dexToSmali(File dexFile, File zipFile) {
         File base = zipFile != null ? zipFile.getParentFile() : dexFile.getParentFile();
-        String baseName = (zipFile != null ? zipFile.getName() : dexFile.getName()).replaceFirst("\\.[^.]+$", "");
-        File outDir = FileUtils.getUnusedFile(new File(base, baseName + "_smali"));
+        String dexBaseName = dexFile.getName().replaceFirst("\\.[^.]+$", "");
+        File outZip = FileUtils.getUnusedFile(new File(base, dexBaseName + "_smali.zip"));
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
         new Thread(() -> {
@@ -479,17 +479,75 @@ public class DexTools {
                 BaksmaliOptions options = new BaksmaliOptions();
                 options.apiLevel = api;
                 DexBackedDexFile dex = new DexBackedDexFile(Opcodes.forApi(api), bytes);
-                Baksmali.disassembleDexFile(dex, outDir, Math.max(1, Runtime.getRuntime().availableProcessors()), options);
+
+                List<? extends ClassDef> classDefs = new ArrayList<>(dex.getClasses());
+                int totalClasses = classDefs.size();
+                int jobs = Math.max(1, Runtime.getRuntime().availableProcessors());
+                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(jobs);
+                java.util.concurrent.BlockingQueue<FastSmaliEntry> queue = new java.util.concurrent.LinkedBlockingQueue<>(512);
+
+                Thread writerThread = new Thread(() -> {
+                    try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(
+                            new java.io.BufferedOutputStream(new java.io.FileOutputStream(outZip), 131072))) {
+                        zos.setLevel(1);
+                        while (true) {
+                            FastSmaliEntry entry = queue.take();
+                            if (entry == FastSmaliEntry.POISON) break;
+                            java.util.zip.ZipEntry ze = new java.util.zip.ZipEntry(entry.path);
+                            ze.setTime(0);
+                            zos.putNextEntry(ze);
+                            zos.write(entry.bytes);
+                            zos.closeEntry();
+                        }
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+                writerThread.start();
+
+                for (ClassDef cd : classDefs) {
+                    executor.submit(() -> {
+                        try {
+                            String desc = cd.getType();
+                            if (desc.charAt(0) != 'L' || desc.charAt(desc.length() - 1) != ';') return;
+                            String path = desc.substring(1, desc.length() - 1) + ".smali";
+                            ByteArrayOutputStream bos = new ByteArrayOutputStream(2048);
+                            java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.OutputStreamWriter(bos, StandardCharsets.UTF_8), 2048);
+                            com.android.tools.smali.baksmali.formatter.BaksmaliWriter bwWriter =
+                                    new com.android.tools.smali.baksmali.formatter.BaksmaliWriter(bw, options.implicitReferences ? cd.getType() : null);
+                            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(options, cd).writeTo(bwWriter);
+                            bwWriter.close();
+                            queue.put(new FastSmaliEntry(path, bos.toByteArray()));
+                        } catch (Exception ignored) {
+                        }
+                    });
+                }
+
+                executor.shutdown();
+                executor.awaitTermination(1, java.util.concurrent.TimeUnit.HOURS);
+                queue.put(FastSmaliEntry.POISON);
+                writerThread.join();
+
                 pm.dismiss();
                 context.handler.post(() -> {
-                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outDir.getName()));
-                    context.loadFolderInPane(outDir.getParentFile(), pane1);
+                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outZip.getName()));
+                    context.loadFolderInPane(outZip.getParentFile(), pane1);
                 });
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
         }).start();
+    }
+
+    private static class FastSmaliEntry {
+        static final FastSmaliEntry POISON = new FastSmaliEntry(null, null);
+        final String path;
+        final byte[] bytes;
+        FastSmaliEntry(String path, byte[] bytes) {
+            this.path = path;
+            this.bytes = bytes;
+        }
     }
 
     public void handleZipEntryClick(ZipEntryInfo zipEntry) {        File zipFile = zipEntry.getZipFile();
