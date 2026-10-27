@@ -555,7 +555,21 @@ public class FileIconLoader {
         if (name == null || name.isEmpty()) return;
         String tag = file.getAbsolutePath();
 
-        // 1. Fast in-memory check for cached package
+        // 1. Check split APK candidates (.apks, .xapk, etc.) first
+        String lower = name.toLowerCase(Locale.ROOT);
+        boolean splitCandidate = lower.endsWith(".apks") || lower.endsWith(".xapk")
+                || lower.endsWith(".apkm") || lower.endsWith(".aspk");
+        if (splitCandidate) {
+            String key = "split:" + tag;
+            Drawable cached = badgeCache.get(key);
+            if (cached != null) {
+                badgeView.setImageDrawable(cached);
+                badgeView.setVisibility(View.VISIBLE);
+                return;
+            }
+        }
+
+        // 2. Fast in-memory check for cached package
         String cachedPkg = pkgNameCache.get(tag);
         if (cachedPkg != null) {
             if (!cachedPkg.isEmpty()) {
@@ -566,21 +580,7 @@ public class FileIconLoader {
                     badgeView.setVisibility(View.VISIBLE);
                     return;
                 }
-            } else {
-                return;
-            }
-        }
-
-        // 2. Check split APK candidates
-        String lower = name.toLowerCase(Locale.ROOT);
-        boolean splitCandidate = lower.endsWith(".apks") || lower.endsWith(".xapk")
-                || lower.endsWith(".apkm") || lower.endsWith(".aspk");
-        if (splitCandidate) {
-            String key = "split:" + tag;
-            Drawable cached = badgeCache.get(key);
-            if (cached != null) {
-                badgeView.setImageDrawable(cached);
-                badgeView.setVisibility(View.VISIBLE);
+            } else if (!splitCandidate) {
                 return;
             }
         }
