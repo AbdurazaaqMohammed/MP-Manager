@@ -6,9 +6,10 @@ import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.android.apksig.ApkSigner;
 
 import java.io.File;
+import java.security.cert.X509Certificate;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -77,9 +78,9 @@ final class MultiplexDialogs {
                 File out = uniqueOutput(file);
                 long saved = ApkDataMultiplexer.multiplex(file, out, hostEntry);
                 if (sw != null) {
-                    com.android.apksig.ApkSigner.SignerConfig cfg = sw.signerConfig();
+                    ApkSigner.SignerConfig cfg = sw.signerConfig();
                     V2V3SchemeSigner.sign(out, new GenericSignatureKey(
-                            cfg.getPrivateKey(), cfg.getCertificates().toArray(new java.security.cert.X509Certificate[0])), true, true);
+                            cfg.getPrivateKey(), cfg.getCertificates().toArray(new X509Certificate[0])), true, true);
                 }
                 pm.dismiss();
                 context.handler.post(() -> {

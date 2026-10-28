@@ -1,12 +1,15 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.text.TextUtils;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import java.io.File;
+import com.google.android.material.checkbox.MaterialCheckBox;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -76,11 +79,11 @@ public final class CopyConflictDialog {
         if (conflicts == null || conflicts.isEmpty()) return new Decision(ACTION_CANCEL, false);
         final CountDownLatch latch = new CountDownLatch(1);
         final Decision[] result = new Decision[]{new Decision(ACTION_CANCEL, false)};
-        final com.google.android.material.checkbox.MaterialCheckBox[] cbHolder =
-                new com.google.android.material.checkbox.MaterialCheckBox[1];
+        final MaterialCheckBox[] cbHolder =
+                new MaterialCheckBox[1];
 
         context.handler.post(() -> {
-            android.view.View view;
+            View view;
             int titleRes;
             if (conflicts.size() == 1) {
                 titleRes = singleTitleRes;
@@ -134,7 +137,7 @@ public final class CopyConflictDialog {
     public static int askSingle(MainActivity context, DialogUtil dialogUtil, int titleRes,
                                 Conflict c, Runnable onDismissed) {
         Decision d = askConflict(context, dialogUtil, titleRes, titleRes,
-                java.util.Collections.singletonList(c), onDismissed);
+                Collections.singletonList(c), onDismissed);
         return d.action;
     }
 
@@ -179,8 +182,8 @@ public final class CopyConflictDialog {
         return sb.toString();
     }
 
-    private static android.view.View buildSingleConflictView(MainActivity context, Conflict c,
-                                                            com.google.android.material.checkbox.MaterialCheckBox[] outCheckBox) {
+    private static View buildSingleConflictView(MainActivity context, Conflict c,
+                                                            MaterialCheckBox[] outCheckBox) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(16 * context.getResources().getDisplayMetrics().density);
@@ -192,7 +195,7 @@ public final class CopyConflictDialog {
         root.addView(tv, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        com.google.android.material.checkbox.MaterialCheckBox cb = new com.google.android.material.checkbox.MaterialCheckBox(context);
+        MaterialCheckBox cb = new MaterialCheckBox(context);
         cb.setText(R.string.all_checkbox);
         LinearLayout.LayoutParams cbLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -204,8 +207,8 @@ public final class CopyConflictDialog {
         return root;
     }
 
-    private static android.view.View buildConflictList(MainActivity context, List<Conflict> conflicts,
-                                                      com.google.android.material.checkbox.MaterialCheckBox[] outCheckBox) {
+    private static View buildConflictList(MainActivity context, List<Conflict> conflicts,
+                                                      MaterialCheckBox[] outCheckBox) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
 
@@ -228,7 +231,7 @@ public final class CopyConflictDialog {
         root.addView(scroll, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        com.google.android.material.checkbox.MaterialCheckBox cb = new com.google.android.material.checkbox.MaterialCheckBox(context);
+        MaterialCheckBox cb = new MaterialCheckBox(context);
         cb.setText(R.string.all_checkbox);
         LinearLayout.LayoutParams cbLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);

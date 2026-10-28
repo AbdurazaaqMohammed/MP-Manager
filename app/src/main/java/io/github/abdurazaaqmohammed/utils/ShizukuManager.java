@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,6 +15,7 @@ import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
@@ -179,7 +181,7 @@ public final class ShizukuManager {
             List<File> files = new ArrayList<>();
             for (String line : r.stdout.split("\\r?\\n")) {
                 if (line.trim().isEmpty() || line.startsWith("total ")) continue;
-                java.util.regex.Matcher matcher = RootManager.LS_LONG_LINE.matcher(line);
+                Matcher matcher = RootManager.LS_LONG_LINE.matcher(line);
                 if (!matcher.matches()) continue;
                 String mode = matcher.group(1);
                 char type = mode.charAt(0);
@@ -552,13 +554,13 @@ public final class ShizukuManager {
             if (op.directory) {
                 try {
                     ok = s.copyDir(op.src, op.dest);
-                } catch (android.os.RemoteException e) {
+                } catch (RemoteException e) {
                     throw new IOException("copy failed: " + e.getMessage());
                 }
             } else {
                 try {
                     ok = s.copyFile(op.src, op.dest);
-                } catch (android.os.RemoteException e) {
+                } catch (RemoteException e) {
                     throw new IOException("copy failed: " + e.getMessage());
                 }
             }

@@ -10,6 +10,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
 import java.io.File;
@@ -59,14 +60,14 @@ public final class SignatureInfoDialog {
                 CharSequence all = flatten(context, info);
                 // The sheet already lays out every certificate field inline, so the
                 // separate "View certificate" copy is redundant; keep just Close/Copy.
-                androidx.appcompat.app.AlertDialog dialog = dialogUtil.getDialogBuilder()
+                AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(R.string.signature_info)
                         .setView(build(context, info))
                         .setPositiveButton(R.string.close, null)
                         .setNegativeButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, all))
                         .create();
                 dialog.show();
-                io.github.abdurazaaqmohammed.utils.DialogUtil.keepButtonsHorizontal(dialog);
+                DialogUtil.keepButtonsHorizontal(dialog);
             });
         }).start();
     }

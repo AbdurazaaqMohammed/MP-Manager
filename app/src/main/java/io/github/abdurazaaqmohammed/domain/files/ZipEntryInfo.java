@@ -4,6 +4,8 @@ import net.lingala.zip4j.model.FileHeader;
 
 import java.io.File;
 
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+
 /**
  * Value holder for one zip entry. Moved here from the adapters package;
  * {@code io.github.abdurazaaqmohammed.adapters.ZipEntryInfo} remains as a
@@ -54,6 +56,6 @@ public class ZipEntryInfo {
 
     public long computeCrc32() {
         if (isDirectory || zipFile == null || fullPath == null) return -1;
-        return io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.entryCrc32(zipFile, fullPath);
+        return ArchiveBrowseUtil.entryCrc32(zipFile, fullPath);
     }
 }

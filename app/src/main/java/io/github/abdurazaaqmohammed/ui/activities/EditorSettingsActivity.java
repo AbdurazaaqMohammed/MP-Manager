@@ -5,11 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import androidx.preference.PreferenceManager;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+
 import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
@@ -19,13 +15,10 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
-
-import java.util.List;
 
 import android.zero.studio.widget.editor.symbolinput.SymbolManagerActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
 public class EditorSettingsActivity extends BaseActivity {
@@ -174,7 +167,7 @@ public class EditorSettingsActivity extends BaseActivity {
         private void showBottomBarManagementDialog() {
             startActivity(new Intent(getContext(), SymbolManagerActivity.class)
                     .putExtra(SymbolManagerActivity.EXTRA_THEME_STYLE,
-                            io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.currentStyleRes(getContext())));
+                            ThemeRegistry.currentStyleRes(getContext())));
         }
     }
 }

@@ -10,6 +10,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Environment;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.text.format.Formatter;
 import android.view.Gravity;
@@ -44,6 +46,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.apache.commons.io.FilenameUtils;
@@ -73,12 +76,14 @@ import javax.xml.transform.stream.StreamResult;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
@@ -641,12 +646,12 @@ public class FileOpener {
                 sample.setPadding(0, pad / 2, 0, pad / 2);
                 root.addView(sample);
 
-                customInput.addTextChangedListener(new android.text.TextWatcher() {
+                customInput.addTextChangedListener(new TextWatcher() {
                     @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                     @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                         sample.setText(s.length() > 0 ? s : "The quick brown fox jumps over the lazy dog.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789 !?@#$%^&*()");
                     }
-                    @Override public void afterTextChanged(android.text.Editable s) {}
+                    @Override public void afterTextChanged(Editable s) {}
                 });
 
                 TextView meta = new TextView(context);
@@ -1144,8 +1149,8 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showHtmlViewer(readable, fileName));
             } else if (fileName.endsWith(".mtcr") || fileName.endsWith(".dexdiff")) {
                 withReadableCopy(file, readable -> {
-                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.class)
-                            .putExtra(io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
+                    Intent intent = new Intent(context, CompareDexActivity.class)
+                            .putExtra(CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
                     context.startActivity(intent);
                 });
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
@@ -1253,7 +1258,7 @@ public class FileOpener {
 
     private static boolean appReadable(File file) {
         try {
-            if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile)
+            if (file instanceof ShizukuFile)
                 return new File(file.getAbsolutePath()).canRead();
             return true;
         } catch (Exception e) {
@@ -1425,7 +1430,7 @@ public class FileOpener {
                                                         byte[] buf = new byte[65536];
                                                         int n;
                                                         while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
-                                                    } catch (EOFException | net.lingala.zip4j.exception.ZipException cappedRead) {
+                                                    } catch (EOFException | ZipException cappedRead) {
                                                         // zip4j caps entry reads at the central directory's
                                                         // declared compressed size and aborts with
                                                         // "Unexpected end of input stream" when the archive

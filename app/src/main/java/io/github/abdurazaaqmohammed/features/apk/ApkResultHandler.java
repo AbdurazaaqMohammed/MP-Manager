@@ -23,6 +23,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ArchiveBackupUtil;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
@@ -75,7 +76,7 @@ public class ApkResultHandler {
         }
         // Save-back rewrites the archive in place, which only zip-family
         // containers support; browsing a 7z/rar/tar is read-only.
-        if (!io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(zipFile)) {
+        if (!ArchiveBrowseUtil.isZipLike(zipFile)) {
             Extensions.showMessage(activity, R.string.archive_not_editable);
             return;
         }
@@ -201,7 +202,7 @@ public class ApkResultHandler {
         }
         boolean sign = false;
         try {
-            sign = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
+            sign = PreferenceManager.getDefaultSharedPreferences(activity)
                     .getBoolean("autosign", true);
         } catch (Exception ignored) {
         }

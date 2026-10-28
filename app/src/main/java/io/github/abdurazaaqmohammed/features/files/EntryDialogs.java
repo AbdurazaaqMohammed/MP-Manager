@@ -4,9 +4,11 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
+import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -24,7 +26,6 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
 
 import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
@@ -34,6 +35,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -48,16 +50,17 @@ import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -219,7 +222,7 @@ public class EntryDialogs {
             if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
         });
         try {
-            if (ad.getWindow() != null) ad.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            if (ad.getWindow() != null) ad.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         } catch (Exception ignored) {}
         dialogUtil.styleAlertDialog(ad);
         ad.getButton(AlertDialog.BUTTON_NEUTRAL)
@@ -519,7 +522,7 @@ public class EntryDialogs {
                 hidden += st[2];
             }
             String info = context.rss.getString(R.string.delete_size_info,
-                    android.text.format.Formatter.formatFileSize(context, bytes), items, hidden);
+                    Formatter.formatFileSize(context, bytes), items, hidden);
             context.handler.post(() -> {
                 try {
                     target.setText(base + "\n" + info);
@@ -536,8 +539,8 @@ public class EntryDialogs {
             if (root.isFile()) {
                 return new long[]{root.length(), 1, root.getName().startsWith(".") ? 1 : 0};
             }
-            java.util.ArrayDeque<File> stack = new java.util.ArrayDeque<>();
-            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            ArrayDeque<File> stack = new ArrayDeque<>();
+            HashSet<String> seen = new HashSet<>();
             stack.add(root);
             while (!stack.isEmpty()) {
                 File d = stack.poll();
@@ -590,9 +593,9 @@ public class EntryDialogs {
             if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
                 RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 15);
                 if (r != null && r.isSuccess()) out = r.output();
-            } else if (io.github.abdurazaaqmohammed.utils.ShizukuManager.ready()) {
-                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
-                        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 15);
+            } else if (ShizukuManager.ready()) {
+                ShizukuShell.Result r =
+                        ShizukuShell.exec(cmd, 15);
                 if (r != null && r.success) out = r.stdout;
             }
             if (out == null) return null;

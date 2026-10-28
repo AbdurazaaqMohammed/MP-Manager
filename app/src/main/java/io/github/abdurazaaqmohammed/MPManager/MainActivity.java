@@ -28,14 +28,13 @@ import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
 import android.view.GestureDetector;
+import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -44,9 +43,6 @@ import android.widget.PopupMenu;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.widget.ImageView;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -55,8 +51,8 @@ import androidx.appcompat.app.AlertDialog;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
-import io.github.abdurazaaqmohammed.core.ui.util.PopupMenus;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
+import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.data.prefs.PaneCache;
 import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
@@ -71,6 +67,8 @@ import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
 import io.github.abdurazaaqmohammed.features.files.RightMenuController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.StartupPrivileges;
 import io.github.abdurazaaqmohammed.features.files.SortFilterController;
 
@@ -103,10 +101,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.security.Security;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -117,6 +117,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
@@ -155,6 +156,7 @@ import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
 import io.github.ratul.topactivity.utils.PermissionUtil;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 public class MainActivity extends BaseActivity implements PaneNavigationController.Host {
 
@@ -389,7 +391,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RecyclerView pane1View = findViewById(R.id.listViewPane1);
             if (pane1View != null && pane1View.getAdapter() instanceof MainFilesArrayAdapter adapter1) {
                 Set<Integer> selected1 = new HashSet<>(adapter1.selectedPositions);
-                editor.putStringSet("pane1_selected", selected1.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+                editor.putStringSet("pane1_selected", selected1.stream().map(String::valueOf).collect(Collectors.toSet()));
             }
         } catch (Exception ignored) {}
         
@@ -397,7 +399,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RecyclerView pane2View = findViewById(R.id.listViewPane2);
             if (pane2View != null && pane2View.getAdapter() instanceof MainFilesArrayAdapter adapter2) {
                 Set<Integer> selected2 = new HashSet<>(adapter2.selectedPositions);
-                editor.putStringSet("pane2_selected", selected2.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet()));
+                editor.putStringSet("pane2_selected", selected2.stream().map(String::valueOf).collect(Collectors.toSet()));
             }
         } catch (Exception ignored) {}
         
@@ -901,10 +903,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
-        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.init(this);
-        if ("always".equals(androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        DirSizeCache.init(this);
+        if ("always".equals(PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("pref_folder_size_mode", "archive"))) {
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.preload();
+            DirSizeCache.preload();
         }
         // Applies the custom app dir to REAndroid's framework loader before
         // any decode/build can read the default location.
@@ -1091,8 +1093,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         pane2.setLayoutManager(new LinearLayoutManager(this));
         // Fast scroller only makes sense on long listings; short folders keep
         // the plain view (threshold check lives in FastScrollerRecyclerView).
-        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane1).setMinItemsForScroller(50);
-        ((modder.hub.dexeditor.views.FastScrollerRecyclerView) pane2).setMinItemsForScroller(50);
+        ((FastScrollerRecyclerView) pane1).setMinItemsForScroller(50);
+        ((FastScrollerRecyclerView) pane2).setMinItemsForScroller(50);
         // Stable rows: skips a requestLayout per bind and shares the view pool
         // between panes so the second pane inflates fewer row views.
         pane1.setHasFixedSize(true);
@@ -1164,7 +1166,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 Extensions.showMessage(MainActivity.this, getString(R.string.navigate_create_failed, inputPath));
                             }
                         }).create();
-                io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, true);
+                KeyboardUtil.focusOnShow(ad, input, true);
                 dialogUtil.styleAlertDialog(ad);
                 ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
                     int selectionStart = input.getSelectionStart();
@@ -1227,7 +1229,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                         FileUtils.describeWriteProblem(this, newFile));
                             }
                         }).create();
-                io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, false);
+                KeyboardUtil.focusOnShow(ad, input, false);
                 dialogUtil.styleAlertDialog(ad);
                 ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
                     CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
@@ -1410,7 +1412,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }, "privilege-startup").start();
                 new Thread(() -> {
                     try {
-                        int purged = io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(MainActivity.this);
+                        int purged = RecycleBin.purgeExpired(MainActivity.this);
                         if (purged > 0) handler.post(() ->
                                 Extensions.showMessage(MainActivity.this,
                                         rss.getString(R.string.recycle_bin_purged_x, purged)));
@@ -2395,7 +2397,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private boolean showMsgOnLongPress(View v) {
-        v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
@@ -3007,9 +3009,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Recycle bin browser: restore / permanently delete binned items. */
     private void showRecycleBinDialog() {
         new Thread(() -> {
-            io.github.abdurazaaqmohammed.utils.RecycleBin.purgeExpired(this);
-            List<io.github.abdurazaaqmohammed.utils.RecycleBin.Entry> entries =
-                    io.github.abdurazaaqmohammed.utils.RecycleBin.entries(this);
+            RecycleBin.purgeExpired(this);
+            List<RecycleBin.Entry> entries =
+                    RecycleBin.entries(this);
             handler.post(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 if (entries.isEmpty()) {
@@ -3021,10 +3023,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     return;
                 }
                 CharSequence[] labels = new CharSequence[entries.size()];
-                java.text.DateFormat df = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT);
+                DateFormat df = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT);
                 for (int i = 0; i < entries.size(); i++) {
-                    io.github.abdurazaaqmohammed.utils.RecycleBin.Entry e = entries.get(i);
-                    String when = e.deletedAt > 0 ? df.format(new java.util.Date(e.deletedAt)) : "";
+                    RecycleBin.Entry e = entries.get(i);
+                    String when = e.deletedAt > 0 ? df.format(new Date(e.deletedAt)) : "";
                     labels[i] = e.displayName() + (when.isEmpty() ? "" : "\n" + when)
                             + (e.originPath == null || e.originPath.isEmpty()
                             ? "" : "\n" + rss.getString(R.string.deleted_from_x, e.originPath));
@@ -3038,7 +3040,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                         .setTitle(R.string.empty_recycle_bin)
                                         .setMessage(R.string.empty_recycle_bin_confirm)
                                         .setPositiveButton(R.string.delete, (d, w) -> {
-                                            io.github.abdurazaaqmohammed.utils.RecycleBin.emptyBin(MainActivity.this);
+                                            RecycleBin.emptyBin(MainActivity.this);
                                             Extensions.showMessage(MainActivity.this, R.string.recycle_bin_emptied);
                                         })
                                         .setNegativeButton(android.R.string.cancel, null)
@@ -3049,14 +3051,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }).start();
     }
 
-    private void showRecycleBinItemDialog(io.github.abdurazaaqmohammed.utils.RecycleBin.Entry entry) {
+    private void showRecycleBinItemDialog(RecycleBin.Entry entry) {
         String[] actions = {rss.getString(R.string.restore), rss.getString(R.string.delete_forever)};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(entry.displayName())
                 .setItems(actions, (dialog, which) -> {
                     if (which == 0) {
                         new Thread(() -> {
-                            io.github.abdurazaaqmohammed.utils.RecycleBin.RestoreResult res = io.github.abdurazaaqmohammed.utils.RecycleBin.restoreEntry(MainActivity.this, entry);
+                            RecycleBin.RestoreResult res = RecycleBin.restoreEntry(MainActivity.this, entry);
                             handler.post(() -> {
                                 if (res != null && res.restoredFile != null) {
                                     File restored = res.restoredFile;
@@ -3073,7 +3075,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }).start();
                     } else {
                         new Thread(() -> {
-                            boolean ok = io.github.abdurazaaqmohammed.utils.RecycleBin.deleteEntry(MainActivity.this, entry);
+                            boolean ok = RecycleBin.deleteEntry(MainActivity.this, entry);
                             if (!ok) handler.post(() ->
                                     Extensions.showMessage(MainActivity.this, R.string.delete_forever_failed));
                         }).start();

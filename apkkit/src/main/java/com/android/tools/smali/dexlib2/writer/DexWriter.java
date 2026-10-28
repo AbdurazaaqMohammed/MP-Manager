@@ -117,7 +117,6 @@ import com.android.tools.smali.dexlib2.writer.io.DexDataStore;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDeferredOutputStream;
 import com.android.tools.smali.dexlib2.writer.util.TryListBuilder;
-import com.android.tools.smali.util.CharSequenceUtils;
 import com.android.tools.smali.util.ExceptionWithContext;
 
 import java.util.ArrayList;

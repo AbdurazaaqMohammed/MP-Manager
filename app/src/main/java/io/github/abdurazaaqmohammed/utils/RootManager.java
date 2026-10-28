@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -876,7 +877,7 @@ public class RootManager {
     }
 
     public void installSilent(String apkPath) throws IOException {
-        installWithInstaller(java.util.Collections.singletonList(apkPath), null, 0x2);
+        installWithInstaller(Collections.singletonList(apkPath), null, 0x2);
     }
 
     /**

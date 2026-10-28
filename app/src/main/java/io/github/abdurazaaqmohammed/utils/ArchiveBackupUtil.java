@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.zip.CRC32;
 
@@ -24,7 +26,7 @@ public final class ArchiveBackupUtil {
     /** CRC32 of a file on disk, or -1 when it cannot be read. */
     public static long crc32Of(File file) {
         if (file == null || !file.isFile()) return -1;
-        try (InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(file), 16384)) {
+        try (InputStream in = new BufferedInputStream(new FileInputStream(file), 16384)) {
             CRC32 crc = new CRC32();
             byte[] buf = new byte[16384];
             int n;

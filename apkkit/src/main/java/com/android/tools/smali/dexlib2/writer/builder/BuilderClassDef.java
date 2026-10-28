@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import java.util.AbstractCollection;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;

@@ -33,6 +33,7 @@ package modder.hub.dexeditor.fragment;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Base64;
 import android.view.LayoutInflater;
@@ -168,8 +169,8 @@ public class GraphFragment extends Fragment {
         if (getActivity() instanceof DexEditorActivity dexActivity) {
             dark = !dexActivity.isLightTheme();
         } else {
-            dark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-                    == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+            dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                    == Configuration.UI_MODE_NIGHT_YES;
         }
 
         String html = "<!DOCTYPE html>\n" +

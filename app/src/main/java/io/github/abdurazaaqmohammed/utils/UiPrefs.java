@@ -2,11 +2,15 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Environment;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
 import androidx.preference.PreferenceManager;
 
+import com.reandroid.apk.framework.InternalFrameworks;
+
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -155,7 +159,7 @@ public final class UiPrefs {
 
     /** Default working directory base ("MP Manager" on the sdcard). */
     public static String defaultAppDir() {
-        return new java.io.File(android.os.Environment.getExternalStorageDirectory(), "MP Manager").getPath();
+        return new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath();
     }
 
     /**
@@ -163,10 +167,10 @@ public final class UiPrefs {
      * custom app-path preference. Also points REAndroid's framework loader at
      * it so decode/build use the same location the app extracts to.
      */
-    public static java.io.File frameworkDir(Context context) {
-        java.io.File fw = new java.io.File(appPathDir(context, defaultAppDir()), "frameworks");
+    public static File frameworkDir(Context context) {
+        File fw = new File(appPathDir(context, defaultAppDir()), "frameworks");
         try {
-            com.reandroid.apk.framework.InternalFrameworks.setAndroidResourceDirectory(fw.getPath());
+            InternalFrameworks.setAndroidResourceDirectory(fw.getPath());
         } catch (Throwable ignored) {
         }
         return fw;
@@ -242,7 +246,7 @@ public final class UiPrefs {
 
     public static int folderSizeMode(Context context) {
         try {
-            return androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            return PreferenceManager.getDefaultSharedPreferences(context)
                     .getInt(FOLDER_SIZE_KEY, FOLDER_SIZE_USER);
         } catch (Exception ignored) {
             return FOLDER_SIZE_USER;

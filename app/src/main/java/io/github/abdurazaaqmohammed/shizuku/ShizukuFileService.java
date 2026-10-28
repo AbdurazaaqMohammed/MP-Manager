@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentSender;
+import android.content.pm.InstallSourceInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
@@ -308,7 +309,7 @@ public class ShizukuFileService extends IFileService.Stub {
         }
         if (installerPkg != null && !installerPkg.isEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                android.content.pm.InstallSourceInfo info = pm.getInstallSourceInfo(target);
+                InstallSourceInfo info = pm.getInstallSourceInfo(target);
                 if (info != null && installerPkg.equals(info.getInstallingPackageName())) return true;
             } catch (Throwable ignored) {
             }
@@ -342,7 +343,7 @@ public class ShizukuFileService extends IFileService.Stub {
             }
         }
         try {
-            java.lang.reflect.Field f = PackageInstaller.SessionParams.class
+            Field f = PackageInstaller.SessionParams.class
                     .getDeclaredField("installerPackageName");
             f.setAccessible(true);
             f.set(params, pkg);

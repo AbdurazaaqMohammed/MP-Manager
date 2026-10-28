@@ -95,17 +95,22 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.rosemoe.sora.text.Content;
@@ -129,6 +134,7 @@ import modder.hub.dexeditor.utils.ClassTree;
 import modder.hub.dexeditor.utils.DexBatchExporter;
 import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
+import modder.hub.dexeditor.utils.FileUtil;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertCircularProgress;
@@ -141,6 +147,9 @@ import java.util.Random;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 /**
  * DexEditorActivity: The main entry point for the DEX editor.
@@ -217,7 +226,7 @@ public class DexEditorActivity extends BaseActivity {
      */
     public boolean isLightTheme() {
         try {
-            android.util.TypedValue value = new android.util.TypedValue();
+            TypedValue value = new TypedValue();
             if (getTheme().resolveAttribute(android.R.attr.isLightTheme, value, true)) return value.data != 0;
         } catch (Exception ignored) {
         }
@@ -241,10 +250,10 @@ public class DexEditorActivity extends BaseActivity {
 
     private int themeColor(int attr, int fallback) {
         try {
-            android.util.TypedValue value = new android.util.TypedValue();
+            TypedValue value = new TypedValue();
             if (getTheme().resolveAttribute(attr, value, true)) {
                 if (value.resourceId != 0) {
-                    int color = androidx.core.content.ContextCompat.getColor(this, value.resourceId);
+                    int color = ContextCompat.getColor(this, value.resourceId);
                     if (color != 0) return color;
                 }
                 if (value.data != 0) return value.data;
@@ -2214,7 +2223,7 @@ public class DexEditorActivity extends BaseActivity {
                 .setNeutralButton(android.R.string.search_go, null)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, editText, false);
+        KeyboardUtil.focusOnShow(dialog, editText, false);
         dialog.show();
 
         // Custom click listeners so "Search" doesn't auto-dismiss before we can read the field.
@@ -2249,7 +2258,7 @@ public class DexEditorActivity extends BaseActivity {
                 .setPositiveButton(R.string.apply, (d, w) -> adapter.setFilter(editText.getText().toString()))
                 .setNegativeButton(R.string.clear, (d, w) -> adapter.setFilter(null))
                 .create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(filterDialog, editText, false);
+        KeyboardUtil.focusOnShow(filterDialog, editText, false);
         filterDialog.show();
     }
 
@@ -2282,7 +2291,7 @@ public class DexEditorActivity extends BaseActivity {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(replaceAllDialog, etFind, false);
+        KeyboardUtil.focusOnShow(replaceAllDialog, etFind, false);
         replaceAllDialog.show();
     }
 
@@ -2898,7 +2907,7 @@ public class DexEditorActivity extends BaseActivity {
         browseBtn.setBackgroundResource(outValue.resourceId);
         browseBtn.setContentDescription("Browse Smali");
 
-        androidx.appcompat.app.AlertDialog[] addDialogHolder = new androidx.appcompat.app.AlertDialog[1];
+        AlertDialog[] addDialogHolder = new AlertDialog[1];
         browseBtn.setOnClickListener(v -> {
             FilePickerDialog.Properties props = new FilePickerDialog.Properties();
             props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
@@ -3021,25 +3030,25 @@ public class DexEditorActivity extends BaseActivity {
                 }
             }
         } else if (f.isFile()) {
-            String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
+            String lower = f.getName().toLowerCase(Locale.ROOT);
             if (lower.endsWith(".smali")) {
                 String simpleName = f.getName().substring(0, f.getName().length() - 6);
                 String rel = (basePrefix == null || basePrefix.isEmpty()) ? simpleName : basePrefix + "/" + simpleName;
                 out.add(new ImportItem(f, rel));
             } else if (lower.endsWith(".zip") || lower.endsWith(".apk") || lower.endsWith(".jar")) {
-                try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f)) {
-                    java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+                try (ZipFile zf = new ZipFile(f)) {
+                    Enumeration<? extends ZipEntry> en = zf.entries();
                     File tempDexDir = new File(getCacheDir(), "dex_import_" + System.currentTimeMillis());
                     tempDexDir.mkdirs();
                     while (en.hasMoreElements()) {
-                        java.util.zip.ZipEntry ze = en.nextElement();
+                        ZipEntry ze = en.nextElement();
                         String entryName = ze.getName();
-                        if (!ze.isDirectory() && entryName.toLowerCase(java.util.Locale.ROOT).endsWith(".smali")) {
+                        if (!ze.isDirectory() && entryName.toLowerCase(Locale.ROOT).endsWith(".smali")) {
                             File target = new File(tempDexDir, entryName);
                             File parent = target.getParentFile();
                             if (parent != null && !parent.exists()) parent.mkdirs();
-                            try (java.io.InputStream is = zf.getInputStream(ze);
-                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(target)) {
+                            try (InputStream is = zf.getInputStream(ze);
+                                 FileOutputStream fos = new FileOutputStream(target)) {
                                 byte[] buf = new byte[8192];
                                 int n;
                                 while ((n = is.read(buf)) != -1) {
@@ -3076,7 +3085,7 @@ public class DexEditorActivity extends BaseActivity {
                 for (ImportItem item : filesToProcess) {
                     File f = item.file;
                     String relPath = item.relativePath;
-                    String code = modder.hub.dexeditor.utils.FileUtil.readFile(f.getAbsolutePath());
+                    String code = FileUtil.readFile(f.getAbsolutePath());
                     if (code == null || code.trim().isEmpty()) continue;
 
                     String cleanPkg = targetPkg == null ? "" : targetPkg.trim();
@@ -3091,7 +3100,7 @@ public class DexEditorActivity extends BaseActivity {
                     }
 
                     // Check existing .class definition
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
+                    Matcher m = Pattern.compile("(?m)^\\.class\\s+(.*?)(L[^;\\s]+;)").matcher(code);
                     if (m.find()) {
                         String originalType = m.group(2); // e.g. "La0;"
                         if (!cleanPkg.isEmpty()) {

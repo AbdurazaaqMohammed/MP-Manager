@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-
 /**
  * Exports an APK's translatable strings for translators.
  *

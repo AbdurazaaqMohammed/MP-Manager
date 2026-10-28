@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.activities;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -31,18 +32,36 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import org.json.JSONObject;
+
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BiPredicate;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.features.dex.DexCompareEngine;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
@@ -67,7 +86,7 @@ public class CompareDexActivity extends BaseActivity {
     public static final String EXTRA_MTCR_FILE = "mtcr_file";
 
     private String mtcrFilePath;
-    private java.util.zip.ZipFile mtcrZipFile;
+    private ZipFile mtcrZipFile;
 
     private static final int COLOR_ADDED = 0xFF4CAF50;
     private static final int COLOR_REMOVED = 0xFFF44336;
@@ -387,12 +406,12 @@ public class CompareDexActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                mtcrZipFile = new java.util.zip.ZipFile(file);
-                java.util.zip.ZipEntry infoEntry = mtcrZipFile.getEntry("info.json");
+                mtcrZipFile = new ZipFile(file);
+                ZipEntry infoEntry = mtcrZipFile.getEntry("info.json");
                 if (infoEntry != null) {
-                    try (java.io.InputStream in = mtcrZipFile.getInputStream(infoEntry)) {
-                        String jsonStr = new String(readAllBytes(in), java.nio.charset.StandardCharsets.UTF_8);
-                        org.json.JSONObject obj = new org.json.JSONObject(jsonStr);
+                    try (InputStream in = mtcrZipFile.getInputStream(infoEntry)) {
+                        String jsonStr = new String(readAllBytes(in), StandardCharsets.UTF_8);
+                        JSONObject obj = new JSONObject(jsonStr);
                         String f1 = obj.optString("file1", "");
                         String f2 = obj.optString("file2", "");
                         names1 = new File(f1).getName();
@@ -401,11 +420,11 @@ public class CompareDexActivity extends BaseActivity {
                 }
                 if (TextUtils.isEmpty(names1)) names1 = file.getName();
 
-                java.util.Set<String> aSet = new java.util.HashSet<>();
-                java.util.Set<String> bSet = new java.util.HashSet<>();
-                java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = mtcrZipFile.entries();
+                Set<String> aSet = new HashSet<>();
+                Set<String> bSet = new HashSet<>();
+                Enumeration<? extends ZipEntry> entries = mtcrZipFile.entries();
                 while (entries.hasMoreElements()) {
-                    java.util.zip.ZipEntry ze = entries.nextElement();
+                    ZipEntry ze = entries.nextElement();
                     String name = ze.getName();
                     if (name.startsWith("a/") && name.length() > 2) {
                         aSet.add(name.substring(2));
@@ -414,7 +433,7 @@ public class CompareDexActivity extends BaseActivity {
                     }
                 }
 
-                java.util.Set<String> allPaths = new java.util.TreeSet<>(aSet);
+                Set<String> allPaths = new TreeSet<>(aSet);
                 allPaths.addAll(bSet);
 
                 List<DexCompareEngine.ComparedClass> list = new ArrayList<>();
@@ -428,7 +447,7 @@ public class CompareDexActivity extends BaseActivity {
                     else status = DexCompareEngine.Status.ADDED;
                     list.add(new DexCompareEngine.ComparedClass(type, status));
                 }
-                list.sort((c1, c2) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(c1.displayName(), c2.displayName()));
+                list.sort((c1, c2) -> FileSorting.compareNaturalIgnoreCase(c1.displayName(), c2.displayName()));
 
                 runOnUiThread(() -> {
                     updateListSubtitle();
@@ -1330,22 +1349,22 @@ public class CompareDexActivity extends BaseActivity {
             Extensions.showMessage(this, R.string.nothing_to_export);
             return;
         }
-        String timestamp = new java.text.SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(new java.util.Date());
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(new Date());
         String outFileName = "Compare dex_" + timestamp + ".mtcr";
         File downloadDir = new File("/storage/emulated/0/Download");
         if (!downloadDir.exists()) downloadDir.mkdirs();
         File outFile = new File(downloadDir, outFileName);
 
-        final android.app.ProgressDialog progress = new android.app.ProgressDialog(this);
+        final ProgressDialog progress = new ProgressDialog(this);
         progress.setMessage(getString(R.string.exporting));
         progress.setCancelable(false);
         progress.show();
 
         new Thread(() -> {
             try {
-                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new java.io.BufferedOutputStream(new java.io.FileOutputStream(outFile), 65536))) {
+                try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outFile), 65536))) {
                     zos.setLevel(1);
-                    org.json.JSONObject info = new org.json.JSONObject();
+                    JSONObject info = new JSONObject();
                     List<String> paths1 = getIntent().getStringArrayListExtra(EXTRA_FILES1);
                     List<String> paths2 = getIntent().getStringArrayListExtra(EXTRA_FILES2);
                     info.put("file1", paths1 != null && !paths1.isEmpty() ? paths1.get(0) : names1);
@@ -1357,8 +1376,8 @@ public class CompareDexActivity extends BaseActivity {
                     info.put("type", "dex");
                     info.put("versionCode", 24011893);
 
-                    zos.putNextEntry(new java.util.zip.ZipEntry("info.json"));
-                    zos.write(info.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    zos.putNextEntry(new ZipEntry("info.json"));
+                    zos.write(info.toString().getBytes(StandardCharsets.UTF_8));
                     zos.closeEntry();
 
                     for (DexCompareEngine.ComparedClass cc : allClasses) {
@@ -1370,8 +1389,8 @@ public class CompareDexActivity extends BaseActivity {
                                     ? readZipEntryText(mtcrZipFile, "a/" + inner)
                                     : engine.smaliLeft(cc.type);
                             if (!TextUtils.isEmpty(smaliL)) {
-                                zos.putNextEntry(new java.util.zip.ZipEntry("a/" + inner));
-                                zos.write(smaliL.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                zos.putNextEntry(new ZipEntry("a/" + inner));
+                                zos.write(smaliL.getBytes(StandardCharsets.UTF_8));
                                 zos.closeEntry();
                             }
                         }
@@ -1380,8 +1399,8 @@ public class CompareDexActivity extends BaseActivity {
                                     ? readZipEntryText(mtcrZipFile, "b/" + inner)
                                     : engine.smaliRight(cc.type);
                             if (!TextUtils.isEmpty(smaliR)) {
-                                zos.putNextEntry(new java.util.zip.ZipEntry("b/" + inner));
-                                zos.write(smaliR.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                zos.putNextEntry(new ZipEntry("b/" + inner));
+                                zos.write(smaliR.getBytes(StandardCharsets.UTF_8));
                                 zos.closeEntry();
                             }
                         }
@@ -1400,19 +1419,19 @@ public class CompareDexActivity extends BaseActivity {
         }).start();
     }
 
-    private static String readZipEntryText(java.util.zip.ZipFile zf, String entryName) {
+    private static String readZipEntryText(ZipFile zf, String entryName) {
         if (zf == null) return "";
-        java.util.zip.ZipEntry ze = zf.getEntry(entryName);
+        ZipEntry ze = zf.getEntry(entryName);
         if (ze == null) return "";
-        try (java.io.InputStream in = zf.getInputStream(ze)) {
-            return new String(readAllBytes(in), java.nio.charset.StandardCharsets.UTF_8);
+        try (InputStream in = zf.getInputStream(ze)) {
+            return new String(readAllBytes(in), StandardCharsets.UTF_8);
         } catch (Exception e) {
             return "";
         }
     }
 
-    private static byte[] readAllBytes(java.io.InputStream in) throws java.io.IOException {
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    private static byte[] readAllBytes(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int r;
         while ((r = in.read(buf)) != -1) out.write(buf, 0, r);

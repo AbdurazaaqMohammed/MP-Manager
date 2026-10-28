@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.utils;
 
 import com.android.apksig.ApkVerifier;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
 import java.io.File;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
@@ -9,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.BooleanSupplier;
 import java.util.zip.CRC32;
 
 /**
@@ -151,7 +155,7 @@ public final class ApkSignatureInfo {
         return new ApkSignatureInfo(apk, status, schemes.toString(), errors, certs, structural);
     }
 
-    private static boolean safe(java.util.function.BooleanSupplier supplier) {
+    private static boolean safe(BooleanSupplier supplier) {
         try {
             return Boolean.TRUE.equals(supplier.getAsBoolean());
         } catch (Throwable ignored) {
@@ -165,8 +169,8 @@ public final class ApkSignatureInfo {
      */
     public static boolean hasSignatureMaterial(File apk) {
         if (apk == null || !apk.isFile()) return false;
-        try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(apk)) {
-            for (net.lingala.zip4j.model.FileHeader header : zf.getFileHeaders()) {
+        try (ZipFile zf = new ZipFile(apk)) {
+            for (FileHeader header : zf.getFileHeaders()) {
                 String name = header.getFileName();
                 if (name == null) continue;
                 String upper = name.toUpperCase(Locale.US);

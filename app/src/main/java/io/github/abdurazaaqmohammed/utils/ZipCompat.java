@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
@@ -142,9 +143,9 @@ public final class ZipCompat {
 
     private static boolean isPasswordProblem(Throwable t) {
         for (Throwable c = t; c != null; c = c.getCause()) {
-            if (c instanceof net.lingala.zip4j.exception.ZipException
-                    && ((net.lingala.zip4j.exception.ZipException) c).getType()
-                    == net.lingala.zip4j.exception.ZipException.Type.WRONG_PASSWORD) return true;
+            if (c instanceof ZipException
+                    && ((ZipException) c).getType()
+                    == ZipException.Type.WRONG_PASSWORD) return true;
             if (c.getCause() == c) break;
         }
         return false;

@@ -102,6 +102,7 @@ import com.android.tools.smali.dexlib2.dexbacked.*;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -109,6 +110,7 @@ import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
+import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.RegexGuard;
@@ -544,7 +546,7 @@ public class SearchFragment extends Fragment {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, etFind,
+        KeyboardUtil.focusOnShow(dialog, etFind,
                 lastSearchQuery != null && !lastSearchQuery.isEmpty());
         dialog.show();
 
@@ -651,7 +653,7 @@ public class SearchFragment extends Fragment {
                 .setPositiveButton(android.R.string.ok, null)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(replaceDialog, etFind,
+        KeyboardUtil.focusOnShow(replaceDialog, etFind,
                 lastSearchQuery != null && !lastSearchQuery.isEmpty());
         replaceDialog.show();
 
@@ -2543,7 +2545,7 @@ public class SearchFragment extends Fragment {
                 String typeKey = type.substring(1, type.length() - 1);
                 String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(typeKey);
                 if (pending != null) {
-                    pending = modder.hub.dexeditor.smali.SmaliHelper.stripSmaliHeader(pending);
+                    pending = SmaliHelper.stripSmaliHeader(pending);
                     String dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
                     return "# " + dexFileName + "\n\n" + pending;
                 }

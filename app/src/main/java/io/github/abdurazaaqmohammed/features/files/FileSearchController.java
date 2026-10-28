@@ -1,13 +1,20 @@
 package io.github.abdurazaaqmohammed.features.files;
 
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Parcelable;
+import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -23,6 +30,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.apk.axml.ResourceTableParser;
+import com.apk.axml.aXMLDecoder;
+import com.apk.axml.serializableItems.ResEntry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -35,6 +45,7 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
@@ -49,8 +60,12 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * File search + find-in-files dialogs extracted from MainActivity.
@@ -199,10 +214,10 @@ public class FileSearchController {
             searchQuery.requestFocus();
             try {
                 if (dialog.getWindow() != null)
-                    dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-                android.view.inputmethod.InputMethodManager imm =
-                        (android.view.inputmethod.InputMethodManager) activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-                if (imm != null) imm.showSoftInput(searchQuery, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                    dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                InputMethodManager imm =
+                        (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showSoftInput(searchQuery, InputMethodManager.SHOW_IMPLICIT);
             } catch (Exception ignored) {
             }
             Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
@@ -428,7 +443,7 @@ public class FileSearchController {
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         int pad = dp(16);
         header.setPadding(pad, pad, pad, dp(8));
 
@@ -473,7 +488,7 @@ public class FileSearchController {
 
         LinearLayout bottomBar = new LinearLayout(activity);
         bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
         bottomBar.setPadding(dp(12), dp(4), dp(12), dp(4));
 
         Button expandBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
@@ -538,7 +553,7 @@ public class FileSearchController {
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 LinearLayout row = new LinearLayout(activity);
                 row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(dp(16), dp(8), dp(16), dp(8));
 
                 ImageView icon = new ImageView(activity);
@@ -563,7 +578,7 @@ public class FileSearchController {
 
                 TextView sub = new TextView(activity);
                 sub.setTextSize(12);
-                sub.setTextColor(android.graphics.Color.GRAY);
+                sub.setTextColor(Color.GRAY);
                 sub.setSingleLine(true);
                 sub.setEllipsize(TextUtils.TruncateAt.START);
                 textCol.addView(sub);
@@ -614,15 +629,15 @@ public class FileSearchController {
         };
         list.setAdapter(adapter);
 
-        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+        searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
-                String q = s != null ? s.toString().trim().toLowerCase(java.util.Locale.ROOT) : "";
+            @Override public void afterTextChanged(Editable s) {
+                String q = s != null ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
                 filteredResults.clear();
                 for (File f : allResults) {
-                    if (q.isEmpty() || f.getName().toLowerCase(java.util.Locale.ROOT).contains(q)
-                            || (f.getParent() != null && f.getParent().toLowerCase(java.util.Locale.ROOT).contains(q))) {
+                    if (q.isEmpty() || f.getName().toLowerCase(Locale.ROOT).contains(q)
+                            || (f.getParent() != null && f.getParent().toLowerCase(Locale.ROOT).contains(q))) {
                         filteredResults.add(f);
                     }
                 }
@@ -814,7 +829,7 @@ public class FileSearchController {
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         int pad = dp(16);
         header.setPadding(pad, pad, pad, dp(8));
 
@@ -859,7 +874,7 @@ public class FileSearchController {
 
         LinearLayout bottomBar = new LinearLayout(activity);
         bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
         bottomBar.setPadding(dp(12), dp(4), dp(12), dp(4));
 
         View spacer = new View(activity);
@@ -915,7 +930,7 @@ public class FileSearchController {
                 row.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(dp(16), dp(8), dp(16), dp(8));
 
                 ImageView icon = new ImageView(activity);
@@ -940,7 +955,7 @@ public class FileSearchController {
 
                 TextView sub = new TextView(activity);
                 sub.setTextSize(12);
-                sub.setTextColor(android.graphics.Color.GRAY);
+                sub.setTextColor(Color.GRAY);
                 sub.setSingleLine(true);
                 sub.setEllipsize(TextUtils.TruncateAt.START);
                 textCol.addView(sub);
@@ -991,15 +1006,15 @@ public class FileSearchController {
         };
         list.setAdapter(adapter);
 
-        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+        searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
-                String q = s != null ? s.toString().trim().toLowerCase(java.util.Locale.ROOT) : "";
+            @Override public void afterTextChanged(Editable s) {
+                String q = s != null ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
                 filteredResults.clear();
                 for (ZipEntryInfo entry : allResults) {
-                    if (q.isEmpty() || entry.getName().toLowerCase(java.util.Locale.ROOT).contains(q)
-                            || entry.getFullPath().toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                    if (q.isEmpty() || entry.getName().toLowerCase(Locale.ROOT).contains(q)
+                            || entry.getFullPath().toLowerCase(Locale.ROOT).contains(q)) {
                         filteredResults.add(entry);
                     }
                 }
@@ -1029,8 +1044,8 @@ public class FileSearchController {
         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
         File targetFile = null;
         if (a instanceof MainFilesArrayAdapter adapter) {
-            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) {
-                targetFile = ((io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) adapter.values[0]).getZipFile();
+            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof ZipEntryInfo) {
+                targetFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
             }
         }
         if (targetFile == null) {
@@ -1074,7 +1089,7 @@ public class FileSearchController {
                     }
                     runFindInFiles(startDir, q, cbSubfolders.isChecked(), cbCase.isChecked(), cbRegex.isChecked());
                 }).create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(findDialog, queryInput, false);
+        KeyboardUtil.focusOnShow(findDialog, queryInput, false);
         findDialog.show();
     }
 
@@ -1112,8 +1127,8 @@ public class FileSearchController {
         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
         File targetFile = null;
         if (a instanceof MainFilesArrayAdapter adapter) {
-            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) {
-                targetFile = ((io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo) adapter.values[0]).getZipFile();
+            if (adapter.isInZip && adapter.values != null && adapter.values.length > 0 && adapter.values[0] instanceof ZipEntryInfo) {
+                targetFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
             }
         }
         if (targetFile == null) {
@@ -1151,7 +1166,7 @@ public class FileSearchController {
                     }
                     runXmlSearch(searchTarget, q, cbSubfolders.isChecked(), false, false);
                 }).create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(xmlDialog, queryInput, false);
+        KeyboardUtil.focusOnShow(xmlDialog, queryInput, false);
         xmlDialog.show();
     }
 
@@ -1209,7 +1224,7 @@ public class FileSearchController {
     }
 
     private void showContentHitsDialog(List<ContentHit> hits, String query, boolean regex, boolean matchCase) {
-        java.util.LinkedHashMap<String, XmlFileGroup> groupsMap = new java.util.LinkedHashMap<>();
+        LinkedHashMap<String, XmlFileGroup> groupsMap = new LinkedHashMap<>();
         for (ContentHit hit : hits) {
             String path = (hit.displayPath() != null && !hit.displayPath().isEmpty()) ? hit.displayPath() : hit.file().getName();
             XmlFileGroup group = groupsMap.get(path);
@@ -1227,7 +1242,7 @@ public class FileSearchController {
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         int pad = dp(16);
         header.setPadding(pad, pad, pad, dp(8));
 
@@ -1272,7 +1287,7 @@ public class FileSearchController {
 
         LinearLayout bottomBar = new LinearLayout(activity);
         bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
         bottomBar.setPadding(dp(12), dp(4), dp(12), dp(4));
 
         View spacer = new View(activity);
@@ -1324,7 +1339,7 @@ public class FileSearchController {
                 row.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
                 int pad = (int) (12 * activity.getResources().getDisplayMetrics().density + 0.5f);
                 row.setPadding(pad, dp(8), pad, dp(8));
 
@@ -1388,15 +1403,15 @@ public class FileSearchController {
         };
         list.setAdapter(adapter);
 
-        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+        searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
-                String q = s != null ? s.toString().trim().toLowerCase(java.util.Locale.ROOT) : "";
+            @Override public void afterTextChanged(Editable s) {
+                String q = s != null ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
                 filteredGroups.clear();
                 for (XmlFileGroup g : allGroups) {
-                    if (q.isEmpty() || g.fileName.toLowerCase(java.util.Locale.ROOT).contains(q)
-                            || g.directoryPath.toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                    if (q.isEmpty() || g.fileName.toLowerCase(Locale.ROOT).contains(q)
+                            || g.directoryPath.toLowerCase(Locale.ROOT).contains(q)) {
                         filteredGroups.add(g);
                     }
                 }
@@ -1422,7 +1437,7 @@ public class FileSearchController {
                 String searchQuery = query;
                 boolean isRegex = regex;
                 if (!isRegex && (query.contains("*") || query.contains("?"))) {
-                    java.util.regex.Pattern p = io.github.abdurazaaqmohammed.domain.files.FileSearch.compilePattern(query, matchCase, false);
+                    Pattern p = FileSearch.compilePattern(query, matchCase, false);
                     if (p != null) {
                         searchQuery = p.pattern();
                         isRegex = true;
@@ -1437,8 +1452,8 @@ public class FileSearchController {
                         && entryPath != null && !entryPath.isEmpty() && !entryPath.equals(target.getName());
 
                 if (isArchive) {
-                    try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(target)) {
-                        java.util.zip.ZipEntry ze = zf.getEntry(entryPath);
+                    try (ZipFile zf = new ZipFile(target)) {
+                        ZipEntry ze = zf.getEntry(entryPath);
                         if (ze == null) return;
                         File cacheDir = new File(activity.getCacheDir(), "xml_search_" + System.currentTimeMillis());
                         cacheDir.mkdirs();
@@ -1461,7 +1476,7 @@ public class FileSearchController {
                         }
                         if (isAxml) {
                             intent.putExtra("axml", true);
-                            java.util.zip.ZipEntry rssEntry = zf.getEntry("resources.arsc");
+                            ZipEntry rssEntry = zf.getEntry("resources.arsc");
                             if (rssEntry != null) {
                                 File tmpRss = new File(cacheDir, "resources.arsc");
                                 try (InputStream ris = zf.getInputStream(rssEntry);
@@ -1473,15 +1488,15 @@ public class FileSearchController {
                                 intent.putExtra("rssPath", tmpRss.getAbsolutePath());
                                 try (InputStream is2 = new FileInputStream(tempFile);
                                      InputStream ris2 = new FileInputStream(tmpRss)) {
-                                    com.apk.axml.ResourceTableParser rtp = new com.apk.axml.ResourceTableParser(ris2);
-                                    List<com.apk.axml.serializableItems.ResEntry> entries = rtp.parse();
-                                    com.apk.axml.aXMLDecoder decoder = new com.apk.axml.aXMLDecoder(is2, entries);
+                                    ResourceTableParser rtp = new ResourceTableParser(ris2);
+                                    List<ResEntry> entries = rtp.parse();
+                                    aXMLDecoder decoder = new aXMLDecoder(is2, entries);
                                     intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
                                 } catch (Exception ignored) {
                                 }
                             } else {
                                 try (InputStream is2 = new FileInputStream(tempFile)) {
-                                    com.apk.axml.aXMLDecoder decoder = new com.apk.axml.aXMLDecoder(is2);
+                                    aXMLDecoder decoder = new aXMLDecoder(is2);
                                     intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
                                 } catch (Exception ignored) {
                                 }
@@ -1509,7 +1524,7 @@ public class FileSearchController {
                     } else if (isAxml) {
                         try (InputStream is = FileUtils.getInputStream(file)) {
                             intent.putExtra("axml", true);
-                            intent.putExtra(Intent.EXTRA_TEXT, new com.apk.axml.aXMLDecoder(is).decodeAsString().trim());
+                            intent.putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is).decodeAsString().trim());
                         } catch (Exception ignored) {}
                     }
                 }

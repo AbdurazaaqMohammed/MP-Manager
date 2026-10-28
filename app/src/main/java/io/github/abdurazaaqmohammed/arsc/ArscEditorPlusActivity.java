@@ -56,9 +56,11 @@ import net.lingala.zip4j.model.FileHeader;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -73,6 +75,7 @@ import io.github.abdurazaaqmohammed.features.translation.TranslationExportDialog
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -360,7 +363,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, null)
                 .create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, etFind,
+        KeyboardUtil.focusOnShow(dialog, etFind,
                 lastSearchQuery != null && !lastSearchQuery.isEmpty());
         dialog.show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -1087,27 +1090,27 @@ public class ArscEditorPlusActivity extends BaseActivity {
             int typeId = spec.getId();
             StringBuilder sb = new StringBuilder();
             sb.append("<?xml version='1.0' encoding='utf-8' ?>\n");
-            sb.append(String.format(java.util.Locale.US, "<type id=\"0x%02x\">\n", typeId));
+            sb.append(String.format(Locale.US, "<type id=\"0x%02x\">\n", typeId));
 
             List<ResourceEntry> entries = ArscData.resourcesOf(spec);
-            java.util.Collections.sort(entries, (a, b) -> Integer.compare(a.getResourceId(), b.getResourceId()));
+            Collections.sort(entries, (a, b) -> Integer.compare(a.getResourceId(), b.getResourceId()));
             for (ResourceEntry entry : entries) {
                 if (entry == null) continue;
                 String name = entry.getName();
                 int resId = entry.getResourceId();
-                sb.append(String.format(java.util.Locale.US, "  <entry id=\"0x%08x\" name=\"%s\" />\n", resId, name != null ? name : ""));
+                sb.append(String.format(Locale.US, "  <entry id=\"0x%08x\" name=\"%s\" />\n", resId, name != null ? name : ""));
             }
             sb.append("</type>\n");
 
             String typeName = spec.getTypeName();
             File tempXml = new File(getCacheDir(), (typeName != null ? typeName : "type") + "_type_info.xml");
             try (FileOutputStream fos = new FileOutputStream(tempXml)) {
-                fos.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             }
 
             Intent intent = new Intent(this, TextEditorActivity.class);
             intent.setAction(Intent.ACTION_VIEW);
-            intent.setData(android.net.Uri.fromFile(tempXml));
+            intent.setData(Uri.fromFile(tempXml));
             startActivity(intent);
         } catch (Exception e) {
             Extensions.showMessage(this, "Failed to generate type-info: " + e.getMessage());

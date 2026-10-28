@@ -774,8 +774,8 @@ public class PlayerManager {
         if (mediaPlayer != null) {
             msec = Math.max(0, msec);
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    mediaPlayer.seekTo(msec, android.media.MediaPlayer.SEEK_CLOSEST);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mediaPlayer.seekTo(msec, MediaPlayer.SEEK_CLOSEST);
                 } else {
                     mediaPlayer.seekTo(msec);
                 }

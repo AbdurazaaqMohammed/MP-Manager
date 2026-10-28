@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.core.ui.base;
 
 import android.R;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
@@ -12,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
 /**
  * Single place for activity-wide UI behaviour.
@@ -46,17 +48,17 @@ public abstract class BaseActivity extends AppCompatActivity {
         super.onResume();
         if (getIntent() != null && getIntent().getBooleanExtra("restore_progress", false)) {
             getIntent().removeExtra("restore_progress");
-            io.github.abdurazaaqmohammed.utils.ProgressManager.restoreHidden();
+            ProgressManager.restoreHidden();
         }
         // Pick up a font changed in Settings while this activity was in background.
         if (appliedFontEpoch != AppFont.currentEpoch()) recreate();
     }
 
     @Override
-    protected void onNewIntent(android.content.Intent intent) {
+    protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (intent != null && intent.getBooleanExtra("restore_progress", false)) {
-            io.github.abdurazaaqmohammed.utils.ProgressManager.restoreHidden();
+            ProgressManager.restoreHidden();
         }
     }
 

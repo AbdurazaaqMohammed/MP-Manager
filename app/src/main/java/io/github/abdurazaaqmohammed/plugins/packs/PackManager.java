@@ -5,9 +5,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 
 import dalvik.system.DexClassLoader;
 
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPack;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
@@ -109,11 +112,11 @@ public final class PackManager {
 
     /** Ask the foreground activity to rebuild the sidebar with loaded packs. */
     public static void notifySidebar() {
-        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(() -> {
             try {
-                io.github.abdurazaaqmohammed.MPManager.MainActivity activity =
-                        io.github.abdurazaaqmohammed.MPManager.MainActivity.current();
+                MainActivity activity =
+                        MainActivity.current();
                 if (activity != null) {
                     activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
                 }

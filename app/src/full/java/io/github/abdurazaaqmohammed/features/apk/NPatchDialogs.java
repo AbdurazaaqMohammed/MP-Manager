@@ -2,10 +2,11 @@ package io.github.abdurazaaqmohammed.features.apk;
 
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.CheckBox;
@@ -21,11 +22,18 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.function.IntConsumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -381,7 +389,7 @@ public class NPatchDialogs {
     }
 
     private static final String PREF_PROFILES = "npatch_profiles";
-    private static final java.lang.reflect.Type PROFILE_MAP_TYPE =
+    private static final Type PROFILE_MAP_TYPE =
             new TypeToken<LinkedHashMap<String, Profile>>() { }.getType();
 
     private static Map<String, Profile> loadProfiles(SharedPreferences settings) {
@@ -546,7 +554,7 @@ public class NPatchDialogs {
         settings.edit().putInt(key, value).apply();
     }
 
-    private void parseInt(SharedPreferences settings, CharSequence s, String key, java.util.function.IntConsumer setter) {
+    private void parseInt(SharedPreferences settings, CharSequence s, String key, IntConsumer setter) {
         try {
             int value = Integer.parseInt(s.toString());
             setter.accept(value);
@@ -555,12 +563,12 @@ public class NPatchDialogs {
         }
     }
 
-    private abstract static class SimpleTextWatcher implements android.text.TextWatcher {
+    private abstract static class SimpleTextWatcher implements TextWatcher {
         @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
         @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
             onChanged(s);
         }
-        @Override public void afterTextChanged(android.text.Editable s) { }
+        @Override public void afterTextChanged(Editable s) { }
         protected abstract void onChanged(CharSequence s);
     }
 
@@ -598,8 +606,8 @@ public class NPatchDialogs {
                 } catch (Throwable t) {
                     npatchLogger.e(rootCauseMessage(t));
                     try {
-                        java.io.PrintWriter pw = new java.io.PrintWriter(
-                                new java.io.File(context.getCacheDir(), "npatch-last-error.txt"), "UTF-8");
+                        PrintWriter pw = new PrintWriter(
+                                new File(context.getCacheDir(), "npatch-last-error.txt"), "UTF-8");
                         pw.print(rootCauseMessage(t));
                         for (Throwable c = t; c != null; c = c.getCause()) {
                             for (StackTraceElement el : c.getStackTrace()) pw.println("    at " + el);
@@ -636,10 +644,10 @@ public class NPatchDialogs {
     private void exportUserKeys(SignWrapper sw, Options options) throws Exception {
         options.userKeyStoreBks = new File(context.getCacheDir(), "npatch-user-key.bks");
         options.userKeyStoreDefault = new File(context.getCacheDir(), "npatch-user-key."
-                + java.security.KeyStore.getDefaultType().toLowerCase(java.util.Locale.ROOT));
+                + KeyStore.getDefaultType().toLowerCase(Locale.ROOT));
         sw.exportKey(options.userKeyStoreBks, "BKS", BKS_PASSWORD, BKS_ALIAS);
         try {
-            sw.exportKey(options.userKeyStoreDefault, java.security.KeyStore.getDefaultType(),
+            sw.exportKey(options.userKeyStoreDefault, KeyStore.getDefaultType(),
                     BKS_PASSWORD, BKS_ALIAS);
         } catch (Exception e) {
             // LSPatch falls back gracefully only if we pass a file it can open;
@@ -789,7 +797,7 @@ public class NPatchDialogs {
 
     private static String baseName(File srcApk) {
         String base = srcApk.getName();
-        if (base.toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) {
+        if (base.toLowerCase(Locale.ROOT).endsWith(".apk")) {
             base = base.substring(0, base.length() - 4);
         }
         return base;
@@ -825,8 +833,8 @@ public class NPatchDialogs {
             }
         }
         if (!renamed.equals(produced) && !produced.renameTo(renamed)) {
-            java.nio.file.Files.copy(produced.toPath(), renamed.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(produced.toPath(), renamed.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING);
             produced.delete();
         }
         return renamed;

@@ -10,8 +10,6 @@ import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.lang.reflect.Type;
@@ -219,7 +217,7 @@ public final class RecycleBin {
     }
 
     private static final class AppGsonHolder {
-        static final Gson GSON = io.github.abdurazaaqmohammed.utils.AppGson.get();
+        static final Gson GSON = AppGson.get();
     }
 
     public static final class Meta {

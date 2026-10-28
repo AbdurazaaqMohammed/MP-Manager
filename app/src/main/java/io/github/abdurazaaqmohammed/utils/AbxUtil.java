@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.util.Base64;
+
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
 
@@ -12,6 +14,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -294,7 +297,7 @@ public final class AbxUtil {
             case TYPE_BYTES_HEX:
                 return toHex(readBytes(data));
             case TYPE_BYTES_BASE64:
-                return android.util.Base64.encodeToString(readBytes(data), android.util.Base64.NO_WRAP);
+                return Base64.encodeToString(readBytes(data), Base64.NO_WRAP);
             default:
                 throw new IOException(String.format("Unknown ABX type nibble 0x%02X", type));
         }
@@ -364,7 +367,7 @@ public final class AbxUtil {
         XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
         factory.setNamespaceAware(false);
         XmlPullParser parser = factory.newPullParser();
-        parser.setInput(new java.io.StringReader(xml));
+        parser.setInput(new StringReader(xml));
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream data = new DataOutputStream(bos);
         data.write(MAGIC);

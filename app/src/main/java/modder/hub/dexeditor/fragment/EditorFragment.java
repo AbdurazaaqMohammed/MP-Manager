@@ -38,6 +38,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -57,6 +58,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -87,6 +89,7 @@ import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.CustomAutoComplete;
@@ -460,7 +463,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 Log.e("EditorFragment", "Smali language load error", e);
             }
             cachedColorScheme = TextMateColorScheme.create(registry);
-            cachedColorScheme.setColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) {
             Log.e("EditorFragment", "Static init error", e);
@@ -472,13 +475,13 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             String pluginId = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.getCurrentId(context);
             if (pluginId != null) {
                 int nightMode = io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.modeFor(context, pluginId);
-                if (nightMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";
-                if (nightMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO) return "light.json";
+                if (nightMode == AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";
+                if (nightMode == AppCompatDelegate.MODE_NIGHT_NO) return "light.json";
             }
         } catch (Exception ignored) {
         }
-        boolean dark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
         return dark ? "dark.json" : "light.json";
     }
 

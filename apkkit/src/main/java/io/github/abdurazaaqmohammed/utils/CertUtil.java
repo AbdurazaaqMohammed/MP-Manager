@@ -10,6 +10,7 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
@@ -20,6 +21,8 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -184,7 +187,7 @@ public class CertUtil {
         return getFingerprint(cert, "SHA-256");
     }
 
-    public static String formatPrincipal(java.security.Principal principal) {
+    public static String formatPrincipal(Principal principal) {
         if (principal == null) return "";
         return cleanDistinguishedName(principal.getName());
     }
@@ -193,11 +196,11 @@ public class CertUtil {
         if (dn == null || dn.isEmpty()) return "";
         String res = dn.replace("OID.1.2.840.113549.1.9.1=", "EMAILADDRESS=")
                        .replace("1.2.840.113549.1.9.1=", "EMAILADDRESS=");
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(=#)([0-9a-fA-F]{4,})").matcher(res);
+        Matcher m = Pattern.compile("(=#)([0-9a-fA-F]{4,})").matcher(res);
         StringBuffer sb = new StringBuffer();
         while (m.find()) {
             String decoded = decodeDerHexString(m.group(2));
-            m.appendReplacement(sb, "=" + java.util.regex.Matcher.quoteReplacement(decoded));
+            m.appendReplacement(sb, "=" + Matcher.quoteReplacement(decoded));
         }
         m.appendTail(sb);
         return sb.toString();

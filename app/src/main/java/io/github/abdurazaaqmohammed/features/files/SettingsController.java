@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -146,7 +147,7 @@ public class SettingsController {
             }
         } catch (Exception ignored) {
         }
-        android.os.Process.killProcess(android.os.Process.myPid());
+        Process.killProcess(Process.myPid());
         System.exit(0);
     }
 

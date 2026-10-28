@@ -8,6 +8,7 @@ import androidx.preference.PreferenceManager;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import rikka.shizuku.Shizuku;
 
 /**
  * Startup privilege handling (root / Shizuku working mode).
@@ -60,7 +61,7 @@ public final class StartupPrivileges {
 
         if (!gotRoot) {
             if (reqShell) {
-                if (ShizukuManager.hasPermission() || rikka.shizuku.Shizuku.pingBinder()) {
+                if (ShizukuManager.hasPermission() || Shizuku.pingBinder()) {
                     rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
                     handler.post(refreshSidebar);
                 }

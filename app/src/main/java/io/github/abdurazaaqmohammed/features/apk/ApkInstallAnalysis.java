@@ -3,15 +3,18 @@ package io.github.abdurazaaqmohammed.features.apk;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.content.pm.SigningInfo;
 import android.os.Build;
 
 import androidx.annotation.Nullable;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -243,7 +246,7 @@ public final class ApkInstallAnalysis {
 
     private static String installedSignerSha256(PackageInfo info) {
         try {
-            android.content.pm.Signature[] signatures;
+            Signature[] signatures;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 SigningInfo si = info.signingInfo;
                 if (si == null) return null;
@@ -276,7 +279,7 @@ public final class ApkInstallAnalysis {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 SigningInfo si = info.signingInfo;
                 if (si == null) return null;
-                android.content.pm.Signature[] signatures = si.hasMultipleSigners()
+                Signature[] signatures = si.hasMultipleSigners()
                         ? si.getApkContentsSigners() : si.getSigningCertificateHistory();
                 return toX509(signatures);
             }
@@ -288,10 +291,10 @@ public final class ApkInstallAnalysis {
 
     /** SigningInfo hands back bare signatures; rebuild the certificate for the DN. */
     @Nullable
-    private static X509Certificate toX509(android.content.pm.Signature[] signatures) {
+    private static X509Certificate toX509(Signature[] signatures) {
         if (signatures == null || signatures.length == 0) return null;
-        try (InputStream in = new java.io.ByteArrayInputStream(signatures[0].toByteArray())) {
-            return (X509Certificate) java.security.cert.CertificateFactory.getInstance("X.509")
+        try (InputStream in = new ByteArrayInputStream(signatures[0].toByteArray())) {
+            return (X509Certificate) CertificateFactory.getInstance("X.509")
                     .generateCertificate(in);
         } catch (Throwable t) {
             return null;

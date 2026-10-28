@@ -4,14 +4,18 @@ import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.InstallSourceInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,6 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis;
 import io.github.abdurazaaqmohammed.shizuku.IFileService;
 import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
 
@@ -207,7 +212,7 @@ public final class PrivilegedInstaller {
     public static boolean hasSignatureMismatch(Context context, List<File> apkFiles) {
         try {
             if (apkFiles == null || apkFiles.isEmpty()) return false;
-            return io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis
+            return ApkInstallAnalysis
                     .analyze(context, apkFiles.get(0)).isDifferentSigner();
         } catch (Throwable t) {
             return false;
@@ -433,7 +438,7 @@ public final class PrivilegedInstaller {
 
     private static void copyFile(File src, File dst) throws Exception {
         try (InputStream in = new FileInputStream(src);
-             OutputStream out = new java.io.FileOutputStream(dst)) {
+             OutputStream out = new FileOutputStream(dst)) {
             byte[] buf = new byte[65536];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
@@ -527,7 +532,7 @@ public final class PrivilegedInstaller {
     /** Hidden-API write of the INSTALL_* flags onto a session; silently skipped when blocked. */
     public static void applyInstallFlags(PackageInstaller.SessionParams params, int flags) {
         try {
-            java.lang.reflect.Field f = PackageInstaller.SessionParams.class.getDeclaredField("installFlags");
+            Field f = PackageInstaller.SessionParams.class.getDeclaredField("installFlags");
             f.setAccessible(true);
             int cur = f.getInt(params);
             f.setInt(params, cur | flags | FLAG_REPLACE_EXISTING);
@@ -542,7 +547,7 @@ public final class PrivilegedInstaller {
         try {
             PackageManager pm = context.getPackageManager();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                android.content.pm.InstallSourceInfo info = pm.getInstallSourceInfo(packageName);
+                InstallSourceInfo info = pm.getInstallSourceInfo(packageName);
                 if (info != null && info.getInstallingPackageName() != null)
                     return info.getInstallingPackageName();
             }
@@ -556,6 +561,6 @@ public final class PrivilegedInstaller {
     /** Share intent used by the "open Play Store page" affordance. */
     public static Intent playStoreIntent(String packageName) {
         return new Intent(Intent.ACTION_VIEW,
-                android.net.Uri.parse("market://details?id=" + packageName));
+                Uri.parse("market://details?id=" + packageName));
     }
 }

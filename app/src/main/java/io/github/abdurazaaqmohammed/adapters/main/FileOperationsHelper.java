@@ -1,17 +1,14 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -23,7 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.Locale;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
@@ -69,6 +66,7 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class FileOperationsHelper {
 
@@ -248,7 +246,7 @@ public class FileOperationsHelper {
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
             // Browsing a 7z/rar/tar: entries cannot be written back into it.
-            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            Extensions.showMessage(context, R.string.archive_not_editable);
             return true;
         }
         if (destIsZip) {
@@ -521,7 +519,7 @@ public class FileOperationsHelper {
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
             // Browsing a 7z/rar/tar: entries cannot be written back into it.
-            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            Extensions.showMessage(context, R.string.archive_not_editable);
             return true;
         }
         if (destIsZip) {
@@ -1130,7 +1128,7 @@ public class FileOperationsHelper {
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
             // Browsing a 7z/rar/tar: entries cannot be written back into it.
-            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, R.string.archive_not_editable);
+            Extensions.showMessage(context, R.string.archive_not_editable);
             return true;
         }
         if (destIsZip) {
@@ -1271,7 +1269,7 @@ public class FileOperationsHelper {
 
     /** Entry count for the extraction progress bar; 1 when the archive cannot be read cheaply. */
     private static int archiveEntryCount(File archive) {
-        String lower = archive.getName().toLowerCase(java.util.Locale.ROOT);
+        String lower = archive.getName().toLowerCase(Locale.ROOT);
         try {
             if (lower.endsWith(".zip")) return Math.max(1, ZipCompat.listHeadersOrEmpty(archive).size());
             File[] kids = archive.listFiles();
@@ -1289,7 +1287,7 @@ public class FileOperationsHelper {
             TextInputEditText input = new TextInputEditText(context);
             input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
             if (wrongRetry) input.setHint(R.string.wrong_unzip_password);
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+            new MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.password)
                     .setView(input)
                     .setPositiveButton(android.R.string.ok, (d, w) -> result[0] = passwordOf(input))

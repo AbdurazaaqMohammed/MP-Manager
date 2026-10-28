@@ -55,6 +55,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.CompoundButtonCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
@@ -149,7 +150,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         try {
             TypedValue value = new TypedValue();
             if (context.getTheme().resolveAttribute(attr, value, true) && value.resourceId != 0) {
-                return androidx.core.content.ContextCompat.getColor(context, value.resourceId);
+                return ContextCompat.getColor(context, value.resourceId);
             }
             if (value.data != 0) return value.data;
         } catch (Exception ignored) {

@@ -63,6 +63,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -155,12 +156,12 @@ public class BaksmaliWriter extends DexFormattedWriter {
      * scan-free {@link IndentingWriter#writeNoNewline} path. Purely a memo: evicting or
      * clearing it never changes output, only speed.
      */
-    private static final java.util.concurrent.ConcurrentHashMap<String, String> TYPE_FORMAT_CACHE =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> TYPE_FORMAT_CACHE =
+            new ConcurrentHashMap<>();
 
     /** Same memo for simple names (quoted form when the name contains a space separator). */
-    private static final java.util.concurrent.ConcurrentHashMap<String, String> NAME_FORMAT_CACHE =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> NAME_FORMAT_CACHE =
+            new ConcurrentHashMap<>();
 
     /** Coarse cap: the caches hold at most this many entries before being cleared wholesale. */
     private static final int FORMAT_CACHE_MAX = 1 << 15;

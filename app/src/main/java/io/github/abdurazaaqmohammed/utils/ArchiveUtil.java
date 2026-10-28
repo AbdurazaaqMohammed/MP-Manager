@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import org.apache.commons.compress.PasswordRequiredException;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.compress.archivers.sevenz.SevenZMethod;
@@ -7,11 +8,8 @@ import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 
 import com.github.junrar.Archive;
@@ -19,6 +17,7 @@ import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -28,10 +27,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.InflaterInputStream;
 
 public class ArchiveUtil {
 
@@ -43,7 +44,7 @@ public class ArchiveUtil {
             byte[] buf = new byte[256];
             int n = is.read(buf);
             if (n < 11) return false;
-            String header = new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8);
+            String header = new String(buf, 0, n, StandardCharsets.UTF_8);
             return header.startsWith("MIUI BACKUP") || header.startsWith("ANDROID BACKUP");
         } catch (Exception ignored) {
             return false;
@@ -153,7 +154,7 @@ public class ArchiveUtil {
                 !"0".equals(compressionStr.trim()) &&
                 !"none".equalsIgnoreCase(compressionStr.trim());
 
-        InputStream tarStream = isCompressed ? new java.util.zip.InflaterInputStream(raw) : raw;
+        InputStream tarStream = isCompressed ? new InflaterInputStream(raw) : raw;
         extractTar(tarStream, destDir, preserveTime);
     }
 
@@ -219,7 +220,7 @@ public class ArchiveUtil {
         try (ZipFile zf = new ZipFile(archive)) {
             if (password != null) zf.setPassword(password);
             zf.extractAll(destDir.getAbsolutePath());
-        } catch (net.lingala.zip4j.exception.ZipException e) {
+        } catch (ZipException e) {
             if (password != null || isPasswordError(e)) throw e;
             ZipCompat.extractAll(archive, destDir, preserveTime);
         }
@@ -236,7 +237,7 @@ public class ArchiveUtil {
         if (type == ArchiveBrowseUtil.ArchiveType.ZIP) {
             try (ZipFile zf = new ZipFile(archive)) {
                 return zf.isEncrypted();
-            } catch (net.lingala.zip4j.exception.ZipException e) {
+            } catch (ZipException e) {
                 // zip4j cannot walk archives with unknown compression methods;
                 // ask the central directory directly instead of failing.
                 for (net.lingala.zip4j.model.FileHeader fh : ZipCompat.listHeaders(archive)) {
@@ -248,7 +249,7 @@ public class ArchiveUtil {
         if (type == ArchiveBrowseUtil.ArchiveType.SEVEN_Z) {
             try (SevenZFile ignored = ArchiveBrowseUtil.openSevenZ(archive, null)) {
                 return false;
-            } catch (org.apache.commons.compress.PasswordRequiredException e) {
+            } catch (PasswordRequiredException e) {
                 return true;
             }
         }
@@ -261,10 +262,10 @@ public class ArchiveUtil {
      */
     public static boolean isPasswordError(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
-            if (t instanceof net.lingala.zip4j.exception.ZipException
-                    && ((net.lingala.zip4j.exception.ZipException) t).getType() == net.lingala.zip4j.exception.ZipException.Type.WRONG_PASSWORD)
+            if (t instanceof ZipException
+                    && ((ZipException) t).getType() == ZipException.Type.WRONG_PASSWORD)
                 return true;
-            if (t instanceof org.apache.commons.compress.PasswordRequiredException) return true;
+            if (t instanceof PasswordRequiredException) return true;
             if (t == t.getCause()) break;
         }
         return false;

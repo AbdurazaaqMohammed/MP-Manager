@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.features.files;
 
-import android.content.SharedPreferences;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -153,7 +153,7 @@ public class RightMenuController {
         itemLayout.setGravity(Gravity.CENTER_VERTICAL);
         int padH = (int) (18 * activity.getResources().getDisplayMetrics().density);
         itemLayout.setPadding(padH, 0, padH, 0);
-        android.util.TypedValue outValue = new android.util.TypedValue();
+        TypedValue outValue = new TypedValue();
         activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
         itemLayout.setBackgroundResource(outValue.resourceId);
 
@@ -163,7 +163,7 @@ public class RightMenuController {
         iconLp.setMarginEnd((int) (16 * activity.getResources().getDisplayMetrics().density));
         icon.setLayoutParams(iconLp);
         icon.setImageResource(iconRes);
-        android.util.TypedValue colorOnSurface = new android.util.TypedValue();
+        TypedValue colorOnSurface = new TypedValue();
         activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, colorOnSurface, true);
         icon.setColorFilter(colorOnSurface.data);
         itemLayout.addView(icon);
@@ -171,7 +171,7 @@ public class RightMenuController {
         TextView text = new TextView(activity);
         text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
         text.setText(title);
-        text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         text.setTextColor(colorOnSurface.data);
         itemLayout.addView(text);
 

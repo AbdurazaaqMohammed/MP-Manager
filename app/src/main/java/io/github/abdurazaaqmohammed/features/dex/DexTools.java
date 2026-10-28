@@ -11,12 +11,13 @@ import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
+import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
-import com.android.tools.smali.baksmali.Baksmali;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcodes;
@@ -26,11 +27,15 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +45,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -48,6 +60,7 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
 import io.github.abdurazaaqmohammed.utils.DexStringUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -483,17 +496,17 @@ public class DexTools {
                 List<? extends ClassDef> classDefs = new ArrayList<>(dex.getClasses());
                 int totalClasses = classDefs.size();
                 int jobs = Math.max(1, Runtime.getRuntime().availableProcessors());
-                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(jobs);
-                java.util.concurrent.BlockingQueue<FastSmaliEntry> queue = new java.util.concurrent.LinkedBlockingQueue<>(512);
+                ExecutorService executor = Executors.newFixedThreadPool(jobs);
+                BlockingQueue<FastSmaliEntry> queue = new LinkedBlockingQueue<>(512);
 
                 Thread writerThread = new Thread(() -> {
-                    try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(
-                            new java.io.BufferedOutputStream(new java.io.FileOutputStream(outZip), 131072))) {
+                    try (ZipOutputStream zos = new ZipOutputStream(
+                            new BufferedOutputStream(new FileOutputStream(outZip), 131072))) {
                         zos.setLevel(1);
                         while (true) {
                             FastSmaliEntry entry = queue.take();
                             if (entry == FastSmaliEntry.POISON) break;
-                            java.util.zip.ZipEntry ze = new java.util.zip.ZipEntry(entry.path);
+                            ZipEntry ze = new ZipEntry(entry.path);
                             ze.setTime(0);
                             zos.putNextEntry(ze);
                             zos.write(entry.bytes);
@@ -512,10 +525,10 @@ public class DexTools {
                             if (desc.charAt(0) != 'L' || desc.charAt(desc.length() - 1) != ';') return;
                             String path = desc.substring(1, desc.length() - 1) + ".smali";
                             ByteArrayOutputStream bos = new ByteArrayOutputStream(2048);
-                            java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.OutputStreamWriter(bos, StandardCharsets.UTF_8), 2048);
-                            com.android.tools.smali.baksmali.formatter.BaksmaliWriter bwWriter =
-                                    new com.android.tools.smali.baksmali.formatter.BaksmaliWriter(bw, options.implicitReferences ? cd.getType() : null);
-                            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(options, cd).writeTo(bwWriter);
+                            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(bos, StandardCharsets.UTF_8), 2048);
+                            BaksmaliWriter bwWriter =
+                                    new BaksmaliWriter(bw, options.implicitReferences ? cd.getType() : null);
+                            new ClassDefinition(options, cd).writeTo(bwWriter);
                             bwWriter.close();
                             queue.put(new FastSmaliEntry(path, bos.toByteArray()));
                         } catch (Exception ignored) {
@@ -524,7 +537,7 @@ public class DexTools {
                 }
 
                 executor.shutdown();
-                executor.awaitTermination(1, java.util.concurrent.TimeUnit.HOURS);
+                executor.awaitTermination(1, TimeUnit.HOURS);
                 queue.put(FastSmaliEntry.POISON);
                 writerThread.join();
 
@@ -563,9 +576,9 @@ public class DexTools {
             tempFile.createNewFile();
             // One generic stage covers every browsable archive format; the
             // special cases below work on the staged copy.
-            io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
+            ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
             if(name.endsWith(".dex")) {
-                if (io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(zipFile))
+                if (ArchiveBrowseUtil.isZipLike(zipFile))
                     preExtractAllDex(context, zipFile, false);
                 context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
             } else if (name.endsWith(".xml")) {
@@ -577,7 +590,7 @@ public class DexTools {
                 if(isAxml) {
                     try {
                         tmpRss = File.createTempFile("rss_", ".arsc", context.getCacheDir());
-                        io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
+                        ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
                     } catch (Exception rssFailure) {
                         // No resources.arsc alongside the binary xml: fall back
                         // to the plain text editor instead of failing the click.

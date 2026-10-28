@@ -11,6 +11,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.preference.PreferenceManager;
+
 import com.google.android.material.card.MaterialCardView;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -36,7 +38,7 @@ public final class SectionCollapse {
         View card = root.findViewById(cardId);
         if (!(card instanceof MaterialCardView)) return;
         Context context = card.getContext();
-        SharedPreferences prefs = androidx.preference.PreferenceManager
+        SharedPreferences prefs = PreferenceManager
                 .getDefaultSharedPreferences(context);
         applyToCard((MaterialCardView) card, prefs, key);
     }

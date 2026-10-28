@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
@@ -11,6 +12,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
@@ -30,8 +34,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -40,12 +46,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -725,8 +733,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         }
         boolean isFromFile = tab.file != null;
         try (InputStream raw = isFromFile ? FileUtils.getInputStream(tab.file) : getContentResolver().openInputStream(tab.fileUri);
-             java.io.BufferedInputStream bis = raw instanceof java.io.BufferedInputStream
-                     ? (java.io.BufferedInputStream) raw : new java.io.BufferedInputStream(raw)) {
+             BufferedInputStream bis = raw instanceof BufferedInputStream
+                     ? (BufferedInputStream) raw : new BufferedInputStream(raw)) {
             if (!tab.abx && AbxUtil.isAbxStream(bis)) {
                 tab.abx = true;
                 if (getCurrentTab() == tab) abx = true;
@@ -952,7 +960,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
             try {
                 AccessManager.copyFile(this, tmp.getPath(), tab.file.getAbsolutePath(), true);
-                if (!AccessManager.exists(this, tab.file.getAbsolutePath())) throw new java.io.IOException("copy failed");
+                if (!AccessManager.exists(this, tab.file.getAbsolutePath())) throw new IOException("copy failed");
             } finally {
                 //noinspection ResultOfMethodCallIgnored
                 tmp.delete();
@@ -985,12 +993,12 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
         boolean rootAvailable = false;
         try {
-            rootAvailable = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable() && tab.file != null;
+            rootAvailable = RootManager.getInstance(this).isRootAvailable() && tab.file != null;
         } catch (Exception ignored) {
         }
-        boolean shizukuUsable = io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()
+        boolean shizukuUsable = ShizukuShell.isGranted()
                 && tab.file != null
-                && io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile.isAndroidDataPath(tab.file);
+                && ShizukuFile.isAndroidDataPath(tab.file);
 
         MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.save_denied_title)
@@ -1009,13 +1017,13 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     /** "Save a copy": pick a destination folder and write the buffer there. */
     private void pickSaveCopyDir(EditorTab tab, String text) {
-        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties props =
-                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties();
-        props.selection_mode = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.SINGLE_MODE;
-        props.selection_type = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.DIR_SELECT;
-        props.root = android.os.Environment.getExternalStorageDirectory();
-        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog picker =
-                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog(this, props);
+        FilePickerDialog.Properties props =
+                new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        FilePickerDialog picker =
+                new FilePickerDialog(this, props);
         picker.setTitle(getString(R.string.save_copy));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;

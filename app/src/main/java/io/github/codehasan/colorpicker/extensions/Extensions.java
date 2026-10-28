@@ -29,6 +29,7 @@ import com.google.android.material.snackbar.Snackbar;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 
 public final class Extensions {
 
@@ -106,7 +107,7 @@ public final class Extensions {
             } catch (Exception ignored) {}
         }
         snackbar.setAction(R.string.details, v ->
-                new io.github.abdurazaaqmohammed.utils.ErrorUtil(activity)
+                new ErrorUtil(activity)
                         .showError(String.valueOf(details)))
                 .show();
     }

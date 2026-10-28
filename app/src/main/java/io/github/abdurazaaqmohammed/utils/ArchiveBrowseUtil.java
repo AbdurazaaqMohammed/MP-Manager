@@ -20,6 +20,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -429,7 +430,7 @@ public final class ArchiveBrowseUtil {
         if (type == ArchiveType.GZIP) {
             long len = archive.length();
             if (len >= 18) {
-                try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(archive, "r")) {
+                try (RandomAccessFile raf = new RandomAccessFile(archive, "r")) {
                     byte[] head = new byte[8];
                     raf.readFully(head);
                     mtime = u4le(head, 4);

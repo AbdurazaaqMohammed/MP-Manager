@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -21,7 +18,6 @@ import android.media.ThumbnailUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
-import android.text.TextUtils;
 import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.View;
@@ -30,10 +26,12 @@ import android.widget.TextView;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.preference.PreferenceManager;
 
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -41,16 +39,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 public class FileIconLoader {
@@ -67,8 +70,8 @@ public class FileIconLoader {
      * walk of a big tree hammers storage; racing it against listing and icon
      * I/O on cold start is what made opening the app feel slow.
      */
-    private static final java.util.concurrent.ScheduledExecutorService folderSizeService =
-            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+    private static final ScheduledExecutorService folderSizeService =
+            Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "folder-size");
                 t.setPriority(Thread.MIN_PRIORITY);
                 return t;
@@ -134,8 +137,8 @@ public class FileIconLoader {
      * leave the row without a date.
      */
     private static final int MAX_BACKEND_STATS_PER_LISTING = 48;
-    private final java.util.concurrent.atomic.AtomicInteger backendStatBudget =
-            new java.util.concurrent.atomic.AtomicInteger(MAX_BACKEND_STATS_PER_LISTING);
+    private final AtomicInteger backendStatBudget =
+            new AtomicInteger(MAX_BACKEND_STATS_PER_LISTING);
 
     private boolean claimBackendStatSlot(String tag) {
         if (backendStatBudget.getAndDecrement() <= 0) {
@@ -158,7 +161,7 @@ public class FileIconLoader {
         this.datePattern = UiPrefs.getDatePattern(context);
         String mode;
         try {
-            mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            mode = PreferenceManager.getDefaultSharedPreferences(context)
                     .getString("pref_folder_size_mode", "archive");
         } catch (Exception e) {
             mode = "archive";
@@ -452,27 +455,27 @@ public class FileIconLoader {
             fileDateView.setText(dateStr);
             return;
         }
-        Long cached = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(file);
+        Long cached = DirSizeCache.peek(file);
         if (cached != null) {
             fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(cached)));
             return;
         }
         fileDateView.setText(dateStr);
-        if (!io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.isReady()) return; // preload in flight; rows rebind and pick it up
+        if (!DirSizeCache.isReady()) return; // preload in flight; rows rebind and pick it up
         String tag = path;
         fileDateView.setTag(tag);
         folderSizeService.schedule(() -> {
             if (!tag.equals(fileDateView.getTag())) return;
             long size = calculateFolderSize(file, context);
             if (size < 0) return; // walk aborted; leave uncached so it can retry later
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(file, size);
-            io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            DirSizeCache.record(file, size);
+            DirSizeCache.scheduleSave();
             context.runOnUiThread(() -> {
                 if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
             });
-        }, SIZE_WALK_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, SIZE_WALK_DELAY_MS, TimeUnit.MILLISECONDS);
     }
 
     /** Delay before a folder-size walk starts, so listing and icons go first. */
@@ -499,7 +502,7 @@ public class FileIconLoader {
             } catch (Exception ignored) {}
         }
         long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;
-        java.util.ArrayDeque<File> stack = new java.util.ArrayDeque<>();
+        ArrayDeque<File> stack = new ArrayDeque<>();
         stack.push(dir);
         long total = 0;
         int visited = 0;
@@ -541,13 +544,13 @@ public class FileIconLoader {
         String name = file.getName();
         if (name == null || name.isEmpty()) return null;
         if (isDataRoot(listedDir)) {
-            return io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(name) ? name : null;
+            return RootManager.isPackageNameValid(name) ? name : null;
         }
         if (isDataAppRoot(listedDir)) {
             // Android 8+: /data/app/~~.../com.pkg-... or legacy /data/app/com.pkg-...
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(possiblePkg)) {
+            if (RootManager.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
             if (file.isDirectory()) {
@@ -560,22 +563,22 @@ public class FileIconLoader {
                         String cn = c.getName();
                         int cDash = cn.indexOf('-');
                         String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                        if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(cPkg)) {
+                        if (RootManager.isPackageNameValid(cPkg)) {
                             return cPkg;
                         }
                     }
-                } else if (io.github.abdurazaaqmohammed.utils.AccessManager.fileOpsOn(context)) {
+                } else if (AccessManager.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
-                        io.github.abdurazaaqmohammed.utils.RootManager.ShellResult r =
-                                io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context)
-                                        .executeFs("ls -1 -- " + io.github.abdurazaaqmohammed.utils.RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
+                        RootManager.ShellResult r =
+                                RootManager.getInstance(context)
+                                        .executeFs("ls -1 -- " + RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
                         if (r != null && r.isSuccess() && r.output() != null) {
                             for (String line : r.output().split("\\r?\\n")) {
                                 String cn = line.trim();
                                 int cDash = cn.indexOf('-');
                                 String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                                if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(cPkg)) {
+                                if (RootManager.isPackageNameValid(cPkg)) {
                                     return cPkg;
                                 }
                             }
@@ -587,7 +590,7 @@ public class FileIconLoader {
             // Inside ~~...: folders like com.example.app-hash
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(possiblePkg)) {
+            if (RootManager.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
         }

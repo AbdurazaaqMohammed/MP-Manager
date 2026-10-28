@@ -7,7 +7,6 @@ import android.net.Uri;
 
 import androidx.annotation.Nullable;
 
-import java.io.File;
 import java.util.Locale;
 import java.util.UUID;
 

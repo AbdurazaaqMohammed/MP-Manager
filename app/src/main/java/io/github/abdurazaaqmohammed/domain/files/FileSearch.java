@@ -1,13 +1,23 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
+import com.apk.axml.aXMLDecoder;
+
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Pure file-search logic extracted from MainActivity.
@@ -205,17 +215,17 @@ public final class FileSearch {
 
     private static void findInArchiveFiles(File archive, String needle, boolean searchSubfolders, boolean matchCase,
                                            boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
-        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(archive)) {
-            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+        try (ZipFile zf = new ZipFile(archive)) {
+            Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 if (hits.size() >= MAX_HITS) return;
-                java.util.zip.ZipEntry ze = en.nextElement();
+                ZipEntry ze = en.nextElement();
                 String name = ze.getName();
                 if (ze.isDirectory() || ze.getSize() > MAX_CONTENT_BYTES) continue;
                 if (!searchSubfolders && name.contains("/")) continue;
 
                 // Check text file extensions
-                String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+                String lowerName = name.toLowerCase(Locale.ROOT);
                 if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".webp")
                         || lowerName.endsWith(".so") || lowerName.endsWith(".dex") || lowerName.endsWith(".arsc")
                         || lowerName.endsWith(".pdf") || lowerName.endsWith(".gif") || lowerName.endsWith(".mp3")
@@ -226,7 +236,7 @@ public final class FileSearch {
                 scanned[0]++;
                 if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
 
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), java.nio.charset.StandardCharsets.UTF_8))) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), StandardCharsets.UTF_8))) {
                     String line;
                     int lineNo = 0;
                     while ((line = br.readLine()) != null) {
@@ -300,7 +310,7 @@ public final class FileSearch {
 
     private static void searchSingleXmlFile(File file, String displayName, String query, boolean matchCase,
             boolean regex, Pattern pattern, List<ContentHit> hits) {
-        try (java.io.InputStream is = new java.io.BufferedInputStream(new java.io.FileInputStream(file))) {
+        try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
             is.mark(4);
             byte[] magic = new byte[4];
             int r = is.read(magic);
@@ -309,7 +319,7 @@ public final class FileSearch {
             if (r == 4 && magic[0] == 0x03 && magic[1] == 0x00 && magic[2] == 0x08 && magic[3] == 0x00) {
                 // Binary Android XML
                 try {
-                    decodedXml = new com.apk.axml.aXMLDecoder(is).decodeAsString();
+                    decodedXml = new aXMLDecoder(is).decodeAsString();
                 } catch (Exception ignored) {
                 }
             }
@@ -340,11 +350,11 @@ public final class FileSearch {
 
     private static void searchInArchiveXml(File archive, String query, boolean searchSubfolders, boolean matchCase, boolean regex,
             Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
-        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(archive)) {
-            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+        try (ZipFile zf = new ZipFile(archive)) {
+            Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 if (hits.size() >= MAX_HITS) return;
-                java.util.zip.ZipEntry ze = en.nextElement();
+                ZipEntry ze = en.nextElement();
                 String name = ze.getName();
                 if (!ze.isDirectory() && name.toLowerCase().endsWith(".xml") && ze.getSize() < MAX_CONTENT_BYTES) {
                     if (!searchSubfolders && name.contains("/")) {
@@ -353,7 +363,7 @@ public final class FileSearch {
                     }
                     scanned[0]++;
                     if (progress != null) progress.onProgress(scanned[0]);
-                    try (java.io.InputStream is = new java.io.BufferedInputStream(zf.getInputStream(ze))) {
+                    try (InputStream is = new BufferedInputStream(zf.getInputStream(ze))) {
                         is.mark(4);
                         byte[] magic = new byte[4];
                         int r = is.read(magic);
@@ -361,13 +371,13 @@ public final class FileSearch {
                         String decoded = null;
                         if (r == 4 && magic[0] == 0x03 && magic[1] == 0x00 && magic[2] == 0x08 && magic[3] == 0x00) {
                             try {
-                                decoded = new com.apk.axml.aXMLDecoder(is).decodeAsString();
+                                decoded = new aXMLDecoder(is).decodeAsString();
                             } catch (Exception ignored) {
                             }
                         }
                         if (decoded == null) {
                             byte[] bytes = is.readAllBytes();
-                            decoded = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                            decoded = new String(bytes, StandardCharsets.UTF_8);
                         }
                         matchXmlLines(decoded, archive, name, query, matchCase, regex, pattern, hits);
                     } catch (Exception ignored) {
@@ -409,13 +419,13 @@ public final class FileSearch {
         if (prefix.startsWith("/")) prefix = prefix.substring(1);
         if (!prefix.isEmpty() && !prefix.endsWith("/")) prefix += "/";
 
-        String normQuery = matchCase ? query : query.toLowerCase(java.util.Locale.ROOT);
+        String normQuery = matchCase ? query : query.toLowerCase(Locale.ROOT);
 
-        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
-            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+        try (ZipFile zf = new ZipFile(zipFile)) {
+            Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 if (callback != null && callback.isCancelled()) break;
-                java.util.zip.ZipEntry ze = en.nextElement();
+                ZipEntry ze = en.nextElement();
                 String rawName = ze.getName().replace('\\', '/');
                 if (!prefix.isEmpty() && !rawName.startsWith(prefix)) continue;
 
@@ -437,7 +447,7 @@ public final class FileSearch {
                 if (pattern != null) {
                     matchName = pattern.matcher(fileName).find();
                 } else {
-                    matchName = matchCase ? fileName.contains(query) : fileName.toLowerCase(java.util.Locale.ROOT).contains(normQuery);
+                    matchName = matchCase ? fileName.contains(query) : fileName.toLowerCase(Locale.ROOT).contains(normQuery);
                 }
 
                 boolean matchSize = true;
@@ -451,11 +461,11 @@ public final class FileSearch {
                 if (!isDir && textInside != null && !textInside.isEmpty()) {
                     matchText = false;
                     if (len >= 0 && len < 10485760) {
-                        try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), java.nio.charset.StandardCharsets.UTF_8))) {
+                        try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), StandardCharsets.UTF_8))) {
                             String line;
                             while ((line = br.readLine()) != null) {
                                 if (matchCase ? line.contains(textInside)
-                                        : line.toLowerCase(java.util.Locale.ROOT).contains(textInside.toLowerCase(java.util.Locale.ROOT))) {
+                                        : line.toLowerCase(Locale.ROOT).contains(textInside.toLowerCase(Locale.ROOT))) {
                                     matchText = true;
                                     break;
                                 }

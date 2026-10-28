@@ -25,6 +25,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -53,6 +55,7 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ArscEditorActivity extends BaseActivity {
@@ -598,7 +601,7 @@ public class ArscEditorActivity extends BaseActivity {
         groupParams.topMargin = dp(8);
         root.addView(group, groupParams);
 
-        androidx.appcompat.app.AlertDialog valueDialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog valueDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.arsc_search_value))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -612,7 +615,7 @@ public class ArscEditorActivity extends BaseActivity {
                     pushHistory(q);
                     runSimpleSearch(q, kind);
                 }).create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(valueDialog, query, true);
+        KeyboardUtil.focusOnShow(valueDialog, query, true);
         valueDialog.show();
     }
 
@@ -621,7 +624,7 @@ public class ArscEditorActivity extends BaseActivity {
         input.setHint(getString(R.string.arsc_hex_hint));
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setSingleLine(true);
-        androidx.appcompat.app.AlertDialog idDialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog idDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.arsc_search_id))
                 .setView(UiFields.wrap(this, input, "Hex ID", 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -650,7 +653,7 @@ public class ArscEditorActivity extends BaseActivity {
                     }
                     showEntryDetail(e, re);
                 }).create();
-        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(idDialog, input, false);
+        KeyboardUtil.focusOnShow(idDialog, input, false);
         idDialog.show();
     }
 

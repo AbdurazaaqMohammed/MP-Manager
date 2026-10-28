@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.listeners;
 
 import android.view.GestureDetector;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -107,7 +108,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
                             if (touchView != null) {
-                                touchView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                touchView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                             }
                             originalLongClickListener.onLongClick(touchView);
                         }

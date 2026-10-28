@@ -15,12 +15,15 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -277,7 +280,7 @@ public class aXMLDecoder {
 		if (Math.abs(f - rounded) < 0.0005f) {
 			return Integer.toString((int) rounded);
 		}
-		String s = new java.text.DecimalFormat("0.####", new java.text.DecimalFormatSymbols(java.util.Locale.US)).format(f);
+		String s = new DecimalFormat("0.####", new DecimalFormatSymbols(Locale.US)).format(f);
 		return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
 	}
 

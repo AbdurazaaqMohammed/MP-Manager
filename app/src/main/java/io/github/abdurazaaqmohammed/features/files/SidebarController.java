@@ -7,7 +7,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.DragEvent;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -15,6 +19,7 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.PopupMenu;
 
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.annotation.NonNull;
@@ -27,19 +32,21 @@ import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.reflect.TypeToken;
 
 import io.github.abdurazaaqmohammed.utils.AppGson;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -62,11 +69,14 @@ import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -673,12 +683,12 @@ public class SidebarController {
     }
 
     private int recycleBinSortMode = 0; // 0 = Deletion time (desc), 1 = Modified time (desc), 2 = Name (asc)
-    private final java.text.SimpleDateFormat recycleDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+    private final SimpleDateFormat recycleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
     public void showRecycleBinDialog() {
         List<RecycleBin.Entry> allEntries = RecycleBin.entries(activity);
         List<RecycleBin.Entry> filteredEntries = new ArrayList<>(allEntries);
-        java.util.Set<RecycleBin.Entry> selectedEntries = new java.util.HashSet<>();
+        Set<RecycleBin.Entry> selectedEntries = new HashSet<>();
 
         int pad = (int) (12 * activity.getResources().getDisplayMetrics().density);
 
@@ -688,7 +698,7 @@ public class SidebarController {
         // Header view
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(pad, (int) (8 * activity.getResources().getDisplayMetrics().density), pad, (int) (8 * activity.getResources().getDisplayMetrics().density));
 
         TextView titleText = new TextView(activity);
@@ -739,7 +749,7 @@ public class SidebarController {
 
         LinearLayout bottomBar = new LinearLayout(activity);
         bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
         bottomBar.setPadding(pad, (int) (4 * activity.getResources().getDisplayMetrics().density), pad, (int) (4 * activity.getResources().getDisplayMetrics().density));
 
         Button actionLeftBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
@@ -765,7 +775,7 @@ public class SidebarController {
         final RecyclerView.Adapter<?>[] adapterHolder = new RecyclerView.Adapter<?>[1];
 
         Runnable sortAndRefresh = () -> {
-            java.util.Collections.sort(filteredEntries, (a, b) -> {
+            Collections.sort(filteredEntries, (a, b) -> {
                 if (recycleBinSortMode == 0) { // Deletion time (newest first)
                     return Long.compare(b.deletedAt, a.deletedAt);
                 } else if (recycleBinSortMode == 1) { // Modified time (newest first)
@@ -814,11 +824,11 @@ public class SidebarController {
                 Extensions.showMessage(activity, R.string.restored);
             } else {
                 // Empty bin
-                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                new AlertDialog.Builder(activity)
                         .setTitle(R.string.empty_recycle_bin)
                         .setMessage(R.string.empty_recycle_bin_confirm)
                         .setPositiveButton(R.string.delete, (d, w) -> {
-                            io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(activity, true);
+                            ProgressManager pm = new ProgressManager(activity, true);
                             pm.setText(activity.getString(R.string.deleting));
                             pm.show();
                             new Thread(() -> {
@@ -841,12 +851,12 @@ public class SidebarController {
         actionRightBtn.setOnClickListener(v -> {
             if (!selectedEntries.isEmpty()) {
                 // Delete selected
-                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                new AlertDialog.Builder(activity)
                         .setTitle(R.string.delete_forever)
                         .setMessage(activity.getString(R.string.confirm_delete_f, selectedEntries.size() + " items"))
                         .setPositiveButton(R.string.delete, (d, w) -> {
                             List<RecycleBin.Entry> toDel = new ArrayList<>(selectedEntries);
-                            io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(activity, false);
+                            ProgressManager pm = new ProgressManager(activity, false);
                             pm.setText(activity.getString(R.string.deleting));
                             pm.setTotal(toDel.size());
                             pm.show();
@@ -879,7 +889,7 @@ public class SidebarController {
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 LinearLayout row = new LinearLayout(activity);
                 row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(pad, (int) (8 * activity.getResources().getDisplayMetrics().density), pad, (int) (8 * activity.getResources().getDisplayMetrics().density));
 
                 CheckBox cb = new CheckBox(activity);
@@ -930,16 +940,16 @@ public class SidebarController {
                 title.setText(entry.displayName());
 
                 // Subtitle: modified date in white, deleted date in red (#FF5252)
-                String modStr = recycleDateFormat.format(new java.util.Date(entry.lastModified));
-                String delStr = recycleDateFormat.format(new java.util.Date(entry.deletedAt));
-                android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
+                String modStr = recycleDateFormat.format(new Date(entry.lastModified));
+                String delStr = recycleDateFormat.format(new Date(entry.deletedAt));
+                SpannableStringBuilder ssb = new SpannableStringBuilder();
                 int modStart = 0;
                 ssb.append(modStr);
-                ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.WHITE), modStart, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new ForegroundColorSpan(Color.WHITE), modStart, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ssb.append("    ");
                 int delStart = ssb.length();
                 ssb.append(delStr);
-                ssb.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF5252), delStart, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new ForegroundColorSpan(0xFFFF5252), delStart, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 sub.setText(ssb);
 
                 if (entry.file.isDirectory()) {
@@ -1010,10 +1020,10 @@ public class SidebarController {
     private void filterList(String query, List<RecycleBin.Entry> all, List<RecycleBin.Entry> filtered,
                             RecyclerView.Adapter<?> adapter, AlertDialog dialog, TextView titleText) {
         filtered.clear();
-        String q = query != null ? query.trim().toLowerCase(java.util.Locale.ROOT) : "";
+        String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
         for (RecycleBin.Entry e : all) {
-            if (q.isEmpty() || e.displayName().toLowerCase(java.util.Locale.ROOT).contains(q)
-                    || (e.originPath != null && e.originPath.toLowerCase(java.util.Locale.ROOT).contains(q))) {
+            if (q.isEmpty() || e.displayName().toLowerCase(Locale.ROOT).contains(q)
+                    || (e.originPath != null && e.originPath.toLowerCase(Locale.ROOT).contains(q))) {
                 filtered.add(e);
             }
         }
@@ -1023,8 +1033,8 @@ public class SidebarController {
     }
 
     private void showRecycleBinItemActions(RecycleBin.Entry entry, Runnable onUpdated) {
-        String modStr = recycleDateFormat.format(new java.util.Date(entry.lastModified));
-        String delStr = recycleDateFormat.format(new java.util.Date(entry.deletedAt));
+        String modStr = recycleDateFormat.format(new Date(entry.lastModified));
+        String delStr = recycleDateFormat.format(new Date(entry.deletedAt));
         String reasonStr = "overwrite".equals(entry.reason)
                 ? activity.getString(R.string.recycle_bin_reason_overwrite)
                 : activity.getString(R.string.recycle_bin_reason_delete);
@@ -1042,7 +1052,7 @@ public class SidebarController {
                 activity.getString(R.string.rename),
                 activity.getString(R.string.restore)
         };
-        new androidx.appcompat.app.AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity)
                 .setTitle(entry.displayName())
                 .setMessage(details.toString())
                 .setItems(options, (d, which) -> {
@@ -1087,7 +1097,7 @@ public class SidebarController {
         input.setText(entry.displayName());
         input.setSingleLine(true);
         input.setSelection(0, entry.displayName().lastIndexOf('.') > 0 ? entry.displayName().lastIndexOf('.') : entry.displayName().length());
-        new androidx.appcompat.app.AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity)
                 .setTitle(R.string.rename)
                 .setView(input)
                 .setPositiveButton(R.string.rename, (d, w) -> {
@@ -1111,7 +1121,7 @@ public class SidebarController {
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
         layout.setPadding(pad, pad, pad, pad);
 
-        androidx.appcompat.widget.SwitchCompat toggle = new androidx.appcompat.widget.SwitchCompat(activity);
+        SwitchCompat toggle = new SwitchCompat(activity);
         toggle.setText(activity.getString(R.string.enable_recycle_bin));
         boolean enabled = !RecycleBin.MODE_NEVER.equals(RecycleBin.mode(activity));
         toggle.setChecked(enabled);
@@ -1142,9 +1152,9 @@ public class SidebarController {
             }
         }
 
-        android.widget.RadioGroup group = new android.widget.RadioGroup(activity);
+        RadioGroup group = new RadioGroup(activity);
         for (int i = 0; i < dayOptions.length; i++) {
-            android.widget.RadioButton rb = new android.widget.RadioButton(activity);
+            RadioButton rb = new RadioButton(activity);
             rb.setText(dayLabels[i]);
             rb.setId(i);
             if (i == checkedIdx) rb.setChecked(true);
@@ -1165,7 +1175,7 @@ public class SidebarController {
         });
         layout.addView(purgeBtn);
 
-        new androidx.appcompat.app.AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity)
                 .setTitle(R.string.recycle_bin_options)
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, null)

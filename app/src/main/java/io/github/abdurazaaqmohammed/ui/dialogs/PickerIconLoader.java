@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.dialogs;
 
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -15,7 +12,6 @@ import android.media.ThumbnailUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
-import android.text.TextUtils;
 import android.util.LruCache;
 import android.view.View;
 import android.widget.ImageView;

@@ -304,12 +304,12 @@ public class RenameUtil {
             return;
         }
         RenamePlan plan = new RenamePlan(entry, entry.getName(), newName);
-        resolveConflicts(java.util.Collections.singletonList(plan));
+        resolveConflicts(Collections.singletonList(plan));
         if (plan.error != null) {
             Extensions.showMessage(context, R.string.invalid_names);
             return;
         }
-        executeRenameZip(context, java.util.Collections.singletonList(plan), currentZipPath, pane1, onDone);
+        executeRenameZip(context, Collections.singletonList(plan), currentZipPath, pane1, onDone);
     }
 
     private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath, boolean pane1) {

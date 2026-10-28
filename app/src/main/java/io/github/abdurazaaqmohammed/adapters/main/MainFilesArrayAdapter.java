@@ -27,6 +27,7 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,10 +35,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
+import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.FileMenuAction;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
@@ -51,6 +55,7 @@ import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -107,7 +112,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return fileOpener;
     }
     private final EntryDialogs entryDialogs;
-    private final io.github.abdurazaaqmohammed.data.prefs.ListPrefs listPrefs;
+    private final ListPrefs listPrefs;
 
     /** Row metrics snapshotted once: bind previously re-read prefs per row. */
     private final float nameTextSize;
@@ -245,7 +250,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * links for isDirectory/isFile, so this is display-only there).
      */
     static boolean isSymlink(File f) {
-        if (f instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile sf) return sf.isLink();
+        if (f instanceof ShizukuFile sf) return sf.isLink();
         try {
             return !f.getCanonicalPath().equals(f.getAbsolutePath());
         } catch (Exception e) {
@@ -329,7 +334,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             this.upZipPath = up != null ? up.getFullPath() : null;
             this.upZipFile = up != null ? up.getZipFile() : null;
             this.upFile = null;
-            this.archiveMutable = io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isZipLike(this.upZipFile);
+            this.archiveMutable = ArchiveBrowseUtil.isZipLike(this.upZipFile);
         } else {
             this.upFile = (File) parent;
             this.upZipFile = null;
@@ -344,7 +349,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         uiHelper = context.uiHelper;
         iconLoader = new FileIconLoader(context, isInZip);
         manifestEditor = new ApkManifestEditor(context, dialogUtil, uiHelper);
-        listPrefs = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(context);
+        listPrefs = new ListPrefs(context);
         checksumDialogs = new ChecksumDialogs(context, dialogUtil);
         propertiesDialog = new FilePropertiesDialog(context, dialogUtil, checksumDialogs);
         fileOps = new FileOperationsHelper(context, dialogUtil, this);
@@ -784,7 +789,7 @@ final View.OnClickListener originalClickListener;
 
                 // The archive test is content-based, so Extract is offered even
                 // when the file's extension is missing or wrong.
-                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isBrowsable(file) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
+                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || ArchiveBrowseUtil.isBrowsable(file) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
@@ -1181,9 +1186,9 @@ final View.OnClickListener originalClickListener;
                                                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + only.getName()));
                                                 });
                                             } else if (shareFiles.size() > 1) {
-                                                List<Uri> uris = java.util.Collections.synchronizedList(new ArrayList<>());
-                                                java.util.concurrent.atomic.AtomicInteger pending =
-                                                        new java.util.concurrent.atomic.AtomicInteger(shareFiles.size());
+                                                List<Uri> uris = Collections.synchronizedList(new ArrayList<>());
+                                                AtomicInteger pending =
+                                                        new AtomicInteger(shareFiles.size());
                                                 for (File sf : shareFiles) {
                                                     fileOpener.withReadableCopy(sf, readable -> {
                                                         try {

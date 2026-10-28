@@ -1,9 +1,16 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 
 /**
  * Pure file-listing sort logic extracted from MainActivity.
@@ -119,10 +126,10 @@ public final class FileSorting {
         // the walk; only never-measured or changed folders are walked, in
         // parallel, before the actual sort.
         if (needSizes) {
-            List<File> dirsToSize = new java.util.ArrayList<>();
+            List<File> dirsToSize = new ArrayList<>();
             for (int i = 0; i < n; i++) {
                 if (dirs[i]) {
-                    Long cached = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(files[i]);
+                    Long cached = DirSizeCache.peek(files[i]);
                     if (cached != null) {
                         sizes[i] = cached;
                         continue;
@@ -130,7 +137,7 @@ public final class FileSorting {
                     Long memory = DIR_SIZE_CACHE.get(pathOf(files[i]));
                     if (memory != null) {
                         sizes[i] = memory;
-                        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(files[i], memory);
+                        DirSizeCache.record(files[i], memory);
                         continue;
                     }
                     dirsToSize.add(files[i]);
@@ -145,7 +152,7 @@ public final class FileSorting {
             for (int i = 0; i < n; i++) {
                 if (dirs[i]) sizes[i] = dirSize(files[i]);
             }
-            if (!dirsToSize.isEmpty()) io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.scheduleSave();
+            if (!dirsToSize.isEmpty()) DirSizeCache.scheduleSave();
         }
         Integer[] order = new Integer[n];
         for (int i = 0; i < n; i++) order[i] = i;
@@ -177,23 +184,23 @@ public final class FileSorting {
         System.arraycopy(sorted, 0, files, 0, n);
     }
 
-    private static final java.util.concurrent.ConcurrentHashMap<String, Long> DIR_SIZE_CACHE =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> DIR_SIZE_CACHE =
+            new ConcurrentHashMap<>();
     // Storage-bound work: a handful of concurrent walkers saturates flash I/O
     // without flooding the system with hundreds of stat calls at once.
-    private static final java.util.concurrent.ExecutorService SIZE_POOL =
-            java.util.concurrent.Executors.newFixedThreadPool(
+    private static final ExecutorService SIZE_POOL =
+            Executors.newFixedThreadPool(
                     Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors())));
 
     /** Walks every uncached sibling folder in parallel so a size sort stays responsive. */
     private static void computeSizesParallel(List<File> dirs) {
         if (dirs == null || dirs.isEmpty()) return;
-        List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        List<Future<?>> futures = new ArrayList<>();
         for (File d : dirs) {
             if (d == null) continue;
             futures.add(SIZE_POOL.submit(() -> recursiveSize(d)));
         }
-        for (java.util.concurrent.Future<?> f : futures) {
+        for (Future<?> f : futures) {
             try {
                 f.get();
             } catch (Exception ignored) {
@@ -209,7 +216,7 @@ public final class FileSorting {
         if (key == null) return 0;
         Long cached = DIR_SIZE_CACHE.get(key);
         if (cached != null) return cached;
-        Long persisted = io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.peek(dir);
+        Long persisted = DirSizeCache.peek(dir);
         if (persisted != null) {
             DIR_SIZE_CACHE.put(key, persisted);
             return persisted;
@@ -226,7 +233,7 @@ public final class FileSorting {
             }
         }
         DIR_SIZE_CACHE.put(key, total);
-        io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.record(dir, total);
+        DirSizeCache.record(dir, total);
         return total;
     }
 

@@ -10,7 +10,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
-import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -25,6 +24,7 @@ import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.textfield.TextInputLayout;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -374,7 +374,7 @@ public class FilePropertiesDialog {
     }
 
     private void showMillisInputDialog(File file, TextView modifiedView) {
-        com.google.android.material.textfield.TextInputLayout box =
+        TextInputLayout box =
                 UiFields.box(context, context.getString(R.string.mtime_option_millis));
         EditText input = UiFields.field(box, InputType.TYPE_CLASS_NUMBER);
         input.setHint(String.valueOf(System.currentTimeMillis()));

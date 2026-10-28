@@ -40,15 +40,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.eclipse.tm4e.core.registry.IGrammarSource;
 import org.eclipse.tm4e.core.registry.IThemeSource;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -939,7 +936,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
         String allText = content.toString();
         try {
-            String pattern = regex ? findText : java.util.regex.Pattern.quote(findText);
+            String pattern = regex ? findText : Pattern.quote(findText);
             int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
             Matcher m = Pattern.compile(pattern, flags).matcher(allText);
             String replacementSource = replaceWith == null ? "" : replaceWith;

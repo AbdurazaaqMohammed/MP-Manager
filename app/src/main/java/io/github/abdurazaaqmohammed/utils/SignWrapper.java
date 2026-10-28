@@ -28,6 +28,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -277,20 +278,20 @@ public class SignWrapper {
     public void exportKey(File outFile, String storeType, String password, String alias) throws Exception {
         ApkSigner.SignerConfig config = createSignerConfig();
         char[] pass = password.toCharArray();
-        java.security.KeyStore ks = java.security.KeyStore.getInstance(storeType);
+        KeyStore ks = KeyStore.getInstance(storeType);
         ks.load(null, null);
         ks.setKeyEntry(alias, config.getPrivateKey(), pass,
-                config.getCertificates().toArray(new java.security.cert.X509Certificate[0]));
-        try (java.io.FileOutputStream out = new java.io.FileOutputStream(outFile)) {
+                config.getCertificates().toArray(new X509Certificate[0]));
+        try (FileOutputStream out = new FileOutputStream(outFile)) {
             ks.store(out, pass);
         }
         // Read-back verification with the same instance type the engine uses.
-        java.security.KeyStore check = java.security.KeyStore.getInstance(storeType);
-        try (java.io.InputStream in = new java.io.FileInputStream(outFile)) {
+        KeyStore check = KeyStore.getInstance(storeType);
+        try (InputStream in = new FileInputStream(outFile)) {
             check.load(in, pass);
         }
-        if (check.getEntry(alias, new java.security.KeyStore.PasswordProtection(pass)) == null) {
-            throw new java.io.IOException("Exported " + storeType + " keystore failed verification");
+        if (check.getEntry(alias, new KeyStore.PasswordProtection(pass)) == null) {
+            throw new IOException("Exported " + storeType + " keystore failed verification");
         }
     }
 

@@ -49,7 +49,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
-import com.android.apksig.ApkVerifier;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.color.MaterialColors;
@@ -1106,10 +1105,10 @@ public class ApkInfoDialogs {
      * half-way through the loader left the dialog showing "Loading…" forever,
      * which is what users reported as empty fields.
      */
-    private void showPlaceholders(androidx.appcompat.app.AlertDialog ad, CharSequence placeholder) {
+    private void showPlaceholders(AlertDialog ad, CharSequence placeholder) {
         try {
             if (ad.getWindow() == null) return;
-            android.view.View root = ad.getWindow().getDecorView();
+            View root = ad.getWindow().getDecorView();
             int[] ids = {R.id.apkTitle, R.id.apkVersionName, R.id.verCode, R.id.pkgName,
                     R.id.signaturesInApk, R.id.protectedDisplay, R.id.fileSize,
                     R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkCert, R.id.apkInstalled};

@@ -17,12 +17,11 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
-import java.io.File;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.AppReinstaller;
@@ -182,7 +181,7 @@ public final class InstallInfoDialog {
         MaterialCardView card = new MaterialCardView(activity);
         card.addView(content);
         SectionCollapse.applyToCard(card,
-                androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity),
+                PreferenceManager.getDefaultSharedPreferences(activity),
                 "install_info_signature");
         return card;
     }
@@ -217,7 +216,7 @@ public final class InstallInfoDialog {
         MaterialCardView card = new MaterialCardView(activity);
         card.addView(content);
         SectionCollapse.applyToCard(card,
-                androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity),
+                PreferenceManager.getDefaultSharedPreferences(activity),
                 "install_info_hashes");
         return card;
     }

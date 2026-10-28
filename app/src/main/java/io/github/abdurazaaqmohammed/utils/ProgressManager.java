@@ -23,6 +23,8 @@ import com.reandroid.apk.APKLogger;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 
@@ -41,7 +43,7 @@ public class ProgressManager {
     private static final int NOTIFICATION_ID = 1001;
 
     private final long startTime = System.currentTimeMillis();
-    private static final java.util.List<ProgressManager> activeInstances = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final List<ProgressManager> activeInstances = new CopyOnWriteArrayList<>();
 
     public static void restoreHidden() {
         for (ProgressManager pm : activeInstances) {

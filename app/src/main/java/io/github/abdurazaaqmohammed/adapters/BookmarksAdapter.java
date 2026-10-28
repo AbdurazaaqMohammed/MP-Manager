@@ -2,9 +2,11 @@ package io.github.abdurazaaqmohammed.adapters;
 
 import android.graphics.Color;
 import android.util.TypedValue;
+import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
@@ -112,7 +114,7 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
             private MotionEvent lastEvent;
             private final Runnable longPressRunnable = () -> {
                 isLongPressTriggered = true;
-                row.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                row.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                 if (callbacks != null) {
                     callbacks.onItemLongPressed(row, pos, lastEvent);
                 }
@@ -131,7 +133,7 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
                     case MotionEvent.ACTION_MOVE:
                         float dx = Math.abs(event.getRawX() - downX);
                         float dy = Math.abs(event.getRawY() - downY);
-                        float slop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
+                        float slop = ViewConfiguration.get(context).getScaledTouchSlop();
                         if (dx > slop || dy > slop) {
                             if (!isLongPressTriggered) {
                                 row.removeCallbacks(longPressRunnable);
