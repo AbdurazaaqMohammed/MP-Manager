@@ -14,20 +14,13 @@
     <string name="warning">Advertencia</string>
     <string name="copy_log">Copiar registro</string>
     <string name="app_icon_list_label">Icono de la aplicación</string>
-    <string name="show_icons">Mostrar iconos en la lista de aplicaciones</string>
     <string name="merge_splits">Combinar/AntiSplit aplicaciones divididas por defecto</string>
     <string name="show_last_updated">Mostrar fecha de última actualización</string>
-    <string name="show_first_install">Mostrar fecha de primera instalación</string>
-    <string name="show_pkg">Mostrar nombre del paquete</string>
-    <string name="show_app">Mostrar nombre de la aplicación</string>
-    <string name="show_v_code">Mostrar código de versión</string>
-    <string name="show_v_name">Mostrar nombre de versión</string>
     <string name="filter">Filtrar</string>
     <string name="warn_sign">Después de combinar, la firma original del APK dejará de ser válida y deberá firmarse para poder instalarlo. Esto impedirá actualizar la aplicación desde fuentes oficiales. Algunas aplicaciones verifican la firma del APK o utilizan otras medidas para comprobar si la aplicación fue modificada, lo que puede provocar que se cierre al iniciarse.</string>
     <string name="user_apps">Aplicaciones de usuario</string>
     <string name="system_apps">Aplicaciones del sistema</string>
     <string name="share_apk">Compartir APK</string>
-    <string name="display_nfo">Mostrar información</string>
     <string name="display_functions">Mostrar funciones</string>
     <string name="confirm">Confirmar</string>
     <string name="black_theme">Tema negro</string>
@@ -56,7 +49,6 @@
     <string name="confuse_zip_structure">Alterar estructura Zip</string>
     <string name="dex_protection_level">Nivel de protección Dex</string>
     <string name="copying">"Copiando %1$s"</string>
-    <string name="enter_name_for_copy">Introduce el nuevo nombre para la copia</string>
     <string name="signing_">firmando %1$s</string>
     <string name="signed">Firmado %1$s</string>
     <string name="deleting">Eliminando %1$s</string>
@@ -258,7 +250,6 @@
     <string name="batch_sign">Firmar APK en lote</string>
     <string name="batch_optimize">Optimizar APK en lote</string>
     <string name="batch_install">Instalar APK en lote</string>
-    <string name="view_certificate">Ver certificado</string>
     <string name="unknown_sdk">\?</string>
     <string name="no_signature_found">No se encontró firma</string>
     <string name="cert">Certificado %1$d</string>
@@ -353,8 +344,6 @@
     <string name="warning_dangerous_directory">Advertencia: directorio peligroso</string>
     <string name="warn_delete_s">Estás a punto de eliminar archivos en un directorio sensible del sistema. Esto puede dañar aplicaciones o causar inestabilidad del sistema.\n\n¿Estás totalmente seguro?</string>
     <string name="no_apk_files_found">No se encontraron archivos APK en el archivo</string>
-    <string name="manage_bottom_bar">Gestionar barra inferior</string>
-    <string name="delete_button">Eliminar botón</string>
     <string name="termux_perm"><![CDATA[Nota: Debes conceder permiso para que MP Manager pueda enviar comandos a Termux\n(Permisos > Permisos adicionales > Ejecutar comandos en el entorno Termux)]]></string>
     <string name="editor_settings">Ajustes del editor</string>
     <string name="icon_changed">Icono cambiado</string>
@@ -607,7 +596,6 @@ Layout Inspector
     <string name="exactly_match">Coincidencia exacta</string>
     <string name="hex">Hex</string>
     <string name="open_player_as_act">Abrir reproductor como actividad</string>
-    <string name="root_available">Root disponible</string>
     <string name="root_install">Instalación con root</string>
     <string name="root_file_operations">Operaciones de archivos con root</string>
     <string name="root_extractor_features">Funciones root en extractor de APK</string>
@@ -687,7 +675,6 @@ Layout Inspector
     <string name="new_key">Nueva clave</string>
     <string name="access_mode">Modo de acceso</string>
     <string name="shizuku_mode">Shizuku</string>
-    <string name="shizuku_status">Estado de Shizuku</string>
     <string name="shizuku_not_running">Shizuku no está en ejecución</string>
     <string name="shizuku_running_no_perm">Shizuku en ejecución, falta permiso</string>
     <string name="shizuku_ready">Shizuku conectado</string>
@@ -827,7 +814,6 @@ Layout Inspector
     <string name="no_files_found">No se encontraron archivos</string>
     <string name="find_needs_folder">Buscar en archivos necesita una carpeta local</string>
     <string name="find_in_files">Buscar en archivos</string>
-    <string name="matches_x">%1$d coincidencias</string>
     <string name="querier_enter_query">Introduce una consulta</string>
     <string name="querier_no_res_id">Ningún recurso con id 0x%1$s</string>
     <string name="querier_bad_id">Id incorrecto: %1$s</string>
@@ -837,7 +823,6 @@ Layout Inspector
     <string name="querier_not_number">No es un número</string>
     <string name="querier_out_of_range">Número fuera de rango</string>
     <string name="querier_only_decimal_negative">Solo el decimal puede ser negativo</string>
-    <string name="menu_refresh">Actualizar</string>
     <string name="menu_select_all">Seleccionar todo</string>
     <string name="menu_hidden_files">Archivos ocultos</string>
     <string name="menu_show_system_hidden">Mostrar archivos ocultos del sistema</string>
@@ -1110,10 +1095,6 @@ Layout Inspector
     <string name="hex_invalid_offset">Desplazamiento no válido</string>
     <string name="hex_unsaved">Cambios sin guardar</string>
     <string name="hex_discard_unsaved">¿Descartar cambios sin guardar?</string>
-    <string name="edsettings_click">Acción de clic</string>
-    <string name="edsettings_long">Acción de pulsación larga</string>
-    <string name="edsettings_add">Añadir botón</string>
-    <string name="edsettings_edit">Editar botón</string>
     <string name="native_required">Se necesitan herramientas nativas</string>
     <string name="native_need_download">Esta función necesita binarios nativos (descarga de ~%1$s MB). ¿Descargar ahora?</string>
     <string name="download">Descargar</string>
@@ -1446,11 +1427,6 @@ Layout Inspector
     <string name="convert_to_camelcase">Convertir a camelCase</string>
     <string name="increase_indent">Aumentar sangría</string>
     <string name="decrease_indent">Reducir sangría</string>
-    <string name="cut">Cortar</string>
-    <string name="paste">Pegar</string>
-    <string name="insert_text">Insertar texto</string>
-    <string name="regex_find_replace">Buscar y reemplazar con regex</string>
-    <string name="replace_line">Reemplazar línea</string>
     <string name="no_matches_found">No se encontraron coincidencias</string>
     <string name="reload_file">Recargar archivo</string>
     <string name="overriding_methods_found">%1$d métodos que sobrescriben encontrados. ¿Quieres buscar usos de los métodos que sobrescriben?</string>
@@ -1522,15 +1498,6 @@ Layout Inspector
     <string name="view_mode_auto">Cambio automático</string>
     <string name="view_mode_side_by_side">Lado a lado</string>
     <string name="view_mode_unified">Unificado</string>
-    <string name="show_signature">Mostrar tipo de firma</string>
-    <string name="show_apk_size">Mostrar tamaño del APK</string>
-    <string name="show_apk_dir">Mostrar directorio del APK</string>
-    <string name="show_data_dir">Mostrar directorio de datos internos</string>
-    <string name="show_ext_data_dir">Mostrar directorio de datos externos</string>
-    <string name="show_target_sdk">Mostrar SDK de destino</string>
-    <string name="show_min_sdk">Mostrar SDK mínimo</string>
-    <string name="show_installer">Mostrar instalador</string>
-    <string name="show_enabled_state">Mostrar estado de habilitación</string>
     <string name="signature">Firma</string>
     <string name="apk_size">Tamaño del APK</string>
     <string name="apk_dir">Directorio del APK</string>
@@ -1672,7 +1639,6 @@ Layout Inspector
     <string name="installer_source_shell">Shell (necesita root/Shizuku, para HyperOS/MIUI)</string>
     <string name="installer_source_custom">Paquete personalizado…</string>
     <string name="installer_custom_pkg">Paquete instalador personalizado</string>
-    <string name="installer_spoof_note">La suplantación solo funciona con instalación silenciosa root/Shizuku. Sin privilegios el sistema registra el propio MP Manager. La suplantación de Play evita que las apps que comprueban el instalador pidan reinstalar desde Play; no falsifica firmas ni licencias de Play.</string>
     <string name="install_allow_test">Permitir paquetes de prueba</string>
     <string name="install_allow_downgrade">Permitir degradación</string>
     <string name="install_grant_all">Conceder todos los permisos solicitados al instalar</string>
@@ -1690,10 +1656,6 @@ Layout Inspector
     <string name="add_to_outer_title">Actualizar archivo externo</string>
     <string name="add_to_outer_msg">¿Escribir también %1$s actualizado en %2$s?</string>
     <string name="outer_updated_f">%1$s actualizado dentro de %2$s</string>
-    <string name="editor_archive_update_title">Actualizar archivo</string>
-    <string name="editor_archive_update_msg">%1$s guardado. ¿Escribirlo en %2$s ahora?</string>
-    <string name="update_archive">Actualizar archivo</string>
-    <string name="stay">Quedarse</string>
     <string name="dex_export_title">Exportar clases</string>
     <string name="dex_export_smali">Smali (archivos .smali)</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>

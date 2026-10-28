@@ -259,7 +259,6 @@
     <string name="customize">سفارشی‌سازی</string>
     <string name="customize_file_menu">ترتیب فهرست عملکرد پرونده</string>
     <string name="customize_file_menu_hint">برای کشیدن و رها کردن موارد به هر نقطه، روی مورد ضربه زده و نگه دارید</string>
-    <string name="cut">برش</string>
     <string name="cut_line">برش خط</string>
     <string name="dark_theme">طرح زمینه تاریک</string>
     <string name="data_type">نوع اطلاعات</string>
@@ -287,7 +286,6 @@
     <string name="default_client">مشتری پیش‌فرض</string>
     <string name="default_server">کارگزار پیش‌فرض</string>
     <string name="delete">حذف</string>
-    <string name="delete_button">حذف دکمه</string>
     <string name="delete_config">حذف پرونده</string>
     <string name="delete_confirm">آیا می‌خواهید نمایه %1$s را حذف کنید؟</string>
     <string name="delete_entry_info">تمام ورودی‌های این پیکربندی پس از ذخیره‌سازی حذف خواهند شد.</string>
@@ -334,7 +332,6 @@
     <string name="discard">دور انداختن</string>
     <string name="dismiss">رد کردن</string>
     <string name="display_functions">نمایش عملکردها</string>
-    <string name="display_nfo">نمایش اطلاعات</string>
     <string name="dns_applied">‏DNS %1$s</string>
     <string name="dns_pinned_unsupported">میان‌برهای متصل شده پشتیبانی نمی‌شوند</string>
     <string name="dns_shortcut_failed">میان‌بر ناموفق</string>
@@ -374,10 +371,6 @@
 
 تغییر پرونده‌های سیستمی ممکن است باعث از کار افتادن برنامه‌ها یا اختلال در بالا آمدن دستگاه شود. ادامه می‌دهید؟</string>
     <string name="editor_writing_root">در حال نوشتن مجدد با دسترسی ریشه (root)...</string>
-    <string name="edsettings_add">افزودن دکمه</string>
-    <string name="edsettings_click">عمل ضربه زدن</string>
-    <string name="edsettings_edit">ویرایش دکمه</string>
-    <string name="edsettings_long">اقدام ضربه زدن و نگه داشتن</string>
     <string name="elevated_access">دسترسی سطح بالا</string>
     <string name="empty_line">خط خالی</string>
     <string name="enable_app">فعال کردن برنامه</string>
@@ -389,7 +382,6 @@
     <string name="enter_a_url_or_set_the_button_to_dismiss">یک نشانی URL وارد کنید یا دکمه را روی حالت «رد کردن» تنظیم نمایید</string>
     <string name="enter_line_to_jump_to">شماره خط مقصد را وارد کنید</string>
     <string name="enter_name">نام را وارد کنید</string>
-    <string name="enter_name_for_copy">مورد وجود دارد لطفاً نام جدیدی برای رونوشت وارد کنید</string>
     <string name="enter_password">رمز عبور را وارد کنید</string>
     <string name="enter_path">مسیر را وارد کنید</string>
     <string name="enter_width_and_height">عرض و ارتفاع را وارد کنید</string>
@@ -636,7 +628,6 @@
     <string name="include_bookmark_groups_sidebar">شامل کردن گروه‌های نشانک در نوار کناری</string>
     <string name="increase_indent">افزایش تورفتگی</string>
     <string name="info">اطلاعات</string>
-    <string name="insert_text">درج متن</string>
     <string name="inspect_mode">حالت نظارت</string>
     <string name="inspect_stopped">حالت نظارت متوقف شد</string>
     <string name="inspector">ناظر</string>
@@ -705,13 +696,11 @@
     <string name="long_select">انتخاب طولانی</string>
     <string name="longs">طولانی</string>
     <string name="lossless">بدون از دست رفتن</string>
-    <string name="manage_bottom_bar">مدیریت نوار پایین</string>
     <string name="manage_profiles">مدیریت نمایه</string>
     <string name="manage_storage">مدیریت ذخیره‌سازی</string>
     <string name="manifest_toggles">تغییر وضعیت Manifest</string>
     <string name="match_case">مطابقت حروف</string>
     <string name="match_exactly">مطابقت دقیق</string>
-    <string name="matches_x">%1$d مطابقت</string>
     <string name="matching">تطابق…</string>
     <string name="max_size_hint">حداکثر اندازه پرونده</string>
     <string name="me_attr_missing">ویژگی %1$s در Manifest یافت نشد</string>
@@ -745,7 +734,6 @@
     <string name="menu_hide_selected">مخفی کردن پرونده‌های انتخاب شده</string>
     <string name="menu_items">موارد فهرست</string>
     <string name="menu_order_reset">بازنشانی ترتیب فهرست</string>
-    <string name="menu_refresh">تازه‌سازی</string>
     <string name="menu_select_all">انتخاب همه</string>
     <string name="menu_seq">از نماد منو برای بالا و پایین بردن برای تغییر ترتیب فهرست (منو) استفاده کنید</string>
     <string name="menu_show_manual_hidden">نمایش پرونده‌های مخفی</string>
@@ -862,7 +850,6 @@
     <string name="pane_highlight_style">برجسته‌سازی پنجره فعال</string>
     <string name="parent">والد</string>
     <string name="parent_dir">شاخه والد</string>
-    <string name="paste">جای‌گذاری</string>
     <string name="paste_from">جای‌گذاری از</string>
     <string name="paste_style">جای‌گذاری سبک</string>
     <string name="path">مسیر</string>
@@ -983,7 +970,6 @@ F00#
     <string name="refactor_obfuscated_resource_names">بازسازی نام‌های مبهم‌سازی‌شده‌ی منابع</string>
     <string name="refactored">‏%1$s بازسازی شده</string>
     <string name="regex">استفاده از عبارت منظم</string>
-    <string name="regex_find_replace">یافتن و جایگزینی با استفاده از عبارت منظم</string>
     <string name="reload">بارگذاری مجدد</string>
     <string name="reload_file">بارگذاری مجدد پرونده</string>
     <string name="reload_with_charset">بارگذاری مجدد با مجموعه نویسه</string>
@@ -1022,7 +1008,6 @@ F00#
     <string name="replace_all">جایگزینی همه</string>
     <string name="replace_data_type">جایگزینی نوع اطلاعات</string>
     <string name="replace_in_all_strings">جایگزینی در تمام رشته‌ها</string>
-    <string name="replace_line">جایگزینی خط</string>
     <string name="replace_line_with_clipboard">جایگزینی خط (با استفاده از بریده‌دان)</string>
     <string name="replace_with">جایگزینی با</string>
     <string name="replacement_errors">خطاهای جایگزینی</string>
@@ -1043,7 +1028,6 @@ F00#
     <string name="rewind">به عقب</string>
     <string name="rich_text_html">متن غنی (HTML)</string>
     <string name="root">روت</string>
-    <string name="root_available">دسترسی ر‌وت</string>
     <string name="root_denied_msg">دسترسی ریشه/روت با این دستور su در دسترس نیست</string>
     <string name="root_detected_enabled">روت شناسایی شد، دسترسی ریشه/روت فعال گردید</string>
     <string name="root_extractor_features">ویژگی‌های نیازمند دسترسی روت در استخراج کننده APK</string>
@@ -1146,20 +1130,13 @@ com/gms/
     <string name="shizuku_open">باز کردن شیزوکو</string>
     <string name="shizuku_ready">شیزوکو متصل شد</string>
     <string name="shizuku_running_no_perm">شیزوکو در حال اجرا، مجوز از دست رفته است</string>
-    <string name="shizuku_status">وضعیت شیزوکو</string>
     <string name="shizuku_unsupported">شیزوکو به اندروید ۶ و بالاتر نیاز دارد</string>
     <string name="shorts">کوتاه</string>
-    <string name="show_app">نمایش نام برنامه</string>
     <string name="show_bookmarks_sidebar">نمایش نشانک‌ها در نوار کناری</string>
-    <string name="show_first_install">نمایش زمان اولین نصب</string>
-    <string name="show_icons">نمایش نمادها در فهرست برنامه‌ها</string>
     <string name="show_last_updated">نمایش زمان آخرین به‌روزرسانی</string>
     <string name="show_launch_activities">نمایش فعالیت‌های راه‌اندازی</string>
     <string name="show_methods">نمایش روش‌ها</string>
-    <string name="show_pkg">نمایش نام بسته</string>
     <string name="show_strings">نمایش رشته‌ها</string>
-    <string name="show_v_code">نمایش رمز نسخه</string>
-    <string name="show_v_name">نمایش نام نسخه</string>
     <string name="shuffle">مختلط</string>
     <string name="sidebar_collapse">اضمحلال انتخاب‌ها</string>
     <string name="sidebar_expand">گسترش انتخاب‌ها</string>
@@ -1427,7 +1404,6 @@ com/gms/
     <string name="version_name">نام نسخه</string>
     <string name="view">مشاهده</string>
     <string name="view_bounds">حاشیه‌ها</string>
-    <string name="view_certificate">مشاهده گواهی</string>
     <string name="view_children">فرزندان</string>
     <string name="view_children_count">تعداد فرزندان</string>
     <string name="view_class">کلاس</string>
@@ -1539,15 +1515,6 @@ com/gms/
     <string name="zip_differences">تفاوت‌های ZIP</string>
     <string name="zipalign">تراز Zip قبل از امضا</string>
     <string name="zipalign_explanation">اطلاعات فشرده نشده در داخل APK (Manifest، منابع، کتابخانه‌های بومی) را تراز می کند تا اندروید بتواند آن را به طور موثر نصب و اجرا کند. این کار باید قبل از امضا انجام شود، بنابراین آن را روشن نگه دارید، مگر اینکه APK قبلاً تراز شده باشد.</string>
-    <string name="show_signature">نمایش نوع امضا</string>
-    <string name="show_apk_size">نمایش اندازه APK</string>
-    <string name="show_apk_dir">نمایش شاخه APK</string>
-    <string name="show_data_dir">نمایش شاخه داده‌های داخلی</string>
-    <string name="show_ext_data_dir">نمایش شاخه داده‌های خارجی</string>
-    <string name="show_target_sdk">نمایش SDK هدف</string>
-    <string name="show_min_sdk">نمایش حداقل SDK</string>
-    <string name="show_installer">نمایش نصب‌کننده</string>
-    <string name="show_enabled_state">نمایش وضعیت فعال بودن</string>
     <string name="signature">امضا</string>
     <string name="apk_size">اندازه APK</string>
     <string name="apk_dir">شاخه APK</string>
@@ -1694,7 +1661,6 @@ com/gms/
     <string name="installer_source_shell">شل (نیازمند root/Shizuku، برای HyperOS/MIUI)</string>
     <string name="installer_source_custom">بسته سفارشی…</string>
     <string name="installer_custom_pkg">بسته نصب‌کننده سفارشی</string>
-    <string name="installer_spoof_note">جعل فقط با نصب بی‌صدای root/Shizuku باقی می‌ماند. بدون دسترسی ویژه، سیستم خود MP Manager را ثبت می‌کند. جعل Play از درخواست نصب مجدد از Play توسط برنامه‌هایی که نصب‌کننده را بررسی می‌کنند جلوگیری می‌کند؛ امضا یا مجوز Play را جعل نمی‌کند.</string>
     <string name="install_allow_test">اجازه بسته‌های آزمایشی</string>
     <string name="install_allow_downgrade">اجازه کاهش نسخه</string>
     <string name="install_grant_all">اعطای همه مجوزهای درخواستی هنگام نصب</string>
@@ -1712,10 +1678,6 @@ com/gms/
     <string name="add_to_outer_title">به‌روزرسانی بایگانی بیرونی</string>
     <string name="add_to_outer_msg">%1$s به‌روزشده در %2$s نیز نوشته شود؟</string>
     <string name="outer_updated_f">%1$s داخل %2$s به‌روز شد</string>
-    <string name="editor_archive_update_title">به‌روزرسانی بایگانی</string>
-    <string name="editor_archive_update_msg">%1$s ذخیره شد. اکنون در %2$s نوشته شود؟</string>
-    <string name="update_archive">به‌روزرسانی بایگانی</string>
-    <string name="stay">ماندن</string>
     <string name="dex_export_title">صدور کلاس‌ها</string>
     <string name="dex_export_smali">Smali (پرونده‌های .smali)</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>

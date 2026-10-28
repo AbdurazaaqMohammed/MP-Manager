@@ -13,23 +13,8 @@
     <string name="warning">Warning</string>
     <string name="copy_log">Copy log</string>
     <string name="app_icon_list_label">App icon</string>
-    <string name="show_icons">Show icons in app list</string>
     <string name="merge_splits">Merge/AntiSplit split apps by default</string>
     <string name="show_last_updated">Show last updated date</string>
-    <string name="show_first_install">Show first installed date</string>
-    <string name="show_pkg">Show package name</string>
-    <string name="show_app">Show app name</string>
-    <string name="show_v_code">Show version code</string>
-    <string name="show_v_name">Show version name</string>
-    <string name="show_signature">Show signature type</string>
-    <string name="show_apk_size">Show APK size</string>
-    <string name="show_apk_dir">Show APK directory</string>
-    <string name="show_data_dir">Show internal data directory</string>
-    <string name="show_ext_data_dir">Show external data directory</string>
-    <string name="show_target_sdk">Show target SDK</string>
-    <string name="show_min_sdk">Show min SDK</string>
-    <string name="show_installer">Show installer</string>
-    <string name="show_enabled_state">Show enabled state</string>
     <string name="signature">Signature</string>
     <string name="apk_size">APK size</string>
     <string name="apk_dir">APK dir</string>
@@ -50,7 +35,6 @@
     <string name="user_apps">User apps</string>
     <string name="system_apps">System apps</string>
     <string name="share_apk">Share APK</string>
-    <string name="display_nfo">Display information</string>
     <string name="display_functions">Display functions</string>
     <string name="confirm">Confirm</string>
     <string name="theme">Theme</string>
@@ -84,15 +68,10 @@
     <string name="confuse_zip_structure">Confuse Zip Structure</string>
     <string name="dex_protection_level">Dex Protection Level</string>
     <string name="copying">"Copying %1$s"</string>
-    <string name="enter_name_for_copy">Enter new name for copy</string>
     <string name="copy_conflict_title">Name already in use</string>
     <string name="copy_conflict_title_all">Names already in use</string>
     <string name="copy_conflict_replace">Replace</string>
     <string name="copy_conflict_skip">Skip</string>
-    <string name="copy_conflict_keep_both">Keep both</string>
-    <string name="copy_conflict_replace_all">Replace all</string>
-    <string name="copy_conflict_skip_all">Skip all</string>
-    <string name="copy_conflict_keep_both_all">Keep all</string>
     <string name="copy_conflict_source">Copying: %1$s\n%2$s · %3$s</string>
     <string name="copy_conflict_arrow">↓ replaces ↓</string>
     <string name="copy_conflict_existing">Existing: %1$s\n%2$s · %3$s</string>
@@ -247,7 +226,6 @@
     <string name="unhide">Unhide</string>
     <string name="keep">Keep</string>
     <string name="all_checkbox">All</string>
-    <string name="hidden_toast">Item hidden</string>
     <string name="added_to_bookmarks">Added %1$s to bookmarks</string>
     <string name="filepath">File path</string>
     <string name="confirm_delete_bookmark">Are you sure you want to delete bookmark %1$s?</string>
@@ -327,7 +305,6 @@
     <string name="batch_sign">Batch sign APKs</string>
     <string name="batch_optimize">Optimize APKs</string>
     <string name="batch_install">Install APKs</string>
-    <string name="view_certificate">View certificate</string>
     <string name="unknown_sdk">\?</string>
     <string name="no_signature_found">No signature found</string>
     <string name="cert">Certificate %1$d</string>
@@ -340,7 +317,6 @@
     <string name="sig_status_failed">Verification failed</string>
     <string name="sig_status_none">Not signed</string>
     <string name="sig_owner">Owner</string>
-    <string name="sig_issuer">Issuer</string>
     <string name="sig_serial">Serial</string>
     <string name="sig_created">Created</string>
     <string name="sig_expired">Expired</string>
@@ -451,8 +427,6 @@
     <string name="warning_dangerous_directory">Warning: Dangerous Directory</string>
     <string name="warn_delete_s">You are about to delete files in a sensitive system directory. This may break apps or cause system instability.\n\nAre you absolutely sure?</string>
     <string name="no_apk_files_found">No APK files found in archive</string>
-    <string name="manage_bottom_bar">Manage Bottom Bar</string>
-    <string name="delete_button">Delete Button</string>
     <string name="termux_perm"><![CDATA[Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)]]></string>
     <string name="editor_settings">Editor Settings</string>
     <string name="icon_changed">Icon changed</string>
@@ -741,7 +715,6 @@ Layout Inspector
     <string name="exactly_match">Exactly match</string>
     <string name="hex">Hex</string>
     <string name="open_player_as_act">Open player as activity</string>
-    <string name="root_available">Root available</string>
     <string name="root_install">Root install</string>
     <string name="shizuku_silent_install">Shizuku silent install</string>
     <string name="installer_source">Installer package (install attribution)</string>
@@ -751,7 +724,6 @@ Layout Inspector
     <string name="installer_source_shell">Shell (needs root/Shizuku, for HyperOS/MIUI)</string>
     <string name="installer_source_custom">Custom package…</string>
     <string name="installer_custom_pkg">Custom installer package</string>
-    <string name="installer_spoof_note">Sets the package Android records as the installer (getInstallSourceInfo), not the install source. Spoofing only sticks with root/Shizuku silent install. Without privilege the system records MP Manager itself. Play spoof stops apps that check the installer from asking to be reinstalled from Play; it does not fake Play signatures or licensing. The install initiator still shows the real privileged caller (com.android.shell): Android does not allow spoofing it.</string>
     <string name="apk_compare_newer">installed %1$s — this APK is newer</string>
     <string name="apk_compare_older">installed %1$s — this APK is older</string>
     <string name="apk_compare_same">installed %1$s — identical version</string>
@@ -763,7 +735,6 @@ Layout Inspector
     <string name="apk_compare_signer_subject">Signed by %1$s</string>
     <string name="apk_compare_installed_signer">Installed copy signed by %1$s</string>
     <string name="apk_compare_title">Install %1$s?</string>
-    <string name="apk_compare_suspicious">This APK is signed by a different key than the installed app with the same package name. Installing it will fail unless the existing app is uninstalled first, and the files are not an update of the installed version.</string>
     <string name="apk_compare_signature_warning">Warning: this APK is signed by a different key than the already installed app with the same package name. It is not an update of that app. Android will refuse to install it on top (INSTALL_FAILED_UPDATE_INCOMPATIBLE) unless you uninstall the existing copy first — so make sure you trust this file before you do.</string>
     <string name="install_core_patch">How to install a differently signed APK (Core Patch)</string>
     <string name="install_save_data">Save the app\'s data before uninstalling</string>
@@ -774,7 +745,6 @@ Layout Inspector
     <string name="uninstall_and_install">Uninstall and install</string>
     <string name="install_info_signature">Signature</string>
     <string name="install_info_hashes">Hashes</string>
-    <string name="install_info_notes">Notes</string>
     <string name="apk_compare_sha256_label">Candidate SHA-256</string>
     <string name="apk_compare_installed_label">Installed SHA-256</string>
     <string name="install_info_mode">Show installation info</string>
@@ -864,7 +834,6 @@ Layout Inspector
     <string name="new_key">New Key</string>
     <string name="access_mode">Access mode</string>
     <string name="shizuku_mode">Shizuku</string>
-    <string name="shizuku_status">Shizuku status</string>
     <string name="shizuku_not_running">Shizuku not running</string>
     <string name="shizuku_running_no_perm">Shizuku running, permission missing</string>
     <string name="shizuku_ready">Shizuku connected</string>
@@ -896,7 +865,6 @@ Layout Inspector
     <string name="folder_size_none">Never</string>
     <string name="file_operations">File operations</string>
     <string name="elevated_access">Elevated access</string>
-    <string name="elevated_access_mode">Access mode</string>
     <string name="elevated_install">Installing</string>
     <string name="elevated_install_flags">Install flags</string>
     <string name="restart_to_apply_theme">Restart the app to apply the new theme</string>
@@ -1021,7 +989,6 @@ Layout Inspector
     <string name="find_needs_folder">Find in files needs a local folder</string>
     <string name="find_in_files">Find in files</string>
     <string name="xml_search">XML Search</string>
-    <string name="matches_x">%1$d matches</string>
     <string name="querier_enter_query">Enter a query</string>
     <string name="querier_no_res_id">No resource with id 0x%1$s</string>
     <string name="querier_bad_id">Bad id: %1$s</string>
@@ -1031,7 +998,6 @@ Layout Inspector
     <string name="querier_not_number">Not a number</string>
     <string name="querier_out_of_range">Number out of range</string>
     <string name="querier_only_decimal_negative">Only decimal can be negative</string>
-    <string name="menu_refresh">Refresh</string>
     <string name="menu_select_all">Select all</string>
     <string name="menu_hidden_files">Hidden files</string>
     <string name="menu_show_system_hidden">Show system hidden files</string>
@@ -1326,10 +1292,6 @@ Layout Inspector
     <string name="hex_invalid_offset">Invalid offset</string>
     <string name="hex_unsaved">Unsaved changes</string>
     <string name="hex_discard_unsaved">Discard unsaved changes?</string>
-    <string name="edsettings_click">Click Action</string>
-    <string name="edsettings_long">Long Press Action</string>
-    <string name="edsettings_add">Add Button</string>
-    <string name="edsettings_edit">Edit Button</string>
     <string name="native_required">Native tools required</string>
     <string name="native_need_download">This feature needs native binaries (~%1$s MB download). Download now?</string>
     <string name="download">Download</string>
@@ -1667,11 +1629,6 @@ Layout Inspector
     <string name="convert_to_camelcase">Convert to camelcase</string>
     <string name="increase_indent">Increase indent</string>
     <string name="decrease_indent">Decrease indent</string>
-    <string name="cut">Cut</string>
-    <string name="paste">Paste</string>
-    <string name="insert_text">Insert text</string>
-    <string name="regex_find_replace">Regex find and replace</string>
-    <string name="replace_line">Replace line</string>
     <string name="no_matches_found">No matches found</string>
     <string name="symbol_replaced_matches">Replaced %1$d matches</string>
     <string name="folder_size_mode">Show size on folders</string>
@@ -1754,10 +1711,6 @@ Layout Inspector
     <string name="add_to_outer_title">Update outer archive</string>
     <string name="add_to_outer_msg">Also write the updated %1$s back into %2$s?</string>
     <string name="outer_updated_f">%1$s updated inside %2$s</string>
-    <string name="editor_archive_update_title">Update archive</string>
-    <string name="editor_archive_update_msg">%1$s saved. Write it back into %2$s now?</string>
-    <string name="update_archive">Update archive</string>
-    <string name="stay">Stay</string>
     <string name="dex_export_title">Export classes</string>
     <string name="dex_export_smali">Smali (.smali files)</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>
@@ -1808,7 +1761,6 @@ Layout Inspector
     <string name="donate">Donate</string>
     <string name="setup">Setup</string>
     <string name="recycle_bin">Recycle bin</string>
-    <string name="recycle_bin_summary">Move deleted files here instead of erasing them, so accidental deletes can be undone</string>
     <string name="ask">Ask</string>
     <string name="never">Never</string>
     <string name="always">Always</string>
@@ -1841,19 +1793,12 @@ Layout Inspector
     <string name="recycle_bin_reason_delete">Deleted</string>
     <string name="recycle_bin_options">Recycle bin options</string>
     <string name="enable_recycle_bin">Enable recycle bin</string>
-    <string name="startup">Startup</string>
-    <string name="request_root_permission">Request root permission</string>
-    <string name="request_root_permission_summary">Request root permissions at startup. After modifying this setting, you need to restart to take effect.</string>
-    <string name="request_shell_permission">Request shell permission</string>
-    <string name="request_shell_permission_summary">If root permission is not obtained at startup, MP will try to call Shizuku to obtain shell permission. After modifying this setting, you need to restart to take effect.</string>
     <string name="sort_by_deletion_time">Deletion time</string>
     <string name="sort_by_modified_time">Last modified time</string>
     <string name="sort_by_name">File name</string>
     <string name="selected_count">%1$d selected</string>
     <string name="restore_all">Restore all</string>
     <string name="delete_all">Delete all</string>
-    <string name="dex_to_jar">Dex to Jar</string>
-    <string name="jar_saved_to">JAR saved to %1$s</string>
     <string name="item_deleted">Item deleted</string>
     <string name="renamed">Renamed</string>
     <string name="restored">Restored</string>
@@ -1873,8 +1818,6 @@ Layout Inspector
     <string name="npatch_fake_signature">Declare original signature as fake-signature</string>
     <string name="npatch_gms_replacement">GMS replacement package (optional)</string>
     <string name="npatch_profiles">Patch profiles</string>
-    <string name="xposed_patcher_lite_title">Xposed patcher</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
     <string name="multiplex_apk">Multiplex APK (deduplicate)</string>
     <string name="multiplex_title">Multiplex: %1$s</string>
     <string name="multiplex_info">Redirects entries that are identical to entries inside the stored embedded APK (%1$s) so the duplicated data is stored only once. The output is signed with the V2/V3 raw-file signer, which preserves the optimization.</string>
@@ -1911,6 +1854,4 @@ Layout Inspector
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="npatch_no_output">The patcher produced no output APK. Check the log for details.</string>
-    <string name="npatch_autosign_running">Re-signing with your key…</string>
 </resources>

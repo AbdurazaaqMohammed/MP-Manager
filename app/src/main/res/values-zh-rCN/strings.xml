@@ -13,20 +13,13 @@
     <string name="warning">警告</string>
     <string name="copy_log">复制日志</string>
     <string name="app_icon_list_label">应用图标</string>
-    <string name="show_icons">在应用列表中显示图标</string>
     <string name="merge_splits">默认合并/反拆分 split 应用</string>
     <string name="show_last_updated">显示最后更新日期</string>
-    <string name="show_first_install">显示首次安装日期</string>
-    <string name="show_pkg">显示包名</string>
-    <string name="show_app">显示应用名称</string>
-    <string name="show_v_code">显示版本代码</string>
-    <string name="show_v_name">显示版本名称</string>
     <string name="filter">过滤</string>
     <string name="warn_sign">合并后，APK 的原始签名将失效，必须签名才能安装。这会破坏从官方来源更新应用。某些应用会验证 APK 签名或采取其他措施检查应用是否被修改，这可能导致其在启动时崩溃。</string>
     <string name="user_apps">用户应用</string>
     <string name="system_apps">系统应用</string>
     <string name="share_apk">分享 APK</string>
-    <string name="display_nfo">显示信息</string>
     <string name="display_functions">显示功能</string>
     <string name="confirm">确认</string>
     <string name="black_theme">黑色主题</string>
@@ -55,7 +48,6 @@
     <string name="confuse_zip_structure">混淆 Zip 结构</string>
     <string name="dex_protection_level">Dex 保护级别</string>
     <string name="copying">"正在复制 %1$s"</string>
-    <string name="enter_name_for_copy">输入副本的新名称</string>
     <string name="signing_">正在签名 %1$s</string>
     <string name="signed">已签名 %1$s</string>
     <string name="deleting">正在删除 %1$s</string>
@@ -256,7 +248,6 @@
     <string name="batch_sign">批量签名 APK</string>
     <string name="batch_optimize">优化 APK</string>
     <string name="batch_install">安装 APK</string>
-    <string name="view_certificate">查看证书</string>
     <string name="unknown_sdk">\?</string>
     <string name="no_signature_found">未找到签名</string>
     <string name="cert">证书 %1$d</string>
@@ -352,8 +343,6 @@
     <string name="warning_dangerous_directory">警告：危险目录</string>
     <string name="warn_delete_s">您即将删除敏感系统目录中的文件。这可能会破坏应用或导致系统不稳定。\n\n您绝对确定吗？</string>
     <string name="no_apk_files_found">归档中未找到 APK 文件</string>
-    <string name="manage_bottom_bar">管理底部栏</string>
-    <string name="delete_button">删除按钮</string>
     <string name="termux_perm"><![CDATA[注意：您需要授予 MP Manager 权限才能向 Termux 发送命令\n（权限 > 附加权限 > 在 Termux 环境中运行命令）]]></string>
     <string name="editor_settings">编辑器设置</string>
     <string name="icon_changed">图标已更改</string>
@@ -605,7 +594,6 @@ Layout Inspector
     <string name="exactly_match">完全匹配</string>
     <string name="hex">十六进制</string>
     <string name="open_player_as_act">以 Activity 打开播放器</string>
-    <string name="root_available">Root 可用</string>
     <string name="root_install">Root 安装</string>
     <string name="root_file_operations">Root 文件操作</string>
     <string name="root_extractor_features">APK 提取器中的 Root 功能</string>
@@ -676,7 +664,6 @@ Layout Inspector
     <string name="new_key">新密钥</string>
     <string name="access_mode">访问模式</string>
     <string name="shizuku_mode">Shizuku</string>
-    <string name="shizuku_status">Shizuku 状态</string>
     <string name="shizuku_not_running">Shizuku 未运行</string>
     <string name="shizuku_running_no_perm">Shizuku 正在运行，缺少权限</string>
     <string name="shizuku_ready">Shizuku 已连接</string>
@@ -815,7 +802,6 @@ Layout Inspector
     <string name="no_files_found">未找到文件</string>
     <string name="find_needs_folder">在文件中查找需要本地文件夹</string>
     <string name="find_in_files">在文件中查找</string>
-    <string name="matches_x">%1$d 个匹配</string>
     <string name="querier_enter_query">输入查询</string>
     <string name="querier_no_res_id">没有 id 为 0x%1$s 的资源</string>
     <string name="querier_bad_id">错误 id：%1$s</string>
@@ -825,7 +811,6 @@ Layout Inspector
     <string name="querier_not_number">不是数字</string>
     <string name="querier_out_of_range">数字超出范围</string>
     <string name="querier_only_decimal_negative">只有十进制可以为负数</string>
-    <string name="menu_refresh">刷新</string>
     <string name="menu_select_all">全选</string>
     <string name="menu_hidden_files">隐藏文件</string>
     <string name="menu_show_system_hidden">显示系统隐藏文件</string>
@@ -1017,10 +1002,6 @@ Layout Inspector
     <string name="hex_invalid_offset">无效偏移量</string>
     <string name="hex_unsaved">未保存的更改</string>
     <string name="hex_discard_unsaved">丢弃未保存的更改？</string>
-    <string name="edsettings_click">点击操作</string>
-    <string name="edsettings_long">长按操作</string>
-    <string name="edsettings_add">添加按钮</string>
-    <string name="edsettings_edit">编辑按钮</string>
     <string name="native_required">需要原生工具</string>
     <string name="native_need_download">此功能需要原生二进制文件（约 %1$s MB 下载）。现在下载？</string>
     <string name="download">下载</string>
@@ -1356,11 +1337,6 @@ Layout Inspector
     <string name="convert_to_camelcase">转换为驼峰式</string>
     <string name="increase_indent">增加缩进</string>
     <string name="decrease_indent">减少缩进</string>
-    <string name="cut">剪切</string>
-    <string name="paste">粘贴</string>
-    <string name="insert_text">插入文本</string>
-    <string name="regex_find_replace">正则查找并替换</string>
-    <string name="replace_line">替换行</string>
     <string name="no_matches_found">未找到匹配项</string>
     <string name="reload_file">重新加载文件</string>
     <string name="overriding_methods_found">找到 %1$d 个重写方法。是否要搜索重写方法的用法？</string>
@@ -1531,15 +1507,6 @@ Layout Inspector
     <string name="view_mode_auto">自动切换</string>
     <string name="view_mode_side_by_side">并排</string>
     <string name="view_mode_unified">统一</string>
-    <string name="show_signature">显示签名类型</string>
-    <string name="show_apk_size">显示 APK 大小</string>
-    <string name="show_apk_dir">显示 APK 目录</string>
-    <string name="show_data_dir">显示内部数据目录</string>
-    <string name="show_ext_data_dir">显示外部数据目录</string>
-    <string name="show_target_sdk">显示目标 SDK</string>
-    <string name="show_min_sdk">显示最低 SDK</string>
-    <string name="show_installer">显示安装来源</string>
-    <string name="show_enabled_state">显示启用状态</string>
     <string name="signature">签名</string>
     <string name="apk_size">APK 大小</string>
     <string name="apk_dir">APK 目录</string>
@@ -1681,7 +1648,6 @@ Layout Inspector
     <string name="installer_source_shell">Shell（需要 root/Shizuku，适用于 HyperOS/MIUI）</string>
     <string name="installer_source_custom">自定义包…</string>
     <string name="installer_custom_pkg">自定义安装包</string>
-    <string name="installer_spoof_note">伪造仅在使用 root/Shizuku 静默安装时有效。无特权时系统会记录 MP Manager 自身。Play 伪造可阻止检查安装来源的应用要求从 Play 重装；不会伪造 Play 签名或许可。</string>
     <string name="install_allow_test">允许测试包</string>
     <string name="install_allow_downgrade">允许降级</string>
     <string name="install_grant_all">安装时授予所有请求的权限</string>
@@ -1697,10 +1663,6 @@ Layout Inspector
     <string name="add_to_outer_title">更新外部归档</string>
     <string name="add_to_outer_msg">是否将更新后的 %1$s 写回 %2$s？</string>
     <string name="outer_updated_f">%1$s 已在 %2$s 内更新</string>
-    <string name="editor_archive_update_title">更新归档</string>
-    <string name="editor_archive_update_msg">%1$s 已保存。现在将其写回 %2$s？</string>
-    <string name="update_archive">更新归档</string>
-    <string name="stay">停留</string>
     <string name="dex_export_title">导出类</string>
     <string name="dex_export_smali">Smali（.smali 文件）</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>

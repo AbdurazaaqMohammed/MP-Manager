@@ -14,20 +14,13 @@
     <string name="warning">Предупреждение</string>
     <string name="copy_log">Копировать журнал</string>
     <string name="app_icon_list_label">Значок приложения</string>
-    <string name="show_icons">Показывать значки в списке приложений</string>
     <string name="merge_splits">Объединять split-приложения по умолчанию</string>
     <string name="show_last_updated">Показывать дату последнего обновления</string>
-    <string name="show_first_install">Показывать дату первой установки</string>
-    <string name="show_pkg">Показывать имя пакета</string>
-    <string name="show_app">Показывать имя приложения</string>
-    <string name="show_v_code">Показывать код версии</string>
-    <string name="show_v_name">Показывать имя версии</string>
     <string name="filter">Фильтр</string>
     <string name="warn_sign">После объединения исходная подпись APK станет недействительной, и для установки его необходимо будет подписать. Это нарушит обновление приложения из официальных источников. Некоторые приложения проверяют подпись APK или используют другие меры для обнаружения изменений, что может привести к сбою при запуске.</string>
     <string name="user_apps">Пользовательские приложения</string>
     <string name="system_apps">Системные приложения</string>
     <string name="share_apk">Поделиться APK</string>
-    <string name="display_nfo">Отображаемая информация</string>
     <string name="display_functions">Отображаемые функции</string>
     <string name="confirm">Подтвердить</string>
     <string name="black_theme">Чёрная тема</string>
@@ -56,7 +49,6 @@
     <string name="confuse_zip_structure">Запутывать структуру Zip</string>
     <string name="dex_protection_level">Уровень защиты Dex</string>
     <string name="copying">"Копирование %1$s"</string>
-    <string name="enter_name_for_copy">Введите новое имя для копии</string>
     <string name="signing_">подписывание %1$s</string>
     <string name="signed">Подписано %1$s</string>
     <string name="deleting">Удаление %1$s</string>
@@ -257,7 +249,6 @@
     <string name="batch_sign">Пакетная подпись APK</string>
     <string name="batch_optimize">Оптимизация APK</string>
     <string name="batch_install">Установка APK</string>
-    <string name="view_certificate">Просмотреть сертификат</string>
     <string name="unknown_sdk">\?</string>
     <string name="no_signature_found">Подпись не найдена</string>
     <string name="cert">Сертификат %1$d</string>
@@ -352,8 +343,6 @@
     <string name="warning_dangerous_directory">Внимание: опасный каталог</string>
     <string name="warn_delete_s">Вы собираетесь удалить файлы в чувствительном системном каталоге. Это может нарушить работу приложений или вызвать нестабильность системы.\n\nВы абсолютно уверены?</string>
     <string name="no_apk_files_found">APK-файлы в архиве не найдены</string>
-    <string name="manage_bottom_bar">Настроить нижнюю панель</string>
-    <string name="delete_button">Удалить кнопку</string>
     <string name="termux_perm"><![CDATA[Примечание: необходимо разрешить MP Manager отправлять команды в Termux\n(Разрешения > Дополнительные разрешения > Выполнение команд в среде Termux)]]></string>
     <string name="editor_settings">Настройки редактора</string>
     <string name="icon_changed">Значок изменён</string>
@@ -582,7 +571,6 @@
     <string name="exactly_match">Точное совпадение</string>
     <string name="hex">Hex</string>
     <string name="open_player_as_act">Открывать плеер как activity</string>
-    <string name="root_available">Root доступен</string>
     <string name="root_install">Установка с root</string>
     <string name="root_file_operations">Файловые операции с root</string>
     <string name="root_extractor_features">Root-функции в извлечении APK</string>
@@ -653,7 +641,6 @@
     <string name="new_key">Новый ключ</string>
     <string name="access_mode">Режим доступа</string>
     <string name="shizuku_mode">Shizuku</string>
-    <string name="shizuku_status">Статус Shizuku</string>
     <string name="shizuku_not_running">Shizuku не запущен</string>
     <string name="shizuku_running_no_perm">Shizuku запущен, нет разрешения</string>
     <string name="shizuku_ready">Shizuku подключён</string>
@@ -792,7 +779,6 @@
     <string name="no_files_found">Файлы не найдены</string>
     <string name="find_needs_folder">Для поиска в файлах нужна локальная папка</string>
     <string name="find_in_files">Найти в файлах</string>
-    <string name="matches_x">Совпадений: %1$d</string>
     <string name="querier_enter_query">Введите запрос</string>
     <string name="querier_no_res_id">Нет ресурса с id 0x%1$s</string>
     <string name="querier_bad_id">Некорректный id: %1$s</string>
@@ -802,7 +788,6 @@
     <string name="querier_not_number">Не число</string>
     <string name="querier_out_of_range">Число вне диапазона</string>
     <string name="querier_only_decimal_negative">Отрицательным может быть только десятичное число</string>
-    <string name="menu_refresh">Обновить</string>
     <string name="menu_select_all">Выбрать всё</string>
     <string name="menu_hidden_files">Скрытые файлы</string>
     <string name="menu_show_system_hidden">Показывать системные скрытые файлы</string>
@@ -992,10 +977,6 @@
     <string name="hex_invalid_offset">Недопустимое смещение</string>
     <string name="hex_unsaved">Несохранённые изменения</string>
     <string name="hex_discard_unsaved">Отбросить несохранённые изменения?</string>
-    <string name="edsettings_click">Действие по нажатию</string>
-    <string name="edsettings_long">Действие по долгому нажатию</string>
-    <string name="edsettings_add">Добавить кнопку</string>
-    <string name="edsettings_edit">Редактировать кнопку</string>
     <string name="native_required">Требуются нативные инструменты</string>
     <string name="native_need_download">Для этой функции нужны нативные бинарные файлы (загрузка ~%1$s МБ). Скачать сейчас?</string>
     <string name="download">Скачать</string>
@@ -1323,11 +1304,6 @@
     <string name="convert_to_camelcase">Преобразовать в camelCase</string>
     <string name="increase_indent">Увеличить отступ</string>
     <string name="decrease_indent">Уменьшить отступ</string>
-    <string name="cut">Вырезать</string>
-    <string name="paste">Вставить</string>
-    <string name="insert_text">Вставить текст</string>
-    <string name="regex_find_replace">Поиск и замена regex</string>
-    <string name="replace_line">Заменить строку</string>
     <string name="no_matches_found">Совпадений не найдено</string>
     <string name="reload_file">Перезагрузить файл</string>
     <string name="overriding_methods_found">Найдено переопределяющих методов: %1$d. Искать использования переопределяющих методов?</string>
@@ -1503,15 +1479,6 @@
     <string name="view_mode_auto">Автопереключение</string>
     <string name="view_mode_side_by_side">Рядом</string>
     <string name="view_mode_unified">Единый</string>
-    <string name="show_signature">Показывать тип подписи</string>
-    <string name="show_apk_size">Показывать размер APK</string>
-    <string name="show_apk_dir">Показывать каталог APK</string>
-    <string name="show_data_dir">Показывать внутренний каталог данных</string>
-    <string name="show_ext_data_dir">Показывать внешний каталог данных</string>
-    <string name="show_target_sdk">Показывать целевой SDK</string>
-    <string name="show_min_sdk">Показывать минимальный SDK</string>
-    <string name="show_installer">Показывать установщик</string>
-    <string name="show_enabled_state">Показывать состояние включения</string>
     <string name="signature">Подпись</string>
     <string name="apk_size">Размер APK</string>
     <string name="apk_dir">Каталог APK</string>
@@ -1653,7 +1620,6 @@
     <string name="installer_source_shell">Shell (нужен root/Shizuku, для HyperOS/MIUI)</string>
     <string name="installer_source_custom">Свой пакет…</string>
     <string name="installer_custom_pkg">Свой пакет установщика</string>
-    <string name="installer_spoof_note">Подмена работает только с тихой установкой через root/Shizuku. Без привилегий система запишет сам MP Manager. Подмена Play не даёт приложениям, проверяющим установщик, просить переустановку из Play; подписи и лицензии Play не подделываются.</string>
     <string name="install_allow_test">Разрешить тестовые пакеты</string>
     <string name="install_allow_downgrade">Разрешить понижение версии</string>
     <string name="install_grant_all">Выдавать все запрашиваемые разрешения при установке</string>
@@ -1671,10 +1637,6 @@
     <string name="add_to_outer_title">Обновить внешний архив</string>
     <string name="add_to_outer_msg">Записать обновлённый %1$s обратно в %2$s?</string>
     <string name="outer_updated_f">%1$s обновлён внутри %2$s</string>
-    <string name="editor_archive_update_title">Обновить архив</string>
-    <string name="editor_archive_update_msg">%1$s сохранён. Записать его в %2$s сейчас?</string>
-    <string name="update_archive">Обновить архив</string>
-    <string name="stay">Остаться</string>
     <string name="dex_export_title">Экспорт классов</string>
     <string name="dex_export_smali">Smali (файлы .smali)</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>

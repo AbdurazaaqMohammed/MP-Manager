@@ -244,7 +244,6 @@
     <string name="customize">ปรับแต่ง</string>
     <string name="customize_file_menu">ลำดับเมนูไฟล์</string>
     <string name="customize_file_menu_hint">กดค้างเพื่อลากรายการไปที่ใดก็ได้</string>
-    <string name="cut">ตัด</string>
     <string name="cut_line">ตัดบรรทัด</string>
     <string name="dark_theme">ธีมมืด</string>
     <string name="data_type">ประเภทข้อมูล</string>
@@ -272,7 +271,6 @@
     <string name="default_client">ไคลเอนต์เริ่มต้น</string>
     <string name="default_server">เซิร์ฟเวอร์เริ่มต้น</string>
     <string name="delete">ลบ</string>
-    <string name="delete_button">ปุ่มลบ</string>
     <string name="delete_config">ลบการตั้งค่า</string>
     <string name="delete_confirm">คุณแน่ใจหรือไม่ว่าต้องการลบโปรไฟล์ %1$s?</string>
     <string name="delete_entry_info">รายการทั้งหมดของการตั้งค่านี้จะถูกลบหลังบันทึก</string>
@@ -313,7 +311,6 @@
     <string name="discard">ละทิ้ง</string>
     <string name="dismiss">ปิด</string>
     <string name="display_functions">ฟังก์ชันการแสดงผล</string>
-    <string name="display_nfo">ข้อมูลการแสดงผล</string>
     <string name="dns_applied">DNS %1$s</string>
     <string name="dns_pinned_unsupported">ไม่รองรับ pinned shortcut</string>
     <string name="dns_shortcut_failed">สร้างทางลัดไม่สำเร็จ</string>
@@ -353,10 +350,6 @@
 
 การแก้ไขไฟล์ระบบอาจทำให้แอปเสียหายหรือบูตไม่ขึ้น ดำเนินการต่อ?</string>
     <string name="editor_writing_root">กำลังเขียนกลับด้วย root…</string>
-    <string name="edsettings_add">เพิ่มปุ่ม</string>
-    <string name="edsettings_click">การกระทำเมื่อคลิก</string>
-    <string name="edsettings_edit">แก้ไขปุ่ม</string>
-    <string name="edsettings_long">การกระทำเมื่อกดค้าง</string>
     <string name="elevated_access">การเข้าถึงระดับสูง</string>
     <string name="ellipsis">…</string>
     <string name="empty_line">บรรทัดว่าง</string>
@@ -369,7 +362,6 @@
     <string name="enter_a_url_or_set_the_button_to_dismiss">ป้อน URL หรือตั้งค่าปุ่มเป็นปิด</string>
     <string name="enter_line_to_jump_to">ป้อนบรรทัดที่จะไป</string>
     <string name="enter_name">ป้อนชื่อ</string>
-    <string name="enter_name_for_copy">ป้อนชื่อใหม่สำหรับสำเนา</string>
     <string name="enter_password">ป้อนรหัสผ่าน</string>
     <string name="enter_path">ป้อนเส้นทาง</string>
     <string name="enter_width_and_height">ป้อนความกว้างและความสูง</string>
@@ -596,7 +588,6 @@
     <string name="include_bookmark_groups_sidebar">รวมกลุ่มบุ๊กมาร์กในแถบด้านข้าง</string>
     <string name="increase_indent">เพิ่มการเยื้อง</string>
     <string name="info">ข้อมูล</string>
-    <string name="insert_text">แทรกข้อความ</string>
     <string name="inspect_mode">โหมดตรวจสอบ</string>
     <string name="inspect_stopped">หยุดโหมดตรวจสอบแล้ว</string>
     <string name="inspector">ตัวตรวจสอบ</string>
@@ -662,13 +653,11 @@
     <string name="long_select">เลือกแบบยาว</string>
     <string name="longs">Long</string>
     <string name="lossless">ไม่สูญเสียคุณภาพ</string>
-    <string name="manage_bottom_bar">จัดการแถบล่าง</string>
     <string name="manage_profiles">จัดการโปรไฟล์</string>
     <string name="manage_storage">จัดการพื้นที่จัดเก็บ</string>
     <string name="manifest_toggles">สลับการตั้งค่า Manifest</string>
     <string name="match_case">ตรงตามตัวพิมพ์</string>
     <string name="match_exactly">ตรงกันทุกประการ</string>
-    <string name="matches_x">%1$d รายการที่ตรงกัน</string>
     <string name="matching">กำลังจับคู่…</string>
     <string name="max_size_hint">ขนาดไฟล์สูงสุด</string>
     <string name="me_attr_missing">ไม่พบแอตทริบิวต์ %1$s ใน manifest</string>
@@ -700,7 +689,6 @@
     <string name="menu_hide_selected">ซ่อนไฟล์ที่เลือก</string>
     <string name="menu_items">รายการเมนู</string>
     <string name="menu_order_reset">รีเซ็ตลำดับเมนูแล้ว</string>
-    <string name="menu_refresh">รีเฟรช</string>
     <string name="menu_select_all">เลือกทั้งหมด</string>
     <string name="menu_seq">ใช้โลโก้เมนูเลื่อนขึ้นลงเพื่อเปลี่ยนลำดับเมนู</string>
     <string name="menu_show_manual_hidden">แสดงไฟล์ที่ซ่อนด้วยตนเอง</string>
@@ -812,7 +800,6 @@
     <string name="package_label">แพ็กเกจ</string>
     <string name="parent">รายการหลัก</string>
     <string name="parent_dir">ไดเรกทอรีหลัก</string>
-    <string name="paste">วาง</string>
     <string name="paste_from">วางจาก</string>
     <string name="paste_style">วางสไตล์</string>
     <string name="path">เส้นทาง</string>
@@ -909,7 +896,6 @@
     <string name="refactor_obfuscated_resource_names">รีแฟกเตอร์ชื่อทรัพยากรที่ถูก obfuscate</string>
     <string name="refactored">รีแฟกเตอร์ %1$s แล้ว</string>
     <string name="regex">ใช้ regex</string>
-    <string name="regex_find_replace">ค้นหาและแทนที่ด้วย regex</string>
     <string name="reload">โหลดใหม่</string>
     <string name="reload_file">โหลดไฟล์ใหม่</string>
     <string name="reload_with_charset">โหลดใหม่ด้วย Charset</string>
@@ -948,7 +934,6 @@
     <string name="replace_all">แทนที่ทั้งหมด</string>
     <string name="replace_data_type">แทนที่ประเภทข้อมูล</string>
     <string name="replace_in_all_strings">แทนที่ในสตริงทั้งหมด</string>
-    <string name="replace_line">แทนที่บรรทัด</string>
     <string name="replace_line_with_clipboard">แทนที่บรรทัด (ด้วยคลิปบอร์ด)</string>
     <string name="replace_with">แทนที่ด้วย</string>
     <string name="replacement_errors">ข้อผิดพลาดในการแทนที่</string>
@@ -968,7 +953,6 @@
     <string name="rewind">กรอกลับ</string>
     <string name="rich_text_html">ข้อความRich (HTML)</string>
     <string name="root">Root</string>
-    <string name="root_available">มี Root</string>
     <string name="root_denied_msg">Root ไม่พร้อมใช้งานกับคำสั่ง su นี้</string>
     <string name="root_detected_enabled">ตรวจพบ Root เปิดใช้งานการเข้าถึง root แล้ว</string>
     <string name="root_extractor_features">ฟีเจอร์ Root ใน APK Extractor</string>
@@ -1057,20 +1041,13 @@ androidx/
     <string name="shizuku_open">เปิด Shizuku</string>
     <string name="shizuku_ready">เชื่อมต่อ Shizuku แล้ว</string>
     <string name="shizuku_running_no_perm">Shizuku ทำงานอยู่ แต่ขาดสิทธิ์</string>
-    <string name="shizuku_status">สถานะ Shizuku</string>
     <string name="shizuku_unsupported">Shizuku ต้องใช้ Android 6+</string>
     <string name="shorts">Short</string>
-    <string name="show_app">แสดงชื่อแอป</string>
     <string name="show_bookmarks_sidebar">แสดงบุ๊กมาร์กในแถบด้านข้าง</string>
-    <string name="show_first_install">แสดงวันที่ติดตั้งครั้งแรก</string>
-    <string name="show_icons">แสดงไอคอนในรายการแอป</string>
     <string name="show_last_updated">แสดงวันที่อัปเดตล่าสุด</string>
     <string name="show_launch_activities">แสดง Launch Activities</string>
     <string name="show_methods">แสดง Methods</string>
-    <string name="show_pkg">แสดงชื่อแพ็กเกจ</string>
     <string name="show_strings">แสดง Strings</string>
-    <string name="show_v_code">แสดงรหัสเวอร์ชัน</string>
-    <string name="show_v_name">แสดงชื่อเวอร์ชัน</string>
     <string name="shuffle">สุ่ม</string>
     <string name="sidebar_collapse">ย่อส่วน</string>
     <string name="sidebar_expand">ขยายส่วน</string>
@@ -1293,7 +1270,6 @@ androidx/
     <string name="version_name">ชื่อเวอร์ชัน</string>
     <string name="view">ดู</string>
     <string name="view_bounds">ขอบเขต</string>
-    <string name="view_certificate">ดูใบรับรอง</string>
     <string name="view_children">รายการย่อย</string>
     <string name="view_children_count">จำนวนรายการย่อย</string>
     <string name="view_class">คลาส</string>
@@ -1378,15 +1354,6 @@ androidx/
     <string name="zip_differences">ความแตกต่าง ZIP</string>
     <string name="zipalign">Zipalign ก่อนลงนาม</string>
     <string name="zipalign_explanation">จัดแนวข้อมูลที่ไม่บีบอัดภายใน APK (manifest, ทรัพยากร, ไลบรารีเนทีฟ) เพื่อให้ Android สามารถติดตั้งและรันได้อย่างมีประสิทธิภาพ ต้องรันก่อนลงนาม ดังนั้นให้เปิดไว้เว้นแต่ APK จะจัดแนวแล้ว</string>
-    <string name="show_signature">แสดงประเภทลายเซ็น</string>
-    <string name="show_apk_size">แสดงขนาด APK</string>
-    <string name="show_apk_dir">แสดงไดเรกทอรี APK</string>
-    <string name="show_data_dir">แสดงไดเรกทอรีข้อมูลภายใน</string>
-    <string name="show_ext_data_dir">แสดงไดเรกทอรีข้อมูลภายนอก</string>
-    <string name="show_target_sdk">แสดง Target SDK</string>
-    <string name="show_min_sdk">แสดง Min SDK</string>
-    <string name="show_installer">แสดงตัวติดตั้ง</string>
-    <string name="show_enabled_state">แสดงสถานะการเปิดใช้งาน</string>
     <string name="signature">ลายเซ็น</string>
     <string name="apk_size">ขนาด APK</string>
     <string name="apk_dir">ไดเรกทอรี APK</string>
@@ -1682,7 +1649,6 @@ androidx/
     <string name="installer_source_shell">Shell (ต้องใช้ root/Shizuku สำหรับ HyperOS/MIUI)</string>
     <string name="installer_source_custom">แพ็กเกจกำหนดเอง…</string>
     <string name="installer_custom_pkg">แพ็กเกจตัวติดตั้งกำหนดเอง</string>
-    <string name="installer_spoof_note">การปลอมจะติดเฉพาะติดตั้งเงียบด้วย root/Shizuku หากไม่มีสิทธิ์ระบบจะบันทึกเป็น MP Manager เอง การปลอม Play ช่วยหยุดแอปที่ตรวจตัวติดตั้งไม่ให้ขอติดตั้งใหม่จาก Play; ไม่ได้ปลอมลายเซ็นหรือไลเซนส์ Play</string>
     <string name="install_allow_test">อนุญาตแพ็กเกจทดสอบ</string>
     <string name="install_allow_downgrade">อนุญาตดาวน์เกรด</string>
     <string name="install_grant_all">ให้สิทธิ์ทั้งหมดที่ขอตอนติดตั้ง</string>
@@ -1700,10 +1666,6 @@ androidx/
     <string name="add_to_outer_title">อัปเดตไฟล์บีบอัดชั้นนอก</string>
     <string name="add_to_outer_msg">เขียน %1$s ที่อัปเดตแล้วกลับลงใน %2$s ด้วยหรือไม่?</string>
     <string name="outer_updated_f">อัปเดต %1$s ใน %2$s แล้ว</string>
-    <string name="editor_archive_update_title">อัปเดตไฟล์บีบอัด</string>
-    <string name="editor_archive_update_msg">บันทึก %1$s แล้ว เขียนกลับลงใน %2$s ตอนนี้หรือไม่?</string>
-    <string name="update_archive">อัปเดตไฟล์บีบอัด</string>
-    <string name="stay">อยู่ต่อ</string>
     <string name="dex_export_title">ส่งออกคลาส</string>
     <string name="dex_export_smali">Smali (ไฟล์ .smali)</string>
     <string name="dex_export_dex">Dex (classes.dex)</string>

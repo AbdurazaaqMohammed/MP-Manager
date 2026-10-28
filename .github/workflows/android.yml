@@ -45,7 +45,7 @@ jobs:
           PY
 
       - name: Build APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleFullRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
