@@ -1018,13 +1018,23 @@ public class MediaPlayerActivity extends BaseActivity implements
                                 || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                 || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                     }
-                    media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
-                    if (!media.isEmpty()) {
+                    io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(this);
+                    String dirPath = dir.getAbsolutePath();
+                    File[] arr = media.toArray(new File[0]);
+                    FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
+                    if (arr.length > 0) {
                         List<MediaItem> q = new ArrayList<>();
                         int start = 0;
-                        for (int i = 0; i < media.size(); i++) {
-                            q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
-                            if (media.get(i).getAbsolutePath().equals(cur.getAbsolutePath())) start = i;
+                        String curAbs = cur.getAbsolutePath();
+                        String curName = cur.getName();
+                        for (int i = 0; i < arr.length; i++) {
+                            String path = arr[i].getAbsolutePath();
+                            if (path.equals(curAbs) || arr[i].getName().equalsIgnoreCase(curName)) {
+                                start = i;
+                                q.add(PlayerManager.buildMediaItem(this, path));
+                            } else {
+                                q.add(PlayerManager.buildMediaItemFast(path));
+                            }
                         }
                         playerManager.play(q, start);
                         return;

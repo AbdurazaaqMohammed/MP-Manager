@@ -163,9 +163,11 @@ public final class FileSorting {
             switch (sortBy) {
                 case SORT_SIZE:
                     result = Long.compare(sizes[ia], sizes[ib]);
+                    if (result == 0) result = compareNaturalIgnoreCase(names[ia], names[ib]);
                     break;
                 case SORT_DATE:
                     result = Long.compare(times[ia], times[ib]);
+                    if (result == 0) result = compareNaturalIgnoreCase(names[ia], names[ib]);
                     break;
                 case SORT_TYPE:
                     result = exts[ia].compareToIgnoreCase(exts[ib]);
