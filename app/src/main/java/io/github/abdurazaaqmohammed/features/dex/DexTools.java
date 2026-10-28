@@ -545,7 +545,7 @@ public class DexTools {
                 context.handler.post(() -> {
                     Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outZip.getName()));
                     context.loadFolderInPane(outZip.getParentFile(), pane1);
-                    if (context.panesShowSameFolder()) {
+                    if (context.pane1Folder != null && context.pane1Folder.equals(context.pane2Folder)) {
                         context.loadFolderInPane(outZip.getParentFile(), !pane1);
                     }
                 });
