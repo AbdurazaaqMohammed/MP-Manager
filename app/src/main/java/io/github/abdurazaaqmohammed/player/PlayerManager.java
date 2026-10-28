@@ -571,6 +571,13 @@ public class PlayerManager {
         shuffleOrder = null;
     }
 
+    public synchronized void setQueue(List<MediaItem> newQueue, int newIndex) {
+        if (newQueue == null || newQueue.isEmpty()) return;
+        this.queue = new ArrayList<>(newQueue);
+        this.currentIndex = Math.max(0, Math.min(newIndex, queue.size() - 1));
+        if (shuffle) buildShuffleOrder();
+    }
+
     public void next() {
         if (queue.isEmpty()) return;
         if (repeatMode == RepeatMode.ONE) { seekTo(0); return; }
@@ -623,8 +630,16 @@ public class PlayerManager {
             } catch (Exception ignored) {}
         }
         try {
-            Collections.sort(out, (a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
-        } catch (Exception ignored) {}
+            io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(appContext);
+            String dirPath = dir.getAbsolutePath();
+            File[] arr = out.toArray(new File[0]);
+            FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
+            out = new ArrayList<>(java.util.Arrays.asList(arr));
+        } catch (Exception ignored) {
+            try {
+                Collections.sort(out, (a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+            } catch (Exception ignoredInner) {}
+        }
         return out;
     }
 
@@ -649,7 +664,7 @@ public class PlayerManager {
         boolean changed = false;
         if (queue.size() == 1) {
             List<MediaItem> full = new ArrayList<>();
-            for (File s : siblings) full.add(buildMediaItem(appContext, s.getAbsolutePath()));
+            for (File s : siblings) full.add(buildMediaItemFast(s.getAbsolutePath()));
             queue = full;
             currentIndex = posInSiblings;
             if (shuffle) buildShuffleOrder();
@@ -661,7 +676,7 @@ public class PlayerManager {
                 for (MediaItem m : queue) {
                     if (m != null && ap.equals(m.path)) { already = true; break; }
                 }
-                if (!already) { queue.add(buildMediaItem(appContext, ap)); changed = true; }
+                if (!already) { queue.add(buildMediaItemFast(ap)); changed = true; }
             }
         }
         return changed;
@@ -713,7 +728,7 @@ public class PlayerManager {
                         }
                         if (pos > 0) {
                             File prev = siblings.get(pos - 1);
-                            queue.add(0, buildMediaItem(appContext, prev.getAbsolutePath()));
+                            queue.add(0, buildMediaItemFast(prev.getAbsolutePath()));
                             return 0;
                         }
                     }
@@ -766,7 +781,13 @@ public class PlayerManager {
     public void seekTo(int msec) {
         if (mediaPlayer != null) {
             msec = Math.max(0, msec);
-            try { mediaPlayer.seekTo(msec); } catch (Exception ignored) {}
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mediaPlayer.seekTo(msec, MediaPlayer.SEEK_CLOSEST);
+                } else {
+                    mediaPlayer.seekTo(msec);
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -1034,11 +1055,27 @@ public class PlayerManager {
     public int getLastVideoWidth() { return lastVideoWidth; }
     public int getLastVideoHeight() { return lastVideoHeight; }
 
+    public static MediaItem buildMediaItemFast(String filePath) {
+        Uri uri = Uri.fromFile(new File(filePath));
+        String name = filePath.substring(filePath.lastIndexOf('/') + 1);
+        String title = filePath.lastIndexOf('\\') >= 0 ? filePath.substring(filePath.lastIndexOf('\\') + 1) : name;
+        String lower = filePath.toLowerCase(Locale.ROOT);
+        boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
+                || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
+                || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
+                || lower.endsWith(".m4v");
+        return new MediaItem(uri, filePath, title, null, null, 0, isVideo);
+    }
+
     public static MediaItem buildMediaItem(Context context, String filePath) {
         Uri uri = Uri.fromFile(new File(filePath));
         String title = null, artist = null, album = null;
         long duration = 0;
-        boolean isVideo = false;
+        String lower = filePath.toLowerCase(Locale.ROOT);
+        boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
+                || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
+                || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
+                || lower.endsWith(".m4v");
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         try {
             mmr.setDataSource(context, uri);
