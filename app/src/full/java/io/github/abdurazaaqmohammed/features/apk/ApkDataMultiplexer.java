@@ -40,8 +40,10 @@ final class ApkDataMultiplexer {
 
     private static final String[] KNOWN_HOST_ENTRIES = {
             "assets/lspatch/origin.apk",
+            "assets/SignatureKiller/origin.apk",
             "assets/npatch/origin.apk",
             "assets/base.apk",
+            "assets/origin.apk"
     };
 
     private ApkDataMultiplexer() {
