@@ -545,6 +545,9 @@ public class DexTools {
                 context.handler.post(() -> {
                     Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outZip.getName()));
                     context.loadFolderInPane(outZip.getParentFile(), pane1);
+                    if (context.panesShowSameFolder()) {
+                        context.loadFolderInPane(outZip.getParentFile(), !pane1);
+                    }
                 });
             } catch (Exception e) {
                 pm.dismiss();
@@ -607,6 +610,11 @@ public class DexTools {
                         .putExtra("axml", true)
                         .putExtra("path", tempFile.getPath()), 757);
                 } else context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("path", tempFile.getPath()), 757);
+            } else if (name.endsWith(".smali")) {
+                context.startActivityForResult(new Intent(context, TextEditorActivity.class)
                         .putExtra("zf", zipFile.getPath())
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("path", tempFile.getPath()), 757);

@@ -85,9 +85,6 @@ public class RightMenuController {
         // 2. Search
         addRightDrawerItem(container, R.drawable.baseline_search_24, activity.getString(R.string.search), v -> activity.showSearchDialog());
 
-        // 3. Find in files
-        addRightDrawerItem(container, R.drawable.ic_search_replace, activity.getString(R.string.find_in_files), v -> activity.showFindInFilesDialog());
-
         // 4. XML Search
         addRightDrawerItem(container, R.drawable.baseline_search_24, activity.getString(R.string.xml_search), v -> fileSearch.showXmlSearchDialog());
 
@@ -111,8 +108,50 @@ public class RightMenuController {
         // 8. Sort
         addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort), v -> activity.showSortDialog());
 
-        // 9. Hidden files
-        addRightDrawerItem(container, R.drawable.visibility_off_24px, activity.getString(R.string.menu_hidden_files), activity::showHiddenFilesMenu);
+        // 9. Hidden files & Folder sizes
+        android.content.SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        addRightDrawerCheckbox(container, R.drawable.visibility_off_24px,
+                activity.getString(R.string.menu_show_system_hidden),
+                prefs.getBoolean("show_system_hidden", false),
+                (buttonView, isChecked) -> {
+                    prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
+                    activity.reloadCurrentFolder();
+                });
+
+        addRightDrawerCheckbox(container, R.drawable.visibility_off_24px,
+                activity.getString(R.string.menu_show_manual_hidden),
+                prefs.getBoolean("show_manually_hidden", false),
+                (buttonView, isChecked) -> {
+                    prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
+                    activity.reloadCurrentFolder();
+                });
+
+        // Show folder sizes dialog shortcut
+        addRightDrawerItem(container, R.drawable.folder_24px, activity.getString(R.string.show_folder_size), v -> {
+            String[] folderSizeLabels = {
+                    activity.getString(R.string.folder_size_user_space),
+                    activity.getString(R.string.folder_size_all),
+                    activity.getString(R.string.folder_size_none)
+            };
+            int currentMode = io.github.abdurazaaqmohammed.utils.UiPrefs.folderSizeMode(activity);
+            if (currentMode < 0 || currentMode > 2) currentMode = io.github.abdurazaaqmohammed.utils.UiPrefs.FOLDER_SIZE_USER;
+            androidx.appcompat.app.AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+                    .setTitle(R.string.show_folder_size)
+                    .setSingleChoiceItems(folderSizeLabels, currentMode, (d, which) -> {
+                        prefs.edit().putInt(io.github.abdurazaaqmohammed.utils.UiPrefs.FOLDER_SIZE_KEY, which).apply();
+                        d.dismiss();
+                        activity.reloadCurrentFolder();
+                    })
+                    .create();
+            dialog.setCanceledOnTouchOutside(true);
+            dialog.show();
+            android.view.Window win = dialog.getWindow();
+            if (win != null) {
+                android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+                int width = (int) (280 * dm.density);
+                win.setLayout(Math.min((int) (dm.widthPixels * 0.75f), width), android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            }
+        });
 
         // 10. Add to bookmarks
         addRightDrawerItem(container, R.drawable.baseline_bookmark_24, activity.getString(R.string.menu_add_bookmark), v -> {
@@ -142,6 +181,47 @@ public class RightMenuController {
 
         // 13. Preferences
         addRightDrawerItem(container, R.drawable.baseline_settings_24, activity.getString(R.string.preferences), v -> activity.showSettingsDialog());
+    }
+
+    private void addRightDrawerCheckbox(LinearLayout container, int iconRes, String title, boolean initialValue, android.widget.CompoundButton.OnCheckedChangeListener onChecked) {
+        LinearLayout itemLayout = new LinearLayout(activity);
+        itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (int) (48 * activity.getResources().getDisplayMetrics().density)));
+        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
+        itemLayout.setGravity(Gravity.CENTER_VERTICAL);
+        int padH = (int) (18 * activity.getResources().getDisplayMetrics().density);
+        itemLayout.setPadding(padH, 0, padH, 0);
+        TypedValue outValue = new TypedValue();
+        activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        itemLayout.setBackgroundResource(outValue.resourceId);
+
+        ImageView icon = new ImageView(activity);
+        int iconSize = (int) (22 * activity.getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
+        iconLp.setMarginEnd((int) (16 * activity.getResources().getDisplayMetrics().density));
+        icon.setLayoutParams(iconLp);
+        icon.setImageResource(iconRes);
+        TypedValue colorOnSurface = new TypedValue();
+        activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, colorOnSurface, true);
+        icon.setColorFilter(colorOnSurface.data);
+        itemLayout.addView(icon);
+
+        TextView text = new TextView(activity);
+        text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        text.setText(title);
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        text.setTextColor(colorOnSurface.data);
+        itemLayout.addView(text);
+
+        com.google.android.material.checkbox.MaterialCheckBox checkBox = new com.google.android.material.checkbox.MaterialCheckBox(activity);
+        checkBox.setChecked(initialValue);
+        checkBox.setOnCheckedChangeListener(onChecked);
+        itemLayout.addView(checkBox);
+
+        itemLayout.setOnClickListener(v -> checkBox.toggle());
+
+        container.addView(itemLayout);
     }
 
     private void addRightDrawerItem(LinearLayout container, int iconRes, String title, View.OnClickListener onClick) {
