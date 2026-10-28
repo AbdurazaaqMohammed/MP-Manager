@@ -20,7 +20,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -29,93 +29,148 @@ import java.util.zip.CRC32;
 /**
  * Format-generic read access to every archive type the panes can browse.
  *
- * Zip keeps flowing through {@link ZipCompat}; 7z, RAR, the tar family and the
- * single-file compressors (gz/bz2/xz) are read through commons-compress and
- * junrar, so each of them opens in a pane the way zips always did. Entry names
- * are normalized to zip conventions everywhere: forward slashes and a trailing
- * slash on directories, which is what the pane listing and the '..' logic of
- * {@code MainActivity.readZipFolder} expect.
+ * The format is detected from the file's bytes (magic numbers, and a tar
+ * header heuristic for the magic-less tar), never from the file name, so
+ * "Open with → Archive viewer" works on any real archive even when its
+ * extension is missing or wrong. Zip keeps flowing through {@link ZipCompat};
+ * 7z, RAR, the tar family and the single-file compressors (gz/bz2/xz) are read
+ * through commons-compress and junrar. A gz/bz2/xz whose payload is a tar is
+ * browsed as that tar, so mislabeled tar.gz archives still list real names.
+ * Entry names are normalized to zip conventions everywhere: forward slashes
+ * and a trailing slash on directories.
  */
 public final class ArchiveBrowseUtil {
+
+    /** Archive container kinds detectable from file content. */
+    public enum ArchiveType {
+        ZIP, SEVEN_Z, RAR, TAR, GZIP, BZIP2, XZ,
+        /** Not a recognizable archive (or one this build cannot list). */
+        NONE
+    }
 
     /** One raw archive entry; {@code path} ends with '/' when {@code isDirectory}. */
     public record RawEntry(String path, boolean isDirectory, long size, long lastModified) {
     }
 
     private static final int BUFFER_SIZE = 8192;
+    private static final int TAR_BLOCK = 512;
 
     private ArchiveBrowseUtil() {
     }
 
     /**
-     * True when the archive is a zip-family container whose entries can be
-     * edited in place (zip4j). Plain zip extensions are accepted directly; any
-     * other file (.apk bundles and friends) is judged by its PK magic so the
-     * archive tools keep working on zip content under other names.
+     * Detects the archive container kind from the file's leading bytes. Never
+     * throws; {@link ArchiveType#NONE} means "not a readable archive".
+     */
+    public static ArchiveType detectArchiveType(File file) {
+        if (file == null || !file.isFile()) return ArchiveType.NONE;
+        byte[] head = new byte[TAR_BLOCK];
+        int n;
+        try (InputStream in = FileUtils.getInputStream(file)) {
+            n = readFully(in, head);
+        } catch (Exception e) {
+            return ArchiveType.NONE;
+        }
+        byte[] magic = head;
+        if (n >= 4 && magic[0] == 'P' && magic[1] == 'K'
+                && (magic[2] == 3 || magic[2] == 5 || magic[2] == 7)
+                && (magic[3] == 4 || magic[3] == 6 || magic[3] == 8)) return ArchiveType.ZIP;
+        if (n >= 6 && magic[0] == 0x37 && magic[1] == 0x7A && magic[2] == (byte) 0xBC
+                && magic[3] == (byte) 0xAF && magic[4] == 0x27 && magic[5] == 0x1C)
+            return ArchiveType.SEVEN_Z;
+        if (n >= 6 && magic[0] == 'R' && magic[1] == 'a' && magic[2] == 'r'
+                && magic[3] == '!' && magic[4] == 0x1A && magic[5] == 0x07) return ArchiveType.RAR;
+        if (n >= 2 && magic[0] == 0x1F && magic[1] == (byte) 0x8B) return ArchiveType.GZIP;
+        if (n >= 3 && magic[0] == 'B' && magic[1] == 'Z' && magic[2] == 'h') return ArchiveType.BZIP2;
+        if (n >= 6 && magic[0] == (byte) 0xFD && magic[1] == 0x37 && magic[2] == 0x7A
+                && magic[3] == 'X' && magic[4] == 'Z' && magic[5] == 0x00) return ArchiveType.XZ;
+        return looksLikeTar(head, n) ? ArchiveType.TAR : ArchiveType.NONE;
+    }
+
+    /** True when the archive content can be listed in a pane. */
+    public static boolean isBrowsable(File file) {
+        return detectArchiveType(file) != ArchiveType.NONE;
+    }
+
+    /**
+     * True when the file is a zip-family container whose entries can be edited
+     * in place (zip4j) — zips, APKs and every other PK-prefixed container.
      */
     public static boolean isZipLike(File archive) {
-        if (archive == null) return false;
-        if (archive.getName().toLowerCase(Locale.ROOT).endsWith(".zip")) return true;
-        try (InputStream in = FileUtils.getInputStream(archive)) {
-            byte[] magic = new byte[4];
-            if (readFully(in, magic) < 4) return false;
-            return magic[0] == 'P' && magic[1] == 'K'
-                    && (magic[2] == 3 || magic[2] == 5 || magic[2] == 7)
-                    && (magic[3] == 4 || magic[3] == 6 || magic[3] == 8);
+        return detectArchiveType(archive) == ArchiveType.ZIP;
+    }
+
+    /** True when the leading bytes look like a tar archive block. */
+    private static boolean looksLikeTar(byte[] head, int len) {
+        if (len < TAR_BLOCK) return false;
+        // POSIX ("ustar\0" + "00") and GNU ("ustar ", " \0") both spell ustar
+        // at offset 257; v7 tars have no magic, so fall back to the checksum.
+        if (head[257] == 'u' && head[258] == 's' && head[259] == 't'
+                && head[260] == 'a' && head[261] == 'r') return true;
+        if (head[0] == 0) return false;
+        try {
+            String chk = new String(head, 148, 8, StandardCharsets.ISO_8859_1).trim();
+            if (chk.isEmpty() || !isOctal(chk)) return false;
+            long stored = Long.parseLong(chk, 8);
+            long sum = 0;
+            for (int i = 0; i < TAR_BLOCK; i++)
+                sum += (i >= 148 && i < 156) ? 0x20 : (head[i] & 0xFF);
+            return sum == stored;
         } catch (Exception e) {
             return false;
         }
     }
 
+    private static boolean isOctal(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '7') return false;
+        }
+        return true;
+    }
+
     /** Every entry in the archive, directories marked by a trailing '/'. */
     public static List<RawEntry> listEntries(File archive) throws IOException {
-        String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) {
-            List<RawEntry> out = new ArrayList<>();
-            for (net.lingala.zip4j.model.FileHeader fh : ZipCompat.listHeaders(archive)) {
-                boolean dir = fh.isDirectory();
-                out.add(new RawEntry(normalizeDir(dir, fh.getFileName()), dir,
-                        Math.max(0, fh.getUncompressedSize()),
-                        Math.max(0, fh.getLastModifiedTime())));
-            }
-            return out;
-        }
-        if (lower.endsWith(".7z")) {
-            try (SevenZFile sz = openSevenZ(archive, null)) {
+        ArchiveType type = detectArchiveType(archive);
+        switch (type) {
+            case ZIP: {
                 List<RawEntry> out = new ArrayList<>();
-                for (SevenZArchiveEntry e : sz.getEntries()) {
-                    String name = e.getName().replace('\\', '/');
-                    if (name.isEmpty()) continue;
-                    long mtime = e.getLastModifiedDate() != null ? e.getLastModifiedDate().getTime() : 0;
-                    out.add(new RawEntry(normalizeDir(e.isDirectory(), name), e.isDirectory(),
-                            Math.max(0, e.getSize()), mtime));
+                for (net.lingala.zip4j.model.FileHeader fh : ZipCompat.listHeaders(archive)) {
+                    boolean dir = fh.isDirectory();
+                    out.add(new RawEntry(normalizeDir(dir, fh.getFileName()), dir,
+                            Math.max(0, fh.getUncompressedSize()),
+                            Math.max(0, fh.getLastModifiedTime())));
                 }
                 return out;
             }
-        }
-        if (lower.endsWith(".rar")) return listRar(archive);
-        if (lower.endsWith(".tar") || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
-                || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
-                || lower.endsWith(".tar.xz") || lower.endsWith(".txz")) {
-            try (TarArchiveInputStream tar = new TarArchiveInputStream(openCompressed(archive, lower))) {
-                List<RawEntry> out = new ArrayList<>();
-                TarArchiveEntry e;
-                while ((e = tar.getNextTarEntry()) != null) {
-                    String name = e.getName().replace('\\', '/');
-                    if (name.isEmpty()) continue;
-                    // "tar cf x.tar ." stores a "./" root marker; normalize()
-                    // turns it into "/" which is not a real child of the root.
-                    if (stripSlash(name).isEmpty()) continue;
-                    long mtime = e.getLastModifiedDate() != null ? e.getLastModifiedDate().getTime() : 0;
-                    out.add(new RawEntry(normalizeDir(e.isDirectory(), name), e.isDirectory(),
-                            Math.max(0, e.getSize()), mtime));
+            case SEVEN_Z: {
+                try (SevenZFile sz = openSevenZ(archive, null)) {
+                    List<RawEntry> out = new ArrayList<>();
+                    for (SevenZArchiveEntry e : sz.getEntries()) {
+                        String name = e.getName().replace('\\', '/');
+                        if (name.isEmpty()) continue;
+                        long mtime = e.getLastModifiedDate() != null ? e.getLastModifiedDate().getTime() : 0;
+                        out.add(new RawEntry(normalizeDir(e.isDirectory(), name), e.isDirectory(),
+                                Math.max(0, e.getSize()), mtime));
+                    }
+                    return out;
                 }
-                return out;
             }
+            case RAR:
+                return listRar(archive);
+            case TAR:
+                return listTar(archive, ArchiveType.NONE);
+            case GZIP:
+            case BZIP2:
+            case XZ: {
+                // A compressor stream wrapping a tar is browsed as that tar, so
+                // mislabeled .tar.gz archives list the tar's real entry names.
+                if (isTarPayload(archive, type)) return listTar(archive, type);
+                return listSingleCompressed(archive, type);
+            }
+            default:
+                throw new IOException("Unsupported archive format: " + archive.getName());
         }
-        if (lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz"))
-            return listSingleCompressed(archive, lower);
-        throw new IOException("Unsupported archive format: " + archive.getName());
     }
 
     /**
@@ -123,73 +178,55 @@ public final class ArchiveBrowseUtil {
      * handle backs it and closes it when closed.
      */
     public static InputStream openEntry(File archive, String entryPath) throws IOException {
-        String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) return ZipCompat.openEntry(archive, entryPath);
+        ArchiveType type = detectArchiveType(archive);
         String want = stripSlash(normalize(entryPath));
-        if (lower.endsWith(".7z")) {
-            SevenZFile sz = openSevenZ(archive, null);
-            try {
-                for (SevenZArchiveEntry e : sz.getEntries()) {
-                    if (!stripSlash(normalize(e.getName())).equals(want)) continue;
-                    if (e.isDirectory()) break;
-                    return closeWith(sz, sz.getInputStream(e));
+        switch (type) {
+            case ZIP:
+                return ZipCompat.openEntry(archive, entryPath);
+            case SEVEN_Z: {
+                SevenZFile sz = openSevenZ(archive, null);
+                try {
+                    for (SevenZArchiveEntry e : sz.getEntries()) {
+                        if (!stripSlash(normalize(e.getName())).equals(want)) continue;
+                        if (e.isDirectory()) break;
+                        return closeWith(sz, sz.getInputStream(e));
+                    }
+                } catch (IOException | RuntimeException e) {
+                    closeQuietly(sz);
+                    throw e;
                 }
-            } catch (IOException | RuntimeException e) {
                 closeQuietly(sz);
-                throw e;
+                throw new IOException("Entry not found: " + entryPath);
             }
-            closeQuietly(sz);
-            throw new IOException("Entry not found: " + entryPath);
-        }
-        if (lower.endsWith(".rar")) {
-            // junrar only decodes into an OutputStream, so stage the entry in a
-            // temp file and stream from that; the file deletes itself on close.
-            File tmp = File.createTempFile("mp_rar_entry_", ".tmp");
-            try {
-                extractRarEntry(archive, want, tmp);
-                return new DeletingFileInputStream(tmp);
-            } catch (IOException | RuntimeException e) {
-                //noinspection ResultOfMethodCallIgnored
-                tmp.delete();
-                throw e;
-            }
-        }
-        if (lower.endsWith(".tar") || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
-                || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
-                || lower.endsWith(".tar.xz") || lower.endsWith(".txz")) {
-            TarArchiveInputStream tar = new TarArchiveInputStream(openCompressed(archive, lower));
-            try {
-                TarArchiveEntry e;
-                while ((e = tar.getNextTarEntry()) != null) {
-                    if (!stripSlash(normalize(e.getName())).equals(want)) continue;
-                    if (e.isDirectory()) break;
-                    return tar;
+            case RAR: {
+                // junrar only decodes into an OutputStream, so stage the entry in a
+                // temp file and stream from that; the file deletes itself on close.
+                File tmp = File.createTempFile("mp_rar_entry_", ".tmp");
+                try {
+                    extractRarEntry(archive, want, tmp);
+                    return new DeletingFileInputStream(tmp);
+                } catch (IOException | RuntimeException e) {
+                    //noinspection ResultOfMethodCallIgnored
+                    tmp.delete();
+                    throw e;
                 }
-            } catch (IOException | RuntimeException e) {
-                closeQuietly(tar);
-                throw e;
             }
-            closeQuietly(tar);
-            throw new IOException("Entry not found: " + entryPath);
+            case TAR:
+                return openTarEntry(archive, ArchiveType.NONE, want, entryPath);
+            case GZIP:
+            case BZIP2:
+            case XZ:
+                if (isTarPayload(archive, type)) return openTarEntry(archive, type, want, entryPath);
+                return openSingleCompressed(archive, type);
+            default:
+                throw new IOException("Unsupported archive format: " + archive.getName());
         }
-        if (lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")) {
-            InputStream raw = new FileInputStream(archive);
-            try {
-                if (lower.endsWith(".gz")) return new GzipCompressorInputStream(raw, true);
-                if (lower.endsWith(".bz2")) return new BZip2CompressorInputStream(raw, true);
-                return new XZCompressorInputStream(raw, true);
-            } catch (IOException e) {
-                closeQuietly(raw);
-                throw e;
-            }
-        }
-        throw new IOException("Unsupported archive format: " + archive.getName());
     }
 
     /** Extracts one entry into {@code outFile}, restoring its stored mtime. */
     public static void extractEntry(File archive, String entryPath, File outFile) throws IOException {
-        String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) {
+        ArchiveType type = detectArchiveType(archive);
+        if (type == ArchiveType.ZIP) {
             ZipCompat.extractEntry(archive, entryPath, outFile);
             return;
         }
@@ -197,53 +234,48 @@ public final class ArchiveBrowseUtil {
         File parent = outFile.getParentFile();
         if (parent != null) //noinspection ResultOfMethodCallIgnored
             parent.mkdirs();
-        if (lower.endsWith(".7z")) {
-            try (SevenZFile sz = openSevenZ(archive, null)) {
-                SevenZArchiveEntry e;
-                while ((e = sz.getNextEntry()) != null) {
-                    String name = stripSlash(normalize(e.getName()));
-                    if (!name.equals(want) || e.isDirectory()) continue;
-                    try (InputStream in = sz.getInputStream(e); OutputStream os = new FileOutputStream(outFile)) {
-                        copy(in, os);
-                    }
-                    if (e.getLastModifiedDate() != null) outFile.setLastModified(e.getLastModifiedDate().getTime());
-                    return;
-                }
-            }
-            throw new IOException("Entry not found: " + entryPath);
-        }
-        if (lower.endsWith(".rar")) {
-            extractRarEntry(archive, want, outFile);
-            return;
-        }
-        if (lower.endsWith(".tar") || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
-                || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
-                || lower.endsWith(".tar.xz") || lower.endsWith(".txz")) {
-            try (TarArchiveInputStream tar = new TarArchiveInputStream(openCompressed(archive, lower))) {
-                TarArchiveEntry e;
-                while ((e = tar.getNextTarEntry()) != null) {
-                    if (!stripSlash(normalize(e.getName())).equals(want)) continue;
-                    if (e.isDirectory()) {
-                        //noinspection ResultOfMethodCallIgnored
-                        outFile.mkdirs();
+        switch (type) {
+            case SEVEN_Z: {
+                try (SevenZFile sz = openSevenZ(archive, null)) {
+                    for (SevenZArchiveEntry e : sz.getEntries()) {
+                        if (!stripSlash(normalize(e.getName())).equals(want)) continue;
+                        if (e.isDirectory()) {
+                            //noinspection ResultOfMethodCallIgnored
+                            outFile.mkdirs();
+                            return;
+                        }
+                        try (InputStream in = sz.getInputStream(e); OutputStream os = new FileOutputStream(outFile)) {
+                            copy(in, os);
+                        }
+                        if (e.getLastModifiedDate() != null) outFile.setLastModified(e.getLastModifiedDate().getTime());
                         return;
                     }
-                    try (OutputStream os = new FileOutputStream(outFile)) {
-                        copy(tar, os);
-                    }
-                    if (e.getLastModifiedDate() != null) outFile.setLastModified(e.getLastModifiedDate().getTime());
-                    return;
                 }
+                throw new IOException("Entry not found: " + entryPath);
             }
-            throw new IOException("Entry not found: " + entryPath);
-        }
-        if (lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")) {
-            try (InputStream in = openEntry(archive, entryPath); OutputStream os = new FileOutputStream(outFile)) {
-                copy(in, os);
+            case RAR:
+                extractRarEntry(archive, want, outFile);
+                return;
+            case TAR: {
+                if (extractTarEntry(archive, ArchiveType.NONE, want, outFile)) return;
+                break;
             }
-            return;
+            case GZIP:
+            case BZIP2:
+            case XZ: {
+                if (isTarPayload(archive, type)) {
+                    if (extractTarEntry(archive, type, want, outFile)) return;
+                    break;
+                }
+                try (InputStream in = openSingleCompressed(archive, type); OutputStream os = new FileOutputStream(outFile)) {
+                    copy(in, os);
+                }
+                return;
+            }
+            default:
+                throw new IOException("Unsupported archive format: " + archive.getName());
         }
-        throw new IOException("Unsupported archive format: " + archive.getName());
+        throw new IOException("Entry not found: " + entryPath);
     }
 
     /** CRC-32 of one entry's uncompressed bytes, or -1 when it cannot be read. */
@@ -260,24 +292,90 @@ public final class ArchiveBrowseUtil {
     }
 
     /**
-     * Opens a 7z archive together with the file handle backing it. The
-     * commons-compress {@code SevenZFile(File)} constructor needs
-     * {@code File.toPath()}, which Android only offers from API 26; the
-     * channel-based constructor it falls back on here works down to the app's
-     * minSdk, at the cost of a second handle that has to be closed by hand.
+     * True when the payload inside a gz/bz2/xz starts with a tar header, i.e.
+     * the file is a compressed tar regardless of its name.
      */
+    public static boolean isTarPayload(File archive, ArchiveType wrapper) {
+        try (InputStream in = openSingleCompressed(archive, wrapper)) {
+            byte[] head = new byte[TAR_BLOCK];
+            return readFully(in, head) == TAR_BLOCK && looksLikeTar(head, TAR_BLOCK);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static List<RawEntry> listTar(File archive, ArchiveType wrapper) throws IOException {
+        try (TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper))) {
+            List<RawEntry> out = new ArrayList<>();
+            TarArchiveEntry e;
+            while ((e = tar.getNextTarEntry()) != null) {
+                String name = e.getName().replace('\\', '/');
+                if (name.isEmpty()) continue;
+                // "tar cf x.tar ." stores a "./" root marker; normalize()
+                // turns it into "/" which is not a real child of the root.
+                if (stripSlash(name).isEmpty()) continue;
+                long mtime = e.getLastModifiedDate() != null ? e.getLastModifiedDate().getTime() : 0;
+                out.add(new RawEntry(normalizeDir(e.isDirectory(), name), e.isDirectory(),
+                        Math.max(0, e.getSize()), mtime));
+            }
+            return out;
+        }
+    }
+
+    /** Scans a (possibly compressed) tar for one entry and copies it out. */
+    private static boolean extractTarEntry(File archive, ArchiveType wrapper, String want, File outFile) throws IOException {
+        try (TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper))) {
+            TarArchiveEntry e;
+            while ((e = tar.getNextTarEntry()) != null) {
+                if (!stripSlash(normalize(e.getName())).equals(want)) continue;
+                if (e.isDirectory()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    outFile.mkdirs();
+                    return true;
+                }
+                try (OutputStream os = new FileOutputStream(outFile)) {
+                    copy(tar, os);
+                }
+                if (e.getLastModifiedDate() != null) outFile.setLastModified(e.getLastModifiedDate().getTime());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Positions a (possibly compressed) tar on one entry and returns it open. */
+    private static InputStream openTarEntry(File archive, ArchiveType wrapper, String want, String originalPath) throws IOException {
+        TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper));
+        try {
+            TarArchiveEntry e;
+            while ((e = tar.getNextTarEntry()) != null) {
+                if (!stripSlash(normalize(e.getName())).equals(want)) continue;
+                if (e.isDirectory()) break;
+                return tar;
+            }
+        } catch (IOException | RuntimeException e) {
+            closeQuietly(tar);
+            throw e;
+        }
+        closeQuietly(tar);
+        throw new IOException("Entry not found: " + originalPath);
+    }
+
     /**
-     * Opens a 7z archive. {@code SevenZFile(File)} and the password variants
-     * are used as-is: with core library desugaring (NIO) enabled, their
-     * {@code File.toPath()} calls and the java.nio.file machinery behind them
-     * are rewritten to the desugar implementation, which works below API 26.
-     * Passing a platform {@link java.nio.channels.FileChannel} from
-     * {@code RandomAccessFile.getChannel()} instead is NOT an option — the
-     * desugar layer rewrites the channel types and the adapter corrupts
-     * sequential 7z entry iteration under ART.
+     * Opens the (optionally decompressed) byte stream of a tar archive. The
+     * caller wraps the result in {@link TarArchiveInputStream} itself.
      */
-    public static SevenZFile openSevenZ(File archive, char[] password) throws IOException {
-        return password == null ? new SevenZFile(archive) : new SevenZFile(archive, password);
+    public static InputStream openTar(File archive, ArchiveType wrapper) throws IOException {
+        InputStream raw = new FileInputStream(archive);
+        try {
+            if (wrapper == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
+            if (wrapper == ArchiveType.BZIP2) return new BZip2CompressorInputStream(raw, true);
+            if (wrapper == ArchiveType.XZ) return new XZCompressorInputStream(raw, true);
+            return raw;
+        } catch (IOException e) {
+            closeQuietly(raw);
+            throw e;
+        }
     }
 
     private static List<RawEntry> listRar(File archive) throws IOException {
@@ -318,21 +416,20 @@ public final class ArchiveBrowseUtil {
     }
 
     /**
-     * A .gz/.bz2/.xz holds exactly one unnamed payload; it is presented as the
-     * archive name minus its extension, matching what extraction produces.
-     * gzip exposes the true mtime in its header and the uncompressed size in
-     * its ISIZE trailer, so both are read instead of shown as zero.
+     * A bare gz/bz2/xz holds exactly one unnamed payload. gzip stores the
+     * original file name in its header, so that is used when present; the
+     * archive's own name minus a known compressor extension is the fallback.
      */
-    private static List<RawEntry> listSingleCompressed(File archive, String lower) throws IOException {
-        String ext = lower.endsWith(".gz") ? ".gz" : lower.endsWith(".bz2") ? ".bz2" : ".xz";
-        String name = archive.getName().substring(0, archive.getName().length() - ext.length());
-        if (name.isEmpty()) name = "content";
+    private static List<RawEntry> listSingleCompressed(File archive, ArchiveType type) throws IOException {
+        String name = null;
+        if (type == ArchiveType.GZIP) name = gzipStoredFileName(archive);
+        if (name == null) name = stripCompressorExtension(archive.getName());
         long size = 0;
         long mtime = 0;
-        if (lower.endsWith(".gz")) {
+        if (type == ArchiveType.GZIP) {
             long len = archive.length();
             if (len >= 18) {
-                try (RandomAccessFile raf = new RandomAccessFile(archive, "r")) {
+                try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(archive, "r")) {
                     byte[] head = new byte[8];
                     raf.readFully(head);
                     mtime = u4le(head, 4);
@@ -348,17 +445,64 @@ public final class ArchiveBrowseUtil {
         return out;
     }
 
-    private static InputStream openCompressed(File archive, String lower) throws IOException {
+    /** Opens the decompressed payload stream of a bare gz/bz2/xz file. */
+    public static InputStream openSingleCompressed(File archive, ArchiveType type) throws IOException {
         InputStream raw = new FileInputStream(archive);
         try {
-            if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) return new GzipCompressorInputStream(raw, true);
-            if (lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")) return new BZip2CompressorInputStream(raw, true);
-            if (lower.endsWith(".tar.xz") || lower.endsWith(".txz")) return new XZCompressorInputStream(raw, true);
-            return raw;
+            if (type == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
+            if (type == ArchiveType.BZIP2) return new BZip2CompressorInputStream(raw, true);
+            return new XZCompressorInputStream(raw, true);
         } catch (IOException e) {
             closeQuietly(raw);
             throw e;
         }
+    }
+
+    /** Original file name stored in a gzip header (FNAME field), or null. */
+    private static String gzipStoredFileName(File archive) {
+        try (InputStream in = FileUtils.getInputStream(archive)) {
+            byte[] head = new byte[10];
+            if (readFully(in, head) < 10) return null;
+            int flags = head[3] & 0xFF;
+            if ((flags & 0x08) == 0) return null;
+            int skip = 0;
+            if ((flags & 0x04) != 0) { // FEXTRA: two little-endian length bytes
+                byte[] xlen = new byte[2];
+                if (readFully(in, xlen) < 2) return null;
+                skip = (xlen[0] & 0xFF) | ((xlen[1] & 0xFF) << 8);
+            }
+            for (int i = 0; i < skip; i++) if (in.read() < 0) return null;
+            StringBuilder sb = new StringBuilder();
+            int b;
+            while ((b = in.read()) > 0) sb.append((char) b);
+            if (sb.length() == 0) return null;
+            String name = sb.toString().replace('\\', '/');
+            name = name.substring(name.lastIndexOf('/') + 1).trim();
+            return name.isEmpty() ? null : name;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** archive.tar.gz → archive.tar; archive.bin → archive.bin (unchanged). */
+    public static String stripCompressorExtension(String name) {
+        String lower = name.toLowerCase(Locale.ROOT);
+        for (String ext : new String[]{".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2", ".txz", ".gz", ".bz2", ".xz"}) {
+            if (lower.endsWith(ext) && name.length() > ext.length())
+                return name.substring(0, name.length() - ext.length());
+        }
+        return name;
+    }
+
+    /**
+     * Opens a 7z archive. With core library desugaring (NIO) enabled, the
+     * {@code SevenZFile(File)} machinery — including its {@code File.toPath()}
+     * call and the java.nio.file classes in static initializers — works below
+     * API 26. Do not pass a platform {@link java.nio.channels.FileChannel}:
+     * under the desugar layer that breaks 7z iteration under ART.
+     */
+    public static SevenZFile openSevenZ(File archive, char[] password) throws IOException {
+        return password == null ? new SevenZFile(archive) : new SevenZFile(archive, password);
     }
 
     private static String normalize(String path) {

@@ -782,7 +782,9 @@ final View.OnClickListener originalClickListener;
                     }
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
+                // The archive test is content-based, so Extract is offered even
+                // when the file's extension is missing or wrong.
+                if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isBrowsable(file) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 

@@ -1125,7 +1125,11 @@ public class FileOpener {
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                // Extension says archive: only route to the viewer when the
+                // bytes agree, so a mislabeled file falls through gracefully.
+                if (ArchiveBrowseUtil.isBrowsable(file))
+                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                else openWithDefaultOrDialog(file, fileName);
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else if (fileName.endsWith(".dex")) {
@@ -1144,6 +1148,10 @@ public class FileOpener {
                             .putExtra(io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
                     context.startActivity(intent);
                 });
+            } else if (ArchiveBrowseUtil.isBrowsable(file)) {
+                // Unhandled extension but the bytes are an archive (zip/7z/rar/
+                // tar/gz/...): open the archive viewer instead of "no app found".
+                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }

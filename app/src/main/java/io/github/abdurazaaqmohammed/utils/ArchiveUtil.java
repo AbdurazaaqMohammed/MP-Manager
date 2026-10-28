@@ -76,25 +76,41 @@ public class ArchiveUtil {
      * Extracts an archive, optionally with a password for encrypted zip/7z.
      * A null password extracts normally; encrypted archives then fail with a
      * password exception that callers can use to prompt and retry.
+     *
+     * The format comes from the file's bytes via {@link ArchiveBrowseUtil},
+     * not the file name, so extraction works on archives with missing or
+     * wrong extensions too.
      */
     public static void extract(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
         if (!destDir.exists()) destDir.mkdirs();
-        String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) extractZip(archive, destDir, preserveTime, password);
-        else if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
-        else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime);
-        else if (lower.endsWith(".tar")) extractTar(new FileInputStream(archive), destDir, preserveTime);
-        else if (lower.endsWith(".tgz")) extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".tar.gz")) extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".tbz2")) extractTar(new BZip2CompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".tar.bz2")) extractTar(new BZip2CompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".txz")) extractTar(new XZCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".tar.xz")) extractTar(new XZCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
-        else if (lower.endsWith(".gz")) extractSingleCompressed(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".gz");
-        else if (lower.endsWith(".bz2")) extractSingleCompressed(new BZip2CompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".bz2");
-        else if (lower.endsWith(".xz")) extractSingleCompressed(new XZCompressorInputStream(new FileInputStream(archive), true), destDir, archive.getName(), ".xz");
-        else if (isMiuiOrAndroidBackup(archive)) extractBackupArchive(archive, destDir, preserveTime);
-        else throw new IOException("Unsupported archive format: " + archive.getName());
+        ArchiveBrowseUtil.ArchiveType type = ArchiveBrowseUtil.detectArchiveType(archive);
+        switch (type) {
+            case ZIP:
+                extractZip(archive, destDir, preserveTime, password);
+                return;
+            case SEVEN_Z:
+                extract7z(archive, destDir, preserveTime, password);
+                return;
+            case RAR:
+                extractRar(archive, destDir, preserveTime);
+                return;
+            case TAR:
+                extractTar(new FileInputStream(archive), destDir, preserveTime);
+                return;
+            case GZIP:
+            case BZIP2:
+            case XZ:
+                if (ArchiveBrowseUtil.isTarPayload(archive, type)) {
+                    extractTar(ArchiveBrowseUtil.openTar(archive, type), destDir, preserveTime);
+                } else {
+                    extractSingleCompressed(ArchiveBrowseUtil.openSingleCompressed(archive, type), destDir,
+                            ArchiveBrowseUtil.stripCompressorExtension(archive.getName()));
+                }
+                return;
+            default:
+                if (isMiuiOrAndroidBackup(archive)) extractBackupArchive(archive, destDir, preserveTime);
+                else throw new IOException("Unsupported archive format: " + archive.getName());
+        }
     }
 
     private static void extractBackupArchive(File archive, File destDir, boolean preserveTime) throws IOException {
@@ -210,13 +226,14 @@ public class ArchiveUtil {
     }
 
     /**
-     * True when the archive cannot be opened without a password. Zip checks
-     * the central-directory flag; 7z (when only contents are encrypted) is
-     * detected by attempting to open it. Other formats return false.
+     * True when the archive cannot be opened without a password. The format
+     * is detected from content: zip checks the central-directory flag; 7z
+     * (when only contents are encrypted) is detected by attempting to open it.
+     * Other formats return false.
      */
     public static boolean needsPassword(File archive) throws IOException {
-        String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".zip")) {
+        ArchiveBrowseUtil.ArchiveType type = ArchiveBrowseUtil.detectArchiveType(archive);
+        if (type == ArchiveBrowseUtil.ArchiveType.ZIP) {
             try (ZipFile zf = new ZipFile(archive)) {
                 return zf.isEncrypted();
             } catch (net.lingala.zip4j.exception.ZipException e) {
@@ -228,7 +245,7 @@ public class ArchiveUtil {
                 return false;
             }
         }
-        if (lower.endsWith(".7z")) {
+        if (type == ArchiveBrowseUtil.ArchiveType.SEVEN_Z) {
             try (SevenZFile ignored = ArchiveBrowseUtil.openSevenZ(archive, null)) {
                 return false;
             } catch (org.apache.commons.compress.PasswordRequiredException e) {
@@ -297,10 +314,9 @@ public class ArchiveUtil {
         }
     }
 
-    private static void extractSingleCompressed(InputStream compressedInput, File destDir, String archiveName, String ext) throws IOException {
+    private static void extractSingleCompressed(InputStream compressedInput, File destDir, String baseName) throws IOException {
         try (InputStream is = compressedInput) {
-            String base = archiveName.substring(0, archiveName.length() - ext.length());
-            File out = new File(destDir, base);
+            File out = new File(destDir, baseName);
             try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
                 copy(is, os);
             }
