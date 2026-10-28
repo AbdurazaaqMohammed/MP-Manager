@@ -50,12 +50,18 @@ public class PaneNavigationController {
         } else {
             List<NavigationHistoryEntry> history = historyFor(pane1);
             int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
-            if (historyIndex > 0 && historyIndex <= history.size()) {
+            NavigationHistoryEntry current = (historyIndex >= 0 && historyIndex < history.size()) ? history.get(historyIndex) : null;
+            while (historyIndex > 0) {
                 NavigationHistoryEntry entry = history.get(--historyIndex);
+                if (current != null && current.file() != null && entry.file() != null
+                        && current.file().equals(entry.file())) {
+                    continue; // Skip deeper levels in same archive
+                }
                 setIndex(pane1, historyIndex);
                 open(entry, pane1);
                 return true;
-            } else return false;
+            }
+            return false;
         }
     }
 

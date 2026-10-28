@@ -1088,40 +1088,14 @@ public class FileOpener {
             withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
         } else {
             String bak = ".bak";
-            if (ext.equals(bak) && ArchiveUtil.isMiuiOrAndroidBackup(file)) {
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
-            } else if(ext.equals(bak)) {
-                View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
-                context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-                EditText tv = et.findViewById(R.id.m_et_edittext);
-                String newName = fileName.replace(bak, "");
-                tv.setText(newName);
-                tv.requestFocus();
-                tv.post(() -> {
-                    try {
-                        int len = tv.length();
-                        int dot = newName.lastIndexOf('.');
-                        int end = (dot > 0 && dot < len) ? dot : len;
-                        if (end < 0) end = 0;
-                        if (end > len) end = len;
-                        tv.setSelection(0, end);
-                    } catch (Exception ignored) {
-                        try {
-                            tv.setSelection(tv.length());
-                        } catch (Exception ignored2) {}
-                    }
-                    InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-                    if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
-                });
-                new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.restore_backup)
-                .setView(et)
-                .setPositiveButton(R.string.restore, (dialog, which) -> {
-                    String bakPath = file.getPath();
-                    String origPath = bakPath.replace(bak, "");
-                    restoreBakRootAware(file, new File(origPath), fileName);
-                })
-                .setNegativeButton(android.R.string.cancel, null).show();
+            if (ext.equals(bak)) {
+                String nameWithoutBak = fileName.substring(0, fileName.length() - bak.length());
+                String innerExt = FilenameUtils.getExtension(nameWithoutBak);
+                if (!innerExt.isEmpty()) {
+                    handleFileClick(file, nameWithoutBak);
+                } else {
+                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                }
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
