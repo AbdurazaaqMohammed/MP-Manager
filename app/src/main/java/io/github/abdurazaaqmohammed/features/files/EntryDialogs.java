@@ -636,7 +636,12 @@ public class EntryDialogs {
                     break;
                 }
             }
-            if (!stripped.isEmpty()) filenameEditText.setText(stripped + picked);
+            if (!multi && (picked.equals(".gz") || picked.equals(".bz2") || picked.equals(".xz"))) {
+                // For single-file compression (.gz, .bz2, .xz), do not strip the file's original extension (e.g., file.tar -> file.tar.gz, test.txt -> test.txt.gz)
+                filenameEditText.setText(fileName + picked);
+            } else if (!stripped.isEmpty()) {
+                filenameEditText.setText(stripped + picked);
+            }
         });
 
         AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);

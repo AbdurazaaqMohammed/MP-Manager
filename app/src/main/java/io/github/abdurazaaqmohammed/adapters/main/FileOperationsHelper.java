@@ -572,6 +572,9 @@ public class FileOperationsHelper {
             if (!(item instanceof File f)) continue;
             File dest = entry.getValue();
             if (dest == null || dest.equals(f)) continue;
+            if (activeProgress != null) {
+                activeProgress.setFileInfo(f.getName(), f.getParent(), dest.getParent());
+            }
             int itemTotal = FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
             if (useElevated) {
                 try {
@@ -1197,14 +1200,30 @@ public class FileOperationsHelper {
     }
 
     public void extractArchive(File archive) {
+        extractArchive(archive, true);
+    }
+
+    public void extractArchive(File archive, boolean intoSubFolder) {
         File parent = archive.getParentFile();
-        String baseName = archive.getName();
-        String folderName = baseName;
-        if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
-        else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
-        else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
-        else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
-        File destDir = FileUtils.getUnusedFile(new File(parent, folderName));
+        File destDir;
+        if (intoSubFolder) {
+            String baseName = archive.getName();
+            String folderName = baseName;
+            if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
+            else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
+            else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
+            else if (baseName.endsWith(".tgz")) folderName = baseName.substring(0, baseName.length() - ".tgz".length());
+            else if (baseName.endsWith(".tbz2")) folderName = baseName.substring(0, baseName.length() - ".tbz2".length());
+            else if (baseName.endsWith(".txz")) folderName = baseName.substring(0, baseName.length() - ".txz".length());
+            else {
+                int lastDot = baseName.lastIndexOf('.');
+                folderName = lastDot > 0 ? baseName.substring(0, lastDot) : baseName;
+            }
+            destDir = FileUtils.getUnusedFile(new File(parent, folderName));
+        } else {
+            destDir = parent;
+        }
+        final File finalDestDir = destDir;
         new Thread(() -> {
             char[] password = null;
             try {

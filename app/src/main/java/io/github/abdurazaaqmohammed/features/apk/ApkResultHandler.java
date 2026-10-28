@@ -154,8 +154,17 @@ public class ApkResultHandler {
                                             if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                             addedNames.add(modifiedFileName);
                                             ZipParameters zp = new ZipParameters();
-                                            boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
-                                            zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                            net.lingala.zip4j.model.FileHeader origHeader = null;
+                                            try {
+                                                origHeader = zf.getFileHeader(targetEntry);
+                                            } catch (Exception ignored) {}
+                                            if (origHeader != null) {
+                                                zp.setCompressionMethod(origHeader.getCompressionMethod());
+                                            } else {
+                                                boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
+                                                zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                            }
+                                            zp.setCompressionLevel(net.lingala.zip4j.model.enums.CompressionLevel.NORMAL);
                                             if (entryName != null) zp.setFileNameInZip(entryName);
                                             zf.addFile(path, zp);
                                         }

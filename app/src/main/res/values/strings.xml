@@ -1855,5 +1855,6 @@ Layout Inspector
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Xposed patcher</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="extract_to_folder">Extract to folder \"%1$s\"</string>
+    <string name="extract_to_folder_tip">Extracts all files inside a new folder named after the archive</string>
 </resources>

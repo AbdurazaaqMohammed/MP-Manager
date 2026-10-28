@@ -67,6 +67,93 @@ public class ProgressManager {
         initChannel();
     }
 
+    private String currentFileName, currentFrom, currentTo;
+    private long lastSpeedCheckTime = 0;
+    private long lastTransferredBytes = 0;
+    private String currentSpeed = "";
+
+    public ProgressManager setFileInfo(String name, String from, String to) {
+        this.currentFileName = name;
+        this.currentFrom = from;
+        this.currentTo = to;
+        handler.post(() -> {
+            if (dismissed || dialog == null || !dialog.isShowing()) return;
+            updateFileDetails(dialog);
+        });
+        return this;
+    }
+
+    public ProgressManager updateTransferProgress(long transferredBytes, long totalBytes) {
+        long now = System.currentTimeMillis();
+        if (lastSpeedCheckTime == 0) {
+            lastSpeedCheckTime = now;
+            lastTransferredBytes = transferredBytes;
+        } else if (now - lastSpeedCheckTime >= 600) {
+            long deltaBytes = transferredBytes - lastTransferredBytes;
+            long deltaMs = now - lastSpeedCheckTime;
+            if (deltaMs > 0 && deltaBytes >= 0) {
+                double speedMBs = (deltaBytes / 1024.0 / 1024.0) / (deltaMs / 1000.0);
+                if (speedMBs >= 100) {
+                    currentSpeed = String.format(java.util.Locale.US, "%.0f MB/s", speedMBs);
+                } else if (speedMBs >= 1) {
+                    currentSpeed = String.format(java.util.Locale.US, "%.1f MB/s", speedMBs);
+                } else {
+                    double speedKBs = (deltaBytes / 1024.0) / (deltaMs / 1000.0);
+                    currentSpeed = String.format(java.util.Locale.US, "%.1f KB/s", speedKBs);
+                }
+            }
+            lastSpeedCheckTime = now;
+            lastTransferredBytes = transferredBytes;
+        }
+
+        if (totalBytes > 0) {
+            int progress = (int) Math.min(Integer.MAX_VALUE, (transferredBytes * 1000L) / totalBytes);
+            setProgress(progress, 1000);
+        }
+        return this;
+    }
+
+    private void updateFileDetails(AlertDialog d) {
+        if (d == null) return;
+        TextView nameTv = d.findViewById(R.id.progressFileName);
+        TextView fromTv = d.findViewById(R.id.progressFrom);
+        TextView toTv = d.findViewById(R.id.progressTo);
+        TextView speedTv = d.findViewById(R.id.progressSpeed);
+
+        if (nameTv != null) {
+            if (currentFileName != null && !currentFileName.isEmpty()) {
+                nameTv.setVisibility(View.VISIBLE);
+                nameTv.setText(currentFileName);
+            } else {
+                nameTv.setVisibility(View.GONE);
+            }
+        }
+        if (fromTv != null) {
+            if (currentFrom != null && !currentFrom.isEmpty()) {
+                fromTv.setVisibility(View.VISIBLE);
+                fromTv.setText("From: " + currentFrom);
+            } else {
+                fromTv.setVisibility(View.GONE);
+            }
+        }
+        if (toTv != null) {
+            if (currentTo != null && !currentTo.isEmpty()) {
+                toTv.setVisibility(View.VISIBLE);
+                toTv.setText("To: " + currentTo);
+            } else {
+                toTv.setVisibility(View.GONE);
+            }
+        }
+        if (speedTv != null) {
+            if (currentSpeed != null && !currentSpeed.isEmpty()) {
+                speedTv.setVisibility(View.VISIBLE);
+                speedTv.setText(currentSpeed);
+            } else {
+                speedTv.setVisibility(View.GONE);
+            }
+        }
+    }
+
     public ProgressManager show() {
         handler.post(() -> {
             if (dismissed || (dialog != null && dialog.isShowing())) return;
@@ -81,6 +168,7 @@ public class ProgressManager {
             }
             applyCount(v.findViewById(R.id.progressCount));
             dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
+            updateFileDetails(dialog);
         });
         return this;
     }
@@ -97,6 +185,7 @@ public class ProgressManager {
                 TextView title = dialog.findViewById(R.id.dialogTitle);
                 if (title != null) title.setText(text);
                 applyCount(dialog.findViewById(R.id.progressCount));
+                updateFileDetails(dialog);
             }
             if (hidden) updateNotification();
         });
@@ -114,6 +203,7 @@ public class ProgressManager {
                 pb.setMax(max);
                 pb.setProgress(progress);
                 applyCount(dialog.findViewById(R.id.progressCount));
+                updateFileDetails(dialog);
             }
             if (hidden) updateNotification();
         });

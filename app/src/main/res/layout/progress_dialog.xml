@@ -1,46 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:padding="16dp">
 
-<com.google.android.material.button.MaterialButton
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_alignParentEnd="true"
-    android:id="@+id/hideButton"
-    style="@style/Widget.Material3.Button.OutlinedButton"
-    android:text="@string/hide"/>
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
 
-<TextView
-    android:id="@+id/dialogTitle"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_toStartOf="@id/hideButton"
-    android:layout_alignParentStart="true"
-    android:text="@string/loading"
-    android:textSize="18sp"
-    android:textStyle="bold"
-    android:padding="16dp"/>
+        <TextView
+            android:id="@+id/dialogTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/hideButton"
+            android:text="@string/loading"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-<ProgressBar
-    android:id="@+id/progressBar"
-    android:indeterminateDrawable="@drawable/load"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:indeterminate="true"
-    android:layout_centerHorizontal="true"
-    android:layout_below="@id/dialogTitle"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/hideButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="@string/hide" />
+    </RelativeLayout>
 
-<TextView
-    android:id="@+id/progressCount"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_below="@id/progressBar"
-    android:layout_alignParentStart="true"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp"
-    android:paddingBottom="8dp"
-    android:textSize="14sp"
-    android:visibility="gone"/>
-</RelativeLayout>
+    <LinearLayout
+        android:id="@+id/progressDetailsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/progressFileName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="middle"
+            android:singleLine="true"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/progressFrom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="start"
+            android:singleLine="true"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/progressTo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="start"
+            android:singleLine="true"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:indeterminate="true"
+        android:indeterminateDrawable="@drawable/load" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/progressCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/progressSpeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </RelativeLayout>
+
+</LinearLayout>

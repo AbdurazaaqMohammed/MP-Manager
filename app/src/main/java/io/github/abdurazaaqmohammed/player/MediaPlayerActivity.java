@@ -1020,7 +1020,11 @@ public class MediaPlayerActivity extends BaseActivity implements
                                     || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                     || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                         }
-                        media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                        io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(this);
+                        String dirPath = dir.getAbsolutePath();
+                        File[] arr = media.toArray(new File[0]);
+                        FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
+                        media = Arrays.asList(arr);
                         if (media.size() > 1) {
                             List<MediaItem> q = new ArrayList<>();
                             int start = 0;

@@ -1130,10 +1130,10 @@ public class FileOpener {
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
-                // Extension says archive: only route to the viewer when the
+                // Extension says archive: only route to the viewer/dialog when the
                 // bytes agree, so a mislabeled file falls through gracefully.
                 if (ArchiveBrowseUtil.isBrowsable(file))
-                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                    showArchiveOptionsDialog(file, fileName);
                 else openWithDefaultOrDialog(file, fileName);
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
@@ -1155,8 +1155,8 @@ public class FileOpener {
                 });
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
-                // tar/gz/...): open the archive viewer instead of "no app found".
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                // tar/gz/...): show archive options dialog instead of "no app found".
+                showArchiveOptionsDialog(file, fileName);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
@@ -1496,5 +1496,46 @@ public class FileOpener {
                     if (apkFile != null) context.startActivityForResult(arscIntent, 757);
                     else context.startActivity(arscIntent);
                 }).create());
+    }
+
+    private void showArchiveOptionsDialog(File file, String fileName) {
+        String baseName = fileName;
+        String folderName = baseName;
+        if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
+        else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
+        else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
+        else if (baseName.endsWith(".tgz")) folderName = baseName.substring(0, baseName.length() - ".tgz".length());
+        else if (baseName.endsWith(".tbz2")) folderName = baseName.substring(0, baseName.length() - ".tbz2".length());
+        else if (baseName.endsWith(".txz")) folderName = baseName.substring(0, baseName.length() - ".txz".length());
+        else {
+            int lastDot = baseName.lastIndexOf('.');
+            folderName = lastDot > 0 ? baseName.substring(0, lastDot) : baseName;
+        }
+
+        CharSequence[] options = new CharSequence[] {
+                context.rss.getString(R.string.view),
+                context.rss.getString(R.string.extract),
+                context.rss.getString(R.string.extract_to_folder, folderName)
+        };
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder();
+        builder.setTitle(fileName);
+        builder.setItems(options, (dialog, which) -> {
+            dialog.dismiss();
+            switch (which) {
+                case 0:
+                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                    break;
+                case 1:
+                    withReadableCopy(file, readable -> fileOps.extractArchive(readable, false));
+                    break;
+                case 2:
+                    withReadableCopy(file, readable -> fileOps.extractArchive(readable, true));
+                    break;
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        dialogUtil.styleAlertDialog(dialog);
     }
 }

@@ -326,9 +326,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                         || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
                                         || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
                                         || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
-                                        || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                             }
-                            media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                            io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(this);
+                            String dirPath = dir.getAbsolutePath();
+                            File[] arr = media.toArray(new File[0]);
+                            FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
+                            media = Arrays.asList(arr);
                             if (media.size() > 1) {
                                 List<MediaItem> q = new ArrayList<>();
                                 int start = 0;
