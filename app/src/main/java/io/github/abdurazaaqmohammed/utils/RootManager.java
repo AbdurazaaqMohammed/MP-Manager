@@ -304,6 +304,19 @@ public class RootManager {
     }
 
     private ShellResult spawnSu(String command, int timeoutSeconds) {
+        return spawnSu(command, timeoutSeconds, null);
+    }
+
+    /**
+     * Runs {@code command} as root, forwarding {@link ShellProgress} markers from
+     * its stdout to {@code progress} as they arrive.
+     *
+     * <p>The drain thread is the only place that sees output while the process
+     * is alive, so it is also the only place that can turn a long batch into
+     * live numbers. Marker lines are consumed here and never reach the returned
+     * output, so callers that parse stdout (cat, ls, stat) are unaffected.
+     */
+    private ShellResult spawnSu(String command, int timeoutSeconds, ShellProgress.Listener progress) {
         synchronized (lock) {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
@@ -316,6 +329,7 @@ public class RootManager {
                     String line;
                     try {
                         while ((line = stdout.readLine()) != null) {
+                            if (ShellProgress.consume(line, progress)) continue;
                             if (output.length() > 0) output.append("\n");
                             output.append(line);
                         }
@@ -374,11 +388,15 @@ public class RootManager {
     }
 
     public ShellResult executeGlobalNs(String command, int timeoutSeconds) {
+        return executeGlobalNs(command, timeoutSeconds, null);
+    }
+
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(command);
-        return spawnSu(wrapped, timeoutSeconds);
+        return spawnSu(wrapped, timeoutSeconds, progress);
     }
 
     private volatile int nsWinner;
@@ -433,6 +451,10 @@ public class RootManager {
     }
 
     public ShellResult executeFs(String command, int timeoutSeconds) {
+        return executeFs(command, timeoutSeconds, null);
+    }
+
+    public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
@@ -441,8 +463,8 @@ public class RootManager {
             global = prefersGlobalNs();
         } catch (Exception ignored) {
         }
-        if (global) return executeGlobalNs(command, timeoutSeconds);
-        return spawnSu(command, timeoutSeconds);
+        if (global) return executeGlobalNs(command, timeoutSeconds, progress);
+        return spawnSu(command, timeoutSeconds, progress);
     }
 
     public ShellResult executeWithInput(String command, String input) {
@@ -711,12 +733,23 @@ public class RootManager {
         public final String dest;
         public final boolean directory;
         public final boolean destExists;
+        /** Files this op moves, for progress accounting (0 when unknown). */
+        public final int files;
+        /** Bytes this op moves, for progress accounting (0 when unknown). */
+        public final long bytes;
 
         public CopyOp(String src, String dest, boolean directory, boolean destExists) {
+            this(src, dest, directory, destExists, 0, 0L);
+        }
+
+        public CopyOp(String src, String dest, boolean directory, boolean destExists,
+                      int files, long bytes) {
             this.src = src;
             this.dest = dest;
             this.directory = directory;
             this.destExists = destExists;
+            this.files = files;
+            this.bytes = bytes;
         }
     }
 
@@ -724,12 +757,22 @@ public class RootManager {
      * Runs every copy in one shell process. Copying item by item cost one
      * {@code su} spawn each, all serialised behind the same lock, so even a
      * handful of small files felt slow.
+     *
+     * <p>Each op appends a {@link ShellProgress} marker with the running totals,
+     * so the batch stays a single process while the UI still gets a number after
+     * every item instead of one jump at the end.
      */
     public void copyAllPreserving(List<CopyOp> ops) throws IOException {
+        copyAllPreserving(ops, null);
+    }
+
+    public void copyAllPreserving(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
         if (ops == null || ops.isEmpty()) return;
         StringBuilder cmd = new StringBuilder();
         int count = 0;
         int timeout = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
         for (CopyOp op : ops) {
             String src = op.src;
             String dest = op.dest;
@@ -741,11 +784,14 @@ public class RootManager {
             String parent = new File(dest).getParent();
             if (parent != null) cmd.append("mkdir -p ").append(escapeShellArg(parent)).append(" && ");
             cmd.append("cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            filesDone += Math.max(0, op.files);
+            bytesDone += Math.max(0L, op.bytes);
+            cmd.append(ShellProgress.report(filesDone, bytesDone));
             count++;
             timeout += op.directory ? 120 : 60;
         }
         if (count == 0) return;
-        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout));
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -755,9 +801,19 @@ public class RootManager {
      * item cost one {@code su} spawn each, all serialised behind the same lock,
      * so even a handful of empty files felt slow.
      *
+     * <p>Paths are removed in chunks rather than all at once: {@code rm} is
+     * cheap to invoke inside an already-running shell, and a marker per chunk
+     * is what gives the dialog a moving counter. Failures no longer abort the
+     * batch (they are reported through the marker stream), so a single
+     * undeletable path cannot leave the rest of the selection behind.
+     *
      * @return the paths that were actually removed.
      */
     public List<String> deleteAll(List<String> paths) throws IOException {
+        return deleteAll(paths, null);
+    }
+
+    public List<String> deleteAll(List<String> paths, ShellProgress.Listener progress) throws IOException {
         List<String> targets = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
@@ -766,12 +822,221 @@ public class RootManager {
             targets.add(path);
         }
         if (targets.isEmpty()) return targets;
-        StringBuilder cmd = new StringBuilder("rm -rf --");
-        for (String path : targets) cmd.append(' ').append(escapeShellArg(path));
-        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30));
-        if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+
+        final int chunk = 32;
+        final java.util.concurrent.atomic.AtomicBoolean failed =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        ShellProgress.Listener relay = new ShellProgress.Listener() {
+            @Override
+            public void onProgress(int filesDone, long bytesDone) {
+                if (progress != null) progress.onProgress(filesDone, bytesDone);
+            }
+
+            @Override
+            public void onFailure() {
+                failed.set(true);
+                if (progress != null) progress.onFailure();
+            }
+        };
+
+        StringBuilder cmd = new StringBuilder();
+        int done = 0;
+        for (int i = 0; i < targets.size(); i += chunk) {
+            int end = Math.min(targets.size(), i + chunk);
+            if (cmd.length() > 0) cmd.append(" ; ");
+            cmd.append("rm -rf --");
+            for (int j = i; j < end; j++) cmd.append(' ').append(escapeShellArg(targets.get(j)));
+            cmd.append(ShellProgress.reportFailure());
+            done = end;
+            cmd.append(ShellProgress.reportAlways(done, 0L));
+        }
+        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30), relay);
+        if (failed.get() || !result.isSuccess()) {
+            throw new IOException("delete failed: " + result.error);
+        }
         invalidateListCache();
         return targets;
+    }
+
+    /**
+     * Deletes each path recursively, reporting progress as it goes.
+     *
+     * <p>A single {@code rm -rf} is opaque: it is one command, so the dialog had
+     * nothing to show until it returned. Here the tree is walked deepest-first
+     * and one {@code rm -rf} runs per directory, with a marker after each. Each
+     * of those calls does real work (it takes a whole subtree with it), so the
+     * spawn count stays proportional to the number of <em>directories</em> — not
+     * files — while the dialog gets a counter that moves.
+     *
+     * <p>Markers here carry a delta of one per directory; the relay turns them
+     * back into a running total for the caller.
+     *
+     * @return the paths that were removed.
+     */
+    public List<String> deleteTree(List<String> paths, ShellProgress.Listener progress) throws IOException {
+        List<String> targets = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (isPathBlocked(path))
+                throw new IOException("Blocked: refusing to delete critical path: " + path);
+            targets.add(path);
+        }
+        if (targets.isEmpty()) return targets;
+
+        final int[] done = {0};
+        final java.util.concurrent.atomic.AtomicBoolean failed =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        ShellProgress.Listener relay = new ShellProgress.Listener() {
+            @Override
+            public void onProgress(int delta, long bytesDone) {
+                if (delta > 0) done[0] += delta;
+                if (progress != null) progress.onProgress(done[0], 0L);
+            }
+
+            @Override
+            public void onFailure() {
+                failed.set(true);
+                if (progress != null) progress.onFailure();
+            }
+        };
+
+        StringBuilder cmd = new StringBuilder();
+        for (String path : targets) {
+            String arg = escapeShellArg(path);
+            if (cmd.length() > 0) cmd.append(" ; ");
+            cmd.append("find ").append(arg).append(" -depth -type d 2>/dev/null")
+                    .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
+                    .append(" echo @@MPPROG 1 0; done");
+            // Whatever is left (the root itself, files at the top level) goes in
+            // one more call, and still reports, so the counter always lands on
+            // the value the dialog was sized with.
+            cmd.append(" ; rm -rf -- ").append(arg).append(" ; echo @@MPPROG 1 0");
+        }
+        ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay);
+        if (failed.get()) throw new IOException("delete failed: " + result.error);
+        invalidateListCache();
+        return targets;
+    }
+
+    /**
+     * Number of directories under {@code paths}, which is the unit
+     * {@link #deleteTree} reports in.
+     */
+    public int countDirs(List<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        StringBuilder cmd = new StringBuilder("echo @@MPDIRS $(");
+        cmd.append("find");
+        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        cmd.append(" -type d 2>/dev/null | wc -l)");
+        ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
+        return parseCountMarker(r, "@@MPDIRS");
+    }
+
+    /** Reads an {@code @@NAME <n>} line out of a shell result. */
+    static int parseCountMarker(ShellResult r, String marker) {
+        if (r == null || r.output == null) return 0;
+        for (String line : r.output.split("\n")) {
+            String t = line.trim();
+            if (!t.startsWith(marker)) continue;
+            try {
+                return Math.max(0, Integer.parseInt(t.substring(marker.length()).trim()));
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Counts files and totals bytes across {@code paths} using the root shell,
+     * because the app process cannot list them.
+     *
+     * <p>{@code du -sk} is used rather than {@code -sb}: every Android toolbox
+     * ships {@code -s} and {@code -k}, while {@code -b} is not universal, and a
+     * progress denominator does not need byte-exact disk usage.
+     */
+    public FileUtils.Measure measure(List<String> paths) {
+        return measureSet(paths).total;
+    }
+
+    /**
+     * Same as {@link #measure} but also returns one entry per input path, so a
+     * batch copy can attribute a known share of the work to each item.
+     *
+     * <p>The per-path lines cost one extra {@code du} + {@code find} each, all
+     * inside the single shell process that already had to be spawned.
+     */
+    public FileUtils.MeasureSet measureSet(List<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return new FileUtils.MeasureSet(new FileUtils.Measure(1, 0L), new ArrayList<>());
+        }
+        StringBuilder cmd = new StringBuilder("echo @@MPM $(");
+        cmd.append("du -sk");
+        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        cmd.append(" 2>/dev/null | awk '{s+=$1} END {print s*1024+0}') $(");
+        cmd.append("find");
+        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        cmd.append(" -type f 2>/dev/null | wc -l)\n");
+        for (int i = 0; i < paths.size(); i++) {
+            String a = escapeShellArg(paths.get(i));
+            cmd.append("echo @@MPI ").append(i)
+                    .append(" $(du -sk ").append(a).append(" 2>/dev/null | awk '{print $1*1024+0}')")
+                    .append(" $(find ").append(a).append(" -type f 2>/dev/null | wc -l)\n");
+        }
+        ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
+        FileUtils.MeasureSet parsed = parseMeasureSet(r, paths.size());
+        return parsed != null
+                ? parsed
+                : new FileUtils.MeasureSet(new FileUtils.Measure(1, 0L), new ArrayList<>());
+    }
+
+    /**
+     * Reads the {@code @@MPM <bytes> <files>} total line and the
+     * {@code @@MPI <index> <bytes> <files>} per-path lines emitted by
+     * {@link #measureSet}.
+     */
+    static FileUtils.MeasureSet parseMeasureSet(ShellResult r, int expected) {
+        if (r == null || r.output == null) return null;
+        FileUtils.Measure total = null;
+        List<FileUtils.Measure> each = new ArrayList<>();
+        for (int i = 0; i < expected; i++) each.add(new FileUtils.Measure(0, 0L));
+        boolean sawAny = false;
+        for (String line : r.output.split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("@@MPM ")) {
+                String[] parts = t.substring(6).trim().split("\\s+");
+                if (parts.length < 2) continue;
+                try {
+                    total = new FileUtils.Measure(Math.max(1, Integer.parseInt(parts[1])),
+                            Math.max(0L, Long.parseLong(parts[0])));
+                    sawAny = true;
+                } catch (NumberFormatException ignored) {
+                }
+            } else if (t.startsWith("@@MPI ")) {
+                String[] parts = t.substring(6).trim().split("\\s+");
+                if (parts.length < 3) continue;
+                try {
+                    int idx = Integer.parseInt(parts[0]);
+                    if (idx >= 0 && idx < each.size()) {
+                        each.set(idx, new FileUtils.Measure(Math.max(0, Integer.parseInt(parts[2])),
+                                Math.max(0L, Long.parseLong(parts[1]))));
+                    }
+                    sawAny = true;
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        if (!sawAny) return null;
+        if (total == null) {
+            int files = 0;
+            long bytes = 0L;
+            for (FileUtils.Measure m : each) {
+                files += m.files;
+                bytes += m.bytes;
+            }
+            total = new FileUtils.Measure(Math.max(1, files), bytes);
+        }
+        return new FileUtils.MeasureSet(total, each);
     }
 
     public void touch(String path) throws IOException {

@@ -1856,4 +1856,29 @@ Layout Inspector
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Xposed patcher</string>
     <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+
+    <!-- Progress dialog: operation captions -->
+    <string name="op_copying">COPY</string>
+    <string name="op_moving">MOVE</string>
+    <string name="op_deleting">DELETE</string>
+    <string name="op_extracting">EXTRACT</string>
+    <string name="op_compressing">COMPRESS</string>
+    <string name="op_adding">ADD</string>
+    <string name="op_signing">SIGN</string>
+    <string name="op_processing">WORKING</string>
+
+    <!-- Progress dialog: path labels -->
+    <string name="progress_from">From</string>
+    <string name="progress_to">To</string>
+
+    <!-- Progress dialog: statistics. %1$d%% is an escaped percent sign. -->
+    <string name="progress_stat_bytes">%1$d%% • %2$s / %3$s</string>
+    <string name="progress_stat_items">%1$d / %2$d (%3$d%%)</string>
+    <string name="progress_stat_elapsed">%1$s elapsed</string>
+    <string name="progress_left_bytes">%1$s left</string>
+    <string name="progress_left_items">%1$d left</string>
+    <string name="progress_speed_bytes">%1$s/s</string>
+    <string name="progress_speed_items">%1$d/s</string>
+    <string name="progress_eta">%1$s left</string>
+    <string name="progress_done">Done</string>
 </resources>

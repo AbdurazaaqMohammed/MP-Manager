@@ -215,8 +215,13 @@ public final class ShizukuManager {
     }
 
     private static void throwIfShellFails(String command, String what, int timeout) throws IOException {
+        throwIfShellFails(command, what, timeout, null);
+    }
+
+    private static void throwIfShellFails(String command, String what, int timeout,
+                                          ShellProgress.Listener progress) throws IOException {
         if (!ready()) throw new IOException("Shizuku not connected or permission missing");
-        ShizukuShell.Result r = ShizukuShell.exec(command, timeout);
+        ShizukuShell.Result r = ShizukuShell.exec(command, timeout, progress);
         if (r == null || !r.success) throw shellError(what, r);
     }
 
@@ -515,9 +520,25 @@ public final class ShizukuManager {
      * a fresh {@code sh -c} process each, which dominated multi-selection copies.
      */
     public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+        copyAllPreserving(context, ops, null);
+    }
+
+    /**
+     * Runs every copy in one shell process when the shell can reach the paths,
+     * and one binder round trip each when it cannot. Per-item shell copies cost
+     * a fresh {@code sh -c} process each, which dominated multi-selection copies.
+     *
+     * <p>Shell work emits a {@link ShellProgress} marker per item so the batch
+     * stays one process while still reporting numbers; binder work reports after
+     * each round trip.
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+                                         ShellProgress.Listener progress) throws IOException {
         if (ops == null || ops.isEmpty()) return;
         StringBuilder shell = new StringBuilder();
         int shellOps = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
         List<RootManager.CopyOp> service = new ArrayList<>();
         for (RootManager.CopyOp op : ops) {
             String src = op.src;
@@ -532,12 +553,15 @@ public final class ShizukuManager {
                 if (destParent != null) shell.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
                 shell.append("cp -p").append(op.directory ? " -r" : "").append(" -- ")
                         .append(shellArg(src)).append(' ').append(shellArg(dest));
+                filesDone += Math.max(0, op.files);
+                bytesDone += Math.max(0L, op.bytes);
+                shell.append(ShellProgress.report(filesDone, bytesDone));
                 shellOps++;
             } else {
                 service.add(op);
             }
         }
-        if (shellOps > 0) throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60));
+        if (shellOps > 0) throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60), progress);
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
         for (RootManager.CopyOp op : service) {
@@ -569,6 +593,9 @@ public final class ShizukuManager {
                 s.touchMtime(op.dest, s.pathMtime(op.src));
             } catch (Exception ignored) {
             }
+            filesDone += Math.max(0, op.files);
+            bytesDone += Math.max(0L, op.bytes);
+            if (progress != null) progress.onProgress(filesDone, bytesDone);
         }
     }
 
@@ -607,23 +634,59 @@ public final class ShizukuManager {
     }
 
     public static void deleteAll(Context context, List<String> paths) throws IOException {
+        deleteAll(context, paths, null);
+    }
+
+    /**
+     * Shell-deletable paths go out in chunks of 32 with a marker after each, so
+     * one process still does the work but the dialog gets a moving counter.
+     * Binder-deleted paths report after each round trip.
+     */
+    public static void deleteAll(Context context, List<String> paths,
+                                 ShellProgress.Listener progress) throws IOException {
         if (paths == null || paths.isEmpty()) return;
-        StringBuilder shell = new StringBuilder("rm -rf --");
-        int shellPaths = 0;
+        List<String> shellPaths = new ArrayList<>();
         List<String> service = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
             if (useShell(path)) {
                 if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
-                shell.append(' ').append(shellArg(path));
-                shellPaths++;
+                shellPaths.add(path);
             } else {
                 requireAllowed(path);
                 if (isTopLevel(path)) throw new IOException("Refusing protected top-level path");
                 service.add(path);
             }
         }
-        if (shellPaths > 0) throwIfShellFails(shell.toString(), "delete", Math.max(30, shellPaths * 30));
+        int done = 0;
+        if (!shellPaths.isEmpty()) {
+            StringBuilder shell = new StringBuilder();
+            final int chunk = 32;
+            final java.util.concurrent.atomic.AtomicBoolean failed =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            ShellProgress.Listener relay = new ShellProgress.Listener() {
+                @Override
+                public void onProgress(int filesDone, long bytesDone) {
+                    if (progress != null) progress.onProgress(filesDone, bytesDone);
+                }
+
+                @Override
+                public void onFailure() {
+                    failed.set(true);
+                }
+            };
+            for (int i = 0; i < shellPaths.size(); i += chunk) {
+                int end = Math.min(shellPaths.size(), i + chunk);
+                if (shell.length() > 0) shell.append(" ; ");
+                shell.append("rm -rf --");
+                for (int j = i; j < end; j++) shell.append(' ').append(shellArg(shellPaths.get(j)));
+                shell.append(ShellProgress.reportFailure());
+                shell.append(ShellProgress.reportAlways(end, 0L));
+            }
+            throwIfShellFails(shell.toString(), "delete", Math.max(30, shellPaths.size() * 30), relay);
+            if (failed.get()) throw new IOException("delete failed: some paths could not be removed");
+            done = shellPaths.size();
+        }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
         for (String path : service) {
@@ -634,7 +697,122 @@ public final class ShizukuManager {
             } catch (Exception e) {
                 throw new IOException("delete failed: " + e.getMessage());
             }
+            done++;
+            if (progress != null) progress.onProgress(done, 0L);
         }
+    }
+
+    /**
+     * Deletes each path recursively, reporting one marker per directory removed.
+     *
+     * <p>Same shape as {@link RootManager#deleteTree}: walking deepest-first and
+     * running {@code rm -rf} per directory keeps the spawn count tied to the
+     * directory count while giving the dialog a counter that moves, instead of
+     * one opaque {@code rm -rf} that returns only when everything is gone.
+     */
+    public static void deleteTree(Context context, List<String> paths,
+                                  ShellProgress.Listener progress) throws IOException {
+        if (paths == null || paths.isEmpty()) return;
+        List<String> shellPaths = new ArrayList<>();
+        List<String> service = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (useShell(path)) {
+                if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+                shellPaths.add(path);
+            } else {
+                requireAllowed(path);
+                if (isTopLevel(path)) throw new IOException("Refusing protected top-level path");
+                service.add(path);
+            }
+        }
+
+        final int[] done = {0};
+        final java.util.concurrent.atomic.AtomicBoolean failed =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        ShellProgress.Listener relay = new ShellProgress.Listener() {
+            @Override
+            public void onProgress(int delta, long bytesDone) {
+                if (delta > 0) done[0] += delta;
+                if (progress != null) progress.onProgress(done[0], 0L);
+            }
+
+            @Override
+            public void onFailure() {
+                failed.set(true);
+            }
+        };
+
+        if (!shellPaths.isEmpty()) {
+            StringBuilder cmd = new StringBuilder();
+            for (String path : shellPaths) {
+                String arg = shellArg(path);
+                if (cmd.length() > 0) cmd.append(" ; ");
+                cmd.append("find ").append(arg).append(" -depth -type d 2>/dev/null")
+                        .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
+                        .append(" echo @@MPPROG 1 0; done");
+                cmd.append(" ; rm -rf -- ").append(arg).append(" ; echo @@MPPROG 1 0");
+            }
+            throwIfShellFails(cmd.toString(), "delete", Math.max(120, shellPaths.size() * 60), relay);
+            if (failed.get()) throw new IOException("delete failed: some paths could not be removed");
+        }
+
+        if (service.isEmpty()) return;
+        IFileService s = serviceSync(context);
+        for (String path : service) {
+            try {
+                if (!s.deletePath(path)) throw new IOException(serviceError(s));
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("delete failed: " + e.getMessage());
+            }
+            done[0]++;
+            if (progress != null) progress.onProgress(done[0], 0L);
+        }
+    }
+
+    /** Directories under {@code paths}, the unit {@link #deleteTree} reports in. */
+    public static int countDirs(Context context, List<String> paths) {
+        if (paths == null || paths.isEmpty() || !ready()) return 0;
+        StringBuilder cmd = new StringBuilder("echo @@MPDIRS $(");
+        cmd.append("find");
+        for (String p : paths) cmd.append(' ').append(shellArg(p));
+        cmd.append(" -type d 2>/dev/null | wc -l)");
+        ShizukuShell.Result r = ShizukuShell.exec(cmd.toString(), Math.max(30, paths.size() * 20));
+        return RootManager.parseCountMarker(
+                new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr), "@@MPDIRS");
+    }
+
+    /**
+     * Counts files and totals bytes across {@code paths} from the shell side,
+     * where the paths are actually readable.
+     */
+    public static FileUtils.Measure measure(Context context, List<String> paths) {
+        return measureSet(context, paths).total;
+    }
+
+    public static FileUtils.MeasureSet measureSet(Context context, List<String> paths) {
+        FileUtils.Measure empty = new FileUtils.Measure(1, 0L);
+        if (paths == null || paths.isEmpty()) return new FileUtils.MeasureSet(empty, new ArrayList<>());
+        if (!ready()) return new FileUtils.MeasureSet(empty, new ArrayList<>());
+        StringBuilder cmd = new StringBuilder("echo @@MPM $(");
+        cmd.append("du -sk");
+        for (String p : paths) cmd.append(' ').append(shellArg(p));
+        cmd.append(" 2>/dev/null | awk '{s+=$1} END {print s*1024+0}') $(");
+        cmd.append("find");
+        for (String p : paths) cmd.append(' ').append(shellArg(p));
+        cmd.append(" -type f 2>/dev/null | wc -l)\n");
+        for (int i = 0; i < paths.size(); i++) {
+            String a = shellArg(paths.get(i));
+            cmd.append("echo @@MPI ").append(i)
+                    .append(" $(du -sk ").append(a).append(" 2>/dev/null | awk '{print $1*1024+0}')")
+                    .append(" $(find ").append(a).append(" -type f 2>/dev/null | wc -l)\n");
+        }
+        ShizukuShell.Result r = ShizukuShell.exec(cmd.toString(), Math.max(30, paths.size() * 20));
+        FileUtils.MeasureSet parsed = RootManager.parseMeasureSet(
+                new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr), paths.size());
+        return parsed != null ? parsed : new FileUtils.MeasureSet(empty, new ArrayList<>());
     }
 
     public static void rename(Context context, String oldPath, String newPath) throws IOException {

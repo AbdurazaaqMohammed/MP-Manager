@@ -74,6 +74,10 @@ public class ArchiveUtil {
         extract(archive, destDir, preserveTime, null);
     }
 
+    public static void extract(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
+        extract(archive, destDir, preserveTime, password, null);
+    }
+
     /**
      * Extracts an archive, optionally with a password for encrypted zip/7z.
      * A null password extracts normally; encrypted archives then fail with a
@@ -82,40 +86,46 @@ public class ArchiveUtil {
      * The format comes from the file's bytes via {@link ArchiveBrowseUtil},
      * not the file name, so extraction works on archives with missing or
      * wrong extensions too.
+     *
+     * @param listener receives the entry currently being written and the bytes
+     *                 as they land, so a progress dialog can show a live rate
      */
-    public static void extract(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
+    public static void extract(File archive, File destDir, boolean preserveTime, char[] password,
+                               FileUtils.TransferListener listener) throws IOException {
         if (!destDir.exists()) destDir.mkdirs();
         ArchiveBrowseUtil.ArchiveType type = ArchiveBrowseUtil.detectArchiveType(archive);
         switch (type) {
             case ZIP:
-                extractZip(archive, destDir, preserveTime, password);
+                extractZip(archive, destDir, preserveTime, password, listener);
                 return;
             case SEVEN_Z:
-                extract7z(archive, destDir, preserveTime, password);
+                extract7z(archive, destDir, preserveTime, password, listener);
                 return;
             case RAR:
-                extractRar(archive, destDir, preserveTime);
+                extractRar(archive, destDir, preserveTime, listener);
                 return;
             case TAR:
-                extractTar(new BufferedInputStream(new FileInputStream(archive), BUFFER_SIZE), destDir, preserveTime);
+                extractTar(new BufferedInputStream(new FileInputStream(archive), BUFFER_SIZE), archive,
+                        destDir, preserveTime, listener);
                 return;
             case GZIP:
             case BZIP2:
             case XZ:
                 if (ArchiveBrowseUtil.isTarPayload(archive, type)) {
-                    extractTar(ArchiveBrowseUtil.openTar(archive, type), destDir, preserveTime);
+                    extractTar(ArchiveBrowseUtil.openTar(archive, type), archive, destDir, preserveTime, listener);
                 } else {
-                    extractSingleCompressed(ArchiveBrowseUtil.openSingleCompressed(archive, type), destDir,
-                            ArchiveBrowseUtil.stripCompressorExtension(archive.getName()));
+                    extractSingleCompressed(ArchiveBrowseUtil.openSingleCompressed(archive, type), archive,
+                            destDir, ArchiveBrowseUtil.stripCompressorExtension(archive.getName()), listener);
                 }
                 return;
             default:
-                if (isMiuiOrAndroidBackup(archive)) extractBackupArchive(archive, destDir, preserveTime);
+                if (isMiuiOrAndroidBackup(archive)) extractBackupArchive(archive, destDir, preserveTime, listener);
                 else throw new IOException("Unsupported archive format: " + archive.getName());
         }
     }
 
-    private static void extractBackupArchive(File archive, File destDir, boolean preserveTime) throws IOException {
+    private static void extractBackupArchive(File archive, File destDir, boolean preserveTime,
+                                             FileUtils.TransferListener listener) throws IOException {
         InputStream raw = new BufferedInputStream(FileUtils.getInputStream(archive));
         String line = readAsciiLine(raw);
         if (line == null) {
@@ -156,7 +166,7 @@ public class ArchiveUtil {
                 !"none".equalsIgnoreCase(compressionStr.trim());
 
         InputStream tarStream = isCompressed ? new InflaterInputStream(raw) : raw;
-        extractTar(tarStream, destDir, preserveTime);
+        extractTar(tarStream, archive, destDir, preserveTime, listener);
     }
 
     private static String readAsciiLine(InputStream is) throws IOException {
@@ -170,22 +180,30 @@ public class ArchiveUtil {
     }
 
     public static void create(File output, List<File> sources) throws IOException {
+        create(output, sources, null);
+    }
+
+    /**
+     * @param listener receives every file written and the bytes as they land
+     */
+    public static void create(File output, List<File> sources, FileUtils.TransferListener listener) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".7z")) create7z(output, sources);
-        else if (lower.endsWith(".tar")) createTar(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE), sources);
-        else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
-        else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
-        else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
-        else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
+        if (lower.endsWith(".7z")) create7z(output, sources, listener);
+        else if (lower.endsWith(".tar")) createTar(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE), sources, listener);
+        else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+        else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+        else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else throw new IOException("Unsupported archive format: " + output.getName());
     }
 
-    private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
+    private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password,
+                                  FileUtils.TransferListener listener) throws IOException {
         // Opened through ArchiveBrowseUtil.openSevenZ: with core library
         // desugaring (NIO) the SevenZFile(File) machinery works below API 26.
         try (SevenZFile sevenZFile = ArchiveBrowseUtil.openSevenZ(archive, password)) {
@@ -194,10 +212,11 @@ public class ArchiveUtil {
                 File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
+                    if (listener != null) listener.onFile(archive, out);
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                        copy(sevenZFile.getInputStream(entry), os);
+                        copy(sevenZFile.getInputStream(entry), os, listener);
                     }
                     if (preserveTime && entry.getLastModifiedDate() != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -217,10 +236,23 @@ public class ArchiveUtil {
      * Zstandard, bzip2, LZMA) abort its central-directory read, so the same
      * guarantee is provided by {@link ZipCompat} for those.
      */
-    private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
+    private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password,
+                                   FileUtils.TransferListener listener) throws IOException {
         try (ZipFile zf = new ZipFile(archive)) {
             if (password != null) zf.setPassword(password);
-            zf.extractAll(destDir.getAbsolutePath());
+            // zip4j reports progress through its own monitor; the pump turns that
+            // into byte deltas and the entry currently being written.
+            ZipProgressPump pump = null;
+            if (listener != null) {
+                pump = new ZipProgressPump(zf.getProgressMonitor(), listener,
+                        path -> listener.onFile(archive, new File(path)));
+                pump.start();
+            }
+            try {
+                zf.extractAll(destDir.getAbsolutePath());
+            } finally {
+                if (pump != null) pump.stop();
+            }
         } catch (ZipException e) {
             if (password != null || isPasswordError(e)) throw e;
             ZipCompat.extractAll(archive, destDir, preserveTime);
@@ -272,17 +304,20 @@ public class ArchiveUtil {
         return false;
     }
 
-    private static void extractRar(File archive, File destDir, boolean preserveTime) throws IOException {
+    private static void extractRar(File archive, File destDir, boolean preserveTime,
+                                   FileUtils.TransferListener listener) throws IOException {
         try (Archive rar = new Archive(archive)) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
                 File out = resolveDestFile(destDir, fh.getFileName());
                 if (fh.isDirectory()) out.mkdirs();
                 else {
+                    if (listener != null) listener.onFile(archive, out);
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
                         rar.extractFile(fh, os);
+                        if (listener != null) listener.onBytes(Math.max(0L, fh.getFullUnpackSize()));
                     }
                     if (preserveTime && fh.getMTime() != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -295,17 +330,19 @@ public class ArchiveUtil {
         }
     }
 
-    private static void extractTar(InputStream tarInput, File destDir, boolean preserveTime) throws IOException {
+    private static void extractTar(InputStream tarInput, File archive, File destDir, boolean preserveTime,
+                                   FileUtils.TransferListener listener) throws IOException {
         try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
                 File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
+                    if (listener != null) listener.onFile(archive, out);
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                        copy(tais, os);
+                        copy(tais, os, listener);
                     }
                     if (preserveTime && entry.getLastModifiedDate() != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -316,70 +353,81 @@ public class ArchiveUtil {
         }
     }
 
-    private static void extractSingleCompressed(InputStream compressedInput, File destDir, String baseName) throws IOException {
+    private static void extractSingleCompressed(InputStream compressedInput, File archive, File destDir,
+                                                String baseName, FileUtils.TransferListener listener) throws IOException {
         try (InputStream is = compressedInput) {
             File out = new File(destDir, baseName);
+            if (listener != null) listener.onFile(archive, out);
             try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                copy(is, os);
+                copy(is, os, listener);
             }
         }
     }
 
-    private static void compressSingle(OutputStream compressedOutput, File source) throws IOException {
+    private static void compressSingle(OutputStream compressedOutput, File source, File output,
+                                       FileUtils.TransferListener listener) throws IOException {
         try (OutputStream os = new BufferedOutputStream(compressedOutput)) {
+            if (listener != null) listener.onFile(source, output);
             try (InputStream is = new BufferedInputStream(new FileInputStream(source))) {
-                copy(is, os);
+                copy(is, os, listener);
             }
         }
     }
 
-    private static void create7z(File output, List<File> sources) throws IOException {
+    private static void create7z(File output, List<File> sources, FileUtils.TransferListener listener) throws IOException {
         try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(output)) {
             sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
-            for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
+            for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName(), output, listener);
         }
     }
 
-    private static void addToSevenZ(SevenZOutputFile sevenZOutput, File file, String entryName) throws IOException {
+    private static void addToSevenZ(SevenZOutputFile sevenZOutput, File file, String entryName, File output,
+                                    FileUtils.TransferListener listener) throws IOException {
         SevenZArchiveEntry entry = sevenZOutput.createArchiveEntry(file, entryName);
         sevenZOutput.putArchiveEntry(entry);
         if (file.isDirectory()) {
             sevenZOutput.closeArchiveEntry();
             File[] children = file.listFiles();
-            if (children != null) for (File child : children) addToSevenZ(sevenZOutput, child, entryName + child.getName() + (child.isDirectory() ? "/" : ""));
+            if (children != null) for (File child : children) addToSevenZ(sevenZOutput, child, entryName + child.getName() + (child.isDirectory() ? "/" : ""), output, listener);
         } else {
+            if (listener != null) listener.onFile(file, output);
             try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
-                copySevenZ(is, sevenZOutput);
+                copySevenZ(is, sevenZOutput, listener);
             }
             sevenZOutput.closeArchiveEntry();
         }
     }
 
-    private static void copySevenZ(InputStream is, SevenZOutputFile os) throws IOException {
+    private static void copySevenZ(InputStream is, SevenZOutputFile os, FileUtils.TransferListener listener) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
         int length;
-        while ((length = is.read(buffer)) > 0) os.write(buffer, 0, length);
+        while ((length = is.read(buffer)) > 0) {
+            os.write(buffer, 0, length);
+            if (listener != null) listener.onBytes(length);
+        }
     }
 
-    private static void createTar(OutputStream tarOutput, List<File> sources) throws IOException {
+    private static void createTar(OutputStream tarOutput, List<File> sources, FileUtils.TransferListener listener) throws IOException {
         try (TarArchiveOutputStream taos = new TarArchiveOutputStream(tarOutput)) {
             taos.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR);
             taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
             taos.setAddPaxHeadersForNonAsciiNames(true);
-            for (File source : sources) addToTar(taos, source, source.isDirectory() ? source.getName() + "/" : source.getName());
+            for (File source : sources) addToTar(taos, source, source.isDirectory() ? source.getName() + "/" : source.getName(), listener);
         }
     }
 
-    private static void addToTar(TarArchiveOutputStream taos, File file, String entryName) throws IOException {
+    private static void addToTar(TarArchiveOutputStream taos, File file, String entryName,
+                                 FileUtils.TransferListener listener) throws IOException {
         TarArchiveEntry entry = new TarArchiveEntry(file, entryName);
         taos.putArchiveEntry(entry);
         if (file.isDirectory()) {
             taos.closeArchiveEntry();
             File[] children = file.listFiles();
-            if (children != null) for (File child : children) addToTar(taos, child, entryName + child.getName() + (child.isDirectory() ? "/" : ""));
+            if (children != null) for (File child : children) addToTar(taos, child, entryName + child.getName() + (child.isDirectory() ? "/" : ""), listener);
         } else {
+            if (listener != null) listener.onFile(file, null);
             try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
-                copy(is, taos);
+                copy(is, taos, listener);
             }
             taos.closeArchiveEntry();
         }
@@ -418,8 +466,15 @@ public class ArchiveUtil {
     }
 
     private static void copy(InputStream is, OutputStream os) throws IOException {
+        copy(is, os, null);
+    }
+
+    private static void copy(InputStream is, OutputStream os, FileUtils.TransferListener listener) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
         int length;
-        while ((length = is.read(buffer)) > 0) os.write(buffer, 0, length);
+        while ((length = is.read(buffer)) > 0) {
+            os.write(buffer, 0, length);
+            if (listener != null) listener.onBytes(length);
+        }
     }
 }

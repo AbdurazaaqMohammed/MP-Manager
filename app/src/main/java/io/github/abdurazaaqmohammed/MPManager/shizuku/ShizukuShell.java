@@ -143,6 +143,16 @@ public final class ShizukuShell {
     }
 
     public static Result exec(String command, long timeoutSeconds) {
+        return exec(command, timeoutSeconds, null);
+    }
+
+    /**
+     * @param progress receives {@link io.github.abdurazaaqmohammed.utils.ShellProgress}
+     *                 markers from stdout while the command runs; marker lines are
+     *                 stripped from {@link Result#stdout}
+     */
+    public static Result exec(String command, long timeoutSeconds,
+                              io.github.abdurazaaqmohammed.utils.ShellProgress.Listener progress) {
         if (!isGranted()) {
             Log.d(TAG, "exec: not granted, refusing: " + command);
             return new Result(false, "", "Shizuku not granted", -1);
@@ -153,7 +163,7 @@ public final class ShizukuShell {
                             .newProcess(new String[]{"sh", "-c", command}, null, "/");
             StringBuilder out = new StringBuilder();
             StringBuilder err = new StringBuilder();
-            Thread outT = drain(p.getInputStream(), out);
+            Thread outT = drain(p.getInputStream(), out, progress);
             Thread errT = drain(p.getErrorStream(), err);
             // Process.waitFor(timeout) is broken here: ShizukuRemoteProcess.exitValue() is a binder
             // IPC throwing IllegalArgumentException("process hasn't exited") while still running.
@@ -269,10 +279,20 @@ public final class ShizukuShell {
         return detail;
     }
 
-    private static Thread drain(InputStream is, StringBuilder sb) {        Thread t = new Thread(() -> {
+    private static Thread drain(InputStream is, StringBuilder sb) {
+        return drain(is, sb, null);
+    }
+
+    private static Thread drain(InputStream is, StringBuilder sb,
+                                io.github.abdurazaaqmohammed.utils.ShellProgress.Listener progress) {
+        Thread t = new Thread(() -> {
             try (BufferedReader r = new BufferedReader(new InputStreamReader(is))) {
                 String line;
                 while ((line = r.readLine()) != null) {
+                    if (progress != null && io.github.abdurazaaqmohammed.utils.ShellProgress
+                            .consume(line, progress)) {
+                        continue;
+                    }
                     sb.append(line).append('\n');
                 }
             } catch (IOException ignored) {

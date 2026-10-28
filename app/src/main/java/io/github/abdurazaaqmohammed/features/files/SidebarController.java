@@ -830,6 +830,8 @@ public class SidebarController {
                         .setPositiveButton(R.string.delete, (d, w) -> {
                             ProgressManager pm = new ProgressManager(activity, true);
                             pm.setText(activity.getString(R.string.deleting));
+                            pm.setOperation(R.string.op_deleting);
+                            pm.setSource(RecycleBin.binDir(activity));
                             pm.show();
                             new Thread(() -> {
                                 RecycleBin.emptyBin(activity);
@@ -858,11 +860,16 @@ public class SidebarController {
                             List<RecycleBin.Entry> toDel = new ArrayList<>(selectedEntries);
                             ProgressManager pm = new ProgressManager(activity, false);
                             pm.setText(activity.getString(R.string.deleting));
+                            pm.setOperation(R.string.op_deleting);
                             pm.setTotal(toDel.size());
                             pm.show();
                             new Thread(() -> {
                                 for (int i = 0; i < toDel.size(); i++) {
-                                    RecycleBin.deleteEntry(activity, toDel.get(i));
+                                    RecycleBin.Entry entry = toDel.get(i);
+                                    pm.setFile(entry.displayName());
+                                    pm.setPaths(entry.originPath != null ? entry.originPath
+                                            : entry.file.getAbsolutePath(), null);
+                                    RecycleBin.deleteEntry(activity, entry);
                                     pm.setProgress(i + 1, toDel.size());
                                 }
                                 activity.runOnUiThread(() -> {

@@ -20,12 +20,66 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 
 public class FileUtils {
+
+    /**
+     * Called from the copying thread as work advances, so a progress dialog can
+     * show the current item, its endpoints and a live byte rate.
+     * Both methods are cheap and must never block.
+     */
+    public interface TransferListener {
+        /** A new item is about to be written. {@code destination} may be null. */
+        void onFile(File source, File destination);
+
+        /** {@code count} more bytes were written. */
+        void onBytes(long count);
+    }
+
+    /** File/byte totals for a set of roots, used to size a progress bar up front. */
+    public static final class Measure {
+        public int files;
+        public long bytes;
+        /** Directories walked, so a delete can count entries rather than files. */
+        public int dirs;
+
+        public Measure() {
+        }
+
+        public Measure(int files, long bytes) {
+            this.files = files;
+            this.bytes = bytes;
+        }
+
+        /** Every entry the walk will visit, which is what a delete removes. */
+        public int entries() {
+            return files + dirs;
+        }
+    }
+
+    /**
+     * A total plus the same numbers broken down per input path.
+     *
+     * <p>The breakdown is what lets an elevated batch copy report a running
+     * counter: the shell script cannot measure anything itself while copying,
+     * so each item's share is measured once up front and the copy step only has
+     * to add those known shares together.
+     */
+    public static final class MeasureSet {
+        public final Measure total;
+        public final List<Measure> each;
+
+        public MeasureSet(Measure total, List<Measure> each) {
+            this.total = total;
+            this.each = each;
+        }
+    }
+
     public static final String[] IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif"};
     public static final String[] FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"};
     public static final String[] VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv"};
@@ -193,6 +247,14 @@ public class FileUtils {
     }
 
     public static void copyFolder(File src, File dest) throws IOException {
+        copyFolder(src, dest, null);
+    }
+
+    /**
+     * Recursive copy that reports every file it starts and every chunk it writes,
+     * so a single walk can drive both the item counter and the byte rate.
+     */
+    public static void copyFolder(File src, File dest, TransferListener listener) throws IOException {
         if (src.isDirectory()) {
             if (!dest.exists()) {
                 //noinspection ResultOfMethodCallIgnored
@@ -203,13 +265,13 @@ public class FileUtils {
             for (String child : children) {
                 File srcChild = new File(src, child);
                 File dstChild = new File(dest, child);
-                copyFolder(srcChild, dstChild);
+                copyFolder(srcChild, dstChild, listener);
             }
         } else {
             // dest might be the parent dir OR the exact target file (when called
             // from the recursive case above it is always the exact target file).
             File target = dest.isDirectory() ? new File(dest, src.getName()) : dest;
-            copyFile(src, target);
+            copyFile(src, target, listener);
         }
     }
 
@@ -264,6 +326,18 @@ public class FileUtils {
     }
 
     public static void copyFile(File sourceFile, File destinationFile) throws IOException {
+        copyFile(sourceFile, destinationFile, null);
+    }
+
+    /**
+     * Copies {@code sourceFile} to {@code destinationFile}.
+     *
+     * <p>With a listener the transfer is chunked at {@value #TRANSFER_CHUNK} so
+     * the caller gets a byte counter that actually moves during a large file;
+     * without one the original single-shot path is kept untouched.
+     */
+    public static void copyFile(File sourceFile, File destinationFile, TransferListener listener) throws IOException {
+        if (listener != null) listener.onFile(sourceFile, destinationFile);
         // FileChannel.transferTo delegates to sendfile(2) on Linux — the kernel
         // copies data without any user-space buffer, making this the fastest
         // possible file copy on Android internal and shared storage.
@@ -275,14 +349,19 @@ public class FileUtils {
                 long size = src.size();
                 long transferred = 0;
                 while (transferred < size) {
-                    transferred += src.transferTo(transferred, size - transferred, dst);
+                    long want = listener == null ? size - transferred
+                            : Math.min(size - transferred, TRANSFER_CHUNK);
+                    long written = src.transferTo(transferred, want, dst);
+                    if (written <= 0) break;
+                    transferred += written;
+                    if (listener != null) listener.onBytes(written);
                 }
                 return;
             }
         }
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {
-            copyFile(is, os);
+            copyFile(is, os, listener);
         }
     }
 
@@ -313,12 +392,25 @@ public class FileUtils {
     /** I/O buffer size: 64 KB gives good throughput on FUSE / shared storage. */
     private static final int IO_BUFFER_SIZE = 65536;
 
+    /** Granularity of the reported transfer progress: 1 MB keeps the UI smooth. */
+    private static final long TRANSFER_CHUNK = 1024L * 1024L;
+
     public static void copyFile(InputStream is, OutputStream os) throws IOException {
         if (LegacyUtils.supportsWriteExternalStorage) {
             byte[] buffer = new byte[IO_BUFFER_SIZE];
             int length;
             while ((length = is.read(buffer)) > 0) os.write(buffer, 0, length);
         } else android.os.FileUtils.copy(is, os);
+    }
+
+    /** Streaming copy that reports every chunk it writes. */
+    public static void copyFile(InputStream is, OutputStream os, TransferListener listener) throws IOException {
+        byte[] buffer = new byte[IO_BUFFER_SIZE];
+        int length;
+        while ((length = is.read(buffer)) > 0) {
+            os.write(buffer, 0, length);
+            if (listener != null) listener.onBytes(length);
+        }
     }
 
     public static InputStream getInputStream(File file) throws IOException {
@@ -347,6 +439,122 @@ public class FileUtils {
      * is measuring. The result is always at least one so the progress bar has a
      * usable maximum.
      */
+    /**
+     * One walk that yields both the file count and the byte size of the work, so
+     * the progress dialog can show a real total and a remaining-bytes figure
+     * without paying for two traversals of the same tree.
+     *
+     * <p>The count matches {@link #countFilesForProgress(Collection, int)} exactly
+     * (a directory with children counts as 0, an empty one as 1) and stops at
+     * {@code cap} entries. The result always reports at least one file so a
+     * progress bar has a usable maximum.
+     */
+    public static Measure measure(Collection<File> roots, int cap) {
+        Measure acc = new Measure();
+        if (roots == null) {
+            acc.files = 1;
+            return acc;
+        }
+        for (File root : roots) {
+            if (acc.files >= cap) break;
+            measureInto(root, cap, acc);
+        }
+        if (acc.files < 1) acc.files = 1;
+        return acc;
+    }
+
+    public static Measure measure(File root, int cap) {
+        Measure acc = new Measure();
+        measureInto(root, cap, acc);
+        if (acc.files < 1) acc.files = 1;
+        return acc;
+    }
+
+    private static void measureInto(File root, int cap, Measure acc) {
+        if (root == null || acc.files >= cap) return;
+        File[] children = root.listFiles();
+        if (children == null || children.length == 0) {
+            acc.files += 1;
+            acc.bytes += safeLength(root);
+            if (root.isDirectory()) acc.dirs += 1;
+            return;
+        }
+        if (root.isDirectory()) acc.dirs += 1;
+        for (File child : children) {
+            if (acc.files >= cap) break;
+            if (child.isDirectory()) {
+                measureInto(child, cap, acc);
+            } else {
+                acc.files += 1;
+                acc.bytes += safeLength(child);
+            }
+        }
+    }
+
+    /**
+     * Deletes {@code root} recursively, reporting every entry as it goes so a
+     * progress dialog gets a counter that actually moves.
+     *
+     * <p>{@code Util.deleteDir} removes a whole tree in one opaque call, which is
+     * why a delete used to jump from 0% to 100%: the caller had nothing to
+     * report in between. Here each unlink is its own step.
+     *
+     * <p>Symlinks are removed, never followed, so a link pointing outside the
+     * tree cannot take its target with it.
+     *
+     * @return true when nothing of the tree is left behind
+     */
+    public static boolean deleteTree(File root, TransferListener listener) {
+        if (root == null) return true;
+        if (listener != null) listener.onFile(root, null);
+
+        // One lstat decides link/dir/file, so a large tree does not pay three
+        // stat syscalls per entry just to be measured.
+        int mode = lstatMode(root);
+        boolean link = mode >= 0 && android.system.OsConstants.S_ISLNK(mode);
+        boolean isDir = !link && (mode >= 0 ? android.system.OsConstants.S_ISDIR(mode) : root.isDirectory());
+        boolean isFile = !link && (mode >= 0 ? android.system.OsConstants.S_ISREG(mode) : root.isFile());
+
+        if (isDir) {
+            File[] kids;
+            try {
+                kids = root.listFiles();
+            } catch (Exception e) {
+                kids = null;
+            }
+            if (kids != null) {
+                for (File kid : kids) deleteTree(kid, listener);
+            }
+        }
+        long size = isFile ? safeLength(root) : 0L;
+        boolean gone = root.delete();
+        if (gone && size > 0 && listener != null) listener.onBytes(size);
+        return gone || !root.exists();
+    }
+
+    /** {@code st_mode} from lstat, or -1 when it cannot be read. */
+    private static int lstatMode(File f) {
+        try {
+            return android.system.Os.lstat(f.getAbsolutePath()).st_mode;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /** True for a symbolic link; {@code File.isDirectory()} would follow it. */
+    public static boolean isSymlink(File f) {
+        if (f == null) return false;
+        return android.system.OsConstants.S_ISLNK(lstatMode(f));
+    }
+
+    private static long safeLength(File f) {
+        try {
+            return f.isFile() ? f.length() : 0L;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
     public static int countFilesForProgress(Collection<File> roots, int cap) {
         int total = 0;
         if (roots == null) return 1;

@@ -330,21 +330,55 @@ public final class AccessManager {
      * paths) for the entire selection instead of one per item.
      */
     public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+        copyAllPreserving(context, ops, null);
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch. The
+     * backend gets one shell process (root) or one command (shizuku shell
+     * paths) for the entire selection instead of one per item.
+     *
+     * @param progress receives per-item counters streamed out of that process
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+                                         ShellProgress.Listener progress) throws IOException {
         if (ops == null || ops.isEmpty()) return;
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
-            RootManager.getInstance(context).copyAllPreserving(ops);
+            RootManager.getInstance(context).copyAllPreserving(ops, progress);
             return;
         }
         if (backend == Backend.SHIZUKU) {
-            ShizukuManager.copyAllPreserving(context, ops);
+            ShizukuManager.copyAllPreserving(context, ops, progress);
             return;
         }
+        int files = 0;
+        long bytes = 0L;
         for (RootManager.CopyOp op : ops) {
             if (op.directory) FileUtils.copyFolder(new File(op.src), new File(op.dest));
             else FileUtils.copyFile(new File(op.src), new File(op.dest));
             preserveTime(context, op.src, op.dest);
+            files += Math.max(0, op.files);
+            bytes += Math.max(0L, op.bytes);
+            if (progress != null) progress.onProgress(files, bytes);
         }
+    }
+
+    /**
+     * Counts files and bytes through the active elevated backend, because the
+     * app process cannot list paths like {@code /data/data/...}.
+     *
+     * @return null when no elevated backend is active
+     */
+    public static FileUtils.MeasureSet measureSetElevated(Context context, List<String> paths) {
+        if (paths == null || paths.isEmpty()) return null;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).measureSet(paths);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.measureSet(context, paths);
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**
@@ -353,12 +387,17 @@ public final class AccessManager {
      * @return the paths that were handled by the backend.
      */
     public static List<String> deleteAll(Context context, List<String> paths, boolean useElevated) throws IOException {
+        return deleteAll(context, paths, useElevated, null);
+    }
+
+    public static List<String> deleteAll(Context context, List<String> paths, boolean useElevated,
+                                         ShellProgress.Listener progress) throws IOException {
         if (paths == null || paths.isEmpty()) return new ArrayList<>();
         if (useElevated) {
             Backend backend = active(context);
-            if (backend == Backend.ROOT) return RootManager.getInstance(context).deleteAll(paths);
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).deleteAll(paths, progress);
             if (backend == Backend.SHIZUKU) {
-                ShizukuManager.deleteAll(context, paths);
+                ShizukuManager.deleteAll(context, paths, progress);
                 return paths;
             }
         }
@@ -366,8 +405,58 @@ public final class AccessManager {
         for (String path : paths) {
             delete(context, path, false);
             done.add(path);
+            if (progress != null) progress.onProgress(done.size(), 0L);
         }
         return done;
+    }
+
+    /**
+     * Recursive delete that reports one step per directory removed, so the
+     * dialog keeps moving instead of jumping from 0% when {@code rm -rf}
+     * returns.
+     */
+    public static void deleteTree(Context context, List<String> paths, boolean useElevated,
+                                  ShellProgress.Listener progress) throws IOException {
+        if (paths == null || paths.isEmpty()) return;
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).deleteTree(paths, progress);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.deleteTree(context, paths, progress);
+                return;
+            }
+        }
+        // Plain delete still reports per entry, so the dialog keeps moving.
+        final int[] done = {0};
+        FileUtils.TransferListener perEntry = progress == null ? null : new FileUtils.TransferListener() {
+            @Override
+            public void onFile(File source, File destination) {
+                if (source == null) return;
+                progress.onProgress(++done[0], 0L);
+            }
+
+            @Override
+            public void onBytes(long count) {
+            }
+        };
+        for (String path : paths) {
+            FileUtils.deleteTree(new File(path), perEntry);
+        }
+    }
+
+    /** Directories under {@code paths}; the unit {@link #deleteTree} counts in. */
+    public static int countDirsElevated(Context context, List<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).countDirs(paths);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.countDirs(context, paths);
+        } catch (Exception ignored) {
+        }
+        return 0;
     }
 
     public static void mkdir(Context context, String path, boolean useElevated) throws IOException {

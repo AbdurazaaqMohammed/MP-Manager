@@ -57,6 +57,7 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.DestSizePoller;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -65,6 +66,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.ShellProgress;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -117,19 +119,26 @@ public class FileOperationsHelper {
     }
 
     /**
-     * @param totalFiles 0 keeps the spinner; a positive value switches to a real
-     *                   bar with an "n / total (x%)" line.
+     * Opens the dialog immediately as a spinner. The totals are filled in a
+     * moment later by {@link #applyMeasure} on the worker thread, because
+     * measuring a root-only tree needs a shell round trip and must never run on
+     * the UI thread.
      */
-    private void showActiveProgress(String text, int totalFiles) {
+    private void showActiveProgress(String text, int operationRes) {
         dismissActiveProgress();
-        ProgressManager pm = new ProgressManager(context, totalFiles <= 0);
+        ProgressManager pm = new ProgressManager(context, true);
         pm.setText(text);
-        if (totalFiles > 0) {
-            pm.showCount(true);
-            pm.setProgress(0, totalFiles);
-        }
+        if (operationRes != 0) pm.setOperation(operationRes);
         activeProgress = pm;
         pm.show();
+    }
+
+    /** Pushes measured totals into the live dialog. Safe from any thread. */
+    private void applyMeasure(FileUtils.Measure measure) {
+        ProgressManager pm = activeProgress;
+        if (pm == null || measure == null || measure.files <= 0) return;
+        pm.setProgress(0, measure.files);
+        pm.setBytes(0L, measure.bytes);
     }
 
     private void dismissActiveProgress() {
@@ -142,8 +151,16 @@ public class FileOperationsHelper {
         if (pm != null && total > 0) pm.setProgress(Math.min(done, total), total);
     }
 
+    /** Snaps the dialog to 100% right before it closes, so it never stops short. */
+    private void completeActiveProgress(int totalFiles, long totalBytes) {
+        ProgressManager pm = activeProgress;
+        if (pm == null) return;
+        if (totalFiles > 0) pm.setProgress(totalFiles, totalFiles);
+        if (totalBytes > 0) pm.setBytes(totalBytes, totalBytes);
+    }
+
     private void runWithProgress(String text, IoOperation op) {
-        showActiveProgress(text);
+        showActiveProgress(text, 0);
         new Thread(() -> {
             try {
                 op.run();
@@ -157,9 +174,20 @@ public class FileOperationsHelper {
     }
 
     private void runWithProgress(String text, List<?> items, IoOperation op) {
-        showActiveProgress(text, countFiles(items));
+        runWithProgress(text, items, 0, op);
+    }
+
+    /**
+     * @param operationRes caption shown above the title ({@code COPY}, {@code MOVE}, …);
+     *                     0 leaves it off
+     */
+    private void runWithProgress(String text, List<?> items, int operationRes, IoOperation op) {
+        showActiveProgress(text, operationRes);
         new Thread(() -> {
             try {
+                // Measuring happens here, not on the UI thread: an elevated tree
+                // needs a shell round trip to count.
+                applyMeasure(measureInfo(items).total);
                 op.run();
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
@@ -172,18 +200,146 @@ public class FileOperationsHelper {
 
     private static final int PROGRESS_COUNT_CAP = 20000;
 
-    private int countFiles(List<?> items) {
+    /** Totals for the whole selection plus each item's own share of them. */
+    private static final class MeasureInfo {
+        final FileUtils.Measure total;
+        final java.util.Map<String, FileUtils.Measure> byPath;
+
+        MeasureInfo(FileUtils.Measure total, java.util.Map<String, FileUtils.Measure> byPath) {
+            this.total = total;
+            this.byPath = byPath;
+        }
+
+        FileUtils.Measure of(File f) {
+            FileUtils.Measure m = f == null ? null : byPath.get(f.getAbsolutePath());
+            return m != null ? m : new FileUtils.Measure(1, 0L);
+        }
+    }
+
+    private volatile List<?> measuredItems;
+    private volatile MeasureInfo measuredInfo;
+
+    private FileUtils.Measure measureItems(List<?> items) {
+        return measureInfo(items).total;
+    }
+
+    /** Cached totals only — never measures, so it is safe on the UI thread. */
+    private FileUtils.Measure cachedMeasure(List<?> items) {
+        MeasureInfo info = measuredInfo;
+        if (info == null) return null;
+        if (items != null && items != measuredItems) return null;
+        return info.total;
+    }
+
+    /**
+     * File and byte totals for {@code items}, computed at most once per list
+     * instance.
+     *
+     * <p>A plain walk returns nothing for root-only paths — {@code listFiles()}
+     * simply fails — which is why elevated transfers used to show a bar that
+     * never moved. When the walk comes back blind and an elevated backend is
+     * active, the same numbers are asked for over the shell instead.
+     */
+    private MeasureInfo measureInfo(List<?> items) {
+        if (items != null && items == measuredItems && measuredInfo != null) return measuredInfo;
+        MeasureInfo info = computeMeasure(items);
+        measuredItems = items;
+        measuredInfo = info;
+        return info;
+    }
+
+    private MeasureInfo computeMeasure(List<?> items) {
         List<File> roots = new ArrayList<>();
+        List<String> paths = new ArrayList<>();
         if (items != null) {
             for (Object item : items) {
-                if (item instanceof File f) roots.add(f);
+                if (item instanceof File f) {
+                    roots.add(f);
+                    paths.add(f.getAbsolutePath());
+                }
             }
         }
-        return FileUtils.countFilesForProgress(roots, PROGRESS_COUNT_CAP);
+
+        java.util.Map<String, FileUtils.Measure> byPath = new java.util.HashMap<>();
+        int files = 0;
+        long bytes = 0L;
+        boolean blind = false;
+        for (File root : roots) {
+            FileUtils.Measure m = FileUtils.measure(root, PROGRESS_COUNT_CAP);
+            byPath.put(root.getAbsolutePath(), m);
+            files += m.files;
+            bytes += m.bytes;
+            if (!root.canRead()) blind = true;
+        }
+        FileUtils.Measure local = new FileUtils.Measure(Math.max(1, files), bytes);
+
+        if ((blind || local.bytes == 0) && AccessManager.fileOpsOn(context)) {
+            FileUtils.MeasureSet elevated = AccessManager.measureSetElevated(context, paths);
+            if (elevated != null && elevated.total.files > 0
+                    && (elevated.total.files > local.files || elevated.total.bytes > local.bytes)) {
+                java.util.Map<String, FileUtils.Measure> mapped = new java.util.HashMap<>();
+                for (int i = 0; i < paths.size(); i++) {
+                    FileUtils.Measure m = i < elevated.each.size() ? elevated.each.get(i) : null;
+                    mapped.put(paths.get(i), m != null ? m : new FileUtils.Measure(1, 0L));
+                }
+                return new MeasureInfo(elevated.total, mapped);
+            }
+        }
+        return new MeasureInfo(local, byPath);
+    }
+
+    /**
+     * Bridges {@link ShellProgress} counters from a single elevated shell process
+     * into the dialog, walking the op list so the file name follows along.
+     *
+     * @param ops    ordered exactly as the shell will run them
+     * @param poller optional sampler that fills in the bytes of the item in
+     *               flight, between markers
+     */
+    private ShellProgress.Listener shellProgress(List<RootManager.CopyOp> ops,
+                                                 int totalFiles, long totalBytes,
+                                                 DestSizePoller poller) {
+        ProgressManager pm = activeProgress;
+        if (pm == null) return null;
+        return new ShellProgress.Listener() {
+            private int next = 0;
+
+            @Override
+            public void onProgress(int filesDone, long bytesDone) {
+                if (totalFiles > 0) pm.setProgress(Math.min(filesDone, totalFiles), totalFiles);
+                if (totalBytes > 0) pm.setBytes(Math.min(bytesDone, totalBytes), totalBytes);
+                // A marker means op[next] just finished, so show the one after it.
+                if (ops == null || ops.isEmpty()) return;
+                int show = Math.min(next, ops.size() - 1);
+                RootManager.CopyOp op = ops.get(show);
+                pm.setPaths(op.src, op.dest);
+                pm.setFile(new File(op.dest));
+                if (poller != null) {
+                    long before = 0L;
+                    for (int i = 0; i < show; i++) before += Math.max(0L, ops.get(i).bytes);
+                    poller.watch(new File(op.dest), before);
+                }
+                next++;
+            }
+        };
+    }
+
+    /**
+     * Starts a sampler for the item currently being written, so one large file
+     * or folder still advances the bar instead of jumping at the end.
+     */
+    private DestSizePoller newPoller(long totalBytes) {
+        if (totalBytes <= 0) return null;
+        DestSizePoller poller = new DestSizePoller(absolute -> {
+            ProgressManager pm = activeProgress;
+            if (pm != null) pm.setBytes(Math.min(absolute, totalBytes), totalBytes);
+        });
+        poller.start();
+        return poller;
     }
 
     public void copyItemsAsync(List<Object> items) {
-        runWithProgress(context.rss.getString(R.string.copying, summarizeItems(items)), items, () -> copyMultiple(items));
+        runWithProgress(context.rss.getString(R.string.copying, summarizeItems(items)), items, R.string.op_copying, () -> copyMultiple(items));
     }
 
     public void copyAsync(Object item) {
@@ -194,7 +350,7 @@ public class FileOperationsHelper {
     public void moveAsync(Object item) {
         List<Object> items = (adapter.isMultiSelectMode() && !adapter.getSelectedFiles().isEmpty())
                 ? adapter.getSelectedFiles() : Collections.singletonList(item);
-        runWithProgress(context.rss.getString(R.string.moving_f, summarizeItems(items)), items, () -> move(item));
+        runWithProgress(context.rss.getString(R.string.moving_f, summarizeItems(items)), items, R.string.op_moving, () -> move(item));
     }
 
     public void copy(Object item) throws IOException {
@@ -260,7 +416,10 @@ public class FileOperationsHelper {
 
         boolean useElevated = AccessManager.fileOpsOn(context);
         int done = 0;
-        final int totalFiles = countFiles(items);
+        final MeasureInfo info = measureInfo(items);
+        final int totalFiles = info.total.files;
+        final long totalBytes = info.total.bytes;
+        final FileUtils.TransferListener listener = transferListener();
 
         // A move needs the same replace / skip / keep-both choices a copy gets,
         // so plan the destinations up front exactly like copyToRegularFolder does.
@@ -287,22 +446,33 @@ public class FileOperationsHelper {
                 } catch (Exception e) {
                     destExists = false;
                 }
+                FileUtils.Measure im = info.of(f);
                 // The batch already removes replaced destinations, so the per-item
                 // clear below must not run for the items it handled.
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
-                        f.isDirectory(), destExists));
+                        f.isDirectory(), destExists, im.files, im.bytes));
                 sources.add(f.getAbsolutePath());
                 opItems.add(item);
-                opFiles += FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+                opFiles += im.files;
             }
             if (!ops.isEmpty()) {
+                DestSizePoller poller = newPoller(totalBytes);
                 try {
-                    AccessManager.copyAllPreserving(context, ops);
+                    if (listener != null) {
+                        listener.onFile(new File(ops.get(0).src), new File(ops.get(0).dest));
+                    }
+                    if (poller != null) poller.watch(new File(ops.get(0).dest), 0L);
+                    // The batch reports its own counters through the marker
+                    // stream, so no lump sum is added afterwards.
+                    AccessManager.copyAllPreserving(context, ops,
+                            shellProgress(ops, totalFiles, totalBytes, poller));
                     AccessManager.deleteAll(context, sources, true);
                     batchDone.addAll(opItems);
                     done += opFiles;
                     advanceActiveProgress(done, totalFiles);
                 } catch (Exception e) {
+                } finally {
+                    if (poller != null) poller.stop();
                 }
             }
         }
@@ -313,23 +483,31 @@ public class FileOperationsHelper {
             File dest = planned.getValue();
             if (item instanceof File f) {
                 if (dest == null || dest.equals(f)) continue;
-                int itemTotal = FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+                FileUtils.Measure im = info.of(f);
+                int itemTotal = im.files;
+                long itemBytes = im.bytes;
                 clearReplacedDestination(dest, useElevated);
                 if (useElevated) {
                     try {
                         // copy -p keeps the timestamps, so no separate preserveTime
                         // round trip is needed. Rename falls back to copy+delete
                         // across filesystems, which mv already does internally.
+                        if (listener != null) listener.onFile(f, dest);
                         AccessManager.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
                                 f.isDirectory(), true);
                         AccessManager.delete(context, f.getAbsolutePath(), true);
                         done += itemTotal;
                         advanceActiveProgress(done, totalFiles);
+                        if (listener != null) listener.onBytes(itemBytes);
                         continue;
                     } catch (Exception e) {
                     }
                 }
                 if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellMove(f, destinationFolder, dest.getName())) {
+                    if (listener != null) {
+                        listener.onFile(f, dest);
+                        listener.onBytes(itemBytes);
+                    }
                     done += itemTotal;
                     advanceActiveProgress(done, totalFiles);
                     continue;
@@ -338,6 +516,10 @@ public class FileOperationsHelper {
                     RecycleBin.moveToBin(context, dest, "overwrite");
                 }
                 if (f.renameTo(dest)) {
+                    if (listener != null) {
+                        listener.onFile(f, dest);
+                        listener.onBytes(itemBytes);
+                    }
                     done += itemTotal;
                     advanceActiveProgress(done, totalFiles);
                     continue;
@@ -354,10 +536,10 @@ public class FileOperationsHelper {
                         //noinspection ResultOfMethodCallIgnored
                         dest.mkdir();
                     }
-                    FileUtils.copyFolder(f, dest);
+                    FileUtils.copyFolder(f, dest, listener);
                     syncDirTimes(f, dest);
                 } else {
-                    FileUtils.copyFile(f, dest);
+                    FileUtils.copyFile(f, dest, listener);
                     AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                 }
                 if (copySize(f) != copySize(dest)) {
@@ -374,6 +556,7 @@ public class FileOperationsHelper {
                 advanceActiveProgress(done, totalFiles);
             }
         }
+        completeActiveProgress(totalFiles, totalBytes);
         List<String> affectedNames = new ArrayList<>();
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
@@ -535,7 +718,10 @@ public class FileOperationsHelper {
         if (plan == null) return true;
 
         int done = 0;
-        final int totalFiles = countFiles(items);
+        final MeasureInfo info = measureInfo(items);
+        final int totalFiles = info.total.files;
+        final long totalBytes = info.total.bytes;
+        final FileUtils.TransferListener listener = transferListener();
 
         Set<Object> batchDone = new HashSet<>();
         if (useElevated) {
@@ -550,18 +736,30 @@ public class FileOperationsHelper {
                     batchDone.add(item);
                     continue;
                 }
+                FileUtils.Measure im = info.of(f);
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
-                        f.isDirectory(), dirHasEntry(destinationFolder, dest.getName())));
+                        f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),
+                        im.files, im.bytes));
                 opItems.add(item);
-                opFiles += FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+                opFiles += im.files;
             }
             if (!ops.isEmpty()) {
+                DestSizePoller poller = newPoller(totalBytes);
                 try {
-                    AccessManager.copyAllPreserving(context, ops);
+                    if (listener != null) {
+                        listener.onFile(new File(ops.get(0).src), new File(ops.get(0).dest));
+                    }
+                    if (poller != null) poller.watch(new File(ops.get(0).dest), 0L);
+                    // One shell process still does the whole batch, but it now
+                    // echoes a counter after every item.
+                    AccessManager.copyAllPreserving(context, ops,
+                            shellProgress(ops, totalFiles, totalBytes, poller));
                     batchDone.addAll(opItems);
                     done += opFiles;
                     advanceActiveProgress(done, totalFiles);
                 } catch (Exception e) {
+                } finally {
+                    if (poller != null) poller.stop();
                 }
             }
         }
@@ -572,19 +770,27 @@ public class FileOperationsHelper {
             if (!(item instanceof File f)) continue;
             File dest = entry.getValue();
             if (dest == null || dest.equals(f)) continue;
-            int itemTotal = FileUtils.countFilesForProgress(f, PROGRESS_COUNT_CAP);
+            FileUtils.Measure im = info.of(f);
+            int itemTotal = im.files;
+            long itemBytes = im.bytes;
             if (useElevated) {
                 try {
+                    if (listener != null) listener.onFile(f, dest);
                     AccessManager.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
                             f.isDirectory(), true);
                     done += itemTotal;
                     advanceActiveProgress(done, totalFiles);
+                    if (listener != null) listener.onBytes(itemBytes);
                     continue;
                 } catch (Exception e) {
                 }
             }
             if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder)
                     && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null) {
+                if (listener != null) {
+                    listener.onFile(f, dest);
+                    listener.onBytes(itemBytes);
+                }
                 done += itemTotal;
                 advanceActiveProgress(done, totalFiles);
                 continue;
@@ -604,10 +810,10 @@ public class FileOperationsHelper {
                     //noinspection ResultOfMethodCallIgnored
                     dest.mkdir();
                 }
-                FileUtils.copyFolder(f, dest);
+                FileUtils.copyFolder(f, dest, listener);
                 syncDirTimes(f, dest);
             } else {
-                FileUtils.copyFile(f, dest);
+                FileUtils.copyFile(f, dest, listener);
                 AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
             }
             done += itemTotal;
@@ -621,6 +827,7 @@ public class FileOperationsHelper {
                 advanceActiveProgress(++done, totalFiles);
             }
         }
+        completeActiveProgress(totalFiles, totalBytes);
         List<String> affectedNames = new ArrayList<>();
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
@@ -636,6 +843,29 @@ public class FileOperationsHelper {
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
+    }
+
+    /** Byte-reporting adapter for the dialog that owns the current transfer. */
+    private FileUtils.TransferListener transferListener() {
+        ProgressManager pm = activeProgress;
+        return pm == null ? null : pm.listener();
+    }
+
+    private static long sizeOf(File f) {
+        if (f == null) return 0L;
+        try {
+            return f.isFile() ? f.length() : copySize(f);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private static long bytesOf(List<?> items) {
+        long total = 0L;
+        for (Object item : items) {
+            if (item instanceof File f) total += sizeOf(f);
+        }
+        return total;
     }
 
     /**
@@ -698,7 +928,13 @@ public class FileOperationsHelper {
                 List<CopyConflictDialog.Conflict> remaining = conflicts.subList(i, conflicts.size());
                 CopyConflictDialog.Decision decision = CopyConflictDialog.askConflict(
                         context, dialogUtil, singleTitle, allTitle, remaining,
-                        () -> showActiveProgress(transferLabel(isMove, summarizeItems(items))));
+                        () -> {
+                            showActiveProgress(transferLabel(isMove, summarizeItems(items)),
+                                    isMove ? R.string.op_moving : R.string.op_copying);
+                            // Cached by the worker before planning; measuring a
+                            // root-only tree here would block the UI thread.
+                            applyMeasure(cachedMeasure(items));
+                        });
                 if (decision == null || decision.action == CopyConflictDialog.ACTION_CANCEL) return null;
                 action = decision.action;
                 if (decision.applyToAll) {
@@ -1218,14 +1454,10 @@ public class FileOperationsHelper {
                     if (password == null) return;
                 }
                 destDir.mkdirs();
-                ProgressManager pm = new ProgressManager(context, false);
-                pm.showCount(true);
-                int totalEntries = archiveEntryCount(archive);
-                pm.setProgress(0, totalEntries);
-                pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
-                pm.show();
                 // Root-only archives are unreadable to zip4j/tar readers:
-                // stage a copy into cache first (binary-safe).
+                // stage a copy into cache first (binary-safe). Staging happens
+                // before measuring so the totals describe the file we will
+                // actually read.
                 File readable = archive;
                 File staged = null;
                 if (RootStaging.needsStaging(context, archive)) {
@@ -1233,11 +1465,23 @@ public class FileOperationsHelper {
                             context, archive.getAbsolutePath());
                     readable = staged;
                 }
+                ProgressManager pm = new ProgressManager(context, false);
+                pm.showCount(true);
+                int totalEntries = archiveEntryCount(readable);
+                long totalBytes = archiveUncompressedSize(readable);
+                pm.setOperation(R.string.op_extracting);
+                pm.setFile(archive);
+                pm.setPaths(archive, destDir);
+                pm.setProgress(0, totalEntries);
+                pm.setBytes(0L, totalBytes);
+                pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
+                pm.show();
+                FileUtils.TransferListener listener = pm.listener();
                 try {
                     boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
                     while (true) {
                         try {
-                            ArchiveUtil.extract(readable, destDir, keepTime, password);
+                            ArchiveUtil.extract(readable, destDir, keepTime, password, listener);
                             break;
                         } catch (Exception e) {
                             // Missing or wrong password: prompt and retry until it
@@ -1249,9 +1493,12 @@ public class FileOperationsHelper {
                                 pm.dismiss();
                                 return;
                             }
+                            // A retry restarts the byte count from zero.
+                            pm.setBytes(0L, totalBytes);
                         }
                     }
                     pm.setProgress(totalEntries, totalEntries);
+                    pm.setBytes(totalBytes, totalBytes);
                 } finally {
                     if (staged != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -1277,6 +1524,33 @@ public class FileOperationsHelper {
         } catch (Exception ignored) {
         }
         return 1;
+    }
+
+    /**
+     * Total uncompressed size the extraction will write, so the dialog can show
+     * a byte bar and a live rate. Falls back to the archive size when the entry
+     * table is not readable cheaply (7z/rar/tar), which still gives a usable
+     * denominator and a sensible "left" figure.
+     */
+    private static long archiveUncompressedSize(File archive) {
+        String lower = archive.getName().toLowerCase(Locale.ROOT);
+        try {
+            if (lower.endsWith(".zip")) {
+                long total = 0L;
+                for (FileHeader fh : ZipCompat.listHeadersOrEmpty(archive)) {
+                    if (fh.isDirectory()) continue;
+                    long size = fh.getUncompressedSize();
+                    if (size > 0) total += size;
+                }
+                if (total > 0) return total;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            return Math.max(0L, archive.length());
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     /** Shown on the background thread; blocks until dismissed. Null = cancel. */
