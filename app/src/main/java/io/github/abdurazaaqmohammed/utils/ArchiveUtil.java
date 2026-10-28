@@ -36,7 +36,8 @@ import java.util.zip.InflaterInputStream;
 
 public class ArchiveUtil {
 
-    private static final int BUFFER_SIZE = 8192;
+    /** 64 KB: sweet spot between FUSE page size overhead and JVM GC pressure. */
+    private static final int BUFFER_SIZE = 65536;
 
     public static boolean isMiuiOrAndroidBackup(File file) {
         if (file == null || file.isDirectory()) return false;
@@ -96,7 +97,7 @@ public class ArchiveUtil {
                 extractRar(archive, destDir, preserveTime);
                 return;
             case TAR:
-                extractTar(new FileInputStream(archive), destDir, preserveTime);
+                extractTar(new BufferedInputStream(new FileInputStream(archive), BUFFER_SIZE), destDir, preserveTime);
                 return;
             case GZIP:
             case BZIP2:
@@ -171,16 +172,16 @@ public class ArchiveUtil {
     public static void create(File output, List<File> sources) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".7z")) create7z(output, sources);
-        else if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
-        else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new FileOutputStream(output)), sources);
-        else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new FileOutputStream(output)), sources.get(0));
-        else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources.get(0));
-        else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new FileOutputStream(output)), sources.get(0));
+        else if (lower.endsWith(".tar")) createTar(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE), sources);
+        else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources);
+        else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
+        else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
+        else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0));
         else throw new IOException("Unsupported archive format: " + output.getName());
     }
 

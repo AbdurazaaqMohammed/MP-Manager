@@ -162,7 +162,7 @@ public final class ZipCompat {
         if (parent != null) //noinspection ResultOfMethodCallIgnored
             parent.mkdirs();
         try (InputStream in = openEntry(zip, entryName);
-             OutputStream out = new FileOutputStream(outFile)) {
+             OutputStream out = new java.io.BufferedOutputStream(new FileOutputStream(outFile), COPY_BUFFER)) {
             byte[] buf = new byte[COPY_BUFFER];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
@@ -235,7 +235,7 @@ public final class ZipCompat {
                 parent.mkdirs();
             RandomAccessFile raf = new RandomAccessFile(zip, "r");
             try (InputStream in = openRawEntry(raf, e);
-                 OutputStream os = new FileOutputStream(out)) {
+                 OutputStream os = new java.io.BufferedOutputStream(new FileOutputStream(out), COPY_BUFFER)) {
                 byte[] buf = new byte[COPY_BUFFER];
                 int n;
                 while ((n = in.read(buf)) != -1) os.write(buf, 0, n);

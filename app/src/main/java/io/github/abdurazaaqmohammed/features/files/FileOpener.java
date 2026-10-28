@@ -1089,12 +1089,7 @@ public class FileOpener {
         } else {
             String bak = ".bak";
             if (ext.equals(bak) && ArchiveUtil.isMiuiOrAndroidBackup(file)) {
-                dialogUtil.styleAlertDialog(
-                        dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
-                            dialog.dismiss();
-                            if (which == 0) withReadableCopy(file, fileOps::extractArchive);
-                            else showOpenWithDialog(file, fileName);
-                        }).create());
+                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else if(ext.equals(bak)) {
                 View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
                 context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);

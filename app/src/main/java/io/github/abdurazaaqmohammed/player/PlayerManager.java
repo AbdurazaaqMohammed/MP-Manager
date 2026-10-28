@@ -571,13 +571,6 @@ public class PlayerManager {
         shuffleOrder = null;
     }
 
-    public synchronized void setQueue(List<MediaItem> newQueue, int newIndex) {
-        if (newQueue == null || newQueue.isEmpty()) return;
-        this.queue = new ArrayList<>(newQueue);
-        this.currentIndex = Math.max(0, Math.min(newIndex, queue.size() - 1));
-        if (shuffle) buildShuffleOrder();
-    }
-
     public void next() {
         if (queue.isEmpty()) return;
         if (repeatMode == RepeatMode.ONE) { seekTo(0); return; }
@@ -773,13 +766,7 @@ public class PlayerManager {
     public void seekTo(int msec) {
         if (mediaPlayer != null) {
             msec = Math.max(0, msec);
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    mediaPlayer.seekTo(msec, MediaPlayer.SEEK_CLOSEST);
-                } else {
-                    mediaPlayer.seekTo(msec);
-                }
-            } catch (Exception ignored) {}
+            try { mediaPlayer.seekTo(msec); } catch (Exception ignored) {}
         }
     }
 
@@ -1047,27 +1034,11 @@ public class PlayerManager {
     public int getLastVideoWidth() { return lastVideoWidth; }
     public int getLastVideoHeight() { return lastVideoHeight; }
 
-    public static MediaItem buildMediaItemFast(String filePath) {
-        Uri uri = Uri.fromFile(new File(filePath));
-        String name = filePath.substring(filePath.lastIndexOf('/') + 1);
-        String title = filePath.lastIndexOf('\\') >= 0 ? filePath.substring(filePath.lastIndexOf('\\') + 1) : name;
-        String lower = filePath.toLowerCase(Locale.ROOT);
-        boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
-                || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
-                || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
-                || lower.endsWith(".m4v");
-        return new MediaItem(uri, filePath, title, null, null, 0, isVideo);
-    }
-
     public static MediaItem buildMediaItem(Context context, String filePath) {
         Uri uri = Uri.fromFile(new File(filePath));
         String title = null, artist = null, album = null;
         long duration = 0;
-        String lower = filePath.toLowerCase(Locale.ROOT);
-        boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
-                || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
-                || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
-                || lower.endsWith(".m4v");
+        boolean isVideo = false;
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         try {
             mmr.setDataSource(context, uri);

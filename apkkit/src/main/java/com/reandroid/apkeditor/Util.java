@@ -77,23 +77,18 @@ public class Util {
     }
 
     public static void deleteDir(File dir) {
-        if(!dir.exists()){
+        if (dir == null || !dir.exists()) {
             return;
         }
-        if(dir.isFile()){
+        if (dir.isFile()) {
             dir.delete();
             return;
         }
-        if(!dir.isDirectory()){
-            return;
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File file : files) deleteDir(file);
         }
-        File[] files=dir.listFiles();
-        if(files==null) {
-            deleteEmptyDirectories(dir);
-            return;
-        }
-        for(File file : files) deleteDir(file);
-        deleteEmptyDirectories(dir);
+        dir.delete();
     }
     public static void deleteEmptyDirectories(File dir){
         if(dir==null || !dir.isDirectory()){

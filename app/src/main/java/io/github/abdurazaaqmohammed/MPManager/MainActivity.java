@@ -309,46 +309,39 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (useActivity) MediaPlayerActivity.openAndPlay(this, filePath);
         else {
             PlayerManager pm = PlayerManager.getInstance(this);
-            pm.play(PlayerManager.buildMediaItem(this, filePath));
-            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
-            new Thread(() -> {
-                try {
-                    File cur = new File(filePath);
-                    File dir = cur.getParentFile();
-                    if (dir != null && dir.isDirectory()) {
-                        File[] all = dir.listFiles();
-                        if (all != null) {
-                            List<File> media = new ArrayList<>();
-                            for (File f : all) {
-                                if (f == null || !f.isFile()) continue;
-                                String n = f.getName().toLowerCase(Locale.ROOT);
-                                if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
-                                        || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
-                                        || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
-                                        || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
-                                        || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
+            try {
+                File cur = new File(filePath);
+                File dir = cur.getParentFile();
+                if (dir != null && dir.isDirectory()) {
+                    File[] all = dir.listFiles();
+                    if (all != null) {
+                        List<File> media = new ArrayList<>();
+                        for (File f : all) {
+                            if (f == null || !f.isFile()) continue;
+                            String n = f.getName().toLowerCase(Locale.ROOT);
+                            if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
+                                    || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
+                                    || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
+                                    || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
+                                    || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
+                        }
+                        media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                        if (!media.isEmpty()) {
+                            List<MediaItem> q = new ArrayList<>();
+                            int start = 0;
+                            for (int i = 0; i < media.size(); i++) {
+                                q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
+                                if (media.get(i).getAbsolutePath().equals(cur.getAbsolutePath())) start = i;
                             }
-                            media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
-                            if (media.size() > 1) {
-                                List<MediaItem> q = new ArrayList<>();
-                                int start = 0;
-                                for (int i = 0; i < media.size(); i++) {
-                                    String path = media.get(i).getAbsolutePath();
-                                    if (path.equals(cur.getAbsolutePath())) {
-                                        q.add(pm.getCurrentItem() != null ? pm.getCurrentItem() : PlayerManager.buildMediaItemFast(path));
-                                        start = i;
-                                    } else {
-                                        q.add(PlayerManager.buildMediaItemFast(path));
-                                    }
-                                }
-                                final int startIdx = start;
-                                final List<MediaItem> fullQueue = q;
-                                runOnUiThread(() -> pm.setQueue(fullQueue, startIdx));
-                            }
+                            pm.play(q, start);
+                            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
+                            return;
                         }
                     }
-                } catch (Exception ignored) {}
-            }).start();
+                }
+            } catch (Exception ignored) {}
+            pm.play(PlayerManager.buildMediaItem(this, filePath));
+            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
         }
     }
 
@@ -2707,7 +2700,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /** True when both panes list the same folder and the same location inside an archive. */
-    private boolean panesShowSameFolder() {
+    public boolean panesShowSameFolder() {
         File first = pane1Folder;
         File second = pane2Folder;
         if (first == null || !first.equals(second)) return false;

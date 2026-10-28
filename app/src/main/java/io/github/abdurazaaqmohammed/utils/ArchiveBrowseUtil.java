@@ -12,6 +12,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 
+import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,7 +45,7 @@ public final class ArchiveBrowseUtil {
 
     /** Archive container kinds detectable from file content. */
     public enum ArchiveType {
-        ZIP, SEVEN_Z, RAR, TAR, GZIP, BZIP2, XZ,
+        ZIP, SEVEN_Z, RAR, TAR, GZIP, BZIP2, XZ, BACKUP,
         /** Not a recognizable archive (or one this build cannot list). */
         NONE
     }
@@ -85,7 +86,7 @@ public final class ArchiveBrowseUtil {
         if (n >= 3 && magic[0] == 'B' && magic[1] == 'Z' && magic[2] == 'h') return ArchiveType.BZIP2;
         if (n >= 6 && magic[0] == (byte) 0xFD && magic[1] == 0x37 && magic[2] == 0x7A
                 && magic[3] == 'X' && magic[4] == 'Z' && magic[5] == 0x00) return ArchiveType.XZ;
-        return looksLikeTar(head, n) ? ArchiveType.TAR : ArchiveType.NONE;
+        return looksLikeTar(head, n) ? ArchiveType.TAR : (n >= 14 && (new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("MIUI BACKUP") || new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("ANDROID BACKUP")) ? ArchiveType.BACKUP : ArchiveType.NONE);
     }
 
     /** True when the archive content can be listed in a pane. */
@@ -160,7 +161,8 @@ public final class ArchiveBrowseUtil {
             case RAR:
                 return listRar(archive);
             case TAR:
-                return listTar(archive, ArchiveType.NONE);
+            case BACKUP:
+                return listTar(archive, type);
             case GZIP:
             case BZIP2:
             case XZ: {
@@ -213,7 +215,8 @@ public final class ArchiveBrowseUtil {
                 }
             }
             case TAR:
-                return openTarEntry(archive, ArchiveType.NONE, want, entryPath);
+            case BACKUP:
+                return openTarEntry(archive, type, want, entryPath);
             case GZIP:
             case BZIP2:
             case XZ:
@@ -257,8 +260,9 @@ public final class ArchiveBrowseUtil {
             case RAR:
                 extractRarEntry(archive, want, outFile);
                 return;
-            case TAR: {
-                if (extractTarEntry(archive, ArchiveType.NONE, want, outFile)) return;
+            case TAR:
+            case BACKUP: {
+                if (extractTarEntry(archive, type, want, outFile)) return;
                 break;
             }
             case GZIP:
@@ -367,6 +371,49 @@ public final class ArchiveBrowseUtil {
      * caller wraps the result in {@link TarArchiveInputStream} itself.
      */
     public static InputStream openTar(File archive, ArchiveType wrapper) throws IOException {
+        if (wrapper == ArchiveType.BACKUP) {
+            InputStream raw = new BufferedInputStream(new FileInputStream(archive));
+            try {
+                String line = readAsciiLine(raw);
+                if (line == null) {
+                    raw.close();
+                    throw new IOException("Empty backup archive: " + archive.getName());
+                }
+                line = line.trim();
+                if (line.startsWith("MIUI BACKUP")) {
+                    boolean foundAndroidBackup = false;
+                    for (int i = 0; i < 20; i++) {
+                        line = readAsciiLine(raw);
+                        if (line == null) break;
+                        if (line.trim().startsWith("ANDROID BACKUP")) {
+                            foundAndroidBackup = true;
+                            break;
+                        }
+                    }
+                    if (!foundAndroidBackup) {
+                        raw.close();
+                        throw new IOException("Invalid MIUI backup format: missing ANDROID BACKUP section");
+                    }
+                } else if (!line.startsWith("ANDROID BACKUP")) {
+                    raw.close();
+                    throw new IOException("Not an Android or MIUI backup: " + line);
+                }
+                String versionStr = readAsciiLine(raw);
+                String compressionStr = readAsciiLine(raw);
+                String encryptionStr = readAsciiLine(raw);
+                if (encryptionStr != null && !"none".equalsIgnoreCase(encryptionStr.trim())) {
+                    raw.close();
+                    throw new IOException("Encrypted backups (" + encryptionStr + ") are not supported");
+                }
+                boolean isCompressed = compressionStr != null &&
+                        !"0".equals(compressionStr.trim()) &&
+                        !"none".equalsIgnoreCase(compressionStr.trim());
+                return isCompressed ? new java.util.zip.InflaterInputStream(raw) : raw;
+            } catch (IOException e) {
+                closeQuietly(raw);
+                throw e;
+            }
+        }
         InputStream raw = new FileInputStream(archive);
         try {
             if (wrapper == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
@@ -377,6 +424,16 @@ public final class ArchiveBrowseUtil {
             closeQuietly(raw);
             throw e;
         }
+    }
+
+    private static String readAsciiLine(InputStream is) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        int b;
+        while ((b = is.read()) != -1) {
+            if (b == '\n') break;
+            if (b != '\r') sb.append((char) b);
+        }
+        return sb.length() == 0 && b == -1 ? null : sb.toString();
     }
 
     private static List<RawEntry> listRar(File archive) throws IOException {
