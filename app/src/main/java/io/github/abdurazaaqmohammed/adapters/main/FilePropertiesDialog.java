@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.widget.EditText;
 
 import androidx.appcompat.app.AlertDialog;
@@ -93,8 +94,9 @@ public class FilePropertiesDialog {
         propSubtitle.setText(typeStr);
 
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
+        boolean isImage = !isInZip && !multi && file != null && file.isFile() && FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS);
         boolean hasIcon = false;
-        if (!isInZip && !multi && file.isFile() && FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+        if (isImage) {
             Bitmap bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
             if (bmp != null) {
                 propIcon.setImageBitmap(Bitmap.createScaledBitmap(bmp, dp(48), dp(48), true));
@@ -153,6 +155,13 @@ public class FilePropertiesDialog {
                         m = AccessManager.getMtime(context, file.getAbsolutePath());
                     } catch (Exception ignored) {
                     }
+                    if (m <= 0 && isImage) {
+                        try {
+                            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                            String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME);
+                            m = parseExifDate(dt);
+                        } catch (Exception ignored) {}
+                    }
                     if (m <= 0) return;
                     long finalM = m;
                     context.handler.post(() -> {
@@ -162,6 +171,24 @@ public class FilePropertiesDialog {
                         }
                     });
                 }).start();
+            }
+
+            if (isImage) {
+                final TextView[] dateTakenHolder = new TextView[1];
+                String dateTakenDisplay = "—";
+                try {
+                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                    String dtOriginal = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+                    if (!TextUtils.isEmpty(dtOriginal)) {
+                        long millis = parseExifDate(dtOriginal);
+                        dateTakenDisplay = millis > 0 ? UiPrefs.formatDate(context, millis) : dtOriginal;
+                    }
+                } catch (Exception ignored) {}
+                final TextView dateTakenView = addPropertyRow(propRows, context.getString(R.string.date_taken),
+                        dateTakenDisplay,
+                        R.drawable.edit_24px,
+                        v -> showEditDateTakenDialog(file, dateTakenHolder[0]));
+                dateTakenHolder[0] = dateTakenView;
             }
             if (!multi && file.isFile()) {
                 addPropertyRow(propRows, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
@@ -358,45 +385,86 @@ public class FilePropertiesDialog {
     }
 
     private void showEditLastModifiedDialog(File file, TextView modifiedView) {
-        String[] options = {
-                context.getString(R.string.mtime_option_picker),
-                context.getString(R.string.mtime_option_millis),
-                context.getString(R.string.mtime_option_now)};
-        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle(context.getString(R.string.mtime_edit_title))
-                .setItems(options, (d, which) -> {
-                    if (which == 1) showMillisInputDialog(file, modifiedView);
-                    else if (which == 2) applyMtime(file, modifiedView, System.currentTimeMillis());
-                    else showPickerDialog(file, modifiedView);
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .create());
-    }
+        long currentMtime = lastKnownMtime(file);
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+        String initialText = sdf.format(new java.util.Date(currentMtime));
 
-    private void showMillisInputDialog(File file, TextView modifiedView) {
-        TextInputLayout box =
-                UiFields.box(context, context.getString(R.string.mtime_option_millis));
-        EditText input = UiFields.field(box, InputType.TYPE_CLASS_NUMBER);
-        input.setHint(String.valueOf(System.currentTimeMillis()));
-        input.setText(String.valueOf(lastKnownMtime(file)));
-        AlertDialog millisDialog = dialogUtil.getDialogBuilder()
-                .setTitle(context.getString(R.string.mtime_option_millis))
-                .setView(box)
+        TextInputLayout box = UiFields.box(context, null);
+        EditText input = UiFields.field(box, InputType.TYPE_CLASS_DATETIME);
+        input.setText(initialText);
+        input.setSingleLine(true);
+        box.setEndIconMode(TextInputLayout.END_ICON_CUSTOM);
+        box.setEndIconDrawable(R.drawable.ic_calendar_today_24);
+        box.setEndIconContentDescription(R.string.mtime_option_picker);
+
+        box.setEndIconOnClickListener(v -> {
+            long baseTime = parseDateTimeInput(input.getText() != null ? input.getText().toString().trim() : "");
+            if (baseTime <= 0) baseTime = currentMtime;
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(baseTime);
+            int year = cal.get(Calendar.YEAR);
+            int month = cal.get(Calendar.MONTH);
+            int day = cal.get(Calendar.DAY_OF_MONTH);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+            int minute = cal.get(Calendar.MINUTE);
+
+            new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
+                Calendar res = Calendar.getInstance();
+                res.set(y, m, d, h, min, 0);
+                input.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+            }, hour, minute, true).show(), year, month, day).show();
+        });
+
+        int pad = dp(16);
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(pad, dp(8), pad, dp(8));
+        container.addView(box);
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.mtime_edit_title))
+                .setView(container)
+                .setNeutralButton(R.string.current_time, (d, w) -> {
+                    long now = System.currentTimeMillis();
+                    applyMtime(file, modifiedView, now);
+                })
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    String s = input.getText() == null ? "" : input.getText().toString().trim();
-                    long millis;
-                    try {
-                        millis = Long.parseLong(s);
-                    } catch (NumberFormatException e) {
+                    String text = input.getText() != null ? input.getText().toString().trim() : "";
+                    long parsed = parseDateTimeInput(text);
+                    if (parsed > 0) {
+                        applyMtime(file, modifiedView, parsed);
+                    } else {
                         Extensions.showMessage(context, context.getString(R.string.mtime_failed));
-                        return;
                     }
-                    applyMtime(file, modifiedView, millis);
                 })
                 .create();
-        KeyboardUtil.focusOnShow(millisDialog, input, true);
-        dialogUtil.styleAlertDialog(millisDialog);
+        KeyboardUtil.focusOnShow(dialog, input, true);
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private static long parseDateTimeInput(String str) {
+        if (TextUtils.isEmpty(str)) return -1;
+        String[] patterns = {
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm",
+                "yyyy:MM:dd HH:mm:ss",
+                "yyyy/MM/dd HH:mm:ss",
+                "yyyy-MM-dd"
+        };
+        for (String pattern : patterns) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(pattern, java.util.Locale.US);
+                sdf.setLenient(false);
+                java.util.Date date = sdf.parse(str);
+                if (date != null) return date.getTime();
+            } catch (Exception ignored) {}
+        }
+        try {
+            long millis = Long.parseLong(str);
+            if (millis > 0) return millis;
+        } catch (Exception ignored) {}
+        return -1;
     }
 
     private long lastKnownMtime(File file) {
@@ -412,24 +480,15 @@ public class FilePropertiesDialog {
         return System.currentTimeMillis();
     }
 
-    private void showPickerDialog(File file, TextView modifiedView) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(lastKnownMtime(file));
-        int year = cal.get(Calendar.YEAR);
-        int month = cal.get(Calendar.MONTH);
-        int day = cal.get(Calendar.DAY_OF_MONTH);
-        int hour = cal.get(Calendar.HOUR_OF_DAY);
-        int minute = cal.get(Calendar.MINUTE);
-
-        new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
-            Calendar result = Calendar.getInstance();
-            result.set(y, m, d, h, min, 0);
-            applyMtime(file, modifiedView, result.getTimeInMillis());
-        }, hour, minute, true).show(), year, month, day).show();
-    }
-
     private void applyMtime(File file, TextView modifiedView, long newTime) {
         new Thread(() -> {
+            if (FileUtils.matchExt('.' + FilenameUtils.getExtension(file.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
+                try {
+                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME, formatExifDate(newTime));
+                    exif.saveAttributes();
+                } catch (Exception ignored) {}
+            }
             boolean ok = false;
             try {
                 ok = AccessManager.touchMtime(context, file.getAbsolutePath(), newTime);
@@ -447,6 +506,125 @@ public class FilePropertiesDialog {
                 }
             });
         }).start();
+    }
+
+    private void showEditDateTakenDialog(File file, TextView dateTakenView) {
+        long current = -1;
+        try {
+            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+            String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+            current = parseExifDate(dt);
+        } catch (Exception ignored) {}
+        if (current <= 0) current = System.currentTimeMillis();
+
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+        String initialText = sdf.format(new java.util.Date(current));
+
+        TextInputLayout box = UiFields.box(context, null);
+        EditText input = UiFields.field(box, InputType.TYPE_CLASS_DATETIME);
+        input.setText(initialText);
+        input.setSingleLine(true);
+        box.setEndIconMode(TextInputLayout.END_ICON_CUSTOM);
+        box.setEndIconDrawable(R.drawable.ic_calendar_today_24);
+        box.setEndIconContentDescription(R.string.mtime_option_picker);
+
+        long finalCurrent = current;
+        box.setEndIconOnClickListener(v -> {
+            long baseTime = parseDateTimeInput(input.getText() != null ? input.getText().toString().trim() : "");
+            if (baseTime <= 0) baseTime = finalCurrent;
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(baseTime);
+            int year = cal.get(Calendar.YEAR);
+            int month = cal.get(Calendar.MONTH);
+            int day = cal.get(Calendar.DAY_OF_MONTH);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+            int minute = cal.get(Calendar.MINUTE);
+
+            new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
+                Calendar res = Calendar.getInstance();
+                res.set(y, m, d, h, min, 0);
+                input.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+            }, hour, minute, true).show(), year, month, day).show();
+        });
+
+        int pad = dp(16);
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(pad, dp(8), pad, dp(8));
+        container.addView(box);
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.date_taken))
+                .setView(container)
+                .setNeutralButton(R.string.current_time, (d, w) -> {
+                    long now = System.currentTimeMillis();
+                    applyExifDateTaken(file, dateTakenView, now);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String text = input.getText() != null ? input.getText().toString().trim() : "";
+                    long parsed = parseDateTimeInput(text);
+                    if (parsed > 0) {
+                        applyExifDateTaken(file, dateTakenView, parsed);
+                    } else {
+                        Extensions.showMessage(context, context.getString(R.string.mtime_failed));
+                    }
+                })
+                .create();
+        KeyboardUtil.focusOnShow(dialog, input, true);
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void applyExifDateTaken(File file, TextView dateTakenView, long millis) {
+        new Thread(() -> {
+            try {
+                long originalMtime = file.lastModified();
+                if (originalMtime <= 0) {
+                    try {
+                        originalMtime = AccessManager.getMtime(context, file.getAbsolutePath());
+                    } catch (Exception ignored) {}
+                }
+                androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                if (millis > 0) {
+                    String formatted = formatExifDate(millis);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, formatted);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, formatted);
+                } else {
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, null);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, null);
+                }
+                exif.saveAttributes();
+                if (originalMtime > 0) {
+                    try {
+                        AccessManager.touchMtime(context, file.getAbsolutePath(), originalMtime);
+                    } catch (Exception ignored) {}
+                }
+                context.handler.post(() -> {
+                    if (dateTakenView != null) {
+                        dateTakenView.setText(millis > 0 ? UiPrefs.formatDate(context, millis) : "—");
+                    }
+                    Extensions.showMessage(context, context.getString(R.string.mtime_updated));
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    private static long parseExifDate(String exifDate) {
+        if (android.text.TextUtils.isEmpty(exifDate)) return -1;
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+            java.util.Date d = sdf.parse(exifDate.trim());
+            return d != null ? d.getTime() : -1;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private static String formatExifDate(long millis) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+        return sdf.format(new java.util.Date(millis));
     }
 
     private TextView addPropertyRow(LinearLayout container, String label, String value) {
