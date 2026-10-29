@@ -697,6 +697,40 @@ final View.OnClickListener originalClickListener;
     }
 
     /**
+     * True when every targeted entry is a directory, so file-only actions
+     * (Share, Open with) cannot do anything meaningful and are disabled.
+     */
+    private boolean isTargetOnlyFolder(boolean multi, boolean isInZip, File file, ZipEntryInfo entry) {
+        if (multi) {
+            boolean allFolders = !selectedPositions.isEmpty();
+            for (int bp : selectedPositions) {
+                if (bp < 0 || bp >= values.length) {
+                    allFolders = false;
+                    break;
+                }
+                Object obj = values[bp];
+                if (obj instanceof File f) {
+                    if (!f.isDirectory()) {
+                        allFolders = false;
+                        break;
+                    }
+                } else if (obj instanceof ZipEntryInfo ze) {
+                    if (!ze.isDirectory()) {
+                        allFolders = false;
+                        break;
+                    }
+                } else {
+                    allFolders = false;
+                    break;
+                }
+            }
+            return allFolders;
+        }
+        if (isInZip) return entry != null && entry.isDirectory();
+        return file != null && file.isDirectory();
+    }
+
+    /**
      * Builds and shows a row's long-press menu on demand. Previously this ran
      * on a fresh thread for every bound row (menu model, URI staging, dialog
      * inflation) whether or not the user ever long-pressed it. Press-time
@@ -736,6 +770,21 @@ final View.OnClickListener originalClickListener;
                 } else {
                     if (file != null) targetPaths.add(file.getPath());
                     else if (entry != null) targetPaths.add(entry.getFullPath());
+                }
+
+                // Actions that cannot apply to the current target stay in the
+                // menu but are grayed out and unclickable. Folders can be
+                // browsed, renamed or deleted, but not shared or handed to
+                // another app. Canonical folder comparison resolves symlinks,
+                // so /sdcard and /storage/emulated/0 count as the same pane
+                // folder and Move between the panes is then a no-op.
+                Set<String> disabledIds = new HashSet<>();
+                if (isTargetOnlyFolder(multi, isInZip, file, entry)) {
+                    disabledIds.add(FileMenuOrder.SHARE);
+                    disabledIds.add(FileMenuOrder.OPEN_WITH);
+                }
+                if (context.arePanesInSameFolder()) {
+                    disabledIds.add(FileMenuOrder.MOVE);
                 }
 
                 Set<String> manualHidden = listPrefs.manuallyHidden();
@@ -983,7 +1032,7 @@ final View.OnClickListener originalClickListener;
                     menuSheet = new BottomSheetDialog(context);
                     menuDialogBuilder = null;
                 }
-                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, position1 -> {
+                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, disabledIds, position1 -> {
                     if (menuSheet != null) menuSheet.dismiss();
                     if(menuDialog[0] != null) menuDialog[0].dismiss();
                     try {
@@ -1120,7 +1169,7 @@ final View.OnClickListener originalClickListener;
                                         } else fileOps.copyAsync(item);
                                         break;
                                     case FileMenuOrder.MOVE:
-                                        if (context.pane1Folder == context.pane2Folder) {
+                                        if (context.arePanesInSameFolder()) {
                                             break;
                                         }
                                         fileOps.moveAsync(item);

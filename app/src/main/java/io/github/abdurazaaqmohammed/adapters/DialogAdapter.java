@@ -13,7 +13,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.color.MaterialColors;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -30,17 +32,23 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
     private final List<FileMenuOrder.MenuItem> items;
     private final boolean isInZip;
     private final boolean grid;
+    private final Set<String> disabledIds;
     private final OnItemClickListener listener;
 
     public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, OnItemClickListener listener) {
-        this(context, items, isInZip, false, listener);
+        this(context, items, isInZip, false, Collections.emptySet(), listener);
     }
 
     public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, boolean grid, OnItemClickListener listener) {
+        this(context, items, isInZip, grid, Collections.emptySet(), listener);
+    }
+
+    public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, boolean grid, Set<String> disabledIds, OnItemClickListener listener) {
         this.context = context;
         this.items = items;
         this.isInZip = isInZip;
         this.grid = grid;
+        this.disabledIds = disabledIds == null ? Collections.emptySet() : disabledIds;
         this.listener = listener;
     }
 
@@ -63,10 +71,14 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
         holder.label.setCompoundDrawablesRelative(drawable, null, null, null);
         holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 8));
 
-        boolean disabled = (FileMenuOrder.MOVE.equals(item.id()) && context.pane1Folder == context.pane2Folder)
+        // disabledIds is computed off the UI thread (canonical path checks do
+        // filesystem I/O); the reference equality here is a free fallback.
+        boolean disabled = disabledIds.contains(item.id())
+                || (FileMenuOrder.MOVE.equals(item.id()) && context.pane1Folder == context.pane2Folder)
                 || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id()) || FileMenuOrder.CMD.equals(item.id())) && isInZip);
         holder.itemView.setAlpha(disabled ? 0.38f : 1f);
-        holder.itemView.setOnClickListener(v -> {
+        holder.itemView.setEnabled(!disabled);
+        holder.itemView.setOnClickListener(disabled ? null : v -> {
             if (listener == null) return;
             int pos = holder.getBindingAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onItemClick(pos);
