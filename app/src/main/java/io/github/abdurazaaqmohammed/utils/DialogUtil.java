@@ -12,6 +12,7 @@ import android.content.Context;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.Button;
+import android.view.ViewGroup;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -46,6 +47,7 @@ public class DialogUtil {
         if (dialog == null) return;
         View decor = dialog.getWindow() == null ? null : dialog.getWindow().getDecorView();
         if (decor == null) return;
+        decor.post(() -> forceButtonsHorizontal(dialog));
         decor.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
                 v.post(() -> forceButtonsHorizontal(dialog)));
     }
@@ -60,15 +62,38 @@ public class DialogUtil {
             } else {
                 panel.setOrientation(LinearLayout.HORIZONTAL);
             }
-            panel.setPadding(0, panel.getPaddingTop(), 0, panel.getPaddingBottom());
-            panel.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            Context context = panel.getContext();
+            panel.setPadding(dp(context, 12), panel.getPaddingTop(), dp(context, 12), panel.getPaddingBottom());
+            panel.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+
+            // Eliminate any expanding spacers between buttons to prevent huge gaps
+            for (int i = 0; i < panel.getChildCount(); i++) {
+                View child = panel.getChildAt(i);
+                if (!(child instanceof Button)) {
+                    child.setVisibility(View.GONE);
+                    ViewGroup.LayoutParams lp = child.getLayoutParams();
+                    if (lp instanceof LinearLayout.LayoutParams llp) {
+                        llp.weight = 0;
+                        llp.width = 0;
+                        child.setLayoutParams(llp);
+                    }
+                }
+            }
+
             int[] buttonIds = {AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_POSITIVE};
             for (int id : buttonIds) {
                 Button btn = dialog.getButton(id);
-                if (btn != null) {
-                    btn.setPadding(dp(btn.getContext(), 6), btn.getPaddingTop(), dp(btn.getContext(), 6), btn.getPaddingBottom());
+                if (btn != null && btn.getVisibility() != View.GONE) {
+                    btn.setPadding(dp(btn.getContext(), 8), btn.getPaddingTop(), dp(btn.getContext(), 8), btn.getPaddingBottom());
                     btn.setMinWidth(0);
                     btn.setMinimumWidth(0);
+                    ViewGroup.LayoutParams lp = btn.getLayoutParams();
+                    if (lp instanceof LinearLayout.LayoutParams llp) {
+                        llp.weight = 0;
+                        llp.leftMargin = dp(btn.getContext(), 4);
+                        llp.rightMargin = dp(btn.getContext(), 4);
+                        btn.setLayoutParams(llp);
+                    }
                 }
             }
         } catch (Exception ignored) {
