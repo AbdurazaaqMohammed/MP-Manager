@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.apache.commons.io.FilenameUtils;
@@ -633,7 +634,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
 
         boolean selected = selectedPositions.contains(position);
-        int background = selected ? Color.DKGRAY : Color.TRANSPARENT;
+        // colorSecondaryContainer is the Material 3 selected-row color: a soft
+        // tint that keeps the row's normal text readable in every theme,
+        // unlike the previous Color.DKGRAY which swallowed dark text in the
+        // light theme.
+        int background = selected ? MaterialColors.getColor(convertView,
+                com.google.android.material.R.attr.colorSecondaryContainer, Color.TRANSPARENT)
+                : Color.TRANSPARENT;
         if (holder.appliedBackgroundColor != background) {
             convertView.setBackgroundColor(background);
             holder.appliedBackgroundColor = background;
