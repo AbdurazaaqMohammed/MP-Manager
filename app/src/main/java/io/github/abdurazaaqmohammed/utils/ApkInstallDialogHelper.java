@@ -200,7 +200,15 @@ public class ApkInstallDialogHelper {
             PackageInstaller.SessionParams params =
                     new PackageInstaller.SessionParams(
                             PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-            params.setSize(apkFile.length());
+            // Auto location: the INTERNAL_ONLY session default lets a
+            // conservative free-space estimate reject the create upfront with
+            // "Requested internal only, but not enough space" even when the
+            // install would fit.
+            params.setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // setSize exists only since S.
+                params.setSize(apkFile.length());
+            }
 
             int sessionId = pi.createSession(params);
             try (PackageInstaller.Session session = pi.openSession(sessionId);

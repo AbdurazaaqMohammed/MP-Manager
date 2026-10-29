@@ -109,7 +109,14 @@ public class ShizukuFileService extends IFileService.Stub {
         try {
             PackageInstaller.SessionParams params =
                     new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-            params.setSize(total);
+            // Auto install location: the session default (INTERNAL_ONLY) makes
+            // PackageManager reject creation upfront with "Requested internal
+            // only, but not enough space" based on a conservative estimate.
+            params.setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // setSize exists only since S.
+                params.setSize(total);
+            }
             if (target != null) params.setAppPackageName(target);
             setInstallerPackage(params, installerPkg);
             setOriginatingUid(params, installerPkg, pm);

@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.InstallSourceInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -251,7 +252,16 @@ public final class PrivilegedInstaller {
         if (installerPkg != null && RootManager.isPackageNameValid(installerPkg)) {
             sb.append(" -i ").append(RootManager.escapeShellArg(installerPkg));
         }
-        sb.append(" -S ").append(totalSize);
+        // Sessions default to installLocation INTERNAL_ONLY, which makes
+        // PackageManager reject the create at once with "Requested internal
+        // only, but not enough space" when its conservative free-space
+        // estimate (which excludes cache-clearable and low-disk-reserve
+        // bytes) does not fit the -S size, even though the install would
+        // succeed. Auto location plus no upfront size defers the real check
+        // to commit time, where the system allocates with the actual install
+        // size and can free cached data — matching how other installers and
+        // Play behave.
+        sb.append(" --install-location 0");
         return sb.toString();
     }
 
@@ -469,7 +479,13 @@ public final class PrivilegedInstaller {
                                                 boolean mayClaimInstaller) throws Exception {
         PackageInstaller.SessionParams params =
                 new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        params.setSize(totalSize);
+        // Auto location instead of the INTERNAL_ONLY session default so the
+        // create is not rejected upfront by a conservative free-space estimate.
+        params.setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // setSize exists only since S.
+            params.setSize(totalSize);
+        }
         if (targetPackage != null && !targetPackage.trim().isEmpty()
                 && RootManager.isPackageNameValid(targetPackage)) {
             try {
