@@ -25,6 +25,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.AppReinstaller;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
@@ -127,12 +128,9 @@ public final class InstallInfoDialog {
 
         root.addView(spacer(activity, 8));
 
-        // Signature: dedupe owner/issuer when they match, and show the cert hash.
-        root.addView(buildSignatureCard(activity, analysis), matchWrap());
-        root.addView(spacer(activity, 8));
-
-        // Hashes of both archives.
-        root.addView(buildHashesCard(activity, analysis), matchWrap());
+        // Compact Signature and Hash rows (one line each, clickable for details)
+        root.addView(buildCompactSignatureRow(activity, analysis), matchWrap());
+        root.addView(buildCompactHashRow(activity, analysis), matchWrap());
 
         if (analysis.isDifferentSigner()) {
             root.addView(spacer(activity, 8));
@@ -141,84 +139,195 @@ public final class InstallInfoDialog {
 
         root.addView(spacer(activity, 8));
 
-        // Options that stay visible so they are never lost under a collapsed header.
-        if (analysis.isDifferentSigner() && analysis.installed && AppReinstaller.canSaveData(activity)) {
+        // Options on a single horizontal line
+        LinearLayout optionsRow = new LinearLayout(activity);
+        optionsRow.setOrientation(LinearLayout.HORIZONTAL);
+        optionsRow.setGravity(Gravity.CENTER_VERTICAL);
+        optionsRow.setLayoutParams(matchWrap());
+
+        boolean canSave = analysis.isDifferentSigner() && analysis.installed && AppReinstaller.canSaveData(activity);
+        if (canSave) {
             MaterialCheckBox saveData = new MaterialCheckBox(activity);
             saveData.setTag("saveData");
             saveData.setText(R.string.install_save_data);
             saveData.setChecked(true);
-            root.addView(saveData, matchWrap());
+            saveData.setTextSize(13f);
+            optionsRow.addView(saveData, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         }
+
         MaterialCheckBox dontShow = new MaterialCheckBox(activity);
         dontShow.setTag("dontShow");
         dontShow.setText(R.string.install_dont_show_again);
-        root.addView(dontShow, matchWrap());
+        dontShow.setTextSize(13f);
+        if (canSave) {
+            optionsRow.addView(dontShow, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        } else {
+            optionsRow.addView(dontShow, matchWrap());
+        }
+        root.addView(optionsRow);
 
         scroll.addView(root);
         return scroll;
     }
 
-    private static View buildSignatureCard(Activity activity, ApkInstallAnalysis analysis) {
-        LinearLayout content = new LinearLayout(activity);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(activity, 16), dp(activity, 8), dp(activity, 16), dp(activity, 8));
+    private static View buildCompactSignatureRow(Activity activity, ApkInstallAnalysis analysis) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(activity, 3), 0, dp(activity, 3));
 
-        TextView title = new TextView(activity);
-        title.setText(R.string.install_info_signature);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextSize(15f);
-        content.addView(title);
+        TextView label = new TextView(activity);
+        label.setText(activity.getString(R.string.signature) + ": ");
+        label.setTextSize(14f);
+        label.setTypeface(Typeface.DEFAULT_BOLD);
+        row.addView(label);
 
-        String owner = analysis.signerSubject;
-        String issuer = analysis.installedSignerSubject;
+        boolean isDiff = analysis.isDifferentSigner();
+        TextView status = new TextView(activity);
+        status.setText(isDiff ? R.string.signature_different : R.string.signature_identical);
+        status.setTextSize(14f);
+        status.setTypeface(Typeface.DEFAULT_BOLD);
+        status.setTextColor(isDiff ? 0xFFE53935 : 0xFF43A047);
+        status.setClickable(true);
+        status.setFocusable(true);
+        TypedValue tv = new TypedValue();
+        try {
+            activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+            status.setBackgroundResource(tv.resourceId);
+        } catch (Exception ignored) {}
+        status.setPadding(dp(activity, 4), dp(activity, 2), dp(activity, 4), dp(activity, 2));
+        status.setOnClickListener(v -> showSignatureDetailsDialog(activity, analysis));
+        row.addView(status);
 
-        addRow(content, activity.getString(R.string.sig_owner),
-                TextUtils.isEmpty(owner) ? activity.getString(android.R.string.unknownName) : owner);
-        addRow(content, activity.getString(R.string.cert_sha256),
-                analysis.signerCertSha256 == null ? activity.getString(android.R.string.unknownName)
-                        : shortHash(analysis.signerCertSha256));
-
-        MaterialCardView card = new MaterialCardView(activity);
-        card.addView(content);
-        SectionCollapse.applyToCard(card,
-                PreferenceManager.getDefaultSharedPreferences(activity),
-                "install_info_signature");
-        return card;
+        return row;
     }
 
-    private static View buildHashesCard(Activity activity, ApkInstallAnalysis analysis) {
+    private static View buildCompactHashRow(Activity activity, ApkInstallAnalysis analysis) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(activity, 3), 0, dp(activity, 3));
+
+        TextView label = new TextView(activity);
+        label.setText("Hash: ");
+        label.setTextSize(14f);
+        label.setTypeface(Typeface.DEFAULT_BOLD);
+        row.addView(label);
+
+        boolean same = analysis.sameBytes;
+        TextView status = new TextView(activity);
+        status.setText(same ? R.string.apk_compare_same_file : R.string.apk_compare_different_file);
+        status.setTextSize(14f);
+        status.setTypeface(Typeface.DEFAULT_BOLD);
+        status.setTextColor(same ? 0xFF43A047 : 0xFFE53935);
+        status.setClickable(true);
+        status.setFocusable(true);
+        TypedValue tv = new TypedValue();
+        try {
+            activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+            status.setBackgroundResource(tv.resourceId);
+        } catch (Exception ignored) {}
+        status.setPadding(dp(activity, 4), dp(activity, 2), dp(activity, 4), dp(activity, 2));
+        status.setOnClickListener(v -> showHashDetailsDialog(activity, analysis));
+        row.addView(status);
+
+        return row;
+    }
+
+    private static void showSignatureDetailsDialog(Activity activity, ApkInstallAnalysis analysis) {
+        ScrollView scroll = new ScrollView(activity);
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(activity, 16), dp(activity, 8), dp(activity, 16), dp(activity, 8));
+        int pad = dp(activity, 16);
+        content.setPadding(pad, pad, pad, pad);
 
-        TextView title = new TextView(activity);
-        title.setText(R.string.install_info_hashes);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextSize(15f);
-        content.addView(title);
+        TextView candidateTitle = new TextView(activity);
+        candidateTitle.setText(activity.getString(R.string.apk_compare_title_candidate));
+        candidateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        candidateTitle.setTextSize(14f);
+        candidateTitle.setTextColor(colorPrimary(activity));
+        content.addView(candidateTitle);
+
+        addRow(content, activity.getString(R.string.sig_owner),
+                TextUtils.isEmpty(analysis.signerSubject) ? activity.getString(android.R.string.unknownName) : analysis.signerSubject);
+        addRow(content, activity.getString(R.string.cert_sha256),
+                analysis.signerCertSha256 == null ? activity.getString(android.R.string.unknownName) : analysis.signerCertSha256);
+
+        content.addView(spacer(activity, 12));
+
+        TextView installedTitle = new TextView(activity);
+        installedTitle.setText(activity.getString(R.string.apk_compare_title_installed));
+        installedTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        installedTitle.setTextSize(14f);
+        installedTitle.setTextColor(colorPrimary(activity));
+        content.addView(installedTitle);
+
+        if (analysis.installed) {
+            addRow(content, activity.getString(R.string.sig_owner),
+                    TextUtils.isEmpty(analysis.installedSignerSubject) ? activity.getString(android.R.string.unknownName) : analysis.installedSignerSubject);
+            addRow(content, activity.getString(R.string.cert_sha256),
+                    analysis.installedSignerCertSha256 == null ? activity.getString(android.R.string.unknownName) : analysis.installedSignerCertSha256);
+        } else {
+            TextView notInst = new TextView(activity);
+            notInst.setText(R.string.apk_compare_new_install);
+            notInst.setTextSize(13f);
+            content.addView(notInst);
+        }
+
+        scroll.addView(content);
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(R.string.install_info_signature)
+                .setView(scroll)
+                .setPositiveButton(R.string.close, null)
+                .show();
+    }
+
+    private static void showHashDetailsDialog(Activity activity, ApkInstallAnalysis analysis) {
+        ScrollView scroll = new ScrollView(activity);
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(activity, 16);
+        content.setPadding(pad, pad, pad, pad);
+
+        TextView candidateTitle = new TextView(activity);
+        candidateTitle.setText(activity.getString(R.string.apk_compare_title_candidate));
+        candidateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        candidateTitle.setTextSize(14f);
+        candidateTitle.setTextColor(colorPrimary(activity));
+        content.addView(candidateTitle);
 
         addRow(content, activity.getString(R.string.apk_compare_sha256_label),
-                TextUtils.isEmpty(analysis.checksum) ? activity.getString(android.R.string.unknownName)
-                        : shortHash(analysis.checksum));
+                TextUtils.isEmpty(analysis.checksum) ? activity.getString(android.R.string.unknownName) : analysis.checksum);
+
+        content.addView(spacer(activity, 12));
+
+        TextView installedTitle = new TextView(activity);
+        installedTitle.setText(activity.getString(R.string.apk_compare_title_installed));
+        installedTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        installedTitle.setTextSize(14f);
+        installedTitle.setTextColor(colorPrimary(activity));
+        content.addView(installedTitle);
+
         if (analysis.installed && !TextUtils.isEmpty(analysis.installedChecksum)) {
-            addRow(content, activity.getString(R.string.apk_compare_installed_label),
-                    shortHash(analysis.installedChecksum));
-        }
-        if (analysis.sameBytes) {
-            TextView same = new TextView(activity);
-            same.setText(R.string.apk_compare_same_file);
-            same.setTextColor(0xFF2E7D32);
-            same.setTextSize(12f);
-            same.setPadding(0, dp(activity, 3), 0, 0);
-            content.addView(same, matchWrap());
+            addRow(content, activity.getString(R.string.apk_compare_installed_label), analysis.installedChecksum);
+        } else {
+            TextView notInst = new TextView(activity);
+            notInst.setText(R.string.apk_compare_new_install);
+            notInst.setTextSize(13f);
+            content.addView(notInst);
         }
 
-        MaterialCardView card = new MaterialCardView(activity);
-        card.addView(content);
-        SectionCollapse.applyToCard(card,
-                PreferenceManager.getDefaultSharedPreferences(activity),
-                "install_info_hashes");
-        return card;
+        scroll.addView(content);
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(R.string.install_info_hashes)
+                .setView(scroll)
+                .setPositiveButton(R.string.close, null)
+                .setNegativeButton(android.R.string.copy, (d, w) -> {
+                    String textToCopy = "Candidate SHA-256: " + analysis.checksum +
+                            (analysis.installed ? "\nInstalled SHA-256: " + analysis.installedChecksum : "");
+                    CopyUtil.copyToClipboard(activity, textToCopy);
+                })
+                .show();
     }
 
     private static View buildWarningCard(Activity activity, ApkInstallAnalysis analysis) {

@@ -666,11 +666,18 @@ public class SettingsController {
                 updatePreview.run();
             }
 
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
         updatePreview.run();
+
+        View btnReshow = root.findViewById(R.id.btnReshowInstallationDetails);
+        if (btnReshow != null) {
+            boolean isNever = InstallerConfig.INFO_MODE_NEVER.equals(InstallerConfig.getInstallInfoMode(activity));
+            btnReshow.setVisibility(isNever ? View.VISIBLE : View.GONE);
+            btnReshow.setOnClickListener(v -> {
+                InstallerConfig.setInstallInfoMode(activity, InstallerConfig.INFO_MODE_WHEN_SIGNATURE_DIFFERS);
+                btnReshow.setVisibility(View.GONE);
+                Extensions.showMessage(activity, R.string.reshow_installation_details_enabled);
+            });
+        }
     }
 
     private void setupPaneHighlightSettings(ScrollView root, SharedPreferences settings) {

@@ -93,8 +93,9 @@ public class FilePropertiesDialog {
         propSubtitle.setText(typeStr);
 
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
+        boolean isImage = !isInZip && !multi && file != null && file.isFile() && FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS);
         boolean hasIcon = false;
-        if (!isInZip && !multi && file.isFile() && FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+        if (isImage) {
             Bitmap bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
             if (bmp != null) {
                 propIcon.setImageBitmap(Bitmap.createScaledBitmap(bmp, dp(48), dp(48), true));
@@ -153,6 +154,13 @@ public class FilePropertiesDialog {
                         m = AccessManager.getMtime(context, file.getAbsolutePath());
                     } catch (Exception ignored) {
                     }
+                    if (m <= 0 && isImage) {
+                        try {
+                            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                            String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME);
+                            m = parseExifDate(dt);
+                        } catch (Exception ignored) {}
+                    }
                     if (m <= 0) return;
                     long finalM = m;
                     context.handler.post(() -> {
@@ -162,6 +170,24 @@ public class FilePropertiesDialog {
                         }
                     });
                 }).start();
+            }
+
+            if (isImage) {
+                final TextView[] dateTakenHolder = new TextView[1];
+                String dateTakenDisplay = "—";
+                try {
+                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                    String dtOriginal = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+                    if (!TextUtils.isEmpty(dtOriginal)) {
+                        long millis = parseExifDate(dtOriginal);
+                        dateTakenDisplay = millis > 0 ? UiPrefs.formatDate(context, millis) : dtOriginal;
+                    }
+                } catch (Exception ignored) {}
+                final TextView dateTakenView = addPropertyRow(propRows, context.getString(R.string.date_taken),
+                        dateTakenDisplay,
+                        R.drawable.edit_24px,
+                        v -> showEditDateTakenDialog(file, dateTakenHolder[0]));
+                dateTakenHolder[0] = dateTakenView;
             }
             if (!multi && file.isFile()) {
                 addPropertyRow(propRows, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
@@ -437,6 +463,13 @@ public class FilePropertiesDialog {
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
                 return;
             }
+            if (FileUtils.matchExt('.' + FilenameUtils.getExtension(file.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
+                try {
+                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME, formatExifDate(newTime));
+                    exif.saveAttributes();
+                } catch (Exception ignored) {}
+            }
             boolean finalOk = ok;
             context.handler.post(() -> {
                 if (finalOk) {
@@ -447,6 +480,87 @@ public class FilePropertiesDialog {
                 }
             });
         }).start();
+    }
+
+    private void showEditDateTakenDialog(File file, TextView dateTakenView) {
+        String[] options = {
+                context.getString(R.string.mtime_option_picker),
+                context.getString(R.string.mtime_option_now),
+                context.getString(R.string.clear)};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.date_taken))
+                .setItems(options, (d, which) -> {
+                    if (which == 1) applyExifDateTaken(file, dateTakenView, System.currentTimeMillis());
+                    else if (which == 2) applyExifDateTaken(file, dateTakenView, -1);
+                    else showDateTakenPickerDialog(file, dateTakenView);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
+    private void showDateTakenPickerDialog(File file, TextView dateTakenView) {
+        long current = -1;
+        try {
+            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+            String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+            current = parseExifDate(dt);
+        } catch (Exception ignored) {}
+        if (current <= 0) current = System.currentTimeMillis();
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(current);
+        int year = cal.get(Calendar.YEAR);
+        int month = cal.get(Calendar.MONTH);
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        int minute = cal.get(Calendar.MINUTE);
+
+        new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
+            Calendar result = Calendar.getInstance();
+            result.set(y, m, d, h, min, 0);
+            applyExifDateTaken(file, dateTakenView, result.getTimeInMillis());
+        }, hour, minute, true).show(), year, month, day).show();
+    }
+
+    private void applyExifDateTaken(File file, TextView dateTakenView, long millis) {
+        new Thread(() -> {
+            try {
+                androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                if (millis > 0) {
+                    String formatted = formatExifDate(millis);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, formatted);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, formatted);
+                } else {
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, null);
+                    exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, null);
+                }
+                exif.saveAttributes();
+                context.handler.post(() -> {
+                    if (dateTakenView != null) {
+                        dateTakenView.setText(millis > 0 ? UiPrefs.formatDate(context, millis) : "—");
+                    }
+                    Extensions.showMessage(context, context.getString(R.string.mtime_updated));
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    private static long parseExifDate(String exifDate) {
+        if (android.text.TextUtils.isEmpty(exifDate)) return -1;
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+            java.util.Date d = sdf.parse(exifDate.trim());
+            return d != null ? d.getTime() : -1;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private static String formatExifDate(long millis) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+        return sdf.format(new java.util.Date(millis));
     }
 
     private TextView addPropertyRow(LinearLayout container, String label, String value) {
