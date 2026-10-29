@@ -666,6 +666,10 @@ public class SettingsController {
                 updatePreview.run();
             }
 
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
         updatePreview.run();
 
         View btnReshow = root.findViewById(R.id.btnReshowInstallationDetails);
