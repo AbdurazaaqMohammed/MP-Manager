@@ -3,7 +3,9 @@ package com.faith.apkinstaller;
 import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
+import android.os.Build;
 
 import com.reandroid.apk.APKLogger;
 import com.reandroid.archive.InputSource;
@@ -30,13 +32,30 @@ public class APKInstallHelper {
         this.packageInstaller = context.getPackageManager().getPackageInstaller();
     }
 
+    // Auto install location: the INTERNAL_ONLY session default makes
+    // PackageManager reject session creation upfront with "Requested internal
+    // only, but not enough space" based on a conservative estimate.
+    private PackageInstaller.SessionParams newSessionParams() {
+        PackageInstaller.SessionParams params =
+                new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+        params.setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO);
+        return params;
+    }
+
+    private void setSizeIfSupported(PackageInstaller.SessionParams params, long size) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // setSize exists only since S.
+            params.setSize(size);
+        }
+    }
+
     public int installApk(InputSource[] apkInputSources) throws IOException {
         long totalSize = 0;
 
         for (InputSource inputSource: apkInputSources) totalSize += inputSource.getLength();
 
-        PackageInstaller.SessionParams installParams = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        installParams.setSize(totalSize);
+        PackageInstaller.SessionParams installParams = newSessionParams();
+        setSizeIfSupported(installParams, totalSize);
 
         int sessionId = packageInstaller.createSession(installParams);
         //Log.d(TAG, "Success: created install session [" + sessionId + "]");
@@ -54,8 +73,8 @@ public class APKInstallHelper {
         List<FileHeader> fhs = zf.getFileHeaders();
         for (FileHeader fh : fhs) if (fh.getFileName().endsWith(".apk")) totalSize += fh.getUncompressedSize();
 
-        PackageInstaller.SessionParams installParams = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        installParams.setSize(totalSize);
+        PackageInstaller.SessionParams installParams = newSessionParams();
+        setSizeIfSupported(installParams, totalSize);
 
         int sessionId = packageInstaller.createSession(installParams);
         logger.logMessage("Success: created install session [" + sessionId + "]");
