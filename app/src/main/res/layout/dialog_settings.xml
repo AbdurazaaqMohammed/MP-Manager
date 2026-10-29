@@ -209,21 +209,6 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/folder_size_mode">
-
-                    <AutoCompleteTextView
-                        android:id="@+id/folderSizeModeTv"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/paneHighlightAnimateSwitch"
                     android:layout_width="match_parent"
@@ -440,21 +425,6 @@
                         android:text="@string/pick_folder"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
                 </LinearLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/show_folder_size">
-
-                    <AutoCompleteTextView
-                        android:id="@+id/folderSizeTv"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
