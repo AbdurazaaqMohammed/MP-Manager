@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -206,25 +207,32 @@ public class DexTools {
         session.outputDir.mkdirs();
         dexPreExtracts.put(key, session);
         new Thread(() -> {
-            try (ZipFile zf = new ZipFile(zipFile)) {
-                FileHeader fh = zf.getFileHeader("classes.dex");
+            // Extracted with the platform ZipFile instead of zip4j: zip4j
+            // applies stored permissions/timestamps to every extracted entry
+            // through the desugared java.nio.file, whose POSIX attribute view
+            // throws a bare UnsupportedOperationException on old Android
+            // (API 24/25), failing the whole extraction. Plain stream copy
+            // keeps only what matters here: the bytes.
+            try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+                java.util.zip.ZipEntry fh = zf.getEntry("classes.dex");
                 int i = 2;
                 while (fh != null) {
-                    session.dexNames.add(fh.getFileName());
-                    fh = zf.getFileHeader("classes" + i + ".dex");
+                    session.dexNames.add(fh.getName());
+                    fh = zf.getEntry("classes" + i + ".dex");
                     i++;
                 }
                 session.total = session.dexNames.size();
+                byte[] buf = new byte[65536];
                 for (int j = 0; j < session.dexNames.size(); j++) {
                     String name = session.dexNames.get(j);
-                    FileHeader header = zf.getFileHeader(name);
-                    if (header == null) throw new IOException("Entry vanished: " + name);
-                    zf.extractFile(header, session.outputDir.getAbsolutePath());
+                    java.util.zip.ZipEntry entry = zf.getEntry(name);
+                    if (entry == null) throw new IOException("Entry vanished: " + name);
                     File out = new File(session.outputDir, name);
-                    long expected = -1;
-                    try {
-                        expected = header.getUncompressedSize();
-                    } catch (Exception ignored) {
+                    long expected = entry.getSize();
+                    try (InputStream is = zf.getInputStream(entry);
+                         FileOutputStream fos = new FileOutputStream(out)) {
+                        int read;
+                        while ((read = is.read(buf)) != -1) fos.write(buf, 0, read);
                     }
                     if (!out.isFile() || (expected > 0 && out.length() != expected)) {
                         throw new IOException("Extract failed: " + out.getAbsolutePath());
@@ -232,7 +240,9 @@ public class DexTools {
                     session.extracted = j + 1;
                 }
             } catch (Exception e) {
-                session.error = String.valueOf(e.getMessage());
+                // Full trace rather than getMessage(): wrappers like zip4j's
+                // ZipException only carry the cause's toString() as message.
+                session.error = Log.getStackTraceString(e);
             } finally {
                 session.done.countDown();
             }
