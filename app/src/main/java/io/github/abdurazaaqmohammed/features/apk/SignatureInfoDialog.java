@@ -12,6 +12,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import java.io.File;
@@ -37,11 +38,11 @@ public final class SignatureInfoDialog {
     private SignatureInfoDialog() {
     }
 
-    public static void show(Activity context, File apk) {
+    public static void show(AppCompatActivity context, File apk) {
         show(context, new DialogUtil(context), apk);
     }
 
-    public static void show(Activity context, DialogUtil dialogUtil, File apk) {
+    public static void show(AppCompatActivity context, DialogUtil dialogUtil, File apk) {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
             final ApkSignatureInfo info;
