@@ -263,15 +263,6 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnReshowInstallationDetails"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone"
-                    android:text="@string/reshow_installation_details"
-                    style="@style/Widget.Material3.Button.TonalButton" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

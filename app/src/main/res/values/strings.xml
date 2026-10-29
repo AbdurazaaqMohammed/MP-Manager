@@ -747,10 +747,9 @@ Layout Inspector
     <string name="install_uninstall_note_root">“Uninstall and install” removes the existing app and installs this one. Its data is copied first and restored afterwards.</string>
     <string name="install_uninstall_note_no_data">“Uninstall and install” removes the existing app and installs this one. Its data cannot be read without root, so it will be lost.</string>
     <string name="install_dont_show_again">Don\'t show this again</string>
-    <string name="reshow_installation_details">Reshow installation details</string>
-    <string name="reshow_installation_details_enabled">Installation details will be shown again</string>
     <string name="open_in_play_store">Open in Play Store</string>
     <string name="date_taken">Date taken</string>
+    <string name="current_time">Current time</string>
     <string name="uninstall_and_install">Uninstall and install</string>
     <string name="install_info_signature">Signature</string>
     <string name="install_info_hashes">Hashes</string>
