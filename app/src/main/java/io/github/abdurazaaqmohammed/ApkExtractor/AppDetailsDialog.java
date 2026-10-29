@@ -117,6 +117,21 @@ public final class AppDetailsDialog {
 
         TextView sigValue = addRow(act, root, act.getString(R.string.signature),
                 ai.sigType == null ? "…" : ai.sigType, null);
+        if (ai.filePath != null) {
+            View sigParent = (View) sigValue.getParent();
+            if (sigParent != null) {
+                sigParent.setClickable(true);
+                sigParent.setFocusable(true);
+                TypedValue tv = new TypedValue();
+                try {
+                    act.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+                    sigParent.setBackgroundResource(tv.resourceId);
+                } catch (Exception ignored) {}
+                View.OnClickListener openSig = v -> io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog.show(act, new File(ai.filePath));
+                sigParent.setOnClickListener(openSig);
+                sigValue.setOnClickListener(openSig);
+            }
+        }
         if (ai.sigType == null && ai.filePath != null) {
             new Thread(() -> {
                 String sig;

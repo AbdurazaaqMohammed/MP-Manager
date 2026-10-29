@@ -781,6 +781,10 @@ public class APKExtractorActivity extends BaseActivity {
         iconList.add(R.drawable.baseline_share_24);
         actionIds.add(1);
 
+        displayList.add(getString(R.string.open_in_play_store));
+        iconList.add(R.drawable.baseline_open_in_new_24);
+        actionIds.add(111);
+
         displayList.add(getString(R.string.launch));
         iconList.add(R.drawable.baseline_open_in_new_24);
         actionIds.add(100);
@@ -915,6 +919,15 @@ public class APKExtractorActivity extends BaseActivity {
                         if (launchIntent == null)
                             Extensions.showMessage(this, getString(R.string.cannot_launch_app));
                         else startActivity(launchIntent);
+                        break;
+                    case 111: // Open in Play Store
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageName)));
+                        } catch (Exception e) {
+                            try {
+                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + packageName)));
+                            } catch (Exception ignored) {}
+                        }
                         break;
                     case 101: // App Info
                         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:" + packageName)));

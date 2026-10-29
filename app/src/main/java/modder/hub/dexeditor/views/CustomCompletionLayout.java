@@ -193,12 +193,24 @@ public class CustomCompletionLayout implements CompletionLayout {
 	@Override
 	public void ensureListPositionVisible(int position, int increment) {
 		listView.post(() -> {
-            while (listView.getFirstVisiblePosition() + 1 > position && listView.canScrollList(-1)) {
-                performScrollList(increment / 2);
-            }
-            while (listView.getLastVisiblePosition() - 1 < position && listView.canScrollList(1)) {
-                performScrollList(-increment / 2);
-            }
-        });
+			if (position == 0 && increment == 0) {
+				listView.setSelectionFromTop(0, 0);
+				return;
+			}
+			int upScrolls = 0;
+			int step = increment != 0 ? Math.abs(increment) / 2 : 20;
+			while (listView.getFirstVisiblePosition() + 1 > position && listView.canScrollList(-1) && upScrolls < 30) {
+				performScrollList(step);
+				upScrolls++;
+			}
+			int downScrolls = 0;
+			while (listView.getLastVisiblePosition() - 1 < position && listView.canScrollList(1) && downScrolls < 30) {
+				performScrollList(-step);
+				downScrolls++;
+			}
+			if (listView.getFirstVisiblePosition() > position || listView.getLastVisiblePosition() < position) {
+				listView.setSelection(position);
+			}
+		});
 	}
 }

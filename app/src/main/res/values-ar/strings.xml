@@ -1673,4 +1673,14 @@
     <string name="renamed">تمت إعادة التسمية</string>
     <string name="restored">تمت الاستعادة</string>
     <string name="failed">فشلت العملية</string>
+    <string name="apk_compare_different_file">ملف مختلف</string>
+    <string name="signature_identical">متطابق</string>
+    <string name="signature_different">مختلف</string>
+    <string name="apk_compare_title_candidate">تطبيق المرشح (جديد)</string>
+    <string name="apk_compare_title_installed">المثبت حالياً</string>
+    <string name="install_save_data">الاحتفاظ ببيانات التطبيق</string>
+    <string name="install_dont_show_again">عدم الإظهار مجدداً</string>
+    <string name="open_in_play_store">فتح في متجر Play</string>
+    <string name="date_taken">تاريخ الالتقاط</string>
+    <string name="current_time">الوقت الحالي</string>
 </resources>
