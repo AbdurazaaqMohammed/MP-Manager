@@ -12,7 +12,9 @@ import java.util.regex.Pattern;
 
 public class DefaultReferenceResolver implements ReferenceResolver {
 
-    static final Pattern pat = Pattern.compile("^[@?]\\+?(?:(\\w+):)?(?:(\\w+)/)?(\\w+)$");
+    // Names allow '$' (AGP intermediate resources) and '.' (style names like
+    // Theme.App); the package segment may contain dots as well.
+    static final Pattern pat = Pattern.compile("^[@?]\\+?(?:([\\w.]+):)?(?:(\\w+)/)?([\\w.$]+)$");
 
     private final List<ResEntry> resourceEntries;
 
@@ -31,9 +33,15 @@ public class DefaultReferenceResolver implements ReferenceResolver {
         String type = m.group(2);
         String name = m.group(3);
 
-        try {
-            return Integer.parseInt(Objects.requireNonNull(name), aXMLEncoder.Config.defaultReferenceRadix);
-        } catch (Exception ignored) {
+        // A bare 8-hex-digit name is the decoder's fallback for references
+        // that had no resolvable name. Hex-looking real names (e.g.
+        // @string/def) must go through the resource tables instead, or they
+        // silently become bogus literal ids.
+        if (type == null && name.length() == 8 && name.matches("[0-9a-fA-F]{8}")) {
+            try {
+                return Integer.parseInt(Objects.requireNonNull(name), aXMLEncoder.Config.defaultReferenceRadix);
+            } catch (Exception ignored) {
+            }
         }
 
         if (resourceEntries != null && type != null) {

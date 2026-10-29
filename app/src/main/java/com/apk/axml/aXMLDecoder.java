@@ -169,19 +169,40 @@ public class aXMLDecoder {
 
 		if (xmlnsInsertIndex >= 0) {
 			int at = xmlnsInsertIndex;
+			List<XMLEntry> nsEntries = new ArrayList<>();
 			if (usedPrefixes.contains("android"))
-				result.add(at++, new XMLEntry(ATTR_INLINE + "xmlns:android","=\"","http://schemas.android.com/apk/res/android","\""));
+				nsEntries.add(new XMLEntry(ATTR_INLINE + "xmlns:android","=\"","http://schemas.android.com/apk/res/android","\""));
 			if (usedPrefixes.contains("tools"))
-				result.add(at++, new XMLEntry(ATTR_INLINE + "xmlns:tools","=\"","http://schemas.android.com/apk/res-auto","\""));
+				nsEntries.add(new XMLEntry(ATTR_INLINE + "xmlns:tools","=\"","http://schemas.android.com/apk/res-auto","\""));
 			for (String p : usedPrefixes) {
 				if (p.equals("android") || p.equals("tools")) continue;
-				result.add(at++, new XMLEntry(ATTR_INLINE + "xmlns:" + p,"=\"","http://schemas.android.com/apk/res-auto","\""));
+				nsEntries.add(new XMLEntry(ATTR_INLINE + "xmlns:" + p,"=\"","http://schemas.android.com/apk/res-auto","\""));
+			}
+			if (!nsEntries.isEmpty()) {
+				// A root with no attributes was closed with '>' by the END_TAG
+				// handling above; re-open it so the declarations stay inside the
+				// tag instead of producing "<set> xmlns:android=...", which the
+				// re-encoding pull parser rejects as an undefined prefix.
+				XMLEntry rootOpen = result.get(at - 1);
+				if (rootOpen.getTag().endsWith(">")) {
+					result.set(at - 1, new XMLEntry(
+							rootOpen.getTag().substring(0, rootOpen.getTag().length() - 1),
+							rootOpen.getMiddleTag(), rootOpen.getValue(), rootOpen.getEndTag()));
+					XMLEntry last = nsEntries.get(nsEntries.size() - 1);
+					nsEntries.set(nsEntries.size() - 1, new XMLEntry(
+							last.getTag(), last.getMiddleTag(), last.getValue(), last.getEndTag() + ">"));
+				}
+				result.addAll(at, nsEntries);
 			}
 		}
 
-		parser.close();
+		// Must run before parser.close(): close() drops the string block the
+		// flag lives in, so checking afterwards always reported UNICODE and
+		// re-encoding converted aapt2's UTF-8 pools to UTF-16, growing edited
+		// XML files by up to 2x for no reason.
 		poolEncoding = parser.isStringPoolUtf8() ? StringPoolChunk.Encoding.UTF8
 				: StringPoolChunk.Encoding.UNICODE;
+		parser.close();
 		return result;
     }
 

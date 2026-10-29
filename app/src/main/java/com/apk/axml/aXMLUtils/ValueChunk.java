@@ -38,10 +38,13 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
     }
 
     final Pattern explicitType = Pattern.compile("^!(?:(string|str|null|)!)?(.*)");
+    // Resource names may contain '$' (AGP intermediate resources) and '.' (style
+    // names like Theme.App); restricting to \w degrades such references into
+    // raw strings on re-encode, bloating the string pool and breaking them.
     final Pattern types = Pattern.compile(("^(?:" +
             "(@null)" +
-            "|(@\\+?(?:\\w+:)?\\w+/\\w+|@(?:\\w+:)?[0-9a-zA-Z]+)" +
-            "|(\\?\\+?(?:\\w+:)?\\w+/\\w+|\\?(?:\\w+:)?[0-9a-zA-Z]+)" +
+            "|(@\\+?(?:[\\w.]+:)?\\w+/[\\w.$]+|@(?:[\\w.]+:)?[0-9a-zA-Z]+)" +
+            "|(\\?\\+?(?:[\\w.]+:)?\\w+/[\\w.$]+|\\?(?:[\\w.]+:)?[0-9a-zA-Z]+)" +
             "|(true|false)" +
             "|([-+]?\\d+)" +
             "|(0x[0-9a-zA-Z]+)" +
@@ -115,13 +118,15 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
             base = (int) f;
             radix = 0;
         } else if (f < 1 && f > -1) {
-            base = (int) (f * (1 << 23));
+            // Round the mantissa like aapt2 does; truncating drifted values
+            // across decode/encode cycles (373.5078dp -> 373.5dp).
+            base = (int) Math.round(f * (1 << 23));
             radix = 3;
         } else if (f < 0x100 && f > -0x100) {
-            base = (int) (f * (1 << 15));
+            base = (int) Math.round(f * (1 << 15));
             radix = 2;
         } else if (f < 0x10000 && f > -0x10000) {
-            base = (int) (f * (1 << 7));
+            base = (int) Math.round(f * (1 << 7));
             radix = 1;
         } else {
             base = (int) f;
@@ -213,8 +218,17 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
                         data = evalcomplex(vp.val);
                         break;
                     case 10:
-                        type = 0x1c;
                         data = Color.parseColor(vp.val);
+                        // Match the original color type by string length, as
+                        // the decoder prints each type differently: #AARRGGBB,
+                        // #RRGGBB, #ARGB, #RGB. Always writing ARGB8 would
+                        // churn values across decode/encode cycles.
+                        type = switch (vp.val.length()) {
+                            case 4 -> 0x1f; // RGB4
+                            case 5 -> 0x1e; // ARGB4
+                            case 7 -> 0x1d; // RGB8
+                            default -> 0x1c; // ARGB8
+                        };
                         break;
                     case 11:
                         type = 0x10;

@@ -75,11 +75,26 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
             }
         }
 
+        // ResStringPool length words are one byte below 128, two bytes
+        // (high bit set first) at or above it.
+        private static int lengthHeaderSize(int len) {
+            return len < 128 ? 1 : 2;
+        }
+
+        private void writeLength(IntWriter w, int len) throws IOException {
+            if (len < 128) {
+                w.write((byte)len);
+            } else {
+                w.write((byte)(0x80 | (len >> 8)));
+                w.write((byte)(len & 0xFF));
+            }
+        }
+
         int size() {
             if (cdata != null) {
                 return cdata.length*2+4+padding();
             }else{
-                return bdata.length+3+padding();
+                return lengthHeaderSize(length()) + lengthHeaderSize(bdata.length) + bdata.length + 1 + padding();
             }
         }
 
@@ -91,8 +106,8 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
                 w.write((short)0);
                 if (padding() == 2)w.write((short)0);
             } else {
-                w.write((byte)length());
-                w.write((byte)bdata.length);
+                writeLength(w, length());
+                writeLength(w, bdata.length);
                 for (byte c:bdata) w.write(c);
                 w.write((byte)0);
                 int p = padding();
