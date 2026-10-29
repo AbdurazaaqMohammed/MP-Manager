@@ -2526,6 +2526,21 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         return true;
     }
 
+    /**
+     * Whether both panes sit in the same folder, resolving symlinks so that
+     * paths like /sdcard and /storage/emulated/0 count as the same place.
+     * Calls into the filesystem; keep it off the UI thread where possible.
+     */
+    public boolean arePanesInSameFolder() {
+        if (pane1Folder == null || pane2Folder == null) return false;
+        if (pane1Folder.equals(pane2Folder)) return true;
+        try {
+            return pane1Folder.getCanonicalFile().equals(pane2Folder.getCanonicalFile());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private final Map<String, int[]> folderScrollPositions1 = new HashMap<>();
     private final Map<String, int[]> folderScrollPositions2 = new HashMap<>();
 
