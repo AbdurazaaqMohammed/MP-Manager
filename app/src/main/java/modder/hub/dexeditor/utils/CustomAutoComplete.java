@@ -54,17 +54,11 @@ import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateSymbolPairMatch;
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 
-import io.github.rosemoe.sora.lang.completion.CompletionItem;
-import io.github.rosemoe.sora.lang.completion.CompletionItemKind;
-import io.github.rosemoe.sora.lang.completion.SimpleCompletionItem;
 import io.github.rosemoe.sora.text.CharPosition;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.ContentReference;
@@ -82,10 +76,6 @@ public class CustomAutoComplete extends EmptyLanguage {
 	private final Language mLanguage;
 	private final CodeEditor mEditor;
 	private final IndentationRules mIndentationRules;
-	// Sorted keyword set fed to the completer. Completion matches strictly by
-	// prefix; see requireAutoComplete for why the language's own completer is
-	// not used.
-	private final TreeSet<String> keywords = new TreeSet<>();
 	
 	public CustomAutoComplete(CodeEditor editor, String[] gotoItems, Language language) {
 		mEditor = editor;
@@ -103,7 +93,15 @@ public class CustomAutoComplete extends EmptyLanguage {
 			}
 		}
 		mIndentationRules = rules;
-
+		
+		if (mLanguage instanceof TextMateLanguage tm) {
+            tm.setAutoCompleteEnabled(true);
+			tm.setTabSize(editor.getTabWidth());
+			if (tm.getSymbolPairs() instanceof TextMateSymbolPairMatch) {
+				tm.getSymbolPairs().setEnabled(true);
+			}
+		}
+		
 		String[] ks = {
 			".class", ".super", ".source", ".implements", ".field", ".method", ".end method",
 			".registers", ".locals", ".param", ".prologue", ".line", ".end local", ".restart local",
@@ -128,18 +126,16 @@ public class CustomAutoComplete extends EmptyLanguage {
 			".array-data", ".end array-data", ".packed-switch", ".end packed-switch",
 			".sparse-switch", ".end sparse-switch"
 		};
-		keywords.addAll(Arrays.asList(ks));
-
-		if (mLanguage instanceof TextMateLanguage tm) {
-            tm.setAutoCompleteEnabled(true);
-			tm.setTabSize(editor.getTabWidth());
-			if (tm.getSymbolPairs() instanceof TextMateSymbolPairMatch) {
-				tm.getSymbolPairs().setEnabled(true);
+		
+		if(mLanguage instanceof TextMateLanguage tm) {
+            if(gotoItems == null){
+				tm.setCompleterKeywords(ks);
+			}else {
+				// Merge ks and gotoItems
+				Set<String> allKeywords = new HashSet<>(Arrays.asList(ks));
+				allKeywords.addAll(Arrays.asList(gotoItems));
+				tm.setCompleterKeywords(allKeywords.toArray(new String[0]));
 			}
-		}
-
-		if (gotoItems != null) {
-			keywords.addAll(Arrays.asList(gotoItems));
 		}
 	}
 	
@@ -173,82 +169,10 @@ public class CustomAutoComplete extends EmptyLanguage {
 		return mLanguage != null ? mLanguage.getAnalyzeManager() : super.getAnalyzeManager();
 	}
 	
-	/*
-	 * Completion is implemented here instead of delegating to the TextMate
-	 * language. Its completer fuzzy-scores every keyword and every identifier
-	 * collected from the document with a very permissive threshold, so short
-	 * prefixes like "fu" match almost the whole file. That huge item list is
-	 * then published on the UI thread (quadratic insertion plus per-item
-	 * highlighting), which freezes the completion popup and ANRs the app.
-	 * Strict prefix matching bounds the result to a handful of items and
-	 * avoids offering fuzzy nonsense such as "float-to-double" for "fu".
-	 */
 	@Override
-	public void requireAutoComplete(@NonNull ContentReference content, @NonNull CharPosition position, @NonNull CompletionPublisher publisher, @NonNull Bundle extraArguments) {
-		String line = content.getLine(position.line);
-		int column = Math.min(position.column, line.length());
-		int begin = column;
-		while (begin > 0 && isSmaliWordChar(line.charAt(begin - 1))) {
-			begin--;
-		}
-		String prefix = line.substring(begin, column);
-		if (prefix.isEmpty()) {
-			return;
-		}
-
-		List<CompletionItem> result = new ArrayList<>();
-		for (String keyword : keywords) {
-			if (keyword.regionMatches(true, 0, prefix, 0, prefix.length())) {
-				result.add(new SimpleCompletionItem(keyword, "Keyword", prefix.length(), keyword)
-						.kind(CompletionItemKind.Keyword));
-			}
-		}
-		addDocumentIdentifiers(content, prefix, result);
-		if (!result.isEmpty()) {
-			publisher.addItems(result);
-		}
-	}
-
-	// Smali words also contain '/', '-' and '.', so that a fragment typed
-	// after a slash or hyphen still completes to the full instruction name
-	// (typing "invoke-v" offers "invoke-virtual", not just "v" matches).
-	private static boolean isSmaliWordChar(char c) {
-		return Character.isJavaIdentifierPart(c) || c == '-' || c == '/' || c == '.';
-	}
-
-	private static final int MAX_IDENTIFIER_COMPLETIONS = 100;
-	private static final int MAX_IDENTIFIER_SCAN_LINES = 20000;
-
-	private void addDocumentIdentifiers(ContentReference content, String prefix, List<CompletionItem> result) {
-		try {
-			int lineCount = Math.min(content.getLineCount(), MAX_IDENTIFIER_SCAN_LINES);
-			Set<String> seen = new HashSet<>();
-			int added = 0;
-			for (int i = 0; i < lineCount && added < MAX_IDENTIFIER_COMPLETIONS; i++) {
-				// Validates against the request each call; a stale request
-				// throws and abandons the scan.
-				String line = content.getLine(i);
-				int length = line.length();
-				int start = -1;
-				for (int j = 0; j <= length; j++) {
-					if (j < length && isSmaliWordChar(line.charAt(j))) {
-						if (start < 0) start = j;
-					} else if (start >= 0) {
-						if (j - start > prefix.length()
-								&& line.regionMatches(true, start, prefix, 0, prefix.length())) {
-							String word = line.substring(start, j);
-							if (seen.add(word) && !keywords.contains(word)) {
-								result.add(new SimpleCompletionItem(word, "Identifier", prefix.length(), word)
-										.kind(CompletionItemKind.Identifier));
-								added++;
-							}
-						}
-						start = -1;
-					}
-				}
-			}
-		} catch (Exception e) {
-			// Stale or cancelled request: keep whatever matched so far.
+	public void requireAutoComplete(@NonNull ContentReference content, @NonNull CharPosition position, @NonNull CompletionPublisher publisher, @NonNull Bundle extraArguments) {		
+		if (mLanguage != null) {
+			mLanguage.requireAutoComplete(content, position, publisher, extraArguments);
 		}
 	}
 	
