@@ -8,6 +8,10 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import android.content.Context;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.widget.Button;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -56,8 +60,23 @@ public class DialogUtil {
             } else {
                 panel.setOrientation(LinearLayout.HORIZONTAL);
             }
+            panel.setPadding(0, panel.getPaddingTop(), 0, panel.getPaddingBottom());
+            panel.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            int[] buttonIds = {AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_POSITIVE};
+            for (int id : buttonIds) {
+                Button btn = dialog.getButton(id);
+                if (btn != null) {
+                    btn.setPadding(dp(btn.getContext(), 6), btn.getPaddingTop(), dp(btn.getContext(), 6), btn.getPaddingBottom());
+                    btn.setMinWidth(0);
+                    btn.setMinimumWidth(0);
+                }
+            }
         } catch (Exception ignored) {
         }
+    }
+
+    private static int dp(Context context, int value) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, context.getResources().getDisplayMetrics());
     }
 
     /** The row that holds the action buttons, found via any visible button's parent. */
