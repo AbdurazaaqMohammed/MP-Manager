@@ -563,7 +563,13 @@ public class SearchFragment extends Fragment {
                     Extensions.showMessage(_context, "Value format error");
                     return; }
             }
-            lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
+            lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastIsHex = isHex;
+            // "Exactly match" is hidden for Smali (a whole class is never equal to
+            // the query), but hiding a checkbox does not uncheck it. It used to
+            // stay checked from an earlier "Class name" search and made every
+            // Smali search return nothing.
+            lastExactlyMatch = cbExactlyMatch.isChecked();
+            boolean exactlyMatchForType = lastExactlyMatch && !type.equals("Smali");
             if (lastIsRegex && !type.equals("Integer")) {
                 String regexError = RegexGuard.validate(query, lastMatchCase);
                 if (regexError != null) {
@@ -577,7 +583,7 @@ public class SearchFragment extends Fragment {
             List<String> scopeClasses = null;
             if (searchInResults) { scopeClasses = new ArrayList<>(); collectClassFullNames(searchResults, scopeClasses); }
             searchResults.clear(); currentQuery = null; adapter.refreshVisibleNodes(); updateUIState();
-            new SearchTask(SearchFragment.this, query, path, type, lastSearchSubfolders, lastMatchCase, lastIsRegex, lastExactlyMatch, isHex, scopeClasses, useExcludeList).start();
+            new SearchTask(SearchFragment.this, query, path, type, lastSearchSubfolders, lastMatchCase, lastIsRegex, exactlyMatchForType, isHex, scopeClasses, useExcludeList).start();
             dialog.dismiss();
         });
     }
@@ -671,11 +677,14 @@ public class SearchFragment extends Fragment {
                     Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files");
             }
             lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = matchCaseMode; lastIsRegex = regexMode; lastExactlyMatch = cbExactlyMatch.isChecked();
+            // Same rule as the search dialog: "Exactly match" is hidden for Smali
+            // and must not leak into the task.
+            boolean exactlyMatchForType = lastExactlyMatch && !type.equals("Smali");
             if (!find.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, find);
             List<String> scopeClasses = new ArrayList<>();
             collectClassFullNames(searchResults, scopeClasses);
             replaceDialog.dismiss();
-            new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
+            new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, exactlyMatchForType, scopeClasses).start();
         });
     }
 
@@ -1378,7 +1387,7 @@ public class SearchFragment extends Fragment {
             this.type = type;
             this.matchCase = matchCase;
             this.isRegex = isRegex;
-            this.exactlyMatch = exactlyMatch;
+            this.exactlyMatch = exactlyMatch && !"Smali".equals(type);
             this.scopeClasses = scopeClasses;
 
             if (isRegex) {
@@ -1735,7 +1744,9 @@ public class SearchFragment extends Fragment {
             this.searchSubfolders = searchSubfolders;
             this.matchCase = matchCase;
             this.isRegex = isRegex;
-            this.exactlyMatch = exactlyMatch;
+            // A Smali match is a substring of the generated class text, never the
+            // whole text, so an "exactly match" flag would match nothing.
+            this.exactlyMatch = exactlyMatch && !"Smali".equals(type);
             this.scopeClasses = scopeClasses;
 
             initSmaliKeywords();
@@ -1785,7 +1796,8 @@ public class SearchFragment extends Fragment {
             this.excludeArray = excludeList.toArray(new String[0]);
             this.poolPrefilterEnabled = "Smali".equals(this.type) && !this.isRegex
                     && query.length() >= 2 && !isCommonSmaliWord(query)
-                    && !containsNonPoolContextChar(query);
+                    && !containsNonPoolContextChar(query)
+                    && !looksLikeSmaliToken(query);
         }
 
         private void initSmaliKeywords() {
@@ -2334,6 +2346,27 @@ public class SearchFragment extends Fragment {
             }
             if (matchCase) return exactlyMatch ? text.equals(query) : text.contains(query);
             return exactlyMatch ? text.equalsIgnoreCase(query) : containsIgnoreCase(text, query);
+        }
+
+        /**
+         * True when the first word of the query has the shape of a smali opcode or
+         * directive ({@code move-result}, {@code const/4}, {@code invoke-static/range}).
+         *
+         * <p>Those never appear in the DEX string pool, so the pool pre-filter would
+         * drop every class for them. The keyword list alone cannot be relied on: it
+         * is hand-written and misses entries like {@code const/4}, which has no
+         * dash to disable the filter through {@link #containsNonPoolContextChar}.</p>
+         */
+        private static boolean looksLikeSmaliToken(String query) {
+            int end = 0;
+            while (end < query.length() && !Character.isWhitespace(query.charAt(end))) end++;
+            if (end == 0) return false;
+            for (int i = 0; i < end; i++) {
+                char c = query.charAt(i);
+                boolean ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '/';
+                if (!ok) return false;
+            }
+            return true;
         }
 
         private boolean isCommonSmaliWord(String query) {
