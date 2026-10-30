@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -11,8 +12,10 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -32,7 +35,11 @@ import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
 import io.github.abdurazaaqmohammed.core.ui.util.ViewPagers;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -41,6 +48,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -570,7 +578,6 @@ public class BookmarksController {
     }
 
     private void exitBookmarkBatchMode() {
-        bookmarkDragging = false; // end any active drag session
         BookmarkListController controller = batchController;
         batchController = null;
         batchSelected.clear();
@@ -635,7 +642,7 @@ public class BookmarksController {
             controller = groupControllers.get(group);
         }
         if (controller == null || controller.items.isEmpty()) {
-            Extensions.showMessage(activity, activity.rss.getString(R.string.empty));
+            Extensions.showMessage(activity, activity.rss.getString(R.string.cannot_open_item));
             return;
         }
 

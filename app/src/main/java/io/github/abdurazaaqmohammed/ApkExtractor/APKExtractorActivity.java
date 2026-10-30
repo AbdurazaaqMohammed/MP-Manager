@@ -1395,7 +1395,7 @@ public class APKExtractorActivity extends BaseActivity {
         return bitmap;
     }
 
-    final ExtractorIconCache iconCache = new ExtractorIconCache();
+    public final ExtractorIconCache iconCache = new ExtractorIconCache();
 
     private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
         PackageManager pm = getPackageManager();

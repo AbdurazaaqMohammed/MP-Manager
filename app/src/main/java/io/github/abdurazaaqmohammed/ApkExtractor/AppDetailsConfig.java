@@ -48,7 +48,7 @@ public final class AppDetailsConfig {
             // --- Basic Details ---
             new ConfigItem("detail:version", R.string.version_name, R.drawable.baseline_info_24, ItemCategory.DETAIL, false),
             new ConfigItem("detail:apk_size", R.string.apk_size, R.drawable.baseline_info_24, ItemCategory.DETAIL, false),
-            new ConfigItem("detail:signature", R.string.signature, R.drawable.ic_verified_user, ItemCategory.DETAIL, false),
+            new ConfigItem("detail:signature", R.string.signature, R.drawable.baseline_check_circle_24, ItemCategory.DETAIL, false),
             new ConfigItem("detail:first_install", R.string.first_install_date, R.drawable.baseline_info_24, ItemCategory.DETAIL, false),
             new ConfigItem("detail:last_updated", R.string.last_updated_date, R.drawable.baseline_info_24, ItemCategory.DETAIL, false),
             new ConfigItem("detail:apk_dir", R.string.apk_dir, R.drawable.folder_24px, ItemCategory.DETAIL, true),
