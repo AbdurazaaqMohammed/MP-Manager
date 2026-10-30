@@ -1022,7 +1022,7 @@ final View.OnClickListener originalClickListener;
                 View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
                 ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
                 RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
-                final BottomSheetDialog menuSheet;
+                final BottomSheetDialog[] menuSheet = {null};
                 final MaterialAlertDialogBuilder menuDialogBuilder;
                 final AlertDialog[] menuDialog = {null};
                 if (twoColumnMenu) {
@@ -1032,15 +1032,15 @@ final View.OnClickListener originalClickListener;
                     float density = context.getResources().getDisplayMetrics().density;
                     int edge = (int) (12 * density + 0.5f);
                     menuList.setPadding(edge, menuList.getPaddingTop(), edge, menuList.getPaddingBottom());
-                    menuSheet = null;
+                    menuSheet[0] = null;
                     menuDialogBuilder = new MaterialAlertDialogBuilder(context).setView(menuView);
                 } else {
                     menuList.setLayoutManager(new LinearLayoutManager(context));
-                    menuSheet = new BottomSheetDialog(context);
+                    menuSheet[0] = null;
                     menuDialogBuilder = null;
                 }
                 menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, disabledIds, position1 -> {
-                    if (menuSheet != null) menuSheet.dismiss();
+                    if (menuSheet[0] != null) menuSheet[0].dismiss();
                     if(menuDialog[0] != null) menuDialog[0].dismiss();
                     try {
                         String actionId = itemIds[position1];
@@ -1283,9 +1283,13 @@ final View.OnClickListener originalClickListener;
                         new ErrorUtil(context).showError(e);
                     }
                 }));
-                if (menuSheet != null) {
-                    menuSheet.setContentView(menuView);
-                    context.runOnUiThread(menuSheet::show);
+                if (!twoColumnMenu) {
+                    context.runOnUiThread(() -> {
+                        BottomSheetDialog bs = new BottomSheetDialog(context);
+                        bs.setContentView(menuView);
+                        bs.show();
+                        menuSheet[0] = bs;
+                    });
                 } else {
                     context.runOnUiThread(() -> menuDialog[0] = menuDialogBuilder.show());
                 }
