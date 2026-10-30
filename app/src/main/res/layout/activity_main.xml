@@ -255,31 +255,16 @@
                         android:text="@string/history" />
                 </com.google.android.material.tabs.TabLayout>
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                <ImageButton
+                    android:id="@+id/bookmarksMenuButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="8dp"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/bookmarksReorderButton"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/reorder_bookmarks"
-                        android:src="@drawable/edit_24px"
-                        app:tint="?attr/colorOnSurface" />
-
-                    <ImageButton
-                        android:id="@+id/bookmarksMenuButton"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/more"
-                        android:src="@drawable/baseline_more_vert_24"
-                        app:tint="?attr/colorOnSurface" />
-                </LinearLayout>
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/more"
+                    android:src="@drawable/baseline_more_vert_24"
+                    app:tint="?attr/colorOnSurface" />
             </FrameLayout>
 
             <androidx.viewpager2.widget.ViewPager2
