@@ -1905,6 +1905,7 @@ Layout Inspector
     <string name="docs_prop_modified">Modified: %1$s</string>
     <string name="docs_prop_id">Document id: %1$s</string>
     <string name="docs_copy_failed">Copy failed: %1$s</string>
+    <string name="saf_transfer_unsupported">Folders and archive entries cannot be transferred into a provider location yet — copy files one at a time</string>
     <string name="docs_copied">Copied to %1$s</string>
     <string name="npatch_profile_save">Save current as profile</string>
     <string name="npatch_profile_name">Profile name</string>

@@ -64,6 +64,24 @@ public class SafFilesArrayAdapter extends RecyclerView.Adapter<SafFilesArrayAdap
         return values[position];
     }
 
+    /**
+     * A view type of its own, deliberately not the 0 the pane's file adapter
+     * uses.
+     *
+     * <p>RecyclerView keeps its recycled holders in a pool keyed by view type
+     * for the whole lifetime of the view, so swapping adapters does not empty
+     * it. With a shared type the SAF adapter was handed a
+     * {@code MainFilesArrayAdapter$ViewHolder} and crashed with
+     * {@code ClassCastException} on the first bind. Distinct types keep the
+     * two pools apart in both directions.</p>
+     */
+    private static final int VIEW_TYPE = 0x534146; // "SAF"
+
+    @Override
+    public int getItemViewType(int position) {
+        return VIEW_TYPE;
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView fileNameView, fileDateView;
         final ImageView fileIconView;

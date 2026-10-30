@@ -55,6 +55,18 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     public FTPFileWrapper getItem(int position) { return values[position]; }
 
+    /**
+     * Same reasoning as the SAF adapter: the recycled-holder pool is keyed by
+     * view type and outlives an adapter swap, so sharing type 0 with the pane's
+     * file adapter could hand an FTP row a foreign ViewHolder.
+     */
+    private static final int VIEW_TYPE = 0x465450; // "FTP"
+
+    @Override
+    public int getItemViewType(int position) {
+        return VIEW_TYPE;
+    }
+
     @Override
     public int getItemCount() { return values.length; }
 

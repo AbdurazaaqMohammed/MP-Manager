@@ -53,6 +53,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.SafFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
@@ -65,6 +66,8 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.utils.SafFile;
+import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ShellProgress;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
@@ -301,13 +304,26 @@ public class FileOperationsHelper {
                                                  DestSizePoller poller) {
         ProgressManager pm = activeProgress;
         if (pm == null) return null;
+        // The shell counts from zero for its own ops; anything already handled
+        // before the batch (the plain-rename fast path of a move) has to be
+        // added on top, or the bar would jump backwards.
+        int batchFiles = 0;
+        long batchBytes = 0L;
+        if (ops != null) {
+            for (RootManager.CopyOp op : ops) {
+                batchFiles += Math.max(0, op.files);
+                batchBytes += Math.max(0L, op.bytes);
+            }
+        }
+        final int fileOffset = Math.max(0, totalFiles - batchFiles);
+        final long byteOffset = Math.max(0L, totalBytes - batchBytes);
         return new ShellProgress.Listener() {
             private int next = 0;
 
             @Override
             public void onProgress(int filesDone, long bytesDone) {
-                if (totalFiles > 0) pm.setProgress(Math.min(filesDone, totalFiles), totalFiles);
-                if (totalBytes > 0) pm.setBytes(Math.min(bytesDone, totalBytes), totalBytes);
+                if (totalFiles > 0) pm.setProgress(Math.min(fileOffset + filesDone, totalFiles), totalFiles);
+                if (totalBytes > 0) pm.setBytes(Math.min(byteOffset + bytesDone, totalBytes), totalBytes);
                 // A marker means op[next] just finished, so show the one after it.
                 if (ops == null || ops.isEmpty()) return;
                 int show = Math.min(next, ops.size() - 1);
@@ -398,6 +414,9 @@ public class FileOperationsHelper {
             ((FtpFilesArrayAdapter) rvAdapter).uploadFiles(items);
             return true;
         }
+        if (rvAdapter instanceof SafFilesArrayAdapter) {
+            return transferIntoSafPane(items, destinationFolder, true);
+        }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
@@ -427,14 +446,47 @@ public class FileOperationsHelper {
         if (plan == null) return true;
 
         Set<Object> batchDone = new HashSet<>();
+
+        // Fast path, and the reason a move no longer feels like a copy: try a
+        // plain rename for every item the app itself can reach. On one
+        // filesystem that is a directory-entry update — instant for any size —
+        // and it costs no su/Shizuku round trip at all, so the elevated
+        // backends are only used for the items that really need them (a
+        // source or destination the app uid cannot touch).
+        int renamedFiles = 0;
+        for (Map.Entry<Object, File> planned : plan.entrySet()) {
+            Object item = planned.getKey();
+            if (!(item instanceof File f)) continue;
+            File dest = planned.getValue();
+            if (dest == null || dest.equals(f)) {
+                batchDone.add(item);
+                continue;
+            }
+            // An existing destination needs the replace handling below, and a
+            // destination the app cannot stat is left to the elevated path.
+            if (dest.exists()) continue;
+            FileUtils.Measure im = info.of(f);
+            if (!f.renameTo(dest)) continue;
+            if (listener != null) {
+                listener.onFile(f, dest);
+                listener.onBytes(im.bytes);
+            }
+            renamedFiles += im.files;
+            batchDone.add(item);
+        }
+        if (renamedFiles > 0) {
+            done += renamedFiles;
+            advanceActiveProgress(done, totalFiles);
+        }
+
         if (useElevated) {
             List<RootManager.CopyOp> ops = new ArrayList<>();
-            List<String> sources = new ArrayList<>();
             List<Object> opItems = new ArrayList<>();
             long opFiles = 0;
             for (Map.Entry<Object, File> planned : plan.entrySet()) {
                 Object item = planned.getKey();
                 if (!(item instanceof File f)) continue;
+                if (batchDone.contains(item)) continue;
                 File dest = planned.getValue();
                 if (dest == null || dest.equals(f)) {
                     batchDone.add(item);
@@ -451,7 +503,6 @@ public class FileOperationsHelper {
                 // clear below must not run for the items it handled.
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), destExists, im.files, im.bytes));
-                sources.add(f.getAbsolutePath());
                 opItems.add(item);
                 opFiles += im.files;
             }
@@ -462,11 +513,12 @@ public class FileOperationsHelper {
                         listener.onFile(new File(ops.get(0).src), new File(ops.get(0).dest));
                     }
                     if (poller != null) poller.watch(new File(ops.get(0).dest), 0L);
-                    // The batch reports its own counters through the marker
-                    // stream, so no lump sum is added afterwards.
-                    AccessManager.copyAllPreserving(context, ops,
+                    // One `mv` per item in a single shell: a rename on the
+                    // same filesystem, so the move no longer streams every
+                    // byte the way copy+delete did. The batch reports its own
+                    // counters through the marker stream.
+                    AccessManager.moveAll(context, ops,
                             shellProgress(ops, totalFiles, totalBytes, poller));
-                    AccessManager.deleteAll(context, sources, true);
                     batchDone.addAll(opItems);
                     done += opFiles;
                     advanceActiveProgress(done, totalFiles);
@@ -489,13 +541,11 @@ public class FileOperationsHelper {
                 clearReplacedDestination(dest, useElevated);
                 if (useElevated) {
                     try {
-                        // copy -p keeps the timestamps, so no separate preserveTime
-                        // round trip is needed. Rename falls back to copy+delete
-                        // across filesystems, which mv already does internally.
+                        // `mv` keeps mode, ownership and timestamps and is a
+                        // rename on the same filesystem; it only streams bytes
+                        // across filesystems, which is exactly move semantics.
                         if (listener != null) listener.onFile(f, dest);
-                        AccessManager.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
-                                f.isDirectory(), true);
-                        AccessManager.delete(context, f.getAbsolutePath(), true);
+                        AccessManager.move(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
                         done += itemTotal;
                         advanceActiveProgress(done, totalFiles);
                         if (listener != null) listener.onBytes(itemBytes);
@@ -652,6 +702,17 @@ public class FileOperationsHelper {
         }
         final boolean elevated = AccessManager.fileOpsOn(context);
         if (!elevated) return false;
+        // When the app can list the folder itself, a missing name really is
+        // missing: no su/Shizuku round trip needed. Only folders the uid
+        // cannot read (/data/data, Android/data on 11+) go to the backend.
+        try {
+            String[] own = dir.list();
+            if (own != null) {
+                for (String n : own) if (n.equals(name)) return true;
+                return false;
+            }
+        } catch (Exception ignored) {
+        }
         String key = dir.getAbsolutePath();
         String[] names = dirListingCache.get(key);
         if (names == null) {
@@ -698,6 +759,9 @@ public class FileOperationsHelper {
             ((FtpFilesArrayAdapter) rvAdapter).uploadFiles(items);
             return true;
         }
+        if (rvAdapter instanceof SafFilesArrayAdapter) {
+            return transferIntoSafPane(items, destinationFolder, false);
+        }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
@@ -710,6 +774,53 @@ public class FileOperationsHelper {
         } else {
             return copyToRegularFolder(items, destinationFolder);
         }
+    }
+
+    /**
+     * Copies (or moves) the selection into a provider-backed pane.
+     *
+     * <p>The on-disk path cannot be used here: a {@code SafFile} has no
+     * readable path, so the bytes go through the provider's own streams via
+     * {@link SafFs}. This is also what keeps the pane-type cast above from
+     * blowing up when the destination is a provider folder.</p>
+     *
+     * @return true when the transfer was handled here
+     */
+    private boolean transferIntoSafPane(List<Object> items, File destinationFolder, boolean move) {
+        if (!(destinationFolder instanceof SafFile)) return false;
+        final SafFile dest = (SafFile) destinationFolder;
+        final boolean destPane1 = !adapter.pane1;
+        final MeasureInfo info = measureInfo(items);
+        final int totalFiles = info.total.files;
+        final FileUtils.TransferListener listener = transferListener();
+        int done = 0;
+        int skipped = 0;
+        for (Object item : items) {
+            if (!(item instanceof File)) {
+                skipped++;
+                continue;
+            }
+            File f = (File) item;
+            if (f.isDirectory()) {
+                skipped++;
+                continue;
+            }
+            try {
+                if (listener != null) listener.onFile(f, new File(dest.getPath(), f.getName()));
+                SafFs.copyFrom(f, dest, null);
+                if (move) //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                FileUtils.Measure im = info.of(f);
+                done += im.files;
+                advanceActiveProgress(done, totalFiles);
+                if (listener != null) listener.onBytes(im.bytes);
+            } catch (Exception e) {
+                Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
+            }
+        }
+        if (skipped > 0) Extensions.showMessage(context, R.string.saf_transfer_unsupported);
+        context.handler.post(() -> context.loadFolderInPane(dest, destPane1, false));
+        return true;
     }
 
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
@@ -1359,8 +1470,19 @@ public class FileOperationsHelper {
 
     private boolean copyFromZip(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
-        MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) ((RecyclerView) context
+        RecyclerView.Adapter destAdapter = ((RecyclerView) context
                 .findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        if (destAdapter instanceof SafFilesArrayAdapter) {
+            // Entries have to be extracted before they can be streamed into a
+            // provider folder, which this path does not do yet.
+            Extensions.showMessage(context, R.string.saf_transfer_unsupported);
+            return true;
+        }
+        if (!(destAdapter instanceof MainFilesArrayAdapter)) {
+            Extensions.showMessage(context, R.string.saf_transfer_unsupported);
+            return true;
+        }
+        MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) destAdapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip && !ArchiveBrowseUtil.isZipLike(destinationFolder)) {
             // Browsing a 7z/rar/tar: entries cannot be written back into it.
