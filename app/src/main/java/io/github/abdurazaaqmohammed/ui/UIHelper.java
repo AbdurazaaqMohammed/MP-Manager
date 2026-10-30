@@ -45,12 +45,12 @@ public class UIHelper {
             //license.replaceFirst("[<\\[](?:yyyy|year)[]>]\\s+[\\[<]name of (?:author|copyright owner)[>\\]]", copyright[which])).
         } catch (Exception ignored) {
         }
-        new MaterialAlertDialogBuilder(context)
+        String url = lib.url;
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context)
                 .setTitle(lib.name)
-                .setMessage(message)
-                .setPositiveButton(context.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lib.url))))
-                .setNegativeButton(context.getString(R.string.close), null)
-                .show();
+                .setMessage(message);
+        if(!TextUtils.isEmpty(url)) builder.setPositiveButton(context.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        builder.setNegativeButton(context.getString(R.string.close), null).show();
     }
 
     public void showAboutDialog() {
@@ -78,6 +78,8 @@ public class UIHelper {
                 new AboutLibrary("apksig for Android", "Muntashir Al-Islam", "https://github.com/MuntashirAkon/apksig-android", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Sora Editor", "Rosemoe", "https://github.com/Rosemoe/sora-editor", "LGPL-2.1", "LGPL-2.1.txt"),
                 new AboutLibrary("InstallerX-Revived", "iamr0s and InstallerX Revived Contributors", "https://github.com/wxxsfxyzm/InstallerX-Revived", "GPL-3.0", "GPL-3.0+.txt"),
+                new AboutLibrary("il2cppdumper", "MuhammadRizwan", "https://github.com/muhammadrizwan87/il2cppdumper", "MIT", "MIT.txt"),
+                new AboutLibrary("LibPatcher", "MuhammadRizwan", null, "MIT", "MIT.txt"),
                 new AboutLibrary("zip4j", "Srikanth Lingala", "https://github.com/srikanth-lingala/zip4j", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("aXML", "APK Explorer & Editor", "https://github.com/apk-editor/aXML", "GPL-3.0", "GPL-3.0+.txt"),
                 new AboutLibrary("Commons Collections", "Apache Software Foundation", "https://github.com/apache/commons-collections", "Apache-2.0", "Apache-2.0.txt"),
