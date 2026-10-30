@@ -15,9 +15,9 @@ import java.util.Arrays;
 
 public final class ExtractorIconCache {
 
-    private static final int MAX_FILES = 400;
+    private static final int MAX_FILES = 1000;
 
-    private final LruCache<String, Drawable> memory = new LruCache<>(64) {
+    private final LruCache<String, Drawable> memory = new LruCache<>(512) {
         @Override
         protected int sizeOf(String key, Drawable value) {
             return 1;

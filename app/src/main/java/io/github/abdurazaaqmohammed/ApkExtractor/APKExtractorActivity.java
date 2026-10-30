@@ -81,6 +81,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -350,61 +351,7 @@ public class APKExtractorActivity extends BaseActivity {
                 }
             } catch (Exception ignored) { }
 
-            CompoundButton showExtractIconToggle = settingsMenu.findViewById(R.id.showExtractIconToggle);
-            showExtractIconToggle.setChecked(showExtractIcon);
-            showExtractIconToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractIcon = isChecked;
-                reloadListView();
-            });
 
-            CompoundButton showExtractResToggle = settingsMenu.findViewById(R.id.showExtractResToggle);
-            showExtractResToggle.setChecked(showExtractRes);
-            showExtractResToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractRes = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showExtractDexToggle = settingsMenu.findViewById(R.id.showExtractDexToggle);
-            showExtractDexToggle.setChecked(showExtractDex);
-            showExtractDexToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractDex = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showExtractBaseToggle = settingsMenu.findViewById(R.id.showExtractBaseToggle);
-            showExtractBaseToggle.setChecked(showExtractBase);
-            showExtractBaseToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractBase = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showExtractManifestToggle = settingsMenu.findViewById(R.id.showExtractManifestToggle);
-            showExtractManifestToggle.setChecked(showExtractManifest);
-            showExtractManifestToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractManifest = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showExtractSplitToggle = settingsMenu.findViewById(R.id.showExtractSplitToggle);
-            showExtractSplitToggle.setChecked(showExtractSplit);
-            showExtractSplitToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractSplit = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showExtractLibsToggle = settingsMenu.findViewById(R.id.showExtractLibsToggle);
-            showExtractLibsToggle.setChecked(showExtractLibs);
-            showExtractLibsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showExtractLibs = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showLaunchActivitiesToggle = settingsMenu.findViewById(R.id.showLaunchActivitiesToggle);
-            showLaunchActivitiesToggle.setChecked(showLaunchActivities);
-            showLaunchActivitiesToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showLaunchActivities = isChecked;
-                reloadListView();
-            });
 
             try {
                 AutoCompleteTextView compressTv = settingsMenu.findViewById(R.id.compressLevelTv);
@@ -513,54 +460,72 @@ public class APKExtractorActivity extends BaseActivity {
                                 appInfo.minSdk = app.applicationInfo.minSdkVersion;
                             else appInfo.minSdk = -1;
                         } catch (Exception ignored2) { appInfo.minSdk = -1; }
-                        try {
-                            File base = new File(app.applicationInfo.sourceDir);
-                            appInfo.baseSize = base.length();
-                            appInfo.apkDir = base.getParent();
-                            long total = appInfo.baseSize;
-                            int splits = 0;
-                            String[] splitDirs = app.applicationInfo.splitSourceDirs;
-                            if (splitDirs != null) {
-                                for (String s : splitDirs) {
+                        Set<String> hiddenKeys = AppDetailsConfig.getHiddenKeys(APKExtractorActivity.this);
+                        boolean needSize = !hiddenKeys.contains("detail:apk_size");
+                        boolean needDataDir = !hiddenKeys.contains("detail:data_dir") || !hiddenKeys.contains("action:open_data_dir");
+                        boolean needExtDataDir = !hiddenKeys.contains("detail:ext_data") || !hiddenKeys.contains("action:open_ext_data_dir");
+                        boolean needInstaller = !hiddenKeys.contains("detail:installer") || !hiddenKeys.contains("detail:initiator") || !hiddenKeys.contains("detail:origin");
+
+                        if (needSize) {
+                            try {
+                                File base = new File(app.applicationInfo.sourceDir);
+                                appInfo.baseSize = base.length();
+                                appInfo.apkDir = base.getParent();
+                                long total = appInfo.baseSize;
+                                int splits = 0;
+                                String[] splitDirs = app.applicationInfo.splitSourceDirs;
+                                if (splitDirs != null) {
+                                    for (String s : splitDirs) {
+                                        try {
+                                            total += new File(s).length();
+                                            splits++;
+                                        } catch (Exception ignored2) {}
+                                    }
+                                }
+                                appInfo.totalSize = total;
+                                appInfo.splitCount = splits;
+                            } catch (Exception ignored2) {}
+                        } else {
+                            try {
+                                appInfo.apkDir = new File(app.applicationInfo.sourceDir).getParent();
+                            } catch (Exception ignored2) {}
+                        }
+                        if (needDataDir) {
+                            try { appInfo.dataDir = app.applicationInfo.dataDir; } catch (Exception ignored2) {}
+                        }
+                        if (needExtDataDir) {
+                            try {
+                                appInfo.extDataDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + app.packageName).getAbsolutePath();
+                            } catch (Exception ignored2) {}
+                        }
+                        if (needInstaller) {
+                            try {
+                                String inst = null;
+                                String initiator = null;
+                                String origin = null;
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     try {
-                                        total += new File(s).length();
-                                        splits++;
+                                        InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
+                                        if (si != null) {
+                                            inst = si.getInstallingPackageName();
+                                            initiator = si.getInitiatingPackageName();
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                try {
+                                                    int src = si.getPackageSource();
+                                                    if (src == 1) origin = "Local file";
+                                                    else if (src == 2) origin = "Downloaded file";
+                                                    else if (src == 3) origin = "Other";
+                                                } catch (Exception ignored3) {}
+                                            }
+                                        }
                                     } catch (Exception ignored2) {}
                                 }
-                            }
-                            appInfo.totalSize = total;
-                            appInfo.splitCount = splits;
-                        } catch (Exception ignored2) {}
-                        try { appInfo.dataDir = app.applicationInfo.dataDir; } catch (Exception ignored2) {}
-                        try {
-                            appInfo.extDataDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + app.packageName).getAbsolutePath();
-                        } catch (Exception ignored2) {}
-                        try {
-                            String inst = null;
-                            String initiator = null;
-                            String origin = null;
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                try {
-                                    InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
-                                    if (si != null) {
-                                        inst = si.getInstallingPackageName();
-                                        initiator = si.getInitiatingPackageName();
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            try {
-                                                int src = si.getPackageSource();
-                                                if (src == 1) origin = "Local file";
-                                                else if (src == 2) origin = "Downloaded file";
-                                                else if (src == 3) origin = "Other";
-                                            } catch (Exception ignored3) {}
-                                        }
-                                    }
-                                } catch (Exception ignored2) {}
-                            }
-                            if (inst == null) inst = pm.getInstallerPackageName(app.packageName);
-                            appInfo.installer = inst;
-                            appInfo.installInitiator = initiator;
-                            appInfo.installOrigin = origin;
-                        } catch (Exception ignored2) {}
+                                if (inst == null) inst = pm.getInstallerPackageName(app.packageName);
+                                appInfo.installer = inst;
+                                appInfo.installInitiator = initiator;
+                                appInfo.installOrigin = origin;
+                            } catch (Exception ignored2) {}
+                        }
                         boolean isSystem = (app.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
                         if (isSystem)
                             freshSystem.add(appInfo);
@@ -1458,8 +1423,6 @@ public class APKExtractorActivity extends BaseActivity {
                     }
                 }
             } catch (Exception ignored) {}
-            final int pos = adapter.filteredAppInfoList.indexOf(app);
-            if (pos >= 0) handler.post(() -> adapter.notifyItemChanged(pos));
         }
     }
 

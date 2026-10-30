@@ -61,7 +61,6 @@ public class BookmarksController {
     private final Map<String, BookmarkListController> groupControllers = new LinkedHashMap<>();
     private BookmarkListController batchController;
     private final Set<Integer> batchSelected = new HashSet<>();
-    private boolean bookmarkDragging;
 
     private BookmarksAdapter bookmarksAdapter;
     private TabLayout bookmarksTabs;
@@ -97,16 +96,6 @@ public class BookmarksController {
         }
 
         @Override
-        public void onDragHandleTouched(View handle, int position, MotionEvent initialEvent) {
-            startBookmarkDrag(this, handle, position, initialEvent);
-        }
-
-        @Override
-        public void onItemLongPressed(View row, int position, MotionEvent initialEvent) {
-            startBookmarkDrag(this, row, position, initialEvent);
-        }
-
-        @Override
         public boolean isBatchMode() {
             return batchController == this;
         }
@@ -114,11 +103,6 @@ public class BookmarksController {
         @Override
         public boolean isBatchSelected(int position) {
             return batchSelected.contains(position);
-        }
-
-        @Override
-        public boolean isDragging() {
-            return bookmarkDragging;
         }
     }
 
@@ -167,6 +151,7 @@ public class BookmarksController {
             }
         });
 
+        activity.findViewById(R.id.bookmarksReorderButton).setOnClickListener(v -> showCurrentTabReorderDialog());
         activity.findViewById(R.id.bookmarksMenuButton).setOnClickListener(this::showBookmarksBarMenu);
         activity.findViewById(R.id.bookmarksCloseButton).setOnClickListener(v -> activity.closeBookmarksDrawer());
         activity.findViewById(R.id.batchCopy).setOnClickListener(v -> batchCopyOrMove(true));
@@ -640,103 +625,147 @@ public class BookmarksController {
                 }).show();
     }
 
-    private void startBookmarkDrag(BookmarkListController controller, View targetView, int position, MotionEvent downEvent) {
-        ListView listView = controller.listView;
-        View row = (targetView.getParent() instanceof ListView) ? targetView : (View) targetView.getParent();
-        float density = activity.getResources().getDisplayMetrics().density;
-        int rowH = row.getHeight() > 0 ? row.getHeight() : (int) (48 * density + 0.5f);
-        int[] dragPos = {position};
-        int[] initialPos = {position};
-        int[] startSlot = {position};
-        int[] lastFirst = {listView.getFirstVisiblePosition()};
-        float[] lastRawY = {downEvent != null ? downEvent.getRawY() : row.getY() + rowH / 2f};
-        float[] totalMovement = {0f};
-        int[] lastTop = {row.getTop()};
-        float[] dragOffset = {0f};
-        bookmarkDragging = true;
-        row.setElevation(8f * density);
-        listView.requestDisallowInterceptTouchEvent(true);
-        ViewParent pagerParent = listView.getParent();
-        if (pagerParent != null) pagerParent.requestDisallowInterceptTouchEvent(true);
+    private void showCurrentTabReorderDialog() {
+        int currentTab = bookmarksTabs != null ? bookmarksTabs.getSelectedTabPosition() : 0;
+        BookmarkListController controller = null;
+        if (currentTab == 0) {
+            controller = mainBookmarkController;
+        } else if (currentTab >= 2 && currentTab - 2 < bookmarkGroups.size()) {
+            String group = bookmarkGroups.get(currentTab - 2);
+            controller = groupControllers.get(group);
+        }
+        if (controller == null || controller.items.isEmpty()) {
+            Extensions.showMessage(activity, activity.rss.getString(R.string.empty));
+            return;
+        }
 
-        View.OnTouchListener dragTouchListener = (v, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_MOVE: {
-                    float dy = event.getRawY() - lastRawY[0];
-                    lastRawY[0] = event.getRawY();
-                    totalMovement[0] += Math.abs(dy);
-                    int topDelta = row.getTop() - lastTop[0];
-                    lastTop[0] = row.getTop();
-                    dragOffset[0] += dy - topDelta;
-                    row.setTranslationY(dragOffset[0]);
+        final BookmarkListController activeController = controller;
+        final ArrayList<File> reorderItems = new ArrayList<>(controller.items);
+        final float density = activity.getResources().getDisplayMetrics().density;
 
-                    int first = listView.getFirstVisiblePosition();
-                    startSlot[0] += first - lastFirst[0];
-                    lastFirst[0] = first;
-                    int childIndex = dragPos[0] - first;
-                    if (childIndex < 0 || childIndex >= listView.getChildCount()) return true;
-                    float visualCenter = row.getTop() + dragOffset[0] + rowH / 2f;
-                    int targetChild = (int) Math.floor(visualCenter / rowH);
-                    int maxChild = Math.min(listView.getChildCount() - 1,
-                            controller.items.size() - 1 - first);
-                    targetChild = Math.max(0, Math.min(maxChild, targetChild));
+        RecyclerView recyclerView = new RecyclerView(activity);
+        recyclerView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(activity));
+        recyclerView.setClipToPadding(false);
+        int pad = (int) (12 * density);
+        recyclerView.setPadding(pad, pad, pad, pad);
 
-                    while (targetChild > childIndex && dragPos[0] + 1 < controller.items.size()) {
-                        controller.items.add(dragPos[0] + 1, controller.items.remove(dragPos[0]));
-                        dragPos[0]++;
-                        childIndex++;
-                    }
-                    while (targetChild < childIndex && dragPos[0] > 0) {
-                        controller.items.add(dragPos[0] - 1, controller.items.remove(dragPos[0]));
-                        dragPos[0]--;
-                        childIndex--;
-                    }
+        class ReorderViewHolder extends RecyclerView.ViewHolder {
+            final ImageView icon;
+            final TextView name;
+            final ImageView dragHandle;
 
-                    for (int i = 0; i < listView.getChildCount(); i++) {
-                        View child = listView.getChildAt(i);
-                        if (child == row) continue;
-                        float t;
-                        if (childIndex > startSlot[0] && i >= startSlot[0] && i < childIndex) t = -rowH;
-                        else if (childIndex < startSlot[0] && i > childIndex && i <= startSlot[0]) t = rowH;
-                        else t = 0;
-                        if (child.getTranslationY() != t)
-                            child.animate().translationY(t).setDuration(120)
-                                    .setInterpolator(new DecelerateInterpolator()).start();
-                    }
-
-                    int[] location = new int[2];
-                    listView.getLocationOnScreen(location);
-                    float fingerY = event.getRawY() - location[1];
-                    if (fingerY < rowH) listView.smoothScrollBy(-rowH / 2, 120);
-                    else if (fingerY > listView.getHeight() - rowH) listView.smoothScrollBy(rowH / 2, 120);
-                    return true;
-                }
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL: {
-                    bookmarkDragging = false;
-                    row.setElevation(0f);
-                    row.setTranslationY(0f);
-                    for (int i = 0; i < listView.getChildCount(); i++) {
-                        listView.getChildAt(i).setTranslationY(0);
-                    }
-                    listView.setOnTouchListener(getSwipeDownCloseListener());
-                    if (targetView != row) targetView.setOnTouchListener(null);
-                    row.setOnTouchListener(null);
-                    if (initialPos[0] != dragPos[0]) {
-                        persistBookmarkOrder(controller);
-                    } else if (totalMovement[0] < 8 * density) {
-                        showBookmarkItemMenu(controller, dragPos[0], row);
-                    }
-                    controller.adapter.notifyDataSetChanged();
-                    return true;
-                }
+            ReorderViewHolder(View itemView) {
+                super(itemView);
+                icon = itemView.findViewById(R.id.bookmarkIcon);
+                name = itemView.findViewById(R.id.bookmarkName);
+                dragHandle = itemView.findViewById(R.id.bookmarkDragHandle);
             }
-            return false;
-        };
+        }
 
-        listView.setOnTouchListener(dragTouchListener);
-        targetView.setOnTouchListener(dragTouchListener);
-        if (targetView != row) row.setOnTouchListener(dragTouchListener);
+        class ReorderAdapter extends RecyclerView.Adapter<ReorderViewHolder> {
+            @NonNull
+            @Override
+            public ReorderViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View view = LayoutInflater.from(activity).inflate(R.layout.item_bookmark, parent, false);
+                return new ReorderViewHolder(view);
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull ReorderViewHolder holder, int position) {
+                File file = reorderItems.get(position);
+                String label = bookmarkLabels.get(file.getPath());
+                holder.name.setText(label != null ? label : file.getName());
+                if (file.isFile()) {
+                    String ext = FilenameUtils.getExtension(file.getName()).toLowerCase(Locale.ROOT);
+                    if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) holder.icon.setImageResource(R.drawable.image_24px);
+                    else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) holder.icon.setImageResource(R.drawable.music_24px);
+                    else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) holder.icon.setImageResource(R.drawable.video_24px);
+                    else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) holder.icon.setImageResource(R.drawable.baseline_folder_zip_24);
+                    else holder.icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
+                } else {
+                    holder.icon.setImageResource(R.drawable.folder_24px);
+                }
+                TypedValue tv = new TypedValue();
+                activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tv, true);
+                ColorUtil.changeImageColor(holder.icon.getDrawable(), tv.data);
+                holder.dragHandle.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public int getItemCount() {
+                return reorderItems.size();
+            }
+        }
+
+        ReorderAdapter reorderAdapter = new ReorderAdapter();
+        recyclerView.setAdapter(reorderAdapter);
+
+        androidx.recyclerview.widget.ItemTouchHelper touchHelper = new androidx.recyclerview.widget.ItemTouchHelper(
+                new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
+                        androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+                    @Override
+                    public boolean onMove(@NonNull RecyclerView rv,
+                                          @NonNull RecyclerView.ViewHolder viewHolder,
+                                          @NonNull RecyclerView.ViewHolder target) {
+                        int fromPos = viewHolder.getBindingAdapterPosition();
+                        int toPos = target.getBindingAdapterPosition();
+                        if (fromPos < 0 || toPos < 0 || fromPos == toPos) return false;
+                        Collections.swap(reorderItems, fromPos, toPos);
+                        reorderAdapter.notifyItemMoved(fromPos, toPos);
+                        return true;
+                    }
+
+                    @Override
+                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                    }
+
+                    @Override
+                    public boolean isLongPressDragEnabled() {
+                        return true;
+                    }
+
+                    @Override
+                    public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+                        super.onSelectedChanged(viewHolder, actionState);
+                        if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                            viewHolder.itemView.setElevation(8f * density);
+                        }
+                    }
+
+                    @Override
+                    public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder) {
+                        super.clearView(rv, viewHolder);
+                        viewHolder.itemView.setElevation(0f);
+                    }
+                });
+        touchHelper.attachToRecyclerView(recyclerView);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+                .setTitle(activity.rss.getString(R.string.reorder_bookmarks))
+                .setMessage(activity.rss.getString(R.string.drag_to_reorder))
+                .setView(recyclerView)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                    activeController.items.clear();
+                    activeController.items.addAll(reorderItems);
+                    persistBookmarkOrder(activeController);
+                    activeController.adapter.notifyDataSetChanged();
+                    activity.refreshSidebar(activity.getSidebarSectionOrder());
+                })
+                .create();
+        dialog.show();
+
+        // Adjust dialog size nicely: fit items up to 80% screen height
+        if (dialog.getWindow() != null) {
+            int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
+            int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
+            int maxDialogH = (int) (screenHeight * 0.80f);
+            int rowHeight = (int) (52 * density);
+            int estimatedH = Math.min(maxDialogH, reorderItems.size() * rowHeight + (int) (140 * density));
+            dialog.getWindow().setLayout((int) (screenWidth * 0.92f), estimatedH);
+        }
     }
 
     private void persistBookmarkOrder(BookmarkListController controller) {
