@@ -297,6 +297,60 @@ public final class AccessManager {
     }
 
     /**
+     * Moves one path.
+     *
+     * <p>Uses rename semantics rather than copy+delete: {@code mv} (root and
+     * Shizuku) and {@link File#renameTo} are a directory-entry update on the
+     * same filesystem, so a 2 GB file moves as fast as a 2 byte one. Only when
+     * the two paths are really on different filesystems does this fall back to
+     * streaming the bytes.</p>
+     */
+    public static void move(Context context, String src, String dest, boolean useElevated) throws IOException {
+        File from = new File(src);
+        File to = new File(dest);
+        // Always try the app's own rename first, even in root/Shizuku mode: it
+        // is a directory-entry update and needs no shell at all. The elevated
+        // backends are the backup for paths this uid cannot touch.
+        if (from.renameTo(to)) return;
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).rename(src, dest);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.rename(context, src, dest);
+                return;
+            }
+        }
+        if (from.isDirectory()) FileUtils.copyFolder(from, to);
+        else FileUtils.copyFile(from, to);
+        delete(context, src, false);
+    }
+
+    /**
+     * Moves a whole selection with {@code mv}, one shell round trip per
+     * backend. See {@link #move} for why this is not copy+delete.
+     */
+    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+                               ShellProgress.Listener progress) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager.getInstance(context).moveAll(ops, progress);
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            ShizukuManager.moveAll(context, ops, progress);
+            return;
+        }
+        for (RootManager.CopyOp op : ops) {
+            move(context, op.src, op.dest, false);
+            if (progress != null) progress.onProgress(Math.max(0, op.files), Math.max(0L, op.bytes));
+        }
+    }
+
+    /**
      * Copy that keeps mode, ownership and timestamps. Equivalent to a copy
      * followed by {@link #preserveTime}, but for the root backend it is a single
      * {@code cp -pf} instead of a copy plus a stat plus a {@code touch}, which

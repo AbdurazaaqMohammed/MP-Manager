@@ -519,6 +519,64 @@ public final class ShizukuManager {
      * and one binder round trip each when it cannot. Per-item shell copies cost
      * a fresh {@code sh -c} process each, which dominated multi-selection copies.
      */
+    /**
+     * Moves a selection with {@code mv} — a rename on the same filesystem, so
+     * a move costs nothing regardless of size, and a copy+unlink only when the
+     * two paths really are on different filesystems.
+     */
+    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+                               ShellProgress.Listener progress) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        StringBuilder shell = new StringBuilder();
+        int shellOps = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
+        List<RootManager.CopyOp> service = new ArrayList<>();
+        for (RootManager.CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (RootManager.isPathBlocked(src)) {
+                throw new IOException("Refusing to move protected path");
+            }
+            if (useShell(src) || useShell(dest)) {
+                if (shell.length() > 0) shell.append(" && ");
+                if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
+                    shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
+                }
+                File destParent = new File(dest).getParentFile();
+                if (destParent != null) shell.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
+                shell.append("mv -f -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
+                filesDone += Math.max(0, op.files);
+                bytesDone += Math.max(0L, op.bytes);
+                shell.append(ShellProgress.report(filesDone, bytesDone));
+                shellOps++;
+            } else {
+                service.add(op);
+            }
+        }
+        if (shellOps > 0) throwIfShellFails(shell.toString(), "move", Math.max(60, shellOps * 60), progress);
+        if (service.isEmpty()) return;
+        IFileService s = serviceSync(context);
+        for (RootManager.CopyOp op : service) {
+            try {
+                // Same guards the single rename uses: the binder path must not
+                // be talked into touching protected top-level locations.
+                requireAllowed(op.src);
+                requireAllowed(op.dest);
+                if (isTopLevel(op.src) || isTopLevel(op.dest)) {
+                    throw new IOException("Refusing protected top-level path");
+                }
+                if (!s.renamePath(op.src, op.dest)) throw new IOException(serviceError(s));
+                filesDone += Math.max(0, op.files);
+                bytesDone += Math.max(0L, op.bytes);
+                if (progress != null) progress.onProgress(filesDone, bytesDone);
+            } catch (Exception e) {
+                throw new IOException("move failed: " + e.getMessage(), e);
+            }
+        }
+    }
+
     public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
         copyAllPreserving(context, ops, null);
     }

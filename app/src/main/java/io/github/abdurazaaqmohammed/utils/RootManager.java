@@ -797,6 +797,48 @@ public class RootManager {
     }
 
     /**
+     * Moves a whole selection in one {@code su} round trip.
+     *
+     * <p>{@code mv} is a rename on the same filesystem — instant, whatever the
+     * size of the tree — and falls back to copy+unlink by itself across
+     * filesystems, which is exactly move semantics. The previous approach
+     * (copy preserving + delete) streamed every byte even for a rename inside
+     * one folder.</p>
+     */
+    public void moveAll(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        StringBuilder cmd = new StringBuilder();
+        int count = 0;
+        int timeout = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (isPathBlocked(src)) {
+                throw new IOException("Blocked: refusing to move critical path: " + src);
+            }
+            if (cmd.length() > 0) cmd.append(" && ");
+            if (op.destExists && op.directory && !isPathBlocked(dest)) {
+                cmd.append("rm -rf -- ").append(escapeShellArg(dest)).append(" && ");
+            }
+            String parent = new File(dest).getParent();
+            if (parent != null) cmd.append("mkdir -p ").append(escapeShellArg(parent)).append(" && ");
+            cmd.append("mv -f -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            filesDone += Math.max(0, op.files);
+            bytesDone += Math.max(0L, op.bytes);
+            cmd.append(ShellProgress.report(filesDone, bytesDone));
+            count++;
+            timeout += op.directory ? 120 : 60;
+        }
+        if (count == 0) return;
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress);
+        if (!result.isSuccess()) throw new IOException("move failed: " + result.error);
+        invalidateListCache();
+    }
+
+    /**
      * Removes every path in one shell process. Deleting a selection item by
      * item cost one {@code su} spawn each, all serialised behind the same lock,
      * so even a handful of empty files felt slow.
