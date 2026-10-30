@@ -170,10 +170,31 @@ public class DexTools {
     }
 
     private void openDexPlusFiles(ArrayList<String> paths, Integer openTab) {
+        openDexPlusFiles(paths, openTab, null, null);
+    }
+
+    /**
+     * @param zipFile   archive the dex files were extracted from, or null for a
+     *                  plain folder
+     * @param entryPath first entry name, used for the "update the archive?"
+     *                  prompt's title
+     *
+     * <p>The extras matter: {@code MainActivity.onActivityResult} only routes
+     * the result to {@code handleModifiedFileResult} (which asks whether to
+     * write the dex back into the APK/ZIP) when the intent carries them.
+     * Without them the editor's result was just highlighted in the pane and
+     * the archive was silently left untouched.</p>
+     */
+    private void openDexPlusFiles(ArrayList<String> paths, Integer openTab,
+                                  File zipFile, String entryPath) {
         Intent intent = new Intent(context, DexEditorActivity.class)
                 .putExtra("theme", context.theme)
                 .putStringArrayListExtra("SelectedDexFiles", paths);
         if (openTab != null) intent.putExtra("openTab", openTab);
+        if (zipFile != null) {
+            intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
+            if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
+        }
         context.startActivityForResult(intent, 757);
     }
 
@@ -388,16 +409,21 @@ public class DexTools {
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
         ArrayList<String> selectedPaths = new ArrayList<>();
         String missing = null;
+        String firstEntry = null;
         for (String n : selectedNames) {
             File f = new File(session.outputDir, n);
-            if (f.isFile() && f.length() > 0) selectedPaths.add(f.getPath());
-            else if (missing == null) missing = f.getAbsolutePath();
+            if (f.isFile() && f.length() > 0) {
+                selectedPaths.add(f.getPath());
+                if (firstEntry == null) firstEntry = n;
+            } else if (missing == null) {
+                missing = f.getAbsolutePath();
+            }
         }
         if (selectedPaths.isEmpty()) {
             Extensions.showMessage(context, missing != null ? missing : context.rss.getString(R.string.file_no_longer_available));
             return;
         }
-        openDexPlusFiles(selectedPaths, null);
+        openDexPlusFiles(selectedPaths, null, session.zipFile, firstEntry);
     }
 
     private void repairDex(File dexFile, File zipFile) {

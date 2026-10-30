@@ -482,9 +482,39 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     handleModifiedFileResult(data.getData(), zipEntryPath, zipFilePath);
                 } else {
                     File modified = new File(data.getData().getPath());
-                    highlightAndFocusItem(pane1, modified.getName());
+                    // An editor that returns nothing but the staged file (the
+                    // dex editor among them) still has to offer the
+                    // "update the archive?" prompt when it was opened from
+                    // inside one: the staged copy lives in the app's private
+                    // dir and the pane is showing the archive.
+                    if (isStagedEditPath(modified) && paneFolderIsEditableArchive(pane1)) {
+                        handleModifiedFileResult(data.getData(), null, null);
+                    } else {
+                        highlightAndFocusItem(pane1, modified.getName());
+                    }
                 }
             }
+        }
+    }
+
+    /** True for files staged under the app's own cache/files dirs for editing. */
+    private boolean isStagedEditPath(File file) {
+        if (file == null) return false;
+        try {
+            String path = file.getPath();
+            return path.startsWith(getCacheDir().getPath()) || path.startsWith(getFilesDir().getPath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** True when the selected pane is browsing a zip-family archive. */
+    private boolean paneFolderIsEditableArchive(boolean pane1) {
+        try {
+            File folder = pane1 ? pane1Folder : pane2Folder;
+            return folder != null && folder.isFile() && ArchiveBrowseUtil.isZipLike(folder);
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -1804,7 +1834,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         return;
                     }
                     bindSafFolder(dir, children, pane1, addToHistory);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    // A provider that answers with something unexpected must
+                    // not take the whole file manager down with it.
+                    new ErrorUtil(this).showError(e);
                 }
                 if (saved != null) restorePaneScroll(pane1, saved);
             });
