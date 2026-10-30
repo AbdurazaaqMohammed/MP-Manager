@@ -1,0 +1,32 @@
+name: Build Il2CppDumper
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v6
+    
+    - name: Setup NDK
+      run: |
+        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+        unzip -q android-ndk-r25b-linux.zip
+        echo "NDK=$(pwd)/android-ndk-r25b" >> $GITHUB_ENV
+        
+    - name: Build
+      run: |
+        $NDK/ndk-build NDK_PROJECT_PATH=. APP_ABI=all
+        
+    - name: Copy output
+      run: |
+        mkdir -p artifacts
+        cp -r libs/* artifacts/
+        
+    - uses: actions/upload-artifact@v6
+      with:
+        name: Il2CppDumper-v2.0.0
+        path: artifacts/

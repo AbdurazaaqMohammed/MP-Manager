@@ -1017,6 +1017,7 @@ Layout Inspector
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Wi-Fi Manager</string>
     <string name="sidebar_tools">Plugins</string>
+    <string name="sidebar_documents">Documents providers</string>
     <string name="sidebar_plugins">Plugins</string>
     <string name="show_plugin_groups_sidebar">Show plugins in sidebar</string>
     <string name="plugin_open">Open</string>
@@ -1832,6 +1833,79 @@ Layout Inspector
     <string name="multiplex_no_host">No stored embedded APK found inside this file. Multiplexing applies to Xposed-patcher outputs or similar packages that embed the original APK uncompressed.</string>
     <string name="multiplex_run">Multiplex</string>
     <string name="multiplex_done">Multiplexed: %1$s (saved %2$s)</string>
+
+    <!-- il2cppdumper (Il2Cpp Self-Dumper, runtime dump of Unity IL2CPP games) -->
+    <string name="il2cpp_dump_native">Dump IL2CPP (il2cppdumper)</string>
+    <string name="il2cpp_dump_title">IL2CPP runtime dumper</string>
+    <string name="il2cpp_dump_desc">Injects libil2cppdumper.so into this APK and loads it from the app class static initializer. When the patched app runs, it waits for the Unity IL2CPP runtime to initialize, then writes a C#-like dump of every managed type (dump.cs) plus IDA/Ghidra scripts (script.json). No hooking, no root needed on the target.</string>
+    <string name="il2cpp_target_label">Injection point</string>
+    <string name="il2cpp_target_detecting">Detecting…</string>
+    <string name="il2cpp_target_none">Could not read any class name from this manifest</string>
+    <string name="il2cpp_target_hint">The dumper starts when the class picked here is initialized. The Application class is the safest choice; pick another activity if the game only loads IL2CPP later.</string>
+    <string name="il2cpp_target_application">Application class — %1$s</string>
+    <string name="il2cpp_target_launcher">Launcher activity — %1$s</string>
+    <string name="il2cpp_target_unity">Unity activity — %1$s</string>
+    <string name="il2cpp_target_activity">Activity — %1$s</string>
+    <string name="il2cpp_pick_target">Pick an injection point first</string>
+    <string name="il2cpp_provider_label">Expose the dump through a DocumentsProvider</string>
+    <string name="il2cpp_provider_hint">Adds a provider to the patched app so its data folders can be browsed without root (same idea as the LSPatch option). Add it once in Tools → Documents providers, then it opens in the pane like a folder.</string>
+    <string name="il2cpp_manual_hint">No dump? Start the injection point by hand: install the patched APK, open APK Extractor → this app → Launch Activity and pick the activity above. The dumper only runs once that class is actually loaded.</string>
+    <string name="il2cpp_abis_label">Dumper libraries to add</string>
+    <string name="il2cpp_no_abi">This APK has no ABI folder we ship a dumper library for.</string>
+    <string name="il2cpp_output_hint">After installing the patched app and launching it once, dump.cs appears in /data/data/&lt;package&gt;/files/il2cpp_dump/ (fallbacks: Android/data/&lt;package&gt;/files/il2cpp_dump/, then /sdcard/il2cpp_dump/). With the provider option on, reach it without root through Documents providers.</string>
+    <string name="il2cpp_done">IL2CPP dumper injected: %1$s</string>
+
+    <!-- LibPatcher (native library offset patcher) -->
+    <string name="patch_native_libs">Patch native libs (LibPatcher)</string>
+    <string name="libpatcher_title">Native library patcher</string>
+    <string name="libpatcher_desc">Port of LibPatcher (TDOhex): patches the selected .so with instruction stubs so a function returns a fixed value — boolean true/false, integer zero/max, long zero/-1, float/double zero, or void (NOP). Choose the library, enter hex offsets (e.g. from Ghidra, IDA or r2) and patch. Only armeabi-v7a and arm64-v8a are supported.</string>
+    <string name="libpatcher_lib">Native library</string>
+    <string name="libpatcher_offsets_hint">Offsets are hex addresses like 0x10150; separate multiple offsets with commas. Leave a field empty to skip it.</string>
+    <string name="libpatcher_type_boolean_true">Boolean → true</string>
+    <string name="libpatcher_type_boolean_false">Boolean → false</string>
+    <string name="libpatcher_type_integer_zero">Integer → 0</string>
+    <string name="libpatcher_type_integer16_max">Int16 → max</string>
+    <string name="libpatcher_type_integer32_max">Int32 → max</string>
+    <string name="libpatcher_type_long_zero">Long → 0</string>
+    <string name="libpatcher_type_long_64">Long → -1</string>
+    <string name="libpatcher_type_float_zero">Float → 0.0</string>
+    <string name="libpatcher_type_double_zero">Double → 0.0</string>
+    <string name="libpatcher_type_void_nop">Void → NOP</string>
+    <string name="libpatcher_unsupported">Unsupported architecture (%1$s)</string>
+    <string name="libpatcher_no_libs">This APK has no native libraries to patch</string>
+    <string name="libpatcher_no_offsets">Enter at least one offset</string>
+    <string name="libpatcher_invalid_offsets">Invalid offsets format. Use hex values like 0x100,0x200</string>
+    <string name="libpatcher_pick_lib">Select a native library first</string>
+    <string name="libpatcher_done">Patched %1$s: %2$s</string>
+    <string name="patch_apk">Patch</string>
+
+    <!-- Documents providers (SAF): locations opened in a pane like a folder -->
+    <string name="docs_browser_title">Documents providers</string>
+    <string name="docs_tool_title">Documents providers</string>
+    <string name="docs_tool_subtitle">Browse SAF locations in the pane, e.g. a patched app\'s data</string>
+    <string name="docs_add_location">Add location</string>
+    <string name="docs_empty">No locations yet. Tap Add location and pick a provider in the system picker — that grant is the only way in for providers that protect their data.</string>
+    <string name="docs_error">Could not open this location</string>
+    <string name="docs_no_picker">No system file picker available on this device</string>
+    <string name="docs_no_viewer">No app can open this file</string>
+    <string name="docs_forget">Remove this location</string>
+    <string name="docs_open">Open</string>
+    <string name="docs_copy_out">Copy to folder…</string>
+    <string name="docs_copy_in">Copy file in…</string>
+    <string name="docs_copy_in_hint">Open a folder in the other pane first, then copy a file into this location.</string>
+    <string name="docs_copy_in_dir">Only single files can be copied in for now</string>
+    <string name="docs_copied_in">Copied %1$s here</string>
+    <string name="docs_new_folder">New folder</string>
+    <string name="docs_rename_failed">Rename failed — the provider refused it</string>
+    <string name="docs_delete_failed">Delete failed — the provider refused it</string>
+    <string name="docs_create_failed">Could not create it — the provider refused it</string>
+    <string name="docs_prop_type">Type: %1$s</string>
+    <string name="docs_prop_folder">Folder</string>
+    <string name="docs_prop_size">Size: %1$s</string>
+    <string name="docs_prop_modified">Modified: %1$s</string>
+    <string name="docs_prop_id">Document id: %1$s</string>
+    <string name="docs_copy_failed">Copy failed: %1$s</string>
+    <string name="docs_copied">Copied to %1$s</string>
     <string name="npatch_profile_save">Save current as profile</string>
     <string name="npatch_profile_name">Profile name</string>
     <string name="npatch_profile_loaded">Loaded profile: %1$s</string>

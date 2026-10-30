@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
@@ -20,6 +21,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -56,6 +58,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apkeditor.Util;
@@ -70,12 +73,15 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -88,11 +94,16 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FastDexPatch;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.Il2CppDumperUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.NativeLibPatcher;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -113,6 +124,9 @@ public class ApkInfoDialogs {
     private final ApkManifestEditor manifestEditor;
     private final ApkSignatureTools signatures;
     private final ApkOverlayTools overlay;
+    /** Memoized {APK has libil2cpp.so, APK has any lib/*.so} for nativeScanFile. */
+    private File nativeScanFile;
+    private boolean[] nativeScanResult;
 
     public ApkInfoDialogs(MainActivity context,
                           DialogUtil dialogUtil,
@@ -137,6 +151,352 @@ public class ApkInfoDialogs {
     private void showMultiplexDialog(File file, String fileName) {
         MultiplexLauncher.open(context, dialogUtil, pane1, file, fileName);
     }
+
+    /**
+     * Memoized availability scan for the two native-lib More entries:
+     * [0] = APK contains libil2cpp.so (il2cppdumper), [1] = APK contains any
+     * lib/*.so (LibPatcher). Warmed from the info loader, awaited on demand.
+     */
+    private synchronized boolean[] nativeScan(File file) {
+        if (nativeScanResult != null && nativeScanFile != null && nativeScanFile.equals(file)) {
+            return nativeScanResult;
+        }
+        boolean[] r = new boolean[2];
+        try {
+            r[0] = Il2CppDumperUtil.hasIl2Cpp(file);
+        } catch (Exception ignored) {
+        }
+        try {
+            r[1] = NativeLibPatcher.hasNativeLibs(file);
+        } catch (Exception ignored) {
+        }
+        nativeScanFile = file;
+        nativeScanResult = r;
+        return r;
+    }
+
+    /**
+     * il2cppdumper: adds libil2cppdumper.so to every supported ABI folder of
+     * the APK and wires a System.loadLibrary call into the class picked as the
+     * injection point (Application class by default, any activity otherwise),
+     * per il2cppdumper-main/README.md.
+     */
+    private void showIl2CppDumpDialog(File file, String fileName) {
+        View ll = LayoutInflater.from(context).inflate(R.layout.dialog_il2cpp_dump, null);
+        MaterialAutoCompleteTextView targetView = ll.findViewById(R.id.il2cpp_target);
+        TextInputLayout targetLayout = ll.findViewById(R.id.il2cpp_target_layout);
+        LinearLayout abiBox = ll.findViewById(R.id.il2cpp_abis);
+        MaterialCheckBox providerBox = ll.findViewById(R.id.il2cpp_provider);
+        MaterialCheckBox autosign = ll.findViewById(R.id.autosign);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = new boolean[1];
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+        ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+        providerBox.setChecked(settings.getBoolean("il2cpp_provider", true));
+        providerBox.setOnCheckedChangeListener((bv, checked) ->
+                settings.edit().putBoolean("il2cpp_provider", checked).apply());
+
+        final List<MaterialCheckBox> abiChecks = new ArrayList<>();
+        final List<Il2CppDumperUtil.Target> targets = new ArrayList<>();
+        final String[] target = {null};
+        targetLayout.setEnabled(false);
+        new Thread(() -> {
+            List<Il2CppDumperUtil.Target> found = new ArrayList<>();
+            List<String> abis = new ArrayList<>();
+            try {
+                found = Il2CppDumperUtil.listTargets(context, file);
+                abis = Il2CppDumperUtil.dumpableAbis(file);
+            } catch (Exception ignored) {
+            }
+            List<Il2CppDumperUtil.Target> fTargets = found;
+            List<String> fAbis = abis;
+            context.handler.post(() -> {
+                targets.addAll(fTargets);
+                if (targets.isEmpty()) {
+                    targetView.setText(context.getString(R.string.il2cpp_target_none), false);
+                } else {
+                    List<String> labels = new ArrayList<>();
+                    for (Il2CppDumperUtil.Target t : targets) labels.add(targetLabel(t));
+                    targetView.setAdapter(new ArrayAdapter<>(context,
+                            android.R.layout.simple_dropdown_item_1line, labels));
+                    // Restore the last pick when this APK still offers it,
+                    // otherwise fall back to the best-ranked class.
+                    String remembered = settings.getString("il2cpp_target", null);
+                    int index = 0;
+                    for (int i = 0; i < targets.size(); i++) {
+                        if (targets.get(i).className.equals(remembered)) {
+                            index = i;
+                            break;
+                        }
+                    }
+                    target[0] = targets.get(index).className;
+                    targetView.setText(labels.get(index), false);
+                    targetLayout.setEnabled(true);
+                }
+                for (String abi : fAbis) {
+                    MaterialCheckBox cb = new MaterialCheckBox(context);
+                    cb.setText(abi);
+                    cb.setChecked(settings.getBoolean("il2cpp_abi_" + abi, true));
+                    cb.setOnCheckedChangeListener((bv, c) ->
+                            settings.edit().putBoolean("il2cpp_abi_" + abi, c).apply());
+                    abiChecks.add(cb);
+                    abiBox.addView(cb);
+                }
+                if (fAbis.isEmpty()) {
+                    TextView none = new TextView(context);
+                    none.setText(R.string.il2cpp_no_abi);
+                    none.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+                    abiBox.addView(none);
+                }
+            });
+        }).start();
+        targetView.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= targets.size()) return;
+            target[0] = targets.get(position).className;
+            settings.edit().putString("il2cpp_target", target[0]).apply();
+        });
+
+        dialogUtil.getDialogBuilder()
+                .setTitle(R.string.il2cpp_dump_title)
+                .setView(ll)
+                .setPositiveButton(R.string.patch_apk, (d, w) -> {
+                    List<String> chosen = new ArrayList<>();
+                    for (MaterialCheckBox cb : abiChecks) {
+                        if (cb.isChecked()) chosen.add(cb.getText().toString());
+                    }
+                    if (chosen.isEmpty()) {
+                        Extensions.showMessage(context, context.getString(R.string.il2cpp_abis_label));
+                        return;
+                    }
+                    if (TextUtils.isEmpty(target[0])) {
+                        Extensions.showMessage(context, context.getString(R.string.il2cpp_pick_target));
+                        return;
+                    }
+                    boolean injectProvider = providerBox.isChecked();
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    Runnable doPatch = () -> {
+                        ProgressManager pm = new ProgressManager(context, true).show();
+                        APKLogger logger = pm.getLogger();
+                        new Thread(() -> {
+                            try {
+                                File out = Il2CppDumperUtil.patchApk(context, file, chosen,
+                                        target[0], injectProvider, logger);
+                                if (sign[0]) wrapper[0].signApk(out);
+                                pm.dismiss();
+                                context.handler.post(() -> {
+                                    Extensions.showMessage(context, context.getString(R.string.il2cpp_done, out.getName()));
+                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                });
+                            } catch (Exception e) {
+                                pm.dismiss();
+                                new ErrorUtil(context).showError(e);
+                            }
+                        }).start();
+                    };
+                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doPatch.run();
+                    }); else doPatch.run();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Dropdown text for an injection point, prefixed by what kind of class it is. */
+    private String targetLabel(Il2CppDumperUtil.Target target) {
+        int res;
+        switch (target.kind) {
+            case Il2CppDumperUtil.Target.APPLICATION: res = R.string.il2cpp_target_application; break;
+            case Il2CppDumperUtil.Target.LAUNCHER: res = R.string.il2cpp_target_launcher; break;
+            case Il2CppDumperUtil.Target.UNITY: res = R.string.il2cpp_target_unity; break;
+            default: res = R.string.il2cpp_target_activity; break;
+        }
+        return context.getString(res, target.className);
+    }
+
+    /** Offsets the label resource for a LibPatcher patch type. */
+    private static int patchTypeLabel(String type) {
+        switch (type) {
+            case "boolean_true": return R.string.libpatcher_type_boolean_true;
+            case "boolean_false": return R.string.libpatcher_type_boolean_false;
+            case "integer_zero": return R.string.libpatcher_type_integer_zero;
+            case "integer16_max": return R.string.libpatcher_type_integer16_max;
+            case "integer32_max": return R.string.libpatcher_type_integer32_max;
+            case "long_zero": return R.string.libpatcher_type_long_zero;
+            case "long_64": return R.string.libpatcher_type_long_64;
+            case "float_zero": return R.string.libpatcher_type_float_zero;
+            case "double_zero": return R.string.libpatcher_type_double_zero;
+            default: return R.string.libpatcher_type_void_nop;
+        }
+    }
+
+    /**
+     * LibPatcher: writes instruction stubs at hex offsets inside a chosen
+     * native library of the APK (ported from the LibPatcher python tool).
+     */
+    private void showLibPatcherDialog(File file, String fileName) {
+        View ll = LayoutInflater.from(context).inflate(R.layout.dialog_lib_patcher, null);
+        MaterialAutoCompleteTextView libInput = ll.findViewById(R.id.lp_lib);
+        TextView archView = ll.findViewById(R.id.lp_arch);
+        LinearLayout fieldsBox = ll.findViewById(R.id.lp_fields);
+        MaterialCheckBox autosign = ll.findViewById(R.id.autosign);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = new boolean[1];
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+        ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+
+        final Map<String, TextInputEditText> offsetInputs = new LinkedHashMap<>();
+        for (String type : NativeLibPatcher.PATCH_TYPES) {
+            com.google.android.material.textfield.TextInputLayout box = UiFields.box(context, context.getString(patchTypeLabel(type)));
+            TextInputEditText edit = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
+            edit.setText(settings.getString("libpatcher_" + type, ""));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+            box.setLayoutParams(lp);
+            offsetInputs.put(type, edit);
+            fieldsBox.addView(box);
+        }
+
+        final List<String> libEntries = new ArrayList<>();
+        final List<String> libDisplay = new ArrayList<>();
+        final String[] chosenEntry = {null};
+        new Thread(() -> {
+            Map<String, String> libs = NativeLibPatcher.nativeLibArchives(file);
+            List<String> entries = new ArrayList<>(libs.keySet());
+            List<String> display = new ArrayList<>();
+            for (String entry : entries) {
+                display.add(entry + "  [" + libs.get(entry) + "]");
+            }
+            context.handler.post(() -> {
+                libEntries.addAll(entries);
+                libDisplay.addAll(display);
+                if (display.isEmpty()) {
+                    archView.setVisibility(View.VISIBLE);
+                    archView.setText(R.string.libpatcher_no_libs);
+                    return;
+                }
+                libInput.setAdapter(new ArrayAdapter<>(context,
+                        android.R.layout.simple_dropdown_item_1line, libDisplay));
+                libInput.setText(libDisplay.get(0), false);
+                chosenEntry[0] = libEntries.get(0);
+                archView.setVisibility(View.VISIBLE);
+                archView.setText(libDisplay.get(0).substring(libDisplay.get(0).indexOf('[')));
+            });
+        }).start();
+        libInput.setOnItemClickListener((parent, view, position, id) -> {
+            chosenEntry[0] = position >= 0 && position < libEntries.size() ? libEntries.get(position) : null;
+            if (position >= 0 && position < libDisplay.size()) {
+                archView.setVisibility(View.VISIBLE);
+                archView.setText(libDisplay.get(position).substring(libDisplay.get(position).indexOf('[')));
+            }
+        });
+
+        dialogUtil.getDialogBuilder()
+                .setTitle(R.string.libpatcher_title)
+                .setView(ll)
+                .setPositiveButton(R.string.patch_apk, (d, w) -> {
+                    String entry = chosenEntry[0];
+                    if (entry == null) {
+                        Extensions.showMessage(context, context.getString(R.string.libpatcher_pick_lib));
+                        return;
+                    }
+                    Map<String, String> raw = new LinkedHashMap<>();
+                    for (String type : NativeLibPatcher.PATCH_TYPES) {
+                        CharSequence text = offsetInputs.get(type).getText();
+                        String value = text == null ? "" : text.toString().trim();
+                        if (!value.isEmpty()) raw.put(type, value);
+                    }
+                    if (raw.isEmpty()) {
+                        Extensions.showMessage(context, context.getString(R.string.libpatcher_no_offsets));
+                        return;
+                    }
+                    try {
+                        NativeLibPatcher.parseOffsets(raw);
+                    } catch (IOException e) {
+                        Extensions.showMessage(context, context.getString(R.string.libpatcher_invalid_offsets));
+                        return;
+                    }
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    Runnable doPatch = () -> {
+                        ProgressManager pm = new ProgressManager(context, true).show();
+                        APKLogger logger = pm.getLogger();
+                        new Thread(() -> {
+                            File workDir = new File(context.getCacheDir(),
+                                    "libpatch_" + System.currentTimeMillis());
+                            try {
+                                workDir.mkdirs();
+                                logger.logMessage("Patching " + entry);
+                                byte[] so = FastDexPatch.readDexBytes(file, entry);
+                                NativeLibPatcher.patch(so, entry, NativeLibPatcher.parseOffsets(raw));
+                                File patchedSo = new File(workDir, new File(entry).getName());
+                                try (FileOutputStream fos = new FileOutputStream(patchedSo)) {
+                                    fos.write(so);
+                                }
+                                Map<String, File> replacements = new LinkedHashMap<>();
+                                replacements.put(entry, patchedSo);
+                                File out = FileUtils.getUnusedFile(new File(file.getParentFile(),
+                                        FilenameUtils.getBaseName(file.getName()) + "_libpatched.apk"));
+                                ApkZipAlignUtil.rebuildApk(file, out, replacements, null, null, null);
+                                if (sign[0]) wrapper[0].signApk(out);
+                                pm.dismiss();
+                                context.handler.post(() -> {
+                                    Extensions.showMessage(context,
+                                            context.getString(R.string.libpatcher_done, entry, out.getName()));
+                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                });
+                            } catch (Exception e) {
+                                pm.dismiss();
+                                new ErrorUtil(context).showError(e);
+                            } finally {
+                                File[] files = workDir.listFiles();
+                                if (files != null) for (File f : files) //noinspection ResultOfMethodCallIgnored
+                                    f.delete();
+                                //noinspection ResultOfMethodCallIgnored
+                                workDir.delete();
+                            }
+                        }).start();
+                    };
+                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doPatch.run();
+                    }); else doPatch.run();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Single-choice style rows for the More dialog; disabled rows are greyed out and unclickable. */
+    private final class MoreItemsAdapter extends BaseAdapter {
+        private final List<String> titles;
+        private final boolean[] enabled;
+        private final LayoutInflater inflater = LayoutInflater.from(context);
+
+        MoreItemsAdapter(List<String> titles, boolean[] enabled) {
+            this.titles = titles;
+            this.enabled = enabled;
+        }
+
+        @Override public int getCount() { return titles.size(); }
+        @Override public String getItem(int position) { return titles.get(position); }
+        @Override public long getItemId(int position) { return position; }
+        @Override public boolean isEnabled(int position) {
+            return position >= 0 && position < enabled.length && enabled[position];
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            View v = convertView != null ? convertView : inflater.inflate(R.layout.item_more_action, parent, false);
+            TextView tv = (TextView) v;
+            tv.setText(getItem(position));
+            tv.setAlpha(isEnabled(position) ? 1f : 0.38f);
+            return v;
+        }
+    }
+
 
     public void showDecompileOptionsDialog(File file, String fileName) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -338,7 +698,7 @@ public class ApkInfoDialogs {
                 .setNeutralButton(R.string.more, (dialog, which) -> {
                     // "View certificate" moved onto the Signatures row, which now opens the
                     // full signature sheet on tap.
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions), context.rss.getString(R.string.npatch_integrated), context.rss.getString(R.string.multiplex_apk)));
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions), context.rss.getString(R.string.npatch_integrated), context.rss.getString(R.string.multiplex_apk), context.rss.getString(R.string.il2cpp_dump_native), context.rss.getString(R.string.patch_native_libs)));
                     final int builtinCount = moreTitles.size();
                     final List<ApkMoreAction> pluginMore =
                             ExtensionRegistry.apkActions();
@@ -353,8 +713,15 @@ public class ApkInfoDialogs {
                         if (e == null) continue;
                         moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
                     }
-                    String[] items = moreTitles.toArray(new String[0]);
-                    dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
+                    // il2cppdumper needs libil2cpp.so, LibPatcher needs any lib/*.so.
+                    boolean[] moreEnabled = new boolean[moreTitles.size()];
+                    Arrays.fill(moreEnabled, true);
+                    boolean[] nativeState = nativeScan(file);
+                    if (moreEnabled.length > 15) {
+                        moreEnabled[14] = nativeState[0];
+                        moreEnabled[15] = nativeState[1];
+                    }
+                    dialogUtil.getDialogBuilder().setAdapter(new MoreItemsAdapter(moreTitles, moreEnabled), (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
                         else if (which1 == 1) {
@@ -674,6 +1041,8 @@ public class ApkInfoDialogs {
                     else if (which1 == 11) manifestEditor.showPermissionsDialog(file);
                     else if (which1 == 12) XposedPatcherLauncher.open(context, dialogUtil, pane1, file, fileName);
                     else if (which1 == 13) showMultiplexDialog(file, fileName);
+                    else if (which1 == 14) showIl2CppDumpDialog(file, fileName);
+                    else if (which1 == 15) showLibPatcherDialog(file, fileName);
                     else {
                         int pluginIndex = which1 - builtinCount;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
@@ -1001,6 +1370,8 @@ public class ApkInfoDialogs {
                 long versionCode = ApkInfoUtil.getVersionCode(packageInfo);
                 String vCode = versionCode > 0 ? String.valueOf(versionCode) : "";
                 String pkg = packageInfo.packageName;
+                // Warm the native-lib availability scan for the More dialog.
+                nativeScan(file);
 
                 ApkSignatureInfo sigInfo;
                 try {

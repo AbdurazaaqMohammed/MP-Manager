@@ -1,0 +1,29 @@
+# NDK/build outputs
+obj/
+libs/
+build/
+bin/
+*.so
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.iml
+
+# Compiled C
+*.o
+*.out
+*.exe
+
+# Logs
+*.log
+
+# Temporary/backup
+*.bak
+*.swp
