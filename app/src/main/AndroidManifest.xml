@@ -114,6 +114,12 @@
             android:windowSoftInputMode="adjustResize"
             android:exported="false">
         </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:exported="false">
+        </activity>
         <service
             android:name="io.github.abdurazaaqmohammed.tools.PrivateDnsTileService"
             android:icon="@drawable/wifi_24px"

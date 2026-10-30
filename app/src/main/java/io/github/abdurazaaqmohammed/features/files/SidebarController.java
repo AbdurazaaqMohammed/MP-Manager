@@ -64,6 +64,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.tools.ToolRunnerActivity;
+import io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -506,6 +507,9 @@ public class SidebarController {
         switch (id) {
             case "extract":
                 activity.startActivityForResult(new Intent(activity, APKExtractorActivity.class), 11);
+                break;
+            case "documents":
+                activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
                 break;
             case "recycle_bin":
                 showRecycleBinDialog();

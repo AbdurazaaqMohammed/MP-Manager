@@ -28,6 +28,9 @@ public class ToolRegistry {
         tools.add(new ToolItem("adb", context.getString(R.string.adb_browser),
                 context.getString(R.string.adb_browser_subtitle),
                 resId(context, "archive_24px", pkg), context.getString(R.string.cat_storage)));
+        tools.add(new ToolItem("documents", context.getString(R.string.docs_tool_title),
+                context.getString(R.string.docs_tool_subtitle),
+                resId(context, "folder_24px", pkg), context.getString(R.string.cat_storage)));
         return tools;
     }
 

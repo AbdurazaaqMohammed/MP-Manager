@@ -124,6 +124,7 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.SafFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
@@ -141,6 +142,8 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.utils.SafFile;
+import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
@@ -1314,6 +1317,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if ((a instanceof MainFilesArrayAdapter adapter)) {
                     adapter.goUp();
+                } else if (a instanceof SafFilesArrayAdapter) {
+                    File current = isPane1 ? pane1Folder : pane2Folder;
+                    File parent = current == null ? null : current.getParentFile();
+                    if (parent != null) loadFolderInPane(parent, isPane1);
                 } else {
                     ftp.ftpParent(isPane1);
                 }
@@ -1629,6 +1636,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                         }
                     }
+                } else if (a instanceof SafFilesArrayAdapter) {
+                    boolean onPane1 = lastPaneSelected == 1;
+                    File current = onPane1 ? pane1Folder : pane2Folder;
+                    File parent = current == null ? null : current.getParentFile();
+                    if (parent != null) {
+                        loadFolderInPane(parent, onPane1);
+                    } else if (isBackPressedToExit) {
+                        handler.removeCallbacks(resetExitPrompt);
+                        finishAffinity();
+                    } else {
+                        isBackPressedToExit = true;
+                        Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+                        handler.postDelayed(resetExitPrompt, 2000);
+                    }
                 } else ftp.ftpParent(lastPaneSelected == 1);
             }
         }
@@ -1705,6 +1726,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
             return;
         }
+        // A provider-backed location (a granted SAF tree): same pane, same
+        // breadcrumb, different listing source.
+        if (SafFs.isSaf(folder)) {
+            loadSafFolderInPane(SafFs.wrap(folder), pane1, addToHistory);
+            return;
+        }
         if (!folder.isDirectory() && ArchiveUtil.isSupportedArchive(folder.getName())) {
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
@@ -1721,6 +1748,92 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         sortFiles(files, folder.getPath());
         bindListedFolder(folder, files, pane1, addToHistory);
         if (saved != null) restorePaneScroll(pane1, saved);
+    }
+
+    /**
+     * Opens a granted SAF tree in pane 1. Used by the Documents providers
+     * screen, which only collects locations — browsing happens here, in the
+     * pane, like any other folder.
+     */
+    public void openSafTree(String treeUri) {
+        SafFs.init(this);
+        final Uri uri;
+        try {
+            uri = Uri.parse(treeUri);
+        } catch (Exception e) {
+            Extensions.showMessage(this, rss.getString(R.string.docs_error));
+            return;
+        }
+        listingExecutor.execute(() -> {
+            final SafFile root = SafFs.treeRoot(uri);
+            handler.post(() -> {
+                try {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (root == null) {
+                        Extensions.showMessage(this, rss.getString(R.string.docs_error));
+                        return;
+                    }
+                    loadFolderInPane(root, true, true);
+                } catch (Exception ignored) {
+                }
+            });
+        });
+    }
+
+    /**
+     * Lists a provider-backed folder (a granted SAF tree or an exported
+     * provider) into a pane. The query runs on the listing executor; the bind
+     * is main-thread and generation-guarded, so navigating away mid-query
+     * cannot overwrite a newer screen.
+     */
+    public void loadSafFolderInPane(File folder, boolean pane1, boolean addToHistory) {
+        SafFs.init(this);
+        if (!(folder instanceof SafFile)) return;
+        final SafFile dir = (SafFile) folder;
+        final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
+        saveCurrentPaneScroll(pane1);
+        final int[] saved = getSavedScrollForLocation(pane1, "saf:" + dir.getAbsolutePath());
+        listingExecutor.execute(() -> {
+            final java.util.List<SafFile> children = SafFs.children(dir);
+            handler.post(() -> {
+                try {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
+                    if (children == null) {
+                        new ErrorUtil(this).showError(new java.io.IOException(getString(R.string.docs_error)));
+                        return;
+                    }
+                    bindSafFolder(dir, children, pane1, addToHistory);
+                } catch (Exception ignored) {
+                }
+                if (saved != null) restorePaneScroll(pane1, saved);
+            });
+        });
+    }
+
+    private void bindSafFolder(SafFile folder, java.util.List<SafFile> children,
+                               boolean pane1, boolean addToHistory) {
+        java.util.List<SafFile> rows = new ArrayList<>();
+        File parent = folder.getParentFile();
+        if (parent instanceof SafFile) rows.add(SafFs.asUp((SafFile) parent));
+        rows.addAll(children);
+        SafFile[] files = rows.toArray(new SafFile[0]);
+
+        if (pane1) {
+            currentPane1Files = files;
+            pane1Folder = folder;
+            if (addToHistory) pushNavigationHistory(true, new NavigationHistoryEntry(folder, false, null));
+        } else {
+            currentPane2Files = files;
+            pane2Folder = folder;
+            if (addToHistory) pushNavigationHistory(false, new NavigationHistoryEntry(folder, false, null));
+        }
+        setCurrentFolder(folder, files);
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        pane.setAdapter(new SafFilesArrayAdapter(this, files, pane1));
+        UiPrefs.playFolderTransition(pane);
+        if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
+        updateNavigationButtons();
     }
 
     /** True when the pane currently lists this exact plain folder. */
@@ -2172,7 +2285,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      *                  adapter is bound (e.g. scroll restore). Null to skip.
      */
     public void loadFolderInPaneAsync(File folder, boolean pane1, boolean addToHistory, Runnable afterBind) {
-        if (folder instanceof FTPFileWrapper
+        if (folder instanceof FTPFileWrapper || SafFs.isSaf(folder)
                 || (!folder.isDirectory() && ArchiveUtil.isSupportedArchive(folder.getName()))) {
             loadFolderInPane(folder, pane1, addToHistory);
             if (afterBind != null) {
@@ -2772,6 +2885,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (folder == null) return;
                 loadFolderInPaneAsync(folder, pane1, false,
                         saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+            } else if (adapter instanceof SafFilesArrayAdapter) {
+                File folder = pane1 ? pane1Folder : pane2Folder;
+                if (folder != null) loadFolderInPane(folder, pane1, false);
             } else if (adapter instanceof FtpFilesArrayAdapter) {
                 reloadPane(pane1, preserveScroll);
             }
@@ -2825,7 +2941,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
         final int finalFoldersCount = foldersCount;
         final int finalTotalCount = totalCount;
-        final String path = curr == null ? "" : curr.getPath();
+        final String path = curr == null ? ""
+                : (curr instanceof SafFile ? ((SafFile) curr).getDisplayPath() : curr.getPath());
         handler.post(() -> {
             currentFolderPath.setText(path);
             uiHelper.scrollTextView(currentFolderPath);
@@ -2930,6 +3047,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         try {
             updates.register();
+            // A provider location picked in the Documents providers screen.
+            String safTree = getIntent() == null ? null : getIntent().getStringExtra("safTree");
+            if (safTree != null && !safTree.isEmpty()) {
+                try {
+                    getIntent().removeExtra("safTree");
+                } catch (Exception ignored) {
+                }
+                openSafTree(safTree);
+            }
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
