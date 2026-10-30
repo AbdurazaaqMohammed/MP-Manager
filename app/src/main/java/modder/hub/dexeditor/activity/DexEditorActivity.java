@@ -2669,6 +2669,17 @@ public class DexEditorActivity extends BaseActivity {
                             List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
                             resultIntent.setData(Uri.fromFile(new File(dexPaths.get(0))));
                             resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            // Hand the archive back with the result as well. The caller
+                            // needs it to offer the "update the APK/ZIP?" prompt, and
+                            // relying on the caller having passed it on the way in is
+                            // what made the prompt appear only on some paths.
+                            Intent launch = getIntent();
+                            if (launch != null) {
+                                String zf = launch.getStringExtra("zipFilePath");
+                                String ze = launch.getStringExtra("zipEntryPath");
+                                if (zf != null) resultIntent.putExtra("zipFilePath", zf);
+                                if (ze != null) resultIntent.putExtra("zipEntryPath", ze);
+                            }
                             setResult(757, resultIntent);
                             finish();
                         });

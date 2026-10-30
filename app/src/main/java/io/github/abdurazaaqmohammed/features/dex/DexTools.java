@@ -215,6 +215,28 @@ public class DexTools {
         }
     }
 
+    /**
+     * The archive a pre-extracted (staged) file came from, or null when the path
+     * is not one of ours.
+     *
+     * <p>Lets the caller recover the "update the archive?" prompt for any editor
+     * that returns nothing but the staged file path — the extras are the fast
+     * path, this is the fallback when they are missing or the pane moved on.</p>
+     */
+    public static File archiveForStagedFile(String stagedPath) {
+        if (stagedPath == null) return null;
+        List<DexPreExtract> sessions;
+        synchronized (DexTools.class) {
+            sessions = new ArrayList<>(dexPreExtracts.values());
+        }
+        for (DexPreExtract session : sessions) {
+            if (session == null || session.zipFile == null || session.outputDir == null) continue;
+            String dir = session.outputDir.getAbsolutePath();
+            if (stagedPath.startsWith(dir + File.separator)) return session.zipFile;
+        }
+        return null;
+    }
+
     private static synchronized DexPreExtract preExtractAllDex(Context ctx, File zipFile, boolean force) {
         String key = zipFile.getAbsolutePath();
         DexPreExtract existing = dexPreExtracts.get(key);

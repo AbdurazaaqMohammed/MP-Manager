@@ -57,6 +57,7 @@ import io.github.abdurazaaqmohammed.data.prefs.PaneCache;
 import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
+import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
 import io.github.abdurazaaqmohammed.features.files.FtpController;
@@ -484,10 +485,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     File modified = new File(data.getData().getPath());
                     // An editor that returns nothing but the staged file (the
                     // dex editor among them) still has to offer the
-                    // "update the archive?" prompt when it was opened from
-                    // inside one: the staged copy lives in the app's private
-                    // dir and the pane is showing the archive.
-                    if (isStagedEditPath(modified) && paneFolderIsEditableArchive(pane1)) {
+                    // "update the archive?" prompt. Resolve the archive from the
+                    // staging directory first, so it works even when the pane is
+                    // not the one the file came from; fall back to the pane.
+                    File stagedArchive = DexTools.archiveForStagedFile(modified.getPath());
+                    if (stagedArchive != null) {
+                        handleModifiedFileResult(data.getData(), null, stagedArchive.getAbsolutePath());
+                    } else if (isStagedEditPath(modified) && paneFolderIsEditableArchive(pane1)) {
                         handleModifiedFileResult(data.getData(), null, null);
                     } else {
                         highlightAndFocusItem(pane1, modified.getName());

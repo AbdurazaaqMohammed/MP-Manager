@@ -43,6 +43,8 @@ import java.util.List;
  */
 public class ApkResultHandler {
 
+    private static final String TAG = "MPM-ArchiveSave";
+
     private final MainActivity activity;
 
     public ApkResultHandler(MainActivity activity) {
@@ -63,23 +65,35 @@ public class ApkResultHandler {
         }
         if (resolvedZip == null) resolvedZip = pane1 ? activity.pane1Folder : activity.pane2Folder;
         final File zipFile = resolvedZip;
-        if (path == null) return;
+        if (path == null) {
+            android.util.Log.w(TAG, "modified file result without a path; nothing to offer");
+            return;
+        }
         boolean inAppPrivateDir = path.startsWith(activity.getCacheDir().getPath());
         try {
             inAppPrivateDir = inAppPrivateDir || path.startsWith(activity.getFilesDir().getPath());
         } catch (Exception ignored) {
         }
-        if (!inAppPrivateDir) return;
+        if (!inAppPrivateDir) {
+            // A real file edited in place: the archive never owned it.
+            android.util.Log.d(TAG, "not a staged file, no archive prompt: " + path);
+            return;
+        }
         if (zipFile == null || !zipFile.isFile()) {
+            android.util.Log.w(TAG, "no archive to write back to for " + path
+                    + " (zip=" + (zipFile == null ? "null" : zipFile.getAbsolutePath()) + ")");
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
             return;
         }
         // Save-back rewrites the archive in place, which only zip-family
         // containers support; browsing a 7z/rar/tar is read-only.
         if (!ArchiveBrowseUtil.isZipLike(zipFile)) {
+            android.util.Log.w(TAG, "archive is not writable in place: " + zipFile.getAbsolutePath());
             Extensions.showMessage(activity, R.string.archive_not_editable);
             return;
         }
+        android.util.Log.d(TAG, "offering archive update: " + path + " -> " + zipFile.getName()
+                + " entry=" + entryPath);
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
                     String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
                     String modifiedFileName = entryName != null
