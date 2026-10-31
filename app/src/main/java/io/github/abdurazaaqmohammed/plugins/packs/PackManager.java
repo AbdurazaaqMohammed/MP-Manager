@@ -265,8 +265,10 @@ public final class PackManager {
         String previousEntry = installedEntry(context, pack.id);
         try {
             if (hadPrevious) {
+                long mtime = dest.lastModified();
                 backup.delete();
                 copy(dest, backup);
+                if (mtime > 0) backup.setLastModified(mtime);
             }
             // The runtime refuses to load a dex from a file the app can still
             // write to ("Writable dex file ... is not allowed"), so the

@@ -862,7 +862,9 @@ public class ImageEditActivity extends BaseActivity {
                 long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
                 if (hasCrop || hasPixelEdits) {
                     try {
-                        copyFile(original, new File(originalPath + ".bak"));
+                        File bak = new File(originalPath + ".bak");
+                        copyFile(original, bak);
+                        if (mtimeToPreserve > 0) bak.setLastModified(mtimeToPreserve);
                     } catch (Exception ignored) {
                     }
                 }

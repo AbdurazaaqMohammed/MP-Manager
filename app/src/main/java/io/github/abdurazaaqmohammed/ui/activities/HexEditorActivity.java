@@ -717,7 +717,10 @@ public class HexEditorActivity extends BaseActivity {
             if (!UiPrefs.genBackup(this)) return;
             if (rootOriginalPath != null) {
                 if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginalPath)) {
-                    if (!AccessManager.exists(this, rootOriginalPath + ".bak")) AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
+                    if (!AccessManager.exists(this, rootOriginalPath + ".bak")) {
+                        AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
+                        AccessManager.preserveTime(this, rootOriginalPath, rootOriginalPath + ".bak");
+                    }
                 }
             } else if (file != null && file.isFile()) {
                 FileUtils.backupOnce(file);

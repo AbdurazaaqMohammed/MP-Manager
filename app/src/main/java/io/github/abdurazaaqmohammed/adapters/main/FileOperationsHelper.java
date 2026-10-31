@@ -1273,7 +1273,7 @@ public class FileOperationsHelper {
                 : currentPath.replace('\\', '/').replaceAll("/+$", "") + "/";
 
         File bak = new File(zipFile.getParent(), zipFile.getName() + ".bak");
-        if (UiPrefs.genBackup(context) && !bak.exists()) FileUtils.copyFile(zipFile, bak);
+        if (UiPrefs.genBackup(context) && !bak.exists()) FileUtils.backupCopy(zipFile, bak);
         File tempFileDir = null;
         try (ZipFile sourceZip = new ZipFile(zipFile)) {
             Map<String, Long> existingEntries = new LinkedHashMap<>();

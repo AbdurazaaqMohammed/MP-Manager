@@ -1102,7 +1102,9 @@ public class ClassTree {
                 // Falls back to the old copy+delete when rename is unsupported.
                 if (bakFile.exists()) bakFile.delete();
                 if (!outFile.renameTo(bakFile)) {
+                    long mtime = outFile.lastModified();
                     FileUtil.copyFile(outFile.getAbsolutePath(), bakFile.getAbsolutePath());
+                    if (mtime > 0) bakFile.setLastModified(mtime);
                     outFile.delete();
                 }
             }

@@ -365,12 +365,23 @@ public class FileUtils {
         }
     }
 
+    /**
+     * Copies {@code src} to {@code dst} and gives {@code dst} the modified time of
+     * {@code src}. Backup copies (".bak") must carry the original file's mtime so
+     * they still sort and read like the file they preserve.
+     */
+    public static void backupCopy(File src, File dst) throws IOException {
+        long mtime = src.lastModified();
+        copyFile(src, dst);
+        if (mtime > 0) dst.setLastModified(mtime);
+    }
+
     public static boolean backupOnce(File original) {
         try {
             if (original == null || !original.isFile()) return false;
             File bak = new File(original.getPath() + ".bak");
             if (bak.exists()) return true;
-            copyFile(original, bak);
+            backupCopy(original, bak);
             return true;
         } catch (Exception ignored) {
             return false;

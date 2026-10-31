@@ -1340,7 +1340,9 @@ public class ArscData {
             }
             if (arscFile.isFile()) {
                 File bak = new File(arscFile.getParentFile(), arscFile.getName() + ".bak");
+                long mtime = arscFile.lastModified();
                 copyFile(arscFile, bak);
+                if (mtime > 0) bak.setLastModified(mtime);
             }
             if (!tmp.renameTo(arscFile)) {
                 copyFile(tmp, arscFile);
@@ -1357,10 +1359,14 @@ public class ArscData {
         File bak;
         if (apkFile != null && apkFile.isFile()) {
             bak = new File(apkFile.getParentFile(), apkFile.getName() + ".bak");
+            long mtime = apkFile.lastModified();
             copyFile(apkFile, bak);
+            if (mtime > 0) bak.setLastModified(mtime);
         } else {
             bak = new File(arscFile.getParentFile(), arscFile.getName() + ".bak");
+            long mtime = arscFile.lastModified();
             copyFile(arscFile, bak);
+            if (mtime > 0) bak.setLastModified(mtime);
         }
         return bak;
     }

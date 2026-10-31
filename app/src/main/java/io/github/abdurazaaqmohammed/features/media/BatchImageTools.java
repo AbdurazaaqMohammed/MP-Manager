@@ -95,7 +95,9 @@ public class BatchImageTools {
 
     private void backupImage(File f) {
         try {
-            FileUtils.copyFile(f, new File(f.getParent(), f.getName() + ".bak"));
+            File bak = new File(f.getParent(), f.getName() + ".bak");
+            if (bak.exists()) return;
+            FileUtils.backupCopy(f, bak);
         } catch (Exception ignored) {
         }
     }

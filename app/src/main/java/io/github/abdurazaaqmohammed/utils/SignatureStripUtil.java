@@ -47,7 +47,7 @@ public class SignatureStripUtil {
     public static boolean strip(File apk) {
         try {
             File bak = new File(apk.getParentFile(), apk.getName() + ".bak");
-            if (!bak.exists()) FileUtils.copyFile(apk, bak);
+            if (!bak.exists()) FileUtils.backupCopy(apk, bak);
             boolean removed = false;
             try {
                 ApkModule m = ApkModule.loadApkFile(apk);

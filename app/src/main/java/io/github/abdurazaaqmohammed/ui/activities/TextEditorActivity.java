@@ -1333,7 +1333,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             if (rootOriginal != null) {
                 if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginal)) {
                     File bak = new File(rootOriginal + ".bak");
-                    if (!bak.exists() && !AccessManager.exists(this, rootOriginal + ".bak")) AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
+                    if (!bak.exists() && !AccessManager.exists(this, rootOriginal + ".bak")) {
+                        AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
+                        AccessManager.preserveTime(this, rootOriginal, rootOriginal + ".bak");
+                    }
                 }
             } else if (directFile != null && directFile.isFile()) {
                 FileUtils.backupOnce(directFile);

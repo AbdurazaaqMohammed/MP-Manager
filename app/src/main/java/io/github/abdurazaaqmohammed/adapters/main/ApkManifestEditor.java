@@ -881,7 +881,7 @@ public class ApkManifestEditor {
         File bak = new File(apkFile.getPath() + ".bak");
         if (bak.exists()) return;
         try {
-            FileUtils.copyFile(apkFile, bak);
+            FileUtils.backupCopy(apkFile, bak);
         } catch (Exception ignored) {
         }
     }
