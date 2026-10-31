@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
@@ -60,6 +61,8 @@ public class ImageEditActivity extends BaseActivity {
     private RectF cropImageRect;
     private float aspect;
     private boolean dirty;
+    private boolean hasPixelEdits;
+    private long targetMtime = -1L;
     private boolean fromShared;
     private int imgW;
     private int imgH;
@@ -466,6 +469,7 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 readDims();
                 dirty = true;
+                hasPixelEdits = true;
                 pm.dismiss();
                 runOnUiThread(() -> {
                     reloadPreview();
@@ -644,6 +648,7 @@ public class ImageEditActivity extends BaseActivity {
                             String mtimeText = mtimeInput.getText() == null ? "" : mtimeInput.getText().toString().trim();
                             long parsedMtime = parseDateTime(mtimeText);
                             if (parsedMtime > 0) {
+                                targetMtime = parsedMtime;
                                 java.text.SimpleDateFormat exifSdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
                                 exif.setAttribute(ExifInterface.TAG_DATETIME, exifSdf.format(new java.util.Date(parsedMtime)));
                             }
@@ -654,6 +659,9 @@ public class ImageEditActivity extends BaseActivity {
                                 workingFile.setLastModified(parsedMtime);
                                 if (originalPath != null) {
                                     new File(originalPath).setLastModified(parsedMtime);
+                                    try {
+                                        AccessManager.touchMtime(ImageEditActivity.this, originalPath, parsedMtime);
+                                    } catch (Exception ignored) {}
                                 }
                             }
 
@@ -841,11 +849,21 @@ public class ImageEditActivity extends BaseActivity {
                     return;
                 }
                 File original = new File(originalPath);
-                try {
-                    copyFile(original, new File(originalPath + ".bak"));
-                } catch (Exception ignored) {
+                long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
+                if (hasCrop || hasPixelEdits) {
+                    try {
+                        copyFile(original, new File(originalPath + ".bak"));
+                    } catch (Exception ignored) {
+                    }
                 }
                 copyFile(workingFile, original);
+                if (mtimeToPreserve > 0) {
+                    try {
+                        original.setLastModified(mtimeToPreserve);
+                        AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
+                    } catch (Exception ignored) {
+                    }
+                }
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
