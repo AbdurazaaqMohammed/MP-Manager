@@ -63,6 +63,8 @@ Search the current folder by file name and optionally recurse into subfolders. A
 
 Content search can also be run over an entire folder from the menu, reporting the number of matches in each file. A list of paths can be set to be excluded from searching.
 
+Search also works inside ZIP and APK archives, and results are shown in an MT Manager style dialog with a persistent results pane. The results dialog stays open while you work, keeps its scroll position, and lets you save edits back into the APK.
+
 <p align="center">
   <img src="./images/search.png" width="200" alt="Search dialog">
   <br>
@@ -83,6 +85,12 @@ When a destination file already exists, each conflict can be resolved with repla
 The MIME type detected from the file contents is shown before sharing or opening a file, and a default app can be set or cleared for a file type.
 
 Files received from other apps can be saved from the share menu. Unknown files can be opened with a custom app from the Open with dialog.
+
+Archives and backups can be browsed directly, including nested archives spanned across folders.
+
+PDF files open in a built-in viewer.
+
+MIUI and Android backup (.bak) archives are supported, and .bak files are handled by their original extension.
 <p align="center">
   <img width="200" alt="shared" src="https://github.com/user-attachments/assets/abdc4653-5af8-4030-8a53-bdcb70357de6" />
   <br>
@@ -129,6 +137,13 @@ In root or Shizuku mode the root directory is added to the sidebar.
 </p>
 </details>
 
+<details><summary>DocumentsProvider viewer</summary>
+
+Browse app data folders through the Storage Access Framework without root. DocumentsProviders on the device are listed in a dedicated tool (Tools → Documents providers), and a provider can be opened in a pane like a regular folder. Useful for reaching /Android/data and other locations granted via providers, including ones injected by patchers.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
 <details><summary>Customizable file menu</summary>
 
 Reorder the long press file menu by dragging items anywhere. The menu can be shown as a bottom sheet or in two columns, with Material colors.
@@ -172,7 +187,7 @@ The built-in image editor can crop single or multiple images with standard or lo
 
 <details><summary>APK information and install</summary>
 
-Tap an APK to see its icon, name, version code and name, package name, signature schemes used (V1, V2, V3, V4) and whether it is protected. You can view files inside the APK and more features outlined below.
+Tap an APK to see its icon, name, version code and name, package name, signature schemes used (V1, V2, V3, V4) and whether it is protected. The full signature details can be shown on press. You can view files inside the APK and more features outlined below.
 
 Installing both regular and split APKS is supported.
 
@@ -264,6 +279,34 @@ ARSC Editor Plus also provides a translation mode for editing values side by sid
   <br>
   <em>ARSC Editor</em> &nbsp;·&nbsp; <em>ARSC Editor Plus</em>
 </p>
+</details>
+
+<details><summary>Xposed patcher</summary>
+
+Patch an APK with [NPatch](https://github.com/nep-Timeline/NPatch) or [LSPatch](https://github.com/JingMatrix/LSPatch) in integrated mode: an Xposed loader is embedded so the selected modules run standalone without a manager app. Embed module APKs, choose an engine and signature bypass level, configure per-engine options (MicroG redirect, hiding libs, forcing cleartext traffic, overriding target SDK or version code and more), and save/load patch profiles. The output is signed with the key configured under Sign Settings.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
+<details><summary>APK data multiplexing</summary>
+
+Multiplex (deduplicate) an APK by redirecting entries that are byte-identical to entries inside the stored embedded APK, so duplicated data is stored only once and the file shrinks. The output is signed in place with the V2/V3 raw-file signer using your key, preserving the optimization.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
+<details><summary>IL2CPP runtime dumper</summary>
+
+Dump Unity IL2CPP games at runtime without root or hooking. Injects libil2cppdumper.so into the APK, loaded from a chosen class's static initializer. When the patched app runs, it waits for the IL2CPP runtime to initialize, then writes a C#-like dump of every managed type (dump.cs) plus IDA/Ghidra scripts (script.json). The dump can be exposed through a DocumentsProvider for easy browsing.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
+<details><summary>Native library patcher</summary>
+
+Patch native .so libraries with instruction stubs (port of LibPatcher) so a function returns a fixed value: boolean true/false, integer zero/max, long zero/-1, float/double zero, or void (NOP). Enter hex offsets from Ghidra, IDA or r2. Only armeabi-v7a and arm64-v8a are supported.
+
+<!-- TODO: Add screenshots/videos -->
 </details>
 
 ### Editing and Comparing
@@ -413,11 +456,11 @@ Shows mounted volumes with used and free space, the space used by files grouped 
 
 <details><summary>Appearance and storage info</summary>
 
-Choose between system, light, dark and black theme all with Material theme and Dynamic Colors. A custom font can be picked for the app and a separate one for dialogs. The file list size, the number of lines shown for file names and the date and time format can be changed, a different startup folder can be set for each pane, and a .bak backup can be created before editing a file.
+Choose between system, light, dark and black theme all with Material theme and Dynamic Colors. A custom font can be picked for the app and a separate one for dialogs. The file list size, the number of lines shown for file names and the date and time format can be changed, folder size can be shown in the file list (always, only in archives, or never), a different startup folder can be set for each pane, and a .bak backup can be created before editing a file.
 
 The sidebar shows mounted storages with used and free space available, with app icon, refreshable volumes and organizable entries.
 
-The app language can be picked manually (Russian, Simplified Chinese and Spanish translation currently available) and the app can toggle automatic check for updates.
+The app language can be picked manually (Russian, Simplified Chinese, Spanish, Indonesian, Arabic, Persian and Thai translation currently available) and the app can toggle automatic check for updates.
 
 <p align="center">
   <img src="./images/sidebar.png" width="200" alt="Sidebar with storage info">
