@@ -39,6 +39,9 @@ public class FileUtils {
 
         /** {@code count} more bytes were written. */
         void onBytes(long count);
+
+        default boolean isCancelled() { return false; }
+        default boolean isPaused() { return false; }
     }
 
     /** File/byte totals for a set of roots, used to size a progress bar up front. */
@@ -255,6 +258,10 @@ public class FileUtils {
      * so a single walk can drive both the item counter and the byte rate.
      */
     public static void copyFolder(File src, File dest, TransferListener listener) throws IOException {
+        if (listener != null && listener.isCancelled()) return;
+        while (listener != null && listener.isPaused() && !listener.isCancelled()) {
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+        }
         if (src.isDirectory()) {
             if (!dest.exists()) {
                 //noinspection ResultOfMethodCallIgnored
@@ -263,6 +270,7 @@ public class FileUtils {
             String[] children = src.list();
             if (children == null) return;
             for (String child : children) {
+                if (listener != null && listener.isCancelled()) return;
                 File srcChild = new File(src, child);
                 File dstChild = new File(dest, child);
                 copyFolder(srcChild, dstChild, listener);
@@ -349,6 +357,12 @@ public class FileUtils {
                 long size = src.size();
                 long transferred = 0;
                 while (transferred < size) {
+                    if (listener != null) {
+                        if (listener.isCancelled()) break;
+                        while (listener.isPaused() && !listener.isCancelled()) {
+                            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                        }
+                    }
                     long want = listener == null ? size - transferred
                             : Math.min(size - transferred, TRANSFER_CHUNK);
                     long written = src.transferTo(transferred, want, dst);
@@ -408,6 +422,12 @@ public class FileUtils {
         byte[] buffer = new byte[IO_BUFFER_SIZE];
         int length;
         while ((length = is.read(buffer)) > 0) {
+            if (listener != null) {
+                if (listener.isCancelled()) break;
+                while (listener.isPaused() && !listener.isCancelled()) {
+                    try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                }
+            }
             os.write(buffer, 0, length);
             if (listener != null) listener.onBytes(length);
         }

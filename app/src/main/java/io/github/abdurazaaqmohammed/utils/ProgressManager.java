@@ -80,6 +80,10 @@ public class ProgressManager {
 
     private volatile boolean hidden;
     private volatile boolean dismissed;
+    private volatile boolean cancelled;
+    private volatile boolean paused;
+    private Runnable onCancelListener;
+    private Runnable onPauseListener;
 
     // ---- owned by the ticker (main thread only) ----------------------------
     private long startMs = -1L;
@@ -143,11 +147,46 @@ public class ProgressManager {
             contentView = LayoutInflater.from(activity)
                     .inflate(R.layout.progress_dialog, null, false);
             contentView.findViewById(R.id.hideButton).setOnClickListener(v1 -> hide());
+            com.google.android.material.button.MaterialButton pauseBtn = contentView.findViewById(R.id.pauseButton);
+            if (pauseBtn != null) {
+                pauseBtn.setText(paused ? R.string.resume : R.string.progress_pause);
+                pauseBtn.setOnClickListener(v1 -> {
+                    paused = !paused;
+                    pauseBtn.setText(paused ? R.string.resume : R.string.progress_pause);
+                    if (onPauseListener != null) onPauseListener.run();
+                });
+            }
+            View cancelBtn = contentView.findViewById(R.id.cancelButton);
+            if (cancelBtn != null) {
+                cancelBtn.setOnClickListener(v1 -> {
+                    cancelled = true;
+                    if (onCancelListener != null) onCancelListener.run();
+                    dismiss();
+                });
+            }
             ((ProgressBar) contentView.findViewById(R.id.progressBar)).setIndeterminate(indeterminate);
             dialog = new MaterialAlertDialogBuilder(activity).setView(contentView).show();
             render();
             startTicker();
         });
+        return this;
+    }
+
+    public boolean isCancelled() {
+        return cancelled || dismissed;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public ProgressManager setOnCancelListener(Runnable onCancelListener) {
+        this.onCancelListener = onCancelListener;
+        return this;
+    }
+
+    public ProgressManager setOnPauseListener(Runnable onPauseListener) {
+        this.onPauseListener = onPauseListener;
         return this;
     }
 
@@ -267,6 +306,16 @@ public class ProgressManager {
             @Override
             public void onBytes(long count) {
                 addBytes(count);
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return cancelled || dismissed;
+            }
+
+            @Override
+            public boolean isPaused() {
+                return paused;
             }
         };
     }

@@ -522,32 +522,10 @@ public final class AppDetailsDialog {
         valueView.setTextSize(14);
         valueView.setTypeface(Typeface.MONOSPACE);
         valueView.setTextIsSelectable(true);
-        valueView.setMaxLines(1);
-        valueView.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         vp.setMarginStart(dp(act, 8));
         valueView.setLayoutParams(vp);
         row.addView(valueView);
-
-        if (isExpandable) {
-            ImageView expandBtn = new ImageView(act);
-            expandBtn.setImageResource(R.drawable.arrow_drop_down_24px);
-            int p = dp(act, 4);
-            expandBtn.setPadding(p, p, p, p);
-            expandBtn.setLayoutParams(new LinearLayout.LayoutParams(dp(act, 28), dp(act, 28)));
-            expandBtn.setBackgroundResource(getSelectableBackground(act));
-            expandBtn.setOnClickListener(v -> {
-                boolean isExpanded = valueView.getMaxLines() > 1;
-                if (isExpanded) {
-                    valueView.setMaxLines(1);
-                    expandBtn.setImageResource(R.drawable.arrow_drop_down_24px);
-                } else {
-                    valueView.setMaxLines(10);
-                    expandBtn.setImageResource(R.drawable.arrow_drop_up_24px);
-                }
-            });
-            row.addView(expandBtn);
-        }
 
         if (tapPath != null) {
             row.setClickable(true);

@@ -1024,6 +1024,14 @@ final View.OnClickListener originalClickListener;
                 final BottomSheetDialog[] menuSheet = {null};
                 final MaterialAlertDialogBuilder menuDialogBuilder;
                 final AlertDialog[] menuDialog = {null};
+                View editBtn = menuView.findViewById(R.id.fileMenuEditButton);
+                if (editBtn != null) {
+                    editBtn.setOnClickListener(v -> {
+                        if (menuSheet[0] != null) menuSheet[0].dismiss();
+                        if (menuDialog[0] != null) menuDialog[0].dismiss();
+                        FileMenuCustomizer.show(context);
+                    });
+                }
                 if (twoColumnMenu) {
                     View handle = menuView.findViewById(R.id.fileMenuHandle);
                     if (handle != null) handle.setVisibility(View.GONE);

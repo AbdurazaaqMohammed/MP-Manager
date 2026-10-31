@@ -116,11 +116,39 @@ public final class FileMenuOrder {
         }
     }
 
+    public static java.util.Set<String> getHiddenIds(Context context) {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            return new java.util.HashSet<>(prefs.getStringSet("filemenu_hidden", new java.util.HashSet<>()));
+        } catch (Exception e) {
+            return new java.util.HashSet<>();
+        }
+    }
+
+    public static void setHiddenIds(Context context, java.util.Set<String> hidden) {
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putStringSet("filemenu_hidden", new java.util.HashSet<>(hidden)).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void toggleHidden(Context context, String id) {
+        java.util.Set<String> hidden = getHiddenIds(context);
+        if (hidden.contains(id)) hidden.remove(id);
+        else hidden.add(id);
+        setHiddenIds(context, hidden);
+    }
+
     public static List<MenuItem> sortItems(Context context, List<MenuItem> visible) {
         List<String> order = load(context);
+        java.util.Set<String> hidden = getHiddenIds(context);
         Map<String, Integer> rank = new HashMap<>();
         for (int i = 0; i < order.size(); i++) rank.put(order.get(i), i);
-        List<MenuItem> sorted = new ArrayList<>(visible);
+        List<MenuItem> sorted = new ArrayList<>();
+        for (MenuItem item : visible) {
+            if (!hidden.contains(item.id)) sorted.add(item);
+        }
         sorted.sort((a, b) -> {
             int ra = rank.containsKey(a.id) ? rank.get(a.id) : 999;
             int rb = rank.containsKey(b.id) ? rank.get(b.id) : 999;

@@ -1965,7 +1965,9 @@ Layout Inspector
     <string name="progress_eta">%1$s left</string>
     <string name="progress_done">Done</string>
     <string name="reorder_bookmarks">Reorder bookmarks</string>
-    <string name="progress_stop">Stop</string>
+    <string name="progress_pause">Pause</string>
+    <string name="progress_stop">Pause</string>
+    <string name="resume">Resume</string>
     <string name="display_details">Display app details</string>
     <string name="display_actions">Display app actions</string>
     <string name="more_functions">More functions</string>
