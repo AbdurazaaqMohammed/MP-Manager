@@ -16,25 +16,25 @@
             android:textStyle="bold"
             android:textSize="16sp"/>
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:gravity="center_vertical">
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:text="@string/delete_useless_files"
                 android:textSize="20sp"
                 android:id="@+id/files_to_delete"
-                android:layout_gravity="start"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content" />
             <com.google.android.material.button.MaterialButton
-                android:layout_gravity="end"
                 android:id="@+id/choose_files_delete"
                 android:text="@string/files_to_delete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
-        </FrameLayout>
+        </LinearLayout>
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:text="@string/ultra_compress"
@@ -127,24 +127,24 @@
             android:textSize="12sp"
             android:layout_marginTop="8dp" />
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:gravity="center_vertical">
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:text="@string/auto_sign"
                 android:textSize="20sp"
                 android:id="@+id/autosign"
-                android:layout_gravity="start"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content" />
             <com.google.android.material.button.MaterialButton
-                android:layout_gravity="end"
                 android:id="@+id/sign_settings"
                 android:text="@string/sign_set"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
-        </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
