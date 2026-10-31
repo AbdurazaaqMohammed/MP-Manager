@@ -39,6 +39,7 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 
+import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion;
 import org.eclipse.tm4e.languageconfiguration.internal.model.IndentationRules;
@@ -65,6 +66,7 @@ import io.github.rosemoe.sora.text.ContentReference;
 import io.github.rosemoe.sora.widget.SymbolPairMatch;
 
 import modder.hub.dexeditor.adapter.*;
+import modder.hub.dexeditor.fragment.SettingsFragment;
 import modder.hub.dexeditor.views.*;
 
 /*
@@ -76,14 +78,29 @@ public class CustomAutoComplete extends EmptyLanguage {
 	private final Language mLanguage;
 	private final CodeEditor mEditor;
 	private final IndentationRules mIndentationRules;
-	
+
+	// For the "suggestions on new lines only" mode: remember whether the line the
+	// cursor landed on was empty when the cursor arrived there. Typing on the same
+	// line keeps that verdict, so a fresh line stays completable while editing a
+	// line that already had code stays suppressed.
+	private int snapshotLine = -1;
+	private boolean snapshotLineEmpty = true;
+
 	public CustomAutoComplete(CodeEditor editor, String[] gotoItems, Language language) {
 		mEditor = editor;
 		mLanguage = language;
 		editor.getComponent(EditorAutoCompletion.class).setMaxHeight(100);
 		editor.getComponent(EditorAutoCompletion.class).setLayout(new CustomCompletionLayout());
 		editor.getComponent(EditorAutoCompletion.class).setAdapter(new CustomCompletionItemAdapter());
-		
+
+		editor.subscribeEvent(SelectionChangeEvent.class, (event, unsubscribe) -> {
+			int line = mEditor.getCursor().getLeftLine();
+			if (line != snapshotLine) {
+				snapshotLine = line;
+				snapshotLineEmpty = mEditor.getText().getLineString(line).trim().isEmpty();
+			}
+		});
+
 		IndentationRules rules = null;
 		if (language instanceof TextMateLanguage) {
 			try {
@@ -170,10 +187,14 @@ public class CustomAutoComplete extends EmptyLanguage {
 	}
 	
 	@Override
-	public void requireAutoComplete(@NonNull ContentReference content, @NonNull CharPosition position, @NonNull CompletionPublisher publisher, @NonNull Bundle extraArguments) {		
-		if (mLanguage != null) {
-			mLanguage.requireAutoComplete(content, position, publisher, extraArguments);
+	public void requireAutoComplete(@NonNull ContentReference content, @NonNull CharPosition position, @NonNull CompletionPublisher publisher, @NonNull Bundle extraArguments) {
+		if (mLanguage == null) return;
+		try {
+			if (!SettingsFragment.autoCompleteEnabled(mEditor.getContext())) return;
+			if (SettingsFragment.autoCompleteNewLineOnly(mEditor.getContext()) && !snapshotLineEmpty) return;
+		} catch (Exception ignored) {
 		}
+		mLanguage.requireAutoComplete(content, position, publisher, extraArguments);
 	}
 	
 	public static class EndwiseNewlineHandler implements NewlineHandler {

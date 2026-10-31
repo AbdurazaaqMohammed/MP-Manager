@@ -793,9 +793,19 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 String currentMethodName = "";
                 String currentFullMethodSignature = "";
                 int methodStartLine = -1;
+                // A line read ahead of the loop (by the .class parser) that still
+                // needs normal processing so it keeps the line numbering intact
+                String pendingLine = null;
 
                 // Read the smali file line by line
-                while ((currentLine = smaliFileReader.readLine()) != null) {
+                while (true) {
+                    if (pendingLine != null) {
+                        currentLine = pendingLine;
+                        pendingLine = null;
+                    } else {
+                        currentLine = smaliFileReader.readLine();
+                    }
+                    if (currentLine == null) break;
                     currentLineNumber++;
                     String trimmedLine = currentLine.trim();
 
@@ -829,7 +839,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         methodStartLine = currentLineNumber - 1;
                     }
                     // Check if the line ends a method
-                    else if (tokens[0].equals(".end") && tokens[1].equals("method")) {
+                    else if (tokens.length > 1 && tokens[0].equals(".end") && tokens[1].equals("method")) {
                         if (isInsideMethod && methodStartLine != -1) {
                             // Create a method info entry
                             HashMap<String, Object> methodInfo = new HashMap<>();
@@ -872,14 +882,22 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         // Read the next line to check for the superclass
                         String nextLine = smaliFileReader.readLine();
                         if (nextLine != null && nextLine.trim().startsWith(".super")) {
+                            // The .super line was consumed here instead of going through
+                            // the loop, so count it - otherwise every following line
+                            // would be parsed one line too early and navigation/highlight
+                            // would land one line above the real method/field
+                            currentLineNumber++;
                             String superClassName = nextLine.trim().substring(nextLine.indexOf(".super") + 7).trim();
 
                             // Create a class info entry
                             HashMap<String, Object> classInfo = new HashMap<>();
                             classInfo.put("MethodOrFieldName", className);
-                            classInfo.put("StartLineNumber", (currentLineNumber - 1));
+                            classInfo.put("StartLineNumber", (currentLineNumber - 2));
                             classInfo.put("SuperClass", superClassName);
                             classInfoList.add(classInfo);
+                        } else if (nextLine != null) {
+                            // Not a .super line - don't lose it, feed it back into the loop
+                            pendingLine = nextLine;
                         }
                     }
                 }

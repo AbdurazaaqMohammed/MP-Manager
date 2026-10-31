@@ -32,6 +32,19 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Function">
+        <SwitchPreferenceCompat
+            app:key="auto_complete"
+            app:title="Auto-complete suggestions"
+            app:summary="Show the suggestion dropdown while typing"
+            app:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            app:key="auto_complete_new_line_only"
+            app:title="Suggestions on new lines only"
+            app:summary="Show suggestions only when typing on an empty line, not when editing a line that already has code"
+            app:defaultValue="false"
+            app:dependency="auto_complete" />
+
         <Preference
             app:key="floating_menu"
             app:title="Edit floating menus"

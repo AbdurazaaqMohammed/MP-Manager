@@ -89,6 +89,8 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private static final String KEY_GEMINI_REFRESH = "gemini_refresh_models";
 	private static final String KEY_EDIT_AI_PROMPT = "edit_ai_prompt";
 	private static final String KEY_GEMINI_WEBSITE = "gemini_website";
+	private static final String KEY_AUTO_COMPLETE = "auto_complete";
+	private static final String KEY_AUTO_COMPLETE_NEW_LINE = "auto_complete_new_line_only";
 	
 	@Override
 	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -300,6 +302,14 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	
 	public static boolean shouldEditAiPrompt(Context context) {
 		return getPrefs(context).getBoolean(KEY_EDIT_AI_PROMPT, false);
+	}
+
+	public static boolean autoCompleteEnabled(Context context) {
+		return getPrefs(context).getBoolean(KEY_AUTO_COMPLETE, true);
+	}
+
+	public static boolean autoCompleteNewLineOnly(Context context) {
+		return getPrefs(context).getBoolean(KEY_AUTO_COMPLETE_NEW_LINE, false);
 	}
 	
 	public static String getChatGptApiKey(Context context) {
