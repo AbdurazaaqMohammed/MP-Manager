@@ -649,6 +649,15 @@ public final class AccessManager {
     }
 
     public static void stageFile(Context context, String srcAbs, File dst) throws IOException {
+        if (SafFs.isSafPath(srcAbs)) {
+            // A provider document: stream it into the staging copy through the
+            // ContentResolver; no elevated backend is involved.
+            SafFs.init(context);
+            File f = SafFs.wrap(new File(srcAbs));
+            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbs);
+            SafFs.copyToRecursive((SafFile) f, dst, null);
+            return;
+        }
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             copyFile(context, srcAbs, dst.getAbsolutePath(), true);
@@ -670,7 +679,15 @@ public final class AccessManager {
         throw new IOException("No elevated access enabled");
     }
 
-    public static void stageTree(Context context, String srcAbs, File dst) throws IOException {        Backend backend = active(context);
+    public static void stageTree(Context context, String srcAbs, File dst) throws IOException {
+        if (SafFs.isSafPath(srcAbs)) {
+            SafFs.init(context);
+            File f = SafFs.wrap(new File(srcAbs));
+            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbs);
+            SafFs.copyToRecursive((SafFile) f, dst, null);
+            return;
+        }
+        Backend backend = active(context);
         if (backend == Backend.ROOT) {
             copyDir(context, srcAbs, dst.getAbsolutePath(), true);
             execute(context, "chmod -R a+rX " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);

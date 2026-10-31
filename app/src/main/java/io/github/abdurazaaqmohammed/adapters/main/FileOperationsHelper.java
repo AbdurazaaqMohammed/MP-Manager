@@ -54,7 +54,6 @@ import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.adapters.SafFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
@@ -410,12 +409,13 @@ public class FileOperationsHelper {
 
     private boolean moveToDestination(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        if (transferFromSafPane(items, true)) return true;
         RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         if (rvAdapter instanceof FtpFilesArrayAdapter) {
             ((FtpFilesArrayAdapter) rvAdapter).uploadFiles(items);
             return true;
         }
-        if (rvAdapter instanceof SafFilesArrayAdapter) {
+        if (destinationFolder instanceof SafFile) {
             return transferIntoSafPane(items, destinationFolder, true);
         }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
@@ -755,12 +755,13 @@ public class FileOperationsHelper {
 
     private boolean copyToDestination(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        if (transferFromSafPane(items, false)) return true;
         RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         if (rvAdapter instanceof FtpFilesArrayAdapter) {
             ((FtpFilesArrayAdapter) rvAdapter).uploadFiles(items);
             return true;
         }
-        if (rvAdapter instanceof SafFilesArrayAdapter) {
+        if (destinationFolder instanceof SafFile) {
             return transferIntoSafPane(items, destinationFolder, false);
         }
         MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) rvAdapter;
@@ -782,8 +783,9 @@ public class FileOperationsHelper {
      *
      * <p>The on-disk path cannot be used here: a {@code SafFile} has no
      * readable path, so the bytes go through the provider's own streams via
-     * {@link SafFs}. This is also what keeps the pane-type cast above from
-     * blowing up when the destination is a provider folder.</p>
+     * {@link SafFs}. Sources may themselves be provider documents (when the
+     * other pane is the provider location), in which case the two providers
+     * stream to each other.</p>
      *
      * @return true when the transfer was handled here
      */
@@ -803,16 +805,26 @@ public class FileOperationsHelper {
             }
             File f = (File) item;
             try {
-                if (listener != null) listener.onFile(f, new File(dest.getPath(), f.getName()));
-                if (f.isDirectory()) {
-                    // Whole subtrees stream in document by document; the
-                    // provider assigns every id, so folders are created
-                    // through createDocument on the way down.
-                    SafFs.copyFromRecursive(f, dest, listener);
+                if (f instanceof SafFile) {
+                    // Provider -> provider: every byte streams from one
+                    // ContentResolver to the other.
+                    if (listener != null) listener.onFile(f, new File(dest.getPath(), f.getName()));
+                    SafFs.copySafToSaf((SafFile) f, dest, listener);
                 } else {
-                    SafFs.copyFrom(f, dest, null);
+                    if (listener != null) listener.onFile(f, new File(dest.getPath(), f.getName()));
+                    if (f.isDirectory()) {
+                        // Whole subtrees stream in document by document; the
+                        // provider assigns every id, so folders are created
+                        // through createDocument on the way down.
+                        SafFs.copyFromRecursive(f, dest, listener);
+                    } else {
+                        SafFs.copyFrom(f, dest, null);
+                    }
                 }
-                if (move) FileUtils.deleteTree(f, null);
+                if (move) {
+                    if (f instanceof SafFile) SafFs.delete((SafFile) f);
+                    else FileUtils.deleteTree(f, null);
+                }
                 FileUtils.Measure im = info.of(f);
                 done += im.files;
                 advanceActiveProgress(done, totalFiles);
@@ -823,6 +835,113 @@ public class FileOperationsHelper {
         }
         if (skipped > 0) Extensions.showMessage(context, R.string.saf_transfer_unsupported);
         context.handler.post(() -> context.loadFolderInPane(dest, destPane1, false));
+        return true;
+    }
+
+    /**
+     * Copies (or moves) provider documents out to the other pane. The plain
+     * {@code java.io.File} copy machinery cannot read a {@code SafFile} by
+     * path, so every byte goes through {@link SafFs} streams; the destination
+     * can be a folder on disk, another provider location or an FTP server.
+     *
+     * @return true when any source was a provider document and the transfer
+     *         was handled here
+     */
+    private boolean transferFromSafPane(List<Object> items, boolean move) throws IOException {
+        boolean anySaf = false;
+        for (Object item : items) {
+            if (item instanceof SafFile) {
+                anySaf = true;
+                break;
+            }
+        }
+        if (!anySaf) return false;
+
+        File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        final MeasureInfo info = measureInfo(items);
+        final int totalFiles = info.total.files;
+        final FileUtils.TransferListener listener = transferListener();
+        int done = 0;
+        int skipped = 0;
+        try {
+            if (rvAdapter instanceof FtpFilesArrayAdapter) {
+                // The FTP uploader reads real files: stage each document into
+                // the cache and hand the copies over. The upload reads the
+                // staged copy, so a move can delete the source right away.
+                java.util.List<Object> toUpload = new ArrayList<>();
+                for (Object item : items) {
+                    if (!(item instanceof SafFile)) {
+                        skipped++;
+                        continue;
+                    }
+                    try {
+                        toUpload.add(RootStaging.stageForRead(context, ((SafFile) item).getPath()));
+                    } catch (Exception e) {
+                        Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
+                    }
+                }
+                if (toUpload.isEmpty()) return true;
+                ((FtpFilesArrayAdapter) rvAdapter).uploadFiles(toUpload);
+                if (move) for (Object item : items) {
+                    if (item instanceof SafFile) SafFs.delete((SafFile) item);
+                }
+            } else if (destinationFolder instanceof SafFile) {
+                for (Object item : items) {
+                    if (!(item instanceof SafFile)) {
+                        skipped++;
+                        continue;
+                    }
+                    SafFile s = (SafFile) item;
+                    try {
+                        if (listener != null) listener.onFile(new File(s.getPath()), new File(destinationFolder.getPath(), s.getName()));
+                        SafFs.copySafToSaf(s, (SafFile) destinationFolder, listener);
+                        if (move) SafFs.delete(s);
+                        FileUtils.Measure im = info.of(s);
+                        done += im.files;
+                        advanceActiveProgress(done, totalFiles);
+                        if (listener != null) listener.onBytes(im.bytes);
+                    } catch (Exception e) {
+                        Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
+                    }
+                }
+            } else {
+                if (destinationFolder == null) {
+                    Extensions.showMessage(context, R.string.docs_copy_in_hint);
+                    return true;
+                }
+                // Same replace / skip / keep-both planning as a regular copy;
+                // it only consults the destination through the File API.
+                Map<Object, File> plan = planTransfers(items, destinationFolder, false, move);
+                if (plan == null) return true;
+                for (Map.Entry<Object, File> planned : plan.entrySet()) {
+                    Object item = planned.getKey();
+                    File dest = planned.getValue();
+                    if (!(item instanceof SafFile)) continue;
+                    SafFile s = (SafFile) item;
+                    if (dest == null || dest.equals(s)) continue;
+                    try {
+                        SafFs.copyToRecursive(s, dest, listener);
+                        if (move) SafFs.delete(s);
+                        FileUtils.Measure im = info.of(s);
+                        done += im.files;
+                        advanceActiveProgress(done, totalFiles);
+                        if (listener != null) listener.onBytes(im.bytes);
+                    } catch (Exception e) {
+                        Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
+                    }
+                }
+            }
+        } finally {
+            if (skipped > 0) Extensions.showMessage(context, R.string.saf_transfer_unsupported);
+            File sourcePane = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
+            if (move && sourcePane instanceof SafFile) {
+                context.handler.post(() -> context.loadFolderInPane(sourcePane, adapter.pane1, false));
+            }
+            if (destinationFolder instanceof SafFile) {
+                context.handler.post(() -> context.loadFolderInPane(destinationFolder, !adapter.pane1, false));
+            }
+        }
         return true;
     }
 
@@ -1475,7 +1594,7 @@ public class FileOperationsHelper {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
         RecyclerView.Adapter destAdapter = ((RecyclerView) context
                 .findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
-        if (destAdapter instanceof SafFilesArrayAdapter) {
+        if (SafFs.isSaf(destinationFolder)) {
             // Entries have to be extracted before they can be streamed into a
             // provider folder, which this path does not do yet.
             Extensions.showMessage(context, R.string.saf_transfer_unsupported);
@@ -1565,7 +1684,17 @@ public class FileOperationsHelper {
         else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
         else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
         else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
-        File destDir = FileUtils.getUnusedFile(new File(parent, folderName));
+        // "Extract here" inside a provider location: the writers below need a
+        // real folder, so the archive is extracted into a temp dir and the
+        // results are streamed into the provider afterwards.
+        final boolean destIsSaf = SafFs.isSaf(parent);
+        final SafFile safDest = destIsSaf ? (SafFile) parent : null;
+        File realDestParent = destIsSaf ? new File(context.getCacheDir(), "saf_extract") : parent;
+        if (destIsSaf) {
+            //noinspection ResultOfMethodCallIgnored
+            realDestParent.mkdirs();
+        }
+        File destDir = FileUtils.getUnusedFile(new File(realDestParent, folderName));
         new Thread(() -> {
             char[] password = null;
             try {
@@ -1611,7 +1740,7 @@ public class FileOperationsHelper {
                         } catch (Exception e) {
                             // Missing or wrong password: prompt and retry until it
                             // succeeds or the user cancels. On a retry the previous
-                            // password was wrong â€” say so.
+                            // password was wrong - say so.
                             if (!ArchiveUtil.isPasswordError(e)) throw e;
                             password = promptForPassword(password != null);
                             if (password == null) {
@@ -1622,6 +1751,13 @@ public class FileOperationsHelper {
                             pm.setBytes(0L, totalBytes);
                         }
                     }
+                    if (destIsSaf) {
+                        File[] kids = destDir.listFiles();
+                        if (kids != null) {
+                            for (File kid : kids) SafFs.copyFromRecursive(kid, safDest, null);
+                        }
+                        FileUtils.deleteTree(destDir, null);
+                    }
                     pm.setProgress(totalEntries, totalEntries);
                     pm.setBytes(totalBytes, totalBytes);
                 } finally {
@@ -1631,9 +1767,13 @@ public class FileOperationsHelper {
                     }
                 }
                 pm.dismiss();
-                context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
+                if (destIsSaf) {
+                    context.handler.post(() -> context.loadFolderInPane(safDest, adapter.pane1, false));
+                } else {
+                    context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
+                }
             } catch (Exception e) {
-                destDir.delete();
+                FileUtils.deleteTree(destDir, null);
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
         }).start();

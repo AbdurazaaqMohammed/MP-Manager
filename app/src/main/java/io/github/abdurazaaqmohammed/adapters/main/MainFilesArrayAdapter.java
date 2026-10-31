@@ -62,6 +62,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
@@ -267,6 +268,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      */
     private boolean resolveDirViaBackend(File f) {
         if (f == null) return false;
+        // Provider documents carry their real type; a shell stat on their
+        // synthetic path would answer for a file that does not exist.
+        if (f instanceof SafFile) return f.isDirectory();
         try {
             String path = f.getAbsolutePath();
             AccessManager.Backend backend = AccessManager.active(context);
@@ -707,6 +711,16 @@ final View.OnClickListener originalClickListener;
      * True when every targeted entry is a directory, so file-only actions
      * (Share, Open with) cannot do anything meaningful and are disabled.
      */
+    /** True when the menu targets provider documents (single row or any selected row). */
+    private boolean isSafTarget(boolean multi, File file) {
+        if (file instanceof SafFile) return true;
+        if (!multi) return false;
+        for (int bp : selectedPositions) {
+            if (bp > 0 && bp < values.length && values[bp] instanceof SafFile) return true;
+        }
+        return false;
+    }
+
     private boolean isTargetOnlyFolder(boolean multi, boolean isInZip, File file, ZipEntryInfo entry) {
         if (multi) {
             boolean allFolders = !selectedPositions.isEmpty();
@@ -792,6 +806,19 @@ final View.OnClickListener originalClickListener;
                 }
                 if (context.arePanesInSameFolder()) {
                     disabledIds.add(FileMenuOrder.MOVE);
+                }
+                // Provider documents stream their bytes on demand, but the
+                // batch APK tools and the command helper read and write next to
+                // their inputs by real path, so they cannot run on them here -
+                // copy the files out first.
+                if (!isInZip && isSafTarget(multi, file)) {
+                    disabledIds.add(FileMenuOrder.BATCH_SIGN);
+                    disabledIds.add(FileMenuOrder.BATCH_OPT);
+                    disabledIds.add(FileMenuOrder.BATCH_INSTALL);
+                    disabledIds.add(FileMenuOrder.BATCH_CROP);
+                    disabledIds.add(FileMenuOrder.BATCH_EXIF);
+                    disabledIds.add(FileMenuOrder.BATCH_STRIP_META);
+                    disabledIds.add(FileMenuOrder.CMD);
                 }
 
                 Set<String> manualHidden = listPrefs.manuallyHidden();

@@ -3,6 +3,8 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import java.io.InputStream;
+import io.github.abdurazaaqmohammed.utils.SafFs;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -890,6 +892,30 @@ public class FileIconLoader {
     }
 
     private static Bitmap loadImageThumbnail(String path) {
+        if (SafFs.isSafPath(path)) {
+            // Provider documents have no readable path: decode through the
+            // ContentResolver stream (bounds pass, then the scaled pass).
+            try (InputStream in = FileUtils.getInputStream(new File(path))) {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeStream(in, null, options);
+                int width = options.outWidth;
+                int height = options.outHeight;
+                int scale = 1;
+                while (width / 2 >= 128 && height / 2 >= 128) {
+                    width /= 2;
+                    height /= 2;
+                    scale *= 2;
+                }
+                try (InputStream in2 = FileUtils.getInputStream(new File(path))) {
+                    options.inSampleSize = scale;
+                    options.inJustDecodeBounds = false;
+                    return BitmapFactory.decodeStream(in2, null, options);
+                }
+            } catch (Throwable t) {
+                return null;
+            }
+        }
         try {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;

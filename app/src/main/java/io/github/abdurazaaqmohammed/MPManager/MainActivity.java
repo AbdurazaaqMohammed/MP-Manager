@@ -125,7 +125,6 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.SafFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
@@ -1238,14 +1237,21 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             boolean isPane1 = lastPaneSelected == 1;
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), true);
-                            File newDir = new File(ogFolder, name);
-                            boolean success = newDir.mkdir() || mkdirViaRoot(ogFolder, name);
+                            boolean success;
+                            if (SafFs.isSaf(ogFolder)) {
+                                success = SafFs.createDirectory((SafFile) ogFolder, name);
+                            } else {
+                                File newDir = new File(ogFolder, name);
+                                success = newDir.mkdir() || mkdirViaRoot(ogFolder, name);
+                                if (!success) {
+                                    Extensions.showMessage(MainActivity.this,
+                                            rss.getString(R.string.failed_to_create_folder, name),
+                                            FileUtils.describeWriteProblem(this, newDir));
+                                    return;
+                                }
+                            }
                             if (success) {
                                 highlightAndFocusItem(isPane1, name);
-                            } else {
-                                Extensions.showMessage(MainActivity.this,
-                                        rss.getString(R.string.failed_to_create_folder, name),
-                                        FileUtils.describeWriteProblem(this, newDir));
                             }
                         })
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
@@ -1253,20 +1259,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             boolean isPane1 = lastPaneSelected == 1;
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), false);
-                            File newFile = new File(ogFolder, name);
-                            boolean success = false;
-                            try {
-                                success = newFile.createNewFile();
-                            } catch (IOException ignored) {}
-                            if (!success) {
-                                success = touchViaRoot(ogFolder, name);
+                            boolean success;
+                            if (SafFs.isSaf(ogFolder)) {
+                                success = SafFs.createFile((SafFile) ogFolder, name, null);
+                            } else {
+                                File newFile = new File(ogFolder, name);
+                                success = false;
+                                try {
+                                    success = newFile.createNewFile();
+                                } catch (IOException ignored) {}
+                                if (!success) {
+                                    success = touchViaRoot(ogFolder, name);
+                                }
+                                if (!success) {
+                                    Extensions.showMessage(MainActivity.this,
+                                            rss.getString(R.string.failed_to_create_file, name),
+                                            FileUtils.describeWriteProblem(this, newFile));
+                                    return;
+                                }
                             }
                             if (success) {
                                 highlightAndFocusItem(isPane1, name);
-                            } else {
-                                Extensions.showMessage(MainActivity.this,
-                                        rss.getString(R.string.failed_to_create_file, name),
-                                        FileUtils.describeWriteProblem(this, newFile));
                             }
                         }).create();
                 KeyboardUtil.focusOnShow(ad, input, false);
@@ -1351,10 +1364,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if ((a instanceof MainFilesArrayAdapter adapter)) {
                     adapter.goUp();
-                } else if (a instanceof SafFilesArrayAdapter) {
-                    File current = isPane1 ? pane1Folder : pane2Folder;
-                    File parent = current == null ? null : current.getParentFile();
-                    if (parent != null) loadFolderInPane(parent, isPane1);
                 } else {
                     ftp.ftpParent(isPane1);
                 }
@@ -1657,6 +1666,21 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 handler.postDelayed(resetExitPrompt, 2000);
                             }
                         } else {
+                            File paneFolder = adapter.pane1 ? pane1Folder : pane2Folder;
+                            if (SafFs.isSaf(paneFolder)) {
+                                File parent = paneFolder.getParentFile();
+                                if (parent != null && !parent.equals(paneFolder)) {
+                                    loadFolderInPane(parent, adapter.pane1);
+                                } else if (isBackPressedToExit) {
+                                    handler.removeCallbacks(resetExitPrompt);
+                                    finishAffinity();
+                                } else {
+                                    isBackPressedToExit = true;
+                                    Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+                                    handler.postDelayed(resetExitPrompt, 2000);
+                                }
+                                return;
+                            }
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
                             while (f != null && !f.exists()) f = f.getParentFile();
@@ -1670,20 +1694,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 handler.postDelayed(resetExitPrompt, 2000);
                             }
                         }
-                    }
-                } else if (a instanceof SafFilesArrayAdapter) {
-                    boolean onPane1 = lastPaneSelected == 1;
-                    File current = onPane1 ? pane1Folder : pane2Folder;
-                    File parent = current == null ? null : current.getParentFile();
-                    if (parent != null) {
-                        loadFolderInPane(parent, onPane1);
-                    } else if (isBackPressedToExit) {
-                        handler.removeCallbacks(resetExitPrompt);
-                        finishAffinity();
-                    } else {
-                        isBackPressedToExit = true;
-                        Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                        handler.postDelayed(resetExitPrompt, 2000);
                     }
                 } else ftp.ftpParent(lastPaneSelected == 1);
             }
@@ -1851,11 +1861,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private void bindSafFolder(SafFile folder, java.util.List<SafFile> children,
                                boolean pane1, boolean addToHistory) {
-        java.util.List<SafFile> rows = new ArrayList<>();
-        File parent = folder.getParentFile();
-        if (parent instanceof SafFile) rows.add(SafFs.asUp((SafFile) parent));
-        rows.addAll(children);
-        SafFile[] files = rows.toArray(new SafFile[0]);
+        // The SAF pane uses the regular pane adapter: identical rows, the same
+        // long-press menu and the same multi-select machinery. The documents
+        // are SafFiles, which answer the File API and stream bytes on demand.
+        SafFile[] files = children.toArray(new SafFile[0]);
 
         if (pane1) {
             currentPane1Files = files;
@@ -1868,7 +1877,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-        pane.setAdapter(new SafFilesArrayAdapter(this, files, pane1));
+        File parent = SafFs.parentOf(folder);
+        // Without a parent the ".." row points at the folder itself, which
+        // goUp recognizes as a no-op.
+        pane.setAdapter(new MainFilesArrayAdapter(this, files, parent != null ? parent : folder, pane1, false, null));
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
@@ -2953,9 +2965,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (folder == null) return;
                 loadFolderInPaneAsync(folder, pane1, false,
                         saved != null ? () -> restorePaneScroll(pane1, saved) : null);
-            } else if (adapter instanceof SafFilesArrayAdapter) {
-                File folder = pane1 ? pane1Folder : pane2Folder;
-                if (folder != null) loadFolderInPane(folder, pane1, false);
             } else if (adapter instanceof FtpFilesArrayAdapter) {
                 reloadPane(pane1, preserveScroll);
             }

@@ -363,10 +363,11 @@ public final class SafFs {
     // ------------------------------------------------------------------
 
     /**
-     * Copies a document into a real file in {@code stageDir}, so the app's
-     * {@code java.io.File}-based code (editors, viewers, archive readers) can
-     * work with a provider document. The copy carries the document's size and
-     * modification time where the provider reports them.
+     * Copies a document into a real file or folder in the app cache, so the
+     * app's {@code java.io.File}-based code (editors, viewers, archive readers)
+     * can work with a provider document. Directories are staged recursively.
+     * The copy carries the document's size and modification time where the
+     * provider reports them.
      */
     public static File materialize(Context context, SafFile file) throws IOException {
         File dir = new File(context.getCacheDir(), "saf_staging");
@@ -375,7 +376,15 @@ public final class SafFs {
         }
         String safe = file.getName().replaceAll("[^a-zA-Z0-9._-]", "_");
         File out = new File(dir, System.currentTimeMillis() + "_" + safe);
-        copyTo(file, out);
+        if (file.isDirectory()) {
+            if (!out.mkdirs() && !out.isDirectory()) throw new IOException("Cannot create " + out.getName());
+            List<SafFile> kids = children(file);
+            if (kids != null) {
+                for (SafFile kid : kids) copyToRecursive(kid, new File(out, kid.getName()), null);
+            }
+        } else {
+            copyTo(file, out);
+        }
         if (file.lastModified() > 0) {
             //noinspection ResultOfMethodCallIgnored
             out.setLastModified(file.lastModified());
@@ -409,25 +418,24 @@ public final class SafFs {
     }
 
     /**
-     * Copies a document or a whole subtree out of a provider into a real
-     * folder, preserving modification times. Directories are walked depth
-     * first; every byte goes through the provider's streams.
+     * Copies a document or a whole subtree out of a provider into the real
+     * file/folder {@code dest}, preserving modification times. Directories are
+     * walked depth first; every byte goes through the provider's streams.
      */
-    public static void copyToRecursive(SafFile source, File destDir, FileUtils.TransferListener listener) throws IOException {
-        File out = new File(destDir, source.getName());
+    public static void copyToRecursive(SafFile source, File dest, FileUtils.TransferListener listener) throws IOException {
         if (source.isDirectory()) {
-            if (!out.isDirectory() && !out.mkdirs() && !out.isDirectory()) {
-                throw new IOException("Cannot create " + out.getName());
+            if (!dest.isDirectory() && !dest.mkdirs() && !dest.isDirectory()) {
+                throw new IOException("Cannot create " + dest.getName());
             }
             List<SafFile> kids = children(source);
             if (kids == null) throw new IOException("Cannot list " + source.getName());
-            for (SafFile kid : kids) copyToRecursive(kid, out, listener);
+            for (SafFile kid : kids) copyToRecursive(kid, new File(dest, kid.getName()), listener);
         } else {
-            if (listener != null) listener.onFile(new File(source.getPath()), out);
-            copyTo(source, out);
+            if (listener != null) listener.onFile(new File(source.getPath()), dest);
+            copyTo(source, dest);
             if (source.lastModified() > 0) {
                 //noinspection ResultOfMethodCallIgnored
-                out.setLastModified(source.lastModified());
+                dest.setLastModified(source.lastModified());
             }
             if (listener != null) listener.onBytes(Math.max(1L, source.length()));
         }

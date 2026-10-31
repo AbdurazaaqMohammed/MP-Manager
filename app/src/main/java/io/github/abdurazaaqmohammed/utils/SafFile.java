@@ -87,6 +87,23 @@ public class SafFile extends File {
         return super.getName();
     }
 
+    /**
+     * The synthetic path is not absolute in {@link File}'s terms (it does not
+     * start with "/"), so the default implementation would resolve it against
+     * the process working directory and destroy the {@code saf:} prefix every
+     * {@link SafFs#isSafPath} check relies on. The path is already exactly what
+     * every wrapper-based caller should see, so return it unchanged.
+     */
+    @Override
+    public String getAbsolutePath() {
+        return getPath();
+    }
+
+    @Override
+    public String getCanonicalPath() {
+        return getPath();
+    }
+
     @Override
     public boolean isDirectory() {
         return directory;

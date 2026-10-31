@@ -50,6 +50,8 @@ import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.utils.SafFile;
+import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -803,11 +805,14 @@ public class EntryDialogs {
                 List<File> readableSources = sources;
                 File effectiveOutput = outputZip;
                 boolean outputToRoot = false;
-                if (compressElevated) {
-                    boolean anyNeedStage = false;
-                    for (File s : sources) {
-                        if (RootStaging.needsStaging(context, s)) { anyNeedStage = true; break; }
-                    }
+                boolean outputToSaf = false;
+                // Provider documents and root-only files are staged into a
+                // real folder either way: the archivers read plain Files.
+                boolean anyNeedStage = false;
+                for (File s : sources) {
+                    if (RootStaging.needsStaging(context, s)) { anyNeedStage = true; break; }
+                }
+                if (compressElevated || anyNeedStage) {
                     if (anyNeedStage) {
                         try {
                             compressStageTmp = new File(context.getCacheDir(), "compress_stage_" + System.currentTimeMillis());
@@ -841,9 +846,22 @@ public class EntryDialogs {
                         effectiveOutput = new File(compressStageTmp, outputZip.getName());
                     }
                 }
+                if (!outputToRoot && SafFs.isSaf(outputZip.getParentFile())) {
+                    // The archive is created in cache and streamed into the
+                    // provider folder when done.
+                    outputToSaf = true;
+                    if (compressStageTmp == null) {
+                        compressStageTmp = new File(context.getCacheDir(),
+                                "compress_stage_" + System.currentTimeMillis());
+                        //noinspection ResultOfMethodCallIgnored
+                        compressStageTmp.mkdirs();
+                    }
+                    effectiveOutput = new File(compressStageTmp, outputZip.getName());
+                }
                 final List<File> finalSources = readableSources;
                 final File finalOutput = effectiveOutput;
                 final boolean finalToRoot = outputToRoot;
+                final boolean finalToSaf = outputToSaf;
                 final File finalStageTmp = compressStageTmp;
 
                 if (format.equals(".zip")) {
@@ -877,6 +895,7 @@ public class EntryDialogs {
                             pm.setProgress(Math.min(compressed, totalSources), totalSources);
                         }
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), "application/zip");
                         pm.setProgress(totalSources, totalSources);
                         pm.setBytes(totalBytes, totalBytes);
                         pm.dismiss();
@@ -901,6 +920,7 @@ public class EntryDialogs {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources, listener);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), null);
                         pm.setProgress(totalSources, totalSources);
                         pm.setBytes(totalBytes, totalBytes);
                         pm.dismiss();
