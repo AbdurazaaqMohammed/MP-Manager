@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector android:drawable="@drawable/splash_logo"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <target android:name="splash_logo" android:animation="@animator/splash_logo_anim" />
+    <target android:name="splash_back" android:animation="@animator/splash_back_anim" />
+    <target android:name="splash_card" android:animation="@animator/splash_card_anim" />
+</animated-vector>
