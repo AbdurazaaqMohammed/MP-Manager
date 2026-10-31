@@ -134,7 +134,7 @@ public final class ArchiveBrowseUtil {
     /** Every entry in the archive, directories marked by a trailing '/'. */
     public static List<RawEntry> listEntries(File archive) throws IOException {
         if (archive == null || !archive.exists() || archive.length() == 0) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
         ArchiveType type = detectArchiveType(archive);
         switch (type) {

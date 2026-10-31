@@ -1974,7 +1974,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     }
                     if (fallback != null && fallback.exists() && !fallback.equals(folder)) {
                         final File validFallback = fallback;
-                        runOnUiThread(() -> openFolderAsync(validFallback, pane1, false, null));
+                        runOnUiThread(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                         return null;
                     }
                 }
@@ -2153,7 +2153,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
                 if (fallback == null || !fallback.exists()) fallback = Environment.getExternalStorageDirectory();
                 final File validFallback = fallback;
-                handler.post(() -> openFolderAsync(validFallback, pane1, false, null));
+                handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                 return;
             }
             final ZipRead read;
@@ -2165,7 +2165,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
                     if (fallback == null || !fallback.exists()) fallback = Environment.getExternalStorageDirectory();
                     final File validFallback = fallback;
-                    handler.post(() -> openFolderAsync(validFallback, pane1, false, null));
+                    handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                     return;
                 }
                 handler.post(() -> {
