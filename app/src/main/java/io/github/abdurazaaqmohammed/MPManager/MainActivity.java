@@ -389,7 +389,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         updates.unregister();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = settings.edit()
-                .putString("bookmarks", getBookmarks().toString())
                 .putBoolean("systemTheme", systemTheme)
                 .putBoolean("checkForUpdates", checkForUpdates)
                 .putInt("theme", theme);

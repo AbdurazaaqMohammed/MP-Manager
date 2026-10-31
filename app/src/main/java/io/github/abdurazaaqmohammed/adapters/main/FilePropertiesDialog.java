@@ -10,6 +10,7 @@ import androidx.appcompat.app.AlertDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.format.Formatter;
 import android.view.Gravity;
@@ -73,8 +74,6 @@ public class FilePropertiesDialog {
         TextView propSubtitle = propView.findViewById(R.id.propertySubtitle);
         ImageView propIcon = propView.findViewById(R.id.propertyIcon);
         LinearLayout propRows = propView.findViewById(R.id.propertyRows);
-        LinearLayout checksumSection = propView.findViewById(R.id.checksumSection);
-        LinearLayout checksumRows = propView.findViewById(R.id.checksumRows);
 
         propTitle.setText(displayName);
         propTitle.setOnLongClickListener(v -> {
@@ -126,9 +125,11 @@ public class FilePropertiesDialog {
         } else {
             nameHolder[0] = addPropertyRow(propRows, context.getString(R.string.name), displayName);
         }
-        if (!isInZip && file.getParentFile() != null)
-            addPropertyRow(propRows, context.getString(R.string.parent), file.getParentFile().getName());
-        addPropertyRow(propRows, context.getString(R.string.type), typeStr);
+        if (!isInZip && file.getParentFile() != null) {
+            String parentPath = file.getParentFile().getAbsolutePath();
+            if (!parentPath.endsWith("/")) parentPath += "/";
+            addPropertyRow(propRows, context.getString(R.string.parent), parentPath);
+        }
 
         long size = 0;
         if (multi) {
@@ -226,14 +227,6 @@ public class FilePropertiesDialog {
                         v -> showEditDateTakenDialog(selectedFilesList, dateTakenHolder[0]));
                 dateTakenHolder[0] = dateTakenView;
             }
-            if (!multi && file.isFile()) {
-                addPropertyRow(propRows, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
-                TextView realMimeView = addPropertyRow(propRows, context.getString(R.string.real_mime), "…");
-                new Thread(() -> {
-                    String realMime = MimeUtil.getRealMimeType(file);
-                    context.handler.post(() -> realMimeView.setText(realMime != null ? realMime : "—"));
-                }).start();
-            }
             if (!multi && file.isDirectory()) {
                 new Thread(() -> {
                     long folderSize = getFolderSize(file, null);
@@ -250,144 +243,116 @@ public class FilePropertiesDialog {
 
         RootManager rm = RootManager.getInstance(context);
         boolean canEditPerms = !isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable();
-        // Built up front so the OK handler can apply the mode; the dialog itself
-        // is created once at the end so the checksum section is always present.
-        // Returning early from the permissions block used to skip it entirely,
-        // which is why checksums vanished in root mode.
-        final PermissionsEditorHelper editor = canEditPerms ? new PermissionsEditorHelper(context) : null;
-        // Guards against saving before stat loaded, which previously chmodded
-        // to 0 - or silently did nothing at all.
-        final boolean[] permsLoaded = {false};
-        if (canEditPerms) {
-            TextView permsTitle = new TextView(context);
-            permsTitle.setText(R.string.root_permissions);
-            permsTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
-            permsTitle.setPadding(0, dp(12), 0, dp(4));
-            propRows.addView(permsTitle);
 
-            View permsEditorView = editor.createPermissionsEditor("0000");
-            propRows.addView(permsEditorView);
+        if (!isInZip && !multi && file != null) {
+            final TextView[] permViewHolder = new TextView[1];
+            View.OnClickListener openPermsAction = v -> {
+                if (canEditPerms) {
+                    showPermissionsDialog(file, rm, permViewHolder[0]);
+                } else {
+                    Extensions.showMessage(context, R.string.storage_root_needed);
+                }
+            };
+
+            TextView permView = addPropertyRow(propRows, context.getString(R.string.permissions), "…",
+                    R.drawable.edit_24px, openPermsAction);
+            permViewHolder[0] = permView;
+            permView.setTypeface(Typeface.MONOSPACE);
 
             new Thread(() -> {
-                String perms = rm.getPermissions(file.getAbsolutePath());
-                context.handler.post(() -> {
-                    if (perms == null || perms.isEmpty()) {
-                        Extensions.showMessage(context, R.string.permissions_unavailable);
-                        return;
-                    }
-                    editor.applyNumericPerms(perms);
-                    permsLoaded[0] = true;
-                });
+                String symbolic = null;
+                String numeric = null;
+                if (canEditPerms) {
+                    numeric = rm.getPermissions(file.getAbsolutePath());
+                }
+                if (numeric == null || numeric.isEmpty()) {
+                    try {
+                        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                                Runtime.getRuntime().exec(new String[]{"stat", "-c", "%a", file.getAbsolutePath()}).getInputStream()));
+                        numeric = reader.readLine();
+                        if (numeric != null) numeric = numeric.trim();
+                    } catch (Exception ignored) {}
+                }
+                if (numeric != null && (numeric.length() == 3 || numeric.length() == 4)) {
+                    symbolic = PermissionsEditorHelper.numericToSymbolic(numeric);
+                }
+                final String permText = (symbolic != null && numeric != null) ? (symbolic + " (" + numeric + ")") : "—";
+                context.handler.post(() -> permView.setText(permText));
             }).start();
         }
 
-        Map<String, String> propHashes = new HashMap<>();
-        ChecksumDialogs.HashProvider propSupplier = () -> propHashes;
-        // A root-only file cannot be stat()ed by the app, so isFile() is false for
-        // it even though it is very much a file. needsStaging() answers via the
-        // backend and keeps the checksum section available for those paths.
-        boolean needsStaging = !isInZip && !multi && !file.isDirectory()
-                && RootStaging.needsStaging(context, file);
-        if (!isInZip && !multi && (file.isFile() || needsStaging)) {
-            if (needsStaging) {
-                // Root-only file: hash a staged copy (HashUtil needs a FileInputStream).
-                Runnable runStagedChecksum = () -> {
-                    checksumRows.removeAllViews();
-                    TextView hint = new TextView(context);
-                    hint.setText(R.string.checksum_reading_elevated);
-                    checksumRows.addView(hint);
-                    new Thread(() -> {
-                        File staged = null;
-                        try {
-                            staged = RootStaging.stageForRead(context, file.getAbsolutePath());
-                            final Map<String, String> hashes = HashUtil.hashAll(staged);
-                            context.handler.post(() -> {
-                                checksumRows.removeAllViews();
-                                showHashes(checksumRows, hashes, propHashes);
-                                checksumDialogs.addVerifySection(checksumRows, propSupplier);
-                            });
-                        } catch (Exception e) {
-                            context.handler.post(() -> {
-                                checksumRows.removeAllViews();
-                                TextView err = new TextView(context);
-                                err.setText(context.getString(R.string.checksum_unavailable,
-                                        e.getMessage() == null ? e.toString() : e.getMessage()));
-                                checksumRows.addView(err);
-                            });
-                        } finally {
-                            // The staged copy is disposable; nothing else holds it.
-                            if (staged != null) {
-                                //noinspection ResultOfMethodCallIgnored
-                                staged.delete();
-                            }
-                        }
-                    }).start();
-                };
-                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> runStagedChecksum.run());
-                runStagedChecksum.run();
-            } else {
-                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
-                    checksumRows.removeAllViews();
-                    checksumDialogs.startChecksumComputation(checksumRows, file, propHashes);
-                    checksumDialogs.addVerifySection(checksumRows, propSupplier);
-                });
-                checksumDialogs.startChecksumComputation(checksumRows, file, propHashes);
-                checksumDialogs.addVerifySection(checksumRows, propSupplier);
-            }
-        } else if (isInZip && !multi && !entry.isDirectory()) {
-            Map<String, String> zipHashes = new HashMap<>();
-            long entryCrc = entry.computeCrc32();
-            if (entryCrc >= 0) zipHashes.put("CRC32", HashUtil.crc32Hex(entryCrc));
-            checksumDialogs.addCrc32Row(checksumRows, entryCrc);
-            checksumDialogs.addVerifySection(checksumRows, () -> zipHashes);
-            propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
-                checksumRows.removeAllViews();
-                checksumDialogs.addCrc32Row(checksumRows, entry.computeCrc32());
-                checksumDialogs.startZipEntryChecksumComputation(checksumRows, entry.getZipFile(), entry.getFullPath(), zipHashes);
-                checksumDialogs.addVerifySection(checksumRows, () -> zipHashes);
-            });
-        } else {
-            checksumSection.setVisibility(View.GONE);
-        }
-
-        selfDialog[0] = dialogUtil.getDialogBuilder()
+        var dialogBuilder = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.properties))
                 .setView(wrapInScroll(propView))
+                .setPositiveButton(R.string.close, null);
+
+        if (!isInZip && !multi && file != null && file.isFile()) {
+            dialogBuilder.setNeutralButton(R.string.mime, (d, w) -> showMimeDialog(file));
+        }
+
+        selfDialog[0] = dialogBuilder.create();
+        dialogUtil.styleAlertDialog(selfDialog[0]);
+    }
+
+    private void showPermissionsDialog(File file, RootManager rm, TextView permView) {
+        PermissionsEditorHelper editor = new PermissionsEditorHelper(context);
+        View editorView = editor.createPermissionsEditor("0000");
+
+        new Thread(() -> {
+            String perms = rm.getPermissions(file.getAbsolutePath());
+            context.handler.post(() -> {
+                if (perms != null && !perms.isEmpty()) {
+                    editor.applyNumericPerms(perms);
+                }
+            });
+        }).start();
+
+        AlertDialog permDialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.permissions))
+                .setView(wrapInScroll(editorView))
+                .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    if (editor == null) return;
-                    if (!permsLoaded[0] || !editor.isReady()) {
-                        Extensions.showMessage(context, R.string.permissions_unavailable);
-                        return;
-                    }
+                    if (!editor.isReady()) return;
                     String permsStr = String.valueOf(editor.getNumericValue());
                     new Thread(() -> {
                         try {
                             rm.chmodFs(file.getAbsolutePath(), permsStr);
                             rm.invalidateListCache();
-                            context.handler.post(() ->
-                                    Extensions.showMessage(context, R.string.permissions_updated));
+                            String updatedSymbolic = PermissionsEditorHelper.numericToSymbolic(permsStr);
+                            final String newDisplay = updatedSymbolic + " (" + permsStr + ")";
+                            context.handler.post(() -> {
+                                if (permView != null) permView.setText(newDisplay);
+                                Extensions.showMessage(context, R.string.permissions_updated);
+                            });
                         } catch (Exception e) {
-                            context.handler.post(() ->
-                                    new ErrorUtil(context).showError(e));
+                            context.handler.post(() -> new ErrorUtil(context).showError(e));
                         }
                     }).start();
                 })
                 .create();
-        dialogUtil.styleAlertDialog(selfDialog[0]);
+        dialogUtil.styleAlertDialog(permDialog);
     }
 
-    /** Fills the checksum rows from an already-computed set of digests. */
-    private void showHashes(LinearLayout container, Map<String, String> hashes,
-                            Map<String, String> out) {
-        for (String algo : HashUtil.ALGORITHMS) {
-            TextView tv = checksumDialogs.addChecksumRow(container, algo);
-            String value = hashes.get(algo);
-            tv.setText(value == null ? "—" : value);
-        }
-        if (out != null) {
-            out.clear();
-            out.putAll(hashes);
-        }
+    private void showMimeDialog(File file) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(20);
+        layout.setPadding(pad, dp(12), pad, dp(12));
+
+        addPropertyRow(layout, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
+        TextView realMimeView = addPropertyRow(layout, context.getString(R.string.real_mime), "…");
+
+        new Thread(() -> {
+            String realMime = MimeUtil.getRealMimeType(file);
+            context.handler.post(() -> realMimeView.setText(realMime != null ? realMime : "—"));
+        }).start();
+
+        AlertDialog mimeDialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.mime))
+                .setView(wrapInScroll(layout))
+                .setPositiveButton(R.string.close, null)
+                .create();
+        dialogUtil.styleAlertDialog(mimeDialog);
     }
 
     private long getFolderSize(File file, TextView toUpdate) {

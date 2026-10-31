@@ -148,12 +148,14 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     public static String formatDate(long millis, String pattern) {
-        if (pattern == null || pattern.isEmpty() || pattern.equals("default")) return new Date(millis).toString();
+        if (pattern == null || pattern.isEmpty() || pattern.equals("default")) {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(millis));
+        }
         if (pattern.equals("locale")) return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(millis));
         try {
             return new SimpleDateFormat(pattern, Locale.getDefault()).format(new Date(millis));
         } catch (Exception e) {
-            return new Date(millis).toString();
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(millis));
         }
     }
 
