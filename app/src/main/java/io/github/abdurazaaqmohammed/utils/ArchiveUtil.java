@@ -14,6 +14,8 @@ import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
+import com.github.junrar.exception.UnsupportedRarEncryptedException;
+import com.github.junrar.exception.WrongPasswordException;
 import com.github.junrar.rarfile.FileHeader;
 
 import net.lingala.zip4j.ZipFile;
@@ -102,7 +104,7 @@ public class ArchiveUtil {
                 extract7z(archive, destDir, preserveTime, password, listener);
                 return;
             case RAR:
-                extractRar(archive, destDir, preserveTime, listener);
+                extractRar(archive, destDir, preserveTime, password, listener);
                 return;
             case TAR:
                 extractTar(new BufferedInputStream(new FileInputStream(archive), BUFFER_SIZE), archive,
@@ -286,6 +288,17 @@ public class ArchiveUtil {
                 return true;
             }
         }
+        if (type == ArchiveBrowseUtil.ArchiveType.RAR) {
+            // RAR file headers stay readable without the password (unless the
+            // archive header itself is encrypted), so ask the library whether
+            // any entry needs one instead of waiting for extraction to fail.
+            try (Archive rar = new Archive(archive)) {
+                return rar.isPasswordProtected();
+            } catch (RarException e) {
+                if (isPasswordError(e)) return true;
+                throw new IOException("Failed to read RAR archive", e);
+            }
+        }
         return false;
     }
 
@@ -299,14 +312,16 @@ public class ArchiveUtil {
                     && ((ZipException) t).getType() == ZipException.Type.WRONG_PASSWORD)
                 return true;
             if (t instanceof PasswordRequiredException) return true;
+            if (t instanceof WrongPasswordException) return true;
+            if (t instanceof UnsupportedRarEncryptedException) return true;
             if (t == t.getCause()) break;
         }
         return false;
     }
 
-    private static void extractRar(File archive, File destDir, boolean preserveTime,
+    private static void extractRar(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
-        try (Archive rar = new Archive(archive)) {
+        try (Archive rar = password == null ? new Archive(archive) : new Archive(archive, new String(password))) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
                 File out = resolveDestFile(destDir, fh.getFileName());
