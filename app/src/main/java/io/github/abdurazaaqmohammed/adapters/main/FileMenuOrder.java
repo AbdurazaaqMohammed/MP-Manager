@@ -45,7 +45,7 @@ public final class FileMenuOrder {
     public static final String[] DEFAULT_ORDER = {
             COPY, MOVE, RENAME, DELETE, SHARE, OPEN_WITH,
             COMPRESS, EXTRACT, BOOKMARK, PROPERTIES,
-            CMD, HIDE, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
+            CMD, CHECK, HIDE, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
             CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX,
             BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
     };
@@ -77,7 +77,7 @@ public final class FileMenuOrder {
             if (saved != null && !saved.isEmpty()) {
                 for (String id : saved.split(",")) {
                     id = id.trim();
-                    if (!id.isEmpty() && !id.equals(CHECK) && !order.contains(id)) order.add(id);
+                    if (!id.isEmpty() && !order.contains(id)) order.add(id);
                 }
             }
         } catch (Exception ignored) {

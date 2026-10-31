@@ -522,8 +522,7 @@ public class ImageEditActivity extends BaseActivity {
     private void showExifEditor() {
         String[] tags = {
                 ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_ARTIST,
-                ExifInterface.TAG_COPYRIGHT, ExifInterface.TAG_SOFTWARE,
-                ExifInterface.TAG_DATETIME};
+                ExifInterface.TAG_COPYRIGHT, ExifInterface.TAG_SOFTWARE};
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
@@ -532,8 +531,13 @@ public class ImageEditActivity extends BaseActivity {
         LinearLayout fields = new LinearLayout(this);
         fields.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(fields, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(320)));
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(360)));
         List<EditText> inputs = new ArrayList<>();
+
+        EditText dateTakenInput = new EditText(this);
+        EditText mtimeInput = new EditText(this);
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+
         try {
             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
             for (String tag : tags) {
@@ -548,10 +552,68 @@ public class ImageEditActivity extends BaseActivity {
                 fields.addView(input);
                 inputs.add(input);
             }
+
+            // 1. Date taken
+            TextView dateTakenLabel = new TextView(this);
+            dateTakenLabel.setTextSize(13);
+            dateTakenLabel.setText(getString(R.string.date_taken));
+            dateTakenLabel.setPadding(0, dp(8), 0, 0);
+            fields.addView(dateTakenLabel);
+
+            LinearLayout dateTakenRow = new LinearLayout(this);
+            dateTakenRow.setOrientation(LinearLayout.HORIZONTAL);
+            dateTakenRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            String origDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
+            long parsedTaken = parseDateTime(origDate);
+            if (parsedTaken > 0) {
+                dateTakenInput.setText(sdf.format(new java.util.Date(parsedTaken)));
+            } else {
+                dateTakenInput.setText(origDate != null ? origDate : "");
+            }
+            dateTakenInput.setSingleLine(true);
+            dateTakenRow.addView(dateTakenInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+            ImageView dateTakenPickerBtn = new ImageView(this);
+            dateTakenPickerBtn.setImageResource(R.drawable.ic_calendar_today_24);
+            int iconPad = dp(8);
+            dateTakenPickerBtn.setPadding(iconPad, iconPad, iconPad, iconPad);
+            dateTakenPickerBtn.setOnClickListener(v -> showDateTimePicker(dateTakenInput, sdf));
+            dateTakenRow.addView(dateTakenPickerBtn);
+            fields.addView(dateTakenRow);
+
+            // 2. Last modified time
+            TextView mtimeLabel = new TextView(this);
+            mtimeLabel.setTextSize(13);
+            mtimeLabel.setText(getString(R.string.sort_by_modified_time));
+            mtimeLabel.setPadding(0, dp(8), 0, 0);
+            fields.addView(mtimeLabel);
+
+            LinearLayout mtimeRow = new LinearLayout(this);
+            mtimeRow.setOrientation(LinearLayout.HORIZONTAL);
+            mtimeRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            long curMtime = workingFile.lastModified();
+            if (curMtime <= 0 && originalPath != null) {
+                curMtime = new File(originalPath).lastModified();
+            }
+            if (curMtime <= 0) curMtime = System.currentTimeMillis();
+            mtimeInput.setText(sdf.format(new java.util.Date(curMtime)));
+            mtimeInput.setSingleLine(true);
+            mtimeRow.addView(mtimeInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+            ImageView mtimePickerBtn = new ImageView(this);
+            mtimePickerBtn.setImageResource(R.drawable.ic_calendar_today_24);
+            mtimePickerBtn.setPadding(iconPad, iconPad, iconPad, iconPad);
+            mtimePickerBtn.setOnClickListener(v -> showDateTimePicker(mtimeInput, sdf));
+            mtimeRow.addView(mtimePickerBtn);
+            fields.addView(mtimeRow);
+
         } catch (Exception e) {
             showError(getString(R.string.img_no_exif));
             return;
         }
+
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.img_exif))
                 .setView(root)
@@ -564,7 +626,37 @@ public class ImageEditActivity extends BaseActivity {
                                 String text = inputs.get(i).getText() == null ? "" : inputs.get(i).getText().toString();
                                 exif.setAttribute(tags[i], text);
                             }
+
+                            // Save Date Taken
+                            String takenText = dateTakenInput.getText() == null ? "" : dateTakenInput.getText().toString().trim();
+                            if (!takenText.isEmpty()) {
+                                long takenMillis = parseDateTime(takenText);
+                                java.text.SimpleDateFormat exifSdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+                                String formattedTaken = takenMillis > 0 ? exifSdf.format(new java.util.Date(takenMillis)) : takenText;
+                                exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, formattedTaken);
+                                exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, formattedTaken);
+                            } else {
+                                exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, null);
+                                exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, null);
+                            }
+
+                            // Save Mtime to ExifInterface and file system
+                            String mtimeText = mtimeInput.getText() == null ? "" : mtimeInput.getText().toString().trim();
+                            long parsedMtime = parseDateTime(mtimeText);
+                            if (parsedMtime > 0) {
+                                java.text.SimpleDateFormat exifSdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+                                exif.setAttribute(ExifInterface.TAG_DATETIME, exifSdf.format(new java.util.Date(parsedMtime)));
+                            }
+
                             exif.saveAttributes();
+
+                            if (parsedMtime > 0) {
+                                workingFile.setLastModified(parsedMtime);
+                                if (originalPath != null) {
+                                    new File(originalPath).setLastModified(parsedMtime);
+                                }
+                            }
+
                             dirty = true;
                             runOnUiThread(() -> {
                                 updateInfo();
@@ -575,6 +667,50 @@ public class ImageEditActivity extends BaseActivity {
                         }
                     }).start();
                 }).show();
+    }
+
+    private void showDateTimePicker(EditText targetInput, java.text.SimpleDateFormat sdf) {
+        long current = parseDateTime(targetInput.getText() != null ? targetInput.getText().toString().trim() : "");
+        if (current <= 0) current = System.currentTimeMillis();
+
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTimeInMillis(current);
+        int year = cal.get(java.util.Calendar.YEAR);
+        int month = cal.get(java.util.Calendar.MONTH);
+        int day = cal.get(java.util.Calendar.DAY_OF_MONTH);
+        int hour = cal.get(java.util.Calendar.HOUR_OF_DAY);
+        int minute = cal.get(java.util.Calendar.MINUTE);
+
+        new android.app.DatePickerDialog(this, (dp, y, m, d) ->
+                new android.app.TimePickerDialog(this, (tp, h, min) -> {
+                    java.util.Calendar res = java.util.Calendar.getInstance();
+                    res.set(y, m, d, h, min, 0);
+                    targetInput.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+                }, hour, minute, true).show(), year, month, day).show();
+    }
+
+    private static long parseDateTime(String str) {
+        if (str == null || str.trim().isEmpty()) return -1;
+        String[] patterns = {
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy:MM:dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm",
+                "yyyy/MM/dd HH:mm:ss",
+                "yyyy-MM-dd"
+        };
+        for (String pattern : patterns) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(pattern, Locale.US);
+                sdf.setLenient(false);
+                java.util.Date date = sdf.parse(str.trim());
+                if (date != null) return date.getTime();
+            } catch (Exception ignored) {}
+        }
+        try {
+            long millis = Long.parseLong(str.trim());
+            if (millis > 0) return millis;
+        } catch (Exception ignored) {}
+        return -1;
     }
 
     private void confirmStripMetadata() {

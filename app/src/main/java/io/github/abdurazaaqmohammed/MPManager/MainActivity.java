@@ -3138,6 +3138,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         || AccessManager.exists(this, folder.getAbsolutePath()));
                 if (reachable) {
                     loadFolderInPane(folder, true);
+                    if (target.isFile()) {
+                        highlightAndFocusItem(true, target.getName());
+                    }
                     Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
                 }
             }
