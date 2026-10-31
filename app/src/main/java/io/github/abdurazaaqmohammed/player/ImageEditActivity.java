@@ -597,10 +597,20 @@ public class ImageEditActivity extends BaseActivity {
             mtimeRow.setOrientation(LinearLayout.HORIZONTAL);
             mtimeRow.setGravity(Gravity.CENTER_VERTICAL);
 
-            long curMtime = workingFile.lastModified();
+            long curMtime = targetMtime > 0 ? targetMtime : -1L;
             if (curMtime <= 0 && originalPath != null) {
                 curMtime = new File(originalPath).lastModified();
+                if (curMtime <= 0) {
+                    try {
+                        curMtime = AccessManager.getMtime(this, originalPath);
+                    } catch (Exception ignored) {}
+                }
             }
+            if (curMtime <= 0) {
+                String dtTag = exif.getAttribute(ExifInterface.TAG_DATETIME);
+                curMtime = parseDateTime(dtTag);
+            }
+            if (curMtime <= 0) curMtime = workingFile.lastModified();
             if (curMtime <= 0) curMtime = System.currentTimeMillis();
             mtimeInput.setText(sdf.format(new java.util.Date(curMtime)));
             mtimeInput.setSingleLine(true);
