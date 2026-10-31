@@ -49,8 +49,8 @@
             android:insetBottom="0dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:text="@string/hide"
             android:textSize="12sp" />
     </LinearLayout>
@@ -174,30 +174,4 @@
         android:textSize="13sp"
         android:textStyle="bold"
         android:visibility="gone" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="end|center_vertical"
-        android:orientation="horizontal"
-        android:paddingTop="12dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/pauseButton"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/progress_pause"
-            android:textSize="14sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/cancelButton"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@android:string/cancel"
-            android:textColor="?attr/colorError"
-            android:textSize="14sp" />
-    </LinearLayout>
 </LinearLayout>
