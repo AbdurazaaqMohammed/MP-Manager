@@ -33,15 +33,9 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
     public interface Callbacks {
         String labelOf(File file);
 
-        void onDragHandleTouched(View handle, int position, MotionEvent initialEvent);
-
         boolean isBatchMode();
 
         boolean isBatchSelected(int position);
-
-        boolean isDragging();
-
-        void onItemLongPressed(View row, int position, MotionEvent initialEvent);
     }
 
     private final MainActivity context;
@@ -92,68 +86,9 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
                 ? MaterialColors.getColor(convertView, com.google.android.material.R.attr.colorPrimaryContainer, Color.LTGRAY)
                 : Color.TRANSPARENT);
 
-        boolean dragging = callbacks != null && callbacks.isDragging();
         if (dragHandle != null) {
-            dragHandle.setVisibility(batch && !dragging ? View.VISIBLE : View.GONE);
-            if (batch && !dragging) {
-                dragHandle.setOnTouchListener((v, event) -> {
-                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN && callbacks != null) {
-                        callbacks.onDragHandleTouched(v, position, event);
-                        return true;
-                    }
-                    return false;
-                });
-            }
+            dragHandle.setVisibility(View.GONE);
         }
-
-        final int pos = position;
-        final View row = convertView;
-        convertView.setOnTouchListener(new View.OnTouchListener() {
-            private float downX, downY;
-            private boolean isLongPressTriggered = false;
-            private MotionEvent lastEvent;
-            private final Runnable longPressRunnable = () -> {
-                isLongPressTriggered = true;
-                row.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                if (callbacks != null) {
-                    callbacks.onItemLongPressed(row, pos, lastEvent);
-                }
-            };
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                lastEvent = event;
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX = event.getRawX();
-                        downY = event.getRawY();
-                        isLongPressTriggered = false;
-                        row.postDelayed(longPressRunnable, 350);
-                        return false;
-                    case MotionEvent.ACTION_MOVE:
-                        float dx = Math.abs(event.getRawX() - downX);
-                        float dy = Math.abs(event.getRawY() - downY);
-                        float slop = ViewConfiguration.get(context).getScaledTouchSlop();
-                        if (dx > slop || dy > slop) {
-                            if (!isLongPressTriggered) {
-                                row.removeCallbacks(longPressRunnable);
-                            }
-                        }
-                        if (isLongPressTriggered && callbacks != null && callbacks.isDragging()) {
-                            return true;
-                        }
-                        return false;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        row.removeCallbacks(longPressRunnable);
-                        if (isLongPressTriggered) {
-                            return true;
-                        }
-                        return false;
-                }
-                return false;
-            }
-        });
 
         return convertView;
     }

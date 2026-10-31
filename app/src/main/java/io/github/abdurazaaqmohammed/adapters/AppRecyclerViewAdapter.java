@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.adapters;
 
 import static android.view.View.GONE;
 
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.TypedValue;
@@ -155,8 +158,48 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         holder.packageNameView.setMovementMethod(null);
         holder.packageNameView.setVisibility(View.VISIBLE);
         holder.appIconView.setVisibility(View.VISIBLE);
-        holder.appIconView.setImageDrawable(appInfo.icon);
         holder.splitIconView.setVisibility(appInfo.isSplit ? View.VISIBLE : GONE);
+
+        if (appInfo.icon != null) {
+            holder.appIconView.setImageDrawable(appInfo.icon);
+        } else {
+            Drawable mem = act.iconCache.getMemory(appInfo.packageName, appInfo.getVersionCode());
+            if (mem != null) {
+                appInfo.icon = mem;
+                holder.appIconView.setImageDrawable(mem);
+            } else {
+                holder.appIconView.setImageDrawable(null);
+                final String expectedPkg = appInfo.packageName;
+                final int expectedVc = appInfo.getVersionCode();
+                holder.appIconView.setTag(expectedPkg);
+                new Thread(() -> {
+                    Drawable diskOrLoaded = act.iconCache.getDisk(act, expectedPkg, expectedVc);
+                    if (diskOrLoaded == null) {
+                        try {
+                            PackageManager pm = act.getPackageManager();
+                            ApplicationInfo info = appInfo.appInfo;
+                            if (info == null) {
+                                info = pm.getApplicationInfo(expectedPkg, 0);
+                                appInfo.appInfo = info;
+                            }
+                            if (info != null) {
+                                diskOrLoaded = info.loadIcon(pm);
+                                act.iconCache.put(act, expectedPkg, expectedVc, diskOrLoaded);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (diskOrLoaded != null) {
+                        final Drawable res = diskOrLoaded;
+                        appInfo.icon = res;
+                        act.handler.post(() -> {
+                            if (expectedPkg.equals(holder.appIconView.getTag())) {
+                                holder.appIconView.setImageDrawable(res);
+                            }
+                        });
+                    }
+                }).start();
+            }
+        }
 
         holder.itemView.setOnClickListener(v -> {
             int pos = holder.getBindingAdapterPosition();

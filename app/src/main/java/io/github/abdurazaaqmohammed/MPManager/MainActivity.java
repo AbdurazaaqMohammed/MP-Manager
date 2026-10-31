@@ -1659,6 +1659,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         } else {
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
+                            while (f != null && !f.exists()) f = f.getParentFile();
                             if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
                             else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
@@ -1963,6 +1964,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 });
             }
             if (files == null) {
+                if (folder != null && !folder.exists()) {
+                    File fallback = folder.getParentFile();
+                    while (fallback != null && !fallback.exists()) {
+                        fallback = fallback.getParentFile();
+                    }
+                    if (fallback == null || !fallback.exists()) {
+                        fallback = Environment.getExternalStorageDirectory();
+                    }
+                    if (fallback != null && fallback.exists() && !fallback.equals(folder)) {
+                        final File validFallback = fallback;
+                        runOnUiThread(() -> loadFolderInPaneAsync(validFallback, pane1, false));
+                        return null;
+                    }
+                }
                 runOnUiThread(() -> {
                     try {
                         Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
@@ -2133,10 +2148,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             clearGreen(pane1);
         }
         listingExecutor.execute(() -> {
+            if (zipFile == null || !zipFile.exists()) {
+                File fallback = zipFile != null ? zipFile.getParentFile() : null;
+                while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
+                if (fallback == null || !fallback.exists()) fallback = Environment.getExternalStorageDirectory();
+                final File validFallback = fallback;
+                handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
+                return;
+            }
             final ZipRead read;
             try {
                 read = readZipFolder(zipFile, path);
             } catch (Exception e) {
+                if (zipFile != null && !zipFile.exists()) {
+                    File fallback = zipFile.getParentFile();
+                    while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
+                    if (fallback == null || !fallback.exists()) fallback = Environment.getExternalStorageDirectory();
+                    final File validFallback = fallback;
+                    handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
+                    return;
+                }
                 handler.post(() -> {
                     try {
                         if (!isFinishing() && !isDestroyed()) new ErrorUtil(this).showError(e);
@@ -3107,6 +3138,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         || AccessManager.exists(this, folder.getAbsolutePath()));
                 if (reachable) {
                     loadFolderInPane(folder, true);
+                    if (target.isFile()) {
+                        highlightAndFocusItem(true, target.getName());
+                    }
                     Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
                 }
             }

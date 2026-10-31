@@ -605,8 +605,18 @@ public class SidebarController {
             String payload = event.getClipData() == null || event.getClipData().getItemCount() == 0
                     ? null : event.getClipData().getItemAt(0).getText().toString();
             SidebarAdapter.SidebarEntry source = sidebarAdapter.findByPayload(payload);
-            SidebarAdapter.SidebarEntry target = sidebarAdapter.getEntry(sidebarList.pointToPosition(
-                    (int) event.getX(), (int) event.getY()));
+            int dropPos = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
+            if (dropPos == android.widget.AdapterView.INVALID_POSITION) {
+                int y = (int) event.getY();
+                for (int i = 0; i < sidebarList.getChildCount(); i++) {
+                    View child = sidebarList.getChildAt(i);
+                    if (y >= child.getTop() && y <= child.getBottom()) {
+                        dropPos = sidebarList.getFirstVisiblePosition() + i;
+                        break;
+                    }
+                }
+            }
+            SidebarAdapter.SidebarEntry target = sidebarAdapter.getEntry(dropPos);
             if (source == null || target == null) return false;
             if (source.type() == SidebarAdapter.EntryType.HEADER) {
                 String targetSection = target.section();
@@ -1132,19 +1142,42 @@ public class SidebarController {
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
         layout.setPadding(pad, pad, pad, pad);
 
-        SwitchCompat toggle = new SwitchCompat(activity);
-        toggle.setText(activity.getString(R.string.enable_recycle_bin));
-        boolean enabled = !RecycleBin.MODE_NEVER.equals(RecycleBin.mode(activity));
-        toggle.setChecked(enabled);
-        toggle.setOnCheckedChangeListener((btn, isChecked) -> {
-            RecycleBin.setMode(activity, isChecked ? RecycleBin.MODE_ALWAYS : RecycleBin.MODE_NEVER);
+        TextView modeLabel = new TextView(activity);
+        modeLabel.setText(activity.getString(R.string.recycle_bin));
+        modeLabel.setTypeface(null, Typeface.BOLD);
+        modeLabel.setPadding(0, 0, 0, (int) (4 * activity.getResources().getDisplayMetrics().density));
+        layout.addView(modeLabel);
+
+        String[] modeChoices = {RecycleBin.MODE_ASK, RecycleBin.MODE_ALWAYS, RecycleBin.MODE_NEVER};
+        String[] modeLabels = {
+                activity.getString(R.string.ask),
+                activity.getString(R.string.always),
+                activity.getString(R.string.never)
+        };
+        String currentMode = RecycleBin.mode(activity);
+        int checkedModeIdx = RecycleBin.MODE_ALWAYS.equals(currentMode) ? 1
+                : RecycleBin.MODE_NEVER.equals(currentMode) ? 2 : 0;
+
+        RadioGroup modeGroup = new RadioGroup(activity);
+        for (int i = 0; i < modeChoices.length; i++) {
+            RadioButton rb = new RadioButton(activity);
+            rb.setText(modeLabels[i]);
+            rb.setId(100 + i);
+            if (i == checkedModeIdx) rb.setChecked(true);
+            modeGroup.addView(rb);
+        }
+        modeGroup.setOnCheckedChangeListener((g, checkedId) -> {
+            int idx = checkedId - 100;
+            if (idx >= 0 && idx < modeChoices.length) {
+                RecycleBin.setMode(activity, modeChoices[idx]);
+            }
         });
-        layout.addView(toggle);
+        layout.addView(modeGroup);
 
         TextView retentionLabel = new TextView(activity);
         retentionLabel.setText(activity.getString(R.string.recycle_bin_retention));
         retentionLabel.setTypeface(null, Typeface.BOLD);
-        retentionLabel.setPadding(0, pad, 0, (int) (8 * activity.getResources().getDisplayMetrics().density));
+        retentionLabel.setPadding(0, (int) (12 * activity.getResources().getDisplayMetrics().density), 0, (int) (4 * activity.getResources().getDisplayMetrics().density));
         layout.addView(retentionLabel);
 
         int[] dayOptions = {1, 7, 30, 0};
@@ -1155,28 +1188,29 @@ public class SidebarController {
                 activity.getString(R.string.forever)
         };
         int currentDays = RecycleBin.retentionDays(activity);
-        int checkedIdx = 2; // default 30
+        int checkedDaysIdx = 2; // default 30
         for (int i = 0; i < dayOptions.length; i++) {
             if (dayOptions[i] == currentDays) {
-                checkedIdx = i;
+                checkedDaysIdx = i;
                 break;
             }
         }
 
-        RadioGroup group = new RadioGroup(activity);
+        RadioGroup retentionGroup = new RadioGroup(activity);
         for (int i = 0; i < dayOptions.length; i++) {
             RadioButton rb = new RadioButton(activity);
             rb.setText(dayLabels[i]);
-            rb.setId(i);
-            if (i == checkedIdx) rb.setChecked(true);
-            group.addView(rb);
+            rb.setId(200 + i);
+            if (i == checkedDaysIdx) rb.setChecked(true);
+            retentionGroup.addView(rb);
         }
-        group.setOnCheckedChangeListener((g, checkedId) -> {
-            if (checkedId >= 0 && checkedId < dayOptions.length) {
-                RecycleBin.setRetentionDays(activity, dayOptions[checkedId]);
+        retentionGroup.setOnCheckedChangeListener((g, checkedId) -> {
+            int idx = checkedId - 200;
+            if (idx >= 0 && idx < dayOptions.length) {
+                RecycleBin.setRetentionDays(activity, dayOptions[idx]);
             }
         });
-        layout.addView(group);
+        layout.addView(retentionGroup);
 
         Button purgeBtn = new Button(activity, null, android.R.attr.borderlessButtonStyle);
         purgeBtn.setText("PURGE EXPIRED NOW");

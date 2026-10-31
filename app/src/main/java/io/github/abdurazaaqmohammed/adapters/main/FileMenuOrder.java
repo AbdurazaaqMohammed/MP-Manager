@@ -43,8 +43,9 @@ public final class FileMenuOrder {
     public static final String HIDE = "hide";
 
     public static final String[] DEFAULT_ORDER = {
-            COPY, MOVE, RENAME, DELETE, HIDE, COMPRESS, PROPERTIES, SHARE, OPEN_WITH,
-            BOOKMARK, CMD, CHECK, EXTRACT, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
+            COPY, MOVE, RENAME, DELETE, SHARE, OPEN_WITH,
+            COMPRESS, EXTRACT, BOOKMARK, PROPERTIES,
+            CMD, CHECK, HIDE, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
             CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX,
             BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
     };
@@ -115,11 +116,39 @@ public final class FileMenuOrder {
         }
     }
 
+    public static java.util.Set<String> getHiddenIds(Context context) {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            return new java.util.HashSet<>(prefs.getStringSet("filemenu_hidden", new java.util.HashSet<>()));
+        } catch (Exception e) {
+            return new java.util.HashSet<>();
+        }
+    }
+
+    public static void setHiddenIds(Context context, java.util.Set<String> hidden) {
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putStringSet("filemenu_hidden", new java.util.HashSet<>(hidden)).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void toggleHidden(Context context, String id) {
+        java.util.Set<String> hidden = getHiddenIds(context);
+        if (hidden.contains(id)) hidden.remove(id);
+        else hidden.add(id);
+        setHiddenIds(context, hidden);
+    }
+
     public static List<MenuItem> sortItems(Context context, List<MenuItem> visible) {
         List<String> order = load(context);
+        java.util.Set<String> hidden = getHiddenIds(context);
         Map<String, Integer> rank = new HashMap<>();
         for (int i = 0; i < order.size(); i++) rank.put(order.get(i), i);
-        List<MenuItem> sorted = new ArrayList<>(visible);
+        List<MenuItem> sorted = new ArrayList<>();
+        for (MenuItem item : visible) {
+            if (!hidden.contains(item.id)) sorted.add(item);
+        }
         sorted.sort((a, b) -> {
             int ra = rank.containsKey(a.id) ? rank.get(a.id) : 999;
             int rb = rank.containsKey(b.id) ? rank.get(b.id) : 999;

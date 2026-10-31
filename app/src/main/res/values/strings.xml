@@ -1709,7 +1709,7 @@ Layout Inspector
     <string name="failed_to_check_for_update">Failed to check for update</string>
     <string name="plugin_info">Plugin Info</string>
     <string name="plugin_infos">Plugins are developed as Android apps. Install one and it will show up in this list. On first use you will be prompted to confirm its certificate fingerprint against the one its developer published. If it ever changes, you will be warned.\n\nA plugin can add entries to the sidebar, settings, file menu, text editor or APK dialog. Each plugin runs in its own app process with its own permissions, so a plugin cannot read your files unless you explicitly grant it storage access.\n\nTo make one, copy the samples/plugin-sample module, declare the hooks you use in the manifest, and follow the contract strings in PluginContracts. Then build an APK, host it anywhere, and share the fingerprint with your users.</string>
-    <string name="installer">Installer: %1$s</string>
+    <string name="installer">Installer</string>
     <string name="install_initiator">Install initiator</string>
     <string name="install_origin">Install origin</string>
     <string name="rename_taken_title">Name already taken</string>
@@ -1964,4 +1964,14 @@ Layout Inspector
     <string name="progress_speed_items">%1$d/s</string>
     <string name="progress_eta">%1$s left</string>
     <string name="progress_done">Done</string>
+    <string name="reorder_bookmarks">Reorder bookmarks</string>
+    <string name="progress_pause">Pause</string>
+    <string name="progress_stop">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="cancel">Cancel</string>
+    <string name="display_details">Display app details</string>
+    <string name="display_actions">Display app actions</string>
+    <string name="more_functions">More functions</string>
+    <string name="open_in_play_store_action">Open in Play Store</string>
+    <string name="edit_app_details">Organize app details</string>
 </resources>
