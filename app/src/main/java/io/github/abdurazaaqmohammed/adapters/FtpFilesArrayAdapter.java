@@ -30,13 +30,31 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor;
+import io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler;
+import io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs;
+import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
 
 public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdapter.ViewHolder> {
+
+    /** Built on first use; same dispatch the regular pane uses to open files. */
+    private FileOpener opener;
+
+    private synchronized FileOpener opener() {
+        if (opener == null) {
+            DialogUtil dialogUtil = new DialogUtil(context);
+            ApkManifestEditor manifestEditor = new ApkManifestEditor(context, dialogUtil, context.uiHelper);
+            ApkToolsHandler apkTools = new ApkToolsHandler(context, dialogUtil, context.uiHelper, pane1, manifestEditor);
+            opener = new FileOpener(context, dialogUtil, pane1, apkTools, new ChecksumDialogs(context, dialogUtil), null);
+        }
+        return opener;
+    }
 
     private final MainActivity context;
     private final FTPFileWrapper[] values;
@@ -106,7 +124,11 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
         holder.itemView.setOnClickListener(v -> {
             context.setCurrentPane(pane1 ? 1 : 2);
-            context.loadFolderInPane(file, pane1, true);
+            // A folder navigates like any other pane; a file is downloaded to
+            // the app cache and opened through the regular dispatch (editors,
+            // viewers, archive browser all work on the downloaded copy).
+            if (file.isDirectory()) context.loadFolderInPane(file, pane1, true);
+            else downloadAndOpen(file);
         });
 
         holder.itemView.setOnLongClickListener(v -> {
@@ -223,6 +245,58 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                 .setMessage(props)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
+    }
+
+    /** Downloads a file into the cache and opens it with the app's regular open dispatch. */
+    private void downloadAndOpen(FTPFileWrapper file) {
+        new Thread(() -> {
+            Exception[] error = {null};
+            File dir = new File(context.getCacheDir(), "ftp_open");
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+            File out = new File(dir, System.currentTimeMillis() + "_"
+                    + file.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
+            java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            ftpClient.downloadFile(file.getFtpFile(), out.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
+                @Override
+                public void onStateChanged(int state) {
+                    if (state == COMPLETED || state == ERROR || state == ABORTED) latch.countDown();
+                }
+
+                @Override
+                public void onTransferred(long totalSize, int transferredSize) {
+                }
+
+                @Override
+                public void onErr(int code, String msg) {
+                    error[0] = new IOException(msg);
+                    latch.countDown();
+                }
+
+                public void onErr(int code, Exception e) {
+                    error[0] = e;
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await(60, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {
+            }
+            Exception fError = error[0];
+            final File opened = out;
+            context.runOnUiThread(() -> {
+                if (fError != null) {
+                    Extensions.showMessage(context, context.getString(R.string.download_failed,
+                            fError.getMessage() == null ? fError.toString() : fError.getMessage()));
+                    return;
+                }
+                if (opened.isFile() && opened.length() > 0) {
+                    opener().handleFileClick(opened, file.getName());
+                } else {
+                    Extensions.showMessage(context, context.getString(R.string.download_failed, "empty file"));
+                }
+            });
+        }).start();
     }
 
     private void copyToLocal(FTPFileWrapper file, boolean isMove) {

@@ -42,14 +42,24 @@ public final class RootStaging {
 
     public static boolean needsStaging(Context context, File file) {
         if (context == null || file == null) return false;
+        // Provider documents have no real path at all: always route them
+        // through the staging copy the same way root-only files are.
+        if (SafFs.isSaf(file)) return true;
         return AccessManager.needsElevated(context, file.getAbsolutePath());
     }
 
     public static boolean needsStaging(Context context, String absPath) {
+        if (SafFs.isSafPath(absPath)) return true;
         return AccessManager.needsElevated(context, absPath);
     }
 
     public static File stageForRead(Context context, String srcAbsPath) throws IOException {
+        if (SafFs.isSafPath(srcAbsPath)) {
+            SafFs.init(context);
+            File f = SafFs.wrap(new File(srcAbsPath));
+            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbsPath);
+            return SafFs.materialize(context, (SafFile) f);
+        }
         return AccessManager.stageForRead(context, srcAbsPath);
     }
 
@@ -70,6 +80,13 @@ public final class RootStaging {
     }
 
     public static void writeBack(Context context, File stagedCopy, String originalAbsPath) throws IOException {
+        if (SafFs.isSafPath(originalAbsPath)) {
+            // A provider document: stream the edited copy back through the
+            // ContentResolver instead of an elevated shell copy.
+            SafFs.init(context);
+            SafFs.writeBack(stagedCopy, originalAbsPath);
+            return;
+        }
         AccessManager.writeBack(context, stagedCopy, originalAbsPath);
     }
 

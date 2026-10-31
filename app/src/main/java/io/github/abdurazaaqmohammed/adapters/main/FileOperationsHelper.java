@@ -53,6 +53,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.adapters.SafFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
@@ -796,20 +797,22 @@ public class FileOperationsHelper {
         int done = 0;
         int skipped = 0;
         for (Object item : items) {
-            if (!(item instanceof File)) {
+            if (!(item instanceof File) || item instanceof FTPFileWrapper) {
                 skipped++;
                 continue;
             }
             File f = (File) item;
-            if (f.isDirectory()) {
-                skipped++;
-                continue;
-            }
             try {
                 if (listener != null) listener.onFile(f, new File(dest.getPath(), f.getName()));
-                SafFs.copyFrom(f, dest, null);
-                if (move) //noinspection ResultOfMethodCallIgnored
-                    f.delete();
+                if (f.isDirectory()) {
+                    // Whole subtrees stream in document by document; the
+                    // provider assigns every id, so folders are created
+                    // through createDocument on the way down.
+                    SafFs.copyFromRecursive(f, dest, listener);
+                } else {
+                    SafFs.copyFrom(f, dest, null);
+                }
+                if (move) FileUtils.deleteTree(f, null);
                 FileUtils.Measure im = info.of(f);
                 done += im.files;
                 advanceActiveProgress(done, totalFiles);

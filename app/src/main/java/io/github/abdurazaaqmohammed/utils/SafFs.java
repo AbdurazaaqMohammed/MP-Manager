@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -355,6 +356,142 @@ public final class SafFs {
     public static SafFile asUp(SafFile dir) {
         return new SafFile(dir.getAuthority(), treeOf(dir), dir.getDocId(), "..",
                 DocumentsContract.Document.MIME_TYPE_DIR, 0L, 0L, true, true);
+    }
+
+    // ------------------------------------------------------------------
+    // full-pane operations: materialize, write back, recursive copies
+    // ------------------------------------------------------------------
+
+    /**
+     * Copies a document into a real file in {@code stageDir}, so the app's
+     * {@code java.io.File}-based code (editors, viewers, archive readers) can
+     * work with a provider document. The copy carries the document's size and
+     * modification time where the provider reports them.
+     */
+    public static File materialize(Context context, SafFile file) throws IOException {
+        File dir = new File(context.getCacheDir(), "saf_staging");
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+            throw new IOException("Cannot create staging dir");
+        }
+        String safe = file.getName().replaceAll("[^a-zA-Z0-9._-]", "_");
+        File out = new File(dir, System.currentTimeMillis() + "_" + safe);
+        copyTo(file, out);
+        if (file.lastModified() > 0) {
+            //noinspection ResultOfMethodCallIgnored
+            out.setLastModified(file.lastModified());
+        }
+        return out;
+    }
+
+    /** Streams a real file back into the document a {@code saf:} path addresses. */
+    public static void writeBack(File source, String safPath) throws IOException {
+        SafFile target = (SafFile) wrap(new File(safPath));
+        if (!(target instanceof SafFile)) throw new IOException("Not a provider path: " + safPath);
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = new java.io.FileInputStream(source);
+            out = openOutput(target);
+            byte[] buffer = new byte[65536];
+            int n;
+            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+        } finally {
+            closeQuietly(in);
+            closeQuietly(out);
+        }
+    }
+
+    /** A {@code SafFile} for the document a create/rename call returned, since providers may adjust the name. */
+    private static SafFile fromCreatedUri(SafFile parent, Uri created) {
+        String docId = DocumentsContract.getDocumentId(created);
+        SafFile f = new SafFile(parent.getAuthority(), treeOf(parent), docId, null, null, 0L, 0L, false, true);
+        return stat(f);
+    }
+
+    /**
+     * Copies a document or a whole subtree out of a provider into a real
+     * folder, preserving modification times. Directories are walked depth
+     * first; every byte goes through the provider's streams.
+     */
+    public static void copyToRecursive(SafFile source, File destDir, FileUtils.TransferListener listener) throws IOException {
+        File out = new File(destDir, source.getName());
+        if (source.isDirectory()) {
+            if (!out.isDirectory() && !out.mkdirs() && !out.isDirectory()) {
+                throw new IOException("Cannot create " + out.getName());
+            }
+            List<SafFile> kids = children(source);
+            if (kids == null) throw new IOException("Cannot list " + source.getName());
+            for (SafFile kid : kids) copyToRecursive(kid, out, listener);
+        } else {
+            if (listener != null) listener.onFile(new File(source.getPath()), out);
+            copyTo(source, out);
+            if (source.lastModified() > 0) {
+                //noinspection ResultOfMethodCallIgnored
+                out.setLastModified(source.lastModified());
+            }
+            if (listener != null) listener.onBytes(Math.max(1L, source.length()));
+        }
+    }
+
+    /**
+     * Copies a real file or folder into a provider directory, creating the
+     * documents as it goes (ids are the provider's to assign).
+     */
+    public static void copyFromRecursive(File source, SafFile destParent, FileUtils.TransferListener listener) throws IOException {
+        if (source.isDirectory()) {
+            SafFile created = createChild(destParent, source.getName(), DocumentsContract.Document.MIME_TYPE_DIR);
+            File[] kids = source.listFiles();
+            if (kids != null) {
+                Arrays.sort(kids);
+                for (File kid : kids) copyFromRecursive(kid, created, listener);
+            }
+        } else {
+            copyFrom(source, destParent, null);
+            if (listener != null) listener.onBytes(Math.max(1L, source.length()));
+        }
+    }
+
+    /**
+     * Copies a document or subtree into another provider directory, streaming
+     * every file through the two providers.
+     */
+    public static void copySafToSaf(SafFile source, SafFile destParent, FileUtils.TransferListener listener) throws IOException {
+        if (source.isDirectory()) {
+            SafFile created = createChild(destParent, source.getName(), DocumentsContract.Document.MIME_TYPE_DIR);
+            List<SafFile> kids = children(source);
+            if (kids != null) {
+                for (SafFile kid : kids) copySafToSaf(kid, created, listener);
+            }
+        } else {
+            if (listener != null) listener.onFile(new File(source.getPath()), new File(destParent.getPath(), source.getName()));
+            SafFile created = createChild(destParent, source.getName(), source.getMimeType());
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = openInput(source);
+                out = openOutput(created);
+                byte[] buffer = new byte[65536];
+                int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            } finally {
+                closeQuietly(in);
+                closeQuietly(out);
+            }
+            if (listener != null) listener.onBytes(Math.max(1L, source.length()));
+        }
+    }
+
+    /** Creates a child document and returns it wrapped with the id the provider assigned. */
+    public static SafFile createChild(SafFile parent, String name, String mimeType) throws IOException {
+        Uri created;
+        try {
+            created = DocumentsContract.createDocument(resolver(), documentUri(parent),
+                    mimeType == null ? "application/octet-stream" : mimeType, name);
+        } catch (Exception e) {
+            throw new IOException(e.getMessage() == null ? e.toString() : e.getMessage());
+        }
+        if (created == null) throw new IOException("The provider refused to create " + name);
+        return fromCreatedUri(parent, created);
     }
 
     private static void closeQuietly(Cursor cursor) {

@@ -428,6 +428,11 @@ public class FileUtils {
         if (file instanceof ShizukuFile) {
             file = ShizukuFileOps.materialize(null, file);
         }
+        if (file instanceof SafFile) {
+            // Provider documents stream through the ContentResolver; a path
+            // like "saf:..." has no java.io backing to open.
+            return ((SafFile) file).openInput();
+        }
         return LegacyUtils.supportsFileChannel ?
                 Files.newInputStream(file.toPath(), StandardOpenOption.READ)
                 : new FileInputStream(file);

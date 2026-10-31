@@ -103,6 +103,7 @@ import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -401,7 +402,10 @@ public class FileOpener {
                     Extensions.showMessage(context, R.string.not_an_apk);
                     return;
                 }
-                withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
+                withReadableCopy(file, readable -> {
+                    if (apkTools != null) apkTools.showApkInfoDialog(readable, fileName);
+                    else openWithDefaultOrDialog(readable, fileName);
+                });
                 return;
             }
             case BUILTIN_FONT:
@@ -510,6 +514,21 @@ public class FileOpener {
             if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return;
             showOpenWithDialog(readable, fileName, null, null, file);
         });
+    }
+
+    /**
+     * Opens an archive on the usual read-dispatch. A provider-backed archive
+     * only has a staged copy here, and the archive browser rewrites that copy
+     * in place - edits would never reach the provider - so for SAF sources the
+     * archive opens with an external app instead; the SAF pane's own Extract
+     * and Compress actions cover working with it inside the app.
+     */
+    private void openArchiveSafe(File file) {
+        if (SafFs.isSaf(file)) {
+            openWithDefaultOrDialog(file, file.getName());
+            return;
+        }
+        withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
     }
 
     private void showAppsForMime(File file, String fileName, boolean useActual) {
@@ -1049,7 +1068,10 @@ public class FileOpener {
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")) {
             openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
-            withReadableCopy(file, checksumDialogs::showHashVerifyDialog);
+            withReadableCopy(file, readable -> {
+                if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);
+                else openWithDefaultOrDialog(readable, fileName);
+            });
         } else if (fileName.endsWith(".xml") || fileName.endsWith(".axml")
             || FileUtils.isAxml(file) || FileUtils.isAbx(file)) {
             withReadableCopy(file, readable -> {
@@ -1085,7 +1107,10 @@ public class FileOpener {
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
         } else if ((ext.equals(".apk"))) {
-            withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
+            withReadableCopy(file, readable -> {
+                if (apkTools != null) apkTools.showApkInfoDialog(readable, fileName);
+                else openWithDefaultOrDialog(readable, fileName);
+            });
         } else {
             String bak = ".bak";
             if (ext.equals(bak)) {
@@ -1094,7 +1119,7 @@ public class FileOpener {
                 if (!innerExt.isEmpty()) {
                     handleFileClick(file, nameWithoutBak);
                 } else {
-                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                    openArchiveSafe(file);
                 }
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
@@ -1102,12 +1127,13 @@ public class FileOpener {
                 // Extension says archive: only route to the viewer when the
                 // bytes agree, so a mislabeled file falls through gracefully.
                 if (ArchiveBrowseUtil.isBrowsable(file))
-                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                    openArchiveSafe(file);
                 else openWithDefaultOrDialog(file, fileName);
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else if (fileName.endsWith(".dex")) {
-                fileOps.showDexOptionsDialog(file, null, null, fileName);
+                if (fileOps != null) fileOps.showDexOptionsDialog(file, null, null, fileName);
+                else openWithDefaultOrDialog(file, fileName);
             } else if (fileName.endsWith(".sh")) {
                 withReadableCopy(file, readable -> showShellScriptDialog(readable, file, fileName));
             } else if (FileUtils.matchExt(ext, FileUtils.FONT_EXTS)) {
@@ -1125,7 +1151,7 @@ public class FileOpener {
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
                 // tar/gz/...): open the archive viewer instead of "no app found".
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                openArchiveSafe(file);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
@@ -1240,6 +1266,26 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
         }
+        if (SafFs.isSaf(file)) {
+            // A provider document is answered by staging a real copy first;
+            // every handler below then works on it unchanged.
+            Extensions.showMessage(context, R.string.reading_from_provider);
+            new Thread(() -> {
+                try {
+                    File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                    context.handler.post(() -> {
+                        try {
+                            cb.onReady(staged);
+                        } catch (Exception e) {
+                            new ErrorUtil(context).showError(e);
+                        }
+                    });
+                } catch (Exception e) {
+                    context.handler.post(() -> new ErrorUtil(context).showError(e));
+                }
+            }).start();
+            return;
+        }
         try {
             if (file != null && file.exists() && file.canRead() && appReadable(file)) {
                 cb.onReady(file);
@@ -1275,7 +1321,10 @@ public class FileOpener {
         if (readable != null && original != null
                 && !readable.getAbsolutePath().equals(original.getAbsolutePath())) {
             i.putExtra("rootOriginalPath", original.getAbsolutePath());
-            Extensions.showMessage(context, R.string.opened_with_root);
+            // The editor saves through RootStaging.writeBack, which streams a
+            // provider path back into its document; say so instead of "root".
+            Extensions.showMessage(context, SafFs.isSaf(original)
+                    ? R.string.opened_from_provider : R.string.opened_with_root);
         }
         return i;
     }
