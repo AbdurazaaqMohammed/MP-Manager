@@ -1309,13 +1309,6 @@ final View.OnClickListener originalClickListener;
         }).start();
     }
 
-
-
-
-
-
-
-
     private void updateFolderCountOnMainScreen(int position) {
     }
 
