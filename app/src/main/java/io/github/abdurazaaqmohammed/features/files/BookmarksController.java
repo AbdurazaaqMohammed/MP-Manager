@@ -159,6 +159,7 @@ public class BookmarksController {
             }
         });
 
+        activity.findViewById(R.id.bookmarksReorderButton).setOnClickListener(v -> showCurrentTabReorderDialog());
         activity.findViewById(R.id.bookmarksMenuButton).setOnClickListener(this::showBookmarksBarMenu);
         activity.findViewById(R.id.bookmarksCloseButton).setOnClickListener(v -> activity.closeBookmarksDrawer());
         activity.findViewById(R.id.batchCopy).setOnClickListener(v -> batchCopyOrMove(true));
@@ -340,15 +341,12 @@ public class BookmarksController {
         PopupMenu popup = new PopupMenu(activity, anchor);
         String ag = activity.rss.getString(R.string.add_group);
         String ah = activity.rss.getString(R.string.adjust_height);
-        String ro = activity.rss.getString(R.string.reorder_bookmarks);
         popup.getMenu().add(ag);
-        popup.getMenu().add(ro);
         popup.getMenu().add(ah);
         popup.setOnMenuItemClickListener(item -> {
             CharSequence title = item.getTitle();
             if (TextUtils.isEmpty(title)) ;
             else if (ag.contentEquals(title)) showAddGroupDialog();
-            else if (ro.contentEquals(title)) showCurrentTabReorderDialog();
             else showAdjustHeightDialog();
             return true;
         });
@@ -761,18 +759,21 @@ public class BookmarksController {
                     activeController.items.clear();
                     activeController.items.addAll(reorderItems);
                     persistBookmarkOrder(activeController);
+                    this.bookmarks = activeController.items;
                     activeController.adapter.notifyDataSetChanged();
                     activity.refreshSidebar(activity.getSidebarSectionOrder());
                 })
                 .create();
         dialog.show();
 
-        // Make dialog tall to facilitate reordering easily (80% of screen height)
+        // Adjust dialog size nicely: fit items up to 80% screen height
         if (dialog.getWindow() != null) {
             int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
             int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
-            int targetHeight = (int) (screenHeight * 0.80f);
-            dialog.getWindow().setLayout((int) (screenWidth * 0.94f), targetHeight);
+            int maxDialogH = (int) (screenHeight * 0.80f);
+            int rowHeight = (int) (52 * density);
+            int estimatedH = Math.min(maxDialogH, reorderItems.size() * rowHeight + (int) (140 * density));
+            dialog.getWindow().setLayout((int) (screenWidth * 0.92f), estimatedH);
         }
     }
 
