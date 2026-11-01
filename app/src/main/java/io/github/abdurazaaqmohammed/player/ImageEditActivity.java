@@ -1187,6 +1187,15 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 File original = new File(originalPath);
                 long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
+                if (hasCrop || hasPixelEdits) {
+                    try {
+                        File bak = new File(originalPath + ".bak");
+                        copyFile(original, bak);
+                        if (mtimeToPreserve > 0) bak.setLastModified(mtimeToPreserve);
+                        scanMediaFile(bak.getAbsolutePath());
+                    } catch (Exception ignored) {
+                    }
+                }
                 copyFile(workingFile, original);
                 if (mtimeToPreserve > 0) {
                     try {
