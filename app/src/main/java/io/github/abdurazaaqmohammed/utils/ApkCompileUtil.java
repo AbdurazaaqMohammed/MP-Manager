@@ -159,19 +159,10 @@ public class ApkCompileUtil {
             AppLogs.log("COMPILE_APK", "Starting compile for directory: " + folder.getAbsolutePath());
             BuildOptions bo = new BuildOptions();
 
-            File[] children = folder.listFiles();
-            boolean isXml = false;
-            boolean isJson = false;
-            if (children != null) {
-                for (File f : children) {
-                    String name = f.getName();
-                    if (name.equalsIgnoreCase("resources") || name.equalsIgnoreCase("res")) {
-                        isXml = true;
-                    } else if (name.equalsIgnoreCase("uncompressed-files.json")) {
-                        isJson = true;
-                    }
-                }
-            }
+            File resDir = new File(folder, "resources");
+            File publicXml = new File(resDir, "values/public.xml");
+            boolean isXml = resDir.isDirectory() && (publicXml.isFile() || new File(resDir, "package.json").isFile());
+            boolean isJson = new File(folder, "uncompressed-files.json").isFile();
 
             bo.type = isXml ? BuildOptions.TYPE_XML : isJson ? BuildOptions.TYPE_JSON : BuildOptions.TYPE_RAW;
             bo.extractNativeLibs = extractNativeLibs ? "true" : "false";

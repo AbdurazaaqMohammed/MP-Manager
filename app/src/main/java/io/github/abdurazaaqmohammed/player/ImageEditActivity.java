@@ -87,6 +87,16 @@ public class ImageEditActivity extends BaseActivity {
             resolveSharedImage(incoming);
             return;
         }
+        String rootOriginal = getIntent().getStringExtra("rootOriginalPath");
+        if (rootOriginal != null && !rootOriginal.isEmpty()) {
+            originalPath = rootOriginal;
+        }
+        if (originalPath != null && originalPath.contains("/cache/root_staging/")) {
+            // If originalPath was set to a staged cache file, don't save into cache
+            if (rootOriginal != null && !rootOriginal.isEmpty()) {
+                originalPath = rootOriginal;
+            }
+        }
         if (originalPath != null) {
             originalPath = toPhysicalPathIfRoot(originalPath);
         }
@@ -1220,11 +1230,11 @@ public class ImageEditActivity extends BaseActivity {
                     }
                 }
 
-                // 2. Write the new edited/stretched image to originalPath
-                copyFile(workingFile, original);
+                // 2. Copy EXIF metadata from original backup to workingFile in cache first
+                copyExif(bakPath, workingFile.getAbsolutePath());
 
-                // 3. Copy EXIF metadata from bakPath to originalPath (with updated width/height)
-                copyExif(bakPath, originalPath);
+                // 3. Write the new edited/stretched image to originalPath
+                copyFile(workingFile, original);
 
                 long mtimeToPreserve = targetMtime > 0 ? targetMtime : -1;
                 if (mtimeToPreserve > 0) {
@@ -1374,8 +1384,16 @@ public class ImageEditActivity extends BaseActivity {
 
     private void copyExif(String srcPath, String dstPath) {
         if (!isJpeg || srcPath == null || dstPath == null) return;
+        File stagedSrc = null;
         try {
-            ExifInterface srcExif = new ExifInterface(srcPath);
+            ExifInterface srcExif;
+            try {
+                srcExif = new ExifInterface(srcPath);
+            } catch (Exception e) {
+                // If srcPath is root-protected or not directly accessible
+                stagedSrc = RootStaging.stageForRead(this, srcPath);
+                srcExif = new ExifInterface(stagedSrc.getAbsolutePath());
+            }
             ExifInterface dstExif = new ExifInterface(dstPath);
             String[] tags = {
                     ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL,
@@ -1403,6 +1421,10 @@ public class ImageEditActivity extends BaseActivity {
             JpegMetaStrip.fixJpegMarkerOrder(new File(dstPath));
         } catch (Exception e) {
             AppLogs.logError("IMAGE_EDIT", "Failed to copy EXIF attributes from " + srcPath + " to " + dstPath, e);
+        } finally {
+            if (stagedSrc != null) {
+                try { stagedSrc.delete(); } catch (Exception ignored) {}
+            }
         }
     }
 

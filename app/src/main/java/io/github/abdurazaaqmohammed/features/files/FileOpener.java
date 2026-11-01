@@ -382,7 +382,7 @@ public class FileOpener {
                 return;
             case BUILTIN_IMAGE:
                 if (file == null) return;
-                withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath()));
+                withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath(), file.getAbsolutePath()));
                 return;
             case BUILTIN_HEX:
                 if (file == null || !file.isFile()) {
@@ -1103,7 +1103,7 @@ public class FileOpener {
                 }
             });
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
-            withReadableCopy(file, readable -> context.openImageViewer(readable.getPath()));
+            withReadableCopy(file, readable -> context.openImageViewer(readable.getPath(), file.getAbsolutePath()));
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
         } else if ((ext.equals(".apk"))) {

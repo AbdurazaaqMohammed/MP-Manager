@@ -299,7 +299,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void openImageViewer(String filePath) {
-        ImageViewerActivity.open(this, filePath);
+        ImageViewerActivity.open(this, filePath, null);
+    }
+
+    public void openImageViewer(String filePath, String originalPath) {
+        ImageViewerActivity.open(this, filePath, originalPath);
     }
 
     public void playMediaFile(String filePath) {

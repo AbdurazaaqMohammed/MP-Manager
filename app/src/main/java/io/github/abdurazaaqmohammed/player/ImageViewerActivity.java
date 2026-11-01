@@ -95,10 +95,19 @@ public class ImageViewerActivity extends BaseActivity {
         }
     }
 
+    private String rootOriginalPath;
+
     public static void open(Activity activity, String filePath) {
+        open(activity, filePath, null);
+    }
+
+    public static void open(Activity activity, String filePath, String originalPath) {
         Intent intent = new Intent(activity, ImageViewerActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.putExtra("image_path", filePath);
+        if (originalPath != null) {
+            intent.putExtra("rootOriginalPath", originalPath);
+        }
         activity.startActivity(intent);
     }
     @Override
@@ -157,6 +166,7 @@ public class ImageViewerActivity extends BaseActivity {
                     }).show();
         });
 
+        rootOriginalPath = getIntent().getStringExtra("rootOriginalPath");
         String startPath = getIntent().getStringExtra("image_path");
         if (startPath == null || !new File(startPath).exists()) {
             finish();
@@ -438,7 +448,11 @@ public class ImageViewerActivity extends BaseActivity {
             return;
         }
         ImageEditActivity.sessionPath = path;
-        startActivityForResult(new Intent(this, ImageEditActivity.class), REQ_EDIT_IMAGE);
+        Intent editIntent = new Intent(this, ImageEditActivity.class);
+        if (pos == currentIndex && rootOriginalPath != null) {
+            editIntent.putExtra("rootOriginalPath", rootOriginalPath);
+        }
+        startActivityForResult(editIntent, REQ_EDIT_IMAGE);
     }
 
     @Override
