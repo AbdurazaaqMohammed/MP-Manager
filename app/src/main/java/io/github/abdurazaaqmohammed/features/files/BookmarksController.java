@@ -237,6 +237,7 @@ public class BookmarksController {
             refreshGroupList(group);
         } else {
             getBookmarks().add(file);
+            store.saveBookmarks(getBookmarks());
             if (bookmarksAdapter != null) bookmarksAdapter.notifyDataSetChanged();
         }
         activity.refreshSidebar(activity.getSidebarSectionOrder());

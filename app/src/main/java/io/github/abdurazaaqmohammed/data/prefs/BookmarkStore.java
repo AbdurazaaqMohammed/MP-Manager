@@ -52,7 +52,7 @@ public final class BookmarkStore {
                     for (String path : paths) {
                         if (!TextUtils.isEmpty(path)) {
                             File bookmarked = new File(path);
-                            if (bookmarked.exists()) out.add(bookmarked);
+                            out.add(bookmarked);
                         }
                     }
                 }
@@ -62,7 +62,7 @@ public final class BookmarkStore {
                     bookmark = bookmark.trim();
                     if (!TextUtils.isEmpty(bookmark)) {
                         File bookmarked = new File(bookmark);
-                        if (bookmarked.exists()) out.add(bookmarked);
+                        out.add(bookmarked);
                     }
                 }
             }
@@ -73,7 +73,9 @@ public final class BookmarkStore {
 
     public void saveBookmarks(List<File> files) {
         try {
-            prefs().edit().putString("bookmarks", files.toString()).apply();
+            List<String> paths = new ArrayList<>();
+            for (File f : files) if (f != null && f.getPath() != null) paths.add(f.getPath());
+            prefs().edit().putString("bookmarks", gson.toJson(paths)).commit();
         } catch (Exception ignored) {
         }
     }
@@ -92,7 +94,7 @@ public final class BookmarkStore {
 
     public void saveLabels(Map<String, String> labels) {
         try {
-            prefs().edit().putString("bookmark_labels", gson.toJson(labels)).apply();
+            prefs().edit().putString("bookmark_labels", gson.toJson(labels)).commit();
         } catch (Exception ignored) {
         }
     }
@@ -111,7 +113,7 @@ public final class BookmarkStore {
 
     public void saveGroups(List<String> groups) {
         try {
-            prefs().edit().putString("bookmark_groups", gson.toJson(groups)).apply();
+            prefs().edit().putString("bookmark_groups", gson.toJson(groups)).commit();
         } catch (Exception ignored) {
         }
     }
@@ -135,7 +137,7 @@ public final class BookmarkStore {
         try {
             List<String> paths = new ArrayList<>();
             for (File f : files) paths.add(f.getPath());
-            prefs().edit().putString("bookmarks_group_" + group, gson.toJson(paths)).apply();
+            prefs().edit().putString("bookmarks_group_" + group, gson.toJson(paths)).commit();
         } catch (Exception ignored) {
         }
     }

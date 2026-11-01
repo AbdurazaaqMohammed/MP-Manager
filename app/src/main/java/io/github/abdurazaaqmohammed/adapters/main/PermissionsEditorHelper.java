@@ -38,24 +38,31 @@ public class PermissionsEditorHelper {
     public View createPermissionsEditor(String currentPerms) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(8), dp(8), dp(8), 0);
-
-        TextView sectionTitle = new TextView(context);
-        sectionTitle.setText(R.string.permissions);
-        sectionTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
-        sectionTitle.setTypeface(null, Typeface.BOLD);
-        sectionTitle.setPadding(0, dp(4), 0, dp(8));
-        root.addView(sectionTitle);
+        root.setPadding(dp(16), dp(8), dp(16), dp(4));
 
         int[] permBits = parseNumericPerms(currentPerms);
 
-        TextView colHeader = new TextView(context);
-        colHeader.setText(R.string.read_write_exec);
-        colHeader.setTypeface(Typeface.MONOSPACE);
-        colHeader.setTextSize(12);
-        colHeader.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
-        colHeader.setPadding(dp(8), 0, 0, dp(4));
-        root.addView(colHeader);
+        LinearLayout colHeaderRow = new LinearLayout(context);
+        colHeaderRow.setOrientation(LinearLayout.HORIZONTAL);
+        colHeaderRow.setGravity(Gravity.CENTER_VERTICAL);
+        colHeaderRow.setPadding(0, dp(4), 0, dp(4));
+
+        View spacer = new View(context);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(dp(70), ViewGroup.LayoutParams.WRAP_CONTENT));
+        colHeaderRow.addView(spacer);
+
+        String[] headers = {"Read", "Write", "Exec"};
+        for (String h : headers) {
+            TextView tv = new TextView(context);
+            tv.setText(h);
+            tv.setTextSize(12);
+            tv.setGravity(Gravity.CENTER);
+            tv.setTypeface(Typeface.MONOSPACE);
+            tv.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+            tv.setLayoutParams(new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.WRAP_CONTENT));
+            colHeaderRow.addView(tv);
+        }
+        root.addView(colHeaderRow);
 
         ownerRead = createPermCheckbox(permBits[0] & 4);
         ownerWrite = createPermCheckbox(permBits[0] & 2);
@@ -72,17 +79,30 @@ public class PermissionsEditorHelper {
         otherExec = createPermCheckbox(permBits[2] & 1);
         root.addView(createPermRow(context.getString(R.string.other), otherRead, otherWrite, otherExec));
 
+        LinearLayout specialHeader = new LinearLayout(context);
+        specialHeader.setOrientation(LinearLayout.HORIZONTAL);
+        specialHeader.setGravity(Gravity.CENTER);
+        specialHeader.setPadding(0, dp(10), 0, dp(4));
+
+        TextView specialLabel = new TextView(context);
+        specialLabel.setText("---- " + context.getString(R.string.special_permissions) + " ----");
+        specialLabel.setTextSize(12);
+        specialLabel.setTypeface(Typeface.MONOSPACE);
+        specialLabel.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        specialHeader.addView(specialLabel);
+        root.addView(specialHeader);
+
         setUid = new CheckBox(context);
         setUid.setText(context.getString(R.string.set_uid));
         setUid.setTextSize(12);
         setUid.setChecked((permBits[3] & 4) != 0);
-        setUid.setPadding(dp(4), 0, dp(16), 0);
+        setUid.setPadding(dp(4), 0, dp(12), 0);
 
         setGid = new CheckBox(context);
         setGid.setText(context.getString(R.string.set_gid));
         setGid.setTextSize(12);
         setGid.setChecked((permBits[3] & 2) != 0);
-        setGid.setPadding(dp(4), 0, dp(16), 0);
+        setGid.setPadding(dp(4), 0, dp(12), 0);
 
         sticky = new CheckBox(context);
         sticky.setText(context.getString(R.string.sticky));
@@ -92,35 +112,41 @@ public class PermissionsEditorHelper {
 
         LinearLayout specialRow = new LinearLayout(context);
         specialRow.setOrientation(LinearLayout.HORIZONTAL);
-        specialRow.setGravity(Gravity.CENTER_VERTICAL);
-        specialRow.setPadding(0, dp(4), 0, dp(4));
+        specialRow.setGravity(Gravity.CENTER);
+        specialRow.setPadding(0, dp(2), 0, dp(10));
         specialRow.addView(setUid);
         specialRow.addView(setGid);
         specialRow.addView(sticky);
         root.addView(specialRow);
 
+        LinearLayout previewRow = new LinearLayout(context);
+        previewRow.setOrientation(LinearLayout.HORIZONTAL);
+        previewRow.setGravity(Gravity.CENTER);
+        previewRow.setPadding(0, dp(6), 0, dp(8));
+
         symbolicPreview = new TextView(context);
         symbolicPreview.setText(getSymbolicString());
         symbolicPreview.setTypeface(Typeface.MONOSPACE);
-        symbolicPreview.setTextSize(14);
+        symbolicPreview.setTextSize(15);
         symbolicPreview.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
-        symbolicPreview.setPadding(0, dp(8), 0, dp(4));
-        root.addView(symbolicPreview);
+        previewRow.addView(symbolicPreview);
 
-        LinearLayout numericRow = new LinearLayout(context);
-        numericRow.setOrientation(LinearLayout.HORIZONTAL);
-        numericRow.setGravity(Gravity.CENTER_VERTICAL);
-        numericRow.setPadding(0, dp(4), 0, dp(4));
-        TextView numLabel = new TextView(context);
-        numLabel.setText(context.getString(R.string.numeric));
-        numLabel.setTextSize(13);
+        TextView openParen = new TextView(context);
+        openParen.setText(" (");
+        openParen.setTypeface(Typeface.MONOSPACE);
+        openParen.setTextSize(15);
+        openParen.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
+        previewRow.addView(openParen);
+
         numericInput = new EditText(context);
-        numericInput.setTextSize(14);
+        numericInput.setTextSize(15);
         numericInput.setTypeface(Typeface.MONOSPACE);
+        numericInput.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         numericInput.setText(String.valueOf(permBits[4]));
         numericInput.setSelectAllOnFocus(true);
+        numericInput.setGravity(Gravity.CENTER);
+        numericInput.setBackground(null);
         numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(4), octalOnly() });
-        numericInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         numericInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -136,12 +162,16 @@ public class PermissionsEditorHelper {
                 }
             }
         });
-        numericRow.addView(numLabel);
-        TextInputLayout numericBox =
-                UiFields.wrap(context, numericInput, null, 0);
-        numericBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        numericRow.addView(numericBox);
-        root.addView(numericRow);
+        previewRow.addView(numericInput);
+
+        TextView closeParen = new TextView(context);
+        closeParen.setText(")");
+        closeParen.setTypeface(Typeface.MONOSPACE);
+        closeParen.setTextSize(15);
+        closeParen.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
+        previewRow.addView(closeParen);
+
+        root.addView(previewRow);
 
         View.OnClickListener permListener = v -> {
             symbolicPreview.setText(getSymbolicString());
@@ -186,7 +216,31 @@ public class PermissionsEditorHelper {
         return special * 1000 + owner * 100 + group * 10 + other;
     }
 
-    private int[] parseNumericPerms(String perms) {
+    public static String numericToSymbolic(String perms) {
+        int[] bits = parseNumericPerms(perms);
+        StringBuilder sb = new StringBuilder();
+        sb.append((bits[0] & 4) != 0 ? 'r' : '-');
+        sb.append((bits[0] & 2) != 0 ? 'w' : '-');
+        if ((bits[3] & 4) != 0 && (bits[0] & 1) != 0) sb.append('s');
+        else if ((bits[0] & 1) != 0) sb.append('x');
+        else sb.append((bits[3] & 4) != 0 ? 'S' : '-');
+
+        sb.append((bits[1] & 4) != 0 ? 'r' : '-');
+        sb.append((bits[1] & 2) != 0 ? 'w' : '-');
+        if ((bits[3] & 2) != 0 && (bits[1] & 1) != 0) sb.append('s');
+        else if ((bits[1] & 1) != 0) sb.append('x');
+        else sb.append((bits[3] & 2) != 0 ? 'S' : '-');
+
+        sb.append((bits[2] & 4) != 0 ? 'r' : '-');
+        sb.append((bits[2] & 2) != 0 ? 'w' : '-');
+        if ((bits[3] & 1) != 0 && (bits[2] & 1) != 0) sb.append('t');
+        else if ((bits[2] & 1) != 0) sb.append('x');
+        else sb.append((bits[3] & 1) != 0 ? 'T' : '-');
+
+        return sb.toString();
+    }
+
+    public static int[] parseNumericPerms(String perms) {
         int[] bits = new int[5];
         if (perms == null) return bits;
         String clean = perms.trim().replace(" ", "");
@@ -230,12 +284,13 @@ public class PermissionsEditorHelper {
     private CheckBox createPermCheckbox(int checkedBit) {
         CheckBox cb = new CheckBox(context);
         cb.setChecked(checkedBit != 0);
-        cb.setPadding(0, 0, dp(8), 0);
         cb.setMinWidth(0);
         cb.setMinimumWidth(0);
         cb.setMinHeight(0);
         cb.setMinimumHeight(0);
-        cb.setLayoutParams(new LinearLayout.LayoutParams(dp(40), ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.gravity = Gravity.CENTER;
+        cb.setLayoutParams(lp);
         return cb;
     }
 
@@ -251,7 +306,7 @@ public class PermissionsEditorHelper {
         labelView.setTypeface(Typeface.MONOSPACE);
         labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
         labelView.setPadding(dp(8), 0, dp(4), 0);
-        labelView.setLayoutParams(new LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.WRAP_CONTENT));
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(dp(70), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         row.addView(labelView);
         row.addView(read);

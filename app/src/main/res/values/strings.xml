@@ -24,9 +24,9 @@
     <string name="enabled_state">Enabled</string>
     <string name="status_label">Status</string>
     <string name="actions_label">Actions</string>
-    <string name="open_apk_dir">Open APK folder</string>
-    <string name="open_data_dir">Open data folder</string>
-    <string name="open_ext_data_dir">Open external data folder</string>
+    <string name="open_apk_dir">APK folder</string>
+    <string name="open_data_dir">Data folder</string>
+    <string name="open_ext_data_dir">External data folder</string>
     <string name="base_label">Base</string>
     <string name="splits_label">Splits</string>
     <string name="total_label">Total</string>
@@ -746,7 +746,7 @@ Layout Inspector
     <string name="install_save_data_failed">Could not back up this app\'s data, so it was not uninstalled. Grant root access if you want the data preserved.</string>
     <string name="install_uninstall_note_root">“Uninstall and install” removes the existing app and installs this one. Its data is copied first and restored afterwards.</string>
     <string name="install_uninstall_note_no_data">“Uninstall and install” removes the existing app and installs this one. Its data cannot be read without root, so it will be lost.</string>
-    <string name="install_dont_show_again">Don\'t show this again</string>
+    <string name="install_dont_show_again">Don\'t show again</string>
     <string name="open_in_play_store">Open in Play Store</string>
     <string name="date_taken">Date taken</string>
     <string name="current_time">Current time</string>
@@ -1189,6 +1189,12 @@ Layout Inspector
     <string name="img_flip_v">Flip V</string>
     <string name="img_exif">EXIF tags</string>
     <string name="img_strip_meta">Remove metadata</string>
+    <string name="resize_and_save">Resize selection and save</string>
+    <string name="keep_aspect_ratio">Keep aspect ratio</string>
+    <string name="stretch_image">Stretch image</string>
+    <string name="width">Width</string>
+    <string name="height">Height</string>
+    <string name="invalid_values">Invalid values</string>
     <string name="img_strip_msg">Remove EXIF and other metadata? Image pixels stay identical.</string>
     <string name="img_strip">Strip</string>
     <string name="img_crop_quality">Crop quality</string>
@@ -1974,4 +1980,6 @@ Layout Inspector
     <string name="more_functions">More functions</string>
     <string name="open_in_play_store_action">Open in Play Store</string>
     <string name="edit_app_details">Organize app details</string>
+    <string name="special_permissions">Special Permissions</string>
+    <string name="mime">MIME</string>
 </resources>

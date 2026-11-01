@@ -45,6 +45,7 @@ import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
 public class ImageEditActivity extends BaseActivity {
@@ -84,11 +85,41 @@ public class ImageEditActivity extends BaseActivity {
             resolveSharedImage(incoming);
             return;
         }
-        if (originalPath == null || !new File(originalPath).isFile()) {
+        if (originalPath != null) {
+            originalPath = toPhysicalPathIfRoot(originalPath);
+        }
+        if (originalPath == null || (!new File(originalPath).isFile() && !isRootFile(originalPath))) {
             finish();
             return;
         }
         initEditor();
+    }
+
+    private String toPhysicalPathIfRoot(String path) {
+        if (path == null) return null;
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                if (path.startsWith("/storage/emulated/0")) {
+                    return "/data/media/0" + path.substring("/storage/emulated/0".length());
+                } else if (path.startsWith("/storage/emulated/")) {
+                    return "/data/media/" + path.substring("/storage/emulated/".length());
+                }
+            }
+        } catch (Exception ignored) {}
+        return path;
+    }
+
+    private boolean isRootFile(String path) {
+        if (path == null) return false;
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                RootManager.ShellResult r = rm.execute("test -f " + RootManager.escapeShellArg(path), 5);
+                return r.isSuccess();
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     private void resolveSharedImage(Uri uri) {
@@ -272,15 +303,306 @@ public class ImageEditActivity extends BaseActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
+        int pad = dp(4);
+        row.setPadding(pad, 0, pad, 0);
+
         MaterialButton exifBtn = new MaterialButton(this);
         exifBtn.setText(getString(R.string.img_exif));
+        exifBtn.setTextSize(11);
+        exifBtn.setPadding(dp(4), dp(6), dp(4), dp(6));
         exifBtn.setOnClickListener(v -> showExifEditor());
-        row.addView(exifBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams p1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        p1.setMargins(dp(2), 0, dp(2), 0);
+        row.addView(exifBtn, p1);
+
+        MaterialButton resizeBtn = new MaterialButton(this);
+        resizeBtn.setIconResource(R.drawable.ic_size_select);
+        resizeBtn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        resizeBtn.setIconPadding(dp(4));
+        resizeBtn.setIconSize(dp(16));
+        resizeBtn.setText(getString(R.string.crop));
+        resizeBtn.setTextSize(11);
+        resizeBtn.setPadding(dp(4), dp(6), dp(4), dp(6));
+        resizeBtn.setOnClickListener(v -> showResizeDialog());
+        LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        p2.setMargins(dp(2), 0, dp(2), 0);
+        row.addView(resizeBtn, p2);
+
         MaterialButton stripBtn = new MaterialButton(this);
         stripBtn.setText(getString(R.string.img_strip_meta));
+        stripBtn.setTextSize(11);
+        stripBtn.setPadding(dp(4), dp(6), dp(4), dp(6));
         stripBtn.setOnClickListener(v -> confirmStripMetadata());
-        row.addView(stripBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams p3 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        p3.setMargins(dp(2), 0, dp(2), 0);
+        row.addView(stripBtn, p3);
+
         return row;
+    }
+
+    private void showResizeDialog() {
+        int initialW = imgW;
+        int initialH = imgH;
+        final int cropX, cropY, cropW, cropH;
+        if (hasCrop()) {
+            RectF crop = cropImageRect;
+            cropX = Math.round(crop.left);
+            cropY = Math.round(crop.top);
+            cropW = Math.round(crop.width());
+            cropH = Math.round(crop.height());
+            initialW = cropW;
+            initialH = cropH;
+        } else {
+            cropX = 0;
+            cropY = 0;
+            cropW = imgW;
+            cropH = imgH;
+        }
+
+        final int baseCropW = cropW;
+        final int baseCropH = cropH;
+        final float ratio = initialH > 0 ? initialW / (float) initialH : 1f;
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad, pad, pad);
+
+        LinearLayout inputRow = new LinearLayout(this);
+        inputRow.setOrientation(LinearLayout.HORIZONTAL);
+        inputRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        EditText widthView = new EditText(this);
+        widthView.setInputType(InputType.TYPE_CLASS_NUMBER);
+        widthView.setHint(getString(R.string.width));
+        widthView.setText(String.valueOf(initialW));
+        widthView.setSingleLine(true);
+        inputRow.addView(widthView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView colon = new TextView(this);
+        colon.setText(" : ");
+        colon.setTextSize(16);
+        colon.setTypeface(colon.getTypeface(), android.graphics.Typeface.BOLD);
+        colon.setPadding(dp(8), 0, dp(8), 0);
+        inputRow.addView(colon);
+
+        EditText heightView = new EditText(this);
+        heightView.setInputType(InputType.TYPE_CLASS_NUMBER);
+        heightView.setHint(getString(R.string.height));
+        heightView.setText(String.valueOf(initialH));
+        heightView.setSingleLine(true);
+        inputRow.addView(heightView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        root.addView(inputRow);
+
+        android.widget.CheckBox keepAspect = new android.widget.CheckBox(this);
+        keepAspect.setText(getString(R.string.keep_aspect_ratio));
+        keepAspect.setChecked(true);
+        keepAspect.setPadding(dp(8), dp(8), dp(8), dp(8));
+        root.addView(keepAspect);
+
+        android.widget.CheckBox stretchImage = new android.widget.CheckBox(this);
+        stretchImage.setText(getString(R.string.stretch_image));
+        stretchImage.setChecked(false);
+        stretchImage.setPadding(dp(8), dp(8), dp(8), dp(8));
+        root.addView(stretchImage);
+
+        stretchImage.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (isChecked) {
+                keepAspect.setChecked(false);
+            }
+        });
+
+        keepAspect.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (isChecked) {
+                stretchImage.setChecked(false);
+                try {
+                    String wStr = widthView.getText().toString().trim();
+                    if (!wStr.isEmpty()) {
+                        int wVal = Integer.parseInt(wStr);
+                        if (wVal > 0 && ratio > 0) {
+                            heightView.setText(String.valueOf(Math.round(wVal / ratio)));
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        });
+
+        widthView.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                if (widthView.hasFocus() && keepAspect.isChecked()) {
+                    try {
+                        String str = s.toString().trim();
+                        if (!str.isEmpty()) {
+                            int wVal = Integer.parseInt(str);
+                            if (wVal > 0 && ratio > 0) {
+                                heightView.setText(String.valueOf(Math.round(wVal / ratio)));
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        });
+
+        heightView.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                if (heightView.hasFocus() && keepAspect.isChecked()) {
+                    try {
+                        String str = s.toString().trim();
+                        if (!str.isEmpty()) {
+                            int hVal = Integer.parseInt(str);
+                            if (hVal > 0 && ratio > 0) {
+                                widthView.setText(String.valueOf(Math.round(hVal * ratio)));
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        });
+
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.resize_and_save))
+                .setView(root)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(getString(R.string.preview), null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                int targetW = 0, targetH = 0;
+                try {
+                    targetW = Integer.parseInt(widthView.getText().toString().trim());
+                    targetH = Integer.parseInt(heightView.getText().toString().trim());
+                } catch (Exception ignored) {}
+                if (targetW <= 0 || targetH <= 0) {
+                    showError(getString(R.string.invalid_values));
+                    return;
+                }
+                showResizePreview(targetW, targetH, cropX, cropY, baseCropW, baseCropH);
+            });
+
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                int targetW = 0, targetH = 0;
+                try {
+                    targetW = Integer.parseInt(widthView.getText().toString().trim());
+                    targetH = Integer.parseInt(heightView.getText().toString().trim());
+                } catch (Exception ignored) {}
+                if (targetW <= 0 || targetH <= 0) {
+                    showError(getString(R.string.invalid_values));
+                    return;
+                }
+                dialog.dismiss();
+                applyResizeAndCrop(targetW, targetH, cropX, cropY, baseCropW, baseCropH);
+            });
+        });
+
+        dialog.show();
+    }
+
+    private void showResizePreview(int targetW, int targetH, int cropX, int cropY, int cropW, int cropH) {
+        ProgressManager pm = new ProgressManager(this, true).show();
+        new Thread(() -> {
+            try {
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                Bitmap src = BitmapFactory.decodeFile(workingFile.getAbsolutePath(), opts);
+                if (src == null) throw new Exception("Cannot decode image");
+
+                int cx = Math.max(0, Math.min(cropX, src.getWidth() - 1));
+                int cy = Math.max(0, Math.min(cropY, src.getHeight() - 1));
+                int cw = Math.max(1, Math.min(cropW, src.getWidth() - cx));
+                int ch = Math.max(1, Math.min(cropH, src.getHeight() - cy));
+
+                Bitmap cropped = Bitmap.createBitmap(src, cx, cy, cw, ch);
+                if (cropped != src) src.recycle();
+
+                int maxDim = 2048;
+                int pw = targetW;
+                int ph = targetH;
+                if (pw > maxDim || ph > maxDim) {
+                    if (pw >= ph) {
+                        ph = Math.max(1, Math.round(maxDim * (ph / (float) pw)));
+                        pw = maxDim;
+                    } else {
+                        pw = Math.max(1, Math.round(maxDim * (pw / (float) ph)));
+                        ph = maxDim;
+                    }
+                }
+
+                Bitmap previewBitmap = Bitmap.createScaledBitmap(cropped, pw, ph, true);
+                if (previewBitmap != cropped) cropped.recycle();
+
+                runOnUiThread(() -> {
+                    pm.dismiss();
+                    ImageView iv = new ImageView(this);
+                    iv.setAdjustViewBounds(true);
+                    iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    iv.setImageBitmap(previewBitmap);
+                    int p = dp(16);
+                    iv.setPadding(p, p, p, p);
+
+                    new MaterialAlertDialogBuilder(this)
+                            .setTitle(getString(R.string.preview) + " (" + targetW + " × " + targetH + ")")
+                            .setView(iv)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                });
+            } catch (Throwable e) {
+                pm.dismiss();
+                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+            }
+        }).start();
+    }
+
+    private void applyResizeAndCrop(int targetW, int targetH, int cropX, int cropY, int cropW, int cropH) {
+        ProgressManager pm = new ProgressManager(this, true).show();
+        new Thread(() -> {
+            try {
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                Bitmap src = BitmapFactory.decodeFile(workingFile.getAbsolutePath(), opts);
+                if (src == null) throw new Exception("Cannot decode image");
+
+                int cx = Math.max(0, Math.min(cropX, src.getWidth() - 1));
+                int cy = Math.max(0, Math.min(cropY, src.getHeight() - 1));
+                int cw = Math.max(1, Math.min(cropW, src.getWidth() - cx));
+                int ch = Math.max(1, Math.min(cropH, src.getHeight() - cy));
+
+                Bitmap cropped = Bitmap.createBitmap(src, cx, cy, cw, ch);
+                if (cropped != src) src.recycle();
+
+                Bitmap scaled = Bitmap.createScaledBitmap(cropped, targetW, targetH, true);
+                if (scaled != cropped) cropped.recycle();
+
+                try (FileOutputStream fos = new FileOutputStream(workingFile)) {
+                    if (isJpeg) {
+                        scaled.compress(Bitmap.CompressFormat.JPEG, 95, fos);
+                    } else {
+                        scaled.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                    }
+                }
+                scaled.recycle();
+
+                resetOrientationTag();
+                readDims();
+                dirty = true;
+                hasPixelEdits = true;
+                pm.dismiss();
+                runOnUiThread(() -> {
+                    reloadPreview();
+                    resetCropToFull();
+                    updateInfo();
+                });
+            } catch (Throwable e) {
+                pm.dismiss();
+                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+            }
+        }).start();
     }
 
     private void prepareWorkingCopy() {
@@ -335,6 +657,7 @@ public class ImageEditActivity extends BaseActivity {
             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
             exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
             exif.saveAttributes();
+            if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
         } catch (Exception e) {
             runOnUiThread(() -> showError(getString(R.string.img_orientation_kept)));
         }
@@ -519,6 +842,7 @@ public class ImageEditActivity extends BaseActivity {
             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
             exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
             exif.saveAttributes();
+            if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
         } catch (Exception ignored) {
         }
     }
@@ -664,6 +988,7 @@ public class ImageEditActivity extends BaseActivity {
                             }
 
                             exif.saveAttributes();
+                            if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
 
                             if (parsedMtime > 0) {
                                 workingFile.setLastModified(parsedMtime);
@@ -964,11 +1289,25 @@ public class ImageEditActivity extends BaseActivity {
         super.onDestroy();
     }
 
-    private static void copyFile(File src, File dst) throws Exception {
+    private void copyFile(File src, File dst) throws Exception {
         try (InputStream in = new FileInputStream(src); OutputStream os = new FileOutputStream(dst)) {
             byte[] buf = new byte[65536];
             int n;
             while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+            return;
+        } catch (Exception originalError) {
+            try {
+                RootManager rm = RootManager.getInstance(this);
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                    RootManager.ShellResult r = rm.execute("cp -f " + RootManager.escapeShellArg(src.getAbsolutePath())
+                            + " " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
+                    if (r.isSuccess()) {
+                        rm.execute("chmod 666 " + RootManager.escapeShellArg(dst.getAbsolutePath()), 10);
+                        return;
+                    }
+                }
+            } catch (Exception ignored) {}
+            throw originalError;
         }
     }
 

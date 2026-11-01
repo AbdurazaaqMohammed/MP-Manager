@@ -24,6 +24,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.AppReinstaller;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -198,6 +199,18 @@ public final class InstallInfoDialog {
         status.setPadding(dp(activity, 4), dp(activity, 2), dp(activity, 4), dp(activity, 2));
         status.setOnClickListener(v -> showSignatureDetailsDialog(activity, analysis));
         row.addView(status);
+
+        int sigStatus = analysis.candidateSignatureStatus;
+        if (sigStatus == ApkSignatureInfo.STATUS_VERIFIED || sigStatus == ApkSignatureInfo.STATUS_INVALID) {
+            boolean isVer = sigStatus == ApkSignatureInfo.STATUS_VERIFIED;
+            TextView verText = new TextView(activity);
+            verText.setText(" (" + activity.getString(isVer ? R.string.sig_status_verified : R.string.sig_status_failed) + ")");
+            verText.setTextSize(13f);
+            verText.setTypeface(Typeface.DEFAULT_BOLD);
+            verText.setTextColor(isVer ? 0xFF43A047 : 0xFFE53935);
+            verText.setPadding(0, dp(activity, 2), dp(activity, 4), dp(activity, 2));
+            row.addView(verText);
+        }
 
         return row;
     }
