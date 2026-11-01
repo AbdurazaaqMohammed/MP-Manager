@@ -24,9 +24,9 @@
     <string name="enabled_state">ممكن</string>
     <string name="status_label">الحالة</string>
     <string name="actions_label">الإجراءات</string>
-    <string name="open_apk_dir">فتح مجلد APK</string>
-    <string name="open_data_dir">فتح مجلد البيانات</string>
-    <string name="open_ext_data_dir">فتح مجلد البيانات الخارجية</string>
+    <string name="open_apk_dir">مجلد APK</string>
+    <string name="open_data_dir">مجلد البيانات</string>
+    <string name="open_ext_data_dir">مجلد البيانات الخارجية</string>
     <string name="base_label">الأساسي</string>
     <string name="splits_label">المقسمة</string>
     <string name="total_label">الإجمالي</string>
@@ -1084,6 +1084,12 @@
     <string name="img_flip_v">انعكاس عمودي</string>
     <string name="img_exif">علامات EXIF</string>
     <string name="img_strip_meta">إزالة البيانات الوصفية (Metadata)</string>
+    <string name="resize_and_save">تغيير حجم التحديد والحفظ</string>
+    <string name="keep_aspect_ratio">الحفاظ على نسبة الأبعاد</string>
+    <string name="stretch_image">مط الصورة</string>
+    <string name="width">العرض</string>
+    <string name="height">الارتفاع</string>
+    <string name="invalid_values">قيم غير صالحة</string>
     <string name="img_strip_msg">هل تريد إزالة EXIF والبيانات الوصفية الأخرى؟ ستبقى بكسلات الصورة متطابقة.</string>
     <string name="img_strip">تجريد</string>
     <string name="img_crop_quality">جودة الاقتصاص</string>
@@ -1942,4 +1948,6 @@
     <string name="progress_speed_items">%1$d/ث</string>
     <string name="progress_eta">بقي %1$s</string>
     <string name="progress_done">تم</string>
+    <string name="special_permissions">أذونات خاصة</string>
+    <string name="mime">MIME</string>
 </resources>

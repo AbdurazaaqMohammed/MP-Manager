@@ -62,12 +62,14 @@ public final class ApkInstallAnalysis {
     public final String installedSignerSubject;
     public final String signerCertSha256;
     public final String installedSignerCertSha256;
+    public final int candidateSignatureStatus;
 
     private ApkInstallAnalysis(boolean installed, String packageName, String versionName, long versionCode,
                               String installedVersionName, long installedVersionCode, int versionRelation,
                               int signerRelation, boolean sameBytes, String checksum, String installedChecksum,
                               String signerSubject, String installedSignerSubject,
-                              String signerCertSha256, String installedSignerCertSha256) {
+                              String signerCertSha256, String installedSignerCertSha256,
+                              int candidateSignatureStatus) {
         this.installed = installed;
         this.packageName = packageName;
         this.versionName = versionName;
@@ -83,6 +85,7 @@ public final class ApkInstallAnalysis {
         this.installedSignerSubject = installedSignerSubject;
         this.signerCertSha256 = signerCertSha256;
         this.installedSignerCertSha256 = installedSignerCertSha256;
+        this.candidateSignatureStatus = candidateSignatureStatus;
     }
 
     public boolean isDifferentSigner() {
@@ -193,10 +196,12 @@ public final class ApkInstallAnalysis {
         String archiveCert = archiveSig == null ? null : sha256(archiveSig.getPrimaryCertificate());
         String archiveSubject = archiveSig == null ? null : subjectOf(archiveSig.getPrimaryCertificate());
 
+        int candidateSigStatus = archiveSig == null ? ApkSignatureInfo.STATUS_UNKNOWN : archiveSig.getStatus();
+
         if (pkg == null) {
             return new ApkInstallAnalysis(false, null, versionName, versionCode, null, 0,
                     VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null);
+                    archiveCert, null, candidateSigStatus);
         }
 
         PackageInfo installedInfo;
@@ -205,12 +210,12 @@ public final class ApkInstallAnalysis {
         } catch (Throwable e) {
             return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
                     VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null);
+                    archiveCert, null, candidateSigStatus);
         }
         if (installedInfo == null) {
             return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
                     VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null);
+                    archiveCert, null, candidateSigStatus);
         }
 
         long installedCode = ApkInfoUtil.getVersionCode(installedInfo);
@@ -225,7 +230,7 @@ public final class ApkInstallAnalysis {
         if (TextUtils_isEmpty(installedCert) || TextUtils_isEmpty(archiveCert)) {
             signerRelation = SIGNER_UNKNOWN;
         } else {
-            signerRelation = installedCert.equals(archiveCert) ? SIGNER_SAME : SIGNER_DIFFERENT;
+            signerRelation = matchesInstalledSigner(installedInfo, archiveCert) ? SIGNER_SAME : SIGNER_DIFFERENT;
         }
 
         String installedSource = installedInfo.applicationInfo == null ? null : installedInfo.applicationInfo.sourceDir;
@@ -236,7 +241,7 @@ public final class ApkInstallAnalysis {
 
         return new ApkInstallAnalysis(true, pkg, versionName, versionCode, installedName, installedCode,
                 relation, signerRelation, sameBytes, checksum, installedChecksum, archiveSubject,
-                installedSubject, archiveCert, installedCert);
+                installedSubject, archiveCert, installedCert, candidateSigStatus);
     }
 
     private static int signingFlags() {
@@ -246,21 +251,59 @@ public final class ApkInstallAnalysis {
 
     private static String installedSignerSha256(PackageInfo info) {
         try {
-            Signature[] signatures;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                SigningInfo si = info.signingInfo;
-                if (si == null) return null;
-                signatures = si.hasMultipleSigners()
-                        ? si.getApkContentsSigners() : si.getSigningCertificateHistory();
-            } else {
-                signatures = info.signatures;
-            }
+            Signature[] signatures = getInstalledSignatures(info);
             if (signatures == null || signatures.length == 0) return null;
             return CertUtil.formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(signatures[0].toByteArray()));
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    private static Signature[] getInstalledSignatures(PackageInfo info) {
+        if (info == null) return null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            SigningInfo si = info.signingInfo;
+            if (si == null) return null;
+            // Always prefer active content signers for current signer certificate
+            Signature[] signers = si.getApkContentsSigners();
+            if (signers != null && signers.length > 0) return signers;
+            return si.getSigningCertificateHistory();
+        }
+        return info.signatures;
+    }
+
+    private static boolean matchesInstalledSigner(PackageInfo info, String archiveCert) {
+        if (info == null || TextUtils_isEmpty(archiveCert)) return false;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                SigningInfo si = info.signingInfo;
+                if (si != null) {
+                    Signature[] current = si.getApkContentsSigners();
+                    if (matchesAny(current, archiveCert)) return true;
+                    Signature[] history = si.getSigningCertificateHistory();
+                    if (matchesAny(history, archiveCert)) return true;
+                }
+            }
+            return matchesAny(info.signatures, archiveCert);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean matchesAny(Signature[] signatures, String archiveCert) {
+        if (signatures == null || signatures.length == 0) return false;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            for (Signature sig : signatures) {
+                if (sig == null) continue;
+                String hex = CertUtil.formatHex(md.digest(sig.toByteArray()));
+                md.reset();
+                if (archiveCert.equalsIgnoreCase(hex)) return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     private static String subjectOf(@Nullable X509Certificate cert) {
@@ -276,14 +319,7 @@ public final class ApkInstallAnalysis {
 
     private static X509Certificate installedSignerCert(PackageInfo info) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                SigningInfo si = info.signingInfo;
-                if (si == null) return null;
-                Signature[] signatures = si.hasMultipleSigners()
-                        ? si.getApkContentsSigners() : si.getSigningCertificateHistory();
-                return toX509(signatures);
-            }
-            return toX509(info.signatures);
+            return toX509(getInstalledSignatures(info));
         } catch (Throwable t) {
             return null;
         }

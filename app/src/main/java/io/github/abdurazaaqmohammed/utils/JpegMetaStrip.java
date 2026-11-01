@@ -114,4 +114,47 @@ public class JpegMetaStrip {
             tmp.delete();
         }
     }
+
+    public static void fixJpegMarkerOrder(File file) {
+        try {
+            byte[] data = readFully(file);
+            if (!isJpeg(data)) return;
+            // Check if first marker is APP1 (0xFFE1) and an APP0 (0xFFE0) exists after it
+            int pos = 2;
+            int app1Start = -1, app1Len = -1;
+            int app0Start = -1, app0Len = -1;
+
+            while (pos < data.length - 4) {
+                if (data[pos] != (byte) 0xFF) break;
+                int marker = data[pos + 1] & 0xFF;
+                if (marker == 0xDA || marker == 0xD9) break; // SOS or EOI
+                int segLen = ((data[pos + 2] & 0xFF) << 8) | (data[pos + 3] & 0xFF);
+                int totalSeg = 2 + segLen;
+                if (pos + totalSeg > data.length) break;
+
+                if (marker == 0xE1 && app1Start == -1 && app0Start == -1) {
+                    app1Start = pos;
+                    app1Len = totalSeg;
+                } else if (marker == 0xE0 && app1Start == 2 && app0Start == -1) {
+                    app0Start = pos;
+                    app0Len = totalSeg;
+                    break;
+                }
+                pos += totalSeg;
+            }
+
+            // If APP1 is right after SOI (pos == 2) and APP0 exists immediately after APP1, swap them so APP0 comes first
+            if (app1Start == 2 && app0Start == 2 + app1Len) {
+                byte[] fixed = new byte[data.length];
+                fixed[0] = (byte) 0xFF;
+                fixed[1] = (byte) 0xD8;
+                System.arraycopy(data, app0Start, fixed, 2, app0Len);
+                System.arraycopy(data, app1Start, fixed, 2 + app0Len, app1Len);
+                int restStart = app0Start + app0Len;
+                int restLen = data.length - restStart;
+                System.arraycopy(data, restStart, fixed, 2 + app0Len + app1Len, restLen);
+                writeFully(file, fixed);
+            }
+        } catch (Exception ignored) {}
+    }
 }

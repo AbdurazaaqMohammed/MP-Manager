@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator android:interpolator="@android:interpolator/fast_out_slow_in" android:duration="320" android:startOffset="100" android:valueFrom="5.5" android:valueTo="0" android:valueType="floatType" android:propertyName="translateY" />
+    <objectAnimator android:interpolator="@android:interpolator/fast_out_slow_in" android:duration="320" android:startOffset="100" android:valueFrom="-12" android:valueTo="0" android:valueType="floatType" android:propertyName="rotation" />
+</set>

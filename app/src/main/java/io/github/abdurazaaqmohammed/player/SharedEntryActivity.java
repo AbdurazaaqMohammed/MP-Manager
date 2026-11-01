@@ -39,6 +39,7 @@ import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -578,10 +579,24 @@ public class SharedEntryActivity extends BaseActivity {
         ItemState item = current();
         if (item == null || items.size() != 1) return;
         try {
-            if (item.resolved != null && item.resolved.path != null
-                    && !item.resolved.inaccessible
-                    && new File(item.resolved.path).isFile()) {
-                ImageEditActivity.sessionPath = item.resolved.path;
+            String path = null;
+            if (item.resolved != null && item.resolved.path != null && !item.resolved.inaccessible) {
+                path = item.resolved.path;
+            }
+            if (path != null) {
+                try {
+                    RootManager rm = RootManager.getInstance(this);
+                    if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                        if (path.startsWith("/storage/emulated/0")) {
+                            path = "/data/media/0" + path.substring("/storage/emulated/0".length());
+                        } else if (path.startsWith("/storage/emulated/")) {
+                            path = "/data/media/" + path.substring("/storage/emulated/".length());
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (path != null && (new File(path).isFile() || isRootFilePath(path))) {
+                ImageEditActivity.sessionPath = path;
                 startActivity(new Intent(this, ImageEditActivity.class));
             } else {
                 Intent open = new Intent(this, ImageEditActivity.class);
@@ -595,6 +610,18 @@ public class SharedEntryActivity extends BaseActivity {
         } catch (Exception e) {
             Extensions.showMessage(this, e.getMessage() != null ? e.getMessage() : e.toString());
         }
+    }
+
+    private boolean isRootFilePath(String path) {
+        if (path == null) return false;
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                RootManager.ShellResult r = rm.execute("test -f " + RootManager.escapeShellArg(path), 5);
+                return r.isSuccess();
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     private void pickSaveFolder() {

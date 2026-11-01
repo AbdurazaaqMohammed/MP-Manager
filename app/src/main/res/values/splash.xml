@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch theme of MainActivity. Same parent as before, so nothing visual changes
+         except the Android 12+ splash icon (see values-v31/splash.xml). -->
+    <style name="Theme.MPManager.Splash" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>
