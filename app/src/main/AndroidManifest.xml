@@ -261,11 +261,16 @@
                 android:name=".ftp.FtpForegroundService"
                 android:foregroundServiceType="specialUse"
                 android:exported="false" />
+            <service
+                android:name="io.github.abdurazaaqmohammed.mcp.McpServerService"
+                android:foregroundServiceType="specialUse"
+                android:exported="false" />
            <service
                android:name="io.github.codehasan.colorpicker.services.ColorPickerService"
                android:enabled="true"
                android:exported="false"
                android:foregroundServiceType="mediaProjection" />
+            <receiver android:name="io.github.abdurazaaqmohammed.mcp.McpStopReceiver" android:exported="false" />
             <receiver android:name=".ftp.StopReceiver" android:exported="false" />
             <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
             <service
