@@ -4,12 +4,12 @@
     android:height="288dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:name="splash_logo" android:pivotX="54" android:pivotY="54">
-        <group android:name="splash_back" android:pivotX="54.31" android:pivotY="43.03">
-            <path android:fillColor="#17c3d7" android:pathData="M36.17,35.28Q36.17,32.18 39.27,32.18L65.86,32.18L72.44,37.99L72.44,56.2L36.17,56.2Z" />
-            <path android:fillColor="#000000" android:pathData="M65.86,32.34L72.44,37.99L67.95,37.99Q65.86,37.99 65.86,35.9Z" />
+    <group android:name="mp_logo">
+        <group android:name="mp_doc" android:pivotX="54.31" android:pivotY="43.03" android:rotation="8" android:translateY="12">
+            <path android:name="mp_doc_body" android:fillAlpha="0" android:fillColor="#17c3d7" android:pathData="M36.17,35.28Q36.17,32.18 39.27,32.18L65.86,32.18L72.44,37.99L72.44,56.2L36.17,56.2Z" />
+            <path android:name="mp_doc_fold" android:fillAlpha="0" android:fillColor="#000000" android:pathData="M65.86,32.34L72.44,37.99L67.95,37.99Q65.86,37.99 65.86,35.9Z" />
         </group>
-        <group android:name="splash_card">
+        <group android:name="mp_robot" android:pivotX="54.2" android:pivotY="50.8" android:scaleX="0" android:scaleY="0">
             <path android:fillColor="#f4f6ff" android:pathData="M49.35,43.19C49.35,40.32 51.52,38.38 54.08,38.38C56.63,38.38 58.96,40.32 58.96,43.19Z" android:strokeColor="#1d4f91" android:strokeWidth="0.7" android:strokeLineJoin="round" />
             <path android:fillColor="#1d4f91" android:pathData="M53.3,40.7C53.3,41.05 53.02,41.33 52.68,41.33C52.34,41.33 52.06,41.05 52.06,40.7C52.06,40.36 52.34,40.09 52.68,40.09C53.02,40.09 53.3,40.36 53.3,40.7Z" />
             <path android:fillColor="#1d4f91" android:pathData="M56.4,40.7C56.4,41.05 56.12,41.33 55.78,41.33C55.44,41.33 55.16,41.05 55.16,40.7C55.16,40.36 55.44,40.09 55.78,40.09C56.12,40.09 56.4,40.36 56.4,40.7Z" />
@@ -20,8 +20,10 @@
             <path android:fillColor="#00000000" android:pathData="M45.86,43.34L45.86,43.34Q47.02,43.34 47.02,44.5L47.02,49.93Q47.02,51.09 45.86,51.09L45.86,51.09Q44.7,51.09 44.7,49.93L44.7,44.5Q44.7,43.34 45.86,43.34Z" android:strokeColor="#1d4f91" android:strokeWidth="0.7" android:strokeLineCap="round" android:strokeLineJoin="round" />
             <path android:fillColor="#00000000" android:pathData="M62.45,43.96L62.45,43.96Q63.61,43.96 63.61,45.12L63.61,50.55Q63.61,51.71 62.45,51.71L62.45,51.71Q61.28,51.71 61.28,50.55L61.28,45.12Q61.28,43.96 62.45,43.96Z" android:strokeColor="#1d4f91" android:strokeWidth="0.7" android:strokeLineCap="round" android:strokeLineJoin="round" />
         </group>
+        <group android:name="mp_folder" android:translateY="6">
         <path android:fillColor="#000000" android:pathData="M31.52,48.3Q31.52,45.51 34.31,45.51L44.7,45.51Q46.33,45.51 47.49,46.59L51.13,49.38Q51.67,49.85 52.68,49.85L74.31,49.85Q77.09,49.85 77.09,52.64L77.09,73.88Q77.09,76.74 74.31,76.74L34.31,76.74Q31.52,76.74 31.52,73.88Z" />
         <path android:fillColor="#FFFFFF" android:pathData="M39.66,70.31L39.66,54.89L42.99,54.89L47.49,62.25L52.14,54.89L55.4,54.89L55.4,70.31L52.14,70.31L52.14,60.47L48.42,66.9L46.56,66.9L42.99,60.47L42.99,70.31Z" />
         <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M56.95,54.89L65.86,54.89Q70.12,54.89 70.12,59.3Q70.12,63.72 65.86,63.72L60.2,63.72L60.2,70.31L56.95,70.31ZM60.2,57.76L65.31,57.76Q66.86,57.76 66.86,59.3Q66.86,60.85 65.31,60.85L60.2,60.85Z" />
+        </group>
     </group>
 </vector>

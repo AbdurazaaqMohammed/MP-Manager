@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/mp_splash_logo">
+    <target android:name="mp_folder" android:animation="@animator/mp_folder_rise" />
+    <target android:name="mp_doc" android:animation="@animator/mp_doc_rise" />
+    <target android:name="mp_doc_body" android:animation="@animator/mp_doc_fade" />
+    <target android:name="mp_doc_fold" android:animation="@animator/mp_doc_fade" />
+    <target android:name="mp_robot" android:animation="@animator/mp_robot_pop" />
+</animated-vector>
