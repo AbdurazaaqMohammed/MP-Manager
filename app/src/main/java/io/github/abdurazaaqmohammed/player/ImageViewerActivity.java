@@ -462,6 +462,8 @@ public class ImageViewerActivity extends BaseActivity {
         }
         if (targetOrig != null) {
             editIntent.putExtra("rootOriginalPath", targetOrig);
+        } else if (path != null && !path.contains("/root_staging/") && !path.contains("/cache/")) {
+            editIntent.putExtra("rootOriginalPath", path);
         }
         startActivityForResult(editIntent, REQ_EDIT_IMAGE);
     }

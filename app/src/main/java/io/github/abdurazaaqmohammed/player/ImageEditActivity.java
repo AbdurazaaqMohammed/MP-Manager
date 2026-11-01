@@ -1229,44 +1229,86 @@ public class ImageEditActivity extends BaseActivity {
                     }
                     resetOrientationTag();
                 }
-                if (fromShared) {
-                    pm.dismiss();
-                    runOnUiThread(this::promptSharedSaveLocation);
-                    return;
-                }
-                File original = new File(originalPath);
-                String bakPath = originalPath + ".bak";
-                AppLogs.log("IMAGE_EDIT", "Saving image to " + originalPath + ", creating backup " + bakPath);
-                // 1. Rename original to .bak so last modified time and exif are 100% untouched
+                boolean isRoot = false;
                 try {
-                    AccessManager.move(this, originalPath, bakPath, AccessManager.needsElevated(this, originalPath));
-                } catch (Exception moveErr) {
-                    AppLogs.logError("IMAGE_EDIT", "Failed to move original to .bak, falling back to copy", moveErr);
+                    RootManager rm = RootManager.getInstance(this);
+                    isRoot = (AccessManager.active(this) == AccessManager.Backend.ROOT)
+                            || (rm.isRootFileOpsEnabled() && rm.isRootAvailable());
+                } catch (Exception ignored) {}
+
+                if (isRoot) {
+                    // ==========================================
+                    // PATH A: Root Mode (su / elevated)
+                    // ==========================================
+                    String targetPath = toPhysicalPathIfRoot(originalPath);
+                    if (targetPath == null || targetPath.isEmpty()) targetPath = originalPath;
+                    String bakPath = targetPath + ".bak";
+                    AppLogs.log("IMAGE_EDIT", "[ROOT] Saving image to " + targetPath + ", backup to " + bakPath);
+
+                    RootManager rm = RootManager.getInstance(this);
+                    // 1. Create backup with root preserving all attributes
+                    rm.copyFilePreserving(targetPath, bakPath);
+
+                    // 2. Copy EXIF metadata from original backup to workingFile
+                    copyExif(bakPath, workingFile.getAbsolutePath());
+
+                    // 3. Write edited image to targetPath using root
+                    rm.copyFilePreserving(workingFile.getAbsolutePath(), targetPath);
+
+                    // 4. Restore original ownership, mode, and timestamp on targetPath matching bakPath
                     try {
-                        AccessManager.copyFile(this, originalPath, bakPath, AccessManager.needsElevated(this, originalPath));
-                    } catch (Exception copyErr) {
-                        AppLogs.logError("IMAGE_EDIT", "Failed to copy original to .bak", copyErr);
+                        String restoreCmd = "chown $(stat -c '%u:%g' " + RootManager.escapeShellArg(bakPath) + ") "
+                                + RootManager.escapeShellArg(targetPath) + " 2>/dev/null; "
+                                + "chmod $(stat -c '%a' " + RootManager.escapeShellArg(bakPath) + ") "
+                                + RootManager.escapeShellArg(targetPath) + " 2>/dev/null; "
+                                + "touch -r " + RootManager.escapeShellArg(bakPath) + " "
+                                + RootManager.escapeShellArg(targetPath) + " 2>/dev/null";
+                        rm.execute(restoreCmd, 5);
+                    } catch (Exception ignored) {}
+
+                    // 5. Scan media scanner for both files
+                    scanMediaFile(targetPath);
+                    scanMediaFile(bakPath);
+                    AppLogs.log("IMAGE_EDIT", "[ROOT] Successfully saved and scanned: " + targetPath);
+                } else {
+                    // ==========================================
+                    // PATH B: Normal Mode (Non-root users)
+                    // ==========================================
+                    File original = originalPath != null ? new File(originalPath) : null;
+                    if (fromShared || original == null || !original.canWrite()) {
+                        pm.dismiss();
+                        runOnUiThread(this::promptSharedSaveLocation);
+                        return;
                     }
+
+                    String bakPath = originalPath + ".bak";
+                    AppLogs.log("IMAGE_EDIT", "[NORMAL] Saving in-place to " + originalPath + ", backup to " + bakPath);
+                    File bak = new File(bakPath);
+                    try {
+                        FileUtils.copyFile(original, bak);
+                    } catch (Exception e) {
+                        AppLogs.logError("IMAGE_EDIT", "Failed to create normal backup", e);
+                    }
+
+                    // Copy EXIF
+                    copyExif(bakPath, workingFile.getAbsolutePath());
+
+                    // Write workingFile to original
+                    copyFile(workingFile, original);
+
+                    long mtimeToPreserve = targetMtime > 0 ? targetMtime : bak.lastModified();
+                    if (mtimeToPreserve > 0) {
+                        try {
+                            original.setLastModified(mtimeToPreserve);
+                            AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
+                        } catch (Exception ignored) {}
+                    }
+
+                    scanMediaFile(originalPath);
+                    scanMediaFile(bakPath);
+                    AppLogs.log("IMAGE_EDIT", "[NORMAL] Successfully saved: " + originalPath);
                 }
 
-                // 2. Copy EXIF metadata from original backup to workingFile in cache first
-                copyExif(bakPath, workingFile.getAbsolutePath());
-
-                // 3. Write the new edited/stretched image to originalPath
-                copyFile(workingFile, original);
-
-                long mtimeToPreserve = targetMtime > 0 ? targetMtime : -1;
-                if (mtimeToPreserve > 0) {
-                    try {
-                        original.setLastModified(mtimeToPreserve);
-                        AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
-                    } catch (Exception ignored) {
-                    }
-                }
-
-                scanMediaFile(originalPath);
-                scanMediaFile(bakPath);
-                AppLogs.log("IMAGE_EDIT", "Successfully saved " + originalPath + " and scanned media.");
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
@@ -1331,13 +1373,27 @@ public class ImageEditActivity extends BaseActivity {
         if (path == null) return;
         try {
             MediaScannerConnection.scanFile(this, new String[]{path}, null, null);
+            String emulated = null;
             if (path.startsWith("/data/media/0/")) {
-                String emulated = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
-                MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
+                emulated = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
             } else if (path.startsWith("/data/media/")) {
-                String emulated = "/storage/emulated/" + path.substring("/data/media/".length());
+                emulated = "/storage/emulated/" + path.substring("/data/media/".length());
+            }
+            if (emulated != null) {
                 MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
             }
+            String scanTarget = emulated != null ? emulated : path;
+            Intent scanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            scanIntent.setData(Uri.fromFile(new File(scanTarget)));
+            sendBroadcast(scanIntent);
+
+            try {
+                RootManager rm = RootManager.getInstance(this);
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                    rm.execute("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "
+                            + RootManager.escapeShellArg("file://" + scanTarget) + " >/dev/null 2>&1", 3);
+                }
+            } catch (Exception ignored) {}
         } catch (Exception ignored) {}
     }
 
