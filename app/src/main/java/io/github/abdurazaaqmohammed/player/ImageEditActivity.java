@@ -1285,7 +1285,7 @@ public class ImageEditActivity extends BaseActivity {
                     AppLogs.log("IMAGE_EDIT", "[NORMAL] Saving in-place to " + originalPath + ", backup to " + bakPath);
                     File bak = new File(bakPath);
                     try {
-                        FileUtils.copyFile(original, bak);
+                        copyFile(original, bak);
                     } catch (Exception e) {
                         AppLogs.logError("IMAGE_EDIT", "Failed to create normal backup", e);
                     }
