@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The robot pops up from behind the folder last. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:ordering="together">
+    <objectAnimator
+        android:duration="300"
+        android:interpolator="@android:interpolator/overshoot"
+        android:propertyName="scaleX"
+        android:startOffset="300"
+        android:valueFrom="0"
+        android:valueTo="1"
+        android:valueType="floatType" />
+    <objectAnimator
+        android:duration="300"
+        android:interpolator="@android:interpolator/overshoot"
+        android:propertyName="scaleY"
+        android:startOffset="300"
+        android:valueFrom="0"
+        android:valueTo="1"
+        android:valueType="floatType" />
+</set>

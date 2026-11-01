@@ -499,7 +499,7 @@ public class MergeUtil {
             }
             mergedModule.refreshTable();
             mergedModule.refreshManifest();
-            File outputFile = FileUtils.getUnusedFile(APKExtractorActivity.getAppFolder(), mergedModule.getPackageName() + ".apk");
+            File outputFile = FileUtils.getUnusedFile(APKExtractorActivity.getAppFolder(context), mergedModule.getPackageName() + ".apk");
             mergedModule.writeApk(outputFile);
             return outputFile;
         }
