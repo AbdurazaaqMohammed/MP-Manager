@@ -408,6 +408,22 @@ Start it from the sidebar ("MCP Service") or the Tools hub. It serves:
 Security model (MT Manager style): the **home folder** (default `/storage/emulated/0/MP2/mcp`, configurable) always has read/write access; everything else follows ordered path rules (read-only / read-write / deny, first match wins) managed in the service settings — the AI can query but never elevate them. With no matching rule, shared storage is read-only and everything else is denied. Optional **bearer-token auth** is supported (off by default, like MT Manager); auth does not encrypt traffic, so use a trusted network and never expose the port to the internet. A foreground notification keeps the service alive and can stop it.
 
 </details>
+
+<details><summary>SSL Unpinning</summary>
+
+Patch an APK to **bypass SSL certificate pinning** — inspired by Frida unpinning script collections like [frida-hook-engine](https://github.com/muhammadrizwan87/frida-hook-engine), but implemented as an offline dex patch so the result is a normal standalone APK: no root, no Frida, no Xposed needed. The tool neutralizes in the app's own code:
+
+- every class implementing `javax.net.ssl.X509TrustManager`: `checkServerTrusted`/`checkClientTrusted` become no-ops (catches all custom/pinning trust managers, including renamed classes, via interface detection);
+- OkHttp's `CertificatePinner` (and legacy `com.squareup.okhttp`): `check`/`check$okhttp` become no-ops;
+- OkHttp's `OkHostnameVerifier` and every class implementing `javax.net.ssl.HostnameVerifier`: `verify(...)` returns true;
+- every `WebViewClient`: `onReceivedSslError` calls `SslErrorHandler.proceed()` instead of cancelling.
+
+Find it in the APK info dialog's "More" menu, the Tools hub, or via the MCP tool `mp_apk_ssl_unpin`. The source APK is untouched; output is saved as `<name>-unpinned.apk` next to it, optionally signed with your signing key. Limitations: framework-level validation (`TrustManagerImpl`) and pinning done inside native `.so` libraries cannot be patched from the APK, and interception tools also need the app to trust user CAs.
+
+Use responsibly: only on apps you own or are authorized to test (security research, debugging your own traffic).
+
+</details>
+
 ### Utilities
 
 <details><summary>Plugins and tool packs</summary>

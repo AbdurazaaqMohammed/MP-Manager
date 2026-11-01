@@ -2020,4 +2020,19 @@ Layout Inspector
     <string name="mcp_apply_restart">Apply</string>
     <string name="mcp_settings_applied">Settings applied</string>
     <string name="mcp_subtitle">AI tools: control this device and edit APKs over MCP</string>
+    <string name="ssl_unpin_title">SSL Unpinning</string>
+    <string name="ssl_unpin_subtitle">Patch an APK to bypass SSL certificate pinning</string>
+    <string name="ssl_unpin_explain">Rewrites the APK\'s dex bytecode so certificate pinning checks are skipped: X509TrustManager implementations become no-ops, OkHttp CertificatePinner checks are disabled, hostname verifiers always pass, and WebView SSL errors proceed instead of cancelling. The result is a standalone APK — no root, Frida or Xposed needed.</string>
+    <string name="ssl_unpin_pick">Pick an APK</string>
+    <string name="ssl_unpin_run">Unpin SSL</string>
+    <string name="ssl_unpin_sign">Sign the output APK</string>
+    <string name="ssl_unpin_confirm">Patch %1$s to bypass SSL pinning? Use only on apps you own or are authorized to test.</string>
+    <string name="ssl_unpin_note">The source APK is not modified; output is saved as &lt;name&gt;-unpinned.apk next to it.</string>
+    <string name="ssl_unpin_done">Patched APK saved to %1$s
+
+Patched code:</string>
+    <string name="ssl_unpin_nothing_found">No recognizable SSL pinning code was found (TrustManager/HostnameVerifier/OkHttp/WebView patterns).</string>
+    <string name="ssl_unpin_failed">SSL unpinning failed: %1$s</string>
+    <string name="ssl_unpin_no_apk">Select an APK first</string>
+    <string name="ssl_unpin_limits">Limits: framework-level validation (TrustManagerImpl) and pinning inside native .so libraries cannot be patched this way; apps that do not trust user CAs also need their network security config adjusted for interception tools.</string>
 </resources>
