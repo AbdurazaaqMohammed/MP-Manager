@@ -124,12 +124,16 @@ public final class McpJson {
         return block;
     }
 
-    /** Standard MCP result with a single text block (pretty JSON for structured data). */
+    /** Standard MCP result with a single text block (pretty JSON for structured data).
+     *  Also exposes the payload as structuredContent for modern MCP clients (MT parity). */
     public static JsonObject textResult(JsonElement payload) {
         JsonObject result = new JsonObject();
         JsonArray content = new JsonArray();
         content.add(textContent(payload.toString()));
         result.add("content", content);
+        if (payload.isJsonObject()) {
+            result.add("structuredContent", payload);
+        }
         return result;
     }
 

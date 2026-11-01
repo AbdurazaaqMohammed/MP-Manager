@@ -287,6 +287,186 @@ public final class McpFileTools {
         }
     }
 
+    /** Explicit append (MT mt_file_append_text parity). */
+    public JsonObject appendText(JsonObject args) throws McpJson.McpToolException {
+        args = args == null ? new JsonObject() : args;
+        args.addProperty("append", true);
+        return writeText(args);
+    }
+
+    public JsonObject appendBytes(JsonObject args) throws McpJson.McpToolException {
+        args = args == null ? new JsonObject() : args;
+        args.addProperty("append", true);
+        return writeBytes(args);
+    }
+
+    /** Replace all occurrences (literal or regex) of a substring in a text file. */
+    public JsonObject replaceText(JsonObject args) throws McpJson.McpToolException {
+        File file = resolveChecked(McpJson.reqStr(args, "path"), true);
+        if (!file.isFile()) {
+            throw new McpJson.McpToolException("Not a file: " + file.getPath());
+        }
+        String oldText = McpJson.reqStr(args, "old");
+        String newText = McpJson.str(args, "new", "");
+        boolean regex = McpJson.bool(args, "regex", false);
+        byte[] bytes = readAll(file);
+        if (bytes.length > MAX_TEXT_BYTES) {
+            throw new McpJson.McpToolException("File too large for text replace (" + bytes.length + " bytes)");
+        }
+        String text = new String(bytes, StandardCharsets.UTF_8);
+        int count;
+        if (regex) {
+            java.util.regex.Pattern pattern;
+            try {
+                pattern = java.util.regex.Pattern.compile(oldText);
+            } catch (Exception e) {
+                throw new McpJson.McpToolException("Invalid regex: " + e.getMessage());
+            }
+            java.util.regex.Matcher matcher = pattern.matcher(text);
+            // StringBuffer overload: the StringBuilder variant is API 26+.
+            StringBuffer sb = new StringBuffer();
+            count = 0;
+            while (matcher.find()) {
+                matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(newText));
+                count++;
+            }
+            matcher.appendTail(sb);
+            text = sb.toString();
+        } else {
+            count = 0;
+            int idx = 0;
+            StringBuilder sb = new StringBuilder();
+            while (true) {
+                int found = text.indexOf(oldText, idx);
+                if (found < 0) {
+                    sb.append(text, idx, text.length());
+                    break;
+                }
+                sb.append(text, idx, found).append(newText);
+                idx = found + oldText.length();
+                count++;
+            }
+        }
+        writeBytes(file, text.getBytes(StandardCharsets.UTF_8), false);
+        JsonObject result = new JsonObject();
+        result.addProperty("path", file.getPath());
+        result.addProperty("replaced", count);
+        result.addProperty("size", file.length());
+        return result;
+    }
+
+    /** Patch raw bytes by hex, either at an offset or by searching for old_hex. */
+    public JsonObject patchBytes(JsonObject args) throws McpJson.McpToolException {
+        File file = resolveChecked(McpJson.reqStr(args, "path"), true);
+        if (!file.isFile()) {
+            throw new McpJson.McpToolException("Not a file: " + file.getPath());
+        }
+        String hex = McpJson.reqStr(args, "hex").replaceAll("[^0-9a-fA-F]", "");
+        if (hex.isEmpty() || hex.length() % 2 != 0) {
+            throw new McpJson.McpToolException("hex must be a valid even-length hex string");
+        }
+        byte[] patch = new byte[hex.length() / 2];
+        for (int i = 0; i < patch.length; i++) {
+            patch[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+        }
+        String oldHex = McpJson.str(args, "old_hex", null);
+        byte[] data = readAll(file);
+        long position;
+        if (oldHex != null && !oldHex.isEmpty()) {
+            String clean = oldHex.replaceAll("[^0-9a-fA-F]", "");
+            byte[] search = new byte[clean.length() / 2];
+            for (int i = 0; i < search.length; i++) {
+                search[i] = (byte) Integer.parseInt(clean.substring(i * 2, i * 2 + 2), 16);
+            }
+            int found = -1;
+            for (int i = 0; i + search.length <= data.length; i++) {
+                boolean eq = true;
+                for (int j = 0; j < search.length; j++) {
+                    if (data[i + j] != search[j]) {
+                        eq = false;
+                        break;
+                    }
+                }
+                if (eq) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found < 0) {
+                throw new McpJson.McpToolException("old_hex not found in file");
+            }
+            position = found;
+        } else {
+            position = McpJson.longVal(args, "offset", 0);
+        }
+        if (position < 0 || position + patch.length > data.length) {
+            throw new McpJson.McpToolException("Patch range out of bounds (file size " + data.length + ")");
+        }
+        byte[] oldBytes = java.util.Arrays.copyOfRange(data, (int) position, (int) position + patch.length);
+        System.arraycopy(patch, 0, data, (int) position, patch.length);
+        writeBytes(file, data, false);
+        JsonObject result = new JsonObject();
+        result.addProperty("path", file.getPath());
+        result.addProperty("offset", position);
+        result.addProperty("old_hex", hexOf(oldBytes));
+        result.addProperty("new_hex", hexOf(patch));
+        return result;
+    }
+
+    /** Truncate or extend a file to an exact size. */
+    public JsonObject truncateBytes(JsonObject args) throws McpJson.McpToolException {
+        File file = resolveChecked(McpJson.reqStr(args, "path"), true);
+        if (!file.isFile()) {
+            throw new McpJson.McpToolException("Not a file: " + file.getPath());
+        }
+        long size = McpJson.longVal(args, "size", -1);
+        if (size < 0) throw new McpJson.McpToolException("size must be >= 0");
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+            raf.setLength(size);
+        } catch (IOException e) {
+            throw new McpJson.McpToolException("Truncate failed: " + e.getMessage());
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("path", file.getPath());
+        result.addProperty("size", file.length());
+        return result;
+    }
+
+    /** Reports the effective access policy for a path (AI cannot change it). */
+    public JsonObject accessPolicy(JsonObject args) throws McpJson.McpToolException {
+        String normalized = McpPathPolicy.normalizePath(McpJson.reqStr(args, "path"), ctx.policy.getHome());
+        File file = ctx.policy.resolve(normalized);
+        String canonical;
+        try {
+            canonical = file.getCanonicalPath();
+        } catch (IOException e) {
+            canonical = file.getAbsolutePath();
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("path", canonical);
+        result.addProperty("in_home", McpPathPolicy.MODE_RW.equals(ctx.policy.matchedMode(canonical))
+                && canonical.startsWith(ctx.policy.getHome().getPath()));
+        result.addProperty("read", ctx.policy.canRead(canonical));
+        result.addProperty("write", ctx.policy.canWrite(canonical));
+        String mode = ctx.policy.matchedMode(canonical);
+        result.addProperty("matched_rule", mode != null ? mode : "default (read-only in shared storage, else denied)");
+        JsonArray rules = new JsonArray();
+        for (McpPathPolicy.Rule rule : ctx.policy.getRules()) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("path", rule.path);
+            obj.addProperty("mode", rule.mode);
+            rules.add(obj);
+        }
+        result.add("rules", rules);
+        return result;
+    }
+
+    private static String hexOf(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+
     public JsonObject search(JsonObject args) throws McpJson.McpToolException {
         File root = resolveChecked(McpJson.reqStr(args, "path"), false);
         String query = McpJson.reqStr(args, "query");
@@ -354,7 +534,7 @@ public final class McpFileTools {
                 nameMatch = name.contains(needle);
             }
             boolean contentMatch = false;
-            if (!nameMatch && searchContent && size <= MAX_TEXT_BYTES) {
+            if (searchContent && size <= MAX_TEXT_BYTES) {
                 contentMatch = fileContains(child, needle, caseSensitive);
             }
             if (nameMatch || contentMatch) {
@@ -424,9 +604,9 @@ public final class McpFileTools {
         }
         try {
             if (src.isDirectory()) {
-                org.apache.commons.io.FileUtils.copyDirectory(src, dst);
+                copyTree(src, dst);
             } else {
-                org.apache.commons.io.FileUtils.copyFile(src, dst);
+                streamCopy(src, dst);
             }
         } catch (IOException e) {
             throw new McpJson.McpToolException("Copy failed: " + e.getMessage());
@@ -447,12 +627,20 @@ public final class McpFileTools {
             throw new McpJson.McpToolException("Destination exists: " + dst.getPath() + " (pass overwrite=true)");
         }
         // Plain rename fails across mount points, fall back to copy+delete.
+        File parent = dst.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
+            throw new McpJson.McpToolException("Cannot create destination directory " + parent);
+        }
         if (!src.renameTo(dst)) {
             try {
                 if (src.isDirectory()) {
-                    org.apache.commons.io.FileUtils.moveDirectory(src, dst);
+                    copyTree(src, dst);
+                    deleteTree(src);
                 } else {
-                    org.apache.commons.io.FileUtils.moveFile(src, dst);
+                    streamCopy(src, dst);
+                    if (!src.delete()) {
+                        throw new IOException("Could not delete source after copy");
+                    }
                 }
             } catch (IOException e) {
                 throw new McpJson.McpToolException("Move failed: " + e.getMessage());
@@ -505,6 +693,38 @@ public final class McpFileTools {
         result.addProperty("path", file.getPath());
         result.addProperty("deleted", true);
         return result;
+    }
+
+    private static void streamCopy(File src, File dst) throws IOException {
+        File parent = dst.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
+            throw new IOException("Cannot create parent directory " + parent);
+        }
+        try (InputStream in = new FileInputStream(src);
+             FileOutputStream out = new FileOutputStream(dst)) {
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+        }
+        dst.setLastModified(src.lastModified()); // best effort
+    }
+
+    private static void copyTree(File src, File dst) throws IOException {
+        if (src.isDirectory()) {
+            if (!dst.isDirectory() && !dst.mkdirs() && !dst.isDirectory()) {
+                throw new IOException("Cannot create directory " + dst);
+            }
+            File[] children = src.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    copyTree(child, new File(dst, child.getName()));
+                }
+            }
+        } else {
+            streamCopy(src, dst);
+        }
     }
 
     private static boolean deleteTree(File file) {

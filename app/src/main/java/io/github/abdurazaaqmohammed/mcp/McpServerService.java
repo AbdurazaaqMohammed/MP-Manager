@@ -73,7 +73,9 @@ public class McpServerService extends Service {
         String version;
         try {
             PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
-            version = String.valueOf(info.getLongVersionCode());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                version = String.valueOf(info.getLongVersionCode());
+            } else version = info.versionCode+"";
         } catch (PackageManager.NameNotFoundException e) {
             version = "?";
         }

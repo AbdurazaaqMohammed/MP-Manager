@@ -19,12 +19,14 @@ public class McpToolRegistry {
     private final McpFileTools fileTools;
     private final McpZipTools zipTools;
     private final McpApkTools apkTools;
+    private final McpNativeTools nativeTools;
 
     public McpToolRegistry(McpToolContext ctx) {
         this.ctx = ctx;
         this.fileTools = new McpFileTools(ctx);
         this.zipTools = new McpZipTools(ctx, fileTools);
         this.apkTools = new McpApkTools(ctx);
+        this.nativeTools = new McpNativeTools(ctx);
     }
 
     public JsonArray listTools() {
@@ -49,7 +51,9 @@ public class McpToolRegistry {
             return McpJson.textResult((JsonElement) result);
         } catch (McpJson.McpToolException e) {
             return McpJson.errorResult(e.getMessage());
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // Throwable, not Exception: an Error (e.g. NoSuchMethodError on an
+            // older device) must surface as a tool error, not kill the process.
             return McpJson.errorResult("Tool failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
@@ -73,6 +77,12 @@ public class McpToolRegistry {
             case "mp_file_move": return fileTools.move(args);
             case "mp_file_rename": return fileTools.rename(args);
             case "mp_file_delete": return fileTools.delete(args);
+            case "mp_file_append_text": return fileTools.appendText(args);
+            case "mp_file_append_bytes": return fileTools.appendBytes(args);
+            case "mp_file_replace_text": return fileTools.replaceText(args);
+            case "mp_file_patch_bytes": return fileTools.patchBytes(args);
+            case "mp_file_truncate_bytes": return fileTools.truncateBytes(args);
+            case "mp_file_get_access_policy": return fileTools.accessPolicy(args);
             // ---------------- zip ----------------
             case "mp_zip_list": return zipTools.list(args);
             case "mp_zip_read": return zipTools.read(args);
@@ -104,6 +114,21 @@ public class McpToolRegistry {
             case "mp_apk_build": return apkTools.build(args);
             case "mp_apk_sign": return apkTools.sign(args);
             case "mp_apk_ssl_unpin": return apkTools.sslUnpin(args);
+            case "mp_apk_copy_entry": return apkTools.copyEntry(args);
+            case "mp_apk_search_entries": return apkTools.searchEntries(args);
+            case "mp_apk_read_signature": return apkTools.readSignature(args);
+            case "mp_apk_list_available_apks": return apkTools.listAvailableApks(args);
+            case "mp_apk_dex_outline": return apkTools.dexOutline(args);
+            case "mp_apk_dex_xref": return apkTools.dexXref(args);
+            // ---------------- native libs ----------------
+            case "mp_apk_native_inspect": return nativeTools.inspect(args);
+            case "mp_apk_native_list_items": return nativeTools.listItems(args);
+            case "mp_apk_native_disassemble": return nativeTools.disassemble(args);
+            case "mp_apk_native_map_address": return nativeTools.mapAddress(args);
+            case "mp_apk_native_xref": return nativeTools.xref(args);
+            case "mp_apk_native_control_flow": return nativeTools.controlFlow(args);
+            case "mp_apk_native_patch_string": return nativeTools.patchString(args);
+            case "mp_apk_native_patch_bytes": return nativeTools.patchBytes(args);
             default:
                 return null;
         }
@@ -396,6 +421,148 @@ public class McpToolRegistry {
                 schemaProps(new String[0],
                         "path", "string", "APK file to install",
                         "session", "string", "Or install a session's working copy"));
+        put("mp_file_append_text",
+                "Append text to a file (creates it when missing).",
+                schemaProps(new String[]{"path", "content"},
+                        "path", "string", "File path",
+                        "content", "string", "Text to append"));
+        put("mp_file_append_bytes",
+                "Append binary data (base64) to a file.",
+                schemaProps(new String[]{"path", "base64"},
+                        "path", "string", "File path",
+                        "base64", "string", "base64-encoded bytes to append"));
+        put("mp_file_replace_text",
+                "Replace all occurrences of a substring in a text file (literal or regex).",
+                schemaProps(new String[]{"path", "old"},
+                        "path", "string", "File path",
+                        "old", "string", "Text (or regex) to replace",
+                        "new", "string", "Replacement text",
+                        "regex", "boolean", "Treat old as regex (default false)"));
+        put("mp_file_patch_bytes",
+                "Patch raw bytes in a file: at an offset or by searching for old_hex.",
+                schemaProps(new String[]{"path", "hex"},
+                        "path", "string", "File path",
+                        "hex", "string", "New bytes as hex",
+                        "old_hex", "string", "Find this hex first and patch there (optional)",
+                        "offset", "integer", "Byte offset to patch (used when old_hex is absent)"));
+        put("mp_file_truncate_bytes",
+                "Truncate (or extend) a file to an exact byte size.",
+                schemaProps(new String[]{"path", "size"},
+                        "path", "string", "File path",
+                        "size", "integer", "New size in bytes"));
+        put("mp_file_get_access_policy",
+                "Report the effective read/write policy for a path and the rule that decided it. The AI cannot change these.",
+                schema("path"));
+
+        put("mp_apk_copy_entry",
+                "Copy an entry to a new name inside the session APK (same bytes, new path).",
+                schemaProps(new String[]{"session", "entry", "new_entry"},
+                        "session", "string", "APK session id",
+                        "entry", "string", "Existing entry name",
+                        "new_entry", "string", "Destination entry name"));
+        put("mp_apk_search_entries",
+                "Search APK entries by name and optionally by content.",
+                schemaProps(new String[]{"session", "query"},
+                        "session", "string", "APK session id",
+                        "query", "string", "Substring to find",
+                        "search_content", "boolean", "Also match entry contents (default false)",
+                        "max_results", "integer", "Stop after this many (default 50, max 500)"));
+        put("mp_apk_read_signature",
+                "Verify an APK's signature and list its certificates (subject, issuer, SHA-256, validity).",
+                schemaProps(new String[0],
+                        "path", "string", "APK file",
+                        "session", "string", "Or a session's working copy"));
+        put("mp_apk_list_available_apks",
+                "Find .apk files under a folder (recursive), e.g. the home folder or Download.",
+                schemaProps(new String[0],
+                        "path", "string", "Folder to scan (default MCP home)",
+                        "max_results", "integer", "Stop after this many (default 100)"));
+        put("mp_apk_dex_outline",
+                "List a class's superclass, interfaces, methods and fields with access flags.",
+                schemaProps(new String[]{"session", "class"},
+                        "session", "string", "APK session id",
+                        "class", "string", "Fully qualified class name"));
+        put("mp_apk_dex_xref",
+                "Find where a method/class/string/field is referenced across all dexes.",
+                schemaProps(new String[]{"session", "query"},
+                        "session", "string", "APK session id",
+                        "query", "string", "Substring, e.g. Landroid/content/Context;->getPackageName or a string literal",
+                        "kind", "string", "method | class | string | field (default method)",
+                        "max_results", "integer", "Stop after this many (default 50)"));
+
+        put("mp_apk_native_inspect",
+                "Inspect a native .so library (ELF): class, machine, entry, sections, segments,"
+                        + " SONAME, needed libs, symbol counts. Pure-Java ELF parser, no extra deps.",
+                schemaProps(new String[0],
+                        "session", "string", "APK session id (with lib)",
+                        "lib", "string", "Library name or entry path, e.g. lib/arm64-v8a/libfoo.so",
+                        "path", "string", "Or a direct path to a .so file"));
+        put("mp_apk_native_list_items",
+                "List native library items: symbols (.symtab/.dynsym), imports, sections, segments"
+                        + " or strings (.rodata), with a filter.",
+                schemaProps(new String[]{"kind"},
+                        "kind", "string", "symbols | dynsym | imports | sections | segments | strings",
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file",
+                        "filter", "string", "Substring filter",
+                        "max_results", "integer", "Maximum items returned (default 200, max 2000)",
+                        "min_length", "integer", "Min string length for kind=strings (default 6)"));
+        put("mp_apk_native_disassemble",
+                "Disassemble native code (built-in ARM64 + ARM32/Thumb decoder; other archs fall back to raw bytes)."
+                        + " Branch/call targets are annotated with symbol names.",
+                schemaProps(new String[0],
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file",
+                        "symbol", "string", "Function symbol to start from",
+                        "address", "string", "Or a hex address",
+                        "count", "integer", "Instruction count (default 64, max 2000)",
+                        "thumb", "boolean", "ARM32: decode in Thumb mode (default true)"));
+        put("mp_apk_native_map_address",
+                "Map a virtual address to its section, file offset and containing symbol.",
+                schemaProps(new String[]{"address"},
+                        "address", "string", "Hex address (0x…)",
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file"));
+        put("mp_apk_native_xref",
+                "Scan .text for references to an address/symbol: BL calls and ADRP+ADD constant"
+                        + " references (AArch64) or BL calls (ARM32).",
+                schemaProps(new String[0],
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file",
+                        "symbol", "string", "Symbol to find references to",
+                        "address", "string", "Or a hex address",
+                        "max_results", "integer", "Maximum hits (default 50, max 500)"));
+        put("mp_apk_native_control_flow",
+                "Lightweight control-flow overview of one function: call sites (with resolved"
+                        + " target symbols) and branch sites.",
+                schemaProps(new String[]{"symbol"},
+                        "symbol", "string", "Function symbol",
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file",
+                        "thumb", "boolean", "ARM32: decode in Thumb mode (default true)"));
+        put("mp_apk_native_patch_string",
+                "Patch a NUL-terminated string inside a native library section in place."
+                        + " The replacement must not be longer than the original. Writes back into the session APK.",
+                schemaProps(new String[]{"old", "new"},
+                        "old", "string", "Existing string",
+                        "new", "string", "Replacement (length <= old)",
+                        "section", "string", "Section to patch (default .rodata)",
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file"));
+        put("mp_apk_native_patch_bytes",
+                "Patch raw bytes at a virtual address in a native library; writes back into the session APK.",
+                schemaProps(new String[]{"address", "hex"},
+                        "address", "string", "Hex address (0x…)",
+                        "hex", "string", "New bytes as even-length hex",
+                        "session", "string", "APK session id",
+                        "lib", "string", "Library name or entry path",
+                        "path", "string", "Or a direct path to a .so file"));
         put("mp_apk_ssl_unpin",
                 "Patch an APK to bypass SSL certificate pinning: neutralizes X509TrustManager checks,"
                         + " OkHttp CertificatePinner, OkHostnameVerifier, custom HostnameVerifiers and WebView"
