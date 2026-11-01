@@ -48,6 +48,7 @@ import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
 public class ImageEditActivity extends BaseActivity {
