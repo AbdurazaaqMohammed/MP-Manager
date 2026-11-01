@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<objectAnimator android:interpolator="@android:interpolator/fast_out_slow_in" android:duration="320" android:startOffset="60" android:valueFrom="6.5" android:valueTo="0" android:valueType="floatType" android:propertyName="translateY"
+  xmlns:android="http://schemas.android.com/apk/res/android" />
