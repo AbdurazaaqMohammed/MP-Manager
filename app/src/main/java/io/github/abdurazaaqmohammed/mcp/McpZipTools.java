@@ -14,6 +14,8 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -182,17 +184,29 @@ public final class McpZipTools {
         if (zipPath.exists()) {
             throw new McpJson.McpToolException("Archive already exists: " + zipPath.getPath());
         }
+        List<File> filesToAdd = new ArrayList<>();
+        for (JsonElement el : paths) {
+            File f = ctx.policy.resolve(McpPathPolicy.normalizePath(el.getAsString(), ctx.policy.getHome()));
+            if (!f.exists()) {
+                throw new McpJson.McpToolException("Path does not exist: " + f.getPath());
+            }
+            filesToAdd.add(f);
+        }
+        if (password != null && legacyZip()) {
+            throw new McpJson.McpToolException("Password-protected archives require Android 8+ on this build");
+        }
         try {
+            if (legacyZip()) {
+                writeNewZip(zipPath, filesToAdd, null, Math.max(0, Math.min(9, level)), false);
+                ZipFile zf = zip(zipPath, null);
+                JsonObject result = new JsonObject();
+                result.addProperty("zip", zipPath.getPath());
+                result.addProperty("size", zipPath.length());
+                result.addProperty("entries", zf.getFileHeaders().size());
+                return result;
+            }
             ZipFile zf = zip(zipPath, password);
             ZipParameters params = baseParams(level, password != null);
-            List<File> filesToAdd = new ArrayList<>();
-            for (JsonElement el : paths) {
-                File f = ctx.policy.resolve(McpPathPolicy.normalizePath(el.getAsString(), ctx.policy.getHome()));
-                if (!f.exists()) {
-                    throw new McpJson.McpToolException("Path does not exist: " + f.getPath());
-                }
-                filesToAdd.add(f);
-            }
             // zip4j creates the archive with the first add when it does not exist yet.
             zf.addFiles(filesToAdd, params);
             JsonObject result = new JsonObject();
@@ -205,6 +219,56 @@ public final class McpZipTools {
         }
     }
 
+    /** zip4j's write path needs real java.nio (API 26+); older desugared NIO
+     *  builds throw PosixFileAttributeView NPEs, so those fall back to
+     *  java.util.zip (no encryption support). Reading works everywhere. */
+    private static boolean legacyZip() {
+        return android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O;
+    }
+
+    private void writeNewZip(File zipPath, List<File> files, char[] password,
+                             int level, boolean deflate) throws IOException {
+        File parent = zipPath.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
+            throw new IOException("Cannot create parent directory " + parent);
+        }
+        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(zipPath))) {
+            out.setLevel(level);
+            for (File root : files) {
+                String baseName = root.getName();
+                addTreeToZip(root, baseName, out, new java.util.HashSet<>());
+            }
+        }
+    }
+
+    private void addTreeToZip(File file, String entryName, java.util.zip.ZipOutputStream out,
+                              java.util.Set<String> seen) throws IOException {
+        if (!seen.add(entryName)) return;
+        if (file.isDirectory()) {
+            if (!entryName.endsWith("/")) entryName += "/";
+            out.putNextEntry(new java.util.zip.ZipEntry(entryName));
+            out.closeEntry();
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    addTreeToZip(child, entryName + child.getName(), out, seen);
+                }
+            }
+            return;
+        }
+        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
+        entry.setTime(file.lastModified());
+        out.putNextEntry(entry);
+        try (InputStream in = new FileInputStream(file)) {
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+        }
+        out.closeEntry();
+    }
+
     public JsonObject addFiles(JsonObject args) throws McpJson.McpToolException {
         File zipPath = resolveZip(McpJson.reqStr(args, "zip"), true);
         JsonArray paths = McpJson.array(args, "paths");
@@ -213,20 +277,32 @@ public final class McpZipTools {
         }
         int level = Math.max(0, Math.min(9, McpJson.intVal(args, "level", 5)));
         char[] password = passwordOf(args);
+        String baseDir = McpJson.str(args, "base_dir", null);
+        List<File> filesToAdd = new ArrayList<>();
+        for (JsonElement el : paths) {
+            File f = ctx.policy.resolve(McpPathPolicy.normalizePath(el.getAsString(), ctx.policy.getHome()));
+            if (!f.exists()) {
+                throw new McpJson.McpToolException("Path does not exist: " + f.getPath());
+            }
+            filesToAdd.add(f);
+        }
+        if (password != null && legacyZip()) {
+            throw new McpJson.McpToolException("Password-protected archives require Android 8+ on this build");
+        }
         try {
+            if (legacyZip()) {
+                rewriteZipAdding(zipPath, filesToAdd, baseDir);
+                ZipFile zf = zip(zipPath, null);
+                JsonObject result = new JsonObject();
+                result.addProperty("zip", zipPath.getPath());
+                result.addProperty("entries", zf.getFileHeaders().size());
+                result.addProperty("added", filesToAdd.size());
+                return result;
+            }
             ZipFile zf = zip(zipPath, password);
             ZipParameters params = baseParams(level, password != null);
-            String baseDir = McpJson.str(args, "base_dir", null);
             if (baseDir != null && !baseDir.isEmpty()) {
                 params.setRootFolderNameInZip(baseDir.endsWith("/") ? baseDir : baseDir + "/");
-            }
-            List<File> filesToAdd = new ArrayList<>();
-            for (JsonElement el : paths) {
-                File f = ctx.policy.resolve(McpPathPolicy.normalizePath(el.getAsString(), ctx.policy.getHome()));
-                if (!f.exists()) {
-                    throw new McpJson.McpToolException("Path does not exist: " + f.getPath());
-                }
-                filesToAdd.add(f);
             }
             zf.addFiles(filesToAdd, params); // zip4j replaces same-name entries
             JsonObject result = new JsonObject();
@@ -236,6 +312,76 @@ public final class McpZipTools {
             return result;
         } catch (IOException e) {
             throw new McpJson.McpToolException("Add failed: " + e.getMessage());
+        }
+    }
+
+    /** Rewrites the whole archive, copying existing entries and adding (or
+     *  replacing) the given files. Used where zip4j cannot run (API<26). */
+    private void rewriteZipAdding(File zipPath, List<File> filesToAdd, String baseDir) throws IOException {
+        File temp = new File(zipPath.getParentFile(), zipPath.getName() + ".mcp.tmp");
+        java.util.Map<String, String> additions = new java.util.LinkedHashMap<>();
+        for (File f : filesToAdd) {
+            String name = (baseDir == null || baseDir.isEmpty() ? ""
+                    : baseDir.endsWith("/") ? baseDir : baseDir + "/") + f.getName();
+            additions.put(name, f.getPath());
+        }
+        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp));
+             ZipFile existing = zip(zipPath, null)) {
+            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+            java.util.Set<String> replaced = new java.util.HashSet<>();
+            if (zipPath.exists()) {
+                for (FileHeader header : existing.getFileHeaders()) {
+                    String name = header.getFileName();
+                    if (header.isDirectory()) continue;
+                    if (additions.containsKey(name)) {
+                        replaced.add(name);
+                        putFileEntry(out, name, new File(additions.get(name)));
+                        continue;
+                    }
+                    putStreamEntry(out, name, existing.getInputStream(header));
+                }
+            }
+            for (java.util.Map.Entry<String, String> add : additions.entrySet()) {
+                if (!replaced.contains(add.getKey())) {
+                    putFileEntry(out, add.getKey(), new File(add.getValue()));
+                }
+            }
+        }
+        if (zipPath.exists() && !zipPath.delete()) {
+            throw new IOException("Could not replace archive " + zipPath);
+        }
+        if (!temp.renameTo(zipPath)) {
+            throw new IOException("Could not move new archive into place");
+        }
+    }
+
+    private static void putFileEntry(java.util.zip.ZipOutputStream out, String name, File file)
+            throws IOException {
+        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(name);
+        entry.setTime(file.lastModified());
+        out.putNextEntry(entry);
+        try (InputStream in = new FileInputStream(file)) {
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+        }
+        out.closeEntry();
+    }
+
+    private static void putStreamEntry(java.util.zip.ZipOutputStream out, String name, InputStream in)
+            throws IOException {
+        try {
+            out.putNextEntry(new java.util.zip.ZipEntry(name));
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            out.closeEntry();
+        } finally {
+            in.close();
         }
     }
 
@@ -253,6 +399,33 @@ public final class McpZipTools {
                 : text.getBytes(StandardCharsets.UTF_8);
         int level = Math.max(0, Math.min(9, McpJson.intVal(args, "level", 5)));
         char[] password = passwordOf(args);
+        if (password != null && legacyZip()) {
+            throw new McpJson.McpToolException("Password-protected archives require Android 8+ on this build");
+        }
+        if (legacyZip()) {
+            // Stage the payload in a temp file and reuse the rewrite path.
+            File stage = null;
+            try {
+                stage = File.createTempFile("mcp_entry_", ".tmp", ctx.context.getCacheDir());
+                try (FileOutputStream fos = new FileOutputStream(stage)) {
+                    fos.write(bytes);
+                }
+                java.util.Map<String, File> single = new java.util.LinkedHashMap<>();
+                single.put(entry, stage);
+                rewriteZipAddFiles(zipPath, single);
+                ZipFile zf = zip(zipPath, null);
+                JsonObject result = new JsonObject();
+                result.addProperty("zip", zipPath.getPath());
+                result.addProperty("entry", entry);
+                result.addProperty("size", bytes.length);
+                result.addProperty("entries", zf.getFileHeaders().size());
+                return result;
+            } catch (IOException e) {
+                throw new McpJson.McpToolException("Add failed: " + e.getMessage());
+            } finally {
+                if (stage != null) stage.delete();
+            }
+        }
         File temp = null;
         try {
             ZipFile zf = zip(zipPath, password);
@@ -272,6 +445,41 @@ public final class McpZipTools {
             throw new McpJson.McpToolException("Add failed: " + e.getMessage());
         } finally {
             if (temp != null) temp.delete();
+        }
+    }
+
+    /** Rewrites the archive copying every existing entry and adding/replacing
+     *  the entries in {@code additions} (entry name -> file). */
+    private static void rewriteZipAddFiles(File zipPath, java.util.Map<String, File> additions)
+            throws IOException {
+        File temp = new File(zipPath.getParentFile(), zipPath.getName() + ".mcp.tmp");
+        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp));
+             ZipFile existing = zip(zipPath, null)) {
+            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+            java.util.Set<String> replaced = new java.util.HashSet<>();
+            if (zipPath.exists()) {
+                for (FileHeader header : existing.getFileHeaders()) {
+                    String name = header.getFileName();
+                    if (header.isDirectory()) continue;
+                    if (additions.containsKey(name)) {
+                        replaced.add(name);
+                        putFileEntry(out, name, additions.get(name));
+                        continue;
+                    }
+                    putStreamEntry(out, name, existing.getInputStream(header));
+                }
+            }
+            for (java.util.Map.Entry<String, File> add : additions.entrySet()) {
+                if (!replaced.contains(add.getKey())) {
+                    putFileEntry(out, add.getKey(), add.getValue());
+                }
+            }
+        }
+        if (zipPath.exists() && !zipPath.delete()) {
+            throw new IOException("Could not replace archive " + zipPath);
+        }
+        if (!temp.renameTo(zipPath)) {
+            throw new IOException("Could not move new archive into place");
         }
     }
 
@@ -328,8 +536,20 @@ public final class McpZipTools {
         if (!ctx.policy.canWrite(destCanonical)) {
             throw new McpJson.McpToolException("Write access denied for " + destCanonical);
         }
-        ZipFile zf = zip(zipPath, passwordOf(args));
+        char[] password = passwordOf(args);
         JsonArray entries = McpJson.array(args, "entries");
+        if (password != null && legacyZip()) {
+            throw new McpJson.McpToolException("Extracting encrypted archives requires Android 8+ on this build");
+        }
+        if (legacyZip()) {
+            int count = streamExtract(zipPath, dest, entries);
+            JsonObject result = new JsonObject();
+            result.addProperty("zip", zipPath.getPath());
+            result.addProperty("dest", dest.getPath());
+            result.addProperty("extracted_entries", count);
+            return result;
+        }
+        ZipFile zf = zip(zipPath, password);
         try {
             if (entries.size() == 0) {
                 zf.extractAll(dest.getPath());
@@ -345,11 +565,57 @@ public final class McpZipTools {
             JsonObject result = new JsonObject();
             result.addProperty("zip", zipPath.getPath());
             result.addProperty("dest", dest.getPath());
-            result.addProperty("extracted_entries", entries.size());
+            result.addProperty("extracted_entries", Math.max(entries.size(), 1));
             return result;
         } catch (ZipException e) {
             throw new McpJson.McpToolException("Extract failed (wrong password?): " + e.getMessage());
         }
+    }
+
+    /** Streaming extract for devices where zip4j cannot extract (API<26).
+     *  Supports unencrypted archives only. */
+    private static int streamExtract(File zipPath, File dest, JsonArray entries) throws McpJson.McpToolException {
+        java.util.Set<String> wanted = new java.util.HashSet<>();
+        for (JsonElement el : entries) {
+            String name = el.getAsString();
+            wanted.add(name);
+            wanted.add(name.startsWith("/") ? name.substring(1) : "/" + name);
+        }
+        if (!dest.isDirectory() && !dest.mkdirs() && !dest.isDirectory()) {
+            throw new McpJson.McpToolException("Cannot create destination directory " + dest);
+        }
+        int count = 0;
+        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new FileInputStream(zipPath))) {
+            byte[] buffer = new byte[16384];
+            java.util.zip.ZipEntry entry;
+            while ((entry = in.getNextEntry()) != null) {
+                String name = entry.getName();
+                if (wanted.size() > 0 && !wanted.contains(name)) continue;
+                File out = new File(dest, name);
+                if (entry.isDirectory()) {
+                    out.mkdirs();
+                    continue;
+                }
+                File parent = out.getParentFile();
+                if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
+                    throw new McpJson.McpToolException("Cannot create directory " + parent);
+                }
+                try (FileOutputStream fos = new FileOutputStream(out)) {
+                    int read;
+                    while ((read = in.read(buffer)) != -1) {
+                        fos.write(buffer, 0, read);
+                    }
+                }
+                out.setLastModified(entry.getTime());
+                count++;
+            }
+        } catch (IOException e) {
+            throw new McpJson.McpToolException("Extract failed: " + e.getMessage());
+        }
+        if (wanted.size() > 0 && count < wanted.size()) {
+            throw new McpJson.McpToolException("Some entries were not found in the archive (extracted " + count + ")");
+        }
+        return count;
     }
 
     public JsonObject check(JsonObject args) throws McpJson.McpToolException {

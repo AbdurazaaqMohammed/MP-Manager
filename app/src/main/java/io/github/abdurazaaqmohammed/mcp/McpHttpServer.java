@@ -177,7 +177,7 @@ public class McpHttpServer {
             writeSimple(socket, e.status, "text/plain", String.valueOf(e.getMessage()));
         } catch (IOException e) {
             // client went away or connection broke; nothing to do
-        } catch (Exception e) {
+        } catch (Throwable e) {
             try {
                 writeSimple(socket, 500, "text/plain", "Internal error: " + e);
             } catch (Exception ignored) {

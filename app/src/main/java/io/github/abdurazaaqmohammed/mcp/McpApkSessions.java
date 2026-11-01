@@ -46,8 +46,13 @@ public class McpApkSessions {
             throw new McpJson.McpToolException("Cannot create workspace dir " + workDir);
         }
         File workApk = new File(workDir, "apk.apk");
-        try {
-            org.apache.commons.io.FileUtils.copyFile(source, workApk);
+        try (java.io.InputStream in = new java.io.FileInputStream(source);
+             java.io.FileOutputStream out = new java.io.FileOutputStream(workApk)) {
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
         } catch (IOException e) {
             throw new McpJson.McpToolException("Failed to copy APK into workspace: " + e.getMessage());
         }
@@ -72,10 +77,7 @@ public class McpApkSessions {
     public synchronized boolean close(String id) {
         Session session = sessions.remove(id);
         if (session == null) return false;
-        try {
-            org.apache.commons.io.FileUtils.deleteDirectory(session.workDir);
-        } catch (IOException ignored) {
-        }
+        deleteTree(session.workDir);
         return true;
     }
 
@@ -83,5 +85,15 @@ public class McpApkSessions {
         for (String id : sessions.keySet().toArray(new String[0])) {
             close(id);
         }
+    }
+
+    private static void deleteTree(File file) {
+        File[] children = file.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteTree(child);
+            }
+        }
+        file.delete();
     }
 }

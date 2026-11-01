@@ -20,6 +20,7 @@ import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -92,7 +93,8 @@ public final class McpApkTools {
             app.addProperty("package", info.packageName);
             app.addProperty("label", label);
             app.addProperty("version_name", info.versionName);
-            app.addProperty("version_code", info.getLongVersionCode());
+            app.addProperty("version_code", android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P
+                    ? info.getLongVersionCode() : info.versionCode);
             app.addProperty("apk_path", info.applicationInfo != null ? info.applicationInfo.sourceDir : null);
             apps.add(app);
         }
@@ -212,15 +214,20 @@ public final class McpApkTools {
             result.addProperty("min_sdk", parser.getMinSDKVersion());
             result.addProperty("target_sdk", parser.getTargetSDKVersion());
             result.addProperty("app_name", parser.getAppName());
-            JsonArray permissions = new JsonArray();
-            for (String permission : parser.getPermissions()) {
-                permissions.add(permission);
+            // APKParser's getters return null when the package parser finds
+            // nothing (e.g. stripped APKs) — guard every list.
+            List<String> permissions = parser.getPermissions();
+            JsonArray permissionsJson = new JsonArray();
+            if (permissions != null) {
+                for (String permission : permissions) {
+                    permissionsJson.add(permission);
+                }
             }
-            result.add("permissions", permissions);
-            result.addProperty("activities", parser.getActivities().size());
-            result.addProperty("services", parser.getServices().size());
-            result.addProperty("receivers", parser.getReceivers().size());
-            result.addProperty("providers", parser.getProviders().size());
+            result.add("permissions", permissionsJson);
+            result.addProperty("activities", sizeOf(parser.getActivities()));
+            result.addProperty("services", sizeOf(parser.getServices()));
+            result.addProperty("receivers", sizeOf(parser.getReceivers()));
+            result.addProperty("providers", sizeOf(parser.getProviders()));
         }
         JsonArray dexes = new JsonArray();
         try {
@@ -544,6 +551,13 @@ public final class McpApkTools {
                     total++;
                     String type = classDef.getType(); // Lcom/foo/Bar;
                     String dotted = type.substring(1, type.length() - 1).replace('/', '.');
+                    // Skip D8/R8 synthetic lambda classes: jadx drops or renames
+                    // them on load, so they decompile poorly, and the enclosing
+                    // class is what an AI caller wants anyway.
+                    if (dotted.contains("-$$Nest$") || dotted.contains("$$ExternalSyntheticLambda")
+                            || dotted.contains("$1") && dotted.endsWith("$1")) {
+                        continue;
+                    }
                     if (filter != null && !filter.isEmpty() && !dotted.contains(filter)) continue;
                     if (classes.size() < maxResults) {
                         JsonObject cls = new JsonObject();
@@ -568,20 +582,52 @@ public final class McpApkTools {
         return result;
     }
 
-    /** Full Java decompilation of one class via the bundled jadx. */
+    /** Full Java decompilation of one class via the bundled jadx. jadx only
+     *  gets the single dex that contains the class — loading a whole APK can
+     *  exhaust the heap on low-RAM devices. */
     public JsonObject decompileClass(JsonObject args) throws McpJson.McpToolException {
         McpApkSessions.Session session = session(args);
         String className = McpJson.reqStr(args, "class");
+        String dexType = "L" + className.replace('.', '/') + ";";
+        File dexFile = null;
+        try {
+            outer:
+            for (String dexName : dexNames(session.workApk)) {
+                byte[] dexBytes = readZipEntry(session.workApk, dexName);
+                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile parsed =
+                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
+                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
+                                new java.io.ByteArrayInputStream(dexBytes));
+                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : parsed.getClasses()) {
+                    if (dexType.equals(classDef.getType())) {
+                        dexFile = File.createTempFile("mcp_dex_", ".dex", ctx.context.getCacheDir());
+                        try (FileOutputStream out = new FileOutputStream(dexFile)) {
+                            out.write(dexBytes);
+                        }
+                        break outer;
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            throw new McpJson.McpToolException("Dex scan failed: " + e.getMessage());
+        }
+        if (dexFile == null) {
+            throw new McpJson.McpToolException("Class not found in APK: " + className);
+        }
         try {
             jadx.api.JadxArgs jadxArgs = new jadx.api.JadxArgs();
-            jadxArgs.setInputFile(session.workApk);
-            jadxArgs.setSkipSources(true);
+            jadxArgs.setInputFile(dexFile);
             jadxArgs.setSkipResources(true);
+            jadxArgs.setThreadsCount(1); // single thread keeps peak memory low
             jadx.api.JadxDecompiler decompiler = new jadx.api.JadxDecompiler(jadxArgs);
             try {
                 decompiler.load();
                 for (jadx.api.JavaClass cls : decompiler.getClasses()) {
-                    if (cls.getFullName().equals(className)) {
+                    // getFullName() may diverge from the dex name for synthetic
+                    // lambda classes; the raw name keeps the original form.
+                    if (cls.getFullName().equals(className)
+                            || className.equals(cls.getRawName())
+                            || cls.getRawName().endsWith("." + className)) {
                         String code = cls.getCode();
                         JsonObject result = new JsonObject();
                         result.addProperty("session", session.id);
@@ -590,14 +636,16 @@ public final class McpApkTools {
                         return result;
                     }
                 }
-                throw new McpJson.McpToolException("Class not found in APK: " + className);
+                throw new McpJson.McpToolException("Class not found in dex: " + className);
             } finally {
                 decompiler.close();
             }
         } catch (McpJson.McpToolException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new McpJson.McpToolException("Decompile failed: " + e.getMessage());
+        } finally {
+            dexFile.delete();
         }
     }
 
@@ -638,7 +686,7 @@ public final class McpApkTools {
                 SignWrapper wrapper = defaultSignWrapper();
                 wrapper.signApk(buildInput, output);
             } else {
-                org.apache.commons.io.FileUtils.copyFile(buildInput, output);
+                copyFileFallback(buildInput, output);
             }
         } catch (Exception e) {
             throw new McpJson.McpToolException("Build failed: " + e.getMessage());
@@ -696,6 +744,297 @@ public final class McpApkTools {
     }
 
     // ------------------------------------------------------------------
+    // Entry management extras (MT parity: copy_entry, search, signature, list)
+    // ------------------------------------------------------------------
+
+    /** Copy an entry to a new entry name inside the session APK. */
+    public JsonObject copyEntry(JsonObject args) throws McpJson.McpToolException {
+        McpApkSessions.Session session = session(args);
+        String entry = McpJson.reqStr(args, "entry");
+        String newEntry = McpJson.reqStr(args, "new_entry");
+        byte[] bytes;
+        try {
+            try (ZipFile zf = new ZipFile(session.workApk)) {
+                FileHeader header = zf.getFileHeader(entry);
+                if (header == null) throw new McpJson.McpToolException("Entry not found: " + entry);
+                bytes = readEntryBytes(zf, header);
+            }
+            replaceEntry(session.workApk, newEntry, bytes);
+        } catch (McpJson.McpToolException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new McpJson.McpToolException("Copy failed: " + e.getMessage());
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("session", session.id);
+        result.addProperty("entry", entry);
+        result.addProperty("new_entry", newEntry);
+        result.addProperty("size", bytes.length);
+        return result;
+    }
+
+    /** Search APK entries by name and optionally by content (text or base64 needle). */
+    public JsonObject searchEntries(JsonObject args) throws McpJson.McpToolException {
+        McpApkSessions.Session session = session(args);
+        String query = McpJson.reqStr(args, "query");
+        boolean searchContent = McpJson.bool(args, "search_content", false);
+        int max = Math.max(1, Math.min(500, McpJson.intVal(args, "max_results", 50)));
+        JsonArray matches = new JsonArray();
+        int total = 0;
+        try (ZipFile zf = new ZipFile(session.workApk)) {
+            for (FileHeader header : zf.getFileHeaders()) {
+                String name = header.getFileName();
+                boolean nameMatch = name.contains(query);
+                boolean contentMatch = false;
+                if (!nameMatch && searchContent && !header.isDirectory()
+                        && header.getUncompressedSize() <= McpFileTools.MAX_TEXT_BYTES) {
+                    try {
+                        byte[] bytes = readEntryBytes(zf, header);
+                        String text = new String(bytes, StandardCharsets.UTF_8);
+                        contentMatch = text.contains(query);
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (nameMatch || contentMatch) {
+                    total++;
+                    if (matches.size() < max) {
+                        JsonObject obj = new JsonObject();
+                        obj.addProperty("name", name);
+                        obj.addProperty("size", header.getUncompressedSize());
+                        obj.addProperty("name_matched", nameMatch);
+                        obj.addProperty("content_matched", contentMatch);
+                        matches.add(obj);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new McpJson.McpToolException("Search failed: " + e.getMessage());
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("session", session.id);
+        result.addProperty("query", query);
+        result.addProperty("total", total);
+        result.addProperty("returned", matches.size());
+        result.add("matches", matches);
+        return result;
+    }
+
+    /** Signature/certificate details of an APK (path or session). */
+    public JsonObject readSignature(JsonObject args) throws McpJson.McpToolException {
+        String pathArg = McpJson.str(args, "path", null);
+        File input;
+        if (pathArg == null && args != null && args.has("session")) {
+            input = session(args).workApk;
+        } else {
+            input = resolvePath(pathArg, false);
+        }
+        if (!input.isFile()) throw new McpJson.McpToolException("APK not found: " + input);
+        io.github.abdurazaaqmohammed.utils.ApkSignatureInfo sig =
+                io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.analyze(input);
+        JsonObject result = new JsonObject();
+        result.addProperty("apk", input.getPath());
+        int status = sig.getStatus();
+        result.addProperty("status", status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_VERIFIED ? "verified"
+                : status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_INVALID ? "invalid"
+                : status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_NOT_SIGNED ? "not_signed" : "unknown");
+        result.addProperty("schemes", sig.getSchemes());
+        if (!sig.getErrors().isEmpty()) {
+            JsonArray errors = new JsonArray();
+            for (String err : sig.getErrors()) errors.add(err);
+            result.add("errors", errors);
+        }
+        JsonArray certs = new JsonArray();
+        for (java.security.cert.X509Certificate cert : sig.getCertificates()) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("subject", cert.getSubjectX500Principal().getName());
+            obj.addProperty("issuer", cert.getIssuerX500Principal().getName());
+            try {
+                obj.addProperty("sha256", io.github.abdurazaaqmohammed.utils.HashUtil.hashStream(
+                        new java.io.ByteArrayInputStream(cert.getEncoded()), "SHA-256"));
+            } catch (Exception ignored) {
+            }
+            obj.addProperty("not_before", cert.getNotBefore().toString());
+            obj.addProperty("not_after", cert.getNotAfter().toString());
+            certs.add(obj);
+        }
+        result.add("certificates", certs);
+        return result;
+    }
+
+    /** Lists APK files under a folder (recursive). */
+    public JsonObject listAvailableApks(JsonObject args) throws McpJson.McpToolException {
+        String pathArg = McpJson.str(args, "path", null);
+        File root = pathArg == null || pathArg.isEmpty()
+                ? ctx.policy.getHome()
+                : ctx.policy.resolve(McpPathPolicy.normalizePath(pathArg, ctx.policy.getHome()));
+        if (!root.isDirectory()) throw new McpJson.McpToolException("Not a directory: " + root);
+        int max = Math.max(1, Math.min(500, McpJson.intVal(args, "max_results", 100)));
+        JsonArray apks = new JsonArray();
+        listApksRecursive(root, apks, max, 0);
+        JsonObject result = new JsonObject();
+        result.addProperty("path", root.getPath());
+        result.addProperty("count", apks.size());
+        result.add("apks", apks);
+        return result;
+    }
+
+    private void listApksRecursive(File dir, JsonArray out, int max, int depth) {
+        if (out.size() >= max || depth > 12) return;
+        File[] children = dir.listFiles();
+        if (children == null) return;
+        for (File child : children) {
+            if (out.size() >= max) return;
+            if (child.isDirectory()) {
+                listApksRecursive(child, out, max, depth + 1);
+            } else if (child.getName().toLowerCase().endsWith(".apk")) {
+                JsonObject obj = new JsonObject();
+                obj.addProperty("path", child.getPath());
+                obj.addProperty("size", child.length());
+                out.add(obj);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Dex analysis (MT mt_apk_dex_read_class_outline / dex_xref parity)
+    // ------------------------------------------------------------------
+
+    /** Methods/fields outline of one class (dexlib2). */
+    public JsonObject dexOutline(JsonObject args) throws McpJson.McpToolException {
+        McpApkSessions.Session session = session(args);
+        String className = McpJson.reqStr(args, "class");
+        String dexType = "L" + className.replace('.', '/') + ";";
+        try {
+            for (String dexName : dexNames(session.workApk)) {
+                byte[] dexBytes = readZipEntry(session.workApk, dexName);
+                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex =
+                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
+                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
+                                new java.io.ByteArrayInputStream(dexBytes));
+                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
+                    if (!dexType.equals(classDef.getType())) continue;
+                    JsonObject result = new JsonObject();
+                    result.addProperty("session", session.id);
+                    result.addProperty("class", className);
+                    result.addProperty("dex", dexName);
+                    result.addProperty("superclass", classDef.getSuperclass());
+                    JsonArray interfaces = new JsonArray();
+                    for (String iface : classDef.getInterfaces()) interfaces.add(iface);
+                    result.add("interfaces", interfaces);
+                    JsonArray methods = new JsonArray();
+                    for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
+                        JsonObject m = new JsonObject();
+                        m.addProperty("name", method.getName());
+                        m.addProperty("return", method.getReturnType());
+                        JsonArray params = new JsonArray();
+                        for (Object p : method.getParameterTypes()) params.add(String.valueOf(p));
+                        m.add("params", params);
+                        m.addProperty("access", com.android.tools.smali.dexlib2.AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()));
+                        m.addProperty("direct", com.android.tools.smali.dexlib2.AccessFlags.STATIC.isSet(method.getAccessFlags())
+                                || (method.getAccessFlags() & 0x2) != 0); // static or private -> direct table
+                        m.addProperty("has_code", method.getImplementation() != null);
+                        methods.add(m);
+                    }
+                    result.add("methods", methods);
+                    JsonArray fields = new JsonArray();
+                    for (com.android.tools.smali.dexlib2.iface.Field field : classDef.getFields()) {
+                        JsonObject f = new JsonObject();
+                        f.addProperty("name", field.getName());
+                        f.addProperty("type", field.getType());
+                        f.addProperty("access", com.android.tools.smali.dexlib2.AccessFlags.formatAccessFlagsForField(field.getAccessFlags()));
+                        fields.add(f);
+                    }
+                    result.add("fields", fields);
+                    return result;
+                }
+            }
+            throw new McpJson.McpToolException("Class not found in APK: " + className);
+        } catch (McpJson.McpToolException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new McpJson.McpToolException("Dex parse failed: " + e.getMessage());
+        }
+    }
+
+    /** Cross-reference scan: where a method/class/string is referenced across all dexes. */
+    public JsonObject dexXref(JsonObject args) throws McpJson.McpToolException {
+        McpApkSessions.Session session = session(args);
+        String query = McpJson.reqStr(args, "query");
+        String kind = McpJson.str(args, "kind", "method"); // method|class|string|field
+        int max = Math.max(1, Math.min(300, McpJson.intVal(args, "max_results", 50)));
+        JsonArray refs = new JsonArray();
+        int total = 0;
+        try {
+            outer:
+            for (String dexName : dexNames(session.workApk)) {
+                byte[] dexBytes = readZipEntry(session.workApk, dexName);
+                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex =
+                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
+                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
+                                new java.io.ByteArrayInputStream(dexBytes));
+                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
+                    String owner = classDef.getType();
+                    for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
+                        com.android.tools.smali.dexlib2.iface.MethodImplementation impl = method.getImplementation();
+                        if (impl == null) continue;
+                        java.util.List<String> hits = new java.util.ArrayList<>();
+                        for (com.android.tools.smali.dexlib2.iface.instruction.Instruction insn : impl.getInstructions()) {
+                            if (!(insn instanceof com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)) continue;
+                            Object reference = ((com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction) insn).getReference();
+                            String hit = null;
+                            if ("method".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.MethodReference) {
+                                com.android.tools.smali.dexlib2.iface.reference.MethodReference mr =
+                                        (com.android.tools.smali.dexlib2.iface.reference.MethodReference) reference;
+                                String text = mr.getDefiningClass() + "->" + mr.getName() + mr.getReturnType();
+                                if (text.contains(query)) hit = text;
+                            } else if ("class".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.TypeReference) {
+                                String text = ((com.android.tools.smali.dexlib2.iface.reference.TypeReference) reference).getType();
+                                if (text.contains(query)) hit = text;
+                            } else if ("string".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.StringReference) {
+                                String text = ((com.android.tools.smali.dexlib2.iface.reference.StringReference) reference).getString();
+                                if (text.contains(query)) hit = text;
+                            } else if ("field".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.FieldReference) {
+                                com.android.tools.smali.dexlib2.iface.reference.FieldReference fr =
+                                        (com.android.tools.smali.dexlib2.iface.reference.FieldReference) reference;
+                                String text = fr.getDefiningClass() + "->" + fr.getName() + ":" + fr.getType();
+                                if (text.contains(query)) hit = text;
+                            }
+                            if (hit != null) {
+                                hits.add(hit);
+                                if (hits.size() >= 5) break;
+                            }
+                        }
+                        if (!hits.isEmpty()) {
+                            total++;
+                            if (refs.size() < max) {
+                                JsonObject obj = new JsonObject();
+                                obj.addProperty("class", owner.substring(1, owner.length() - 1).replace('/', '.'));
+                                obj.addProperty("method", method.getName());
+                                obj.addProperty("dex", dexName);
+                                JsonArray h = new JsonArray();
+                                for (String hit : hits) h.add(hit);
+                                obj.add("references", h);
+                                refs.add(obj);
+                            }
+                            if (total >= max * 4) break outer;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new McpJson.McpToolException("Xref scan failed: " + e.getMessage());
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("session", session.id);
+        result.addProperty("query", query);
+        result.addProperty("kind", kind);
+        result.addProperty("total", total);
+        result.addProperty("returned", refs.size());
+        result.add("references", refs);
+        return result;
+    }
+
+    // ------------------------------------------------------------------
     // SSL unpinning hook (delegates to the patch engine)
     // ------------------------------------------------------------------
 
@@ -713,11 +1052,13 @@ public final class McpApkTools {
                 ? new File(input.getParentFile(), stripExt(input.getName()) + "-unpinned.apk")
                 : resolvePath(outputArg, true);
         boolean sign = McpJson.bool(args, "sign", true);
+        io.github.abdurazaaqmohammed.utils.SslUnpinning.Report report;
         try {
-            io.github.abdurazaaqmohammed.utils.SslUnpinning.unpinApk(input, output, sign ? defaultSignWrapper() : null);
+            report = io.github.abdurazaaqmohammed.utils.SslUnpinning.unpinApk(
+                    input, output, sign ? defaultSignWrapper() : null);
         } catch (McpJson.McpToolException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new McpJson.McpToolException("SSL unpinning failed: " + e.getMessage());
         }
         JsonObject result = new JsonObject();
@@ -725,12 +1066,26 @@ public final class McpApkTools {
         result.addProperty("output", output.getPath());
         result.addProperty("size", output.length());
         result.addProperty("signed", sign);
+        result.addProperty("classes_patched", report.classesPatched);
+        result.addProperty("methods_patched", report.methodsPatched);
+        JsonArray patches = new JsonArray();
+        for (String patch : report.patches) {
+            patches.add(patch);
+        }
+        result.add("patches", patches);
+        result.addProperty("note", report.patches.isEmpty()
+                ? "No recognizable pinning code found; output is a rebuilt copy of the input."
+                : "Patched code listed in 'patches'.");
         return result;
     }
 
     // ------------------------------------------------------------------
     // helpers
     // ------------------------------------------------------------------
+
+    private static int sizeOf(List<?> list) {
+        return list == null ? 0 : list.size();
+    }
 
     private static String baseName(String path) {
         String name = new File(path).getName();
@@ -795,6 +1150,11 @@ public final class McpApkTools {
         return true;
     }
 
+    /** Public entry-point for other MCP tool classes (native patching). */
+    public static void replaceApkEntry(File apk, String entry, byte[] bytes) throws IOException {
+        replaceEntry(apk, entry, bytes);
+    }
+
     /** Rewrites a single zip entry in place via a temp archive (zip4j has no direct byte-level replace). */
     private static void replaceEntry(File apk, String entry, byte[] bytes) throws IOException {
         File temp = new File(apk.getParentFile(), apk.getName() + ".mcp.tmp");
@@ -841,7 +1201,7 @@ public final class McpApkTools {
         }
         zf.close();
         if (!apk.delete() || !temp.renameTo(apk)) {
-            org.apache.commons.io.FileUtils.copyFile(temp, apk);
+            copyFileFallback(temp, apk);
             temp.delete();
         }
     }
@@ -859,8 +1219,24 @@ public final class McpApkTools {
             }
         }
         if (!apk.delete() || !temp.renameTo(apk)) {
-            org.apache.commons.io.FileUtils.copyFile(temp, apk);
+            copyFileFallback(temp, apk);
             temp.delete();
+        }
+    }
+
+    /** Stream copy that, unlike commons-io on some FUSE stacks, does not fail
+     *  when the destination's modification time cannot be preserved. */
+    private static void copyFileFallback(File src, File dst) throws IOException {
+        try (InputStream in = new FileInputStream(src);
+             FileOutputStream out = new FileOutputStream(dst)) {
+            byte[] buffer = new byte[16384];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+        }
+        if (!dst.setLastModified(src.lastModified())) {
+            // best effort only
         }
     }
 
