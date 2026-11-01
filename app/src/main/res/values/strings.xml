@@ -2035,11 +2035,4 @@ Patched code:</string>
     <string name="ssl_unpin_failed">SSL unpinning failed: %1$s</string>
     <string name="ssl_unpin_no_apk">Select an APK first</string>
     <string name="ssl_unpin_limits">Limits: framework-level validation (TrustManagerImpl) and pinning inside native .so libraries cannot be patched this way; apps that do not trust user CAs also need their network security config adjusted for interception tools.</string>
-    <string name="compile_apk">Compile APK</string>
-    <string name="compile_apk_options">Compile APK Options</string>
-    <string name="compile_apk_options_title">Compile Options</string>
-    <string name="compile_opt_validate_res">Validate resource directory name</string>
-    <string name="compile_opt_no_cache">Ignore cached/pre-built DEX files</string>
-    <string name="compile_opt_dex_profile">Encode DEX profile (.prof)</string>
-    <string name="compile_opt_align">ZipAlign APK (4-byte / 16-KB page alignment)</string>
 </resources>

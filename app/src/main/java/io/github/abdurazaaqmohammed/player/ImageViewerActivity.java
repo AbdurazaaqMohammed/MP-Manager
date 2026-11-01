@@ -449,8 +449,19 @@ public class ImageViewerActivity extends BaseActivity {
         }
         ImageEditActivity.sessionPath = path;
         Intent editIntent = new Intent(this, ImageEditActivity.class);
-        if (pos == currentIndex && rootOriginalPath != null) {
-            editIntent.putExtra("rootOriginalPath", rootOriginalPath);
+        String targetOrig = null;
+        if (rootOriginalPath != null) {
+            if (pos == currentIndex || imagePaths.size() == 1) {
+                targetOrig = rootOriginalPath;
+            } else {
+                File origDir = new File(rootOriginalPath).getParentFile();
+                if (origDir != null) {
+                    targetOrig = new File(origDir, new File(path).getName()).getAbsolutePath();
+                }
+            }
+        }
+        if (targetOrig != null) {
+            editIntent.putExtra("rootOriginalPath", targetOrig);
         }
         startActivityForResult(editIntent, REQ_EDIT_IMAGE);
     }

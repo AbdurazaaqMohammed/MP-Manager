@@ -108,12 +108,6 @@ public class RightMenuController {
         // 8. Sort
         addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort), v -> activity.showSortDialog());
 
-        // 8.5. Compile APK (shown when current pane folder is an unpacked APK directory)
-        File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
-        if (io.github.abdurazaaqmohammed.utils.ApkCompileUtil.isApkDirectory(currentFolder)) {
-            addRightDrawerItem(container, R.drawable.apk_document_24px, activity.getString(R.string.compile_apk), v -> io.github.abdurazaaqmohammed.utils.ApkCompileUtil.showCompileDialog(currentFolder, activity));
-        }
-
         // 9. Hidden files & Folder sizes
         android.content.SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         addRightDrawerCheckbox(container, R.drawable.visibility_off_24px,

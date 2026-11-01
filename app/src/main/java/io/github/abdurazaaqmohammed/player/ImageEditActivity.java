@@ -93,9 +93,27 @@ public class ImageEditActivity extends BaseActivity {
             originalPath = rootOriginal;
         }
         if (originalPath != null && originalPath.contains("/cache/root_staging/")) {
-            // If originalPath was set to a staged cache file, don't save into cache
+            // Never allow originalPath to stay inside cache/root_staging
             if (rootOriginal != null && !rootOriginal.isEmpty()) {
                 originalPath = rootOriginal;
+            } else {
+                String stagedName = new File(originalPath).getName();
+                int idx = stagedName.indexOf('_');
+                String realName = (idx > 0 && idx < stagedName.length() - 1) ? stagedName.substring(idx + 1) : stagedName;
+                String[] candidateDirs = {
+                        "/storage/emulated/0/DCIM/Screenshots",
+                        "/storage/emulated/0/Pictures/Screenshots",
+                        "/storage/emulated/0/DCIM/Camera",
+                        "/storage/emulated/0/Download",
+                        "/storage/emulated/0/Pictures"
+                };
+                for (String dir : candidateDirs) {
+                    File candidate = new File(dir, realName);
+                    if (candidate.isFile()) {
+                        originalPath = candidate.getAbsolutePath();
+                        break;
+                    }
+                }
             }
         }
         if (originalPath != null) {
