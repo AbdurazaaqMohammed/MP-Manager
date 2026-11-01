@@ -151,13 +151,36 @@ public class PickerIconLoader {
         return d;
     }
 
+    private static String resolveAccessiblePath(String path) {
+        if (path == null) return null;
+        if (path.startsWith("/data/media/0/")) {
+            return "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+        } else if (path.startsWith("/data/media/")) {
+            return "/storage/emulated/" + path.substring("/data/media/".length());
+        }
+        return path;
+    }
+
     private static Bitmap loadImageThumbnail(String path) {
+        String resolvedPath = resolveAccessiblePath(path);
+        Bitmap bitmap = decodeBitmapFromFile(resolvedPath);
+        if (bitmap == null && !resolvedPath.equals(path)) {
+            bitmap = decodeBitmapFromFile(path);
+        }
+        return bitmap;
+    }
+
+    private static Bitmap decodeBitmapFromFile(String filePath) {
         try {
+            File f = new File(filePath);
+            if (!f.canRead()) return null;
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(path, options);
+            BitmapFactory.decodeFile(filePath, options);
             int width = options.outWidth;
             int height = options.outHeight;
+            if (width <= 0 || height <= 0) return null;
+
             int scale = 1;
             while (width / 2 >= 128 && height / 2 >= 128) {
                 width /= 2;
@@ -166,17 +189,23 @@ public class PickerIconLoader {
             }
             options.inSampleSize = scale;
             options.inJustDecodeBounds = false;
-            return BitmapFactory.decodeFile(path, options);
+            return BitmapFactory.decodeFile(filePath, options);
         } catch (Throwable t) {
             return null;
         }
     }
 
     private static Bitmap loadVideoThumbnail(String path) {
+        String resolvedPath = resolveAccessiblePath(path);
         try {
-            return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
-        } catch (Throwable t) {
-            return null;
+            Bitmap b = ThumbnailUtils.createVideoThumbnail(resolvedPath, MediaStore.Video.Thumbnails.MINI_KIND);
+            if (b != null) return b;
+        } catch (Throwable ignored) {}
+        if (!resolvedPath.equals(path)) {
+            try {
+                return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
+            } catch (Throwable ignored) {}
         }
+        return null;
     }
 }

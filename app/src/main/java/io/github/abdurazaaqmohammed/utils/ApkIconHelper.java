@@ -47,8 +47,19 @@ public final class ApkIconHelper {
 
     public static Drawable getApkIcon(Context context, String path) {
         if (context == null || path == null) return null;
-        File src = new File(path);
-        if (!src.isFile() || !src.canRead()) return null;
+        String resolvedPath = path;
+        if (path.startsWith("/data/media/0/")) {
+            resolvedPath = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+        } else if (path.startsWith("/data/media/")) {
+            resolvedPath = "/storage/emulated/" + path.substring("/data/media/".length());
+        }
+        File src = new File(resolvedPath);
+        if (!src.isFile() || !src.canRead()) {
+            src = new File(path);
+            if (!src.isFile() || !src.canRead()) return null;
+            resolvedPath = path;
+        }
+        path = resolvedPath;
         long mtime = 0;
         long size = 0;
         try { mtime = src.lastModified(); size = src.length(); } catch (Exception ignored) {}
