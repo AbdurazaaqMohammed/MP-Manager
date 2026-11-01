@@ -86,9 +86,6 @@ public class ImageEditActivity extends BaseActivity {
             resolveSharedImage(incoming);
             return;
         }
-        if (originalPath != null) {
-            originalPath = toPhysicalPathIfRoot(originalPath);
-        }
         if (originalPath == null || (!new File(originalPath).isFile() && !isRootFile(originalPath))) {
             finish();
             return;
