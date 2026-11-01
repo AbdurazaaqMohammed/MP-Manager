@@ -391,6 +391,39 @@ Connect to an FTP server with optional FTPS and browse remote folders in either 
 </p>
 </details>
 
+### AI / MCP
+
+<details><summary>MCP Service (AI tools)</summary>
+
+MP Manager ships a built-in **MCP (Model Context Protocol) server**, similar to MT Manager's MCP feature but specialized for APKs: connect any MCP-capable AI tool (ChatMCP, Claude, Cherry Studio, …) and drive the app's file, ZIP and APK engines through conversation. You describe what you want; the AI calls MP Manager's tools.
+
+Start it from the sidebar ("MCP Service") or the Tools hub. It serves:
+
+- **Streamable HTTP** at `http://<device>:8787/mcp` (and legacy **SSE** at `http://<device>:8787/sse`) — on-device AI tools use `127.0.0.1`, tools on a computer use the LAN address shown while running.
+- **`mp_file_*` tools** — browse, read (text + paged binary), create/edit/search, mkdir, copy/move/rename and permanently delete files, plus upload (AI device → phone) and download (phone → AI device).
+- **`mp_zip_*` tools** — list and read entries without extracting, integrity checks (with password), create archives with compression level 0–9 and optional AES password, add/replace/delete/rename entries, extract whole archives or single entries.
+- **`mp_apk_*` tools** — the specialty: list installed apps, open an APK by path or package into an edit session, analyze it (manifest, permissions, components, dex list, signing), decompile single classes to Java with jadx, list classes, edit entries and string resources (ARSCLib), then rebuild (zipalign) and sign. The source APK is never modified: edits go to a session copy and builds are written to the home folder's `output/` directory.
+- **`mp_apk_ssl_unpin`** — patch an APK to bypass SSL pinning (see the SSL Unpinning tool below), callable straight from the conversation.
+
+Security model (MT Manager style): the **home folder** (default `/storage/emulated/0/MP2/mcp`, configurable) always has read/write access; everything else follows ordered path rules (read-only / read-write / deny, first match wins) managed in the service settings — the AI can query but never elevate them. With no matching rule, shared storage is read-only and everything else is denied. Optional **bearer-token auth** is supported (off by default, like MT Manager); auth does not encrypt traffic, so use a trusted network and never expose the port to the internet. A foreground notification keeps the service alive and can stop it.
+
+</details>
+
+<details><summary>SSL Unpinning</summary>
+
+Patch an APK to **bypass SSL certificate pinning** — inspired by Frida unpinning script collections like [frida-hook-engine](https://github.com/muhammadrizwan87/frida-hook-engine), but implemented as an offline dex patch so the result is a normal standalone APK: no root, no Frida, no Xposed needed. The tool neutralizes in the app's own code:
+
+- every class implementing `javax.net.ssl.X509TrustManager`: `checkServerTrusted`/`checkClientTrusted` become no-ops (catches all custom/pinning trust managers, including renamed classes, via interface detection);
+- OkHttp's `CertificatePinner` (and legacy `com.squareup.okhttp`): `check`/`check$okhttp` become no-ops;
+- OkHttp's `OkHostnameVerifier` and every class implementing `javax.net.ssl.HostnameVerifier`: `verify(...)` returns true;
+- every `WebViewClient`: `onReceivedSslError` calls `SslErrorHandler.proceed()` instead of cancelling.
+
+Find it in the APK info dialog's "More" menu, the Tools hub, or via the MCP tool `mp_apk_ssl_unpin`. The source APK is untouched; output is saved as `<name>-unpinned.apk` next to it, optionally signed with your signing key. Limitations: framework-level validation (`TrustManagerImpl`) and pinning done inside native `.so` libraries cannot be patched from the APK, and interception tools also need the app to trust user CAs.
+
+Use responsibly: only on apps you own or are authorized to test (security research, debugging your own traffic).
+
+</details>
+
 ### Utilities
 
 <details><summary>Plugins and tool packs</summary>
