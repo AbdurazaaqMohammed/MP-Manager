@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -1000,6 +1001,10 @@ public class ImageEditActivity extends BaseActivity {
                                 }
                             }
 
+                            if (originalPath != null) {
+                                scanMediaFile(originalPath);
+                            }
+
                             dirty = true;
                             runOnUiThread(() -> {
                                 updateInfo();
@@ -1185,14 +1190,6 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 File original = new File(originalPath);
                 long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
-                if (hasCrop || hasPixelEdits) {
-                    try {
-                        File bak = new File(originalPath + ".bak");
-                        copyFile(original, bak);
-                        if (mtimeToPreserve > 0) bak.setLastModified(mtimeToPreserve);
-                    } catch (Exception ignored) {
-                    }
-                }
                 copyFile(workingFile, original);
                 if (mtimeToPreserve > 0) {
                     try {
@@ -1201,6 +1198,7 @@ public class ImageEditActivity extends BaseActivity {
                     } catch (Exception ignored) {
                     }
                 }
+                scanMediaFile(originalPath);
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
@@ -1247,6 +1245,7 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 copyFile(workingFile, dest);
                 final String savedPath = dest.getAbsolutePath();
+                scanMediaFile(savedPath);
                 pm.dismiss();
                 runOnUiThread(() -> {
                     showError(getString(R.string.logger_saved_to, savedPath));
@@ -1257,6 +1256,13 @@ public class ImageEditActivity extends BaseActivity {
                 runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
         }).start();
+    }
+
+    private void scanMediaFile(String path) {
+        if (path == null) return;
+        try {
+            MediaScannerConnection.scanFile(this, new String[]{path}, null, null);
+        } catch (Exception ignored) {}
     }
 
     private void confirmExit() {
@@ -1304,7 +1310,6 @@ public class ImageEditActivity extends BaseActivity {
                     RootManager.ShellResult r = rm.execute("cp -f " + RootManager.escapeShellArg(src.getAbsolutePath())
                             + " " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
                     if (r.isSuccess()) {
-                        rm.execute("chmod 666 " + RootManager.escapeShellArg(dst.getAbsolutePath()), 10);
                         return;
                     }
                 }

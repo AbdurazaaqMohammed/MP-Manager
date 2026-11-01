@@ -101,6 +101,11 @@ public final class RecycleBin {
         try {
             if (!dir.isDirectory()) //noinspection ResultOfMethodCallIgnored
                 dir.mkdirs();
+            File nomedia = new File(dir, ".nomedia");
+            if (!nomedia.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                nomedia.createNewFile();
+            }
         } catch (Exception ignored) {
         }
         return dir;
