@@ -1988,4 +1988,36 @@ Layout Inspector
     <string name="edit_app_details">Organize app details</string>
     <string name="special_permissions">Special Permissions</string>
     <string name="mime">MIME</string>
+
+    <!-- MCP service (AI tools over the Model Context Protocol, like MT Manager's MCP feature) -->
+    <string name="mcp_server">MCP Service</string>
+    <string name="mcp_start">Start</string>
+    <string name="mcp_stop">Stop</string>
+    <string name="mcp_channel_name">MCP Service</string>
+    <string name="mcp_notification_title">MCP Service running</string>
+    <string name="mcp_notification_text">Connect your AI tool to http://%1$s</string>
+    <string name="mcp_status_running">Running</string>
+    <string name="mcp_status_stopped">Stopped</string>
+    <string name="mcp_request_count">%1$d requests served</string>
+    <string name="mcp_transport_note">AI tools connect over MCP Streamable HTTP (http://…/mcp). Legacy SSE clients can use http://…/sse. Use 127.0.0.1 for on-device AI tools, or the LAN address shown while running for tools on a computer (same Wi-Fi network).</string>
+    <string name="mcp_home_hint">Home folder (base for relative paths)</string>
+    <string name="mcp_home_create_failed">Could not create home folder %1$s</string>
+    <string name="mcp_start_failed">Failed to start MCP server: %1$s</string>
+    <string name="mcp_auth_switch">Require bearer token authentication</string>
+    <string name="mcp_token_value">Token: %1$s (tap to copy)</string>
+    <string name="mcp_regenerate_token">Regenerate token</string>
+    <string name="mcp_token_regenerated">New token generated. Update it in your AI tool.</string>
+    <string name="mcp_rules_title">Path rules</string>
+    <string name="mcp_rules_hint">The home folder always has read/write access. Other paths follow these ordered rules; the first matching rule wins. With no matching rule: read-only in shared storage, everything else denied.</string>
+    <string name="mcp_add_rule">Add rule</string>
+    <string name="mcp_rule_row">%1$s  ·  %2$s (tap to remove)</string>
+    <string name="mcp_rule_home">Home (read/write): %1$s</string>
+    <string name="mcp_rule_path_hint">Absolute folder or file path</string>
+    <string name="mcp_rule_mode_title">Access mode</string>
+    <string name="mcp_delete_rule">Remove rule</string>
+    <string name="mcp_delete_rule_msg">Remove this path rule?</string>
+    <string name="mcp_security_note">Security: the AI can read and edit real files on this device. Auth does not encrypt traffic — use a trusted network only, never expose the port to the internet. File contents you open may be sent to the AI tool\'s model provider. Rule changes apply after restarting the service.</string>
+    <string name="mcp_apply_restart">Apply</string>
+    <string name="mcp_settings_applied">Settings applied</string>
+    <string name="mcp_subtitle">AI tools: control this device and edit APKs over MCP</string>
 </resources>
