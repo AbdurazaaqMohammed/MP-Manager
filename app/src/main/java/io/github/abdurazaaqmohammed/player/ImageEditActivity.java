@@ -1262,6 +1262,13 @@ public class ImageEditActivity extends BaseActivity {
         if (path == null) return;
         try {
             MediaScannerConnection.scanFile(this, new String[]{path}, null, null);
+            if (path.startsWith("/data/media/0/")) {
+                String emulated = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+                MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
+            } else if (path.startsWith("/data/media/")) {
+                String emulated = "/storage/emulated/" + path.substring("/data/media/".length());
+                MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
+            }
         } catch (Exception ignored) {}
     }
 

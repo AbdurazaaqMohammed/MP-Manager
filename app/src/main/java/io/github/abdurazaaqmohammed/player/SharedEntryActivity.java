@@ -524,8 +524,20 @@ public class SharedEntryActivity extends BaseActivity {
         if (item == null || item.resolved == null
                 || item.resolved.path == null || item.resolved.inaccessible) return;
         try {
+            String path = item.resolved.path;
+            try {
+                RootManager rm = RootManager.getInstance(this);
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                    if (path.startsWith("/storage/emulated/0")) {
+                        path = "/data/media/0" + path.substring("/storage/emulated/0".length());
+                    } else if (path.startsWith("/storage/emulated/")) {
+                        path = "/data/media/" + path.substring("/storage/emulated/".length());
+                    }
+                }
+            } catch (Exception ignored) {}
+
             Intent open = new Intent(this, MainActivity.class);
-            open.putExtra("locatePath", item.resolved.path);
+            open.putExtra("locatePath", path);
             open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(open);
             finish();

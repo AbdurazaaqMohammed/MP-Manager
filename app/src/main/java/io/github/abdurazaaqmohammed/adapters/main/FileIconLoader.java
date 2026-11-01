@@ -891,6 +891,16 @@ public class FileIconLoader {
         return layer;
     }
 
+    private static String resolveAccessiblePath(String path) {
+        if (path == null) return null;
+        if (path.startsWith("/data/media/0/")) {
+            return "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+        } else if (path.startsWith("/data/media/")) {
+            return "/storage/emulated/" + path.substring("/data/media/".length());
+        }
+        return path;
+    }
+
     private static Bitmap loadImageThumbnail(String path) {
         if (SafFs.isSafPath(path)) {
             // Provider documents have no readable path: decode through the
@@ -916,13 +926,38 @@ public class FileIconLoader {
                 return null;
             }
         }
+        String resolvedPath = resolveAccessiblePath(path);
+        Bitmap bitmap = decodeBitmapFromFile(resolvedPath);
+        if (bitmap == null && !resolvedPath.equals(path)) {
+            bitmap = decodeBitmapFromFile(path);
+        }
+        if (bitmap == null && (path.startsWith("/data/") || isRootAccessAvailable())) {
+            bitmap = decodeBitmapViaRootStream(path);
+        }
+        return bitmap;
+    }
+
+    private static boolean isRootAccessAvailable() {
         try {
+            RootManager rm = RootManager.getInstance();
+            return rm != null && rm.isRootAvailable();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static Bitmap decodeBitmapFromFile(String filePath) {
+        try {
+            File f = new File(filePath);
+            if (!f.canRead()) return null;
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(path, options);
+            BitmapFactory.decodeFile(filePath, options);
 
             int width = options.outWidth;
             int height = options.outHeight;
+            if (width <= 0 || height <= 0) return null;
+
             int scale = 1;
             while (width / 2 >= 128 && height / 2 >= 128) {
                 width /= 2;
@@ -932,17 +967,55 @@ public class FileIconLoader {
 
             options.inSampleSize = scale;
             options.inJustDecodeBounds = false;
-            return BitmapFactory.decodeFile(path, options);
+            return BitmapFactory.decodeFile(filePath, options);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Bitmap decodeBitmapViaRootStream(String path) {
+        try {
+            RootManager rm = RootManager.getInstance();
+            if (rm == null || !rm.isRootAvailable()) return null;
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            rm.readStream(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
+            byte[] data = baos.toByteArray();
+            if (data == null || data.length == 0) return null;
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(data, 0, data.length, options);
+
+            int width = options.outWidth;
+            int height = options.outHeight;
+            if (width <= 0 || height <= 0) return null;
+
+            int scale = 1;
+            while (width / 2 >= 128 && height / 2 >= 128) {
+                width /= 2;
+                height /= 2;
+                scale *= 2;
+            }
+
+            options.inSampleSize = scale;
+            options.inJustDecodeBounds = false;
+            return BitmapFactory.decodeByteArray(data, 0, data.length, options);
         } catch (Throwable t) {
             return null;
         }
     }
 
     private static Bitmap loadVideoThumbnail(String path) {
+        String resolvedPath = resolveAccessiblePath(path);
         try {
-            return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
-        } catch (Throwable t) {
-            return null;
+            Bitmap b = ThumbnailUtils.createVideoThumbnail(resolvedPath, MediaStore.Video.Thumbnails.MINI_KIND);
+            if (b != null) return b;
+        } catch (Throwable ignored) {}
+        if (!resolvedPath.equals(path)) {
+            try {
+                return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
+            } catch (Throwable ignored) {}
         }
+        return null;
     }
 }
