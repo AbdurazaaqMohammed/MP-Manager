@@ -62,6 +62,48 @@ public class ApkInfoUtil {
         return -1;
     }
 
+    public static String getAndroidVersionName(int sdk) {
+        return switch (sdk) {
+            case 1 -> "Android 1.0 (1)";
+            case 2 -> "Android 1.1 (2)";
+            case 3 -> "Android 1.5 Cupcake (3)";
+            case 4 -> "Android 1.6 Donut (4)";
+            case 5 -> "Android 2.0 Eclair (5)";
+            case 6 -> "Android 2.0.1 Eclair (6)";
+            case 7 -> "Android 2.1 Eclair (7)";
+            case 8 -> "Android 2.2 Froyo (8)";
+            case 9 -> "Android 2.3 Gingerbread (9)";
+            case 10 -> "Android 2.3.3 Gingerbread (10)";
+            case 11 -> "Android 3.0 Honeycomb (11)";
+            case 12 -> "Android 3.1 Honeycomb (12)";
+            case 13 -> "Android 3.2 Honeycomb (13)";
+            case 14 -> "Android 4.0 Ice Cream Sandwich (14)";
+            case 15 -> "Android 4.0.3 Ice Cream Sandwich (15)";
+            case 16 -> "Android 4.1 Jelly Bean (16)";
+            case 17 -> "Android 4.2 Jelly Bean (17)";
+            case 18 -> "Android 4.3 Jelly Bean (18)";
+            case 19 -> "Android 4.4 KitKat (19)";
+            case 20 -> "Android 4.4W KitKat Wear (20)";
+            case 21 -> "Android 5.0 Lollipop (21)";
+            case 22 -> "Android 5.1 Lollipop (22)";
+            case 23 -> "Android 6.0 Marshmallow (23)";
+            case 24 -> "Android 7.0 Nougat (24)";
+            case 25 -> "Android 7.1 Nougat (25)";
+            case 26 -> "Android 8.0 Oreo (26)";
+            case 27 -> "Android 8.1 Oreo (27)";
+            case 28 -> "Android 9 Pie (28)";
+            case 29 -> "Android 10 (29)";
+            case 30 -> "Android 11 (30)";
+            case 31 -> "Android 12 (31)";
+            case 32 -> "Android 12L (32)";
+            case 33 -> "Android 13 (33)";
+            case 34 -> "Android 14 (34)";
+            case 35 -> "Android 15 (35)";
+            case 36 -> "Android 16 (36)";
+            default -> sdk > 36 ? "Android " + (sdk - 19) + " (" + sdk + ")" : String.valueOf(sdk);
+        };
+    }
+
     public static CharSequence getPermissions(PackageInfo pi) {
         if (pi == null || pi.requestedPermissions == null) return "";
         StringBuilder sb = new StringBuilder();

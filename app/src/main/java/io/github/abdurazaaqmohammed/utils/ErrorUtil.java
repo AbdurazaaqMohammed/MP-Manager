@@ -26,6 +26,9 @@ public class ErrorUtil {
     }
 
     public void showError(String s) {
+        try {
+            AppLogs.logError("UI_ERROR", s, null);
+        } catch (Exception ignored) {}
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setMessage(s)
                 .setNegativeButton(android.R.string.cancel, null)

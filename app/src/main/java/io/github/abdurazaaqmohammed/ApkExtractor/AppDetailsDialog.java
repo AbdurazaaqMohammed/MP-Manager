@@ -304,14 +304,14 @@ public final class AppDetailsDialog {
             }
             case "detail:target_sdk": {
                 if (ai.targetSdk > 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), String.valueOf(ai.targetSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.targetSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;
             }
             case "detail:min_sdk": {
                 if (ai.minSdk >= 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), String.valueOf(ai.minSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.minSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;

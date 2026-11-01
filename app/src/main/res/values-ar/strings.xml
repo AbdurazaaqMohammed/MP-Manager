@@ -1950,4 +1950,11 @@
     <string name="progress_done">تم</string>
     <string name="special_permissions">أذونات خاصة</string>
     <string name="mime">MIME</string>
+    <string name="compile_apk">تجميع APK</string>
+    <string name="compile_apk_options">خيارات تجميع APK</string>
+    <string name="compile_apk_options_title">خيارات التجميع</string>
+    <string name="compile_opt_validate_res">التحقق من صحة مجلد الموارد (res)</string>
+    <string name="compile_opt_no_cache">تجاهل ملفات DEX المخزنة مؤقتاً (noCache)</string>
+    <string name="compile_opt_dex_profile">ترميز ملف تعريف DEX (.prof)</string>
+    <string name="compile_opt_align">محاذاة الحزمة ZipAlign (محاذاة 4 بايت / 16 كيلو بايت)</string>
 </resources>

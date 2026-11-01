@@ -137,6 +137,22 @@ public class ImageEditActivity extends BaseActivity {
         ProgressManager pm = new ProgressManager(this, true).show();
         new Thread(() -> {
             try {
+                // Try to resolve the real underlying storage or root path first
+                SharedPathResolver.Result resolved = SharedPathResolver.resolve(this, uri, null);
+                if (resolved != null && resolved.path != null) {
+                    boolean exists = false;
+                    try {
+                        exists = new File(resolved.path).isFile() || AccessManager.exists(this, resolved.path);
+                    } catch (Exception ignored) {}
+                    if (exists) {
+                        originalPath = resolved.path;
+                        fromShared = false;
+                        pm.dismiss();
+                        runOnUiThread(this::initEditor);
+                        return;
+                    }
+                }
+
                 String name = "shared_image";
                 try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) {
@@ -1189,8 +1205,27 @@ public class ImageEditActivity extends BaseActivity {
                     return;
                 }
                 File original = new File(originalPath);
-                long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
+                String bakPath = originalPath + ".bak";
+                AppLogs.log("IMAGE_EDIT", "Saving image to " + originalPath + ", creating backup " + bakPath);
+                // 1. Rename original to .bak so last modified time and exif are 100% untouched
+                try {
+                    AccessManager.move(this, originalPath, bakPath, AccessManager.needsElevated(this, originalPath));
+                } catch (Exception moveErr) {
+                    AppLogs.logError("IMAGE_EDIT", "Failed to move original to .bak, falling back to copy", moveErr);
+                    try {
+                        AccessManager.copyFile(this, originalPath, bakPath, AccessManager.needsElevated(this, originalPath));
+                    } catch (Exception copyErr) {
+                        AppLogs.logError("IMAGE_EDIT", "Failed to copy original to .bak", copyErr);
+                    }
+                }
+
+                // 2. Write the new edited/stretched image to originalPath
                 copyFile(workingFile, original);
+
+                // 3. Copy EXIF metadata from bakPath to originalPath (with updated width/height)
+                copyExif(bakPath, originalPath);
+
+                long mtimeToPreserve = targetMtime > 0 ? targetMtime : -1;
                 if (mtimeToPreserve > 0) {
                     try {
                         original.setLastModified(mtimeToPreserve);
@@ -1198,13 +1233,17 @@ public class ImageEditActivity extends BaseActivity {
                     } catch (Exception ignored) {
                     }
                 }
+
                 scanMediaFile(originalPath);
+                scanMediaFile(bakPath);
+                AppLogs.log("IMAGE_EDIT", "Successfully saved " + originalPath + " and scanned media.");
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
                     finish();
                 });
             } catch (Exception e) {
+                AppLogs.logError("IMAGE_EDIT", "Error during doSave", e);
                 pm.dismiss();
                 runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
@@ -1330,6 +1369,40 @@ public class ImageEditActivity extends BaseActivity {
 
     private void showError(String message) {
         Extensions.showMessage(this, message);
+    }
+
+    private void copyExif(String srcPath, String dstPath) {
+        if (!isJpeg || srcPath == null || dstPath == null) return;
+        try {
+            ExifInterface srcExif = new ExifInterface(srcPath);
+            ExifInterface dstExif = new ExifInterface(dstPath);
+            String[] tags = {
+                    ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL,
+                    ExifInterface.TAG_DATETIME, ExifInterface.TAG_EXPOSURE_TIME,
+                    ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_ISO_SPEED_RATINGS,
+                    ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FLASH,
+                    ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_APERTURE_VALUE,
+                    ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LONGITUDE,
+                    ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_DATESTAMP,
+                    ExifInterface.TAG_GPS_PROCESSING_METHOD, ExifInterface.TAG_GPS_TIMESTAMP,
+                    ExifInterface.TAG_SOFTWARE, ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT,
+                    ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_DATETIME_ORIGINAL,
+                    ExifInterface.TAG_SUBSEC_TIME, ExifInterface.TAG_SUBSEC_TIME_DIGITIZED,
+                    ExifInterface.TAG_SUBSEC_TIME_ORIGINAL, ExifInterface.TAG_IMAGE_DESCRIPTION,
+                    ExifInterface.TAG_USER_COMMENT, ExifInterface.TAG_EXIF_VERSION
+            };
+            for (String tag : tags) {
+                String val = srcExif.getAttribute(tag);
+                if (val != null) {
+                    dstExif.setAttribute(tag, val);
+                }
+            }
+            dstExif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
+            dstExif.saveAttributes();
+            JpegMetaStrip.fixJpegMarkerOrder(new File(dstPath));
+        } catch (Exception e) {
+            AppLogs.logError("IMAGE_EDIT", "Failed to copy EXIF attributes from " + srcPath + " to " + dstPath, e);
+        }
     }
 
     private int dp(int value) {

@@ -22,12 +22,60 @@ public class AppLogs {
         if (context != null) appContext = context.getApplicationContext();
     }
 
+    private static final Object LOG_LOCK = new Object();
+    private static File sessionLogFile = null;
+
     public static File getLogsDir() {
         String base = UiPrefs.appPathDir(appContext,
                 new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath());
         File dir = new File(base, "logs");
-        dir.mkdirs();
+        if (!dir.exists()) dir.mkdirs();
         return dir;
+    }
+
+    public static File getSessionLogFile() {
+        synchronized (LOG_LOCK) {
+            if (sessionLogFile == null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+                String timestamp = LocalDateTime.now().format(formatter);
+                sessionLogFile = new File(getLogsDir(), "app_" + timestamp + ".log");
+            }
+            return sessionLogFile;
+        }
+    }
+
+    public static void log(String tag, String message) {
+        synchronized (LOG_LOCK) {
+            try {
+                File file = getSessionLogFile();
+                DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                String line = LocalDateTime.now().format(timeFmt) + " [" + tag + "] " + message + "\n";
+                try (FileWriter fw = new FileWriter(file, true)) {
+                    fw.write(line);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
+    public static void logError(String tag, String message, Throwable t) {
+        synchronized (LOG_LOCK) {
+            try {
+                File file = getSessionLogFile();
+                DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                StringBuilder sb = new StringBuilder();
+                sb.append(LocalDateTime.now().format(timeFmt)).append(" [ERROR/").append(tag).append("] ").append(message).append("\n");
+                if (t != null) {
+                    StringWriter sw = new StringWriter();
+                    PrintWriter pw = new PrintWriter(sw);
+                    t.printStackTrace(pw);
+                    pw.flush();
+                    sb.append(sw.toString()).append("\n");
+                }
+                try (FileWriter fw = new FileWriter(file, true)) {
+                    fw.write(sb.toString());
+                }
+            } catch (Exception ignored) {}
+        }
     }
 
     public static File newLogFile(String prefix) {
@@ -36,6 +84,7 @@ public class AppLogs {
 
     public static File writeCrash(Throwable e, Context context) {
         try {
+            logError("CRASH", "Uncaught exception", e);
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
             String timestamp = LocalDateTime.now().format(formatter);
