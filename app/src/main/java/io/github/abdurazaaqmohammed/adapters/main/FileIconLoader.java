@@ -978,7 +978,7 @@ public class FileIconLoader {
             RootManager rm = RootManager.getInstance();
             if (rm == null || !rm.isRootAvailable()) return null;
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            rm.readStream(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
+            rm.streamFromRoot(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
             byte[] data = baos.toByteArray();
             if (data == null || data.length == 0) return null;
 
