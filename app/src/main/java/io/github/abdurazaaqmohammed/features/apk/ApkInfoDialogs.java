@@ -97,6 +97,7 @@ import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.SslUnpinningLauncher;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FastDexPatch;
@@ -698,7 +699,7 @@ public class ApkInfoDialogs {
                 .setNeutralButton(R.string.more, (dialog, which) -> {
                     // "View certificate" moved onto the Signatures row, which now opens the
                     // full signature sheet on tap.
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions), context.rss.getString(R.string.npatch_integrated), context.rss.getString(R.string.multiplex_apk), context.rss.getString(R.string.il2cpp_dump_native), context.rss.getString(R.string.patch_native_libs)));
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions), context.rss.getString(R.string.npatch_integrated), context.rss.getString(R.string.multiplex_apk), context.rss.getString(R.string.il2cpp_dump_native), context.rss.getString(R.string.patch_native_libs), context.rss.getString(R.string.ssl_unpin_title)));
                     final int builtinCount = moreTitles.size();
                     final List<ApkMoreAction> pluginMore =
                             ExtensionRegistry.apkActions();
@@ -1043,6 +1044,7 @@ public class ApkInfoDialogs {
                     else if (which1 == 13) showMultiplexDialog(file, fileName);
                     else if (which1 == 14) showIl2CppDumpDialog(file, fileName);
                     else if (which1 == 15) showLibPatcherDialog(file, fileName);
+                    else if (which1 == 16) SslUnpinningLauncher.open(context, dialogUtil, pane1, file, fileName);
                     else {
                         int pluginIndex = which1 - builtinCount;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {

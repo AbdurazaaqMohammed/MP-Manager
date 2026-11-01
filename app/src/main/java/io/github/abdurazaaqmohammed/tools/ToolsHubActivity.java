@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
 import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
@@ -486,6 +487,10 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, StorageManagerActivity.class));
         } else if ("adb".equals(item.id())) {
             startActivity(new Intent(this, AdbBrowserActivity.class));
+        } else if ("mcpserver".equals(item.id())) {
+            startActivity(new Intent(this, McpServerActivity.class));
+        } else if ("sslunpin".equals(item.id())) {
+            startActivity(new Intent(this, SslUnpinningActivity.class));
         } else if ("documents".equals(item.id())) {
             startActivity(new Intent(this, DocumentsBrowserActivity.class));
         } else {

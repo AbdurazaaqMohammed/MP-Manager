@@ -520,6 +520,9 @@ public class SidebarController {
             case "ftp_client":
                 activity.showFtpClientDialog();
                 break;
+            case "mcp_server":
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.mcp.McpServerActivity.class));
+                break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
                 break;
