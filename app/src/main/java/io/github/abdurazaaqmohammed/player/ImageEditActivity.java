@@ -24,6 +24,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.utils.AppLogs;
 import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.appbar.MaterialToolbar;
