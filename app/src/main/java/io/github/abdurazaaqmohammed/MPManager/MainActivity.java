@@ -3139,15 +3139,17 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 } catch (Exception ignored) {
                 }
                 File target = new File(locate);
-                File folder = target.isFile() ? target.getParentFile() : target;
-                // exists() is false under /data for the app uid, so fall back to the elevated
-                // backend before giving up on a root/shizuku-resolved path.
+                boolean isDir = AccessManager.isDirectory(this, target.getAbsolutePath());
+                boolean isFile = !isDir && (AccessManager.isFile(this, target.getAbsolutePath()) || target.getParentFile() != null);
+                File folder = isFile ? target.getParentFile() : target;
                 boolean reachable = folder != null && (folder.exists()
                         || AccessManager.exists(this, folder.getAbsolutePath()));
                 if (reachable) {
                     loadFolderInPane(folder, true);
-                    if (target.isFile()) {
-                        highlightAndFocusItem(true, target.getName());
+                    if (isFile) {
+                        final String itemName = target.getName();
+                        highlightAndFocusItem(true, itemName);
+                        handler.postDelayed(() -> highlightAndFocusItem(true, itemName), 350);
                     }
                     Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
                 }

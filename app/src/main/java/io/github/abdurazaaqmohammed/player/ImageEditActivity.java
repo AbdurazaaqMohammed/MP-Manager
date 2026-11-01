@@ -1305,23 +1305,26 @@ public class ImageEditActivity extends BaseActivity {
     }
 
     private void copyFile(File src, File dst) throws Exception {
-        try (InputStream in = new FileInputStream(src); OutputStream os = new FileOutputStream(dst)) {
-            byte[] buf = new byte[65536];
-            int n;
-            while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+        try {
+            AccessManager.copyFile(this, src.getAbsolutePath(), dst.getAbsolutePath(), AccessManager.needsElevated(this, src.getAbsolutePath()) || AccessManager.needsElevated(this, dst.getAbsolutePath()));
             return;
-        } catch (Exception originalError) {
-            try {
-                RootManager rm = RootManager.getInstance(this);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    RootManager.ShellResult r = rm.execute("cp -f " + RootManager.escapeShellArg(src.getAbsolutePath())
-                            + " " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
-                    if (r.isSuccess()) {
+        } catch (Exception e) {
+            // Fall back to direct stream or executeFs
+            try (InputStream in = new FileInputStream(src); OutputStream os = new FileOutputStream(dst)) {
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+                return;
+            } catch (Exception directError) {
+                try {
+                    RootManager rm = RootManager.getInstance(this);
+                    if (rm.isRootAvailable()) {
+                        rm.copyFile(src.getAbsolutePath(), dst.getAbsolutePath());
                         return;
                     }
-                }
-            } catch (Exception ignored) {}
-            throw originalError;
+                } catch (Exception ignored) {}
+                throw e;
+            }
         }
     }
 
