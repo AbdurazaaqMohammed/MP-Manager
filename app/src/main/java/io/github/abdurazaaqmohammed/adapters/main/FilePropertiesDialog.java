@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.media.MediaScannerConnection;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.widget.EditText;
@@ -499,6 +500,7 @@ public class FilePropertiesDialog {
                         successCount++;
                     }
                 } catch (Exception ignored) {}
+                scanMediaFile(context, file.getAbsolutePath());
             }
             int finalSuccess = successCount;
             context.handler.post(() -> {
@@ -614,6 +616,7 @@ public class FilePropertiesDialog {
                             AccessManager.touchMtime(context, file.getAbsolutePath(), originalMtime);
                         } catch (Exception ignored) {}
                     }
+                    scanMediaFile(context, file.getAbsolutePath());
                     imageCount++;
                 } catch (Exception ignored) {}
             }
@@ -645,6 +648,13 @@ public class FilePropertiesDialog {
     private static String formatExifDate(long millis) {
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
         return sdf.format(new java.util.Date(millis));
+    }
+
+    private static void scanMediaFile(MainActivity context, String path) {
+        if (context == null || path == null) return;
+        try {
+            MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
+        } catch (Exception ignored) {}
     }
 
     private TextView addPropertyRow(LinearLayout container, String label, String value) {
