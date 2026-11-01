@@ -211,10 +211,9 @@ public final class AccessManager {
         String base = new File(srcAbsPath).getName();
         if (base.isEmpty()) base = "staged_file";
         base = base.replaceAll("[^a-zA-Z0-9_.-]", "_");
-        File dst = new File(dir, System.currentTimeMillis() + "_" + base);
-        int dup = 0;
-        while (dst.exists() && dup < 100) {
-            dst = new File(dir, System.currentTimeMillis() + "_" + (dup++) + "_" + base);
+        File dst = new File(dir, "cached_" + base);
+        if (dst.exists()) {
+            dst.delete();
         }
         return dst;
     }

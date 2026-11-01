@@ -98,8 +98,7 @@ public class ImageEditActivity extends BaseActivity {
                 originalPath = rootOriginal;
             } else {
                 String stagedName = new File(originalPath).getName();
-                int idx = stagedName.indexOf('_');
-                String realName = (idx > 0 && idx < stagedName.length() - 1) ? stagedName.substring(idx + 1) : stagedName;
+                String realName = stagedName.replaceFirst("^(cached_|\\d+_)", "");
                 String[] candidateDirs = {
                         "/storage/emulated/0/DCIM/Screenshots",
                         "/storage/emulated/0/Pictures/Screenshots",
@@ -1308,6 +1307,22 @@ public class ImageEditActivity extends BaseActivity {
                     scanMediaFile(bakPath);
                     AppLogs.log("IMAGE_EDIT", "[NORMAL] Successfully saved: " + originalPath);
                 }
+
+                // Clean up any cached/staged files for this image
+                try {
+                    String baseName = new File(originalPath).getName();
+                    File stageDir = RootStaging.stageDir(ImageEditActivity.this);
+                    if (stageDir != null && stageDir.isDirectory()) {
+                        File[] cachedFiles = stageDir.listFiles();
+                        if (cachedFiles != null) {
+                            for (File cf : cachedFiles) {
+                                if (cf.getName().endsWith(baseName)) {
+                                    cf.delete();
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
 
                 pm.dismiss();
                 runOnUiThread(() -> {

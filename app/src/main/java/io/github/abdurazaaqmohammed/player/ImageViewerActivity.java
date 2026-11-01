@@ -23,6 +23,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
@@ -168,6 +169,17 @@ public class ImageViewerActivity extends BaseActivity {
 
         rootOriginalPath = getIntent().getStringExtra("rootOriginalPath");
         String startPath = getIntent().getStringExtra("image_path");
+        if (rootOriginalPath != null) {
+            String emulated = null;
+            if (rootOriginalPath.startsWith("/data/media/0/")) {
+                emulated = "/storage/emulated/0/" + rootOriginalPath.substring("/data/media/0/".length());
+            } else if (rootOriginalPath.startsWith("/data/media/")) {
+                emulated = "/storage/emulated/" + rootOriginalPath.substring("/data/media/".length());
+            }
+            if (emulated != null && new File(emulated).exists() && new File(emulated).canRead()) {
+                startPath = emulated;
+            }
+        }
         if (startPath == null || !new File(startPath).exists()) {
             finish();
             return;
@@ -274,7 +286,13 @@ public class ImageViewerActivity extends BaseActivity {
         currentIndex = pos;
         String path = imagePaths.get(pos);
         File file = new File(path);
-        titleText.setText(file.getName());
+        String displayName = file.getName();
+        if (rootOriginalPath != null && (pos == currentIndex || imagePaths.size() == 1)) {
+            displayName = new File(rootOriginalPath).getName();
+        } else if (displayName.startsWith("cached_")) {
+            displayName = displayName.substring("cached_".length());
+        }
+        titleText.setText(displayName);
         counterText.setText((pos + 1) + "/" + imagePaths.size());
 
         String resolution = "";
@@ -306,9 +324,18 @@ public class ImageViewerActivity extends BaseActivity {
         String path = imagePaths.get(pos);
         File file = new File(path);
 
+        String displayPath = path;
+        String displayName = file.getName();
+        if (rootOriginalPath != null && (pos == currentIndex || imagePaths.size() == 1)) {
+            displayPath = rootOriginalPath;
+            displayName = new File(rootOriginalPath).getName();
+        } else if (displayName.startsWith("cached_")) {
+            displayName = displayName.substring("cached_".length());
+        }
+
         StringBuilder sb = new StringBuilder();
-        sb.append("File: ").append(file.getName()).append("\n");
-        sb.append("Path: ").append(file.getAbsolutePath()).append("\n");
+        sb.append("File: ").append(displayName).append("\n");
+        sb.append("Path: ").append(displayPath).append("\n");
         sb.append("Size: ").append(formatFileSize(file.length())).append("\n");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -474,6 +501,27 @@ public class ImageViewerActivity extends BaseActivity {
         if (requestCode == REQ_EDIT_IMAGE && resultCode == RESULT_OK) {
             refreshCurrentImage();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            if (rootOriginalPath != null) {
+                File stageDir = RootStaging.stageDir(this);
+                if (stageDir != null && stageDir.isDirectory()) {
+                    String realBase = new File(rootOriginalPath).getName();
+                    File[] cachedFiles = stageDir.listFiles();
+                    if (cachedFiles != null) {
+                        for (File cf : cachedFiles) {
+                            if (cf.getName().endsWith(realBase)) {
+                                cf.delete();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private void checkNativeTools() {

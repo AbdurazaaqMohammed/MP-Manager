@@ -1291,6 +1291,22 @@ public class FileOpener {
                 cb.onReady(file);
                 return;
             }
+            if (file != null) {
+                String p = file.getAbsolutePath();
+                if (p.startsWith("/data/media/0/")) {
+                    File emulated = new File("/storage/emulated/0/" + p.substring("/data/media/0/".length()));
+                    if (emulated.exists() && emulated.canRead()) {
+                        cb.onReady(emulated);
+                        return;
+                    }
+                } else if (p.startsWith("/data/media/")) {
+                    File emulated = new File("/storage/emulated/" + p.substring("/data/media/".length()));
+                    if (emulated.exists() && emulated.canRead()) {
+                        cb.onReady(emulated);
+                        return;
+                    }
+                }
+            }
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
             return;
