@@ -62,6 +62,49 @@ public class ApkInfoUtil {
         return -1;
     }
 
+    public static String getAndroidVersionName(int sdk) {
+        return switch (sdk) {
+            case 1 -> "Android 1.0 (SDK 1)";
+            case 2 -> "Android 1.1 (SDK 2)";
+            case 3 -> "Android 1.5 (SDK 3)";
+            case 4 -> "Android 1.6 (SDK 4)";
+            case 5 -> "Android 2.0 (SDK 5)";
+            case 6 -> "Android 2.0.1 (SDK 6)";
+            case 7 -> "Android 2.1 (SDK 7)";
+            case 8 -> "Android 2.2 (SDK 8)";
+            case 9 -> "Android 2.3 (SDK 9)";
+            case 10 -> "Android 2.3.3 (SDK 10)";
+            case 11 -> "Android 3.0 (SDK 11)";
+            case 12 -> "Android 3.1 (SDK 12)";
+            case 13 -> "Android 3.2 (SDK 13)";
+            case 14 -> "Android 4.0 (SDK 14)";
+            case 15 -> "Android 4.0.3 (SDK 15)";
+            case 16 -> "Android 4.1 (SDK 16)";
+            case 17 -> "Android 4.2 (SDK 17)";
+            case 18 -> "Android 4.3 (SDK 18)";
+            case 19 -> "Android 4.4 (SDK 19)";
+            case 20 -> "Android 4.4W (SDK 20)";
+            case 21 -> "Android 5.0 (SDK 21)";
+            case 22 -> "Android 5.1 (SDK 22)";
+            case 23 -> "Android 6.0 (SDK 23)";
+            case 24 -> "Android 7.0 (SDK 24)";
+            case 25 -> "Android 7.1 (SDK 25)";
+            case 26 -> "Android 8.0 (SDK 26)";
+            case 27 -> "Android 8.1 (SDK 27)";
+            case 28 -> "Android 9 (SDK 28)";
+            case 29 -> "Android 10 (SDK 29)";
+            case 30 -> "Android 11 (SDK 30)";
+            case 31 -> "Android 12 (SDK 31)";
+            case 32 -> "Android 12L (SDK 32)";
+            case 33 -> "Android 13 (SDK 33)";
+            case 34 -> "Android 14 (SDK 34)";
+            case 35 -> "Android 15 (SDK 35)";
+            case 36 -> "Android 16 (SDK 36)";
+            case 37 -> "Android 17 (SDK 37)";
+            default -> sdk > 37 ? "Android " + (sdk - 20) + " (SDK " + sdk + ")" : "SDK " + sdk;
+        };
+    }
+
     public static CharSequence getPermissions(PackageInfo pi) {
         if (pi == null || pi.requestedPermissions == null) return "";
         StringBuilder sb = new StringBuilder();
