@@ -190,7 +190,7 @@ public class RightMenuController {
                 (int) (48 * activity.getResources().getDisplayMetrics().density)));
         itemLayout.setOrientation(LinearLayout.HORIZONTAL);
         itemLayout.setGravity(Gravity.CENTER_VERTICAL);
-        int padH = (int) (18 * activity.getResources().getDisplayMetrics().density);
+        int padH = (int) (16 * activity.getResources().getDisplayMetrics().density);
         itemLayout.setPadding(padH, 0, padH, 0);
         TypedValue outValue = new TypedValue();
         activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
@@ -199,7 +199,7 @@ public class RightMenuController {
         ImageView icon = new ImageView(activity);
         int iconSize = (int) (22 * activity.getResources().getDisplayMetrics().density);
         LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
-        iconLp.setMarginEnd((int) (16 * activity.getResources().getDisplayMetrics().density));
+        iconLp.setMarginEnd((int) (12 * activity.getResources().getDisplayMetrics().density));
         icon.setLayoutParams(iconLp);
         icon.setImageResource(iconRes);
         TypedValue colorOnSurface = new TypedValue();
