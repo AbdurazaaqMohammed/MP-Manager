@@ -1820,7 +1820,7 @@ Layout Inspector
     <string name="failed">Failed</string>
 
     <!-- NPatch integrated mode -->
-    <string name="npatch_integrated">Xposed patcher</string>
+    <string name="npatch_integrated">Signature killer &amp; xposed</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
     <string name="npatch_hint">Patches the APK with NPatch or LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_engine_npatch">NPatch</string>
@@ -1949,7 +1949,7 @@ Layout Inspector
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="xposed_patcher_lite_title">Xposed patcher</string>
+    <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
     <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
