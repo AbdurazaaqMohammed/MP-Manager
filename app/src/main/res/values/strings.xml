@@ -1028,6 +1028,7 @@ Layout Inspector
     <string name="plugin_shortcut_old_android">Shortcuts need Android 8 or newer</string>
     <string name="tools_hub_loading">Loading</string>
     <string name="tools_hub_theme">Theme</string>
+    <string name="accent_color">Accent color</string>
     <string name="tools_hub_refresh_packs">Refresh packs</string>
     <string name="tools_hub_refreshing">Refreshing pack catalog…</string>
     <string name="tools_hub_updated">Catalog updated</string>

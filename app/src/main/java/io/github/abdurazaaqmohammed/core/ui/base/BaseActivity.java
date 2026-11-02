@@ -28,6 +28,8 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         // Theme must be set before super.onCreate so inflation uses it.
         ThemeRegistry.applySaved(this);
+        // Stacked accent overlay (also before super.onCreate).
+        ThemeRegistry.applyAccent(this);
         // Font factory must also wrap AppCompat's, so install before super.onCreate.
         AppFont.installFactory(this);
         appliedFontEpoch = AppFont.currentEpoch();
