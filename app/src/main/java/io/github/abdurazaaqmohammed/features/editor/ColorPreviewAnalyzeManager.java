@@ -5,6 +5,9 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,9 +16,6 @@ import java.util.regex.Matcher;
 
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager;
 import io.github.rosemoe.sora.lang.analysis.StyleReceiver;
-import io.github.rosemoe.sora.lang.analysis.StyleUpdateRange;
-import io.github.rosemoe.sora.lang.brackets.BracketsProvider;
-import io.github.rosemoe.sora.lang.diagnostics.DiagnosticsContainer;
 import io.github.rosemoe.sora.lang.styling.Span;
 import io.github.rosemoe.sora.lang.styling.SpanFactory;
 import io.github.rosemoe.sora.lang.styling.Spans;
@@ -31,12 +31,12 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
  * An AnalyzeManager decorator that intercepts Styles emitted by the underlying language analyzer
  * and decorates Hex color codes (#RGB, #ARGB, #RRGGBB, #AARRGGBB) with color preview backgrounds
  * and high-contrast foreground text.
+ * Uses dynamic Proxy for StyleReceiver to remain fully compatible across sora-editor versions.
  */
 public class ColorPreviewAnalyzeManager implements AnalyzeManager {
 
     private final AnalyzeManager delegate;
     private final CodeEditor editor;
-    private StyleReceiver clientReceiver;
     private volatile ContentReference textReference;
 
     public ColorPreviewAnalyzeManager(@NonNull AnalyzeManager delegate, @Nullable CodeEditor editor) {
@@ -46,12 +46,38 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
 
     @Override
     public void setReceiver(@Nullable StyleReceiver receiver) {
-        this.clientReceiver = receiver;
         if (receiver == null) {
             delegate.setReceiver(null);
-        } else {
-            delegate.setReceiver(new InterceptingStyleReceiver(receiver));
+            return;
         }
+
+        StyleReceiver proxy = (StyleReceiver) Proxy.newProxyInstance(
+                receiver.getClass().getClassLoader(),
+                new Class<?>[]{StyleReceiver.class},
+                new InvocationHandler() {
+                    @Override
+                    public Object invoke(Object proxyObj, Method method, Object[] args) throws Throwable {
+                        String name = method.getName();
+                        if (args != null) {
+                            // Intercept setStyles / updateStyles calls to modify Styles
+                            for (Object arg : args) {
+                                if (arg instanceof Styles) {
+                                    applyColorHighlights((Styles) arg);
+                                }
+                            }
+                            // Replace sourceManager parameter if passed
+                            for (int i = 0; i < args.length; i++) {
+                                if (args[i] instanceof AnalyzeManager) {
+                                    args[i] = ColorPreviewAnalyzeManager.this;
+                                }
+                            }
+                        }
+                        return method.invoke(receiver, args);
+                    }
+                }
+        );
+
+        delegate.setReceiver(proxy);
     }
 
     @Override
@@ -81,42 +107,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
         this.textReference = null;
     }
 
-    private class InterceptingStyleReceiver implements StyleReceiver {
-        private final StyleReceiver target;
-
-        InterceptingStyleReceiver(StyleReceiver target) {
-            this.target = target;
-        }
-
-        @Override
-        public void setStyles(@NonNull AnalyzeManager sourceManager, @Nullable Styles styles) {
-            applyColorHighlights(styles);
-            target.setStyles(ColorPreviewAnalyzeManager.this, styles);
-        }
-
-        @Override
-        public void setStyles(@NonNull AnalyzeManager sourceManager, @Nullable Styles styles, @Nullable Runnable action) {
-            applyColorHighlights(styles);
-            target.setStyles(ColorPreviewAnalyzeManager.this, styles, action);
-        }
-
-        @Override
-        public void updateStyles(@NonNull AnalyzeManager sourceManager, @NonNull Styles styles, @NonNull StyleUpdateRange range) {
-            applyColorHighlights(styles);
-            target.updateStyles(ColorPreviewAnalyzeManager.this, styles, range);
-        }
-
-        @Override
-        public void setDiagnostics(@NonNull AnalyzeManager sourceManager, @Nullable DiagnosticsContainer diagnostics) {
-            target.setDiagnostics(ColorPreviewAnalyzeManager.this, diagnostics);
-        }
-
-        @Override
-        public void updateBracketProvider(@NonNull AnalyzeManager sourceManager, @Nullable BracketsProvider provider) {
-            target.updateBracketProvider(ColorPreviewAnalyzeManager.this, provider);
-        }
-    }
-
     private void applyColorHighlights(@Nullable Styles styles) {
         if (styles == null || styles.spans == null || textReference == null) return;
         Content content = textReference.getReference();
@@ -141,7 +131,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
             Matcher matcher = ColorPreviewHelper.getHexColorPattern().matcher(lineStr);
             if (!matcher.find()) continue;
 
-            // Found at least one hex color in this line
             List<Span> originalSpans = reader.getSpansOnLine(lineIdx);
             if (originalSpans == null || originalSpans.isEmpty()) continue;
 
@@ -153,7 +142,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
     }
 
     private List<Span> decorateLineSpans(String lineStr, List<Span> originalSpans, EditorColorScheme scheme) {
-        // Find all color regions
         class ColorRegion {
             int start;
             int end;
@@ -176,7 +164,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
 
         if (regions.isEmpty()) return null;
 
-        // Clone and sort original spans by column
         List<Span> result = new ArrayList<>();
         for (Span s : originalSpans) {
             result.add(s.copy());
@@ -188,7 +175,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
             int fgId = ColorPreviewHelper.getContrastTextColorId(cr.parsedColor);
             long colorStyle = TextStyle.makeStyle(fgId, bgId, true, false, false);
 
-            // Find the style of the span that covered cr.end so we can restore it after the color badge
             long styleAfter = EditorColorScheme.TEXT_NORMAL;
             for (Span s : result) {
                 if (s.getColumn() <= cr.end) {
@@ -198,15 +184,12 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
                 }
             }
 
-            // Remove or adjust any spans strictly inside [cr.start, cr.end)
             List<Span> updated = new ArrayList<>();
             for (Span s : result) {
                 if (s.getColumn() > cr.start && s.getColumn() < cr.end) {
-                    // Overlapped inside the color badge, skip it
                     continue;
                 }
                 if (s.getColumn() == cr.start) {
-                    // Update this span to our color badge
                     s.setStyle(colorStyle);
                     updated.add(s);
                     continue;
@@ -215,7 +198,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
             }
             result = updated;
 
-            // If no span was exactly at cr.start, insert one
             boolean hasStart = false;
             for (Span s : result) {
                 if (s.getColumn() == cr.start) {
@@ -227,7 +209,6 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
                 result.add(SpanFactory.obtain(cr.start, colorStyle));
             }
 
-            // Ensure a restoring span exists at cr.end if cr.end < lineStr.length()
             if (cr.end < lineStr.length()) {
                 boolean hasEnd = false;
                 for (Span s : result) {
