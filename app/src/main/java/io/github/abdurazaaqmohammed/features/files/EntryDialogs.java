@@ -316,7 +316,7 @@ public class EntryDialogs {
             ll.setOrientation(LinearLayout.VERTICAL);
             int pad = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
             ll.setPadding(pad, pad / 2, pad, 0);
-            TextView msg = new TextView(context);
+            TextView msg = customMsgView = new TextView(context);
             msg.setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
             ll.addView(msg);
             ll.addView(recycleCb);
