@@ -210,11 +210,17 @@ public class RightMenuController {
         TextView text = new TextView(activity);
         text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
         text.setText(title);
+        text.setMaxLines(1);
+        text.setEllipsize(android.text.TextUtils.TruncateAt.END);
         text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         text.setTextColor(colorOnSurface.data);
         itemLayout.addView(text);
 
         com.google.android.material.checkbox.MaterialCheckBox checkBox = new com.google.android.material.checkbox.MaterialCheckBox(activity);
+        LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        checkLp.setMarginStart((int) (4 * activity.getResources().getDisplayMetrics().density));
+        checkBox.setLayoutParams(checkLp);
         checkBox.setChecked(initialValue);
         checkBox.setOnCheckedChangeListener(onChecked);
         itemLayout.addView(checkBox);

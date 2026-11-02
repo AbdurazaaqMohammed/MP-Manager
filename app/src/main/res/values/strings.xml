@@ -1008,8 +1008,8 @@ Layout Inspector
     <string name="querier_only_decimal_negative">Only decimal can be negative</string>
     <string name="menu_select_all">Select all</string>
     <string name="menu_hidden_files">Hidden files</string>
-    <string name="menu_show_system_hidden">Show system hidden files</string>
-    <string name="menu_show_manual_hidden">Show manually hidden files</string>
+    <string name="menu_show_system_hidden">Show system hidden</string>
+    <string name="menu_show_manual_hidden">Show manual hidden</string>
     <string name="menu_hide_selected">Hide selected files</string>
     <string name="menu_add_bookmark">Add to bookmarks</string>
     <string name="menu_swap_panes">Swap panes</string>

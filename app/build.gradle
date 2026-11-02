@@ -16,9 +16,18 @@ android {
         versionName "1.1.1"
     }
 
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "mpmanager123"
+            keyAlias "mpmanager"
+            keyPassword "mpmanager123"
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

@@ -904,8 +904,8 @@
     <string name="querier_only_decimal_negative">الأرقام العشرية فقط هي التي يمكن أن تكون سالبة</string>
     <string name="menu_select_all">تحديد الكل</string>
     <string name="menu_hidden_files">الملفات المخفية</string>
-    <string name="menu_show_system_hidden">إظهار ملفات النظام المخفية</string>
-    <string name="menu_show_manual_hidden">إظهار الملفات المخفية يدوياً</string>
+    <string name="menu_show_system_hidden">إظهار مخفي النظام</string>
+    <string name="menu_show_manual_hidden">إظهار المخفي يدوياً</string>
     <string name="menu_hide_selected">إخفاء الملفات المحددة</string>
     <string name="menu_add_bookmark">إضافة إلى الإشارات المرجعية</string>
     <string name="menu_swap_panes">تبديل الأجزاء</string>
