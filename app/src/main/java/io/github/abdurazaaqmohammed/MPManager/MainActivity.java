@@ -1682,7 +1682,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
-                            while (f != null && !f.exists()) f = f.getParentFile();
+                            while (f != null && !f.exists() && !canListViaRoot(f)) f = f.getParentFile();
                             if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
                             else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);

@@ -844,13 +844,41 @@ public class FileIconLoader {
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             Bitmap bitmap = isVideo ? loadVideoThumbnail(path) : loadImageThumbnail(path);
-            if (bitmap == null || !path.equals(fileIconView.getTag())) return;
-            Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
-            iconCache.put(path, icon);
-            context.runOnUiThread(() -> {
-                if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
-            });
+            if (bitmap != null) {
+                if (!path.equals(fileIconView.getTag())) return;
+                Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
+                iconCache.put(path, icon);
+                context.runOnUiThread(() -> {
+                    if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
+                });
+            } else if (!isVideo) {
+                // If an image (like a WhatsApp animated sticker .webp) failed decode,
+                // check if it is actually a zip/lottie container or special package
+                if (isZipFileFormat(path)) {
+                    iconCache.put(path, cachedArchiveIcon);
+                    context.runOnUiThread(() -> {
+                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
+                    });
+                }
+            }
         });
+    }
+
+    private static boolean isZipFileFormat(String path) {
+        if (path == null) return false;
+        try {
+            String resolved = resolveAccessiblePath(path);
+            File f = new File(resolved);
+            if (f.canRead()) {
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+                    byte[] header = new byte[4];
+                    if (fis.read(header) == 4) {
+                        return header[0] == 0x50 && header[1] == 0x4B && header[2] == 0x03 && header[3] == 0x04;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return false;
     }
 
     private static void ensureCachedIcons(Resources res, int theme) {

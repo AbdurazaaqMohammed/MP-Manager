@@ -85,7 +85,6 @@ public final class AppDetailsDialog {
         TextView pkgView = new TextView(act);
         pkgView.setText(ai.packageName);
         pkgView.setTextSize(13);
-        pkgView.setTextIsSelectable(true);
         titles.addView(pkgView);
         header.addView(titles);
 
@@ -242,7 +241,6 @@ public final class AppDetailsDialog {
                     View sigParent = (View) sigValue.getParent();
                     if (sigParent != null) {
                         sigParent.setClickable(true);
-                        sigParent.setFocusable(true);
                         sigParent.setBackgroundResource(getSelectableBackground(act));
                         View.OnClickListener openSig = v -> io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog.show(act, new File(ai.filePath));
                         sigParent.setOnClickListener(openSig);
@@ -521,7 +519,6 @@ public final class AppDetailsDialog {
         valueView.setText(value == null ? "" : value);
         valueView.setTextSize(14);
         valueView.setTypeface(Typeface.MONOSPACE);
-        valueView.setTextIsSelectable(true);
         LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         vp.setMarginStart(dp(act, 8));
         valueView.setLayoutParams(vp);
@@ -529,7 +526,6 @@ public final class AppDetailsDialog {
 
         if (tapPath != null) {
             row.setClickable(true);
-            row.setFocusable(true);
             row.setBackgroundResource(getSelectableBackground(act));
             row.setOnClickListener(v -> act.openInFileManager(tapPath));
         }
