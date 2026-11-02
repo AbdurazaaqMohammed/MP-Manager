@@ -173,6 +173,13 @@ public class DexEditorActivity extends BaseActivity {
     private static int currentTabIndex = -1;
     private final List<TreeNode> historyNodes = new ArrayList<>();
     private final List<String> stringList = new ArrayList<>();
+    /** True while the toolbar subtitle shows the translation "x/y" counter. */
+    public boolean translationCounterShown;
+    /** Explicit tab requested via the "openTab" extra (-1 when none). The
+     *  async class-tree load must not override it with the Explorer tab. */
+    private int openTabRequested = -1;
+    /** The project path subtitle shown on non-translation tabs. */
+    public String projectSubtitle;
     private final Stack<Integer> tabNavigationHistory = new Stack<>();
     private final ClassTree.CompilationOptions sessionOptions = new ClassTree.CompilationOptions();
     private final List<TreeNode> treeRoots = new ArrayList<>();
@@ -473,9 +480,15 @@ public class DexEditorActivity extends BaseActivity {
             public void onPageSelected(int position) {
                 if (position == 3 && stringList.isEmpty()) loadStrings();
                 refreshExplorerPage(position);
+                if (position != 3 && getSupportActionBar() != null && translationCounterShown) {
+                    // Leaving the translation tab: restore the project subtitle.
+                    translationCounterShown = false;
+                    setToolbarSubtitle(projectSubtitle);
+                }
             }
         });
         int openTab = getIntent().getIntExtra("openTab", -1);
+        openTabRequested = openTab;
         if (openTab >= 0 && openTab < 4 && explorerViewPager != null) explorerViewPager.setCurrentItem(openTab, false);
     }
 
@@ -530,10 +543,14 @@ public class DexEditorActivity extends BaseActivity {
         new Thread(() -> {
             try {
                 final List<String> strings = classTree.getAllStrings();
+                java.util.Collections.sort(strings);
                 runOnUiThread(() -> {
                     stringList.clear();
                     stringList.addAll(strings);
                     refreshExplorerPage(3);
+                    // Refresh the toolbar counter from the source of truth —
+                    // an adapter built before the data landed would report 0/0.
+                    updateTranslationCounter(0, stringList.size());
                     showProcessingProgress(false);
                 });
             } catch (Exception e) {
@@ -594,6 +611,10 @@ public class DexEditorActivity extends BaseActivity {
             getSupportActionBar().setSubtitle(null);
         } else {
             getSupportActionBar().setTitle(R.string.dex_editor_plus);
+            if (explorerViewPager != null && explorerViewPager.getCurrentItem() == 3 && translationCounterShown) {
+                // Keep the translation counter; it tracks the strings tab.
+                return;
+            }
             setToolbarSubtitle(null);
         }
         int btnVis = editorVisible ? View.VISIBLE : View.GONE;
@@ -610,6 +631,7 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     public void setToolbarSubtitle(String subtitle) {
+        projectSubtitle = subtitle;
         if (getSupportActionBar() == null) return;
         if (viewPager.getVisibility() != View.VISIBLE) {
             getSupportActionBar().setSubtitle((subtitle == null || subtitle.isEmpty()) ? "Temporary project" : subtitle.replace("/", "."));
@@ -2180,6 +2202,9 @@ public class DexEditorActivity extends BaseActivity {
 
                     StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), onSurface);
                     holder[0] = stringAdapter;
+                    // MT-style "translated/total" counter in the toolbar subtitle.
+                    stringAdapter.setModifiedCountListener(activity::updateTranslationCounter);
+                    stringAdapter.refresh();
 
                     btnReload.setOnClickListener(v -> {
                         stringAdapter.clearModifications();
@@ -2202,6 +2227,15 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     public void showStringEditDialog(final StringAdapter adapter, final View btnApply, final String original) {
+        // MT translation-mode style: the original string is shown read-only on
+        // top, the editable field below holds the translation.
+        final TextView originalView = new TextView(this);
+        originalView.setText(original);
+        originalView.setTextIsSelectable(true);
+        originalView.setTextColor(onSurfaceColor());
+        int textPad = (int) getDip(6);
+        originalView.setPadding(textPad, textPad, textPad, textPad);
+
         final EditText editText = new EditText(this);
         editText.setText(adapter.getPendingValue(original));
         editText.setSelection(editText.getText().length());
@@ -2213,6 +2247,7 @@ public class DexEditorActivity extends BaseActivity {
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad, pad, pad);
+        container.addView(originalView);
         container.addView(UiFields.wrap(this, editText, getString(R.string.edit_string), 0));
         container.setLayoutParams(params);
 
@@ -2303,6 +2338,15 @@ public class DexEditorActivity extends BaseActivity {
             btnApply.setVisibility(View.GONE);
             loadStrings();
         }).start();
+    }
+
+    /** Toolbar counter for the strings/translation tab: "modified/total". */
+    public void updateTranslationCounter(int modified, int total) {
+        if (getSupportActionBar() == null) return;
+        if (explorerViewPager != null && explorerViewPager.getCurrentItem() == 3) {
+            translationCounterShown = true;
+            getSupportActionBar().setSubtitle(modified + "/" + total);
+        }
     }
 
     /** Switches to the Search tab and runs a "String" type search for the given exact text. */
@@ -2588,7 +2632,7 @@ public class DexEditorActivity extends BaseActivity {
                         // update toolbar
                         updateToolbar();
                         refreshExplorerPage(0);
-                        showTreeView();
+                        if (openTabRequested < 0) showTreeView();
                     } catch (Exception e) {
                         handleUiThreadError(e);
                     }

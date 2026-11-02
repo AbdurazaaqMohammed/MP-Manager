@@ -50,13 +50,16 @@
      * Author - @developer-krushna
      * This class is responsible for listing strings extracted from dex files.
      * It now also supports:
+     *  - MT-Manager-style two-column rows: original on the left, the pending
+     *    translation on the right (green while unapplied, dash when untranslated)
+     *  - a modification counter callback so the toolbar can show "x/y"
      *  - live filtering (search within the list of strings)
-     *  - highlighting strings that have a pending (unsaved) edit made by the user
      */
     public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder> {
 
         private static final int COLOR_MODIFIED = 0xFF2E7D32; // green
         private final int COLOR_NORMAL;
+        private final int COLOR_HINT;
 
         // Full, unfiltered dataset - kept as a reference to the activity's backing list
         private final List<String> allStrings;
@@ -67,33 +70,66 @@
 
         private final OnStringClickListener listener;
         private String currentFilter = null;
+        private boolean untranslatedOnly;
+        private OnModifiedCountChangedListener modifiedCountListener;
 
         public interface OnStringClickListener {
             void onStringClick(String text);
         }
 
+        public interface OnModifiedCountChangedListener {
+            void onModifiedCountChanged(int modified, int total);
+        }
+
         public StringAdapter(List<String> strings, OnStringClickListener listener, int color) {
+            this(strings, listener, color, 0xFF9E9E9E);
+        }
+
+        public StringAdapter(List<String> strings, OnStringClickListener listener, int color, int hintColor) {
             this.allStrings = strings;
             this.displayedStrings = strings;
             this.listener = listener;
             COLOR_NORMAL = color;
+            COLOR_HINT = hintColor;
+        }
+
+        public void setModifiedCountListener(OnModifiedCountChangedListener listener) {
+            this.modifiedCountListener = listener;
+        }
+
+        /** Preloads translations (e.g. from a dictionary) as pending edits. */
+        public void loadTranslations(java.util.Map<String, String> map) {
+            modifiedStrings.clear();
+            if (map != null) modifiedStrings.putAll(map);
+            applyFilter(currentFilter);
+        }
+
+        /** Shows only strings without a pending translation. */
+        public void setUntranslatedOnly(boolean only) {
+            untranslatedOnly = only;
+            applyFilter(currentFilter);
         }
 
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.string_item, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_string_translation, parent, false);
             return new ViewHolder(view);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             final String original = displayedStrings.get(position);
-            final boolean isModified = modifiedStrings.containsKey(original);
-            final String displayText = isModified ? modifiedStrings.get(original) : original;
+            final String pending = modifiedStrings.get(original);
 
-            holder.stringText.setText(displayText);
-            holder.stringText.setTextColor(isModified ? COLOR_MODIFIED : COLOR_NORMAL);
+            holder.original.setText(original);
+            if (pending != null) {
+                holder.translation.setText(pending);
+                holder.translation.setTextColor(COLOR_MODIFIED);
+            } else {
+                holder.translation.setText("—");
+                holder.translation.setTextColor(COLOR_HINT);
+            }
 
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onStringClick(original);
@@ -135,6 +171,7 @@
                 displayedStrings = filtered;
             }
             notifyDataSetChanged();
+            notifyCountChanged();
         }
 
         /** Marks (or unmarks, if newValue equals original) a string as having a pending edit. */
@@ -145,6 +182,7 @@
                 modifiedStrings.put(original, newValue);
             }
             notifyDataSetChanged();
+            notifyCountChanged();
         }
 
         /** Returns the pending edited value for a string, or the original if there is none. */
@@ -165,14 +203,23 @@
         public void clearModifications() {
             modifiedStrings.clear();
             notifyDataSetChanged();
+            notifyCountChanged();
+        }
+
+        private void notifyCountChanged() {
+            if (modifiedCountListener != null) {
+                modifiedCountListener.onModifiedCountChanged(modifiedStrings.size(), allStrings.size());
+            }
         }
 
         static class ViewHolder extends RecyclerView.ViewHolder {
-            final TextView stringText;
+            final TextView original;
+            final TextView translation;
 
             ViewHolder(View itemView) {
                 super(itemView);
-                stringText = itemView.findViewById(R.id.string_text);
+                original = itemView.findViewById(R.id.string_original);
+                translation = itemView.findViewById(R.id.string_translation);
             }
         }
     }

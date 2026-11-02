@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_save"
+        android:icon="@drawable/save_24px"
+        android:title="@string/save"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_save_dictionary"
+        android:icon="@drawable/save_24px"
+        android:title="@string/translation_save_dictionary"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_dictionary_manager"
+        android:icon="@drawable/language_24px"
+        android:title="@string/translation_dictionary_manager"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_filter"
+        android:icon="@drawable/baseline_filter_list_24"
+        android:title="@string/filter"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_replace"
+        android:icon="@drawable/find_replace_24px"
+        android:title="@string/replace"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_check"
+        android:icon="@drawable/baseline_check_circle_24"
+        android:title="@string/translation_check"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_language"
+        android:icon="@drawable/language_24px"
+        android:title="@string/translation_language"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_exit"
+        android:icon="@drawable/ic_exit"
+        android:title="@string/exit"
+        app:showAsAction="never" />
+</menu>

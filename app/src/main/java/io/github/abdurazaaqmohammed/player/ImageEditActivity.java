@@ -588,12 +588,31 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 scaled.recycle();
 
+                // The re-encode dropped EXIF: restore the original's tags
+                // (minus orientation, which the pixels now encode).
+                preserveMetadata();
                 resetOrientationTag();
                 readDims();
                 dirty = true;
                 hasPixelEdits = true;
+
+                // "Resize and save": persist immediately so closing the editor
+                // never loses the stretched image (it lived only in cache).
+                Exception persistError = null;
+                if (!fromShared) {
+                    try {
+                        persistWorkingToOriginal();
+                    } catch (Exception e) {
+                        persistError = e;
+                    }
+                }
+                final Exception finalPersistError = persistError;
                 pm.dismiss();
                 runOnUiThread(() -> {
+                    if (finalPersistError != null) {
+                        showError(finalPersistError.getMessage() != null
+                                ? finalPersistError.getMessage() : finalPersistError.toString());
+                    }
                     reloadPreview();
                     resetCropToFull();
                     updateInfo();
@@ -829,12 +848,98 @@ public class ImageEditActivity extends BaseActivity {
                 out = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), matrix, true);
             }
             try (FileOutputStream fos = new FileOutputStream(workingFile)) {
-                out.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                // Match the file's real format; PNG bytes inside a .jpg corrupt it.
+                if (isJpeg) {
+                    out.compress(Bitmap.CompressFormat.JPEG, 95, fos);
+                } else {
+                    out.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                }
             }
+            preserveMetadata();
         } finally {
             if (out != src) out.recycle();
             src.recycle();
         }
+    }
+
+    /** Cache snapshot of the original's metadata: re-encodes (resize, rotate,
+     *  lossy crop) copy their EXIF from here so tags survive pixel operations. */
+    private File metadataSource;
+
+    private File metadataSourceFile() {
+        if (metadataSource == null) {
+            metadataSource = new File(getCacheDir(), "imageedit_exif_" + System.currentTimeMillis()
+                    + (isJpeg ? ".jpg" : ".png"));
+            try {
+                copyFile(new File(originalPath), metadataSource);
+            } catch (Exception ignored) {
+            }
+        }
+        return metadataSource;
+    }
+
+    /** Copies every EXIF tag (except orientation) from the metadata snapshot
+     *  onto the re-encoded working file, so resized/rotated images keep their
+     *  Date Taken, GPS, camera tags etc. */
+    private void preserveMetadata() {
+        try {
+            ExifInterface src = new ExifInterface(metadataSourceFile().getAbsolutePath());
+            ExifInterface dst = new ExifInterface(workingFile.getAbsolutePath());
+            String[] tags = {
+                    ExifInterface.TAG_DATETIME, ExifInterface.TAG_DATETIME_ORIGINAL,
+                    ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_MAKE,
+                    ExifInterface.TAG_MODEL, ExifInterface.TAG_FLASH,
+                    ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_EXPOSURE_TIME,
+                    ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, ExifInterface.TAG_FOCAL_LENGTH,
+                    ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_ISO_SPEED_RATINGS,
+                    ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
+                    ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
+                    ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
+                    ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
+                    ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_ARTIST,
+                    ExifInterface.TAG_COPYRIGHT, ExifInterface.TAG_SOFTWARE,
+                    ExifInterface.TAG_X_RESOLUTION, ExifInterface.TAG_Y_RESOLUTION,
+                    ExifInterface.TAG_RESOLUTION_UNIT, ExifInterface.TAG_SUBSEC_TIME
+            };
+            boolean any = false;
+            for (String tag : tags) {
+                String value = src.getAttribute(tag);
+                if (value != null) {
+                    dst.setAttribute(tag, value);
+                    any = true;
+                }
+            }
+            if (any) {
+                dst.saveAttributes();
+                if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Persists the working copy to the original location: .bak backup first,
+     *  then copy + restore modification time. Throws on failure so callers can
+     *  surface the error instead of silently leaving the edit in cache only. */
+    private void persistWorkingToOriginal() throws Exception {
+        File original = new File(originalPath);
+        long mtimeToPreserve = targetMtime > 0 ? targetMtime : original.lastModified();
+        try {
+            File bak = new File(originalPath + ".bak");
+            copyFile(original, bak);
+            if (mtimeToPreserve > 0) bak.setLastModified(mtimeToPreserve);
+        } catch (Exception ignored) {
+        }
+        copyFile(workingFile, original);
+        if (mtimeToPreserve > 0) {
+            try {
+                original.setLastModified(mtimeToPreserve);
+                AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
+            } catch (Exception ignored) {
+            }
+        }
+        // Keep the metadata snapshot in sync with what now lives at the original
+        // path so later pixel operations still copy the right tags.
+        metadataSource = null;
     }
 
     private void resetOrientationTag() {
@@ -989,6 +1094,9 @@ public class ImageEditActivity extends BaseActivity {
 
                             exif.saveAttributes();
                             if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
+                            // Keep the snapshot in sync so later re-encodes
+                            // (resize/rotate) carry the edited tags forward.
+                            metadataSource = null;
 
                             if (parsedMtime > 0) {
                                 workingFile.setLastModified(parsedMtime);
@@ -1125,6 +1233,7 @@ public class ImageEditActivity extends BaseActivity {
     }
 
     private void applyLossyCrop(File file, int x, int y, int w, int h) throws Exception {
+        // caller persists metadata after this via preserveMetadata() in doSave crop branch
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
         Bitmap src = BitmapFactory.decodeFile(file.getAbsolutePath(), opts);
@@ -1282,7 +1391,6 @@ public class ImageEditActivity extends BaseActivity {
         confirmExit();
     }
 
-    @Override
     protected void onDestroy() {
         try {
             if (workingFile != null) workingFile.delete();
