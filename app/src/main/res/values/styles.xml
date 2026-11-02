@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <color name="mp_nav_bar_legacy">#FF1C1B1F</color>
+
     <style name="Theme.MyApp.Black" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <item name="colorSurface">@android:color/black</item>
         <item name="android:windowBackground">@android:color/black</item>
@@ -17,15 +19,19 @@
         <item name="android:windowLightNavigationBar">false</item>
     </style>
 
+    <!-- Base (API < 27): windowLightNavigationBar is ignored there, so a
+         surface-colored nav bar would show white icons on white. A dark bar
+         keeps the white system icons visible; values-v27 restores the
+         surface-colored bar with dark icons. -->
     <style name="Theme.MyApp.System" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
         <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">@color/mp_nav_bar_legacy</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>
     <style name="Theme.MyApp.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
         <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">@color/mp_nav_bar_legacy</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>

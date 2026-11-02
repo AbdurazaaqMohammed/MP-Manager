@@ -895,7 +895,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             int surfaceColor = BuiltInThemes.BLACK_ID.equals(pluginId) ? Color.BLACK : MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
             getWindow().setStatusBarColor(surfaceColor);
-            getWindow().setNavigationBarColor(surfaceColor);
+            // Light navigation icons are only renderable on API 26+ (flag) and
+            // reliably on 27+; below that a surface-colored bar shows white
+            // icons on white, so use a dark bar to keep the buttons visible.
+            boolean lightNavSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1;
+            if (lightBars && !lightNavSupported) {
+                getWindow().setNavigationBarColor(MaterialColors.getColor(this,
+                        com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+            } else {
+                getWindow().setNavigationBarColor(surfaceColor);
+            }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
                 // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
                 int darkBar = MaterialColors.getColor(this, android.R.attr.colorPrimary, surfaceColor);
