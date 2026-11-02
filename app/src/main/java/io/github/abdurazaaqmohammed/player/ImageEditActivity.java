@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -84,9 +85,6 @@ public class ImageEditActivity extends BaseActivity {
         if (originalPath == null && incoming != null) {
             resolveSharedImage(incoming);
             return;
-        }
-        if (originalPath != null) {
-            originalPath = toPhysicalPathIfRoot(originalPath);
         }
         if (originalPath == null || (!new File(originalPath).isFile() && !isRootFile(originalPath))) {
             finish();
@@ -1000,6 +998,10 @@ public class ImageEditActivity extends BaseActivity {
                                 }
                             }
 
+                            if (originalPath != null) {
+                                scanMediaFile(originalPath);
+                            }
+
                             dirty = true;
                             runOnUiThread(() -> {
                                 updateInfo();
@@ -1190,6 +1192,7 @@ public class ImageEditActivity extends BaseActivity {
                         File bak = new File(originalPath + ".bak");
                         copyFile(original, bak);
                         if (mtimeToPreserve > 0) bak.setLastModified(mtimeToPreserve);
+                        scanMediaFile(bak.getAbsolutePath());
                     } catch (Exception ignored) {
                     }
                 }
@@ -1201,6 +1204,7 @@ public class ImageEditActivity extends BaseActivity {
                     } catch (Exception ignored) {
                     }
                 }
+                scanMediaFile(originalPath);
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
@@ -1247,6 +1251,7 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 copyFile(workingFile, dest);
                 final String savedPath = dest.getAbsolutePath();
+                scanMediaFile(savedPath);
                 pm.dismiss();
                 runOnUiThread(() -> {
                     showError(getString(R.string.logger_saved_to, savedPath));
@@ -1257,6 +1262,20 @@ public class ImageEditActivity extends BaseActivity {
                 runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
         }).start();
+    }
+
+    private void scanMediaFile(String path) {
+        if (path == null) return;
+        try {
+            MediaScannerConnection.scanFile(this, new String[]{path}, null, null);
+            if (path.startsWith("/data/media/0/")) {
+                String emulated = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+                MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
+            } else if (path.startsWith("/data/media/")) {
+                String emulated = "/storage/emulated/" + path.substring("/data/media/".length());
+                MediaScannerConnection.scanFile(this, new String[]{emulated}, null, null);
+            }
+        } catch (Exception ignored) {}
     }
 
     private void confirmExit() {
@@ -1292,24 +1311,26 @@ public class ImageEditActivity extends BaseActivity {
     }
 
     private void copyFile(File src, File dst) throws Exception {
-        try (InputStream in = new FileInputStream(src); OutputStream os = new FileOutputStream(dst)) {
-            byte[] buf = new byte[65536];
-            int n;
-            while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+        try {
+            AccessManager.copyFile(this, src.getAbsolutePath(), dst.getAbsolutePath(), AccessManager.needsElevated(this, src.getAbsolutePath()) || AccessManager.needsElevated(this, dst.getAbsolutePath()));
             return;
-        } catch (Exception originalError) {
-            try {
-                RootManager rm = RootManager.getInstance(this);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    RootManager.ShellResult r = rm.execute("cp -f " + RootManager.escapeShellArg(src.getAbsolutePath())
-                            + " " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
-                    if (r.isSuccess()) {
-                        rm.execute("chmod 666 " + RootManager.escapeShellArg(dst.getAbsolutePath()), 10);
+        } catch (Exception e) {
+            // Fall back to direct stream or executeFs
+            try (InputStream in = new FileInputStream(src); OutputStream os = new FileOutputStream(dst)) {
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+                return;
+            } catch (Exception directError) {
+                try {
+                    RootManager rm = RootManager.getInstance(this);
+                    if (rm.isRootAvailable()) {
+                        rm.copyFile(src.getAbsolutePath(), dst.getAbsolutePath());
                         return;
                     }
-                }
-            } catch (Exception ignored) {}
-            throw originalError;
+                } catch (Exception ignored) {}
+                throw e;
+            }
         }
     }
 

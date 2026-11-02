@@ -159,6 +159,7 @@ public class BookmarksController {
             }
         });
 
+        activity.findViewById(R.id.bookmarksReorderButton).setOnClickListener(v -> showCurrentTabReorderDialog());
         activity.findViewById(R.id.bookmarksMenuButton).setOnClickListener(this::showBookmarksBarMenu);
         activity.findViewById(R.id.bookmarksCloseButton).setOnClickListener(v -> activity.closeBookmarksDrawer());
         activity.findViewById(R.id.batchCopy).setOnClickListener(v -> batchCopyOrMove(true));
@@ -340,15 +341,12 @@ public class BookmarksController {
         PopupMenu popup = new PopupMenu(activity, anchor);
         String ag = activity.rss.getString(R.string.add_group);
         String ah = activity.rss.getString(R.string.adjust_height);
-        String ro = activity.rss.getString(R.string.reorder_bookmarks);
         popup.getMenu().add(ag);
-        popup.getMenu().add(ro);
         popup.getMenu().add(ah);
         popup.setOnMenuItemClickListener(item -> {
             CharSequence title = item.getTitle();
             if (TextUtils.isEmpty(title)) ;
             else if (ag.contentEquals(title)) showAddGroupDialog();
-            else if (ro.contentEquals(title)) showCurrentTabReorderDialog();
             else showAdjustHeightDialog();
             return true;
         });
@@ -724,6 +722,12 @@ public class BookmarksController {
                         if (fromPos < 0 || toPos < 0 || fromPos == toPos) return false;
                         Collections.swap(reorderItems, fromPos, toPos);
                         reorderAdapter.notifyItemMoved(fromPos, toPos);
+                        activeController.items.clear();
+                        activeController.items.addAll(reorderItems);
+                        persistBookmarkOrder(activeController);
+                        BookmarksController.this.bookmarks = activeController.items;
+                        activeController.adapter.notifyDataSetChanged();
+                        activity.refreshSidebar(activity.getSidebarSectionOrder());
                         return true;
                     }
 
@@ -756,24 +760,17 @@ public class BookmarksController {
                 .setTitle(activity.rss.getString(R.string.reorder_bookmarks))
                 .setMessage(activity.rss.getString(R.string.drag_to_reorder))
                 .setView(recyclerView)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                .setPositiveButton(R.string.close, null)
+                .setOnDismissListener(d -> {
                     activeController.items.clear();
                     activeController.items.addAll(reorderItems);
                     persistBookmarkOrder(activeController);
+                    this.bookmarks = activeController.items;
                     activeController.adapter.notifyDataSetChanged();
                     activity.refreshSidebar(activity.getSidebarSectionOrder());
                 })
                 .create();
         dialog.show();
-
-        // Make dialog tall to facilitate reordering easily (80% of screen height)
-        if (dialog.getWindow() != null) {
-            int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
-            int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
-            int targetHeight = (int) (screenHeight * 0.80f);
-            dialog.getWindow().setLayout((int) (screenWidth * 0.94f), targetHeight);
-        }
     }
 
     private void persistBookmarkOrder(BookmarkListController controller) {

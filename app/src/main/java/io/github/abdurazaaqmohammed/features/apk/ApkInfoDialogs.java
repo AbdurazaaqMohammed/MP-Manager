@@ -1420,9 +1420,9 @@ public class ApkInfoDialogs {
                     protectedDisplay.setText(finalProtectedStr);
                     fileSize.setText(context.getString(R.string.fs_entries, Formatter.formatFileSize(context, file.length()), ApkInfoUtil.getEntryCount(file)));
                     int target = packageInfo.applicationInfo.targetSdkVersion;
-                    apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(target));
+                    apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
-                    apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(min));
+                    apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
                     apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
                     apkInstalled.setText(comparison);
                 });

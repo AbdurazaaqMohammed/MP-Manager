@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'action do build')"
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +46,7 @@ jobs:
           PY
 
       - name: Build APK
-        run: ./gradlew assembleFullRelease
+        run: ./gradlew assembleFullDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
