@@ -168,7 +168,7 @@ public final class AppDetailsDialog {
         act.styleAlertDialog(dialog);
 
         View.OnLongClickListener copy = v -> {
-            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(dialog, tv.getText());
+            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(act, tv.getText());
             return true;
         };
         nameView.setOnLongClickListener(copy);
@@ -205,7 +205,12 @@ public final class AppDetailsDialog {
 
     private static void renderDetailRow(APKExtractorActivity act, LinearLayout container, String id, AppInfo ai, AlertDialog dialog) {
         View.OnLongClickListener copy = v -> {
-            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(dialog, tv.getText());
+            TextView targetTv = null;
+            if (v instanceof TextView tv) targetTv = tv;
+            else if (v.getTag() instanceof TextView tv) targetTv = tv;
+            if (targetTv != null && !TextUtils.isEmpty(targetTv.getText())) {
+                CopyUtil.copyToClipboard(act, targetTv.getText());
+            }
             return true;
         };
 
@@ -531,6 +536,7 @@ public final class AppDetailsDialog {
         }
 
         root.addView(row);
+        row.setTag(valueView);
         return valueView;
     }
 
