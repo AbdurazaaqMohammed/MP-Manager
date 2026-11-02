@@ -71,6 +71,7 @@
         <activity
             android:theme="@style/Theme.MPManager.Splash"
             android:name="io.github.abdurazaaqmohammed.MPManager.MainActivity"
+            android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="true">
             <intent-filter>
@@ -308,6 +309,8 @@
               <activity
                   android:name="io.github.abdurazaaqmohammed.player.SharedEntryActivity"
                   android:exported="true"
+                  android:excludeFromRecents="true"
+                  android:noHistory="true"
                   android:label="@string/shared_entry_title"
                   android:configChanges="orientation|screenSize|keyboardHidden"
                   android:theme="@style/Theme.Material3.DayNight.NoActionBar">

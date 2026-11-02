@@ -91,6 +91,43 @@ public final class AccessManager {
         return false;
     }
 
+    public static boolean isDirectory(Context context, String absPath) {
+        if (absPath == null) return false;
+        try {
+            File f = new File(absPath);
+            if (f.exists() && f.isDirectory()) return true;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).isDirectory(absPath);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.isDirectory(context, absPath);
+            if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+                return RootManager.getInstance(context).isDirectory(absPath);
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static boolean isFile(Context context, String absPath) {
+        if (absPath == null) return false;
+        try {
+            File f = new File(absPath);
+            if (f.exists() && f.isFile()) return true;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).isFile(absPath);
+            if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+                return RootManager.getInstance(context).isFile(absPath);
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     public static File[] listWithStat(Context context, String dirPath) {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {

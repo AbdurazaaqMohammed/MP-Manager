@@ -27,6 +27,8 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.features.editor.ColorPreviewHelper;
+import io.github.abdurazaaqmohammed.features.editor.ColorPreviewLanguageWrapper;
 import io.github.abdurazaaqmohammed.arsc.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
@@ -627,17 +629,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (isSmali) {
             try {
                 ensureLanguageInitialized(requireContext().getApplicationContext());
-                editor.setEditorLanguage(new CustomAutoComplete(editor, cachedInstructions, cachedSmaliLanguage));
+                editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, cachedSmaliLanguage), editor));
                 editor.setColorScheme(cachedColorScheme);
             } catch (Exception e) {
                 Log.e("UnifiedEditor", "Error setting smali language", e);
-                editor.setEditorLanguage(new EmptyLanguage());
+                editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
             }
             //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.VISIBLE);
             if (linearHeader != null) linearHeader.setVisibility(View.VISIBLE);
             editor.setEditable(true);
         } else if (type == TYPE_JAVA) {
-            editor.setEditorLanguage(new JavaLanguage());
+            editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new JavaLanguage(), editor));
             //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
             if (linearHeader != null) linearHeader.setVisibility(View.GONE);
             editor.setEditable(false);
@@ -664,6 +666,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         };
         if (ecs != null) {
             ecs.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            ColorPreviewHelper.syncScheme(ecs);
             editor.setColorScheme(ecs);
         }
     }
@@ -1341,7 +1344,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     } else {
                         // Syntax loading failed - fall back to plain text and log error
                         Log.e("UnifiedEditor", "Failed to load syntax for scope: " + finalScope);
-                        editor.setEditorLanguage(new EmptyLanguage());
+                        editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
                         applySchemePreference();
                     }
                 }
@@ -1369,12 +1372,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void setTextMateLanguage(TextMateLanguage language) {
         if (editor == null || language == null) return;
-        editor.setEditorLanguage(language);
+        editor.setEditorLanguage(new ColorPreviewLanguageWrapper(language, editor));
         try {
             if (cachedColorScheme == null) {
                 cachedColorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
                 cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
             }
+            ColorPreviewHelper.syncScheme(cachedColorScheme);
             editor.setColorScheme(cachedColorScheme);
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Color scheme error", e);

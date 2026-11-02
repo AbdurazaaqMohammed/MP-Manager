@@ -85,7 +85,6 @@ public final class AppDetailsDialog {
         TextView pkgView = new TextView(act);
         pkgView.setText(ai.packageName);
         pkgView.setTextSize(13);
-        pkgView.setTextIsSelectable(true);
         titles.addView(pkgView);
         header.addView(titles);
 
@@ -169,7 +168,7 @@ public final class AppDetailsDialog {
         act.styleAlertDialog(dialog);
 
         View.OnLongClickListener copy = v -> {
-            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(dialog, tv.getText());
+            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(act, tv.getText());
             return true;
         };
         nameView.setOnLongClickListener(copy);
@@ -206,7 +205,12 @@ public final class AppDetailsDialog {
 
     private static void renderDetailRow(APKExtractorActivity act, LinearLayout container, String id, AppInfo ai, AlertDialog dialog) {
         View.OnLongClickListener copy = v -> {
-            if (v instanceof TextView tv && !TextUtils.isEmpty(tv.getText())) CopyUtil.copyToClipboard(dialog, tv.getText());
+            TextView targetTv = null;
+            if (v instanceof TextView tv) targetTv = tv;
+            else if (v.getTag() instanceof TextView tv) targetTv = tv;
+            if (targetTv != null && !TextUtils.isEmpty(targetTv.getText())) {
+                CopyUtil.copyToClipboard(act, targetTv.getText());
+            }
             return true;
         };
 
@@ -242,7 +246,6 @@ public final class AppDetailsDialog {
                     View sigParent = (View) sigValue.getParent();
                     if (sigParent != null) {
                         sigParent.setClickable(true);
-                        sigParent.setFocusable(true);
                         sigParent.setBackgroundResource(getSelectableBackground(act));
                         View.OnClickListener openSig = v -> io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog.show(act, new File(ai.filePath));
                         sigParent.setOnClickListener(openSig);
@@ -304,14 +307,14 @@ public final class AppDetailsDialog {
             }
             case "detail:target_sdk": {
                 if (ai.targetSdk > 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), String.valueOf(ai.targetSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.targetSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;
             }
             case "detail:min_sdk": {
                 if (ai.minSdk >= 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), String.valueOf(ai.minSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.minSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;
@@ -521,7 +524,6 @@ public final class AppDetailsDialog {
         valueView.setText(value == null ? "" : value);
         valueView.setTextSize(14);
         valueView.setTypeface(Typeface.MONOSPACE);
-        valueView.setTextIsSelectable(true);
         LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         vp.setMarginStart(dp(act, 8));
         valueView.setLayoutParams(vp);
@@ -529,12 +531,12 @@ public final class AppDetailsDialog {
 
         if (tapPath != null) {
             row.setClickable(true);
-            row.setFocusable(true);
             row.setBackgroundResource(getSelectableBackground(act));
             row.setOnClickListener(v -> act.openInFileManager(tapPath));
         }
 
         root.addView(row);
+        row.setTag(valueView);
         return valueView;
     }
 

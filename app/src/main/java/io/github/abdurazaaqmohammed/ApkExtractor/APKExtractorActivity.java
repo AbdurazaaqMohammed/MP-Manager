@@ -266,7 +266,8 @@ public class APKExtractorActivity extends BaseActivity {
         userAppInfoList = Collections.synchronizedList(new ArrayList<>());
         systemAppInfoList = Collections.synchronizedList(new ArrayList<>());
         setupAppLists();
-        loadApps();
+        paintCachedApps();
+        handler.postDelayed(this::loadApps, 350);
         if (!LegacyUtils.supportsWriteExternalStorage) {
             getWindow().setStatusBarContrastEnforced(true);
             getWindow().setNavigationBarContrastEnforced(true);

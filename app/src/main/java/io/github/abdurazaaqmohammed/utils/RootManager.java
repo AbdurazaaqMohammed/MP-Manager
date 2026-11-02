@@ -127,6 +127,10 @@ public class RootManager {
         return instance;
     }
 
+    public static RootManager getInstance() {
+        return instance;
+    }
+
     public enum WorkingMode {
         NON_ROOT("non_root", "Non-root"),
         ROOT("root", "Root"),

@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.media.MediaScannerConnection;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.widget.EditText;
@@ -175,6 +176,7 @@ public class FilePropertiesDialog {
                     UiPrefs.formatDate(context, displayMtime),
                     R.drawable.edit_24px,
                     v -> showEditLastModifiedDialog(selectedFilesList, modifiedHolder[0]));
+            if (displayMtime > 0) modifiedView.setTag(formatFullTimestamp(displayMtime));
             modifiedHolder[0] = modifiedView;
             if (displayMtime <= 0 && !multi && file != null) {
                 new Thread(() -> {
@@ -185,7 +187,8 @@ public class FilePropertiesDialog {
                     }
                     if (m <= 0 && isImage) {
                         try {
-                            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                            String path = resolveAccessiblePath(file.getAbsolutePath());
+                            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(path);
                             String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME);
                             m = parseExifDate(dt);
                         } catch (Exception ignored) {}
@@ -195,6 +198,7 @@ public class FilePropertiesDialog {
                     context.handler.post(() -> {
                         try {
                             modifiedView.setText(UiPrefs.formatDate(context, finalM));
+                            modifiedView.setTag(formatFullTimestamp(finalM));
                         } catch (Exception ignored) {
                         }
                     });
@@ -204,6 +208,7 @@ public class FilePropertiesDialog {
             if (hasAnyImages) {
                 final TextView[] dateTakenHolder = new TextView[1];
                 String dateTakenDisplay = "—";
+                String fullDateTaken = null;
                 File sampleImg = null;
                 for (File sf : selectedFilesList) {
                     if (sf.isFile() && FileUtils.matchExt('.' + FilenameUtils.getExtension(sf.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
@@ -213,11 +218,18 @@ public class FilePropertiesDialog {
                 }
                 if (sampleImg != null) {
                     try {
-                        androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(sampleImg.getAbsolutePath());
+                        String samplePath = resolveAccessiblePath(sampleImg.getAbsolutePath());
+                        androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(samplePath);
                         String dtOriginal = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
                         if (!TextUtils.isEmpty(dtOriginal)) {
                             long millis = parseExifDate(dtOriginal);
-                            dateTakenDisplay = millis > 0 ? UiPrefs.formatDate(context, millis) : dtOriginal;
+                            if (millis > 0) {
+                                dateTakenDisplay = UiPrefs.formatDate(context, millis);
+                                fullDateTaken = formatFullTimestamp(millis);
+                            } else {
+                                dateTakenDisplay = dtOriginal;
+                                fullDateTaken = dtOriginal;
+                            }
                         }
                     } catch (Exception ignored) {}
                 }
@@ -225,6 +237,7 @@ public class FilePropertiesDialog {
                         dateTakenDisplay,
                         R.drawable.edit_24px,
                         v -> showEditDateTakenDialog(selectedFilesList, dateTakenHolder[0]));
+                if (fullDateTaken != null) dateTakenView.setTag(fullDateTaken);
                 dateTakenHolder[0] = dateTakenView;
             }
             if (!multi && file.isDirectory()) {
@@ -499,6 +512,7 @@ public class FilePropertiesDialog {
                         successCount++;
                     }
                 } catch (Exception ignored) {}
+                scanMediaFile(context, file.getAbsolutePath());
             }
             int finalSuccess = successCount;
             context.handler.post(() -> {
@@ -599,7 +613,8 @@ public class FilePropertiesDialog {
                             originalMtime = AccessManager.getMtime(context, file.getAbsolutePath());
                         } catch (Exception ignored) {}
                     }
-                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+                    String accessiblePath = resolveAccessiblePath(file.getAbsolutePath());
+                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(accessiblePath);
                     if (millis > 0) {
                         String formatted = formatExifDate(millis);
                         exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, formatted);
@@ -612,8 +627,12 @@ public class FilePropertiesDialog {
                     if (originalMtime > 0) {
                         try {
                             AccessManager.touchMtime(context, file.getAbsolutePath(), originalMtime);
+                            if (!accessiblePath.equals(file.getAbsolutePath())) {
+                                AccessManager.touchMtime(context, accessiblePath, originalMtime);
+                            }
                         } catch (Exception ignored) {}
                     }
+                    scanMediaFile(context, file.getAbsolutePath());
                     imageCount++;
                 } catch (Exception ignored) {}
             }
@@ -622,6 +641,8 @@ public class FilePropertiesDialog {
                 if (finalCount > 0) {
                     if (dateTakenView != null) {
                         dateTakenView.setText(millis > 0 ? UiPrefs.formatDate(context, millis) : "—");
+                        if (millis > 0) dateTakenView.setTag(formatFullTimestamp(millis));
+                        else dateTakenView.setTag(null);
                     }
                     Extensions.showMessage(context, context.getString(R.string.mtime_updated));
                 } else {
@@ -647,6 +668,35 @@ public class FilePropertiesDialog {
         return sdf.format(new java.util.Date(millis));
     }
 
+    private static String formatFullTimestamp(long millis) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+        return sdf.format(new java.util.Date(millis));
+    }
+
+    private static String resolveAccessiblePath(String path) {
+        if (path == null) return null;
+        if (path.startsWith("/data/media/0/")) {
+            return "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+        } else if (path.startsWith("/data/media/")) {
+            return "/storage/emulated/" + path.substring("/data/media/".length());
+        }
+        return path;
+    }
+
+    private static void scanMediaFile(MainActivity context, String path) {
+        if (context == null || path == null) return;
+        try {
+            MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
+            if (path.startsWith("/data/media/0/")) {
+                String emulated = "/storage/emulated/0/" + path.substring("/data/media/0/".length());
+                MediaScannerConnection.scanFile(context, new String[]{emulated}, null, null);
+            } else if (path.startsWith("/data/media/")) {
+                String emulated = "/storage/emulated/" + path.substring("/data/media/".length());
+                MediaScannerConnection.scanFile(context, new String[]{emulated}, null, null);
+            }
+        } catch (Exception ignored) {}
+    }
+
     private TextView addPropertyRow(LinearLayout container, String label, String value) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -662,9 +712,10 @@ public class FilePropertiesDialog {
         TextView valueView = new TextView(context);
         valueView.setText(value == null ? "—" : value);
         valueView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
-        valueView.setTextIsSelectable(true);
         valueView.setOnLongClickListener(v -> {
-            CopyUtil.copyToClipboard(context, valueView.getText());
+            Object tag = valueView.getTag();
+            CharSequence toCopy = (tag instanceof CharSequence cs && !TextUtils.isEmpty(cs)) ? cs : valueView.getText();
+            CopyUtil.copyToClipboard(context, toCopy);
             return true;
         });
         valueView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f));
@@ -698,9 +749,10 @@ public class FilePropertiesDialog {
         TextView valueView = new TextView(context);
         valueView.setText(value == null ? "—" : value);
         valueView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
-        valueView.setTextIsSelectable(true);
         valueView.setOnLongClickListener(v -> {
-            CopyUtil.copyToClipboard(context, valueView.getText());
+            Object tag = valueView.getTag();
+            CharSequence toCopy = (tag instanceof CharSequence cs && !TextUtils.isEmpty(cs)) ? cs : valueView.getText();
+            CopyUtil.copyToClipboard(context, toCopy);
             return true;
         });
         valueView.setOnClickListener(action);
