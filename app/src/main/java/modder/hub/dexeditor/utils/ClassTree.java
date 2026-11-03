@@ -1824,6 +1824,7 @@ public class ClassTree {
         @Override public Iterable<? extends DebugItem> getDebugItems() {
             if (options.removeAllDebug) return new ArrayList<>();
             List<DebugItem> filtered = new ArrayList<>();
+            boolean hasLineNumbers = false;
             for (DebugItem item : delegate.getDebugItems()) {
                 boolean remove = false;
                 switch (item.getDebugItemType()) {
@@ -1832,13 +1833,11 @@ public class ClassTree {
                         break;
                     case DebugItemType.LINE_NUMBER:
                         if (options.removeDebugLine) remove = true;
+                        else hasLineNumbers = true;
                         break;
                     case DebugItemType.PROLOGUE_END:
-                        if (options.removeDebugPrologue) remove = true;
-                        break;
                     case DebugItemType.EPILOGUE_BEGIN:
-                        // Prologue option usually covers epilogue too in some tools, or we can map it
-                        if (options.removeDebugPrologue) remove = true;
+                        if (options.removeDebugPrologue || options.removeDebugLine) remove = true;
                         break;
                     case DebugItemType.START_LOCAL:
                     case DebugItemType.END_LOCAL:
@@ -1849,9 +1848,18 @@ public class ClassTree {
                 }
                 if (!remove) filtered.add(item);
             }
-            // Param debug info is usually handled via method parameters if we want to strip names,
-            // but in debug_info_item they are also present.
-            // dexlib2 doesn't easily expose the parameter names list from debug_info_item here.
+            // If the only debug items are dummy epilogue/prologue without lines or locals, strip them
+            if (filtered.size() <= 2 && !hasLineNumbers) {
+                boolean onlyDummy = true;
+                for (DebugItem d : filtered) {
+                    int type = d.getDebugItemType();
+                    if (type != DebugItemType.PROLOGUE_END && type != DebugItemType.EPILOGUE_BEGIN) {
+                        onlyDummy = false;
+                        break;
+                    }
+                }
+                if (onlyDummy) return new ArrayList<>();
+            }
             return filtered;
         }
     }

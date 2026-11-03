@@ -1510,6 +1510,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
         try {
             if (lineNum >= 0 && lineNum < editor.getText().getLineCount()) {
+                editor.jumpToLine(lineNum);
                 String lineText = editor.getText().getLineString(lineNum);
                 if (column >= 0 && column < editor.getText().getColumnCount(lineNum))
                     editor.getCursor().set(lineNum, column);

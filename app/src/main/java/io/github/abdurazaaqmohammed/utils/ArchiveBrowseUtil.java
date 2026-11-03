@@ -45,7 +45,7 @@ public final class ArchiveBrowseUtil {
 
     /** Archive container kinds detectable from file content. */
     public enum ArchiveType {
-        ZIP, SEVEN_Z, RAR, TAR, GZIP, BZIP2, XZ, BACKUP,
+        ZIP, SEVEN_Z, RAR, TAR, GZIP, BZIP2, XZ, ZSTD, BACKUP,
         /** Not a recognizable archive (or one this build cannot list). */
         NONE
     }
@@ -86,6 +86,8 @@ public final class ArchiveBrowseUtil {
         if (n >= 3 && magic[0] == 'B' && magic[1] == 'Z' && magic[2] == 'h') return ArchiveType.BZIP2;
         if (n >= 6 && magic[0] == (byte) 0xFD && magic[1] == 0x37 && magic[2] == 0x7A
                 && magic[3] == 'X' && magic[4] == 'Z' && magic[5] == 0x00) return ArchiveType.XZ;
+        if (n >= 4 && magic[0] == 0x28 && magic[1] == (byte) 0xB5 && magic[2] == 0x2F && magic[3] == (byte) 0xFD)
+            return ArchiveType.ZSTD;
         return looksLikeTar(head, n) ? ArchiveType.TAR : (n >= 14 && (new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("MIUI BACKUP") || new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("ANDROID BACKUP")) ? ArchiveType.BACKUP : ArchiveType.NONE);
     }
 
@@ -168,7 +170,8 @@ public final class ArchiveBrowseUtil {
                 return listTar(archive, type);
             case GZIP:
             case BZIP2:
-            case XZ: {
+            case XZ:
+            case ZSTD: {
                 // A compressor stream wrapping a tar is browsed as that tar, so
                 // mislabeled .tar.gz archives list the tar's real entry names.
                 if (isTarPayload(archive, type)) return listTar(archive, type);
@@ -223,6 +226,7 @@ public final class ArchiveBrowseUtil {
             case GZIP:
             case BZIP2:
             case XZ:
+            case ZSTD:
                 if (isTarPayload(archive, type)) return openTarEntry(archive, type, want, entryPath);
                 return openSingleCompressed(archive, type);
             default:
@@ -506,16 +510,23 @@ public final class ArchiveBrowseUtil {
         return out;
     }
 
-    /** Opens the decompressed payload stream of a bare gz/bz2/xz file. */
+    /** Opens the decompressed payload stream of a bare gz/bz2/xz/zst file. */
     public static InputStream openSingleCompressed(File archive, ArchiveType type) throws IOException {
         InputStream raw = new FileInputStream(archive);
         try {
             if (type == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
             if (type == ArchiveType.BZIP2) return new BZip2CompressorInputStream(raw, true);
-            return new XZCompressorInputStream(raw, true);
-        } catch (IOException e) {
+            if (type == ArchiveType.XZ) return new XZCompressorInputStream(raw, true);
+            if (type == ArchiveType.ZSTD) {
+                return (InputStream) Class.forName("org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream")
+                        .getConstructor(InputStream.class)
+                        .newInstance(raw);
+            }
+            return raw;
+        } catch (Exception e) {
             closeQuietly(raw);
-            throw e;
+            if (e instanceof IOException) throw (IOException) e;
+            throw new IOException("Cannot open Zstandard stream: " + e.getMessage(), e);
         }
     }
 
@@ -548,7 +559,7 @@ public final class ArchiveBrowseUtil {
     /** archive.tar.gz → archive.tar; archive.bin → archive.bin (unchanged). */
     public static String stripCompressorExtension(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
-        for (String ext : new String[]{".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2", ".txz", ".gz", ".bz2", ".xz"}) {
+        for (String ext : new String[]{".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst", ".tgz", ".tbz2", ".txz", ".gz", ".bz2", ".xz", ".zst"}) {
             if (lower.endsWith(ext) && name.length() > ext.length())
                 return name.substring(0, name.length() - ext.length());
         }

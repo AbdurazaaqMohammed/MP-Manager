@@ -61,11 +61,12 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
+                || lower.endsWith(".tar.zst") || lower.endsWith(".zst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz");
     }
 
     public static String[] getSupportedCreateExts() {
-        return new String[] { ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".gz", ".bz2", ".xz" };
+        return new String[] { ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz", ".tar.zst", ".zst", ".gz", ".bz2", ".xz" };
     }
 
     public static void extract(File archive, File destDir) throws IOException {
@@ -198,10 +199,23 @@ public class ArchiveUtil {
         else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tar.zst")) createTar(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+        else if (lower.endsWith(".zst") && sources.size() == 1) compressSingle(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else throw new IOException("Unsupported archive format: " + output.getName());
+    }
+
+    private static OutputStream openZstdOutputStream(OutputStream out) throws IOException {
+        try {
+            return (OutputStream) Class.forName("org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream")
+                    .getConstructor(OutputStream.class)
+                    .newInstance(out);
+        } catch (Exception e) {
+            if (e instanceof IOException) throw (IOException) e;
+            throw new IOException("Cannot create Zstandard output stream: " + e.getMessage(), e);
+        }
     }
 
     private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password,

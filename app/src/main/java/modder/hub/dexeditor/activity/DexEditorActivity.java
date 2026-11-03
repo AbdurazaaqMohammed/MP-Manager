@@ -1154,9 +1154,6 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     public void openClassAtLine(String className, int lineNumber, int column, String query) {
-        openClass(className);
-
-        // Find the tab we just opened or that was already open
         EditorTab targetTab = null;
         int tabIndex = -1;
         for (int i = 0; i < tabs.size(); i++) {
@@ -1168,19 +1165,27 @@ public class DexEditorActivity extends BaseActivity {
         }
 
         if (targetTab != null) {
-            // Set pending navigation info
             targetTab.pendingLine = lineNumber;
             targetTab.pendingColumn = column;
             targetTab.pendingQuery = query;
-
-            // If fragment is already ready, navigate now
+            showEditor(tabIndex);
             UnifiedEditorFragment fragment = getFragmentAtIndex(tabIndex);
             if (fragment != null && fragment.getEditor() != null && fragment.getEditor().getText().getLineCount() > lineNumber) {
                 fragment.navigateTo(lineNumber, column, query);
-                // Clear pending once navigated
                 targetTab.pendingLine = -1;
                 targetTab.pendingColumn = -1;
                 targetTab.pendingQuery = null;
+            }
+        } else {
+            openClass(className);
+            for (int i = 0; i < tabs.size(); i++) {
+                if (tabs.get(i).className.equals(className) && tabs.get(i).type == 0) {
+                    targetTab = tabs.get(i);
+                    targetTab.pendingLine = lineNumber;
+                    targetTab.pendingColumn = column;
+                    targetTab.pendingQuery = query;
+                    break;
+                }
             }
         }
     }

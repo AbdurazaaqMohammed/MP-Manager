@@ -95,6 +95,7 @@ dependencies {
     // and scrambled solid 7z blocks. 1.27 builds the list with a LinkedHashMap
     // and reads 7z correctly on old Android (with the NIO desugar variant).
     implementation 'org.apache.commons:commons-compress:1.27.1'
+    implementation 'com.github.luben:zstd-jni:1.5.6-8@aar'
     implementation files('libs/xz-1.9.jar')
     implementation files('libs/junrar-8.1.2.jar')
     implementation("com.google.android.material:material:1.14.0")
