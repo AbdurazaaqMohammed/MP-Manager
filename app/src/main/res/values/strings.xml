@@ -1055,6 +1055,37 @@ Layout Inspector
 Translated: %2$d
 Untranslated: %3$d</string>
     <string name="translation_jump_first">Jump to first untranslated</string>
+    <string name="translation_select_all">Select all</string>
+    <string name="translation_invert">Invert selection</string>
+    <string name="translation_selected_n">%1$d selected</string>
+    <string name="translation_provider">Translation service</string>
+    <string name="translation_endpoint">Endpoint URL</string>
+    <string name="translation_api_key">API key</string>
+    <string name="translation_model">Model (OpenAI-compatible)</string>
+    <string name="translation_warning">Warning: your strings and API key are sent to the external translation service. Do not translate confidential content. API usage may cost money or be rate-limited.</string>
+    <string name="translation_target_info">Target language: %1$s (set via menu > Language)</string>
+    <string name="translation_service_options">Service options</string>
+    <string name="translation_service_saved">Translation service saved</string>
+    <string name="translation_auto_confirm_title">Auto translate</string>
+    <string name="translation_auto_confirm">Translate %1$d string(s)
+Scope: %2$s
+Target language: %3$s
+
+Strings are sent to the external service you configured.</string>
+    <string name="translation_scope_selection">selected strings</string>
+    <string name="translation_scope_all">all strings</string>
+    <string name="translation_scope_translated">Translated</string>
+    <string name="translation_scope_untranslated">Untranslated</string>
+    <string name="translation_auto_running_title">Translating…</string>
+    <string name="translation_auto_progress">%1$d / %2$d</string>
+    <string name="translation_auto_finished">Auto-translated %1$d string(s)</string>
+    <string name="translation_auto_running">Auto translation is already running</string>
+    <string name="translation_filter_query">Search</string>
+    <string name="translation_filter_scope">Show</string>
+    <string name="translation_exclude">Exclude (invert)</string>
+    <string name="translation_regex">Regex</string>
+    <string name="translation_exactly">Exactly match</string>
+    <string name="translating">Translating…</string>
     <string name="translation_service_picker">Auto translation service</string>
     <string name="translation_start">Start</string>
     <string name="translation_no_services">No PROCESS_TEXT translation apps are installed</string>
