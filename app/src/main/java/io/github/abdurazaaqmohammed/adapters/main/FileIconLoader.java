@@ -108,7 +108,7 @@ public class FileIconLoader {
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
-            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
+            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
 
@@ -854,12 +854,21 @@ public class FileIconLoader {
             } else if (!isVideo) {
                 // If an image (like a WhatsApp animated sticker .webp) failed decode,
                 // check if it is actually a zip/lottie container or special package
-                if (isZipFileFormat(path)) {
-                    iconCache.put(path, cachedArchiveIcon);
-                    context.runOnUiThread(() -> {
-                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
-                    });
-                }
+                try {
+                    String resolved = resolveAccessiblePath(path);
+                    File f = new File(resolved);
+                    if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(f)) {
+                        iconCache.put(path, cachedStickerIcon);
+                        context.runOnUiThread(() -> {
+                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedStickerIcon);
+                        });
+                    } else if (isZipFileFormat(path)) {
+                        iconCache.put(path, cachedArchiveIcon);
+                        context.runOnUiThread(() -> {
+                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
+                        });
+                    }
+                } catch (Throwable ignored) {}
             }
         });
     }
@@ -895,6 +904,7 @@ public class FileIconLoader {
         cachedArscIcon    = badge(res, density, R.drawable.stacks_24px, 0xFF9A6A00, true);
         cachedDexIcon     = badge(res, density, R.drawable.code_24px, 0xFF549395, true);
         cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, 0xFFE65100, true);
+        cachedStickerIcon = badge(res, density, R.drawable.ic_sticker_24px, 0xFF00897B, true);
         cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,

@@ -1103,7 +1103,13 @@ public class FileOpener {
                 }
             });
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
-            withReadableCopy(file, readable -> context.openImageViewer(readable.getPath()));
+            withReadableCopy(file, readable -> {
+                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
+                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                } else {
+                    context.openImageViewer(readable.getPath());
+                }
+            });
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
         } else if ((ext.equals(".apk"))) {

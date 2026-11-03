@@ -73,6 +73,8 @@
     <string name="deleting">حذف %1$s</string>
     <string name="compressing">جارٍ الضغط</string>
     <string name="compress">ضغط</string>
+    <string name="sticker_preview">معاينة الملصق</string>
+    <string name="open_as_archive">فتح كأرشيف</string>
     <string name="hist">سجل البحث</string>
     <string name="filename">اسم الملف</string>
     <string name="install_location">موقع التثبيت</string>
