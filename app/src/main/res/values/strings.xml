@@ -2035,4 +2035,6 @@ Patched code:</string>
     <string name="ssl_unpin_failed">SSL unpinning failed: %1$s</string>
     <string name="ssl_unpin_no_apk">Select an APK first</string>
     <string name="ssl_unpin_limits">Limits: framework-level validation (TrustManagerImpl) and pinning inside native .so libraries cannot be patched this way; apps that do not trust user CAs also need their network security config adjusted for interception tools.</string>
+    <string name="customize_apk_more">More options order</string>
+    <string name="customize_apk_more_hint">Long-press to drag items anywhere</string>
 </resources>

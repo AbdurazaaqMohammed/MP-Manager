@@ -1950,4 +1950,6 @@
     <string name="progress_done">تم</string>
     <string name="special_permissions">أذونات خاصة</string>
     <string name="mime">MIME</string>
+    <string name="customize_apk_more">ترتيب خيارات المزيد</string>
+    <string name="customize_apk_more_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
 </resources>
