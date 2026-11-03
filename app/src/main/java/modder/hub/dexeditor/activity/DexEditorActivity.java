@@ -338,7 +338,7 @@ public class DexEditorActivity extends BaseActivity {
         setSupportActionBar(toolbar);
 
         drawerToolbar = findViewById(R.id.drawer_toolbar);
-        drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.ic_more_mt));
+        drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.baseline_more_vert_24));
         if (drawerToolbar.getOverflowIcon() != null) {
             DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), onSurfaceColor());
         }
@@ -3274,7 +3274,7 @@ public class DexEditorActivity extends BaseActivity {
                 int onSurface = onSurfaceColor();
                 holder.title.setTextColor(isSelected ? skyColor : onSurface);
                 holder.path.setVisibility(View.GONE);
-                holder.icon.setImageResource(R.drawable.ic_home);
+                holder.icon.setImageResource(R.drawable.baseline_home_24);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : onSurface));
                 } else holder.icon.setColorFilter(new LightingColorFilter(onSurface, isSelected ? skyColor : onSurface));

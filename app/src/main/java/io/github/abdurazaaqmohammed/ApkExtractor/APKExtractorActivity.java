@@ -857,7 +857,7 @@ public class APKExtractorActivity extends BaseActivity {
             actionIds.add(203);
 
             displayList.add(getString(R.string.uninstall_roots));
-            iconList.add(R.drawable.ic_delete);
+            iconList.add(R.drawable.baseline_delete_24);
             actionIds.add(204);
         }
 

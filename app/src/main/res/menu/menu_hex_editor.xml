@@ -16,8 +16,9 @@
         android:title="@string/redo"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_more"
         app:showAsAction="always"
-        android:icon="@drawable/ic_more_mt"
+        android:icon="@drawable/baseline_more_vert_24"
         app:iconTint="?attr/colorOnSurface"
         android:title="@string/more">
     <menu>

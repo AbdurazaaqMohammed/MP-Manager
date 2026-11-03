@@ -89,7 +89,7 @@ public final class AppDetailsConfig {
             new ConfigItem("action:force_stop", R.string.force_stop, R.drawable.stop_circle_24px, ItemCategory.ACTION, false),
             new ConfigItem("action:enable_app", R.string.enable_app, R.drawable.baseline_check_circle_24, ItemCategory.ACTION, false),
             new ConfigItem("action:disable_app", R.string.disable_app, R.drawable.visibility_off_24px, ItemCategory.ACTION, false),
-            new ConfigItem("action:uninstall_root", R.string.uninstall_roots, R.drawable.ic_delete, ItemCategory.ACTION, false)
+            new ConfigItem("action:uninstall_root", R.string.uninstall_roots, R.drawable.baseline_delete_24, ItemCategory.ACTION, false)
     );
 
     // Default hidden items: the toggled functions + seldom needed fields
