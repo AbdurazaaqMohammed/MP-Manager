@@ -211,6 +211,9 @@ public class ArchiveUtil {
         try (SevenZFile sevenZFile = ArchiveBrowseUtil.openSevenZ(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
+                // Stop between entries, so a cancel does not wait for the
+                // current entry to finish writing.
+                if (listener != null) listener.checkpoint();
                 File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
@@ -240,8 +243,13 @@ public class ArchiveUtil {
      */
     private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
+        TransferControl token = listener == null ? null : listener.control();
         try (ZipFile zf = new ZipFile(archive)) {
             if (password != null) zf.setPassword(password);
+            // Attached before the pump starts: the bridge may replace zip4j's
+            // monitor, and the pump has to poll the one zip4j actually writes
+            // through or the dialog would freeze.
+            ZipTransferControl control = token == null ? null : ZipTransferControl.attach(zf, token);
             // zip4j reports progress through its own monitor; the pump turns that
             // into byte deltas and the entry currently being written.
             ZipProgressPump pump = null;
@@ -254,10 +262,20 @@ public class ArchiveUtil {
                 zf.extractAll(destDir.getAbsolutePath());
             } finally {
                 if (pump != null) pump.stop();
+                if (control != null) control.detach();
+            }
+            // A cancelled extraction unwinds through the archive code, which
+            // reports it as its own exception; the control knows the truth.
+            if (token != null && token.isCancelled()) {
+                throw new TransferCancelledException();
             }
         } catch (ZipException e) {
+            // A cancelled extraction must never fall through to the fallback
+            // reader: that would restart the work the user just stopped.
+            if (token != null && token.isCancelled()) throw new TransferCancelledException();
+            if (TransferCancelledException.isCancellation(e)) throw new TransferCancelledException();
             if (password != null || isPasswordError(e)) throw e;
-            ZipCompat.extractAll(archive, destDir, preserveTime);
+            ZipCompat.extractAll(archive, destDir, preserveTime, token);
         }
     }
 
@@ -324,6 +342,7 @@ public class ArchiveUtil {
         try (Archive rar = password == null ? new Archive(archive) : new Archive(archive, new String(password))) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
+                if (listener != null) listener.checkpoint();
                 File out = resolveDestFile(destDir, fh.getFileName());
                 if (fh.isDirectory()) out.mkdirs();
                 else {
@@ -350,6 +369,7 @@ public class ArchiveUtil {
         try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
+                if (listener != null) listener.checkpoint();
                 File out = resolveDestFile(destDir, entry.getName());
                 if (entry.isDirectory()) out.mkdirs();
                 else {
@@ -398,6 +418,7 @@ public class ArchiveUtil {
 
     private static void addToSevenZ(SevenZOutputFile sevenZOutput, File file, String entryName, File output,
                                     FileUtils.TransferListener listener) throws IOException {
+        if (listener != null) listener.checkpoint();
         SevenZArchiveEntry entry = sevenZOutput.createArchiveEntry(file, entryName);
         sevenZOutput.putArchiveEntry(entry);
         if (file.isDirectory()) {
@@ -417,6 +438,7 @@ public class ArchiveUtil {
         byte[] buffer = new byte[BUFFER_SIZE];
         int length;
         while ((length = is.read(buffer)) > 0) {
+            if (listener != null) listener.checkpoint();
             os.write(buffer, 0, length);
             if (listener != null) listener.onBytes(length);
         }
@@ -433,6 +455,7 @@ public class ArchiveUtil {
 
     private static void addToTar(TarArchiveOutputStream taos, File file, String entryName,
                                  FileUtils.TransferListener listener) throws IOException {
+        if (listener != null) listener.checkpoint();
         TarArchiveEntry entry = new TarArchiveEntry(file, entryName);
         taos.putArchiveEntry(entry);
         if (file.isDirectory()) {
@@ -488,6 +511,9 @@ public class ArchiveUtil {
         byte[] buffer = new byte[BUFFER_SIZE];
         int length;
         while ((length = is.read(buffer)) > 0) {
+            // The checkpoint sits between chunks, so a pause stops the copy
+            // here and a cancel unwinds it before the next write.
+            if (listener != null) listener.checkpoint();
             os.write(buffer, 0, length);
             if (listener != null) listener.onBytes(length);
         }

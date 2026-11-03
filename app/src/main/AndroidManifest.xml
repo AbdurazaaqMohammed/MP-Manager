@@ -275,6 +275,10 @@
             <receiver android:name="io.github.abdurazaaqmohammed.mcp.McpStopReceiver" android:exported="false" />
             <receiver android:name=".ftp.StopReceiver" android:exported="false" />
             <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
+            <!-- Pause / cancel tapped in the progress notification. -->
+            <receiver
+                android:name="io.github.abdurazaaqmohammed.utils.ProgressActionReceiver"
+                android:exported="false" />
             <service
                 android:name="io.github.abdurazaaqmohammed.tools.ScreenCaptureService"
                 android:enabled="true"

@@ -217,8 +217,22 @@ public final class ZipCompat {
      * Used as the fallback when zip4j cannot walk the archive at all.
      */
     public static void extractAll(File zip, File destDir, boolean preserveTime) throws IOException {
+        extractAll(zip, destDir, preserveTime, null);
+    }
+
+    /**
+     * Extracts every entry below {@code destDir}, refusing names that escape it.
+     *
+     * <p>This is the fallback used when zip4j cannot walk the archive at all.
+     * It is plain Java, so it takes the pause / cancel checkpoint itself.
+     *
+     * @param control the pause / cancel token, or null
+     */
+    public static void extractAll(File zip, File destDir, boolean preserveTime,
+                                  TransferControl control) throws IOException {
         String canonicalRoot = destDir.getCanonicalPath();
         for (Entry e : readCentralDirectory(zip)) {
+            if (control != null) control.checkpoint();
             File out = new File(destDir, e.name);
             String canonicalOut = out.getCanonicalPath();
             if (!canonicalOut.equals(canonicalRoot)
@@ -238,7 +252,10 @@ public final class ZipCompat {
                  OutputStream os = new java.io.BufferedOutputStream(new FileOutputStream(out), COPY_BUFFER)) {
                 byte[] buf = new byte[COPY_BUFFER];
                 int n;
-                while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+                while ((n = in.read(buf)) != -1) {
+                    if (control != null) control.checkpoint();
+                    os.write(buf, 0, n);
+                }
             } catch (IOException | RuntimeException ex) {
                 closeQuietly(raf);
                 throw ex;

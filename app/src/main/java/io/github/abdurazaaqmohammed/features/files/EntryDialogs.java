@@ -54,8 +54,10 @@ import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ZipProgressPump;
+import io.github.abdurazaaqmohammed.utils.ZipTransferControl;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -264,6 +266,13 @@ public class EntryDialogs {
                 // Deleting frees bytes rather than moving them; the counter is
                 // the meaningful unit here.
             }
+
+            @Override
+            public void checkpoint() {
+                // Parks the delete while the user paused it, and unwinds it
+                // when they cancelled.
+                pm.control().checkpoint();
+            }
         };
     }
 
@@ -272,6 +281,7 @@ public class EntryDialogs {
         boolean isInZip = state.isInZip();
         ProgressManager pm = new ProgressManager(context, false);
         pm.showCount(true);
+        pm.setControllable(true);
         pm.setOperation(R.string.op_deleting);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
@@ -406,7 +416,8 @@ public class EntryDialogs {
                                         }
                                         AccessManager.deleteTree(context, selectedPaths, true,
                                                 (done, bytesDone) ->
-                                                        pm.setProgress(Math.min(done, totalSelected), totalSelected));
+                                                        pm.setProgress(Math.min(done, totalSelected), totalSelected),
+                                                pm.control());
                                     } catch (Exception ignored) {
                                         for (int i = 0; i < selectedFiles.size(); i++) {
                                             File f = selectedFiles.get(i);
@@ -505,8 +516,10 @@ public class EntryDialogs {
                                 try {
                                     AccessManager.deleteTree(context, one, true,
                                             (done, bytesDone) ->
-                                                    pm.setProgress(Math.min(done, total), total));
+                                            pm.setProgress(Math.min(done, total), total),
+                                            pm.control());
                                 } catch (Exception e) {
+                                    if (TransferCancelledException.isCancellation(e)) throw e;
                                     FileUtils.deleteTree(file,
                                             countingDeleter(pm, removed, total));
                                 }
@@ -549,7 +562,17 @@ public class EntryDialogs {
                         }
                     } catch (Exception e) {
                         pm.dismiss();
-                        new ErrorUtil(context).showError(e);
+                        // A cancelled delete is the user's own choice, not a
+                        // failure worth reporting. What was already removed
+                        // still has to leave the list, so the pane is refreshed.
+                        if (TransferCancelledException.isCancellation(e)) {
+                            context.handler.post(() -> {
+                                state.clearSelection();
+                                context.refreshPaneAfterChange(pane1, null);
+                            });
+                        } else {
+                            new ErrorUtil(context).showError(e);
+                        }
                     }
                 }).start();
             };
@@ -824,6 +847,8 @@ public class EntryDialogs {
 
     private void runCompress(File outputZip, String format, File file, String fileName, boolean multi, View compressView, ProgressManager pm) {
         Object[] values = state.values();
+        // Compression honours the pause and cancel buttons.
+        pm.setControllable(true);
         pm.show();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         new Thread(() -> {
@@ -928,12 +953,19 @@ public class EntryDialogs {
                     CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
 
                     ZipProgressPump pump = null;
+                    ZipTransferControl zipControl = null;
                     try (ZipFile zf = new ZipFile(finalOutput)) {
                         if (!TextUtils.isEmpty(pw)) {
                             zipParameters.setEncryptFiles(true);
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zf.setPassword(pw.toString().toCharArray());
                         }
+                        // Attached before the pump starts: the bridge may replace
+                        // zip4j's monitor, and the pump has to poll the one zip4j
+                        // actually writes through or the dialog would freeze.
+                        // It also lets the dialog pause and stop the compression
+                        // mid-archive instead of only between sources.
+                        zipControl = ZipTransferControl.attach(zf, pm.control());
                         // zip4j reports chunk-level progress through its monitor;
                         // the pump turns that into the live byte rate.
                         pump = new ZipProgressPump(zf.getProgressMonitor(), listener,
@@ -949,6 +981,7 @@ public class EntryDialogs {
                             compressed += Math.max(1, FileUtils.countFilesForProgress(source, 20000));
                             pm.setProgress(Math.min(compressed, totalSources), totalSources);
                         }
+                        if (pm.control().isCancelled()) throw new TransferCancelledException();
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), "application/zip");
                         pm.setProgress(totalSources, totalSources);
@@ -956,9 +989,16 @@ public class EntryDialogs {
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
-                        new ErrorUtil(context).showError(e);
+                        // A cancelled compression leaves an unusable archive
+                        // behind, so it is removed rather than kept.
+                        if (TransferCancelledException.isCancellation(e) || pm.control().isCancelled()) {
+                            if (finalOutput.exists()) finalOutput.delete();
+                        } else {
+                            new ErrorUtil(context).showError(e);
+                        }
                     } finally {
                         if (pump != null) pump.stop();
+                        if (zipControl != null) zipControl.detach();
                         context.handler.post(context::reloadCurrentFolder);
                         if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
                         else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
@@ -974,6 +1014,7 @@ public class EntryDialogs {
                 } else {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources, listener);
+                        if (pm.control().isCancelled()) throw new TransferCancelledException();
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), null);
                         pm.setProgress(totalSources, totalSources);
@@ -982,7 +1023,13 @@ public class EntryDialogs {
                         context.handler.post(context::reloadCurrentFolder);
                     } catch (Exception e) {
                         pm.dismiss();
-                        new ErrorUtil(context).showError(e);
+                        // A cancelled compression leaves an unusable archive
+                        // behind, so it is removed rather than kept.
+                        if (TransferCancelledException.isCancellation(e) || pm.control().isCancelled()) {
+                            if (finalOutput.exists()) finalOutput.delete();
+                        } else {
+                            new ErrorUtil(context).showError(e);
+                        }
                     } finally {
                         if (finalStageTmp != null) Util.deleteDir(finalStageTmp);
                     }

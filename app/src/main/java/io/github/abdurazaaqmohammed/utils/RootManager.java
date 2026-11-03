@@ -321,55 +321,102 @@ public class RootManager {
      * output, so callers that parse stdout (cat, ls, stat) are unaffected.
      */
     private ShellResult spawnSu(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return spawnSu(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command, honouring a pause / cancel token while it runs.
+     *
+     * <p>The batch reports its own process id, and every signal is sent
+     * through a second privileged shell: the batch runs as root, so the app
+     * itself is not allowed to signal it. Pausing suspends the batch so it
+     * continues exactly where it stopped; cancelling kills it and everything
+     * it started, so no work continues in the background.
+     */
+    ShellResult spawnSu(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                        TransferControl control) {
         synchronized (lock) {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
-                BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-                StringBuilder output = new StringBuilder();
-                StringBuilder error = new StringBuilder();
-                Thread drainOut = new Thread(() -> {
-                    String line;
-                    try {
-                        while ((line = stdout.readLine()) != null) {
-                            if (ShellProgress.consume(line, progress)) continue;
-                            if (output.length() > 0) output.append("\n");
-                            output.append(line);
-                        }
-                    } catch (Exception ignored) {
-                    }
-                });
-                Thread drainErr = new Thread(() -> {
-                    String line;
-                    try {
-                        while ((line = stderr.readLine()) != null) {
-                            if (error.length() > 0) error.append("\n");
-                            error.append(line);
-                        }
-                    } catch (Exception ignored) {
-                    }
-                });
-                drainOut.start();
-                drainErr.start();
-
-                boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-                if (!finished) {
-                    process.destroyForcibly();
+                ShellBatchControl batchControl = null;
+                ShellProgress.Listener drainListener = progress;
+                if (control != null) {
+                    batchControl = new ShellBatchControl(control, this::runSignalCommand);
+                    // The batch's own progress markers still reach the caller.
+                    drainListener = batchControl.wrap(progress);
                 }
+                final ShellProgress.Listener listener = drainListener;
                 try {
-                    drainOut.join(2000);
-                    drainErr.join(2000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+                    StringBuilder output = new StringBuilder();
+                    StringBuilder error = new StringBuilder();
+                    Thread drainOut = new Thread(() -> {
+                        String line;
+                        try {
+                            while ((line = stdout.readLine()) != null) {
+                                if (ShellProgress.consume(line, listener)) continue;
+                                if (output.length() > 0) output.append("\n");
+                                output.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    Thread drainErr = new Thread(() -> {
+                        String line;
+                        try {
+                            while ((line = stderr.readLine()) != null) {
+                                if (error.length() > 0) error.append("\n");
+                                error.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    drainOut.start();
+                    drainErr.start();
+
+                    boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+                    if (!finished) {
+                        process.destroyForcibly();
+                    }
+                    try {
+                        drainOut.join(2000);
+                        drainErr.join(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    if (batchControl != null && batchControl.wasCancelled()) {
+                        throw new TransferCancelledException();
+                    }
+                    if (!finished) {
+                        return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
+                    }
+                    return new ShellResult(process.exitValue(), output.toString(), error.toString());
+                } finally {
+                    if (batchControl != null) batchControl.detach();
                 }
-                if (!finished) {
-                    return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
-                }
-                return new ShellResult(process.exitValue(), output.toString(), error.toString());
+            } catch (TransferCancelledException e) {
+                throw e;
             } catch (Exception e) {
                 return new ShellResult(-1, "", e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Runs a signal command with root rights.
+     *
+     * <p>It deliberately bypasses the shared lock: the batch that is being
+     * signalled still holds it, and waiting for it would defeat the purpose.
+     */
+    private void runSignalCommand(String command) {
+        try {
+            Process signal = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
+            signal.waitFor(10, TimeUnit.SECONDS);
+            signal.destroyForcibly();
+        } catch (Throwable ignored) {
+            // Signalling is best effort.
         }
     }
 
@@ -396,11 +443,19 @@ public class RootManager {
     }
 
     public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return executeGlobalNs(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command in the global mount namespace with a pause / cancel token.
+     */
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                                        TransferControl control) {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(command);
-        return spawnSu(wrapped, timeoutSeconds, progress);
+        return spawnSu(wrapped, timeoutSeconds, progress, control);
     }
 
     private volatile int nsWinner;
@@ -459,6 +514,14 @@ public class RootManager {
     }
 
     public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return executeFs(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command with a pause / cancel token attached.
+     */
+    public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                                 TransferControl control) {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
@@ -467,8 +530,8 @@ public class RootManager {
             global = prefersGlobalNs();
         } catch (Exception ignored) {
         }
-        if (global) return executeGlobalNs(command, timeoutSeconds, progress);
-        return spawnSu(command, timeoutSeconds, progress);
+        if (global) return executeGlobalNs(command, timeoutSeconds, progress, control);
+        return spawnSu(command, timeoutSeconds, progress, control);
     }
 
     public ShellResult executeWithInput(String command, String input) {
@@ -771,8 +834,18 @@ public class RootManager {
     }
 
     public void copyAllPreserving(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
+        copyAllPreserving(ops, progress, null);
+    }
+
+    /**
+     * Copies a batch, with a pause / cancel token attached to the shell.
+     */
+    public void copyAllPreserving(List<CopyOp> ops, ShellProgress.Listener progress,
+                                   TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
-        StringBuilder cmd = new StringBuilder();
+        // The batch reports its own process id first, so the app can signal it
+        // while it runs.
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
         int count = 0;
         int timeout = 0;
         int filesDone = 0;
@@ -782,12 +855,13 @@ public class RootManager {
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
             if (op.destExists && op.directory && !isPathBlocked(dest)) {
-                if (cmd.length() > 0) cmd.append(" && ");
-                cmd.append("rm -rf -- ").append(escapeShellArg(dest)).append(" && ");
-            } else if (cmd.length() > 0) cmd.append(" && ");
+                cmd.append(" && rm -rf -- ").append(escapeShellArg(dest));
+            } else if (cmd.length() > 0) {
+                cmd.append(" && ");
+            }
             String parent = new File(dest).getParent();
-            if (parent != null) cmd.append("mkdir -p ").append(escapeShellArg(parent)).append(" && ");
-            cmd.append("cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            if (parent != null) cmd.append(" && mkdir -p ").append(escapeShellArg(parent));
+            cmd.append(" && cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
             filesDone += Math.max(0, op.files);
             bytesDone += Math.max(0L, op.bytes);
             cmd.append(ShellProgress.report(filesDone, bytesDone));
@@ -795,7 +869,7 @@ public class RootManager {
             timeout += op.directory ? 120 : 60;
         }
         if (count == 0) return;
-        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress);
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -810,8 +884,17 @@ public class RootManager {
      * one folder.</p>
      */
     public void moveAll(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
+        moveAll(ops, progress, null);
+    }
+
+    /**
+     * Moves a batch, with a pause / cancel token attached to the shell.
+     */
+    public void moveAll(List<CopyOp> ops, ShellProgress.Listener progress,
+                        TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
-        StringBuilder cmd = new StringBuilder();
+        // The batch reports its own process id first, so the app can signal it.
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
         int count = 0;
         int timeout = 0;
         int filesDone = 0;
@@ -823,7 +906,7 @@ public class RootManager {
             if (isPathBlocked(src)) {
                 throw new IOException("Blocked: refusing to move critical path: " + src);
             }
-            if (cmd.length() > 0) cmd.append(" && ");
+            cmd.append(" && ");
             if (op.destExists && op.directory && !isPathBlocked(dest)) {
                 cmd.append("rm -rf -- ").append(escapeShellArg(dest)).append(" && ");
             }
@@ -837,7 +920,7 @@ public class RootManager {
             timeout += op.directory ? 120 : 60;
         }
         if (count == 0) return;
-        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress);
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
         if (!result.isSuccess()) throw new IOException("move failed: " + result.error);
         invalidateListCache();
     }
@@ -860,6 +943,14 @@ public class RootManager {
     }
 
     public List<String> deleteAll(List<String> paths, ShellProgress.Listener progress) throws IOException {
+        return deleteAll(paths, progress, null);
+    }
+
+    /**
+     * Deletes a batch, with a pause / cancel token attached to the shell.
+     */
+    public List<String> deleteAll(List<String> paths, ShellProgress.Listener progress,
+                                  TransferControl control) throws IOException {
         List<String> targets = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
@@ -885,18 +976,17 @@ public class RootManager {
             }
         };
 
-        StringBuilder cmd = new StringBuilder();
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
         int done = 0;
         for (int i = 0; i < targets.size(); i += chunk) {
             int end = Math.min(targets.size(), i + chunk);
-            if (cmd.length() > 0) cmd.append(" ; ");
-            cmd.append("rm -rf --");
+            cmd.append(" ; rm -rf --");
             for (int j = i; j < end; j++) cmd.append(' ').append(escapeShellArg(targets.get(j)));
             cmd.append(ShellProgress.reportFailure());
             done = end;
             cmd.append(ShellProgress.reportAlways(done, 0L));
         }
-        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30), relay);
+        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30), relay, control);
         if (failed.get() || !result.isSuccess()) {
             throw new IOException("delete failed: " + result.error);
         }
@@ -920,6 +1010,14 @@ public class RootManager {
      * @return the paths that were removed.
      */
     public List<String> deleteTree(List<String> paths, ShellProgress.Listener progress) throws IOException {
+        return deleteTree(paths, progress, null);
+    }
+
+    /**
+     * Deletes each path recursively, with a pause / cancel token attached.
+     */
+    public List<String> deleteTree(List<String> paths, ShellProgress.Listener progress,
+                                   TransferControl control) throws IOException {
         List<String> targets = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
@@ -946,11 +1044,10 @@ public class RootManager {
             }
         };
 
-        StringBuilder cmd = new StringBuilder();
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
         for (String path : targets) {
             String arg = escapeShellArg(path);
-            if (cmd.length() > 0) cmd.append(" ; ");
-            cmd.append("find ").append(arg).append(" -depth -type d 2>/dev/null")
+            cmd.append(" ; find ").append(arg).append(" -depth -type d 2>/dev/null")
                     .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
                     .append(" echo @@MPPROG 1 0; done");
             // Whatever is left (the root itself, files at the top level) goes in
@@ -958,7 +1055,7 @@ public class RootManager {
             // the value the dialog was sized with.
             cmd.append(" ; rm -rf -- ").append(arg).append(" ; echo @@MPPROG 1 0");
         }
-        ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay);
+        ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay, control);
         if (failed.get()) throw new IOException("delete failed: " + result.error);
         invalidateListCache();
         return targets;

@@ -39,6 +39,34 @@ public class FileUtils {
 
         /** {@code count} more bytes were written. */
         void onBytes(long count);
+
+        /**
+         * Safe point where a long operation may be paused or cancelled.
+         *
+         * <p>The copy, delete and archive loops call this between chunks and
+         * between entries. The default implementation does nothing, so every
+         * existing listener keeps working; a listener that wants real pause and
+         * cancel support overrides it and delegates to a
+         * {@link TransferControl#checkpoint()}.
+         *
+         * <p>Implementations may throw {@link TransferCancelledException} to
+         * unwind the operation.
+         */
+        default void checkpoint() throws TransferCancelledException {
+        }
+
+        /**
+         * The control that owns this transfer, or null when the transfer cannot
+         * be paused or cancelled.
+         *
+         * <p>Code that delegates the work to an external engine — a zip4j
+         * archive, an elevated shell — needs the control itself, not just the
+         * checkpoint, because stopping that engine means flipping its own
+         * flags rather than throwing.
+         */
+        default TransferControl control() {
+            return null;
+        }
     }
 
     /** File/byte totals for a set of roots, used to size a progress bar up front. */
@@ -255,6 +283,7 @@ public class FileUtils {
      * so a single walk can drive both the item counter and the byte rate.
      */
     public static void copyFolder(File src, File dest, TransferListener listener) throws IOException {
+        if (listener != null) listener.checkpoint();
         if (src.isDirectory()) {
             if (!dest.exists()) {
                 //noinspection ResultOfMethodCallIgnored
@@ -263,6 +292,7 @@ public class FileUtils {
             String[] children = src.list();
             if (children == null) return;
             for (String child : children) {
+                if (listener != null) listener.checkpoint();
                 File srcChild = new File(src, child);
                 File dstChild = new File(dest, child);
                 copyFolder(srcChild, dstChild, listener);
@@ -349,6 +379,9 @@ public class FileUtils {
                 long size = src.size();
                 long transferred = 0;
                 while (transferred < size) {
+                    // The checkpoint sits between chunks, so a pause stops the
+                    // copy here and a resume continues from this exact offset.
+                    if (listener != null) listener.checkpoint();
                     long want = listener == null ? size - transferred
                             : Math.min(size - transferred, TRANSFER_CHUNK);
                     long written = src.transferTo(transferred, want, dst);
@@ -419,6 +452,7 @@ public class FileUtils {
         byte[] buffer = new byte[IO_BUFFER_SIZE];
         int length;
         while ((length = is.read(buffer)) > 0) {
+            if (listener != null) listener.checkpoint();
             os.write(buffer, 0, length);
             if (listener != null) listener.onBytes(length);
         }
@@ -522,6 +556,9 @@ public class FileUtils {
      */
     public static boolean deleteTree(File root, TransferListener listener) {
         if (root == null) return true;
+        // The checkpoint sits before each entry, so a cancel stops the walk
+        // before the next unlink rather than after the whole tree is gone.
+        if (listener != null) listener.checkpoint();
         if (listener != null) listener.onFile(root, null);
 
         // One lstat decides link/dir/file, so a large tree does not pay three

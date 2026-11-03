@@ -70,7 +70,10 @@ import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ShellProgress;
+import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
+import io.github.abdurazaaqmohammed.utils.TransferControl;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.utils.ZipTransferControl;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class FileOperationsHelper {
@@ -132,6 +135,9 @@ public class FileOperationsHelper {
         ProgressManager pm = new ProgressManager(context, true);
         pm.setText(text);
         if (operationRes != 0) pm.setOperation(operationRes);
+        // Copy, move and delete all honour the token, so the dialog offers
+        // the pause and cancel buttons.
+        pm.setControllable(true);
         activeProgress = pm;
         pm.show();
     }
@@ -168,10 +174,12 @@ public class FileOperationsHelper {
             try {
                 op.run();
             } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
+                if (!TransferCancelledException.isCancellation(e)) {
+                    new ErrorUtil(context).showError(e);
+                }
             } finally {
                 //activeProgress = null;
-                dismissActiveProgress();
+                finishActiveProgress();
             }
         }).start();
     }
@@ -193,12 +201,26 @@ public class FileOperationsHelper {
                 applyMeasure(measureInfo(items).total);
                 op.run();
             } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
+                if (!TransferCancelledException.isCancellation(e)) {
+                    new ErrorUtil(context).showError(e);
+                }
             } finally {
                 //activeProgress = null;
-                dismissActiveProgress();
+                finishActiveProgress();
             }
         }).start();
+    }
+
+    /**
+     * Closes the dialog once the worker has stopped for good.
+     *
+     * <p>After a cancel the dialog stays up until the work really stopped, so
+     * the user is never told "cancelled" while something is still running.
+     */
+    private void finishActiveProgress() {
+        ProgressManager pm = activeProgress;
+        if (pm != null) pm.onFinished();
+        dismissActiveProgress();
     }
 
     private static final int PROGRESS_COUNT_CAP = 20000;
@@ -551,11 +573,14 @@ public class FileOperationsHelper {
                     // byte the way copy+delete did. The batch reports its own
                     // counters through the marker stream.
                     AccessManager.moveAll(context, ops,
-                            shellProgress(ops, totalFiles, totalBytes, poller));
+                            shellProgress(ops, totalFiles, totalBytes, poller), transferControl());
                     batchDone.addAll(opItems);
                     done += opFiles;
                     advanceActiveProgress(done, totalFiles);
                 } catch (Exception e) {
+                    // A cancelled batch must not fall through to the plain
+                    // copy path below: the user asked to stop.
+                    if (TransferCancelledException.isCancellation(e)) throw e;
                 } finally {
                     if (poller != null) poller.stop();
                 }
@@ -584,6 +609,8 @@ public class FileOperationsHelper {
                         if (listener != null) listener.onBytes(itemBytes);
                         continue;
                     } catch (Exception e) {
+                        // A cancelled move must not fall through to the plain path.
+                        if (TransferCancelledException.isCancellation(e)) throw e;
                     }
                 }
                 if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellMove(f, destinationFolder, dest.getName())) {
@@ -850,7 +877,7 @@ public class FileOperationsHelper {
                         // through createDocument on the way down.
                         SafFs.copyFromRecursive(f, dest, listener);
                     } else {
-                        SafFs.copyFrom(f, dest, null);
+                        SafFs.copyFrom(f, dest, null, listener);
                     }
                 }
                 if (move) {
@@ -862,6 +889,8 @@ public class FileOperationsHelper {
                 advanceActiveProgress(done, totalFiles);
                 if (listener != null) listener.onBytes(im.bytes);
             } catch (Exception e) {
+                // A cancelled transfer must not be reported as a failure.
+                if (TransferCancelledException.isCancellation(e)) throw new TransferCancelledException();
                 Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
             }
         }
@@ -934,6 +963,8 @@ public class FileOperationsHelper {
                         advanceActiveProgress(done, totalFiles);
                         if (listener != null) listener.onBytes(im.bytes);
                     } catch (Exception e) {
+                        // A cancelled transfer must not be reported as a failure.
+                        if (TransferCancelledException.isCancellation(e)) throw e;
                         Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
                     }
                 }
@@ -960,6 +991,8 @@ public class FileOperationsHelper {
                         advanceActiveProgress(done, totalFiles);
                         if (listener != null) listener.onBytes(im.bytes);
                     } catch (Exception e) {
+                        // A cancelled transfer must not be reported as a failure.
+                        if (TransferCancelledException.isCancellation(e)) throw e;
                         Extensions.showMessage(context, e.getMessage() == null ? e.toString() : e.getMessage());
                     }
                 }
@@ -1018,11 +1051,14 @@ public class FileOperationsHelper {
                     // One shell process still does the whole batch, but it now
                     // echoes a counter after every item.
                     AccessManager.copyAllPreserving(context, ops,
-                            shellProgress(ops, totalFiles, totalBytes, poller));
+                            shellProgress(ops, totalFiles, totalBytes, poller), transferControl());
                     batchDone.addAll(opItems);
                     done += opFiles;
                     advanceActiveProgress(done, totalFiles);
                 } catch (Exception e) {
+                    // A cancelled batch must not fall through to the plain
+                    // copy path below: the user asked to stop.
+                    if (TransferCancelledException.isCancellation(e)) throw e;
                 } finally {
                     if (poller != null) poller.stop();
                 }
@@ -1048,6 +1084,8 @@ public class FileOperationsHelper {
                     if (listener != null) listener.onBytes(itemBytes);
                     continue;
                 } catch (Exception e) {
+                    // A cancelled copy must not fall through to the plain path.
+                    if (TransferCancelledException.isCancellation(e)) throw e;
                 }
             }
             if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder)
@@ -1114,6 +1152,15 @@ public class FileOperationsHelper {
     private FileUtils.TransferListener transferListener() {
         ProgressManager pm = activeProgress;
         return pm == null ? null : pm.listener();
+    }
+
+    /**
+     * The pause / cancel token of the live dialog, or null when there is no
+     * dialog. The elevated backends need it to signal the shell they started.
+     */
+    private TransferControl transferControl() {
+        ProgressManager pm = activeProgress;
+        return pm == null ? null : pm.control();
     }
 
     private static long sizeOf(File f) {
@@ -1429,7 +1476,10 @@ public class FileOperationsHelper {
         File bak = new File(zipFile.getParent(), zipFile.getName() + ".bak");
         if (UiPrefs.genBackup(context) && !bak.exists()) FileUtils.backupCopy(zipFile, bak);
         File tempFileDir = null;
+        // Lets the dialog pause and stop the work while the archive is written.
+        ZipTransferControl zipControl = null;
         try (ZipFile sourceZip = new ZipFile(zipFile)) {
+            zipControl = ZipTransferControl.attach(sourceZip, transferControl());
             Map<String, Long> existingEntries = new LinkedHashMap<>();
             for (FileHeader fh : sourceZip.getFileHeaders()) existingEntries.put(fh.getFileName(), fh.getLastModifiedTime());
             Set<String> toRemove = new LinkedHashSet<>();
@@ -1508,6 +1558,10 @@ public class FileOperationsHelper {
 
             if (!plainFilesToAdd.isEmpty()) sourceZip.addFiles(plainFilesToAdd, zipParameters);
             for (Object[] add : namedAdds) {
+                // The checkpoint sits between entries, so a pause stops the
+                // work here and a cancel unwinds it before the next entry.
+                TransferControl control = transferControl();
+                if (control != null) control.checkpoint();
                 File f = (File) add[0];
                 ZipParameters params = new ZipParameters(zipParameters);
                 if (add[1] == null) {
@@ -1521,6 +1575,7 @@ public class FileOperationsHelper {
             }
             addEmptyFolders(tempFileDir != null ? tempFileDir : context.getCacheDir(), sourceZip, emptyFolders);
         } finally {
+            if (zipControl != null) zipControl.detach();
             if (tempFileDir != null) Util.deleteDir(tempFileDir);
         }
     }
@@ -1753,6 +1808,7 @@ public class FileOperationsHelper {
                 }
                 ProgressManager pm = new ProgressManager(context, false);
                 pm.showCount(true);
+                pm.setControllable(true);
                 int totalEntries = archiveEntryCount(readable);
                 long totalBytes = archiveUncompressedSize(readable);
                 pm.setOperation(R.string.op_extracting);
@@ -1805,8 +1861,15 @@ public class FileOperationsHelper {
                     context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
                 }
             } catch (Exception e) {
+                // A cancelled extraction leaves a half-written tree behind, so
+                // it is removed: the user asked to stop, not to keep a mess.
                 FileUtils.deleteTree(destDir, null);
-                context.handler.post(() -> new ErrorUtil(context).showError(e));
+                if (TransferCancelledException.isCancellation(e)) {
+                    // The partial folder is gone; refresh so it leaves the list.
+                    context.handler.post(context::reloadCurrentFolder);
+                } else {
+                    context.handler.post(() -> new ErrorUtil(context).showError(e));
+                }
             }
         }).start();
     }
