@@ -1956,4 +1956,5 @@ androidx/
     <string name="progress_speed_items">%1$d/ว</string>
     <string name="progress_eta">เหลือ %1$s</string>
     <string name="progress_done">เสร็จ</string>
+    <string name="confirm_move_f">คุณแน่ใจหรือไม่ว่าต้องการย้าย %1$s?</string>
 </resources>

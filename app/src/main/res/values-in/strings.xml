@@ -1926,4 +1926,5 @@
     <string name="progress_speed_items">%1$d/s</string>
     <string name="progress_eta">sisa %1$s</string>
     <string name="progress_done">Selesai</string>
+    <string name="confirm_move_f">Yakin ingin memindahkan %1$s?</string>
 </resources>

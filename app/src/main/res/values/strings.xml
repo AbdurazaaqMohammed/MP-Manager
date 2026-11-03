@@ -2052,4 +2052,5 @@ Patched code:</string>
     <string name="export_settings_failed">Failed to export settings</string>
     <string name="import_settings_failed">Failed to import settings</string>
     <string name="remember_password">Remember password</string>
+    <string name="confirm_move_f">Are you sure you want to move %1$s?</string>
 </resources>

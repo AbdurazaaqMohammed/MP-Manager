@@ -554,14 +554,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     tab.pendingLine = -1;
                     tab.pendingColumn = -1;
                     tab.pendingQuery = null;
-                    navigateTo(line, col, q);
                     consumedPending = true;
+                    editor.post(() -> navigateTo(line, col, q));
                 }
             }
         }
         new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
         if (!skipRestorePosition && !consumedPending && positionManager != null) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (consumedPending) return;
                 try {
                     EditorPositionManager.Position pos = positionManager.getPosition(className);
                     if (pos != null && pos.lineno >= 0 && pos.lineno < editor.getText().getLineCount()) {

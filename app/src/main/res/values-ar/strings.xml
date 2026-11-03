@@ -1967,4 +1967,5 @@
     <string name="export_settings_failed">فشل تصدير الإعدادات</string>
     <string name="import_settings_failed">فشل استيراد الإعدادات</string>
     <string name="remember_password">تذكر كلمة المرور</string>
+    <string name="confirm_move_f">هل أنت متأكد أنك تريد نقل %1$s؟</string>
 </resources>

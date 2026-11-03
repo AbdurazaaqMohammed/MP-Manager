@@ -1,10 +1,14 @@
+# Build MP-Manager APK
+# Note: Offline project rules reside at /storage/emulated/0/Download/apks/Pref/Antigravity/project_rules.md
+# Rule 3 & 5: Builds are triggered strictly and exclusively on branch main with the commit message phrase 'action do build'.
+
 name: Build MP-Manager APK
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - '**'
+      - main
 
 jobs:
   build:

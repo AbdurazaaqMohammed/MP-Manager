@@ -913,7 +913,7 @@ final View.OnClickListener originalClickListener;
                                 pair = new Object[]{o1, o2};
                                 List<File> sameDex1 = singleDexList(o1);
                                 List<File> sameDex2 = singleDexList(o2);
-                                if (sameDex1 != null && sameDex2 != null && dexCompareFiles1 == null) {
+                                if (sameDex1 != null && sameDex2 != null) {
                                     dexCompareFiles1 = sameDex1;
                                     dexCompareFiles2 = sameDex2;
                                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
@@ -1214,7 +1214,7 @@ final View.OnClickListener originalClickListener;
                                         if (context.arePanesInSameFolder()) {
                                             break;
                                         }
-                                        fileOps.moveAsync(item);
+                                        entryDialogs.showMoveDialog(finalPosition, file, entry, multi);
                                         break;
                                     case FileMenuOrder.RENAME:
                                         entryDialogs.showRenameDialog(finalPosition, file, entry, fileName, multi);

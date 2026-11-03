@@ -407,6 +407,38 @@ public class FileOperationsHelper {
         }
     }
 
+    public void moveZipEntryWithSigning(Object item, File zipFile, boolean autoSign, SignWrapper sw) {
+        List<Object> items = (adapter.isMultiSelectMode() && !adapter.getSelectedFiles().isEmpty())
+                ? new ArrayList<>(adapter.getSelectedFiles())
+                : (item != null ? Collections.singletonList(item) : Collections.emptyList());
+        if (items.isEmpty()) return;
+
+        runWithProgress(context.rss.getString(R.string.moving_f, summarizeItems(items)), items, R.string.op_moving, () -> {
+            if (zipFile != null && UiPrefs.genBackup(context)) {
+                FileUtils.backupOnce(zipFile);
+            }
+            if (!copyFromZip(items)) return;
+            List<ZipEntryInfo> toDelete = new ArrayList<>();
+            for (Object o : items) {
+                if (o instanceof ZipEntryInfo) toDelete.add((ZipEntryInfo) o);
+            }
+            if (!toDelete.isEmpty()) {
+                deleteZipEntry(toDelete.toArray(new ZipEntryInfo[0]));
+            }
+            context.handler.post(adapter::clearSelection);
+            if (autoSign && sw != null && zipFile != null) {
+                try {
+                    sw.signApk(zipFile);
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
+            }
+            if (zipFile != null) {
+                context.offerOuterUpdate(zipFile, adapter.pane1);
+            }
+        });
+    }
+
     private boolean moveToDestination(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
         if (transferFromSafPane(items, true)) return true;

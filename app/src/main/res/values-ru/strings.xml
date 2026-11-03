@@ -1927,4 +1927,5 @@
     <string name="progress_speed_items">%1$d/с</string>
     <string name="progress_eta">осталось %1$s</string>
     <string name="progress_done">Готово</string>
+    <string name="confirm_move_f">Вы уверены, что хотите переместить %1$s?</string>
 </resources>
