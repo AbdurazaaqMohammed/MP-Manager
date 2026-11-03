@@ -556,6 +556,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     tab.pendingQuery = null;
                     consumedPending[0] = true;
                     editor.post(() -> navigateTo(line, col, q));
+                    editor.postDelayed(() -> navigateTo(line, col, q), 320);
                 }
             }
         }
@@ -1510,12 +1511,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
         try {
             if (lineNum >= 0 && lineNum < editor.getText().getLineCount()) {
+                final int col = (column >= 0 && column < editor.getText().getColumnCount(lineNum)) ? column : 0;
                 editor.jumpToLine(lineNum);
+                editor.setSelection(lineNum, col);
+                editor.ensurePositionVisible(lineNum, col);
+
                 String lineText = editor.getText().getLineString(lineNum);
-                if (column >= 0 && column < editor.getText().getColumnCount(lineNum))
-                    editor.getCursor().set(lineNum, column);
-                else
-                    editor.getCursor().set(lineNum, 0);
                 if (query != null && !query.isEmpty() && !query.contains("\n")) {
                     int start = lineText.toLowerCase().indexOf(query.toLowerCase());
                     if (start != -1) {

@@ -228,11 +228,15 @@ public class SearchFragment extends Fragment {
             activity.pendingUsageSearch = null;
             r.run();
         }
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     public void refreshUI() {
         if (adapter != null) {
             adapter.refreshVisibleNodes();
+            adapter.notifyDataSetChanged();
             updateSearchInfoBar();
         }
     }

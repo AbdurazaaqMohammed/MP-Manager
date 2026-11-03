@@ -182,12 +182,14 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     /** Records the row as visited and dims it so it reads as already opened. */
     private void markOpened(TreeNode node, int position) {
+        if (node != null) node.setVisited(true);
         String key = openedKey(node);
-        if (key == null || !openedKeys.add(key)) return;
+        if (key != null) openedKeys.add(key);
         if (position >= 0 && position < visibleNodes.size()) notifyItemChanged(position);
     }
 
     public boolean isOpened(TreeNode node) {
+        if (node != null && node.isVisited()) return true;
         String key = openedKey(node);
         return key != null && openedKeys.contains(key);
     }
@@ -507,6 +509,8 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         }
         float wantedAlpha = visited ? 0.55f : 1.0f;
         holder.itemView.setAlpha(wantedAlpha);
+        if (holder.itemContent != null) holder.itemContent.setAlpha(wantedAlpha);
+        if (holder.name != null) holder.name.setAlpha(wantedAlpha);
 
         // 5. Indentation
         int arrowWidth = (int) (14 * density);

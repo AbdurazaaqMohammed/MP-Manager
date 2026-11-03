@@ -85,6 +85,16 @@ public class TreeNode {
         isSnippet = snippet;
     }
 
+    private boolean isVisited = false;
+
+    public boolean isVisited() {
+        return isVisited;
+    }
+
+    public void setVisited(boolean visited) {
+        this.isVisited = visited;
+    }
+
     public String getName() {
         return name;
     }
