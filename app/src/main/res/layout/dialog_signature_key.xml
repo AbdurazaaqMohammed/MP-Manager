@@ -66,6 +66,12 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/cb_save_password"
+        android:text="@string/remember_password"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/cb_biometric"
         android:text="@string/use_biometrics"
         android:visibility="gone"
@@ -106,6 +112,14 @@
             android:layout_height="wrap_content"
             android:text="@string/pick_file"
             android:layout_marginStart="12dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reset_key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/reset"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout

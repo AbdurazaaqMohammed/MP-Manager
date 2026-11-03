@@ -79,6 +79,8 @@
     <string name="copy_conflict_row">%1$s (%2$s) → %3$s (%4$s)</string>
     <string name="archive_unchanged">Nothing changed, archive left untouched</string>
     <string name="archive_not_editable">Entries can only be modified inside zip archives; this one is browse-only</string>
+    <string name="sticker_preview">Sticker Preview</string>
+    <string name="open_as_archive">Open as archive</string>
     <string name="signing_">signing %1$s</string>
     <string name="signed">Signed %1$s</string>
     <string name="deleting">Deleting %1$s</string>
@@ -1008,8 +1010,8 @@ Layout Inspector
     <string name="querier_only_decimal_negative">Only decimal can be negative</string>
     <string name="menu_select_all">Select all</string>
     <string name="menu_hidden_files">Hidden files</string>
-    <string name="menu_show_system_hidden">Show system hidden files</string>
-    <string name="menu_show_manual_hidden">Show manually hidden files</string>
+    <string name="menu_show_system_hidden">Show system hidden</string>
+    <string name="menu_show_manual_hidden">Show manual hidden</string>
     <string name="menu_hide_selected">Hide selected files</string>
     <string name="menu_add_bookmark">Add to bookmarks</string>
     <string name="menu_swap_panes">Swap panes</string>
@@ -1820,7 +1822,7 @@ Layout Inspector
     <string name="failed">Failed</string>
 
     <!-- NPatch integrated mode -->
-    <string name="npatch_integrated">Xposed patcher</string>
+    <string name="npatch_integrated">Signature killer &amp; xposed</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
     <string name="npatch_hint">Patches the APK with NPatch or LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_engine_npatch">NPatch</string>
@@ -1949,7 +1951,7 @@ Layout Inspector
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="xposed_patcher_lite_title">Xposed patcher</string>
+    <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
     <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
@@ -2035,4 +2037,19 @@ Patched code:</string>
     <string name="ssl_unpin_failed">SSL unpinning failed: %1$s</string>
     <string name="ssl_unpin_no_apk">Select an APK first</string>
     <string name="ssl_unpin_limits">Limits: framework-level validation (TrustManagerImpl) and pinning inside native .so libraries cannot be patched this way; apps that do not trust user CAs also need their network security config adjusted for interception tools.</string>
+    <string name="customize_apk_more">More options order</string>
+    <string name="customize_apk_more_hint">Long-press to drag items anywhere</string>
+    <string name="menu_refresh">Refresh</string>
+    <string name="customize_right_menu">Right menu order</string>
+    <string name="customize_right_menu_hint">Long-press to drag items anywhere</string>
+    <string name="reset_signature_key">Reset to default key</string>
+    <string name="signature_key_reset">Signature key reset to default</string>
+    <string name="backup_restore_settings">Backup &amp; Restore</string>
+    <string name="export_settings">Export settings</string>
+    <string name="import_settings">Import settings</string>
+    <string name="settings_exported">Settings exported successfully</string>
+    <string name="settings_imported">Settings imported successfully</string>
+    <string name="export_settings_failed">Failed to export settings</string>
+    <string name="import_settings_failed">Failed to import settings</string>
+    <string name="remember_password">Remember password</string>
 </resources>

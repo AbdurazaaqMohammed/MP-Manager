@@ -452,6 +452,7 @@ public class SearchFragment extends Fragment {
 
         SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
         lastUseExcludeList = prefs.getBoolean("use_exclude_list", false);
+        lastIsRegex = prefs.getBoolean("is_regex", false);
 
         if (lastSearchQuery == null || lastSearchQuery.isEmpty())
             lastSearchQuery = SearchHistoryHelper.lastQuery(requireContext(), SearchHistoryHelper.KEY_DEX);
@@ -578,6 +579,7 @@ public class SearchFragment extends Fragment {
                 if (RegexGuard.mayBacktrackCatastrophically(query))
                     Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files"); }
             lastSearchQuery = query; lastSearchType = type;
+            prefs.edit().putBoolean("is_regex", lastIsRegex).apply();
             if (!query.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, query);
             if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
             List<String> scopeClasses = null;
@@ -677,6 +679,7 @@ public class SearchFragment extends Fragment {
                     Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files");
             }
             lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = matchCaseMode; lastIsRegex = regexMode; lastExactlyMatch = cbExactlyMatch.isChecked();
+            requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE).edit().putBoolean("is_regex", lastIsRegex).apply();
             // Same rule as the search dialog: "Exactly match" is hidden for Smali
             // and must not leak into the task.
             boolean exactlyMatchForType = lastExactlyMatch && !type.equals("Smali");

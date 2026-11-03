@@ -28,7 +28,7 @@ import java.util.List;
 public class aXMLEncoder {
 
     public static class Config {
-        public static final StringPoolChunk.Encoding encoding = StringPoolChunk.Encoding.UNICODE;
+        public static final StringPoolChunk.Encoding encoding = StringPoolChunk.Encoding.UTF8;
         public static final int defaultReferenceRadix = 16;
     }
 

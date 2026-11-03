@@ -247,7 +247,8 @@
            </provider>
             <activity
                 android:name="modder.hub.dexeditor.activity.DexEditorActivity"
-                android:configChanges="orientation|screenSize" />
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:windowSoftInputMode="adjustResize" />
            <provider
                android:name="androidx.core.content.FileProvider"
                android:authorities="io.github.abdurazaaqmohammed.MPManager.provider"
