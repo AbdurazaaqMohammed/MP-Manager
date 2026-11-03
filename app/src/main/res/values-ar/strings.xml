@@ -1952,4 +1952,7 @@
     <string name="mime">MIME</string>
     <string name="customize_apk_more">ترتيب خيارات المزيد</string>
     <string name="customize_apk_more_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
+    <string name="menu_refresh">تحديث</string>
+    <string name="customize_right_menu">ترتيب القائمة الجانبية</string>
+    <string name="customize_right_menu_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
 </resources>
