@@ -13,14 +13,12 @@
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/_app_bar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:theme="@style/AppTheme.AppBarOverlay">
+            android:layout_height="wrap_content">
 
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/_toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                android:background="?attr/colorPrimary"
                 app:subtitleTextAppearance="@style/ToolbarSmallSubtitle"
                 app:popupTheme="@style/AppTheme.PopupOverlay">
 
@@ -93,7 +91,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     app:tabGravity="fill"
-                    app:tabIndicatorColor="#03A9F4"
+                    app:tabIndicatorColor="?attr/colorPrimary"
                     app:tabIndicatorHeight="3dp"
                     app:tabMode="fixed"
                     app:tabTextAppearance="@style/TabTextAppearance" />
@@ -119,7 +117,7 @@
             android:layout_margin="16dp"
             android:layout_gravity="end|bottom"
             android:contentDescription="@string/delete"
-            app:srcCompat="@drawable/ic_delete" />
+            app:srcCompat="@drawable/baseline_delete_24" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
