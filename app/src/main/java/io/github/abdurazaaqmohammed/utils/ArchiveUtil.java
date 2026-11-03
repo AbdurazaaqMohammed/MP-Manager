@@ -114,6 +114,7 @@ public class ArchiveUtil {
             case GZIP:
             case BZIP2:
             case XZ:
+            case ZSTD:
                 if (ArchiveBrowseUtil.isTarPayload(archive, type)) {
                     extractTar(ArchiveBrowseUtil.openTar(archive, type), archive, destDir, preserveTime, listener);
                 } else {
@@ -191,20 +192,26 @@ public class ArchiveUtil {
      */
     public static void create(File output, List<File> sources, FileUtils.TransferListener listener) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
+        boolean singleNonDir = sources.size() == 1 && !sources.get(0).isDirectory();
         if (lower.endsWith(".7z")) create7z(output, sources, listener);
         else if (lower.endsWith(".tar")) createTar(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE), sources, listener);
-        else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tgz") || lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tbz2") || lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".txz") || lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".tar.zst")) createTar(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
-        else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
-        else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
-        else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
-        else if (lower.endsWith(".zst") && sources.size() == 1) compressSingle(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
-        else throw new IOException("Unsupported archive format: " + output.getName());
+        else if (lower.endsWith(".gz")) {
+            if (singleNonDir) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+            else createTar(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        } else if (lower.endsWith(".bz2")) {
+            if (singleNonDir) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+            else createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        } else if (lower.endsWith(".xz")) {
+            if (singleNonDir) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+            else createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        } else if (lower.endsWith(".zst")) {
+            if (singleNonDir) compressSingle(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+            else createTar(openZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        } else throw new IOException("Unsupported archive format: " + output.getName());
     }
 
     private static OutputStream openZstdOutputStream(OutputStream out) throws IOException {
