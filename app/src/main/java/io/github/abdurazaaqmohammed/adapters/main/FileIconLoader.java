@@ -858,9 +858,11 @@ public class FileIconLoader {
                     String resolved = resolveAccessiblePath(path);
                     File f = new File(resolved);
                     if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(f)) {
-                        iconCache.put(path, cachedStickerIcon);
+                        Bitmap stickerBm = io.github.abdurazaaqmohammed.utils.StickerUtil.renderThumbnailBitmap(f, 160);
+                        Drawable icon = stickerBm != null ? new BitmapDrawable(context.getResources(), stickerBm) : cachedStickerIcon;
+                        iconCache.put(path, icon);
                         context.runOnUiThread(() -> {
-                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedStickerIcon);
+                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                         });
                     } else if (isZipFileFormat(path)) {
                         iconCache.put(path, cachedArchiveIcon);

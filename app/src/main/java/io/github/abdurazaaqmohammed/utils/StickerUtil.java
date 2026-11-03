@@ -60,4 +60,49 @@ public class StickerUtil {
         } catch (Throwable ignored) {}
         return null;
     }
+
+    /**
+     * Renders a representative frame from the Lottie sticker to a Bitmap thumbnail.
+     */
+    public static android.graphics.Bitmap renderThumbnailBitmap(File file, int targetSize) {
+        String json = extractLottieJson(file);
+        if (json == null) return null;
+        try {
+            com.airbnb.lottie.LottieResult<com.airbnb.lottie.LottieComposition> result =
+                    com.airbnb.lottie.LottieCompositionFactory.fromJsonStringSync(json, file.getName());
+            com.airbnb.lottie.LottieComposition composition = result.getValue();
+            if (composition == null) return null;
+
+            com.airbnb.lottie.LottieDrawable drawable = new com.airbnb.lottie.LottieDrawable();
+            drawable.setComposition(composition);
+
+            float startFrame = composition.getStartFrame();
+            float endFrame = composition.getEndFrame();
+            // Pick a representative frame (middle frame or start frame)
+            float midFrame = startFrame + (endFrame - startFrame) * 0.35f;
+            drawable.setFrame((int) midFrame);
+
+            android.graphics.Rect bounds = composition.getBounds();
+            int w = bounds.width() > 0 ? bounds.width() : 512;
+            int h = bounds.height() > 0 ? bounds.height() : 512;
+
+            if (targetSize <= 0) targetSize = 160;
+            int renderW, renderH;
+            if (w >= h) {
+                renderW = targetSize;
+                renderH = Math.max(1, (int) (targetSize * ((float) h / w)));
+            } else {
+                renderH = targetSize;
+                renderW = Math.max(1, (int) (targetSize * ((float) w / h)));
+            }
+
+            android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(renderW, renderH, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+            drawable.setBounds(0, 0, renderW, renderH);
+            drawable.draw(canvas);
+            return bitmap;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
 }
