@@ -252,6 +252,14 @@ public final class SafFs {
 
     /** Streams a document into a real folder on disk. */
     public static void copyTo(SafFile source, File target) throws IOException {
+        copyTo(source, target, null);
+    }
+
+    /**
+     * Streams a document into a real folder on disk, pausing and stopping at
+     * the listener's checkpoints.
+     */
+    public static void copyTo(SafFile source, File target, FileUtils.TransferListener listener) throws IOException {
         InputStream in = null;
         OutputStream out = null;
         try {
@@ -259,7 +267,10 @@ public final class SafFs {
             out = new java.io.FileOutputStream(target);
             byte[] buffer = new byte[65536];
             int n;
-            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            while ((n = in.read(buffer)) != -1) {
+                if (listener != null) listener.checkpoint();
+                out.write(buffer, 0, n);
+            }
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -272,6 +283,15 @@ public final class SafFs {
      * because ids are the provider's to assign.
      */
     public static void copyFrom(File source, SafFile parent, String mimeType) throws IOException {
+        copyFrom(source, parent, mimeType, null);
+    }
+
+    /**
+     * Streams a real file into a provider folder, pausing and stopping at the
+     * listener's checkpoints.
+     */
+    public static void copyFrom(File source, SafFile parent, String mimeType,
+                                FileUtils.TransferListener listener) throws IOException {
         Uri created;
         try {
             created = DocumentsContract.createDocument(resolver(), documentUri(parent),
@@ -288,7 +308,10 @@ public final class SafFs {
             in = new java.io.FileInputStream(source);
             byte[] buffer = new byte[65536];
             int n;
-            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            while ((n = in.read(buffer)) != -1) {
+                if (listener != null) listener.checkpoint();
+                out.write(buffer, 0, n);
+            }
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -429,7 +452,10 @@ public final class SafFs {
             }
             List<SafFile> kids = children(source);
             if (kids == null) throw new IOException("Cannot list " + source.getName());
-            for (SafFile kid : kids) copyToRecursive(kid, new File(dest, kid.getName()), listener);
+            for (SafFile kid : kids) {
+                if (listener != null) listener.checkpoint();
+                copyToRecursive(kid, new File(dest, kid.getName()), listener);
+            }
         } else {
             if (listener != null) listener.onFile(new File(source.getPath()), dest);
             copyTo(source, dest);
@@ -451,7 +477,10 @@ public final class SafFs {
             File[] kids = source.listFiles();
             if (kids != null) {
                 Arrays.sort(kids);
-                for (File kid : kids) copyFromRecursive(kid, created, listener);
+                for (File kid : kids) {
+                    if (listener != null) listener.checkpoint();
+                    copyFromRecursive(kid, created, listener);
+                }
             }
         } else {
             copyFrom(source, destParent, null);
@@ -468,7 +497,10 @@ public final class SafFs {
             SafFile created = createChild(destParent, source.getName(), DocumentsContract.Document.MIME_TYPE_DIR);
             List<SafFile> kids = children(source);
             if (kids != null) {
-                for (SafFile kid : kids) copySafToSaf(kid, created, listener);
+                for (SafFile kid : kids) {
+                    if (listener != null) listener.checkpoint();
+                    copySafToSaf(kid, created, listener);
+                }
             }
         } else {
             if (listener != null) listener.onFile(new File(source.getPath()), new File(destParent.getPath(), source.getName()));
@@ -480,7 +512,10 @@ public final class SafFs {
                 out = openOutput(created);
                 byte[] buffer = new byte[65536];
                 int n;
-                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                while ((n = in.read(buffer)) != -1) {
+                    if (listener != null) listener.checkpoint();
+                    out.write(buffer, 0, n);
+                }
             } finally {
                 closeQuietly(in);
                 closeQuietly(out);

@@ -371,14 +371,23 @@ public final class AccessManager {
      */
     public static void moveAll(Context context, List<RootManager.CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException {
+        moveAll(context, ops, progress, null);
+    }
+
+    /**
+     * Moves a whole selection, with a pause / cancel token attached.
+     */
+    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+                               ShellProgress.Listener progress,
+                               TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
-            RootManager.getInstance(context).moveAll(ops, progress);
+            RootManager.getInstance(context).moveAll(ops, progress, control);
             return;
         }
         if (backend == Backend.SHIZUKU) {
-            ShizukuManager.moveAll(context, ops, progress);
+            ShizukuManager.moveAll(context, ops, progress, control);
             return;
         }
         for (RootManager.CopyOp op : ops) {
@@ -433,14 +442,26 @@ public final class AccessManager {
      */
     public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException {
+        copyAllPreserving(context, ops, progress, null);
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch, with a
+     * pause / cancel token attached.
+     *
+     * @param progress receives per-item counters streamed out of that process
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+                                         ShellProgress.Listener progress,
+                                         TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
-            RootManager.getInstance(context).copyAllPreserving(ops, progress);
+            RootManager.getInstance(context).copyAllPreserving(ops, progress, control);
             return;
         }
         if (backend == Backend.SHIZUKU) {
-            ShizukuManager.copyAllPreserving(context, ops, progress);
+            ShizukuManager.copyAllPreserving(context, ops, progress, control);
             return;
         }
         int files = 0;
@@ -508,15 +529,24 @@ public final class AccessManager {
      */
     public static void deleteTree(Context context, List<String> paths, boolean useElevated,
                                   ShellProgress.Listener progress) throws IOException {
+        deleteTree(context, paths, useElevated, progress, null);
+    }
+
+    /**
+     * Recursive delete with a pause / cancel token attached.
+     */
+    public static void deleteTree(Context context, List<String> paths, boolean useElevated,
+                                  ShellProgress.Listener progress,
+                                  TransferControl control) throws IOException {
         if (paths == null || paths.isEmpty()) return;
         if (useElevated) {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
-                RootManager.getInstance(context).deleteTree(paths, progress);
+                RootManager.getInstance(context).deleteTree(paths, progress, control);
                 return;
             }
             if (backend == Backend.SHIZUKU) {
-                ShizukuManager.deleteTree(context, paths, progress);
+                ShizukuManager.deleteTree(context, paths, progress, control);
                 return;
             }
         }
@@ -531,6 +561,12 @@ public final class AccessManager {
 
             @Override
             public void onBytes(long count) {
+            }
+
+            @Override
+            public void checkpoint() {
+                // The plain delete path honours the same pause / cancel token.
+                if (control != null) control.checkpoint();
             }
         };
         for (String path : paths) {

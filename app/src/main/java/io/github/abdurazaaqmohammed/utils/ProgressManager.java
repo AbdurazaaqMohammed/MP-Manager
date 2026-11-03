@@ -62,6 +62,19 @@ public class ProgressManager {
     /** True when the caller has no idea about sizes yet (spinner until proven otherwise). */
     private final boolean indeterminate;
 
+    /**
+     * Pause / resume / cancel token for this operation.
+     *
+     * <p>It exists for every instance, but only operations that opt in via
+     * {@link #setControllable(boolean)} show the buttons and consult it, so a
+     * job that cannot be stopped safely never offers a Stop button.
+     */
+    private final TransferControl control = new TransferControl();
+    /** Whether the dialog offers pause and cancel. */
+    private volatile boolean controllable;
+    /** Set while a cancel has been requested but the worker has not stopped yet. */
+    private volatile boolean cancelling;
+
     public AlertDialog dialog;
     private View contentView;
 
@@ -125,11 +138,119 @@ public class ProgressManager {
         return false;
     }
 
+    /**
+     * Pauses the running operation, or resumes it when it is already paused.
+     *
+     * <p>Called from the notification action, where there is no dialog to
+     * read the current state from.
+     */
+    public static void togglePauseActive() {
+        ProgressManager pm = activeOperation();
+        if (pm == null) return;
+        if (pm.control.isPaused()) pm.resume();
+        else pm.pause();
+    }
+
+    /** Cancels the running operation from the notification action. */
+    public static void cancelActive() {
+        ProgressManager pm = activeOperation();
+        if (pm != null) pm.cancel();
+    }
+
+    /** The controllable operation that is still running, or null. */
+    private static ProgressManager activeOperation() {
+        for (ProgressManager pm : activeInstances) {
+            if (!pm.dismissed && pm.controllable && !pm.control.isCancelled()) return pm;
+        }
+        return null;
+    }
+
     public ProgressManager(AppCompatActivity activity, boolean indeterminate) {
         this.activity = activity;
         this.handler = new Handler(Looper.getMainLooper());
         this.indeterminate = indeterminate;
         initChannel();
+    }
+
+    // =======================================================================
+    // Pause / resume / cancel
+    // =======================================================================
+
+    /**
+     * The token that carries the user's pause / cancel intent to the worker.
+     *
+     * <p>Callers pass it to the code that performs the work; that code calls
+     * {@link TransferControl#checkpoint()} at safe points so a paused
+     * operation really stops and a cancelled one really unwinds.
+     */
+    public TransferControl control() {
+        return control;
+    }
+
+    /**
+     * Offers the pause and cancel buttons for this operation.
+     *
+     * <p>Only enable this for work that really honours the control, otherwise
+     * the buttons would be a lie.
+     */
+    public ProgressManager setControllable(boolean controllable) {
+        this.controllable = controllable;
+        return this;
+    }
+
+    public boolean isControllable() {
+        return controllable;
+    }
+
+    /** True while the operation is paused and waiting for the user. */
+    public boolean isPaused() {
+        return control.isPaused();
+    }
+
+    /** True once the user cancelled and the worker has not finished unwinding. */
+    public boolean isCancelling() {
+        return cancelling || control.isCancelled();
+    }
+
+    /**
+     * Pauses the operation. The worker parks at its next checkpoint, so no
+     * work continues in the background.
+     */
+    public void pause() {
+        if (!controllable || control.isCancelled()) return;
+        control.pause();
+        render();
+    }
+
+    /** Resumes a paused operation; the worker continues where it stopped. */
+    public void resume() {
+        if (!controllable) return;
+        control.resume();
+        render();
+    }
+
+    /**
+     * Cancels the operation.
+     *
+     * <p>The dialog stays up showing that the operation is being cancelled and
+     * closes itself once the worker has actually stopped, so the user is never
+     * told "cancelled" while work is still running.
+     */
+    public void cancel() {
+        if (!controllable || control.isCancelled()) return;
+        cancelling = true;
+        control.cancel();
+        render();
+    }
+
+    /**
+     * Called by the worker once it has stopped for good. Closes the dialog
+     * when the operation was cancelled.
+     */
+    public void onFinished() {
+        cancelling = false;
+        if (control.isCancelled()) dismiss();
+        else render();
     }
 
     // =======================================================================
@@ -145,10 +266,56 @@ public class ProgressManager {
             contentView.findViewById(R.id.hideButton).setOnClickListener(v1 -> hide());
             ((ProgressBar) contentView.findViewById(R.id.progressBar)).setIndeterminate(indeterminate);
             dialog = new MaterialAlertDialogBuilder(activity).setView(contentView).show();
+            setupControls();
             render();
             startTicker();
         });
         return this;
+    }
+
+    /**
+     * Wires the pause and cancel buttons, when this operation supports them.
+     *
+     * <p>The pause button toggles between Pause and Resume so one button
+     * covers both directions, and the dialog itself is made non-cancelable:
+     * closing it by tapping outside would leave the work running with no way
+     * to stop it.
+     */
+    private void setupControls() {
+        View controlRow = contentView.findViewById(R.id.controlRow);
+        if (!controllable) {
+            controlRow.setVisibility(View.GONE);
+            return;
+        }
+        controlRow.setVisibility(View.VISIBLE);
+        contentView.findViewById(R.id.pauseButton).setOnClickListener(v -> {
+            if (control.isCancelled()) return;
+            if (control.isPaused()) resume();
+            else pause();
+            render();
+        });
+        contentView.findViewById(R.id.cancelButton).setOnClickListener(v -> confirmCancel());
+        // The dialog must not be dismissed by tapping outside or by Back: the
+        // work would keep running with no visible way to stop it. The user can
+        // still hide it (the notification carries the same controls) or cancel.
+        if (dialog != null) {
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.setCancelable(false);
+        }
+    }
+
+    /**
+     * Asks before cancelling, because a cancelled copy or delete cannot be
+     * undone.
+     */
+    private void confirmCancel() {
+        if (control.isCancelled()) return;
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(R.string.progress_cancel_confirm)
+                .setMessage(R.string.progress_cancel_confirm_msg)
+                .setPositiveButton(R.string.cancel, (d, w) -> cancel())
+                .setNegativeButton(R.string.progress_keep_waiting, null)
+                .show();
     }
 
     public void setText(int id, String append) {
@@ -250,6 +417,10 @@ public class ProgressManager {
     /**
      * Adapter for the copy/extract helpers so a transfer can report itself
      * without knowing anything about dialogs.
+     *
+     * <p>The returned listener also carries the pause / cancel token, so every
+     * loop that takes a listener inherits real pause and stop behaviour without
+     * knowing a dialog exists.
      */
     public FileUtils.TransferListener listener() {
         return new FileUtils.TransferListener() {
@@ -268,12 +439,26 @@ public class ProgressManager {
             public void onBytes(long count) {
                 addBytes(count);
             }
+
+            @Override
+            public void checkpoint() {
+                // Parks the worker while paused and unwinds it when cancelled.
+                control.checkpoint();
+            }
+
+            @Override
+            public TransferControl control() {
+                return control;
+            }
         };
     }
 
     public void dismiss() {
         handler.post(() -> {
             dismissed = true;
+            // A dismissed dialog must not leave a worker parked in a
+            // checkpoint: release it so the operation can finish and unwind.
+            if (control.isPaused()) control.resume();
             stopTicker();
             activeInstances.remove(this);
             if (dialog != null) dialog.dismiss();
@@ -388,6 +573,8 @@ public class ProgressManager {
         if (contentView != null && dialog != null && dialog.isShowing()) {
             bind(contentView);
         }
+        // The notification mirrors the dialog, including the paused badge and
+        // the Pause/Resume label, so a hidden operation still reads correctly.
         if (hidden) updateNotification();
     }
 
@@ -406,71 +593,122 @@ public class ProgressManager {
     }
 
     private void bind(View v) {
-        TextView op = v.findViewById(R.id.operationLabel);
-        if (isBlank(operationLabel)) {
-            op.setVisibility(View.GONE);
+
+
+        handler.post(() -> {
+            TextView op = v.findViewById(R.id.operationLabel);
+            if (isBlank(operationLabel)) {
+                op.setVisibility(View.GONE);
+            } else {
+                op.setVisibility(View.VISIBLE);
+                op.setText(operationLabel);
+            }
+
+            TextView title = v.findViewById(R.id.dialogTitle);
+            title.setText(isBlank(currentText) ? activity.getString(R.string.progress_working) : currentText);
+
+            TextView file = v.findViewById(R.id.currentFile);
+            if (isBlank(fileName)) {
+                file.setVisibility(View.GONE);
+            } else {
+                file.setVisibility(View.VISIBLE);
+                file.setText(fileName);
+            }
+
+            View pathsBox = v.findViewById(R.id.pathsBox);
+            TextView fromPathView = v.findViewById(R.id.fromPath);
+            TextView toPathView = v.findViewById(R.id.toPath);
+            boolean hasFrom = !isBlank(fromPath);
+            boolean hasTo = !isBlank(toPath);
+            if (!hasFrom && !hasTo) {
+                pathsBox.setVisibility(View.GONE);
+            } else {
+                pathsBox.setVisibility(View.VISIBLE);
+                fromPathView.setVisibility(hasFrom ? View.VISIBLE : View.GONE);
+                v.findViewById(R.id.fromRow).setVisibility(hasFrom ? View.VISIBLE : View.GONE);
+                if (hasFrom) fromPathView.setText(fromPath);
+                toPathView.setVisibility(hasTo ? View.VISIBLE : View.GONE);
+                v.findViewById(R.id.toRow).setVisibility(hasTo ? View.VISIBLE : View.GONE);
+                if (hasTo) toPathView.setText(toPath);
+            }
+
+            ProgressBar pb = v.findViewById(R.id.progressBar);
+            if (hasBytes()) {
+                pb.setIndeterminate(false);
+                pb.setMax(BYTE_BAR_SCALE);
+                pb.setProgress((int) (BYTE_BAR_SCALE * Math.min(bytesDone, bytesTotal) / bytesTotal));
+            } else if (maxVal > 0) {
+                pb.setIndeterminate(false);
+                pb.setMax(maxVal);
+                pb.setProgress(Math.min(progressVal, maxVal));
+            } else {
+                pb.setIndeterminate(true);
+            }
+
+            TextView count = v.findViewById(R.id.progressCount);
+            String stats = buildStatsLine();
+            if (isBlank(stats)) {
+                count.setVisibility(View.GONE);
+            } else {
+                count.setVisibility(View.VISIBLE);
+                count.setText(stats);
+            }
+
+            TextView speed = v.findViewById(R.id.transferSpeed);
+            String rate = buildSpeedLine();
+            if (isBlank(rate)) {
+                speed.setVisibility(View.GONE);
+            } else {
+                speed.setVisibility(View.VISIBLE);
+                speed.setText(rate);
+            }
+            bindControlState(v);
+        });
+    }
+
+    /**
+     * Renders the pause / cancel row.
+     *
+     * <p>The badge tells the user the truth about the state: while the operation
+     * is paused the worker really is parked, and while it is cancelling the
+     * worker is unwinding but may still be finishing the item it was on. The
+     * buttons disable themselves so a second tap cannot queue another action.
+     */
+    private void bindControlState(View v) {
+        View controlRow = v.findViewById(R.id.controlRow);
+        if (!controllable) {
+            controlRow.setVisibility(View.GONE);
+            return;
+        }
+        controlRow.setVisibility(View.VISIBLE);
+
+        TextView badge = v.findViewById(R.id.pausedBadge);
+        View pauseButton = v.findViewById(R.id.pauseButton);
+        View cancelButton = v.findViewById(R.id.cancelButton);
+
+        boolean cancelled = control.isCancelled();
+        boolean pausing = control.isPaused();
+
+        if (cancelled) {
+            badge.setVisibility(View.VISIBLE);
+            badge.setText(R.string.progress_cancelling);
+        } else if (pausing) {
+            badge.setVisibility(View.VISIBLE);
+            badge.setText(R.string.progress_paused);
         } else {
-            op.setVisibility(View.VISIBLE);
-            op.setText(operationLabel);
+            badge.setVisibility(View.GONE);
         }
 
-        TextView title = v.findViewById(R.id.dialogTitle);
-        title.setText(isBlank(currentText) ? activity.getString(R.string.progress_working) : currentText);
-
-        TextView file = v.findViewById(R.id.currentFile);
-        if (isBlank(fileName)) {
-            file.setVisibility(View.GONE);
-        } else {
-            file.setVisibility(View.VISIBLE);
-            file.setText(fileName);
+        if (pauseButton instanceof TextView) {
+            TextView p = (TextView) pauseButton;
+            p.setText(pausing ? R.string.resume : R.string.progress_pause);
+            p.setEnabled(!cancelled);
+            p.setAlpha(cancelled ? 0.4f : 1f);
         }
-
-        View pathsBox = v.findViewById(R.id.pathsBox);
-        TextView fromPathView = v.findViewById(R.id.fromPath);
-        TextView toPathView = v.findViewById(R.id.toPath);
-        boolean hasFrom = !isBlank(fromPath);
-        boolean hasTo = !isBlank(toPath);
-        if (!hasFrom && !hasTo) {
-            pathsBox.setVisibility(View.GONE);
-        } else {
-            pathsBox.setVisibility(View.VISIBLE);
-            fromPathView.setVisibility(hasFrom ? View.VISIBLE : View.GONE);
-            v.findViewById(R.id.fromRow).setVisibility(hasFrom ? View.VISIBLE : View.GONE);
-            if (hasFrom) fromPathView.setText(fromPath);
-            toPathView.setVisibility(hasTo ? View.VISIBLE : View.GONE);
-            v.findViewById(R.id.toRow).setVisibility(hasTo ? View.VISIBLE : View.GONE);
-            if (hasTo) toPathView.setText(toPath);
-        }
-
-        ProgressBar pb = v.findViewById(R.id.progressBar);
-        if (hasBytes()) {
-            pb.setIndeterminate(false);
-            pb.setMax(BYTE_BAR_SCALE);
-            pb.setProgress((int) (BYTE_BAR_SCALE * Math.min(bytesDone, bytesTotal) / bytesTotal));
-        } else if (maxVal > 0) {
-            pb.setIndeterminate(false);
-            pb.setMax(maxVal);
-            pb.setProgress(Math.min(progressVal, maxVal));
-        } else {
-            pb.setIndeterminate(true);
-        }
-
-        TextView count = v.findViewById(R.id.progressCount);
-        String stats = buildStatsLine();
-        if (isBlank(stats)) {
-            count.setVisibility(View.GONE);
-        } else {
-            count.setVisibility(View.VISIBLE);
-            count.setText(stats);
-        }
-
-        TextView speed = v.findViewById(R.id.transferSpeed);
-        String rate = buildSpeedLine();
-        if (isBlank(rate)) {
-            speed.setVisibility(View.GONE);
-        } else {
-            speed.setVisibility(View.VISIBLE);
-            speed.setText(rate);
+        if (cancelButton instanceof TextView) {
+            TextView c = (TextView) cancelButton;
+            c.setEnabled(!cancelled);
+            c.setAlpha(cancelled ? 0.4f : 1f);
         }
     }
 
@@ -617,7 +855,30 @@ public class ProgressManager {
         } else {
             b.setProgress(0, 0, true);
         }
+        addControlActions(b);
         return b;
+    }
+
+    /**
+     * Adds the pause / cancel buttons to the notification.
+     *
+     * <p>A hidden dialog is the one case where the user has no other way to
+     * stop the work, so the notification carries the same two actions.
+     */
+    private void addControlActions(NotificationCompat.Builder b) {
+        if (!controllable || control.isCancelled()) return;
+        b.addAction(0,
+                activity.getString(control.isPaused() ? R.string.resume : R.string.progress_pause),
+                actionIntent(ProgressActionReceiver.ACTION_TOGGLE_PAUSE, 1));
+        b.addAction(0, activity.getString(R.string.cancel),
+                actionIntent(ProgressActionReceiver.ACTION_CANCEL, 2));
+    }
+
+    private PendingIntent actionIntent(String action, int requestCode) {
+        Intent intent = new Intent(activity, ProgressActionReceiver.class);
+        intent.setAction(action);
+        return PendingIntent.getBroadcast(activity, requestCode, intent,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private void cancelNotification() {

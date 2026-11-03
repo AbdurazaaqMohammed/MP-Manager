@@ -220,9 +220,47 @@ public final class ShizukuManager {
 
     private static void throwIfShellFails(String command, String what, int timeout,
                                           ShellProgress.Listener progress) throws IOException {
+        throwIfShellFails(command, what, timeout, progress, null);
+    }
+
+    /**
+     * Runs a command with a pause / cancel token attached.
+     *
+     * <p>The batch reports its own process id and every signal is sent through
+     * another Shizuku shell, because the batch runs as the shell user and the
+     * app is not allowed to signal it directly.
+     */
+    private static void throwIfShellFails(String command, String what, int timeout,
+                                          ShellProgress.Listener progress,
+                                          TransferControl control) throws IOException {
         if (!ready()) throw new IOException("Shizuku not connected or permission missing");
-        ShizukuShell.Result r = ShizukuShell.exec(command, timeout, progress);
-        if (r == null || !r.success) throw shellError(what, r);
+        if (control == null) {
+            ShizukuShell.Result r = ShizukuShell.exec(command, timeout, progress);
+            if (r == null || !r.success) throw shellError(what, r);
+            return;
+        }
+        ShellBatchControl batch = new ShellBatchControl(control, ShizukuManager::runSignalCommand);
+        try {
+            ShizukuShell.Result r = ShizukuShell.exec(command, timeout, batch.wrap(progress));
+            if (batch.wasCancelled()) throw new TransferCancelledException();
+            if (r == null || !r.success) throw shellError(what, r);
+        } finally {
+            batch.detach();
+        }
+    }
+
+    /**
+     * Runs a signal command as the shell user.
+     *
+     * <p>It runs on its own thread because the caller is the UI thread, and a
+     * signal command costs a binder round trip.
+     */
+    private static void runSignalCommand(String command) {
+        try {
+            ShizukuShell.exec(command, 10, null);
+        } catch (Throwable ignored) {
+            // Signalling is best effort.
+        }
     }
 
     public static boolean exists(Context context, String path) {
@@ -526,8 +564,17 @@ public final class ShizukuManager {
      */
     public static void moveAll(Context context, List<RootManager.CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException {
+        moveAll(context, ops, progress, null);
+    }
+
+    /**
+     * Moves every item, with a pause / cancel token attached.
+     */
+    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+                               ShellProgress.Listener progress,
+                               TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
-        StringBuilder shell = new StringBuilder();
+        StringBuilder shell = new StringBuilder(ShellProgress.reportPid());
         int shellOps = 0;
         int filesDone = 0;
         long bytesDone = 0L;
@@ -540,7 +587,7 @@ public final class ShizukuManager {
                 throw new IOException("Refusing to move protected path");
             }
             if (useShell(src) || useShell(dest)) {
-                if (shell.length() > 0) shell.append(" && ");
+                shell.append(" && ");
                 if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
                     shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
                 }
@@ -555,7 +602,9 @@ public final class ShizukuManager {
                 service.add(op);
             }
         }
-        if (shellOps > 0) throwIfShellFails(shell.toString(), "move", Math.max(60, shellOps * 60), progress);
+        if (shellOps > 0) {
+            throwIfShellFails(shell.toString(), "move", Math.max(60, shellOps * 60), progress, control);
+        }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
         for (RootManager.CopyOp op : service) {
@@ -592,8 +641,18 @@ public final class ShizukuManager {
      */
     public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException {
+        copyAllPreserving(context, ops, progress, null);
+    }
+
+    /**
+     * Copies every item, with a pause / cancel token attached.
+     */
+    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+                                         ShellProgress.Listener progress,
+                                         TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
-        StringBuilder shell = new StringBuilder();
+        // The batch reports its own process id first, so the app can signal it.
+        StringBuilder shell = new StringBuilder(ShellProgress.reportPid());
         int shellOps = 0;
         int filesDone = 0;
         long bytesDone = 0L;
@@ -603,7 +662,7 @@ public final class ShizukuManager {
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
             if (useShell(src) || useShell(dest)) {
-                if (shell.length() > 0) shell.append(" && ");
+                shell.append(" && ");
                 if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
                     shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
                 }
@@ -619,7 +678,9 @@ public final class ShizukuManager {
                 service.add(op);
             }
         }
-        if (shellOps > 0) throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60), progress);
+        if (shellOps > 0) {
+            throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60), progress, control);
+        }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
         for (RootManager.CopyOp op : service) {
@@ -702,6 +763,15 @@ public final class ShizukuManager {
      */
     public static void deleteAll(Context context, List<String> paths,
                                  ShellProgress.Listener progress) throws IOException {
+        deleteAll(context, paths, progress, null);
+    }
+
+    /**
+     * Deletes every path, with a pause / cancel token attached.
+     */
+    public static void deleteAll(Context context, List<String> paths,
+                                 ShellProgress.Listener progress,
+                                 TransferControl control) throws IOException {
         if (paths == null || paths.isEmpty()) return;
         List<String> shellPaths = new ArrayList<>();
         List<String> service = new ArrayList<>();
@@ -718,7 +788,7 @@ public final class ShizukuManager {
         }
         int done = 0;
         if (!shellPaths.isEmpty()) {
-            StringBuilder shell = new StringBuilder();
+            StringBuilder shell = new StringBuilder(ShellProgress.reportPid());
             final int chunk = 32;
             final java.util.concurrent.atomic.AtomicBoolean failed =
                     new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -735,13 +805,12 @@ public final class ShizukuManager {
             };
             for (int i = 0; i < shellPaths.size(); i += chunk) {
                 int end = Math.min(shellPaths.size(), i + chunk);
-                if (shell.length() > 0) shell.append(" ; ");
-                shell.append("rm -rf --");
+                shell.append(" ; rm -rf --");
                 for (int j = i; j < end; j++) shell.append(' ').append(shellArg(shellPaths.get(j)));
                 shell.append(ShellProgress.reportFailure());
                 shell.append(ShellProgress.reportAlways(end, 0L));
             }
-            throwIfShellFails(shell.toString(), "delete", Math.max(30, shellPaths.size() * 30), relay);
+            throwIfShellFails(shell.toString(), "delete", Math.max(30, shellPaths.size() * 30), relay, control);
             if (failed.get()) throw new IOException("delete failed: some paths could not be removed");
             done = shellPaths.size();
         }
@@ -770,6 +839,15 @@ public final class ShizukuManager {
      */
     public static void deleteTree(Context context, List<String> paths,
                                   ShellProgress.Listener progress) throws IOException {
+        deleteTree(context, paths, progress, null);
+    }
+
+    /**
+     * Deletes each path recursively, with a pause / cancel token attached.
+     */
+    public static void deleteTree(Context context, List<String> paths,
+                                  ShellProgress.Listener progress,
+                                  TransferControl control) throws IOException {
         if (paths == null || paths.isEmpty()) return;
         List<String> shellPaths = new ArrayList<>();
         List<String> service = new ArrayList<>();
@@ -802,16 +880,15 @@ public final class ShizukuManager {
         };
 
         if (!shellPaths.isEmpty()) {
-            StringBuilder cmd = new StringBuilder();
+            StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
             for (String path : shellPaths) {
                 String arg = shellArg(path);
-                if (cmd.length() > 0) cmd.append(" ; ");
-                cmd.append("find ").append(arg).append(" -depth -type d 2>/dev/null")
+                cmd.append(" ; find ").append(arg).append(" -depth -type d 2>/dev/null")
                         .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
                         .append(" echo @@MPPROG 1 0; done");
                 cmd.append(" ; rm -rf -- ").append(arg).append(" ; echo @@MPPROG 1 0");
             }
-            throwIfShellFails(cmd.toString(), "delete", Math.max(120, shellPaths.size() * 60), relay);
+            throwIfShellFails(cmd.toString(), "delete", Math.max(120, shellPaths.size() * 60), relay, control);
             if (failed.get()) throw new IOException("delete failed: some paths could not be removed");
         }
 

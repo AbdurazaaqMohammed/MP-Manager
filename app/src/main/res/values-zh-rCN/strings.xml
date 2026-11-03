@@ -1955,6 +1955,13 @@ Layout Inspector
     <string name="progress_pause">暂停</string>
     <string name="progress_stop">停止</string>
     <string name="resume">继续</string>
+    <!-- 进度对话框：暂停 / 取消 -->
+    <string name="progress_paused">已暂停</string>
+    <string name="progress_cancelling">正在取消…</string>
+    <string name="progress_cancelled">操作已取消</string>
+    <string name="progress_cancel_confirm">确定取消此操作？</string>
+    <string name="progress_cancel_confirm_msg">操作将尽快停止。已复制或已删除的文件不会恢复。</string>
+    <string name="progress_keep_waiting">继续等待</string>
     <string name="reading_from_provider">正在从提供方读取…</string>
     <string name="opened_from_provider">已从提供方打开——修改将保存回原处</string>
     <string name="cancel">取消</string>

@@ -23,6 +23,14 @@ public final class ShellProgress {
     private static final String PROGRESS = "@@MPPROG ";
     /** Emitted when a chunk of work failed but the batch keeps going. */
     private static final String FAILURE = "@@MPFAIL";
+    /**
+     * {@code @@MPPID <pid>} — the process id of the shell that runs the batch.
+     *
+     * <p>It lets the app stop or suspend the work that runs outside the JVM:
+     * a Java flag cannot reach a {@code cp} the shell already started, but a
+     * signal can.
+     */
+    private static final String PID = "@@MPPID ";
 
     public interface Listener {
         /**
@@ -34,9 +42,27 @@ public final class ShellProgress {
         /** One unit of the batch failed; the operation will throw at the end. */
         default void onFailure() {
         }
+
+        /**
+         * The batch reported the process id of the shell running it.
+         *
+         * <p>Called once, at the start of the batch.
+         */
+        default void onPid(int pid) {
+        }
     }
 
     private ShellProgress() {
+    }
+
+    /**
+     * The clause that reports the shell's own process id.
+     *
+     * <p>It has to come first in the batch, so the app knows which process to
+     * signal before any real work starts.
+     */
+    public static String reportPid() {
+        return "echo " + PID + "$$";
     }
 
     /** Builds the echo clause that reports {@code files}/{@code bytes} as done. */
@@ -64,6 +90,14 @@ public final class ShellProgress {
         if (line == null) return false;
         if (line.startsWith(FAILURE)) {
             if (listener != null) listener.onFailure();
+            return true;
+        }
+        if (line.startsWith(PID)) {
+            String rest = line.substring(PID.length()).trim();
+            try {
+                if (!rest.isEmpty() && listener != null) listener.onPid(Integer.parseInt(rest));
+            } catch (NumberFormatException ignored) {
+            }
             return true;
         }
         if (!line.startsWith(PROGRESS)) return false;
