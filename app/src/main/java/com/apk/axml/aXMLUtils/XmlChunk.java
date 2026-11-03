@@ -19,7 +19,7 @@ public class XmlChunk extends Chunk<XmlChunk.H> {
     }
 
     public XmlChunk(Context context, List<ResEntry> resourceEntries) {
-        this(context, resourceEntries, StringPoolChunk.Encoding.UNICODE);
+        this(context, resourceEntries, StringPoolChunk.Encoding.UTF8);
     }
 
     public XmlChunk(Context context, List<ResEntry> resourceEntries, StringPoolChunk.Encoding encoding) {

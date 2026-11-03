@@ -312,6 +312,12 @@ public class SettingsController {
         });
         checkUpdateNow.setVisibility(checkForUpdates ? View.GONE : View.VISIBLE);
         checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, activity));
+
+        View btnExport = settingsDialog.findViewById(R.id.btn_export_settings);
+        if (btnExport != null) btnExport.setOnClickListener(v -> performExportSettings());
+        View btnImport = settingsDialog.findViewById(R.id.btn_import_settings);
+        if (btnImport != null) btnImport.setOnClickListener(v -> performImportSettings());
+
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> new UIHelper(activity).showAboutDialog());
         setupPluginSettings(settingsDialog, settings);
         setupCollapsibleSections(settingsDialog);
@@ -1378,5 +1384,51 @@ public class SettingsController {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private void performExportSettings() {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        FilePickerDialog picker = new FilePickerDialog(activity, props);
+        picker.setTitle(activity.getString(R.string.export_settings));
+        picker.setDialogSelectionListener(files -> {
+            if (files != null && files.length > 0 && files[0] != null) {
+                File dir = new File(files[0]);
+                File target = new File(dir, "MPManager_Settings_Backup.json");
+                try {
+                    io.github.abdurazaaqmohammed.utils.SettingsBackupHelper.exportToFile(activity, target);
+                    Extensions.showMessage(activity, activity.getString(R.string.settings_exported) + ": " + target.getName());
+                } catch (Exception e) {
+                    Extensions.showMessage(activity, activity.getString(R.string.export_settings_failed) + ": " + e.getMessage());
+                }
+            }
+        });
+        picker.show();
+    }
+
+    private void performImportSettings() {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.FILE_SELECT;
+        props.extensions = new String[]{"json"};
+        props.root = Environment.getExternalStorageDirectory();
+        FilePickerDialog picker = new FilePickerDialog(activity, props);
+        picker.setTitle(activity.getString(R.string.import_settings));
+        picker.setDialogSelectionListener(files -> {
+            if (files != null && files.length > 0 && files[0] != null) {
+                File source = new File(files[0]);
+                try {
+                    io.github.abdurazaaqmohammed.utils.SettingsBackupHelper.importFromFile(activity, source);
+                    Extensions.showMessage(activity, activity.getString(R.string.settings_imported));
+                    refreshFileLists();
+                    refreshSidebar();
+                } catch (Exception e) {
+                    Extensions.showMessage(activity, activity.getString(R.string.import_settings_failed) + ": " + e.getMessage());
+                }
+            }
+        });
+        picker.show();
     }
 }

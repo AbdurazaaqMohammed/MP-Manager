@@ -455,6 +455,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             if (intent.hasExtra(Intent.EXTRA_TEXT)) {
                 extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
             }
+            if (intent.hasExtra("poolEncoding")) {
+                String enc = intent.getStringExtra("poolEncoding");
+                axmlEncoding = "UTF8".equals(enc) ? StringPoolChunk.Encoding.UTF8 : StringPoolChunk.Encoding.UNICODE;
+            }
             if (intent.hasExtra("resEntries")) {
                 //noinspection unchecked
                 entries = (List<ResEntry>) intent.getSerializableExtra("resEntries");

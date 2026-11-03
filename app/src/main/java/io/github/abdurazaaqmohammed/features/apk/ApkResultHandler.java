@@ -183,8 +183,17 @@ public class ApkResultHandler {
                                                 updateArchiveLegacy(zipFile, additions);
                                             } else {
                                                 ZipParameters zp = new ZipParameters();
-                                                boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
+                                                net.lingala.zip4j.model.FileHeader origHeader = zf.getFileHeader(targetEntry);
+                                                boolean store;
+                                                if (origHeader != null) {
+                                                    store = origHeader.getCompressionMethod() == CompressionMethod.STORE;
+                                                } else {
+                                                    store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
+                                                }
                                                 zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                                if (!store) {
+                                                    zp.setCompressionLevel(net.lingala.zip4j.model.enums.CompressionLevel.ULTRA);
+                                                }
                                                 if (entryName != null) zp.setFileNameInZip(entryName);
                                                 zf.addFile(path, zp);
                                             }

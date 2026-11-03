@@ -836,9 +836,12 @@ public class FileOpener {
                                     .putExtra("path", readable.getPath()));
                         } else if (isBinary) {
                             try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                                aXMLDecoder decoder = new aXMLDecoder(is2);
+                                String decodedText = decoder.decodeAsString().trim();
                                 context.startActivity(rootAwareEditorIntent(readable, file)
-                                        .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
+                                        .putExtra(Intent.EXTRA_TEXT, decodedText)
                                         .putExtra("axml", true)
+                                        .putExtra("poolEncoding", decoder.getPoolEncoding() == com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UTF8 ? "UTF8" : "UNICODE")
                                         .putExtra("path", readable.getPath()));
                             } catch (Exception e) {
                                 new ErrorUtil(context).showError(e);
@@ -1091,9 +1094,12 @@ public class FileOpener {
                                 .putExtra("path", readable.getPath()));
                     }
                     else if (axml) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                        aXMLDecoder decoder = new aXMLDecoder(is2);
+                        String decodedText = decoder.decodeAsString().trim();
                         context.startActivity(rootAwareEditorIntent(readable, file)
-                                .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
+                                .putExtra(Intent.EXTRA_TEXT, decodedText)
                                 .putExtra("axml", true)
+                                .putExtra("poolEncoding", decoder.getPoolEncoding() == com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UTF8 ? "UTF8" : "UNICODE")
                                 .putExtra("path", readable.getPath()));
                     }
                     else context.startActivity(rootAwareEditorIntent(readable, file)
@@ -1103,7 +1109,13 @@ public class FileOpener {
                 }
             });
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
-            withReadableCopy(file, readable -> context.openImageViewer(readable.getPath()));
+            withReadableCopy(file, readable -> {
+                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
+                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                } else {
+                    context.openImageViewer(readable.getPath());
+                }
+            });
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
         } else if ((ext.equals(".apk"))) {

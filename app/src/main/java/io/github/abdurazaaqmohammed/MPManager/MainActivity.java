@@ -2148,6 +2148,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
+        syncOppositePaneIfSame(pane1, folder, false, null);
     }
 
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory) {
@@ -2341,6 +2342,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (isCurrentPane) setMultiSelectModeUI(false);
             updateNavigationButtons();
         }
+        syncOppositePaneIfSame(pane1, zipFile, true, path);
     }
 
     public void loadFolderInPane(File folder, boolean pane1) {
@@ -2622,22 +2624,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /**
-     * Refreshes the given pane. When both panes are pointing at the same folder (and the same
-     * location inside an archive) the other pane is refreshed too, so the dual view stays in sync.
+     * Refreshes the given pane and automatically refreshes the other pane so both stay in sync.
      * This is user-initiated (pull-to-refresh), so scroll is reset to the top.
      */
     public void refreshPane(boolean pane1) {
-        clearGreen(pane1);
-        if (panesShowSameFolder()) {
-            clearGreen(!pane1);
-            try {
-                ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane2 : R.id.swipeRefreshPane1)).setRefreshing(false);
-            } catch (Exception ignored) { }
-        }
-        reloadPane(pane1, false);
+        clearGreen(true);
+        clearGreen(false);
         try {
-            ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+            ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane1)).setRefreshing(false);
+            ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setRefreshing(false);
         } catch (Exception ignored) { }
+        reloadOnePane(pane1, false);
+        reloadOnePane(!pane1, false);
     }
 
     public void reloadPane(boolean pane1) {
@@ -2645,18 +2643,33 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /**
-     * Reloads a pane, optionally preserving the current scroll position.
-     * Programmatic (non-user) refreshes should pass true so the list
-     * does not jump to the top while the user is browsing.
+     * Reloads a pane and automatically reloads the other pane too,
+     * optionally preserving the current scroll position.
      */
     public void reloadPane(boolean pane1, boolean preserveScroll) {
-        // When both panes point at the same listing, a change made through
-        // either one is visible in both, so the other pane has to be reloaded
-        // too. Decided before the first reload, since that rewrites the pane's
-        // folder fields.
-        boolean alsoOther = panesShowSameFolder();
         reloadOnePane(pane1, preserveScroll);
-        if (alsoOther) reloadOnePane(!pane1, preserveScroll);
+        reloadOnePane(!pane1, preserveScroll);
+    }
+
+    private boolean isSyncingOpposite = false;
+
+    private void syncOppositePaneIfSame(boolean sourcePane1, File folder, boolean isZip, String zipPath) {
+        if (isSyncingOpposite) return;
+        boolean targetPane1 = !sourcePane1;
+        boolean same;
+        if (isZip) {
+            same = sameZipFolderShown(folder, zipPath, targetPane1);
+        } else {
+            same = samePlainFolderShown(folder, targetPane1);
+        }
+        if (same) {
+            isSyncingOpposite = true;
+            try {
+                reloadOnePane(targetPane1, true);
+            } finally {
+                isSyncingOpposite = false;
+            }
+        }
     }
 
     private void reloadOnePane(boolean pane1, boolean preserveScroll) {
@@ -2793,7 +2806,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         reloadPane(pane1, false);
         handler.postDelayed(() -> focusFirstItem(pane1, names), 120);
         if (syncOther) {
-            reloadPane(!pane1, false);
             handler.postDelayed(() -> focusFirstItem(!pane1, names), 120);
         }
     }

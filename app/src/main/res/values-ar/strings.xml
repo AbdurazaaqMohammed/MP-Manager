@@ -73,6 +73,8 @@
     <string name="deleting">حذف %1$s</string>
     <string name="compressing">جارٍ الضغط</string>
     <string name="compress">ضغط</string>
+    <string name="sticker_preview">معاينة الملصق</string>
+    <string name="open_as_archive">فتح كأرشيف</string>
     <string name="hist">سجل البحث</string>
     <string name="filename">اسم الملف</string>
     <string name="install_location">موقع التثبيت</string>
@@ -904,8 +906,8 @@
     <string name="querier_only_decimal_negative">الأرقام العشرية فقط هي التي يمكن أن تكون سالبة</string>
     <string name="menu_select_all">تحديد الكل</string>
     <string name="menu_hidden_files">الملفات المخفية</string>
-    <string name="menu_show_system_hidden">إظهار ملفات النظام المخفية</string>
-    <string name="menu_show_manual_hidden">إظهار الملفات المخفية يدوياً</string>
+    <string name="menu_show_system_hidden">إظهار مخفي النظام</string>
+    <string name="menu_show_manual_hidden">إظهار المخفي يدوياً</string>
     <string name="menu_hide_selected">إخفاء الملفات المحددة</string>
     <string name="menu_add_bookmark">إضافة إلى الإشارات المرجعية</string>
     <string name="menu_swap_panes">تبديل الأجزاء</string>
@@ -1950,4 +1952,19 @@
     <string name="progress_done">تم</string>
     <string name="special_permissions">أذونات خاصة</string>
     <string name="mime">MIME</string>
+    <string name="customize_apk_more">ترتيب خيارات المزيد</string>
+    <string name="customize_apk_more_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
+    <string name="menu_refresh">تحديث</string>
+    <string name="customize_right_menu">ترتيب القائمة الجانبية</string>
+    <string name="customize_right_menu_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
+    <string name="reset_signature_key">إعادة تعيين للمفتاح الافتراضي</string>
+    <string name="signature_key_reset">تمت استعادة مفتاح التوقيع الافتراضي</string>
+    <string name="backup_restore_settings">النسخ الاحتياطي والاستعادة</string>
+    <string name="export_settings">تصدير الإعدادات</string>
+    <string name="import_settings">استيراد الإعدادات</string>
+    <string name="settings_exported">تم تصدير الإعدادات بنجاح</string>
+    <string name="settings_imported">تم استيراد الإعدادات بنجاح</string>
+    <string name="export_settings_failed">فشل تصدير الإعدادات</string>
+    <string name="import_settings_failed">فشل استيراد الإعدادات</string>
+    <string name="remember_password">تذكر كلمة المرور</string>
 </resources>

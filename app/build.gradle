@@ -16,9 +16,18 @@ android {
         versionName "1.1.1"
     }
 
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "mpmanager123"
+            keyAlias "mpmanager"
+            keyPassword "mpmanager123"
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -136,5 +145,6 @@ dependencies {
     implementation("commons-io:commons-io:2.22.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation 'com.squareup.okhttp3:okhttp:5.5.0'
+    implementation 'com.airbnb.android:lottie:6.6.6'
     testImplementation 'junit:junit:4.13.2'
 }

@@ -157,8 +157,11 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
         }
         header.stringCount = rawStrings.size();
         header.styleCount = 0;
-        header.size = off+header.headerSize+header.stringCount*4+header.styleCount*4;
-        header.stringPoolOffset = offsets.size()*4+header.headerSize;
+        int unpaddedSize = off + header.headerSize + header.stringCount * 4 + header.styleCount * 4;
+        int rem = unpaddedSize % 4;
+        int pad = rem == 0 ? 0 : 4 - rem;
+        header.size = unpaddedSize + pad;
+        header.stringPoolOffset = offsets.size() * 4 + header.headerSize;
         header.stylePoolOffset = 0;
         stringsOffset = new int[offsets.size()];
         if (encoding == Encoding.UTF8) header.flags |= 0x100;
@@ -171,6 +174,8 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
         for (int i:stringsOffset) w.write(i);
         for (int i:stylesOffset) w.write(i);
         for (RawString r:rawStrings) r.write(w);
+        int rem = header.size - (header.headerSize + header.stringCount * 4 + header.styleCount * 4 + (rawStrings.isEmpty() ? 0 : stringsOffset[stringsOffset.length - 1] + rawStrings.get(rawStrings.size() - 1).size()));
+        for (int i = 0; i < rem; i++) w.write((byte) 0);
     }
 
     public class StringItem {
