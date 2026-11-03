@@ -85,10 +85,13 @@ public class SignatureKeyDialog {
         signedBy.setText(prefs.getString("signedBy", "Android Gradle 8.0.2"));
 
         TextView passwordEt = view.findViewById(R.id.et_password);
-        /*MaterialCheckBox cbSavePassword = view.findViewById(R.id.cb_save_password);
+        CompoundButton cbSavePassword = view.findViewById(R.id.cb_save_password);
         boolean savePassword = prefs.getBoolean("save_password", false);
         cbSavePassword.setChecked(savePassword);
-        if(savePassword) passwordEt.setText(prefs.getString("keyPass", "android"));*/
+        if (savePassword) {
+            String savedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", ""));
+            if (!TextUtils.isEmpty(savedPass)) passwordEt.setText(savedPass);
+        }
         AutoCompleteTextView actv = view.findViewById(R.id.actv_signature_key);
         MaterialButton btnPick = view.findViewById(R.id.btn_pick_file);
         MaterialButton btnResetKey = view.findViewById(R.id.btn_reset_key);
@@ -127,6 +130,7 @@ public class SignatureKeyDialog {
             if (finalDebugKeyPath != null) actv.setText(finalDebugKeyPath, false);
             else actv.setText("", false);
             passwordEt.setText("");
+            cbSavePassword.setChecked(false);
             cbBiometric.setChecked(false);
             Extensions.showMessage(activity, R.string.signature_key_reset);
         });
@@ -196,29 +200,43 @@ public class SignatureKeyDialog {
                     String resolvedPassword = !TextUtils.isEmpty(password) || !selectedPath.endsWith("debug.keystore")
                         ? password : "android";
 
-                    if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && biometricChecked) {
-                        if (!TextUtils.isEmpty(resolvedPassword)) {
+                    boolean savePass = cbSavePassword.isChecked();
+                    prefs.edit().putBoolean("save_password", savePass).apply();
+
+                    if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem")) {
+                        if (!selectedPath.endsWith("debug.keystore") && !TextUtils.isEmpty(resolvedPassword)) {
                             if (!verifyKeystorePassword(new File(selectedPath), resolvedPassword)) {
                                 Extensions.showMessage(activity, activity.getString(R.string.sig_invalid_password));
                                 return;
                             }
-                            prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(resolvedPassword)).apply();
-                            prefs.edit().putBoolean("useBiometrics", true).apply();
-                            useBiometrics = true;
-                        } else if (wasUsingBiometrics) {
-                            useBiometrics = true;
+                        }
+                        if (biometricChecked) {
+                            if (!TextUtils.isEmpty(resolvedPassword)) {
+                                prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(resolvedPassword)).apply();
+                                prefs.edit().putBoolean("useBiometrics", true).apply();
+                                useBiometrics = true;
+                            } else if (wasUsingBiometrics) {
+                                useBiometrics = true;
+                            } else {
+                                Extensions.showMessage(activity, activity.getString(R.string.sig_enter_password_first));
+                                return;
+                            }
                         } else {
-                            Extensions.showMessage(activity, activity.getString(R.string.sig_enter_password_first));
-                            return;
+                            if (wasUsingBiometrics) {
+                                prefs.edit().putBoolean("useBiometrics", false).apply();
+                            }
+                            if (savePass && !TextUtils.isEmpty(resolvedPassword)) {
+                                prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(resolvedPassword)).apply();
+                            } else if (!savePass) {
+                                prefs.edit().remove("keyPass").apply();
+                            }
+                            if (TextUtils.isEmpty(resolvedPassword)) {
+                                Extensions.showMessage(activity, activity.getString(R.string.sig_no_password));
+                                return;
+                            }
+                            useBiometrics = false;
                         }
                     } else {
-                        if (wasUsingBiometrics) {
-                            prefs.edit().putBoolean("useBiometrics", false).remove("keyPass").apply();
-                        }
-                        if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && TextUtils.isEmpty(resolvedPassword)) {
-                            Extensions.showMessage(activity, activity.getString(R.string.sig_no_password));
-                            return;
-                        }
                         useBiometrics = false;
                     }
 
