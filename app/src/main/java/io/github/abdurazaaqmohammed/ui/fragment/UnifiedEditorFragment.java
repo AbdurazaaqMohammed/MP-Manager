@@ -535,7 +535,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void postInitialize(boolean skipRestorePosition) {
         Activity activity = getActivity();
-        boolean consumedPending = false;
+        final boolean[] consumedPending = {false};
         if (isSmali && activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = null;
             for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
@@ -554,15 +554,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     tab.pendingLine = -1;
                     tab.pendingColumn = -1;
                     tab.pendingQuery = null;
-                    consumedPending = true;
+                    consumedPending[0] = true;
                     editor.post(() -> navigateTo(line, col, q));
                 }
             }
         }
         new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
-        if (!skipRestorePosition && !consumedPending && positionManager != null) {
+        if (!skipRestorePosition && !consumedPending[0] && positionManager != null) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (consumedPending) return;
+                if (consumedPending[0]) return;
                 try {
                     EditorPositionManager.Position pos = positionManager.getPosition(className);
                     if (pos != null && pos.lineno >= 0 && pos.lineno < editor.getText().getLineCount()) {
