@@ -501,16 +501,12 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         }
 
-        // 4b. Visited results are dimmed so already-opened rows stand apart like hidden files (0.55f alpha).
+        // 4b. Visited results are dimmed so already-opened rows stand apart like hidden files (0.70f alpha).
         boolean visited = (isSearchList || isHistory) && isOpened(node);
-        int wantedTextColor = visited ? openedTextColorResolved : defaultTextColor;
-        if (holder.name.getCurrentTextColor() != wantedTextColor) {
-            holder.name.setTextColor(wantedTextColor);
-        }
-        float wantedAlpha = visited ? 0.55f : 1.0f;
+        float wantedAlpha = visited ? 0.70f : 1.0f;
         holder.itemView.setAlpha(wantedAlpha);
-        if (holder.itemContent != null) holder.itemContent.setAlpha(wantedAlpha);
-        if (holder.name != null) holder.name.setAlpha(wantedAlpha);
+        if (holder.itemContent != null) holder.itemContent.setAlpha(1.0f);
+        if (holder.name != null) holder.name.setAlpha(1.0f);
 
         // 5. Indentation
         int arrowWidth = (int) (14 * density);

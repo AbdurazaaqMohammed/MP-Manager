@@ -1505,38 +1505,70 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void navigateTo(final int lineNum, final int column, final String query) {
         if (editor == null) return;
-        if (editor.getText().getLineCount() <= lineNum) {
+        if (editor.getText().getLineCount() == 0) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> navigateTo(lineNum, column, query), 100);
             return;
         }
         try {
-            if (lineNum >= 0 && lineNum < editor.getText().getLineCount()) {
-                final int col = (column >= 0 && column < editor.getText().getColumnCount(lineNum)) ? column : 0;
-                editor.jumpToLine(lineNum);
-                editor.setSelection(lineNum, col);
-                editor.ensurePositionVisible(lineNum, col);
-
-                String lineText = editor.getText().getLineString(lineNum);
-                if (query != null && !query.isEmpty() && !query.contains("\n")) {
-                    int start = lineText.toLowerCase().indexOf(query.toLowerCase());
-                    if (start != -1) {
-                        editor.setSelectionRegion(lineNum, start, lineNum, start + query.length(), false, 0);
-                        dismissEditorWindow(editor);
-                        scrollSelectionIntoView();
-                        return;
-                    }
+            int targetLine = lineNum;
+            String cleanQuery = (query != null && !query.isEmpty() && !query.contains("\n")) ? query.trim() : null;
+            if (cleanQuery != null) {
+                if (cleanQuery.startsWith("\"") && cleanQuery.endsWith("\"") && cleanQuery.length() > 1) {
+                    cleanQuery = cleanQuery.substring(1, cleanQuery.length() - 1).trim();
                 }
-                if (isSmali && lineText.contains("const-string")) {
-                    int[] positions = SmaliHelper.getOuterQuotePositions(lineText);
-                    if (positions[0] != -1 && positions[1] != -1) {
-                        editor.setSelectionRegion(lineNum, positions[0] + 1, lineNum, positions[1], false, 0);
-                        dismissEditorWindow(editor);
-                        scrollSelectionIntoView();
-                        return;
-                    }
-                }
-                scrollSelectionIntoView();
             }
+
+            boolean targetMatches = false;
+            if (targetLine >= 0 && targetLine < editor.getText().getLineCount()) {
+                String lineText = editor.getText().getLineString(targetLine);
+                if (cleanQuery == null || lineText.toLowerCase().contains(cleanQuery.toLowerCase())) {
+                    targetMatches = true;
+                }
+            }
+
+            if (!targetMatches && cleanQuery != null && !cleanQuery.isEmpty()) {
+                int lineCount = editor.getText().getLineCount();
+                String queryLower = cleanQuery.toLowerCase();
+                for (int i = 0; i < lineCount; i++) {
+                    String line = editor.getText().getLineString(i).toLowerCase();
+                    if (line.contains(queryLower)) {
+                        targetLine = i;
+                        targetMatches = true;
+                        break;
+                    }
+                }
+            }
+
+            if (targetLine < 0 || targetLine >= editor.getText().getLineCount()) {
+                targetLine = Math.max(0, Math.min(lineNum, editor.getText().getLineCount() - 1));
+            }
+
+            final int line = targetLine;
+            final int col = (column >= 0 && column < editor.getText().getColumnCount(line)) ? column : 0;
+            editor.jumpToLine(line);
+            editor.setSelection(line, col);
+            editor.ensurePositionVisible(line, col);
+
+            String lineText = editor.getText().getLineString(line);
+            if (cleanQuery != null && !cleanQuery.isEmpty()) {
+                int start = lineText.toLowerCase().indexOf(cleanQuery.toLowerCase());
+                if (start != -1) {
+                    editor.setSelectionRegion(line, start, line, start + cleanQuery.length(), false, 0);
+                    dismissEditorWindow(editor);
+                    scrollSelectionIntoView();
+                    return;
+                }
+            }
+            if (isSmali && lineText.contains("const-string")) {
+                int[] positions = SmaliHelper.getOuterQuotePositions(lineText);
+                if (positions[0] != -1 && positions[1] != -1) {
+                    editor.setSelectionRegion(line, positions[0] + 1, line, positions[1], false, 0);
+                    dismissEditorWindow(editor);
+                    scrollSelectionIntoView();
+                    return;
+                }
+            }
+            scrollSelectionIntoView();
         } catch (Exception ignored) {}
     }
 

@@ -167,7 +167,8 @@ public class SearchFragment extends Fragment {
                 @Override
                 public void onNodeClick(TreeNode node) {
                     if (node.isSnippet()) {
-                        activity.openClassAtLine(node.getFullName(), node.getLineNumber(), currentQuery);
+                        String query = (currentQuery != null && !currentQuery.isEmpty()) ? currentQuery : node.getName();
+                        activity.openClassAtLine(node.getFullName(), node.getLineNumber(), query);
                     } else if (!node.isDirectory()) {
                         activity.openClass(node.getFullName());
                     }
