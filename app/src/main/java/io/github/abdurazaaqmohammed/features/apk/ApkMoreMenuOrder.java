@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 
