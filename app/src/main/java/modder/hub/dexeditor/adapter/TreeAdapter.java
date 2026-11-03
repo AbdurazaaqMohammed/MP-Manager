@@ -499,12 +499,14 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         }
 
-        // 4b. Visited results are dimmed so already-opened rows stand apart.
-        int wantedTextColor = (isSearchList || isHistory) && isOpened(node)
-                ? openedTextColorResolved : defaultTextColor;
+        // 4b. Visited results are dimmed so already-opened rows stand apart like hidden files (0.55f alpha).
+        boolean visited = (isSearchList || isHistory) && isOpened(node);
+        int wantedTextColor = visited ? openedTextColorResolved : defaultTextColor;
         if (holder.name.getCurrentTextColor() != wantedTextColor) {
             holder.name.setTextColor(wantedTextColor);
         }
+        float wantedAlpha = visited ? 0.55f : 1.0f;
+        holder.itemView.setAlpha(wantedAlpha);
 
         // 5. Indentation
         int arrowWidth = (int) (14 * density);
