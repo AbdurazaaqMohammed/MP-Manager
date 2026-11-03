@@ -8,13 +8,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="4dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/text_to_find"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,7 +35,7 @@
                 android:id="@+id/btn_history_dropdown"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:padding="8dp"
+                android:padding="6dp"
                 android:src="@drawable/arrow_drop_down_24px"
                 android:contentDescription="@string/hist" />
 
@@ -42,14 +44,14 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="4dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/pathTitle"
                 android:text="@string/path"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <LinearLayout
                 android:id="@+id/layout_exclude_list"
@@ -73,7 +75,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/exclude_list"
                     android:textColor="#2196F3"
-                    android:textSize="14sp" />
+                    android:textSize="13sp" />
             </LinearLayout>
         </RelativeLayout>
 
@@ -94,7 +96,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -102,26 +104,26 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/search_type"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <Spinner
                 android:id="@+id/spinner_search_type"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp" />
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
         </LinearLayout>
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_search_subfolders"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:checked="true"
             android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="@string/search_subfolders" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -129,8 +131,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="@string/match_case" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -138,8 +140,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="@string/regex" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -147,8 +149,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="@string/exactly_match" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -156,8 +158,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="@string/hex"
             android:visibility="gone" />
 
