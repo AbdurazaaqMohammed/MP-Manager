@@ -1957,4 +1957,14 @@
     <string name="menu_refresh">تحديث</string>
     <string name="customize_right_menu">ترتيب القائمة الجانبية</string>
     <string name="customize_right_menu_hint">الضغط مطولاً لسحب العناصر إلى أي مكان</string>
+    <string name="reset_signature_key">إعادة تعيين للمفتاح الافتراضي</string>
+    <string name="signature_key_reset">تمت استعادة مفتاح التوقيع الافتراضي</string>
+    <string name="backup_restore_settings">النسخ الاحتياطي والاستعادة</string>
+    <string name="export_settings">تصدير الإعدادات</string>
+    <string name="import_settings">استيراد الإعدادات</string>
+    <string name="settings_exported">تم تصدير الإعدادات بنجاح</string>
+    <string name="settings_imported">تم استيراد الإعدادات بنجاح</string>
+    <string name="export_settings_failed">فشل تصدير الإعدادات</string>
+    <string name="import_settings_failed">فشل استيراد الإعدادات</string>
+    <string name="remember_password">تذكر كلمة المرور</string>
 </resources>

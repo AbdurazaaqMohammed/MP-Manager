@@ -138,18 +138,28 @@ public class SignWrapper {
             }
             requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
         } else {
+            String storedPass = prefs.getBoolean("save_password", false) ? PasswordEncryptor.decryptString(prefs.getString("keyPass", "")) : "";
+            if (!TextUtils.isEmpty(storedPass) && verifyKeystorePassword(keyFile, storedPass)) {
+                callback.onAuthenticated(new SignWrapper(keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign));
+                return;
+            }
             requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
         }
     }
 
     private static void requestPassword(AppCompatActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         EditText pwInput = new EditText(activity);
         pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pwInput.setHint(activity.getString(R.string.enter_password));
+        com.google.android.material.materialswitch.MaterialSwitch cbRemember = new com.google.android.material.materialswitch.MaterialSwitch(activity);
+        cbRemember.setText(activity.getString(R.string.remember_password));
+        cbRemember.setChecked(prefs.getBoolean("save_password", false));
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
         layout.addView(UiFields.wrap(activity, pwInput, null, 0));
+        layout.addView(cbRemember);
         new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.enter_password))
                 .setView(layout)
@@ -162,6 +172,13 @@ public class SignWrapper {
                     if (!verifyKeystorePassword(keyFile, password)) {
                         Extensions.showMessage(activity, R.string.invalid_password);
                         return;
+                    }
+                    boolean remember = cbRemember.isChecked();
+                    prefs.edit().putBoolean("save_password", remember).apply();
+                    if (remember) {
+                        prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(password)).apply();
+                    } else {
+                        prefs.edit().remove("keyPass").apply();
                     }
                     callback.onAuthenticated(new SignWrapper(keyFile, password, v1, v2, v3, v4, signedBy, zipalign));
                 })
