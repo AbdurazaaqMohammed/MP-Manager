@@ -2042,4 +2042,14 @@ Patched code:</string>
     <string name="menu_refresh">Refresh</string>
     <string name="customize_right_menu">Right menu order</string>
     <string name="customize_right_menu_hint">Long-press to drag items anywhere</string>
+    <string name="reset_signature_key">Reset to default key</string>
+    <string name="signature_key_reset">Signature key reset to default</string>
+    <string name="backup_restore_settings">Backup &amp; Restore</string>
+    <string name="export_settings">Export settings</string>
+    <string name="import_settings">Import settings</string>
+    <string name="settings_exported">Settings exported successfully</string>
+    <string name="settings_imported">Settings imported successfully</string>
+    <string name="export_settings_failed">Failed to export settings</string>
+    <string name="import_settings_failed">Failed to import settings</string>
+    <string name="remember_password">Remember password</string>
 </resources>
