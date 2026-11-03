@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:orientation="horizontal">
+
+        <!-- Original string (left column, MT translation-mode style) -->
+        <TextView
+            android:id="@+id/string_original"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="10dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="13sp"
+            android:maxLines="5"
+            android:ellipsize="end" />
+
+        <View
+            android:layout_width="0.5dp"
+            android:layout_height="match_parent"
+            android:background="?attr/colorOutline" />
+
+        <!-- Translation (right column): pending edit in green, dash when untranslated -->
+        <TextView
+            android:id="@+id/string_translation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="10dp"
+            android:textSize="13sp"
+            android:maxLines="5"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp" />
+
+</LinearLayout>

@@ -122,6 +122,11 @@
             android:exported="false">
         </activity>
         <activity
+            android:name="modder.hub.dexeditor.activity.TranslationModeActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.SslUnpinningActivity"
             android:exported="false">

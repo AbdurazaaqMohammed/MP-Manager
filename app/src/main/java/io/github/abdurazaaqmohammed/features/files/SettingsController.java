@@ -154,6 +154,44 @@ public class SettingsController {
     public void attach(ScrollView settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
+        // Accent color (follow material color / presets / custom picker).
+        android.view.View accentRow = settingsDialog.findViewById(R.id.accentColorRow);
+        android.widget.TextView accentValue = settingsDialog.findViewById(R.id.accentColorValue);
+        android.view.View.OnClickListener accentClick = v ->
+                io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs.showAccentChooser(activity);
+        if (accentRow != null) accentRow.setOnClickListener(accentClick);
+        if (accentValue != null) {
+            Runnable refreshAccent = () -> {
+                String mode = null;
+                try {
+                    mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
+                            .getString(io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.ACCENT_PREF_KEY, null);
+                } catch (Exception ignored) {
+                }
+                String text;
+                if (mode == null || mode.isEmpty()) {
+                    text = activity.getString(R.string.accent_follow_material);
+                } else if ("custom".equals(mode)) {
+                    int color = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
+                            .getInt(io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, 0);
+                    text = activity.getString(R.string.accent_custom_value,
+                            String.format("#%06X", color & 0xFFFFFF));
+                } else if (mode.startsWith("preset:")) {
+                    text = mode.substring("preset:".length());
+                } else {
+                    text = mode;
+                }
+                accentValue.setText(text);
+            };
+            refreshAccent.run();
+            if (accentRow != null) {
+                accentRow.setOnLongClickListener(v -> {
+                    refreshAccent.run();
+                    return true;
+                });
+            }
+        }
+
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         String currentThemeId = ThemeRegistry.getCurrentId(activity);
         if (BuiltInThemes.LIGHT_ID.equals(currentThemeId)) {

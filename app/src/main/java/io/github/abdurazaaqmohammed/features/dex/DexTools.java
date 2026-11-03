@@ -155,10 +155,18 @@ public class DexTools {
                         showDexStringReplaceDialog(dexFile, zipFile);
                     } else if (which == 6) {
                         mergeDexOption(dexFile, zipFile);
-                    } else if (which == 0 && zipFile != null) {
-                        openDexPlusInZip(zipFile, dexFile.getName());
+                    } else if (which == 4) {
+                        // MT-style standalone translation mode (multidex dialog
+                        // first when the dex comes from an archive).
+                        if (zipFile != null) {
+                            openDexPlusInZip(zipFile, dexFile.getName(), 3);
+                        } else {
+                            openTranslationActivity(singleDexList(dexFile), null, null);
+                        }
+                    } else if (zipFile != null) {
+                        openDexPlusInZip(zipFile, dexFile.getName(), null);
                     } else {
-                        openDexPlusFiles(singleDexList(dexFile), which == 4 ? 3 : null);
+                        openDexPlusFiles(singleDexList(dexFile), null);
                     }
                 }).create());
     }
@@ -321,6 +329,10 @@ public class DexTools {
     }
 
     private void openDexPlusInZip(File zipFile, String preselected) {
+        openDexPlusInZip(zipFile, preselected, null);
+    }
+
+    private void openDexPlusInZip(File zipFile, String preselected, Integer openTab) {
         DexPreExtract session = preExtractAllDex(context, zipFile, false);
         List<String> dexFiles;
         try {
@@ -334,7 +346,7 @@ public class DexTools {
             return;
         }
         if (dexFiles.size() == 1) {
-            proceedWithSelectedDex(zipFile, session, dexFiles);
+            proceedWithSelectedDex(zipFile, session, dexFiles, openTab);
             return;
         }
         File tempFolder = session.outputDir;
@@ -356,7 +368,7 @@ public class DexTools {
                 if (selectedItems[k]) selectedNames.add(dexNames.get(k));
             }
             if (selectedNames.isEmpty()) return;
-            proceedWithSelectedDex(zipFile, session, selectedNames);
+            proceedWithSelectedDex(zipFile, session, selectedNames, openTab);
         });
         builder.setNegativeButton(android.R.string.cancel, null);
         AlertDialog dialog = builder.create();
@@ -383,6 +395,10 @@ public class DexTools {
     }
 
     private void proceedWithSelectedDex(File zipFile, DexPreExtract session, List<String> selectedNames) {
+        proceedWithSelectedDex(zipFile, session, selectedNames, null);
+    }
+
+    private void proceedWithSelectedDex(File zipFile, DexPreExtract session, List<String> selectedNames, Integer openTab) {
         DexPreExtract useSession = session;
         boolean allThere = useSession.error == null;
         if (allThere) {
@@ -396,7 +412,7 @@ public class DexTools {
         if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
         final DexPreExtract waitSession = useSession;
         if (waitSession.done.getCount() == 0 && waitSession.error == null) {
-            openExtractedDex(waitSession, selectedNames);
+            openExtractedDex(waitSession, selectedNames, openTab);
             return;
         }
         ProgressManager pm = new ProgressManager(context, false);
@@ -429,6 +445,21 @@ public class DexTools {
     }
 
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
+        openExtractedDex(session, selectedNames, null);
+    }
+
+    private void openTranslationActivity(ArrayList<String> paths, File zipFile, String entryPath) {
+        Intent intent = new Intent(context, modder.hub.dexeditor.activity.TranslationModeActivity.class)
+                .putExtra("theme", context.theme)
+                .putStringArrayListExtra("SelectedDexFiles", paths);
+        if (zipFile != null) {
+            intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
+            if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
+        }
+        context.startActivityForResult(intent, 757);
+    }
+
+    private void openExtractedDex(DexPreExtract session, List<String> selectedNames, Integer openTab) {
         ArrayList<String> selectedPaths = new ArrayList<>();
         String missing = null;
         String firstEntry = null;
@@ -445,7 +476,12 @@ public class DexTools {
             Extensions.showMessage(context, missing != null ? missing : context.rss.getString(R.string.file_no_longer_available));
             return;
         }
-        openDexPlusFiles(selectedPaths, null, session.zipFile, firstEntry);
+        if (openTab != null && openTab == 3) {
+            // openTab 3 == translation mode -> standalone activity.
+            openTranslationActivity(selectedPaths, session.zipFile, firstEntry);
+            return;
+        }
+        openDexPlusFiles(selectedPaths, openTab, session.zipFile, firstEntry);
     }
 
     private void repairDex(File dexFile, File zipFile) {
