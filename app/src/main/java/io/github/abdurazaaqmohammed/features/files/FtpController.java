@@ -24,6 +24,8 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile;
+import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileManager;
 import com.lilincpp.github.libezftp.EZFtpClient;
 import com.lilincpp.github.libezftp.EZFtpFile;
 import com.lilincpp.github.libezftp.EZFtpServer;
@@ -234,6 +236,45 @@ public class FtpController {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /**
+     * Connects a saved client profile by name and opens its root in the
+     * current pane - the sidebar pin entry point.
+     */
+    public void connectProfile(String name, boolean pane1) {
+        FtpProfile profile = null;
+        try {
+            for (FtpProfile p : new ProfileManager(activity).getProfiles()) {
+                if (!p.isServerProfile() && name.equals(p.getName())) {
+                    profile = p;
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (profile == null) {
+            Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, name));
+            return;
+        }
+        Extensions.showMessage(activity, activity.rss.getString(R.string.connecting_to, profile.getName()));
+        ftpClient = new EZFtpClient();
+        ftpClient.connect(profile.getIp(), profile.getPort(), profile.getUsername(),
+                profile.getPassword(), profile.getSecurityType(), new OnEZFtpCallBack<>() {
+                    @Override
+                    public void onSuccess(Void response) {
+                        activity.runOnUiThread(() -> {
+                            Extensions.showMessage(activity, activity.rss.getString(R.string.connected_to_ftp));
+                            fetchFtpDirAndLoad(File.separator, pane1);
+                        });
+                    }
+
+                    @Override
+                    public void onFail(int code, String msg) {
+                        activity.runOnUiThread(() ->
+                                Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, msg)));
+                    }
+                });
     }
 
     private int getSecurityTypeIndex(String text) {

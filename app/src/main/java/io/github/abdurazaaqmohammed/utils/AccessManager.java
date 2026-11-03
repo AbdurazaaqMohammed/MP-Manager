@@ -726,9 +726,7 @@ public final class AccessManager {
             // A provider document: stream it into the staging copy through the
             // ContentResolver; no elevated backend is involved.
             SafFs.init(context);
-            File f = SafFs.wrap(new File(srcAbs));
-            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbs);
-            SafFs.copyToRecursive((SafFile) f, dst, null);
+            SafFs.copyToRecursive(SafFs.statWrap(srcAbs), dst, null);
             return;
         }
         Backend backend = active(context);
@@ -755,9 +753,7 @@ public final class AccessManager {
     public static void stageTree(Context context, String srcAbs, File dst) throws IOException {
         if (SafFs.isSafPath(srcAbs)) {
             SafFs.init(context);
-            File f = SafFs.wrap(new File(srcAbs));
-            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbs);
-            SafFs.copyToRecursive((SafFile) f, dst, null);
+            SafFs.copyToRecursive(SafFs.statWrap(srcAbs), dst, null);
             return;
         }
         Backend backend = active(context);

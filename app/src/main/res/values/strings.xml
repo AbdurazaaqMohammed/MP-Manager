@@ -1987,6 +1987,9 @@ Strings are sent to the external service you configured.</string>
     <string name="saf_transfer_unsupported">This item type cannot be transferred into a provider location yet</string>
     <string name="reading_from_provider">Reading from provider…</string>
     <string name="opened_from_provider">Opened from provider — edits save back to it</string>
+    <string name="pin_to_sidebar">Pin to sidebar</string>
+    <string name="unpin_from_sidebar">Unpin from sidebar</string>
+    <string name="connecting_to">Connecting to %1$s…</string>
     <string name="saf_new_file">New file</string>
     <string name="saf_same_location">Both panes are in the same location</string>
     <string name="saf_op_failed">Operation failed: %1$s</string>
