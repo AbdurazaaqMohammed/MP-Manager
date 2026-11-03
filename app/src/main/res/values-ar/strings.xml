@@ -1638,6 +1638,8 @@
     <string name="edpref_word_wrap_summary">التفاف الأسطر الطويلة لتناسب الشاشة</string>
     <string name="edpref_syntax_highlight">تمييز بناء الجملة (Syntax Highlighting)</string>
     <string name="edpref_syntax_highlight_summary">تمكين تمييز بناء الجملة لملفات الكود</string>
+    <string name="edpref_translation_mode">وضع الترجمة في تبويب النصوص</string>
+    <string name="edpref_translation_mode_summary">تقسيم الشاشة لعمود النص الأصلي وعمود الترجمة</string>
     <string name="edpref_editing">إعدادات التحرير</string>
     <string name="edpref_tab_size">حجم علامة الجدولة (Tab)</string>
     <string name="edpref_tab_size_summary">عدد المسافات لعلامة الجدولة</string>

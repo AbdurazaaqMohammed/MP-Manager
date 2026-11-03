@@ -72,6 +72,7 @@
         private String currentFilter = null;
         private boolean untranslatedOnly;
         private OnModifiedCountChangedListener modifiedCountListener;
+        private Boolean translationModeOverride = null;
 
         public interface OnStringClickListener {
             void onStringClick(String text);
@@ -91,6 +92,22 @@
             this.listener = listener;
             COLOR_NORMAL = color;
             COLOR_HINT = hintColor;
+        }
+
+        public void setTranslationMode(boolean enabled) {
+            this.translationModeOverride = enabled;
+            notifyDataSetChanged();
+        }
+
+        private boolean isTranslationMode(android.content.Context context) {
+            if (translationModeOverride != null) {
+                return translationModeOverride;
+            }
+            if (context != null) {
+                return context.getSharedPreferences("editor_prefs", android.content.Context.MODE_PRIVATE)
+                        .getBoolean("pref_dex_translation_mode", false);
+            }
+            return false;
         }
 
         public void setModifiedCountListener(OnModifiedCountChangedListener listener) {
@@ -123,12 +140,40 @@
             final String pending = modifiedStrings.get(original);
 
             holder.original.setText(original);
-            if (pending != null) {
-                holder.translation.setText(pending);
-                holder.translation.setTextColor(COLOR_MODIFIED);
+
+            boolean isTranslation = isTranslationMode(holder.itemView.getContext());
+            if (isTranslation) {
+                if (holder.divider != null) holder.divider.setVisibility(View.VISIBLE);
+                holder.translation.setVisibility(View.VISIBLE);
+
+                android.widget.LinearLayout.LayoutParams origParams =
+                        (android.widget.LinearLayout.LayoutParams) holder.original.getLayoutParams();
+                origParams.width = 0;
+                origParams.weight = 1.0f;
+                holder.original.setLayoutParams(origParams);
+
+                android.widget.LinearLayout.LayoutParams transParams =
+                        (android.widget.LinearLayout.LayoutParams) holder.translation.getLayoutParams();
+                transParams.width = 0;
+                transParams.weight = 1.0f;
+                holder.translation.setLayoutParams(transParams);
+
+                if (pending != null) {
+                    holder.translation.setText(pending);
+                    holder.translation.setTextColor(COLOR_MODIFIED);
+                } else {
+                    holder.translation.setText("—");
+                    holder.translation.setTextColor(COLOR_HINT);
+                }
             } else {
-                holder.translation.setText("—");
-                holder.translation.setTextColor(COLOR_HINT);
+                if (holder.divider != null) holder.divider.setVisibility(View.GONE);
+                holder.translation.setVisibility(View.GONE);
+
+                android.widget.LinearLayout.LayoutParams origParams =
+                        (android.widget.LinearLayout.LayoutParams) holder.original.getLayoutParams();
+                origParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                origParams.weight = 0;
+                holder.original.setLayoutParams(origParams);
             }
 
             holder.itemView.setOnClickListener(v -> {
@@ -215,11 +260,13 @@
         static class ViewHolder extends RecyclerView.ViewHolder {
             final TextView original;
             final TextView translation;
+            final View divider;
 
             ViewHolder(View itemView) {
                 super(itemView);
                 original = itemView.findViewById(R.id.string_original);
                 translation = itemView.findViewById(R.id.string_translation);
+                divider = itemView.findViewById(R.id.string_divider);
             }
         }
     }

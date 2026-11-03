@@ -102,6 +102,7 @@ public class TranslationModeActivity extends BaseActivity {
         list = findViewById(R.id.translation_list);
         list.setLayoutManager(new LinearLayoutManager(this));
         adapter = new StringAdapter(originals, this::onStringTapped, onSurfaceColor());
+        adapter.setTranslationMode(true);
         adapter.setModifiedCountListener((modified, total) -> {
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setSubtitle(modified + "/" + total);
