@@ -2139,6 +2139,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
+        syncOppositePaneIfSame(pane1, folder, false, null);
     }
 
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory) {
@@ -2332,6 +2333,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (isCurrentPane) setMultiSelectModeUI(false);
             updateNavigationButtons();
         }
+        syncOppositePaneIfSame(pane1, zipFile, true, path);
     }
 
     public void loadFolderInPane(File folder, boolean pane1) {
@@ -2638,6 +2640,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void reloadPane(boolean pane1, boolean preserveScroll) {
         reloadOnePane(pane1, preserveScroll);
         reloadOnePane(!pane1, preserveScroll);
+    }
+
+    private boolean isSyncingOpposite = false;
+
+    private void syncOppositePaneIfSame(boolean sourcePane1, File folder, boolean isZip, String zipPath) {
+        if (isSyncingOpposite) return;
+        boolean targetPane1 = !sourcePane1;
+        boolean same;
+        if (isZip) {
+            same = sameZipFolderShown(folder, zipPath, targetPane1);
+        } else {
+            same = samePlainFolderShown(folder, targetPane1);
+        }
+        if (same) {
+            isSyncingOpposite = true;
+            try {
+                reloadOnePane(targetPane1, true);
+            } finally {
+                isSyncingOpposite = false;
+            }
+        }
     }
 
     private void reloadOnePane(boolean pane1, boolean preserveScroll) {
