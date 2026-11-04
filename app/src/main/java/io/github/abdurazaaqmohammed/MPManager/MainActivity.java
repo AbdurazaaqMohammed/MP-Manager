@@ -2152,7 +2152,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
-        syncOppositePaneIfSame(pane1, folder, false, null);
     }
 
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory) {
@@ -2346,7 +2345,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (isCurrentPane) setMultiSelectModeUI(false);
             updateNavigationButtons();
         }
-        syncOppositePaneIfSame(pane1, zipFile, true, path);
     }
 
     public void loadFolderInPane(File folder, boolean pane1) {

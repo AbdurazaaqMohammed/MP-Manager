@@ -2632,6 +2632,7 @@ public class DexEditorActivity extends BaseActivity {
                         // update toolbar
                         updateToolbar();
                         refreshExplorerPage(0);
+                        if (stringList.isEmpty()) loadStrings();
                         if (openTabRequested < 0) showTreeView();
                     } catch (Exception e) {
                         handleUiThreadError(e);

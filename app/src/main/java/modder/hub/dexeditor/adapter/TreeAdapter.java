@@ -166,13 +166,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     public void setSearchList(boolean searchList, String query) {
         this.isSearchList = searchList;
-        if (query == null || !query.equals(this.searchQuery)) {
-            clearCachedSpannedNamesRecursive(rootNodes);
-            // A new query means a new result set: nothing is "already opened".
-            openedKeys.clear();
-            notifyDataSetChanged();
-        }
+        clearCachedSpannedNamesRecursive(rootNodes);
+        openedKeys.clear();
         this.searchQuery = query;
+        notifyDataSetChanged();
     }
 
     private static String openedKey(TreeNode node) {
@@ -182,12 +179,14 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     /** Records the row as visited and dims it so it reads as already opened. */
     private void markOpened(TreeNode node, int position) {
+        if (node != null) node.setVisited(true);
         String key = openedKey(node);
-        if (key == null || !openedKeys.add(key)) return;
+        if (key != null) openedKeys.add(key);
         if (position >= 0 && position < visibleNodes.size()) notifyItemChanged(position);
     }
 
     public boolean isOpened(TreeNode node) {
+        if (node != null && node.isVisited()) return true;
         String key = openedKey(node);
         return key != null && openedKeys.contains(key);
     }
@@ -499,11 +498,20 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         }
 
-        // 4b. Visited results are dimmed so already-opened rows stand apart.
-        int wantedTextColor = (isSearchList || isHistory) && isOpened(node)
-                ? openedTextColorResolved : defaultTextColor;
-        if (holder.name.getCurrentTextColor() != wantedTextColor) {
-            holder.name.setTextColor(wantedTextColor);
+        // 4b. Visited results are dimmed so already-opened rows stand apart like hidden files (0.55f alpha).
+        boolean visited = (isSearchList || isHistory) && isOpened(node);
+        float wantedAlpha = visited ? 0.55f : 1.0f;
+        holder.itemView.setAlpha(wantedAlpha);
+        if (holder.itemContent != null) holder.itemContent.setAlpha(wantedAlpha);
+        int wantedTextColor = visited ? openedTextColorResolved : defaultTextColor;
+        if (holder.name != null) {
+            holder.name.setAlpha(wantedAlpha);
+            if (holder.name.getCurrentTextColor() != wantedTextColor) {
+                holder.name.setTextColor(wantedTextColor);
+            }
+        }
+        if (holder.subtitle != null) {
+            holder.subtitle.setAlpha(wantedAlpha);
         }
 
         // 5. Indentation

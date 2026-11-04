@@ -1946,4 +1946,5 @@ Layout Inspector
     <string name="progress_speed_items">%1$d/s</string>
     <string name="progress_eta">quedan %1$s</string>
     <string name="progress_done">Listo</string>
+    <string name="confirm_move_f">¿Seguro que quieres mover %1$s?</string>
 </resources>

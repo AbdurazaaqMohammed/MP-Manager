@@ -159,9 +159,17 @@ public class APKExtractorActivity extends BaseActivity {
         }
     }
 
+    private static final java.util.Map<String, String> sigTypeCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static String resolveSigType(File apk) {
+        if (apk == null) return "Unknown";
+        String cacheKey = apk.getAbsolutePath() + "_" + apk.lastModified();
+        String cached = sigTypeCache.get(cacheKey);
+        if (cached != null) return cached;
         try {
-            return ApkSignatureInfo.analyze(apk).getStatusLabel();
+            String label = ApkSignatureInfo.analyze(apk).getStatusLabel();
+            if (label != null) sigTypeCache.put(cacheKey, label);
+            return label;
         } catch (Exception e) {
             return "Unknown";
         }

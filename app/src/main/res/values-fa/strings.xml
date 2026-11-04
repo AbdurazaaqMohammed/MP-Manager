@@ -1968,4 +1968,5 @@ com/gms/
     <string name="progress_speed_items">%1$d/ث</string>
     <string name="progress_eta">%1$s مانده</string>
     <string name="progress_done">انجام شد</string>
+    <string name="confirm_move_f">آیا می‌خواهید %1$s را انتقال دهید؟</string>
 </resources>

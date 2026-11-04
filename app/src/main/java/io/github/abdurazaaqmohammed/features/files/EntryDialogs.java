@@ -610,6 +610,61 @@ public class EntryDialogs {
         appendDeleteSize(shownDelete, customMsgView, isInZip, multi, file, values);
     }
 
+    public void showMoveDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
+        Object[] values = state.values();
+        boolean isInZip = state.isInZip();
+        File zipFile = isInZip && entry != null ? entry.getZipFile() : null;
+        boolean isApk = isInZip && zipFile != null && ApkIconHelper.isApkArchiveName(zipFile.getName());
+
+        if (!isInZip) {
+            // Regular folder move: proceed directly via fileOps without unnecessary dialog
+            Object item = multi ? null : (values != null && position >= 0 && position < values.length ? values[position] : file);
+            fileOps.moveAsync(item);
+            return;
+        }
+
+        // Inside archive (especially APK): show single confirmation dialog covering all selected files
+        CharSequence filesToDisplay = getFilesToDisplay(multi, position);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean[] sign = new boolean[1];
+
+        MaterialAlertDialogBuilder moveDialog = dialogUtil.getDialogBuilder();
+        if (isApk) {
+            LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
+            TextView customMsgView = ll.findViewById(R.id.modifiedText);
+            customMsgView.setText(context.rss.getString(R.string.confirm_move_f, filesToDisplay));
+            CheckBox autosign = ll.findViewById(R.id.autosign);
+            autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+            autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+            ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
+            moveDialog.setView(ll);
+        } else {
+            moveDialog.setMessage(context.rss.getString(R.string.confirm_move_f, filesToDisplay));
+        }
+
+        moveDialog.setTitle(context.rss.getString(R.string.warning))
+                .setPositiveButton(context.rss.getString(R.string.yes), (dialog, which) -> {
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    Runnable doMove = () -> {
+                        Object item = multi ? null : (values != null && position >= 0 && position < values.length ? values[position] : entry);
+                        fileOps.moveZipEntryWithSigning(item, zipFile, isApk && sign[0], wrapper[0]);
+                    };
+                    if (isApk && sign[0]) {
+                        SignWrapper.requireAuth(context, sw -> {
+                            wrapper[0] = sw;
+                            doMove.run();
+                        });
+                    } else {
+                        doMove.run();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null);
+
+        AlertDialog shownMove = moveDialog.create();
+        dialogUtil.styleAlertDialog(shownMove);
+        shownMove.show();
+    }
+
     private void appendDeleteSize(AlertDialog shown, TextView customMsg, boolean isInZip,
                                   boolean multi, File file, Object[] values) {
         if (isInZip) return;

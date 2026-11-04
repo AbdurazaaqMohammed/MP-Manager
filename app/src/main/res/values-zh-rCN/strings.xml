@@ -1982,4 +1982,5 @@ Layout Inspector
     <string name="saf_same_location">两个面板位于同一位置</string>
     <string name="saf_op_failed">操作失败：%1$s</string>
     <string name="saf_done">完成</string>
+    <string name="confirm_move_f">您确定要移动 %1$s 吗？</string>
 </resources>
