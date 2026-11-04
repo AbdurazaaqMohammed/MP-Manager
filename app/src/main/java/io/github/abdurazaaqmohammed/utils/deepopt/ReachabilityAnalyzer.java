@@ -23,6 +23,10 @@ import java.util.Set;
  * Seeds + worklist reachability fixpoint over the working classes ({@link DexIndex#classByType}).
  * Kept sets are recomputed from the roots on every {@link #run()}; this is what lets the
  * empty-method cascade drop now-unreachable members between passes.
+ *
+ * Beyond instruction references, class-level batches (annotations, field initial values)
+ * also keep classes whose fully-qualified name appears as an annotation/value string, and
+ * {@code @Keep}-annotated classes/members are always kept.
  */
 public class ReachabilityAnalyzer {
 
@@ -36,6 +40,9 @@ public class ReachabilityAnalyzer {
     private Set<String> componentClasses = Collections.emptySet();
     private Set<String> classRoots = Collections.emptySet();
     private Set<String> methodRoots = Collections.emptySet();
+    private Set<String> nativeKeepClasses = Collections.emptySet();
+    private Set<String> nativeStrings = Collections.emptySet();
+    private boolean forceReflectionMode;
 
     public ReachabilityAnalyzer(DexIndex index, Set<String> keptClasses, Set<String> keptMethodKeys,
                                 Set<String> keptFieldKeys, OptimizerReport report) {
@@ -52,6 +59,21 @@ public class ReachabilityAnalyzer {
         this.methodRoots = methodRoots;
     }
 
+    /** Set when packers/plugin payloads are detected - apply the string-literal conservative pass. */
+    public void setForceReflectionMode(boolean force) {
+        this.forceReflectionMode = force;
+    }
+
+    /** Classes found in native libraries: JNI can reach any member, private included. */
+    public void setNativeKeepClasses(Set<String> types) {
+        this.nativeKeepClasses = types == null ? Collections.emptySet() : types;
+    }
+
+    /** Printable strings from native libraries: member names JNI may look up by name. */
+    public void setNativeStrings(Set<String> strings) {
+        this.nativeStrings = strings == null ? Collections.emptySet() : strings;
+    }
+
     public void run() {
         keptClasses.clear();
         keptMethodKeys.clear();
@@ -64,6 +86,7 @@ public class ReachabilityAnalyzer {
             if (type != null) addKeptClass(type, worklist);
         }
         for (String type : componentClasses) addKeptClass(type, worklist);
+        for (String type : index.keepAnnotatedClasses) addKeptClass(type, worklist);
         for (ClassDef classDef : index.classByType.values()) {
             for (Method method : classDef.getMethods()) {
                 if (methodRoots.contains(method.getName())) keepMethod(method, worklist);
@@ -71,7 +94,7 @@ public class ReachabilityAnalyzer {
         }
         fixpoint(worklist);
 
-        if (index.reflectionMode) {
+        if (index.reflectionMode || forceReflectionMode) {
             report.reflectionMode = true;
             reflectionSeeds(worklist);
             fixpoint(worklist);
@@ -82,12 +105,12 @@ public class ReachabilityAnalyzer {
         Set<String> processed = new HashSet<>();
         while (!worklist.isEmpty() || !pendingClassBatches.isEmpty()) {
             if (!pendingClassBatches.isEmpty()) {
-                handleBatch(pendingClassBatches.poll(), worklist);
+                handleClassBatch(pendingClassBatches.poll(), worklist);
                 continue;
             }
             Method method = worklist.poll();
             if (!processed.add(DexIndex.methodKey(method))) continue;
-            ReferenceExtractor.ReferenceBatch batch = ReferenceExtractor.extractMethod(method);
+            ReferenceExtractor.ReferenceBatch batch = index.extractMethodBatch(method);
             handleBatch(batch, worklist);
         }
     }
@@ -96,6 +119,19 @@ public class ReachabilityAnalyzer {
         for (ReferenceExtractor.MethodCall call : batch.calls) dispatchMethod(call, worklist);
         for (FieldReference ref : batch.fields) keepField(ref, worklist);
         for (String type : batch.types) addKeptClass(type, worklist);
+    }
+
+    /**
+     * Class-level batch: annotations, field initial values and class-name strings they
+     * carry. A string that resolves to an app class keeps that class (Room/Glide-style
+     * frameworks read class names from annotation values).
+     */
+    private void handleClassBatch(ReferenceExtractor.ReferenceBatch batch, Deque<Method> worklist) {
+        handleBatch(batch, worklist);
+        for (String s : batch.strings) {
+            String type = DexIndex.toType(s);
+            if (type != null && index.classByType.containsKey(type)) addKeptClass(type, worklist);
+        }
     }
 
     private void dispatchMethod(ReferenceExtractor.MethodCall call, Deque<Method> worklist) {
@@ -163,7 +199,7 @@ public class ReachabilityAnalyzer {
             if ((method.getAccessFlags() & AccessFlags.PRIVATE.getValue()) != 0) continue;
             worklist.add(method);
         }
-        pendingClassBatches.add(ReferenceExtractor.extractClass(classDef));
+        pendingClassBatches.add(index.extractClassBatch(classDef));
         if (classDef.getSuperclass() != null) addKeptClass(classDef.getSuperclass(), worklist);
         for (String iface : classDef.getInterfaces()) addKeptClass(iface, worklist);
     }
@@ -175,9 +211,11 @@ public class ReachabilityAnalyzer {
         boolean externalizable = classDef.getInterfaces().contains("Ljava/io/Externalizable;");
         boolean parcelable = classDef.getInterfaces().contains("Landroid/os/Parcelable;");
         boolean enumType = "Ljava/lang/Enum;".equals(classDef.getSuperclass());
+        boolean keepAll = index.isKeepAnnotated(classDef) || nativeKeepClasses.contains(type);
         for (Method method : classDef.getMethods()) {
             String name = method.getName();
-            boolean entry = name.equals("<init>") || name.equals("<clinit>")
+            boolean entry = keepAll || index.isKeepAnnotated(method)
+                    || name.equals("<init>") || name.equals("<clinit>")
                     || (method.getAccessFlags() & AccessFlags.NATIVE.getValue()) != 0
                     || name.startsWith("on")
                     || name.equals("attachBaseContext") || name.equals("finalize")
@@ -191,7 +229,8 @@ public class ReachabilityAnalyzer {
         }
         for (Field field : classDef.getFields()) {
             String name = field.getName();
-            boolean entryField = component || enumType || serializable || externalizable || parcelable
+            boolean entryField = keepAll || index.isKeepAnnotated(field)
+                    || component || enumType || serializable || externalizable || parcelable
                     || name.equals("serialVersionUID")
                     || (parcelable && name.equals("CREATOR"));
             if (entryField) keptFieldKeys.add(DexIndex.fieldKey(field));
@@ -210,6 +249,7 @@ public class ReachabilityAnalyzer {
         while (changed) {
             changed = false;
             Set<String> strings = collectKeptStrings();
+            strings.addAll(nativeStrings);
             for (String s : strings) {
                 String type = DexIndex.toType(s);
                 if (type != null && index.classByType.containsKey(type) && !keptClasses.contains(type)) {
@@ -237,23 +277,16 @@ public class ReachabilityAnalyzer {
         }
     }
 
-    /** String literals referenced from the currently kept methods only. */
+    /** String literals referenced from the currently kept methods + class metadata only. */
     private Set<String> collectKeptStrings() {
         Set<String> strings = new HashSet<>();
         for (String type : keptClasses) {
             ClassDef classDef = index.classByType.get(type);
             if (classDef == null) continue;
+            strings.addAll(index.extractClassBatch(classDef).strings);
             for (Method method : classDef.getMethods()) {
                 if (!keptMethodKeys.contains(DexIndex.methodKey(method))) continue;
-                MethodImplementation impl = method.getImplementation();
-                if (impl == null) continue;
-                for (Instruction instruction : impl.getInstructions()) {
-                    if (!(instruction instanceof ReferenceInstruction)) continue;
-                    Reference ref =
-                            ((ReferenceInstruction) instruction).getReference();
-                    if (ref instanceof StringReference)
-                        strings.add(((StringReference) ref).getString());
-                }
+                strings.addAll(index.extractMethodBatch(method).strings);
             }
         }
         return strings;

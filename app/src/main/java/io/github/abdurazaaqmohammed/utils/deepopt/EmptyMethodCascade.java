@@ -83,6 +83,7 @@ public class EmptyMethodCascade {
                 ClassDef classDef = index.classByType.get(type);
                 if (classDef != null) rewriteCallSites(classDef, removedKeys);
             }
+            index.clearBatchCaches();
             reachability.run();
             if (verifyDanglingRefs()) {
                 report.conservativeLock = true;

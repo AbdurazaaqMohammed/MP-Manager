@@ -7,10 +7,9 @@ import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apk.DexFileInputSource;
+import com.reandroid.app.AndroidManifest;
 import com.reandroid.arsc.array.ResValueMapArray;
-import com.reandroid.arsc.chunk.PackageBlock;
-import com.reandroid.arsc.chunk.TableBlock;
-import com.reandroid.arsc.model.ResourceEntry;
+import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValueMap;
 
@@ -18,13 +17,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 
+/**
+ * Post-build verification. Re-parses the OUTPUT apk and checks:
+ * <ol>
+ *   <li>the manifest is present and parseable, and its resource references resolve</li>
+ *   <li>the resource table re-parses and no kept (non-null) resource references an
+ *       all-removed entry</li>
+ *   <li>every dex re-parses</li>
+ *   <li>no kept class/method/field reference dangles</li>
+ * </ol>
+ * Any failure aborts the deep run; the caller falls back to a repack-only output.
+ */
 public final class ApkValidator {
 
     private ApkValidator() {
@@ -33,8 +40,15 @@ public final class ApkValidator {
     public static void validate(File outFile, DexIndex index, Set<String> keptClasses,
                                 Set<String> keptMethodKeys, Set<String> keptFieldKeys) throws Exception {
         try (ApkModule module = ApkModule.loadApkFile(outFile)) {
-            if (module.getAndroidManifest() == null) throw new IOException("Output APK has no parseable AndroidManifest.xml");
-            if (module.hasTableBlock()) verifyResources(module.getTableBlock());
+            module.setLoadDefaultFramework(false);
+            if (!module.hasAndroidManifest())
+                throw new IOException("Output APK has no parseable AndroidManifest.xml");
+            verifyManifestReferences(module);
+            if (module.hasTableBlock()) {
+                ResourceTableIndex tableIndex = ResourceTableIndex.build(module.getTableBlock(),
+                        module.getPackageName());
+                verifyResources(tableIndex);
+            }
 
             for (DexFileInputSource source : module.listDexFiles()) {
                 byte[] bytes;
@@ -51,17 +65,37 @@ public final class ApkValidator {
         verifyNoDanglingRefs(index, keptClasses, keptMethodKeys, keptFieldKeys);
     }
 
-    private static void verifyResources(TableBlock table) throws IOException {
-        Map<Integer, ResourceEntry> byId = new HashMap<>();
-        for (PackageBlock pkg : table.listPackages()) {
-            for (Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
-                ResourceEntry entry = it.next();
-                byId.put(entry.getResourceId(), entry);
-            }
+    /** Icon/label/theme references in the manifest must resolve to live entries. */
+    private static void verifyManifestReferences(ApkModule module) throws IOException {
+        AndroidManifestBlock manifest = module.getAndroidManifest();
+        if (!module.hasTableBlock()) return;
+        ResourceTableIndex tableIndex;
+        try {
+            tableIndex = ResourceTableIndex.build(module.getTableBlock(), module.getPackageName());
+        } catch (Exception e) {
+            throw new IOException("resources.arsc failed to re-parse: " + e, e);
         }
-        for (Map.Entry<Integer, ResourceEntry> e : byId.entrySet()) {
-            ResourceEntry entry = e.getValue();
-            for (Entry config : entry) {
+        checkLive(tableIndex, manifest.getIconResourceId(), "manifest icon");
+        checkLive(tableIndex, manifest.getRoundIconResourceId(), "manifest round icon");
+        Integer label = manifest.getApplicationLabelReference();
+        if (label != null) checkLive(tableIndex, label, "manifest label");
+    }
+
+    private static void checkLive(ResourceTableIndex tableIndex, int resId, String what) throws IOException {
+        if (resId == 0) return;
+        com.reandroid.arsc.model.ResourceEntry entry = tableIndex.byId(resId);
+        if (entry == null) return; // framework or unrelated package
+        for (Entry config : entry) {
+            if (config != null && !config.isNull()) return; // live
+        }
+        throw new IOException(what + " resource 0x" + Integer.toHexString(resId)
+                + " was removed but is still referenced");
+    }
+
+    private static void verifyResources(ResourceTableIndex tableIndex) throws IOException {
+        for (Integer id : tableIndex.byId.keySet()) {
+            com.reandroid.arsc.model.ResourceEntry resEntry = tableIndex.byId.get(id);
+            for (Entry config : resEntry) {
                 if (config == null || config.isNull()) continue;
                 try {
                     if (config.isComplex()) {
@@ -69,21 +103,13 @@ public final class ApkValidator {
                         if (maps == null) continue;
                         for (int i = 0; i < maps.size(); i++) {
                             ResValueMap item = maps.get(i);
-                            if (item.getValueType().isReference()) {
-                                ResourceEntry target = byId.get(item.getData());
-                                if (target != null && isAllNull(target))
-                                    throw new IOException("Kept resource " + e.getKey()
-                                            + " references removed entry " + item.getData());
-                            }
+                            if (item.getValueType().isReference())
+                                checkLive(tableIndex, item.getData(), "Kept resource 0x"
+                                        + Integer.toHexString(id) + " reference");
                         }
                     } else if (config.getValueType().isReference()) {
-                        ResourceEntry referenced = config.getValueAsReference();
-                        if (referenced != null) {
-                            ResourceEntry target = byId.get(referenced.getResourceId());
-                            if (target != null && isAllNull(target))
-                                throw new IOException("Kept resource " + e.getKey()
-                                        + " references removed entry " + referenced.getResourceId());
-                        }
+                        checkLive(tableIndex, config.getResValue().getData(), "Kept resource 0x"
+                                + Integer.toHexString(id) + " reference");
                     }
                 } catch (IOException ex) {
                     throw ex;
@@ -91,13 +117,6 @@ public final class ApkValidator {
                 }
             }
         }
-    }
-
-    private static boolean isAllNull(ResourceEntry entry) {
-        for (Entry config : entry) {
-            if (config != null && !config.isNull()) return false;
-        }
-        return true;
     }
 
     private static void verifyNoDanglingRefs(DexIndex index, Set<String> keptClasses,

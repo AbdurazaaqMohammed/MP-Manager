@@ -135,6 +135,7 @@
     <string name="opt">Optimize APK</string>
     <string name="delete_useless_files">Delete useless files</string>
     <string name="ultra_compress">Ultra Compress</string>
+    <string name="deep_optimize_safe_mode">Safe mode (when the app resolves resources by name, keep entries matching any string)</string>
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
     <string name="about">About</string>
@@ -827,13 +828,13 @@ Layout Inspector
     <string name="batch_operations">Batch operations</string>
     <string name="ask_bookmark_tab">Ask which tab to save bookmarks in</string>
     <string name="deep_optimize">Remove unused resources &amp; code (deep)</string>
-    <string name="deep_optimize_phase_b">Optimize resource IDs</string>
+    <string name="deep_optimize_phase_b">Shorten resource names (experimental)</string>
     <string name="deep_optimize_preserve_debug">Keep debug info (line numbers)</string>
     <string name="deep_optimize_remove_classes">Remove unused classes</string>
     <string name="deep_optimize_remove_methods">Remove unused methods</string>
     <string name="deep_optimize_remove_fields">Remove unused fields</string>
     <string name="deep_optimize_max_passes">Max empty-method passes</string>
-    <string name="deep_optimize_warning">Warning: deep optimization may break the APK.</string>
+    <string name="deep_optimize_warning">Warning: deep optimization rewrites code and resources. The output is verified and falls back to a safe repack if verification fails. Keep a backup of the original APK.</string>
     <string name="deep_optimize_running">Deep removing unused resources &amp; code…</string>
     <string name="sort_by">Sort by</string>
     <string name="sort_name">Name</string>

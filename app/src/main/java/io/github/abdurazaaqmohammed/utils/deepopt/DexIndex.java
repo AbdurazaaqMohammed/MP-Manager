@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils.deepopt;
 
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.iface.Annotation;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.iface.Method;
@@ -28,7 +29,8 @@ import java.util.Set;
 
 /**
  * Global index over every dex in the module: type -> ClassDef, per-dex ordering,
- * subclass/ancestor closures, method/field lookup maps and reflection detection.
+ * subclass/ancestor closures, method/field lookup maps, string pool harvest,
+ * {@code @Keep} precomputation and reflection/dynamic-resource detection.
  * {@link #classByType} is a mutable working map: the empty-method cascade rebuilds
  * classes (fewer members) and puts them back so later passes see the current shape.
  */
@@ -39,9 +41,15 @@ public class DexIndex {
             "getField", "getDeclaredField", "getFields", "getDeclaredFields",
             "newInstance", "getConstructor", "getDeclaredConstructor", "getConstructors",
             "getDeclaredConstructors"));
-    public static final Set<String> RESOURCES_METHOD_NAMES = new HashSet<>(Arrays.asList(
-            "getIdentifier", "getString", "getResourceName", "getResourceEntryName",
-            "getResourceTypeName", "getStringArray", "getText", "getQuantityString"));
+    /**
+     * Resources methods that resolve resources by NAME at runtime. Only these force the
+     * dynamic-resource mode; typed accessors like getString(int) use inlined IDs that the
+     * const-scan already tracks.
+     */
+    public static final Set<String> DYNAMIC_RESOURCE_METHODS = new HashSet<>(Arrays.asList(
+            "getIdentifier", "getResourceName", "getResourceEntryName", "getResourceTypeName"));
+    private static final Set<String> KEEP_ANNOTATIONS = new HashSet<>(Arrays.asList(
+            "Landroidx/annotation/Keep;", "Landroid/support/annotation/Keep;"));
 
     public final Map<String, ClassDef> classByType = new LinkedHashMap<>();
     public final Map<String, ClassDef> originalClasses = new HashMap<>();
@@ -57,10 +65,20 @@ public class DexIndex {
     public final Map<String, Map<String, Set<String>>> fieldsBySig = new HashMap<>();
     private final Map<String, String> resolvedMethodCache = new HashMap<>();
     private final Map<String, String> resolvedFieldCache = new HashMap<>();
+    /** Every string in every dex string pool - the source for dynamic-name keeps. */
     public final Set<String> allStrings = new HashSet<>();
+    /** Classes containing a call to a {@link #DYNAMIC_RESOURCE_METHODS} method. */
+    public final Set<String> dynamicResourceClasses = new HashSet<>();
+    /** Classes carrying {@code @Keep} - always kept with all their members. */
+    public final Set<String> keepAnnotatedClasses = new HashSet<>();
+    public final Set<String> keepAnnotatedMethodKeys = new HashSet<>();
+    public final Set<String> keepAnnotatedFieldKeys = new HashSet<>();
 
     public boolean reflectionMode;
     public int classesTotal;
+
+    private final Map<String, ReferenceExtractor.ReferenceBatch> methodBatchCache = new HashMap<>();
+    private final Map<String, ReferenceExtractor.ReferenceBatch> classBatchCache = new HashMap<>();
 
     public static Opcodes opcodesForDex(byte[] dexBytes) {
         try {
@@ -78,6 +96,7 @@ public class DexIndex {
             String dexName = entry.getKey();
             DexBackedDexFile dex = entry.getValue();
             dexOpcodes.put(dexName, dex.getOpcodes());
+            harvestStrings(dex);
             List<String> types = new ArrayList<>();
             for (ClassDef classDef : dex.getClasses()) {
                 classByType.put(classDef.getType(), classDef);
@@ -90,7 +109,16 @@ public class DexIndex {
         classesTotal = classByType.size();
         buildClosures();
         buildMemberMaps();
-        detectReflection();
+    }
+
+    /** Whole dex string pool - far cheaper than walking every instruction. */
+    private void harvestStrings(DexBackedDexFile dex) {
+        try {
+            for (String s : dex.getStringSection()) {
+                if (s != null) allStrings.add(s);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void buildClosures() {
@@ -106,51 +134,102 @@ public class DexIndex {
         }
     }
 
+    /** Single pass: member maps, {@code @Keep} flags and reflection/dynamic-resource detection. */
     private void buildMemberMaps() {
         for (ClassDef classDef : classByType.values()) {
+            String type = classDef.getType();
             Map<String, Set<String>> sigIndex = new HashMap<>();
             for (Method m : classDef.getMethods()) {
                 methodByKey.put(methodKey(m), m);
                 sigIndex.computeIfAbsent(methodSigKey(m), k -> new HashSet<>()).add(methodKey(m));
+                if (hasKeep(m.getAnnotations())) keepAnnotatedMethodKeys.add(methodKey(m));
             }
-            methodsBySig.put(classDef.getType(), sigIndex);
+            methodsBySig.put(type, sigIndex);
             Map<String, Set<String>> fieldSigIndex = new HashMap<>();
             for (Field f : classDef.getFields()) {
                 fieldByKey.put(fieldKey(f), f);
                 fieldSigIndex.computeIfAbsent(f.getName() + ":" + f.getType(), k -> new HashSet<>())
                         .add(fieldKey(f));
+                if (hasKeep(f.getAnnotations())) keepAnnotatedFieldKeys.add(fieldKey(f));
             }
-            fieldsBySig.put(classDef.getType(), fieldSigIndex);
+            fieldsBySig.put(type, fieldSigIndex);
+            if (hasKeep(classDef.getAnnotations())) keepAnnotatedClasses.add(type);
+            scanClassCode(classDef);
         }
     }
 
-    private void detectReflection() {
-        for (ClassDef classDef : classByType.values()) {
-            for (Method method : classDef.getMethods()) {
-                MethodImplementation impl = method.getImplementation();
-                if (impl == null) continue;
-                for (Instruction instruction : impl.getInstructions()) {
-                    if (!(instruction instanceof ReferenceInstruction)) continue;
-                    Reference reference = ((ReferenceInstruction) instruction).getReference();
-                    if (reference instanceof StringReference) {
-                        allStrings.add(((StringReference) reference).getString());
-                    } else if (reference instanceof MethodReference ref) {
-                        String defining = ref.getDefiningClass();
-                        String name = ref.getName();
-                        if ("Landroid/content/res/Resources;".equals(defining)
-                                && RESOURCES_METHOD_NAMES.contains(name)) {
-                            reflectionMode = true;
-                        } else if (("Ljava/lang/Class;".equals(defining) && REFLECTION_METHOD_NAMES.contains(name))
-                                || defining.startsWith("Ljava/lang/reflect/")) {
-                            reflectionMode = true;
-                        }
-                    } else if (reference instanceof TypeReference) {
-                        String type = ((TypeReference) reference).getType();
-                        if (type.startsWith("Ljava/lang/reflect/")) reflectionMode = true;
+    private void scanClassCode(ClassDef classDef) {
+        boolean dynamicResource = false;
+        boolean reflect = false;
+        for (Method method : classDef.getMethods()) {
+            MethodImplementation impl = method.getImplementation();
+            if (impl == null) continue;
+            for (Instruction instruction : impl.getInstructions()) {
+                if (!(instruction instanceof ReferenceInstruction)) continue;
+                Reference reference = ((ReferenceInstruction) instruction).getReference();
+                if (reference instanceof MethodReference ref) {
+                    String defining = ref.getDefiningClass();
+                    String name = ref.getName();
+                    if ("Landroid/content/res/Resources;".equals(defining)
+                            && DYNAMIC_RESOURCE_METHODS.contains(name)) {
+                        dynamicResource = true;
+                    } else if (("Ljava/lang/Class;".equals(defining) && REFLECTION_METHOD_NAMES.contains(name))
+                            || defining.startsWith("Ljava/lang/reflect/")) {
+                        reflect = true;
                     }
+                } else if (reference instanceof TypeReference) {
+                    if (((TypeReference) reference).getType().startsWith("Ljava/lang/reflect/"))
+                        reflect = true;
                 }
             }
         }
+        if (dynamicResource) dynamicResourceClasses.add(classDef.getType());
+        if (reflect) reflectionMode = true;
+    }
+
+    private static boolean hasKeep(Set<? extends Annotation> annotations) {
+        if (annotations == null) return false;
+        for (Annotation annotation : annotations) {
+            if (KEEP_ANNOTATIONS.contains(annotation.getType())) return true;
+        }
+        return false;
+    }
+
+    public boolean isKeepAnnotated(ClassDef classDef) {
+        return keepAnnotatedClasses.contains(classDef.getType());
+    }
+
+    public boolean isKeepAnnotated(Method method) {
+        return keepAnnotatedMethodKeys.contains(methodKey(method));
+    }
+
+    public boolean isKeepAnnotated(Field field) {
+        return keepAnnotatedFieldKeys.contains(fieldKey(field));
+    }
+
+    /** Cached reference extraction; caches must be cleared after any class rebuild. */
+    public ReferenceExtractor.ReferenceBatch extractMethodBatch(Method method) {
+        String key = methodKey(method);
+        ReferenceExtractor.ReferenceBatch cached = methodBatchCache.get(key);
+        if (cached != null) return cached;
+        ReferenceExtractor.ReferenceBatch batch = ReferenceExtractor.extractMethod(method);
+        methodBatchCache.put(key, batch);
+        return batch;
+    }
+
+    public ReferenceExtractor.ReferenceBatch extractClassBatch(ClassDef classDef) {
+        String key = classDef.getType();
+        ReferenceExtractor.ReferenceBatch cached = classBatchCache.get(key);
+        if (cached != null) return cached;
+        ReferenceExtractor.ReferenceBatch batch = ReferenceExtractor.extractClass(classDef);
+        classBatchCache.put(key, batch);
+        return batch;
+    }
+
+    /** Call after rebuilding any class in {@link #classByType} so stale batches are dropped. */
+    public void clearBatchCaches() {
+        methodBatchCache.clear();
+        classBatchCache.clear();
     }
 
     private Set<String> collectDescendants(String type) {

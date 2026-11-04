@@ -36,11 +36,16 @@ public final class ApkZipAlignUtil {
     private static final int FLAG_DESCRIPTOR = 0x08;
     private static final int FLAG_UTF8 = 0x800;
 
+    /**
+     * Entries Android actually requires uncompressed: the manifest and the resource
+     * table (4-byte aligned, checked separately). res/ payload files follow the same
+     * compression rules as any other entry - Play-delivered APKs deflate them too -
+     * so the optimizer paths are not forced to inflate them.
+     */
     public static boolean mustStore(String name) {
         if (name == null) return false;
         return name.equals("AndroidManifest.xml")
-                || name.equals("resources.arsc")
-                || (name.startsWith("res/") && !name.endsWith(".xml"));
+                || name.equals("resources.arsc");
     }
 
     private static int alignFor(String name, int method) {
@@ -91,6 +96,18 @@ public final class ApkZipAlignUtil {
                         if (dataOff % ALIGN_RES_ARSC != 0) {
                             return "resources.arsc data at offset " + dataOff
                                     + " is not 4-byte aligned";
+                        }
+                    }
+                    // Page-aligned stored native libraries are required when the
+                    // installer mmaps them (extractNativeLibs=false); unaligned libs
+                    // fail with INSTALL_FAILED_NO_MATCHING_ABIS res=-113.
+                    int align = alignFor(name, e.method);
+                    if (align > 0 && e.method == 0) {
+                        LocalHeader lh = readLocalHeader(raf, e.localOffset);
+                        long dataOff = e.localOffset + lh.headerLen;
+                        if (dataOff % align != 0) {
+                            return name + " data at offset " + dataOff
+                                    + " is not " + align + "-byte aligned";
                         }
                     }
                 }
