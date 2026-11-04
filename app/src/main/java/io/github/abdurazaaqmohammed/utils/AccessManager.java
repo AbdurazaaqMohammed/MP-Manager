@@ -95,6 +95,25 @@ public final class AccessManager {
         return false;
     }
 
+    /**
+     * Existence check through the elevated backend only. Unlike
+     * {@link #exists}, it never trusts the app-uid FUSE view: a removal done
+     * through /data/media behind FUSE's back can leave a cached dentry that
+     * makes {@code File.exists()} still report true for a deleted
+     * Android/data path - which showed "delete failed" after a successful
+     * elevated delete. Use this to verify the outcome of an elevated delete.
+     */
+    public static boolean elevatedExists(Context context, String absPath) {
+        if (absPath == null) return false;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).exists(absPath);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.exists(context, absPath);
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     public static boolean isDirectory(Context context, String absPath) {
         if (absPath == null) return false;
         try {

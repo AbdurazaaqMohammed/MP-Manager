@@ -214,6 +214,30 @@ public final class ShizukuManager {
         return new IOException(err == null || err.trim().isEmpty() ? what + " failed" : err.trim());
     }
 
+    /**
+     * Last-resort delete through the Shizuku shell.
+     *
+     * <p>The user service deletes with plain {@code java.io.File} as the shell
+     * uid, which the FUSE layer of some ROMs refuses even inside the allowed
+     * Android/{data,obb,media} trees. An adb-style shell process (what
+     * {@code adb shell rm} uses) is usually still allowed to unlink there, so
+     * a service refusal retries over the shell before giving up.
+     */
+    private static boolean deleteViaShell(String path) {
+        try {
+            if (!ready()) return false;
+            if (RootManager.isPathBlocked(path)) return false;
+            String arg = shellArg(path);
+            // rm followed by an existence probe, so a silent FUSE refusal is
+            // not reported as success (rm -rf exits 0 when nothing matched).
+            ShizukuShell.Result r = ShizukuShell.exec(
+                    "rm -rf -- " + arg + " ; [ ! -e " + arg + " ]", 120);
+            return r != null && r.success;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     private static void throwIfShellFails(String command, String what, int timeout) throws IOException {
         throwIfShellFails(command, what, timeout, null);
     }
@@ -824,8 +848,10 @@ public final class ShizukuManager {
         try {
             if (!s.deletePath(path)) throw new IOException(serviceError(s));
         } catch (IOException e) {
+            if (deleteViaShell(path)) return;
             throw e;
         } catch (Exception e) {
+            if (deleteViaShell(path)) return;
             throw new IOException("delete failed: " + e.getMessage());
         }
     }
@@ -898,8 +924,18 @@ public final class ShizukuManager {
             try {
                 if (!s.deletePath(path)) throw new IOException(serviceError(s));
             } catch (IOException e) {
+                if (deleteViaShell(path)) {
+                    done++;
+                    if (progress != null) progress.onProgress(done, 0L);
+                    continue;
+                }
                 throw e;
             } catch (Exception e) {
+                if (deleteViaShell(path)) {
+                    done++;
+                    if (progress != null) progress.onProgress(done, 0L);
+                    continue;
+                }
                 throw new IOException("delete failed: " + e.getMessage());
             }
             done++;
@@ -976,9 +1012,9 @@ public final class ShizukuManager {
             try {
                 if (!s.deletePath(path)) throw new IOException(serviceError(s));
             } catch (IOException e) {
-                throw e;
+                if (!deleteViaShell(path)) throw e;
             } catch (Exception e) {
-                throw new IOException("delete failed: " + e.getMessage());
+                if (!deleteViaShell(path)) throw new IOException("delete failed: " + e.getMessage());
             }
             done[0]++;
             if (progress != null) progress.onProgress(done[0], 0L);
