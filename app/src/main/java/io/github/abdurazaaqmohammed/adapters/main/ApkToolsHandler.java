@@ -55,4 +55,8 @@ public class ApkToolsHandler {
     public void showApkInfoDialog(File file, String fileName) {
         info.showApkInfoDialog(file, fileName);
     }
+
+    public void showApkInfoDialog(File file, String fileName, boolean isApksSplit) {
+        info.showApkInfoDialog(file, fileName, isApksSplit);
+    }
 }

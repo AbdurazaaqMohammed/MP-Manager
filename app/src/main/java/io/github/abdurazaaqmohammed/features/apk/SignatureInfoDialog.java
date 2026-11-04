@@ -139,33 +139,40 @@ public final class SignatureInfoDialog {
                 final TextView sha256Val = addRowWithView(block, "SHA256", formatHexCustom(rawSha256, true, true));
 
                 // Format controls row (Add colon, Upper case)
-                LinearLayout formatSection = new LinearLayout(context);
-                formatSection.setOrientation(LinearLayout.VERTICAL);
-                formatSection.setPadding(0, dp(context, 8), 0, dp(context, 4));
 
-                LinearLayout colonRow = new LinearLayout(context);
-                colonRow.setOrientation(LinearLayout.HORIZONTAL);
-                colonRow.setGravity(Gravity.CENTER_VERTICAL);
+                addRow(block, context.getString(R.string.sig_serial), cert.getSerialNumber().toString(16), false);
+                addRow(block, context.getString(R.string.sig_created), formatDate(cert.getNotBefore().getTime()), false);
+                addRow(block, context.getString(R.string.sig_expired), formatDate(cert.getNotAfter().getTime()), false);
+                addRow(block, context.getString(R.string.sig_algorithm), cert.getSigAlgName(), false);
+
+                // Format switches placed at the very bottom in a single horizontal row
+                LinearLayout switchesRow = new LinearLayout(context);
+                switchesRow.setOrientation(LinearLayout.HORIZONTAL);
+                switchesRow.setGravity(Gravity.CENTER_VERTICAL);
+                switchesRow.setPadding(0, dp(context, 8), 0, dp(context, 4));
+
                 TextView colonLabel = new TextView(context);
                 colonLabel.setText(context.getString(R.string.add_colon));
                 colonLabel.setTextSize(13f);
-                colonRow.addView(colonLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                switchesRow.addView(colonLabel);
+
                 com.google.android.material.materialswitch.MaterialSwitch colonSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
                 colonSwitch.setChecked(true);
-                colonRow.addView(colonSwitch);
-                formatSection.addView(colonRow, matchWrap());
+                LinearLayout.LayoutParams colonParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                colonParams.setMarginStart(dp(context, 6));
+                colonParams.setMarginEnd(dp(context, 16));
+                switchesRow.addView(colonSwitch, colonParams);
 
-                LinearLayout caseRow = new LinearLayout(context);
-                caseRow.setOrientation(LinearLayout.HORIZONTAL);
-                caseRow.setGravity(Gravity.CENTER_VERTICAL);
                 TextView caseLabel = new TextView(context);
                 caseLabel.setText(context.getString(R.string.upper_case));
                 caseLabel.setTextSize(13f);
-                caseRow.addView(caseLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                switchesRow.addView(caseLabel);
+
                 com.google.android.material.materialswitch.MaterialSwitch caseSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
                 caseSwitch.setChecked(true);
-                caseRow.addView(caseSwitch);
-                formatSection.addView(caseRow, matchWrap());
+                LinearLayout.LayoutParams caseParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                caseParams.setMarginStart(dp(context, 6));
+                switchesRow.addView(caseSwitch, caseParams);
 
                 android.widget.CompoundButton.OnCheckedChangeListener switchListener = (buttonView, isChecked) -> {
                     boolean withColon = colonSwitch.isChecked();
@@ -177,12 +184,7 @@ public final class SignatureInfoDialog {
                 colonSwitch.setOnCheckedChangeListener(switchListener);
                 caseSwitch.setOnCheckedChangeListener(switchListener);
 
-                block.addView(formatSection, matchWrap());
-
-                addRow(block, context.getString(R.string.sig_serial), cert.getSerialNumber().toString(16), false);
-                addRow(block, context.getString(R.string.sig_created), formatDate(cert.getNotBefore().getTime()), false);
-                addRow(block, context.getString(R.string.sig_expired), formatDate(cert.getNotAfter().getTime()), false);
-                addRow(block, context.getString(R.string.sig_algorithm), cert.getSigAlgName(), false);
+                block.addView(switchesRow, matchWrap());
 
                 block.setOnClickListener(v -> CopyUtil.copyToClipboard(context, blockToText(block)));
                 root.addView(block, matchWrap());

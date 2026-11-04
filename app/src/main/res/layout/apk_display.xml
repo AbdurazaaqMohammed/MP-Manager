@@ -78,7 +78,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:textColor="?attr/colorOnSurface"
-                android:textIsSelectable="true"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -325,6 +324,7 @@
         </LinearLayout>
 
         <com.google.android.material.divider.MaterialDivider
+            android:id="@+id/bottomDivider"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginVertical="8dp" />

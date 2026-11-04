@@ -2146,4 +2146,5 @@ Patched code:</string>
     <string name="add_colon">Add colon</string>
     <string name="upper_case">Upper case</string>
     <string name="hash_label">HASH</string>
+    <string name="icon_saved">Icon exported to %1$s</string>
 </resources>

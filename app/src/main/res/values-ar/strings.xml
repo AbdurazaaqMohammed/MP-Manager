@@ -1980,4 +1980,5 @@
     <string name="add_colon">إضافة نقطتين</string>
     <string name="upper_case">أحرف كبيرة</string>
     <string name="hash_label">HASH</string>
+    <string name="icon_saved">تم تصدير الأيقونة إلى %1$s</string>
 </resources>
