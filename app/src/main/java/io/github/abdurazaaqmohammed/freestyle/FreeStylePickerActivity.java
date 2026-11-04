@@ -128,6 +128,10 @@ public class FreeStylePickerActivity extends AppCompatActivity {
     }
 
     private void checkPermissionsAndLoad() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            loadDeviceImages();
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
                     != PackageManager.PERMISSION_GRANTED) {

@@ -66,11 +66,10 @@ public class FreeStyleCanvasView extends View {
     private float initialScaleY;
 
     // Smart alignment guides
-    private boolean showSnapX = false;
-    private boolean showSnapY = false;
-    private float snapLineX = -1f;
-    private float snapLineY = -1f;
-    private static final float SNAP_THRESHOLD = 18f; // pixels
+    private final List<Float> verticalGuideLines = new ArrayList<>();
+    private final List<Float> horizontalGuideLines = new ArrayList<>();
+    private static final float SNAP_THRESHOLD = 20f; // pixels
+    private static final float ROTATION_SNAP_THRESHOLD = 3.5f; // degrees
 
     // Crop Mode State
     private boolean isCropMode = false;
@@ -202,11 +201,11 @@ public class FreeStyleCanvasView extends View {
         }
 
         // Draw guidelines if snapping
-        if (showSnapX && snapLineX >= 0) {
-            canvas.drawLine(snapLineX, 0, snapLineX, getHeight(), guideLinePaint);
+        for (float vx : verticalGuideLines) {
+            canvas.drawLine(vx, 0, vx, getHeight(), guideLinePaint);
         }
-        if (showSnapY && snapLineY >= 0) {
-            canvas.drawLine(0, snapLineY, getWidth(), snapLineY, guideLinePaint);
+        for (float hy : horizontalGuideLines) {
+            canvas.drawLine(0, hy, getWidth(), hy, guideLinePaint);
         }
 
         // Draw controls for active layer
@@ -363,11 +362,6 @@ public class FreeStyleCanvasView extends View {
                     activeLayer.x = snap.x;
                     activeLayer.y = snap.y;
 
-                    showSnapX = snap.snappedX;
-                    showSnapY = snap.snappedY;
-                    snapLineX = snap.lineX;
-                    snapLineY = snap.lineY;
-
                     if (snap.triggeredVibration) {
                         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                     }
@@ -379,8 +373,35 @@ public class FreeStyleCanvasView extends View {
                     // Angle relative to center
                     float currentAngle = (float) Math.toDegrees(Math.atan2(touchY - activeLayer.y, touchX - activeLayer.x));
                     float deltaAngle = currentAngle - initialAngle;
-                    activeLayer.rotation += deltaAngle;
+                    float rawRot = (activeLayer.rotation + deltaAngle) % 360f;
+                    if (rawRot < 0) rawRot += 360f;
+
+                    // Snap to 0, 90, 180, 270 (orthogonal upright angles)
+                    float snappedRot = rawRot;
+                    float[] cardinalAngles = {0f, 90f, 180f, 270f, 360f};
+                    boolean didSnapRot = false;
+                    for (float targetAngle : cardinalAngles) {
+                        if (Math.abs(rawRot - targetAngle) <= ROTATION_SNAP_THRESHOLD) {
+                            snappedRot = targetAngle % 360f;
+                            didSnapRot = true;
+                            break;
+                        }
+                    }
+
+                    if (didSnapRot && Math.abs(activeLayer.rotation - snappedRot) > 0.1f) {
+                        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                    }
+
+                    activeLayer.rotation = snappedRot;
                     initialAngle = currentAngle;
+
+                    verticalGuideLines.clear();
+                    horizontalGuideLines.clear();
+                    if (didSnapRot) {
+                        // Show crosshair guides through center of the aligned image to clearly indicate it's upright
+                        verticalGuideLines.add(activeLayer.x);
+                        horizontalGuideLines.add(activeLayer.y);
+                    }
                     invalidate();
                 } else if (currentMode == MODE_SCALE) {
                     // Distance from center
@@ -389,8 +410,53 @@ public class FreeStyleCanvasView extends View {
                         float ratio = currentDist / initialDist;
                         float newScaleX = initialScaleX * ratio;
                         float newScaleY = initialScaleY * ratio;
+
+                        // Check size alignment with other layers (matching width or matching height)
+                        float curW = activeLayer.width * newScaleX;
+                        float curH = activeLayer.height * newScaleY;
+
+                        verticalGuideLines.clear();
+                        horizontalGuideLines.clear();
+                        boolean snappedSize = false;
+
+                        for (StickerLayer other : layers) {
+                            if (other == activeLayer) continue;
+                            float otherW = other.width * other.scaleX;
+                            float otherH = other.height * other.scaleY;
+
+                            // Match Width
+                            if (Math.abs(curW - otherW) < SNAP_THRESHOLD * 1.5f && activeLayer.width > 0) {
+                                float snapRatio = otherW / (activeLayer.width * initialScaleX);
+                                newScaleX = initialScaleX * snapRatio;
+                                newScaleY = initialScaleY * snapRatio;
+                                snappedSize = true;
+                                // Add vertical edge guidelines
+                                float hW = otherW / 2f;
+                                addUniqueGuide(verticalGuideLines, activeLayer.x - hW);
+                                addUniqueGuide(verticalGuideLines, activeLayer.x + hW);
+                                break;
+                            }
+
+                            // Match Height
+                            if (Math.abs(curH - otherH) < SNAP_THRESHOLD * 1.5f && activeLayer.height > 0) {
+                                float snapRatio = otherH / (activeLayer.height * initialScaleY);
+                                newScaleX = initialScaleX * snapRatio;
+                                newScaleY = initialScaleY * snapRatio;
+                                snappedSize = true;
+                                // Add horizontal edge guidelines
+                                float hH = otherH / 2f;
+                                addUniqueGuide(horizontalGuideLines, activeLayer.y - hH);
+                                addUniqueGuide(horizontalGuideLines, activeLayer.y + hH);
+                                break;
+                            }
+                        }
+
+                        if (snappedSize) {
+                            performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                        }
+
                         // Avoid inverted or overly tiny scale
-                        if (newScaleX > 0.1f && newScaleY > 0.1f) {
+                        if (newScaleX > 0.08f && newScaleY > 0.08f) {
                             activeLayer.scaleX = newScaleX;
                             activeLayer.scaleY = newScaleY;
                         }
@@ -404,8 +470,8 @@ public class FreeStyleCanvasView extends View {
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                showSnapX = false;
-                showSnapY = false;
+                verticalGuideLines.clear();
+                horizontalGuideLines.clear();
                 currentMode = MODE_NONE;
                 activeHandle = StickerLayer.HANDLE_NONE;
                 invalidate();
@@ -482,10 +548,6 @@ public class FreeStyleCanvasView extends View {
     private static class SnapResult {
         float x;
         float y;
-        boolean snappedX;
-        boolean snappedY;
-        float lineX;
-        float lineY;
         boolean triggeredVibration;
     }
 
@@ -494,56 +556,183 @@ public class FreeStyleCanvasView extends View {
         result.x = targetX;
         result.y = targetY;
 
+        verticalGuideLines.clear();
+        horizontalGuideLines.clear();
+
+        float halfW = (layer.width * layer.scaleX) / 2f;
+        float halfH = (layer.height * layer.scaleY) / 2f;
+
+        float targetLeft = targetX - halfW;
+        float targetRight = targetX + halfW;
+        float targetTop = targetY - halfH;
+        float targetBottom = targetY + halfH;
+
         float bestDiffX = SNAP_THRESHOLD;
         float bestDiffY = SNAP_THRESHOLD;
+        float snapXOffset = 0f;
+        float snapYOffset = 0f;
+        boolean snappedX = false;
+        boolean snappedY = false;
 
         // 1. Check canvas center
         float canvasCenterX = getWidth() / 2f;
         float canvasCenterY = getHeight() / 2f;
 
-        if (Math.abs(targetX - canvasCenterX) < bestDiffX) {
-            result.x = canvasCenterX;
-            result.snappedX = true;
-            result.lineX = canvasCenterX;
-            bestDiffX = Math.abs(targetX - canvasCenterX);
+        // Canvas Center X
+        float dCenterX = Math.abs(targetX - canvasCenterX);
+        if (dCenterX < bestDiffX) {
+            bestDiffX = dCenterX;
+            snapXOffset = canvasCenterX - targetX;
+            snappedX = true;
         }
 
-        if (Math.abs(targetY - canvasCenterY) < bestDiffY) {
-            result.y = canvasCenterY;
-            result.snappedY = true;
-            result.lineY = canvasCenterY;
-            bestDiffY = Math.abs(targetY - canvasCenterY);
+        // Canvas Center Y
+        float dCenterY = Math.abs(targetY - canvasCenterY);
+        if (dCenterY < bestDiffY) {
+            bestDiffY = dCenterY;
+            snapYOffset = canvasCenterY - targetY;
+            snappedY = true;
         }
 
-        // 2. Check alignment with all other layers
+        // 2. Check alignment with all other layers (centers, edges: left-to-left, right-to-right, left-to-right, etc.)
         for (StickerLayer other : layers) {
             if (other == layer) continue;
 
-            // X center alignment (vertical guide line)
-            float diffX = Math.abs(targetX - other.x);
-            if (diffX < bestDiffX) {
-                result.x = other.x;
-                result.snappedX = true;
-                result.lineX = other.x;
-                bestDiffX = diffX;
+            float otherHalfW = (other.width * other.scaleX) / 2f;
+            float otherHalfH = (other.height * other.scaleY) / 2f;
+            float otherLeft = other.x - otherHalfW;
+            float otherRight = other.x + otherHalfW;
+            float otherTop = other.y - otherHalfH;
+            float otherBottom = other.y + otherHalfH;
+
+            // X-Alignments:
+            // Center to Center
+            float dcX = Math.abs(targetX - other.x);
+            if (dcX < bestDiffX) {
+                bestDiffX = dcX;
+                snapXOffset = other.x - targetX;
+                snappedX = true;
+            }
+            // Left to Left
+            float dll = Math.abs(targetLeft - otherLeft);
+            if (dll < bestDiffX) {
+                bestDiffX = dll;
+                snapXOffset = otherLeft - targetLeft;
+                snappedX = true;
+            }
+            // Right to Right
+            float drr = Math.abs(targetRight - otherRight);
+            if (drr < bestDiffX) {
+                bestDiffX = drr;
+                snapXOffset = otherRight - targetRight;
+                snappedX = true;
+            }
+            // Left to Right
+            float dlr = Math.abs(targetLeft - otherRight);
+            if (dlr < bestDiffX) {
+                bestDiffX = dlr;
+                snapXOffset = otherRight - targetLeft;
+                snappedX = true;
+            }
+            // Right to Left
+            float drl = Math.abs(targetRight - otherLeft);
+            if (drl < bestDiffX) {
+                bestDiffX = drl;
+                snapXOffset = otherLeft - targetRight;
+                snappedX = true;
             }
 
-            // Y center alignment (horizontal guide line)
-            float diffY = Math.abs(targetY - other.y);
-            if (diffY < bestDiffY) {
-                result.y = other.y;
-                result.snappedY = true;
-                result.lineY = other.y;
-                bestDiffY = diffY;
+            // Y-Alignments:
+            // Center to Center
+            float dcY = Math.abs(targetY - other.y);
+            if (dcY < bestDiffY) {
+                bestDiffY = dcY;
+                snapYOffset = other.y - targetY;
+                snappedY = true;
+            }
+            // Top to Top
+            float dtt = Math.abs(targetTop - otherTop);
+            if (dtt < bestDiffY) {
+                bestDiffY = dtt;
+                snapYOffset = otherTop - targetTop;
+                snappedY = true;
+            }
+            // Bottom to Bottom
+            float dbb = Math.abs(targetBottom - otherBottom);
+            if (dbb < bestDiffY) {
+                bestDiffY = dbb;
+                snapYOffset = otherBottom - targetBottom;
+                snappedY = true;
+            }
+            // Top to Bottom
+            float dtb = Math.abs(targetTop - otherBottom);
+            if (dtb < bestDiffY) {
+                bestDiffY = dtb;
+                snapYOffset = otherBottom - targetTop;
+                snappedY = true;
+            }
+            // Bottom to Top
+            float dbt = Math.abs(targetBottom - otherTop);
+            if (dbt < bestDiffY) {
+                bestDiffY = dbt;
+                snapYOffset = otherTop - targetBottom;
+                snappedY = true;
             }
         }
 
-        if (result.snappedX || result.snappedY) {
-            if (!showSnapX && !showSnapY) {
-                result.triggeredVibration = true;
-            }
+        if (snappedX) {
+            result.x = targetX + snapXOffset;
+        }
+        if (snappedY) {
+            result.y = targetY + snapYOffset;
+        }
+
+        // Collect all active guidelines based on final snapped position
+        float finalCenterX = result.x;
+        float finalCenterY = result.y;
+        float finalLeft = finalCenterX - halfW;
+        float finalRight = finalCenterX + halfW;
+        float finalTop = finalCenterY - halfH;
+        float finalBottom = finalCenterY + halfH;
+
+        if (Math.abs(finalCenterX - canvasCenterX) < 1f) verticalGuideLines.add(canvasCenterX);
+        if (Math.abs(finalCenterY - canvasCenterY) < 1f) horizontalGuideLines.add(canvasCenterY);
+
+        for (StickerLayer other : layers) {
+            if (other == layer) continue;
+            float otherHalfW = (other.width * other.scaleX) / 2f;
+            float otherHalfH = (other.height * other.scaleY) / 2f;
+            float otherLeft = other.x - otherHalfW;
+            float otherRight = other.x + otherHalfW;
+            float otherTop = other.y - otherHalfH;
+            float otherBottom = other.y + otherHalfH;
+
+            // X-lines
+            if (Math.abs(finalCenterX - other.x) < 1f) addUniqueGuide(verticalGuideLines, other.x);
+            if (Math.abs(finalLeft - otherLeft) < 1f) addUniqueGuide(verticalGuideLines, otherLeft);
+            if (Math.abs(finalRight - otherRight) < 1f) addUniqueGuide(verticalGuideLines, otherRight);
+            if (Math.abs(finalLeft - otherRight) < 1f) addUniqueGuide(verticalGuideLines, otherRight);
+            if (Math.abs(finalRight - otherLeft) < 1f) addUniqueGuide(verticalGuideLines, otherLeft);
+
+            // Y-lines
+            if (Math.abs(finalCenterY - other.y) < 1f) addUniqueGuide(horizontalGuideLines, other.y);
+            if (Math.abs(finalTop - otherTop) < 1f) addUniqueGuide(horizontalGuideLines, otherTop);
+            if (Math.abs(finalBottom - otherBottom) < 1f) addUniqueGuide(horizontalGuideLines, otherBottom);
+            if (Math.abs(finalTop - otherBottom) < 1f) addUniqueGuide(horizontalGuideLines, otherBottom);
+            if (Math.abs(finalBottom - otherTop) < 1f) addUniqueGuide(horizontalGuideLines, otherTop);
+        }
+
+        if (!verticalGuideLines.isEmpty() || !horizontalGuideLines.isEmpty()) {
+            result.triggeredVibration = true;
         }
         return result;
+    }
+
+    private void addUniqueGuide(List<Float> list, float val) {
+        for (float v : list) {
+            if (Math.abs(v - val) < 1f) return;
+        }
+        list.add(val);
     }
 
     // --- CROP MODE IMPLEMENTATION ---
