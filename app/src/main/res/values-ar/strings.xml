@@ -1984,6 +1984,5 @@
     <string name="free_style">Free Style</string>
     <string name="select_images">اختر الصور</string>
     <string name="collage_saved">تم حفظ الصورة المجمعة في %1$s</string>
-    <string name="crop">قص</string>
     <string name="apply_crop">تطبيق القص</string>
 </resources>
