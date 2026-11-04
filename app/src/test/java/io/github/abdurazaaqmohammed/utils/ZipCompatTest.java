@@ -8,7 +8,6 @@ import static org.junit.Assert.fail;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
-import io.airlift.compress.zstd.ZstdOutputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -56,8 +55,14 @@ public class ZipCompatTest {
         assertTrue(Arrays.equals(payload, Files.readAllBytes(out.toPath())));
     }
 
+    private static void assumeNativeZstd() {
+        org.junit.Assume.assumeTrue("native zstd not available on this host",
+                ZstdBridge.isLoaded());
+    }
+
     @Test
     public void listsAndExtractsZstdEntries() throws Exception {
+        assumeNativeZstd();
         byte[] payload = payload(40000);
         File zip = folder.newFile("zstd.zip");
         writeSingleEntryZip(zip, "module/classes.dex", payload, METHOD_ZSTD, zstdCompress(payload));
@@ -74,6 +79,7 @@ public class ZipCompatTest {
 
     @Test
     public void computesCrcOfZstdEntry() throws Exception {
+        assumeNativeZstd();
         byte[] payload = payload(9000);
         File zip = folder.newFile("zstd-crc.zip");
         writeSingleEntryZip(zip, "data.bin", payload, METHOD_ZSTD, zstdCompress(payload));
@@ -85,6 +91,7 @@ public class ZipCompatTest {
 
     @Test
     public void extractsZstdArchiveViaFallback() throws Exception {
+        assumeNativeZstd();
         byte[] payload = payload(30000);
         File zip = folder.newFile("zstd-all.zip");
         writeSingleEntryZip(zip, "a/b/c.txt", payload, METHOD_ZSTD, zstdCompress(payload));
@@ -169,7 +176,7 @@ public class ZipCompatTest {
 
     private static byte[] zstdCompress(byte[] data) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (ZstdOutputStream zstd = new ZstdOutputStream(bos)) {
+        try (MpZstdOutputStream zstd = new MpZstdOutputStream(bos)) {
             zstd.write(data);
         }
         return bos.toByteArray();

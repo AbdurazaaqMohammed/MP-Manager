@@ -495,6 +495,55 @@ public class FileOpener {
         return false;
     }
 
+    /**
+     * Probes the MIME types the external default app could be registered under
+     * (the app-reported one, then the sniffed and content-detected ones) and
+     * launches the user's external default (Open with → More → long-press →
+     * Set as default), if any. Returns true when one matched and was launched.
+     */
+    private boolean tryLaunchExternalDefault(Uri uri, File readable) {
+        String actionMime = MimeUtil.getMimeTypeForAction(context, readable);
+        if (actionMime == null) actionMime = "application/octet-stream";
+        if (tryLaunchDefaultApp(uri, actionMime)) return true;
+        try {
+            String real = MimeUtil.getRealMimeType(readable);
+            if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return true;
+            String reported = MimeUtil.getReportedMimeType(context, readable);
+            if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    /**
+     * Routes a file whose bytes look like an archive (epub, .zip and friends)
+     * either to the user's chosen default app or — when none was set — into
+     * MP's archive viewer, exactly as before. Built-in defaults win before
+     * this method is reached; SAF/root-staged copies keep opening externally
+     * because the in-app archive browser cannot write them back.
+     */
+    private void openArchiveOrDefault(File file, String fileName) {
+        withReadableCopy(file, readable -> {
+            boolean staged;
+            try {
+                staged = !readable.getAbsolutePath().equals(file.getAbsolutePath());
+            } catch (Exception e) {
+                staged = true;
+            }
+            Uri uri = null;
+            try {
+                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+            } catch (Exception ignored) {
+            }
+            if (uri != null && tryLaunchExternalDefault(uri, readable)) return;
+            if (staged || !ArchiveBrowseUtil.isBrowsable(readable)) {
+                openWithDefaultOrDialog(readable, fileName);
+                return;
+            }
+            openArchiveSafe(readable);
+        });
+    }
+
     private void openWithDefaultOrDialog(File file, String fileName) {
         if (tryRunBuiltinDefault(file, fileName)) return;
         withReadableCopy(file, readable -> {
@@ -505,13 +554,7 @@ public class FileOpener {
                 showOpenWithDialog(readable, fileName);
                 return;
             }
-            String actionMime = MimeUtil.getMimeTypeForAction(context, readable);
-            if (actionMime == null) actionMime = "application/octet-stream";
-            if (tryLaunchDefaultApp(uri, actionMime)) return;
-            String real = MimeUtil.getRealMimeType(readable);
-            if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return;
-            String reported = MimeUtil.getReportedMimeType(context, readable);
-            if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return;
+            if (tryLaunchExternalDefault(uri, readable)) return;
             showOpenWithDialog(readable, fileName, null, null, file);
         });
     }
@@ -1136,11 +1179,9 @@ public class FileOpener {
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
-                // Extension says archive: only route to the viewer when the
-                // bytes agree, so a mislabeled file falls through gracefully.
-                if (ArchiveBrowseUtil.isBrowsable(file))
-                    openArchiveSafe(file);
-                else openWithDefaultOrDialog(file, fileName);
+                // Extension says archive: honor the user's default app first,
+                // then the bytes-check, then the archive viewer.
+                openArchiveOrDefault(file, fileName);
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else if (fileName.endsWith(".dex")) {
@@ -1162,8 +1203,9 @@ public class FileOpener {
                 });
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
-                // tar/gz/...): open the archive viewer instead of "no app found".
-                openArchiveSafe(file);
+                // tar/gz/...): an .epub lands here. The user's default app wins
+                // over the archive viewer; without one we open the viewer as before.
+                openArchiveOrDefault(file, fileName);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }

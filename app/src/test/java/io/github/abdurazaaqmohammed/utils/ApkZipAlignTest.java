@@ -26,10 +26,13 @@ public class ApkZipAlignTest {
 
     @Test
     public void mustStoreRules() {
+        // Only the manifest and the resource table must stay uncompressed;
+        // res/ payloads may be deflated like anything else (Play ships them
+        // deflated), so the optimizer is free to compress them.
         assertTrue(ApkZipAlignUtil.mustStore("AndroidManifest.xml"));
         assertTrue(ApkZipAlignUtil.mustStore("resources.arsc"));
-        assertTrue(ApkZipAlignUtil.mustStore("res/drawable/icon.png"));
-        assertTrue(ApkZipAlignUtil.mustStore("res/raw/sound.mp3"));
+        assertFalse(ApkZipAlignUtil.mustStore("res/drawable/icon.png"));
+        assertFalse(ApkZipAlignUtil.mustStore("res/raw/sound.mp3"));
         assertFalse(ApkZipAlignUtil.mustStore("res/layout/main.xml"));
         assertFalse(ApkZipAlignUtil.mustStore("res/values/strings.xml"));
         assertFalse(ApkZipAlignUtil.mustStore("classes.dex"));

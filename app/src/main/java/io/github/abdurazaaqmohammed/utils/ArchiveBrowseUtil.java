@@ -11,7 +11,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
-import io.airlift.compress.zstd.ZstdInputStream;
 
 import java.io.BufferedInputStream;
 import java.io.Closeable;
@@ -37,8 +36,10 @@ import java.util.zip.CRC32;
  * "Open with → Archive viewer" works on any real archive even when its
  * extension is missing or wrong. Zip keeps flowing through {@link ZipCompat};
  * 7z, RAR, the tar family and the single-file compressors (gz/bz2/xz/zstd) are
- * read through commons-compress, junrar and aircompressor (zstd, pure Java —
- * zstd-jni ships no Android natives). A gz/bz2/xz/zstd whose payload is a tar is
+ * read through commons-compress, junrar and the app's own vendored zstd
+ * (app/src/main/cpp, built per ABI — zstd-jni has no Android natives and
+ * aircompressor touches sun.misc.Unsafe fields Android lacks).
+ * A gz/bz2/xz/zstd whose payload is a tar is
  * browsed as that tar, so mislabeled tar.gz archives still list real names.
  * Entry names are normalized to zip conventions everywhere: forward slashes
  * and a trailing slash on directories.
@@ -429,8 +430,8 @@ public final class ArchiveBrowseUtil {
             if (wrapper == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
             if (wrapper == ArchiveType.BZIP2) return new BZip2CompressorInputStream(raw, true);
             if (wrapper == ArchiveType.XZ) return new XZCompressorInputStream(raw, true);
-            // aircompressor's zstd stream closes the underlying stream too.
-            if (wrapper == ArchiveType.ZSTD) return new ZstdInputStream(raw);
+            // The app's zstd stream closes the underlying stream too.
+            if (wrapper == ArchiveType.ZSTD) return new MpZstdInputStream(raw);
             return raw;
         } catch (IOException e) {
             closeQuietly(raw);
@@ -521,7 +522,7 @@ public final class ArchiveBrowseUtil {
         try {
             if (type == ArchiveType.GZIP) return new GzipCompressorInputStream(raw, true);
             if (type == ArchiveType.BZIP2) return new BZip2CompressorInputStream(raw, true);
-            if (type == ArchiveType.ZSTD) return new ZstdInputStream(raw);
+            if (type == ArchiveType.ZSTD) return new MpZstdInputStream(raw);
             return new XZCompressorInputStream(raw, true);
         } catch (IOException e) {
             closeQuietly(raw);

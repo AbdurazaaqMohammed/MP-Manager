@@ -23,8 +23,14 @@ public class ZstdArchiveTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    private static void assumeNativeZstd() {
+        org.junit.Assume.assumeTrue("native zstd not available on this host",
+                ZstdBridge.isLoaded());
+    }
+
     @Test
     public void singleFileZstdRoundtrip() throws Exception {
+        assumeNativeZstd();
         byte[] payload = compressiblePayload();
         File src = folder.newFile("payload.bin");
         Files.write(src.toPath(), payload);
@@ -47,6 +53,7 @@ public class ZstdArchiveTest {
 
     @Test
     public void tarZstdRoundtrip() throws Exception {
+        assumeNativeZstd();
         File dir = folder.newFolder("src");
         File a = new File(dir, "a.txt");
         File sub = new File(dir, "sub");
@@ -78,6 +85,7 @@ public class ZstdArchiveTest {
 
     @Test
     public void entryCrcIsReportedForZstdPayload() throws Exception {
+        assumeNativeZstd();
         byte[] payload = compressiblePayload();
         File src = folder.newFile("crc.bin");
         Files.write(src.toPath(), payload);

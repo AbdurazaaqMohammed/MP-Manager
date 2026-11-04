@@ -8,7 +8,7 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
-import io.airlift.compress.zstd.ZstdInputStream;
+
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -339,12 +339,13 @@ public final class ZipCompat {
     }
 
     /**
-     * Zstandard (zip method 93) entries are decoded by aircompressor's
-     * pure-Java zstd stream (no JNI, so it works on every Android ABI too).
-     * The stream closes the underlying region stream, which closes the RAF.
+     * Zstandard (zip method 93) entries are decoded by the app's own native
+     * zstd stream (pure C, compiled per ABI); the app does not depend on
+     * zstd-jni, which has no Android natives. The stream closes the
+     * underlying region stream, which closes the RAF.
      */
     private static InputStream openZstd(InputStream raw) throws IOException {
-        return new ZstdInputStream(raw);
+        return new MpZstdInputStream(raw);
     }
 
     private static int readFully(InputStream in, byte[] buf, int off, int len) throws IOException {
