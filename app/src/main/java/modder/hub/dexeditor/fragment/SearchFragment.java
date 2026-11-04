@@ -2124,22 +2124,38 @@ public class SearchFragment extends Fragment {
                                 if (openContentStr != null || hasPendingStr) {
                                     try {
                                         smali = openContentStr != null ? openContentStr : DexEditorActivity.classTree.getSmaliByType(classDef);
-                                        int start = 0, end;
+                                        int start = 0, lineIdx = 0, end;
                                         while ((end = smali.indexOf('\n', start)) != -1) {
                                             String lineText = smali.substring(start, end);
-                                            if (lineText.contains("\"") && checkMatch(lineText)) {
+                                            if (lineText.contains("\"") && checkStringLiteralMatch(lineText)) {
                                                 if (foundCount.incrementAndGet() >= 250000) {
                                                     stopSearchWithLimit(activity);
                                                     return;
                                                 }
                                                 TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
                                                 snippet.setSnippet(true);
-                                                snippet.setLineNumber(countLinesBefore(smali, start));
+                                                snippet.setLineNumber(lineIdx);
                                                 preHighlightSnippet(snippet, highlightQuery);
                                                 snippets.add(snippet);
                                                 match = true;
                                             }
                                             start = end + 1;
+                                            lineIdx++;
+                                        }
+                                        if (start < smali.length()) {
+                                            String lineText = smali.substring(start);
+                                            if (lineText.contains("\"") && checkStringLiteralMatch(lineText)) {
+                                                if (foundCount.incrementAndGet() >= 250000) {
+                                                    stopSearchWithLimit(activity);
+                                                    return;
+                                                }
+                                                TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                snippet.setSnippet(true);
+                                                snippet.setLineNumber(lineIdx);
+                                                preHighlightSnippet(snippet, highlightQuery);
+                                                snippets.add(snippet);
+                                                match = true;
+                                            }
                                         }
                                     } catch (Exception ignored) {
                                     }
@@ -2354,6 +2370,35 @@ public class SearchFragment extends Fragment {
             }
             if (matchCase) return exactlyMatch ? text.equals(query) : text.contains(query);
             return exactlyMatch ? text.equalsIgnoreCase(query) : containsIgnoreCase(text, query);
+        }
+
+        private boolean checkStringLiteralMatch(String lineText) {
+            if (!lineText.contains("\"")) return false;
+            if (!exactlyMatch) {
+                return checkMatch(lineText);
+            }
+            int len = lineText.length();
+            int start = -1;
+            boolean escape = false;
+            for (int i = 0; i < len; i++) {
+                char c = lineText.charAt(i);
+                if (escape) {
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else if (c == '"') {
+                    if (start == -1) {
+                        start = i + 1;
+                    } else {
+                        String literal = lineText.substring(start, i);
+                        if (checkMatch(literal)) {
+                            return true;
+                        }
+                        start = -1;
+                    }
+                }
+            }
+            return false;
         }
 
         /**
