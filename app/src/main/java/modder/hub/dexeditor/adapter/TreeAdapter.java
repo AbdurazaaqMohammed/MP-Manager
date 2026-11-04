@@ -166,13 +166,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     public void setSearchList(boolean searchList, String query) {
         this.isSearchList = searchList;
-        if (query == null || !query.equals(this.searchQuery)) {
-            clearCachedSpannedNamesRecursive(rootNodes);
-            // A new query means a new result set: nothing is "already opened".
-            openedKeys.clear();
-            notifyDataSetChanged();
-        }
+        clearCachedSpannedNamesRecursive(rootNodes);
+        openedKeys.clear();
         this.searchQuery = query;
+        notifyDataSetChanged();
     }
 
     private static String openedKey(TreeNode node) {

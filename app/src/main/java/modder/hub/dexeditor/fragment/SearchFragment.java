@@ -2792,6 +2792,7 @@ public class SearchFragment extends Fragment {
                 if (fragment.adapter != null) {
                     fragment.adapter.setSearchList(true, highlightQuery);
                     fragment.adapter.refreshVisibleNodes();
+                    fragment.adapter.notifyDataSetChanged();
                 }
             }
         }
