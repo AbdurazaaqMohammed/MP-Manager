@@ -118,13 +118,13 @@ public final class SignatureInfoDialog {
                 block.setOrientation(LinearLayout.VERTICAL);
                 int groupPad = dp(context, 8);
                 block.setPadding(0, groupPad, 0, groupPad);
-                TextView header = new TextView(context);
-                header.setText(certs.size() > 1
-                        ? context.getString(R.string.cert, i + 1)
-                        : context.getString(R.string.signature_signer));
-                header.setTypeface(Typeface.DEFAULT_BOLD);
-                header.setTextSize(14f);
-                block.addView(header);
+                if (certs.size() > 1) {
+                    TextView header = new TextView(context);
+                    header.setText(context.getString(R.string.cert, i + 1));
+                    header.setTypeface(Typeface.DEFAULT_BOLD);
+                    header.setTextSize(14f);
+                    block.addView(header);
+                }
                 addRow(block, context.getString(R.string.sig_owner), CertUtil.formatPrincipal(cert.getSubjectX500Principal()), false);
                 int certHash = cert.hashCode();
                 addRow(block, context.getString(R.string.hash_label), String.format(Locale.US, "0x%08X (%d)", certHash, certHash), false);

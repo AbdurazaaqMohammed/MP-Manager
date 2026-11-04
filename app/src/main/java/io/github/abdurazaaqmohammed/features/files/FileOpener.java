@@ -1132,7 +1132,7 @@ public class FileOpener {
             || fileName.endsWith(".conf") || fileName.endsWith(".cfg") || fileName.endsWith(".ini")
             || fileName.endsWith(".log") || fileName.endsWith(".md") || fileName.endsWith(".csv")
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
-            || fileName.endsWith(".rc") || fileName.equals("init")) {
+            || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
         } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
             io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
