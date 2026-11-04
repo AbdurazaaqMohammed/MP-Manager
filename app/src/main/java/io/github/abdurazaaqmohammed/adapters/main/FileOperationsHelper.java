@@ -728,7 +728,11 @@ public class FileOperationsHelper {
             if (new File(dir, name).exists()) return true;
         } catch (Exception ignored) {
         }
-        final boolean elevated = AccessManager.fileOpsOn(context);
+        // Shell copies of Android/data paths need the same answer as elevated
+        // ones: with the file-ops toggle off the shell still does the copy, so
+        // an existing directory destination must be detected before cp runs.
+        final boolean elevated = AccessManager.fileOpsOn(context)
+                || AccessManager.shellCopyOn(context);
         if (!elevated) return false;
         // When the app can list the folder itself, a missing name really is
         // missing: no su/Shizuku round trip needed. Only folders the uid
@@ -980,7 +984,13 @@ public class FileOperationsHelper {
 
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
         boolean useElevated = AccessManager.fileOpsOn(context);
-        Map<Object, File> plan = planCopies(items, destinationFolder, useElevated);
+        // Android/data is only reachable as the shell user. With the file-ops
+        // toggle off those items used to fall through to a Java copy that staged
+        // every file in the cache first, so a batch cost one shell process per
+        // file and crossed the pipe twice. Hand them to the shell batch instead:
+        // one process, native cp speed.
+        boolean shellBatch = !useElevated && AccessManager.shellCopyOn(context);
+        Map<Object, File> plan = planCopies(items, destinationFolder, useElevated || shellBatch);
         if (plan == null) return true;
 
         int done = 0;
@@ -990,7 +1000,7 @@ public class FileOperationsHelper {
         final FileUtils.TransferListener listener = transferListener();
 
         Set<Object> batchDone = new HashSet<>();
-        if (useElevated) {
+        if (useElevated || shellBatch) {
             List<RootManager.CopyOp> ops = new ArrayList<>();
             List<Object> opItems = new ArrayList<>();
             long opFiles = 0;
@@ -1002,6 +1012,7 @@ public class FileOperationsHelper {
                     batchDone.add(item);
                     continue;
                 }
+                if (!useElevated && !AccessManager.needsShellCopy(context, f, dest)) continue;
                 FileUtils.Measure im = info.of(f);
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),

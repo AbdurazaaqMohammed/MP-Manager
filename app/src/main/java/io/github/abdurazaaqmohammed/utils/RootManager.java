@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.os.ParcelFileDescriptor;
 import androidx.preference.PreferenceManager;
 import android.text.TextUtils;
 
@@ -2085,15 +2086,65 @@ public class RootManager {
         return files.toArray(new File[0]);
     }
 
+    /**
+     * Streams a root-only file into a pipe and hands out the read end.
+     *
+     * <p>A DocumentsProvider cannot pass on a descriptor it opened with its own
+     * uid, so the bytes are produced by {@code su -c cat} in a background pump
+     * and the consumer reads them from the pipe. Nothing is buffered in memory,
+     * so a multi-gigabyte path behaves exactly like a small one.
+     */
+    public ParcelFileDescriptor openReadPipe(String srcPath) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (srcPath == null || !srcPath.startsWith("/")) {
+            throw new IOException("Refusing to read non-absolute path");
+        }
+        ParcelFileDescriptor[] pipe;
+        try {
+            pipe = ParcelFileDescriptor.createPipe();
+        } catch (IOException e) {
+            throw new IOException("Pipe failed: " + e.getMessage(), e);
+        }
+        final Process process;
+        try {
+            process = Runtime.getRuntime().exec(suCommandForFs("cat -- " + escapeShellArg(srcPath)));
+        } catch (IOException e) {
+            closeQuietly(pipe[0]);
+            closeQuietly(pipe[1]);
+            throw e;
+        }
+        Thread pump = new Thread(() -> {
+            try (InputStream in = process.getInputStream();
+                 OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
+                byte[] buf = new byte[131072];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            } catch (Exception ignored) {
+                // A reader that closes early surfaces here; the process is reaped
+                // below either way.
+            } finally {
+                process.destroy();
+            }
+        }, "mp-root-read-pump");
+        pump.setDaemon(true);
+        pump.start();
+        return pipe[0];
+    }
+
+    private static void closeQuietly(ParcelFileDescriptor pfd) {
+        try {
+            if (pfd != null) pfd.close();
+        } catch (Exception ignored) {
+        }
+    }
+
     public long streamFromRoot(String srcPath, OutputStream out, long maxBytes) throws IOException {
         if (!isRootMode()) throw new IOException("Root mode is disabled");
         if (srcPath == null || !srcPath.startsWith("/")) {
             throw new IOException("Refusing to read non-absolute path");
         }
-        long size = getFileSize(srcPath);
-        if (size > maxBytes) {
-            throw new IOException("File too large for preview (" + size + " bytes, limit " + maxBytes + "). Copy it instead.");
-        }
+        // No upfront stat and no size refusal here: the stat cost one extra su
+        // spawn per read, and the cap is enforced while streaming below.
         Process process = null;
         try {
             process = Runtime.getRuntime().exec(suCommandForFs("cat " + escapeShellArg(srcPath)));

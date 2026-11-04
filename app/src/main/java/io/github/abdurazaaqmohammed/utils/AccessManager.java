@@ -3,7 +3,11 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import androidx.preference.PreferenceManager;
+
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -787,6 +791,116 @@ public final class AccessManager {
             return;
         }
         throw new IOException("No elevated access enabled");
+    }
+
+    /**
+     * Whether an elevated backend is enabled, answered from preferences only.
+     *
+     * <p>{@link #fileOpsOn} also probes the device (a {@code su} spawn, a
+     * Shizuku ping). Callers that run on a provider thread only need the
+     * setting, and paying a shell round trip there turns one folder open into a
+     * visible stall.
+     */
+    public static boolean fileOpsConfigured(Context context) {
+        if (context == null) return false;
+        RootManager rm = RootManager.getInstance(context);
+        RootManager.WorkingMode mode = rm.getWorkingMode();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        if (mode == RootManager.WorkingMode.ROOT) return prefs.getBoolean("root_file_ops", false);
+        if (mode == RootManager.WorkingMode.SHIZUKU) {
+            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+        }
+        return false;
+    }
+
+    /**
+     * True when the Shizuku shell can copy paths this app uid cannot reach.
+     *
+     * <p>Android/{data,obb,media} are readable only as the shell user, so a
+     * copy that mixes them with ordinary folders has to be handed to {@code cp}
+     * rather than pulled through the cache one file at a time.
+     */
+    public static boolean shellCopyOn(Context context) {
+        if (context == null) return false;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.getWorkingMode() != RootManager.WorkingMode.SHIZUKU) return false;
+            return ShizukuManager.ready() && ShizukuShell.isGranted();
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /** True when {@code f} is a path only the shell, not this uid, can touch. */
+    private static boolean isShellOnlyPath(File f) {
+        if (f == null) return false;
+        try {
+            if (ShizukuFile.isShizukuPath(f)) return true;
+            return RootManager.isRootOnlyPath(f.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether copying {@code src} to {@code dest} must run in the shell.
+     *
+     * <p>Streaming such a path through {@link FileUtils} first materialises a
+     * cache copy with its own shell process, so the data crosses the pipe twice
+     * and every file costs a process spawn: exactly what made copying out of
+     * Android/data feel slower than a native file manager.
+     */
+    public static boolean needsShellCopy(Context context, File src, File dest) {
+        if (!shellCopyOn(context)) return false;
+        return isShellOnlyPath(src) || isShellOnlyPath(dest);
+    }
+
+    /** True when the path is reachable only through root or Shizuku. */
+    public static boolean needsShellAccess(Context context, String absPath) {
+        if (context == null || absPath == null || absPath.isEmpty()) return false;
+        if (needsElevated(context, absPath)) return true;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                    && ShizukuFile.isAndroidDataPath(absPath)) {
+                return ShizukuManager.ready();
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    /**
+     * Opens {@code absPath} for reading as a file descriptor, for the Documents
+     * provider.
+     *
+     * <p>A path this uid can open is handed out directly. A root/Shizuku path is
+     * pumped into a pipe by the elevated backend, so no staging copy is made
+     * first and files of any size can be passed to another app.
+     */
+    public static ParcelFileDescriptor openReadFd(Context context, String absPath) throws IOException {
+        if (absPath == null || !absPath.startsWith("/")) {
+            throw new IOException("Refusing to open non-absolute path");
+        }
+        File f = new File(absPath);
+        if (f.isFile() && f.canRead()) {
+            return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager rm = RootManager.getInstance(context);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
+                throw new IOException("Root file access is disabled or unavailable");
+            }
+            return rm.openReadPipe(absPath);
+        }
+        if (backend == Backend.SHIZUKU) {
+            if (!canUseShizuku(context)) {
+                throw new IOException("Shizuku file access is disabled or unavailable");
+            }
+            return ShizukuManager.openReadPipe(context, absPath);
+        }
+        throw new IOException("Not readable: " + absPath);
     }
 
     public static void preserveTime(Context context, String srcAbs, String dstAbs) {

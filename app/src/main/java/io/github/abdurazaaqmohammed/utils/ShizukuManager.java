@@ -356,17 +356,26 @@ public final class ShizukuManager {
         // can stat but not read (many /vendor and /odm files) used to fail later
         // as an opaque "exit 1" from cat.
         if (!ShizukuShell.isGranted()) throw new IOException("Shizuku not granted");
-        ShizukuShell.Result readable = ShizukuShell.exec("[ -r " + arg + " ]", 15);
-        if (readable != null && !readable.success) {
-            boolean present = ShizukuShell.exec("[ -e " + arg + " ]", 15).success;
-            throw new IOException(present
-                    ? "The shell user cannot read this file. Enable elevated file access or use root."
-                    : "No such file or directory: " + srcPath);
+        // Streamed, not buffered: execBytes() used to read the whole file into
+        // one byte[] here, so a large file either crawled through the GC or died
+        // with OutOfMemoryError. The two preflight spawns are gone as well - the
+        // reason a failed read is reported now comes from cat's own stderr.
+        ShizukuShell.Stream stream = ShizukuShell.execStream("cat -- " + arg);
+        try {
+            byte[] buf = new byte[131072];
+            long total = 0;
+            int n;
+            while ((n = stream.in().read(buf)) != -1) {
+                total += n;
+                if (total > maxBytes) throw new IOException("File too large");
+                out.write(buf, 0, n);
+            }
+            out.flush();
+            if (!stream.finish(120)) throw new IOException(stream.describeFailure());
+            return total;
+        } finally {
+            stream.close();
         }
-        byte[] data = ShizukuShell.execBytes("cat -- " + arg, maxBytes, 120);
-        out.write(data);
-        out.flush();
-        return data.length;
     }
 
     public static long streamToShell(File localSrc, String dstPath) throws IOException {
@@ -459,6 +468,72 @@ public final class ShizukuManager {
         }
     }
 
+    /**
+     * Opens a Shizuku-only path for reading as a descriptor, for the Documents
+     * provider.
+     *
+     * <p>Inside Android/{data,obb,media} the already-running user service
+     * produces the descriptor itself; anywhere else the shell streams
+     * {@code cat} into a pipe. No staging copy is made, so the size of the file
+     * does not matter.</p>
+     */
+    public static ParcelFileDescriptor openReadPipe(Context context, String srcPath) throws IOException {
+        if (srcPath == null || !srcPath.startsWith("/")) {
+            throw new IOException("Refusing to open non-absolute path");
+        }
+        if (!ready()) throw new IOException("Shizuku not connected or permission missing");
+        if (!useShell(srcPath)) {
+            requireAllowed(srcPath);
+            try {
+                IFileService s = serviceSync(context);
+                ParcelFileDescriptor pfd = s.openRead(srcPath, Long.MAX_VALUE);
+                if (pfd != null) return pfd;
+            } catch (Exception ignored) {
+                // The service only opens the app-private trees and may be
+                // restarting; the shell below can still serve the same path.
+            }
+        }
+        ParcelFileDescriptor[] pipe;
+        try {
+            pipe = ParcelFileDescriptor.createPipe();
+        } catch (IOException e) {
+            throw new IOException("Pipe failed: " + e.getMessage(), e);
+        }
+        final ShizukuShell.Stream stream;
+        try {
+            stream = ShizukuShell.execStream("cat -- " + shellArg(srcPath));
+        } catch (IOException e) {
+            closeQuietly(pipe);
+            throw e;
+        }
+        Thread pump = new Thread(() -> {
+            try (InputStream in = stream.in();
+                 OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
+                byte[] buf = new byte[131072];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            } catch (Exception ignored) {
+                // A reader that closes early surfaces here; the stream is closed
+                // below either way.
+            } finally {
+                stream.close();
+            }
+        }, "mp-shizuku-read-pump");
+        pump.setDaemon(true);
+        pump.start();
+        return pipe[0];
+    }
+
+    private static void closeQuietly(ParcelFileDescriptor[] pipe) {
+        if (pipe == null) return;
+        for (ParcelFileDescriptor p : pipe) {
+            try {
+                if (p != null) p.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     public static void streamTo(Context context, File localSrc, String dstPath) throws IOException {
         if (useShell(dstPath)) {
             streamToShell(localSrc, dstPath);
@@ -513,8 +588,11 @@ public final class ShizukuManager {
             File destParent = new File(dest).getParentFile();
             StringBuilder cmd = new StringBuilder();
             if (destParent != null) cmd.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
-            cmd.append("cat -- ").append(shellArg(src)).append(" > ").append(shellArg(dest));
-            throwIfShellFails(cmd.toString(), "copy", 120);
+            // cp, not "cat > dest": the shell copies in the kernel instead of
+            // pushing every byte through a pipe, which is what makes a copy from
+            // Android/data as fast as the same copy in a native file manager.
+            cmd.append("cp -pf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
+            throwIfShellFails(cmd.toString(), "copy", 600);
             return;
         }
         requireAllowed(src);
@@ -535,7 +613,7 @@ public final class ShizukuManager {
             File destParent = new File(dest).getParentFile();
             StringBuilder cmd = new StringBuilder();
             if (destParent != null) cmd.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
-            cmd.append("cp -r ").append(shellArg(src)).append(" ").append(shellArg(dest));
+            cmd.append("cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
             throwIfShellFails(cmd.toString(), "copy", 300);
             return;
         }

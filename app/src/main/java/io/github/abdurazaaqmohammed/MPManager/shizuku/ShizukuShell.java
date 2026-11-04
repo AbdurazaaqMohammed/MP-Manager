@@ -302,6 +302,99 @@ public final class ShizukuShell {
         return t;
     }
 
+    /**
+     * A running shell command whose stdout is read as it is produced.
+     *
+     * <p>{@link #execBytes} returns the whole output as one array, which is fine
+     * for {@code ls} and {@code stat} but turns any large read into a memory
+     * spike — and an OutOfMemoryError in this app's heap. Copying out of
+     * Android/data streams through here instead, so the data crosses the binder
+     * pipe once, in chunks, and never sits in the app's heap.
+     */
+    public static final class Stream implements java.io.Closeable {
+        private final ShizukuRemoteProcess process;
+        private final InputStream in;
+        private final StringBuilder err = new StringBuilder();
+        private final Thread errDrain;
+        private boolean timedOut;
+
+        Stream(ShizukuRemoteProcess process) {
+            this.process = process;
+            this.in = process.getInputStream();
+            this.errDrain = drain(process.getErrorStream(), err);
+        }
+
+        public InputStream in() {
+            return in;
+        }
+
+        /**
+         * Waits for the command to finish once its output has been consumed.
+         *
+         * @return true when it exited successfully
+         */
+        public boolean finish(long timeoutSeconds) {
+            boolean finished;
+            try {
+                finished = process.waitForTimeout(timeoutSeconds, TimeUnit.SECONDS);
+            } catch (Throwable t) {
+                return false;
+            }
+            if (!finished) {
+                timedOut = true;
+                try {
+                    process.destroy();
+                } catch (Throwable ignored) {
+                }
+                return false;
+            }
+            try {
+                errDrain.join(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            try {
+                return process.exitValue() == 0;
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+
+        /** Human-readable reason for a failed {@link #finish}. */
+        public String describeFailure() {
+            if (timedOut) return "Shell read timed out";
+            try {
+                return ShizukuShell.describeFailure(process.exitValue(), err.toString());
+            } catch (Throwable t) {
+                return "Shell read failed";
+            }
+        }
+
+        @Override
+        public void close() {
+            try {
+                in.close();
+            } catch (Throwable ignored) {
+            }
+            try {
+                process.destroy();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    /** Starts {@code command} and exposes its stdout as a stream. */
+    public static Stream execStream(String command) throws IOException {
+        if (!isGranted()) throw new IOException("Shizuku not granted");
+        try {
+            ShizukuRemoteProcess p = (ShizukuRemoteProcess) new ShizukuProcessFactory()
+                    .newProcess(new String[]{"sh", "-c", command}, null, "/");
+            return new Stream(p);
+        } catch (Throwable t) {
+            throw new IOException(t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage(), t);
+        }
+    }
+
     public static final class Result {
         public final boolean success;
         public final String stdout;

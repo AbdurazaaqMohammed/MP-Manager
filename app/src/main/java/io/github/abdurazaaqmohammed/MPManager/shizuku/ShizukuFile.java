@@ -422,7 +422,9 @@ public class ShizukuFile extends File {
         File out = new File(cacheDir, getName());
         if (out.exists()) out.delete();
         cacheDir.mkdirs();
-        ShizukuShell.Result r = ShizukuShell.exec("cat " + RootManager.escapeShellArg(getAbsolutePath()) + " > " + RootManager.escapeShellArg(out.getAbsolutePath()));
+        // cp rather than "cat > ...": one kernel-side copy instead of the bytes
+        // crossing a shell pipe, and the mode is preserved as a side effect.
+        ShizukuShell.Result r = ShizukuShell.exec("cp -pf -- " + RootManager.escapeShellArg(getAbsolutePath()) + " " + RootManager.escapeShellArg(out.getAbsolutePath()));
         if (!r.success) throw new IOException("Shizuku copy failed: " + r.stderr);
         return out;
     }
