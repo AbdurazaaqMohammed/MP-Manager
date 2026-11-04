@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
 
 import org.apache.commons.io.FilenameUtils;
@@ -87,6 +88,8 @@ public class FilePickerDialog {
     private final List<File> entries = new ArrayList<>();
     private File currentDir;
     private String nameFilter = "";
+    private Runnable cancelListener;
+    private boolean delivered;
 
     public FilePickerDialog(Context context, Properties properties) {
         this.context = context;
@@ -99,6 +102,14 @@ public class FilePickerDialog {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    /**
+     * Called when the dialog goes away without a selection, so a host that is
+     * only a picker entry point (the SAF activity) can close itself too.
+     */
+    public void setOnCancelListener(Runnable listener) {
+        this.cancelListener = listener;
     }
 
     public void show() {
@@ -168,6 +179,9 @@ public class FilePickerDialog {
             builder.setPositiveButton(R.string.select, (d, w) -> selectAndReturn(new String[]{currentDir.getAbsolutePath()}));
         }
         dialog = builder.create();
+        dialog.setOnDismissListener(d -> {
+            if (!delivered && cancelListener != null) cancelListener.run();
+        });
         loadDirectory(currentDir);
         // Refresh when the dialog window regains focus (files may have changed while open).
         try {
@@ -209,6 +223,15 @@ public class FilePickerDialog {
         currentDir = dir;
         entries.clear();
         File[] files = dir.listFiles();
+        if (files == null || files.length == 0) {
+            // Android/data, /data and friends cannot be listed by this uid;
+            // borrow the root/Shizuku backend so the picker browses exactly the
+            // folders the file manager does.
+            try {
+                files = AccessManager.listWithStat(context, dir.getAbsolutePath());
+            } catch (Exception ignored) {
+            }
+        }
         if (files != null) {
             List<File> list = new ArrayList<>();
             for (File f : files) {
@@ -350,6 +373,7 @@ public class FilePickerDialog {
     }
 
     private void selectAndReturn(String[] paths) {
+        delivered = true;
         if (listener != null) listener.onFileSelected(paths);
         dialog.dismiss();
     }
@@ -360,6 +384,7 @@ public class FilePickerDialog {
             else Toast.makeText(context, R.string.select_none, Toast.LENGTH_SHORT).show();
             return;
         }
+        delivered = true;
         if (listener != null) listener.onFileSelected(selectedPaths.toArray(new String[0]));
         dialog.dismiss();
     }
