@@ -1398,6 +1398,7 @@ public class ApkInfoDialogs {
 
         new Thread(() -> {
             final boolean[] loaded = {false};
+            final String[] appMeta = new String[]{"", ""}; // [0]: label, [1]: verName
             try {
                 PackageManager pm = context.getPackageManager();
                 PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
@@ -1419,6 +1420,7 @@ public class ApkInfoDialogs {
                 Drawable icon = appInfo.loadIcon(pm);
                 String label = appInfo.loadLabel(pm).toString();
                 String verName = packageInfo.versionName;
+                appMeta[0] = label;
                 long versionCode = ApkInfoUtil.getVersionCode(packageInfo);
                 String vCode = versionCode > 0 ? String.valueOf(versionCode) : "";
                 String pkg = packageInfo.packageName;
@@ -1459,6 +1461,7 @@ public class ApkInfoDialogs {
                 final String finalVerName = (TextUtils.isEmpty(verName)
                         ? context.getString(R.string.version_name_unset) : verName)
                         + (TextUtils.isEmpty(vCode) ? "" : " (" + vCode + ")");
+                appMeta[1] = finalVerName;
                 context.handler.post(() -> {
                     apkIcon.setImageDrawable(icon);
                     apkTitle.setText(label);
@@ -1497,7 +1500,7 @@ public class ApkInfoDialogs {
             };
             context.handler.post(() -> {
                 apkIcon.setOnLongClickListener(v -> {
-                    exportApkIconZip(file, label, finalVerName);
+                    exportApkIconZip(file, appMeta[0], appMeta[1]);
                     return true;
                 });
                 signaturesInApk.setOnLongClickListener(lcl);
