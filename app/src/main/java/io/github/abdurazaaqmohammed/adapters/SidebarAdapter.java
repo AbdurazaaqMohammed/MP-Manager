@@ -302,7 +302,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "mcp_server", "color_picker", "layout", "wifi", "tools", "settings"};
+        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "mcp_server", "color_picker", "layout", "wifi", "free_style", "tools", "settings"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -317,6 +317,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "color_picker": addTool(id, R.string.color_picker, R.drawable.colorize_24px); break;
                 case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
                 case "wifi": addTool(id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
+                case "free_style": addTool(id, R.string.free_style, R.drawable.image_24px); break;
                 case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
                 case "settings": addTool(id, R.string.settings, R.drawable.baseline_settings_24); break;
                 default: {

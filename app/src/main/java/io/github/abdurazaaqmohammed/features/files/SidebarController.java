@@ -599,6 +599,9 @@ public class SidebarController {
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));
                 break;
+            case "free_style":
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity.class));
+                break;
             case "color_picker":
                 activity.openColorPickerTool();
                 break;

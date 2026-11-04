@@ -131,6 +131,18 @@
             android:name="io.github.abdurazaaqmohammed.tools.SslUnpinningActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:label="@string/free_style"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
+        <activity
+            android:name="io.github.abdurazaaqmohammed.freestyle.FreeStyleCanvasActivity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:label="@string/free_style"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
         <!-- Picker entry point: apps that ask the system for a file can choose
              MP Manager and browse with the app's own FilePickerDialog. -->
         <activity
