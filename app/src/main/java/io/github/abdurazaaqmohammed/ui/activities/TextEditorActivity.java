@@ -624,6 +624,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     markLoadFailed(tab, null);
                     return;
                 }
+                if (tabTooLarge(tab)) {
+                    tab.loading = false;
+                    runOnUiThread(() -> offerHexViewer(tab));
+                    return;
+                }
                 if (tab.pendingDecoded != null) {
                     applyLoadedText(tab, tab.pendingDecoded, token);
                     return;
@@ -684,6 +689,49 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
      * session is restored from disk pointing at the previous run's path), and
      * reusing it produced a blank editor.
      */
+    /**
+     * Files bigger than this refuse to open as text: the String plus the
+     * editor's own per-line copy can cost several times the file size in
+     * heap, which OOMed on big binaries (a system .iso opened as text).
+     * The hex editor is random-access and handles them fine, so it is
+     * offered instead.
+     */
+    private static final long MAX_TEXT_OPEN_BYTES = 10L * 1024 * 1024;
+
+    private boolean tabTooLarge(EditorTab tab) {
+        String path = tab.file != null ? tab.file.getAbsolutePath()
+                : (tab.fileUri != null && "file".equals(tab.fileUri.getScheme())
+                        ? tab.fileUri.getPath() : null);
+        if (path == null) return false;
+        try {
+            return new File(path).length() > MAX_TEXT_OPEN_BYTES;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void offerHexViewer(EditorTab tab) {
+        long sizeMb = 0;
+        String path = tab.file != null ? tab.file.getAbsolutePath() : null;
+        if (path != null) {
+            sizeMb = Math.max(1, new File(path).length() / (1024 * 1024));
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.file_too_large)
+                .setMessage(getString(R.string.file_too_large_open_hex, sizeMb))
+                .setPositiveButton(R.string.hex_editor, (d, w) -> {
+                    if (path == null) return;
+                    Intent i = new Intent(this, HexEditorActivity.class)
+                            .putExtra("path", path);
+                    if (tab.rootOriginalPath != null) {
+                        i.putExtra("rootOriginalPath", tab.rootOriginalPath);
+                    }
+                    startActivity(i);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
     private boolean ensureReadableFile(EditorTab tab) {
         boolean stagedCopyGone = tab.file == null || !tab.file.isFile();
         if (!stagedCopyGone && tab.rootOriginalPath != null && tab.file.length() == 0

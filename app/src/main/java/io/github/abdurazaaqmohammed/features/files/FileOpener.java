@@ -1518,6 +1518,11 @@ public class FileOpener {
                                             } else {
                                                 context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
                                             }
+                                        } catch (OutOfMemoryError oom) {
+                                            // Errors are not caught below; a huge
+                                            // .apks should fail with a message,
+                                            // not a crash.
+                                            context.runOnUiThread(() -> Extensions.showMessage(context, R.string.out_of_memory_operation));
                                         } catch (Exception e) {
                                             context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
                                         }
