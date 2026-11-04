@@ -1,5 +1,7 @@
 # Build MP-Manager APK
-# Note: Offline project rules reside at /storage/emulated/0/Download/apks/Pref/Antigravity/project_rules.md
+# Note: Offline project rules reside locally at /storage/emulated/0/Download/apks/Pref/Antigravity/project_rules.md
+# (These offline/CI configuration notes are strictly local to our test repo and must be excluded from any future upstream PR).
+# Always review project rules before any build unless already reviewed in the current session.
 # Rule 3 & 5: Builds are triggered strictly and exclusively on branch main with the commit message phrase 'action do build'.
 
 name: Build MP-Manager APK

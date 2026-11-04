@@ -731,7 +731,7 @@ public class EntryDialogs {
                         if (!dest.delete()) {
                             if (useElevated) {
                                 try {
-                                    AccessManager.delete(context, dest.getAbsolutePath());
+                                    AccessManager.delete(context, dest.getAbsolutePath(), true);
                                 } catch (Exception ignored) {}
                             }
                         }
@@ -760,17 +760,19 @@ public class EntryDialogs {
         do {
             candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
             i++;
-        } while (useElevated ? dirHasEntry(destinationFolder, candidate)
-                : new File(destinationFolder, candidate).exists());
+        } while (dirHasEntry(destinationFolder, candidate, useElevated));
         return candidate;
     }
 
-    private boolean dirHasEntry(File dir, String name) {
-        try {
-            return AccessManager.hasEntry(context, dir.getAbsolutePath(), name);
-        } catch (Exception e) {
-            return new File(dir, name).exists();
+    private boolean dirHasEntry(File dir, String name, boolean useElevated) {
+        File f = new File(dir, name);
+        if (f.exists()) return true;
+        if (useElevated) {
+            try {
+                return RootManager.getInstance(context).exists(f.getAbsolutePath());
+            } catch (Exception ignored) {}
         }
+        return false;
     }
 
     private void appendDeleteSize(AlertDialog shown, TextView customMsg, boolean isInZip,

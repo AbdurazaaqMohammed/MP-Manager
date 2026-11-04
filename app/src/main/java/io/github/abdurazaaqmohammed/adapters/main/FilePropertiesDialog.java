@@ -346,8 +346,8 @@ public class FilePropertiesDialog {
                 try {
                     // Query available owners/groups in this directory using stat
                     RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + RootManager.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
-                    if (result.isSuccess() && result.output != null) {
-                        for (String line : result.output.split("\\r?\\n")) {
+                    if (result.isSuccess() && result.output() != null) {
+                        for (String line : result.output().split("\\r?\\n")) {
                             line = line.trim();
                             if (!line.isEmpty() && line.contains(":")) candidateOwners.add(line);
                         }

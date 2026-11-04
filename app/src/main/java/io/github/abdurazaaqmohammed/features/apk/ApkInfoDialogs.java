@@ -1201,7 +1201,6 @@ public class ApkInfoDialogs {
         TextView fileSize = display.findViewById(R.id.fileSize);
         TextView apkTargetSdk = display.findViewById(R.id.apkTargetSdk);
         TextView apkMinSdk = display.findViewById(R.id.apkMinSdk);
-        TextView apkCert = display.findViewById(R.id.apkCert);
         TextView apkInstalled = display.findViewById(R.id.apkInstalled);
         TextView apkPermissions = display.findViewById(R.id.apkPermissions);
         LinearLayout permissionsHeader = display.findViewById(R.id.permissionsHeader);
@@ -1457,7 +1456,6 @@ public class ApkInfoDialogs {
                     apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
-                    if (apkCert != null) apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
                     apkInstalled.setText(comparison);
                 });
                 loaded[0] = true;
@@ -1467,14 +1465,6 @@ public class ApkInfoDialogs {
                         SignatureInfoDialog.show(context, dialogUtil, file);
                     }
                 }));
-                context.handler.post(() -> {
-                    if (apkCert != null) apkCert.setOnClickListener(v -> {
-                        if (finalSigInfo != null) {
-                            ad.dismiss();
-                            SignatureInfoDialog.show(context, dialogUtil, file);
-                        }
-                    });
-                });
             } catch (Exception e) {
                 loaded[0] = false;
                 new ErrorUtil(context).showError(e);
@@ -1520,7 +1510,7 @@ public class ApkInfoDialogs {
             View root = ad.getWindow().getDecorView();
             int[] ids = {R.id.apkTitle, R.id.apkVersionName, R.id.verCode, R.id.pkgName,
                     R.id.signaturesInApk, R.id.protectedDisplay, R.id.fileSize,
-                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkCert, R.id.apkInstalled};
+                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkInstalled};
             for (int id : ids) {
                 TextView tv = root.findViewById(id);
                 if (tv != null) tv.setText(placeholder);
