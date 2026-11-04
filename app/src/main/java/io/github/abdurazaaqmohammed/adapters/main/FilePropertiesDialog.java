@@ -272,11 +272,26 @@ public class FilePropertiesDialog {
             permViewHolder[0] = permView;
             permView.setTypeface(Typeface.MONOSPACE);
 
+            final TextView[] ownerViewHolder = new TextView[1];
+            View.OnClickListener openOwnerAction = v -> {
+                if (canEditPerms) {
+                    showOwnerDialog(file, rm, ownerViewHolder[0]);
+                } else {
+                    Extensions.showMessage(context, R.string.storage_root_needed);
+                }
+            };
+            TextView ownerView = addPropertyRow(propRows, context.getString(R.string.owner), "…",
+                    R.drawable.edit_24px, openOwnerAction);
+            ownerViewHolder[0] = ownerView;
+            ownerView.setTypeface(Typeface.MONOSPACE);
+
             new Thread(() -> {
                 String symbolic = null;
                 String numeric = null;
+                String ownerStr = null;
                 if (canEditPerms) {
                     numeric = rm.getPermissions(file.getAbsolutePath());
+                    ownerStr = rm.getOwner(file.getAbsolutePath());
                 }
                 if (numeric == null || numeric.isEmpty()) {
                     try {
@@ -286,11 +301,23 @@ public class FilePropertiesDialog {
                         if (numeric != null) numeric = numeric.trim();
                     } catch (Exception ignored) {}
                 }
+                if (ownerStr == null || ownerStr.isEmpty()) {
+                    try {
+                        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                                Runtime.getRuntime().exec(new String[]{"stat", "-c", "%U:%G", file.getAbsolutePath()}).getInputStream()));
+                        ownerStr = reader.readLine();
+                        if (ownerStr != null) ownerStr = ownerStr.trim();
+                    } catch (Exception ignored) {}
+                }
                 if (numeric != null && (numeric.length() == 3 || numeric.length() == 4)) {
                     symbolic = PermissionsEditorHelper.numericToSymbolic(numeric);
                 }
                 final String permText = (symbolic != null && numeric != null) ? (symbolic + " (" + numeric + ")") : "—";
-                context.handler.post(() -> permView.setText(permText));
+                final String finalOwner = (ownerStr != null && !ownerStr.isEmpty()) ? ownerStr : "—";
+                context.handler.post(() -> {
+                    permView.setText(permText);
+                    ownerView.setText(finalOwner);
+                });
             }).start();
         }
 
@@ -305,6 +332,68 @@ public class FilePropertiesDialog {
 
         selfDialog[0] = dialogBuilder.create();
         dialogUtil.styleAlertDialog(selfDialog[0]);
+    }
+
+    private void showOwnerDialog(File file, RootManager rm, TextView ownerView) {
+        new Thread(() -> {
+            String currentOwner = rm.getOwner(file.getAbsolutePath());
+            if (currentOwner == null || currentOwner.isEmpty()) currentOwner = "root:root";
+            File parent = file.getParentFile();
+            java.util.LinkedHashSet<String> candidateOwners = new java.util.LinkedHashSet<>();
+            candidateOwners.add(currentOwner);
+
+            if (parent != null) {
+                try {
+                    // Query available owners/groups in this directory using stat
+                    RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + RootManager.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
+                    if (result.isSuccess() && result.output != null) {
+                        for (String line : result.output.split("\\r?\\n")) {
+                            line = line.trim();
+                            if (!line.isEmpty() && line.contains(":")) candidateOwners.add(line);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            // Standard common Android owners
+            candidateOwners.add("root:root");
+            candidateOwners.add("media_rw:media_rw");
+            candidateOwners.add("system:system");
+            candidateOwners.add("shell:shell");
+
+            final List<String> ownerList = new ArrayList<>(candidateOwners);
+            final String finalCurrent = currentOwner;
+            int selectedIdx = ownerList.indexOf(currentOwner);
+            if (selectedIdx == -1) selectedIdx = 0;
+            final int initialSelected = selectedIdx;
+            final int[] checkedItem = new int[]{initialSelected};
+
+            context.handler.post(() -> {
+                AlertDialog ownerDialog = dialogUtil.getDialogBuilder()
+                        .setTitle(context.getString(R.string.owner))
+                        .setSingleChoiceItems(ownerList.toArray(new String[0]), initialSelected, (d, which) -> checkedItem[0] = which)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                            if (checkedItem[0] >= 0 && checkedItem[0] < ownerList.size()) {
+                                String selectedOwner = ownerList.get(checkedItem[0]);
+                                new Thread(() -> {
+                                    try {
+                                        rm.executeFs("chown " + selectedOwner + " " + RootManager.escapeShellArg(file.getAbsolutePath()), 30);
+                                        rm.invalidateListCache();
+                                        context.handler.post(() -> {
+                                            if (ownerView != null) ownerView.setText(selectedOwner);
+                                            Extensions.showMessage(context, R.string.owner_updated);
+                                        });
+                                    } catch (Exception e) {
+                                        context.handler.post(() -> new ErrorUtil(context).showError(e));
+                                    }
+                                }).start();
+                            }
+                        })
+                        .create();
+                dialogUtil.styleAlertDialog(ownerDialog);
+                ownerDialog.show();
+            });
+        }).start();
     }
 
     private void showPermissionsDialog(File file, RootManager rm, TextView permView) {

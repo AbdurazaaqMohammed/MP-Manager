@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -18,6 +19,7 @@ import androidx.core.content.ContextCompat;
 import java.io.File;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
@@ -43,6 +45,11 @@ public final class SignatureInfoDialog {
     }
 
     public static void show(AppCompatActivity context, DialogUtil dialogUtil, File apk) {
+        ApkSignatureInfo cached = ApkSignatureInfo.getCached(apk);
+        if (cached != null) {
+            displayDialog(context, dialogUtil, cached);
+            return;
+        }
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
             final ApkSignatureInfo info;
@@ -61,21 +68,23 @@ public final class SignatureInfoDialog {
                 return;
             }
             pm.dismiss();
-            context.runOnUiThread(() -> {
-                CharSequence all = flatten(context, info);
-                // The sheet already lays out every certificate field inline, so the
-                // separate "View certificate" copy is redundant; keep just Close/Copy.
-                DialogUtil du = dialogUtil != null ? dialogUtil : new DialogUtil(context);
-                AlertDialog dialog = du.getDialogBuilder()
-                        .setTitle(R.string.signature_info)
-                        .setView(build(context, info))
-                        .setPositiveButton(R.string.close, null)
-                        .setNegativeButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, all))
-                        .create();
-                dialog.show();
-                DialogUtil.keepButtonsHorizontal(dialog);
-            });
+            context.runOnUiThread(() -> displayDialog(context, dialogUtil, info));
         }).start();
+    }
+
+    private static void displayDialog(AppCompatActivity context, DialogUtil dialogUtil, ApkSignatureInfo info) {
+        CharSequence all = flatten(context, info);
+        // The sheet already lays out every certificate field inline, so the
+        // separate "View certificate" copy is redundant; keep just Close/Copy.
+        DialogUtil du = dialogUtil != null ? dialogUtil : new DialogUtil(context);
+        AlertDialog dialog = du.getDialogBuilder()
+                .setTitle(R.string.signature_info)
+                .setView(build(context, info))
+                .setPositiveButton(R.string.close, null)
+                .setNegativeButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, all))
+                .create();
+        dialog.show();
+        DialogUtil.keepButtonsHorizontal(dialog);
     }
 
     private static View errorView(Activity context, String message) {
@@ -117,14 +126,64 @@ public final class SignatureInfoDialog {
                 header.setTextSize(14f);
                 block.addView(header);
                 addRow(block, context.getString(R.string.sig_owner), CertUtil.formatPrincipal(cert.getSubjectX500Principal()), false);
+                int certHash = cert.hashCode();
+                addRow(block, context.getString(R.string.hash_label), String.format(Locale.US, "0x%08X (%d)", certHash, certHash), false);
+                addRow(block, "CRC32", ApkSignatureInfo.crc32Of(cert), false);
+
+                final String rawMd5 = ApkSignatureInfo.md5Of(cert);
+                final String rawSha1 = ApkSignatureInfo.sha1Of(cert);
+                final String rawSha256 = ApkSignatureInfo.sha256Of(cert);
+
+                final TextView md5Val = addRowWithView(block, "MD5", formatHexCustom(rawMd5, true, true));
+                final TextView sha1Val = addRowWithView(block, "SHA1", formatHexCustom(rawSha1, true, true));
+                final TextView sha256Val = addRowWithView(block, "SHA256", formatHexCustom(rawSha256, true, true));
+
+                // Format controls row (Add colon, Upper case)
+                LinearLayout formatSection = new LinearLayout(context);
+                formatSection.setOrientation(LinearLayout.VERTICAL);
+                formatSection.setPadding(0, dp(context, 8), 0, dp(context, 4));
+
+                LinearLayout colonRow = new LinearLayout(context);
+                colonRow.setOrientation(LinearLayout.HORIZONTAL);
+                colonRow.setGravity(Gravity.CENTER_VERTICAL);
+                TextView colonLabel = new TextView(context);
+                colonLabel.setText(context.getString(R.string.add_colon));
+                colonLabel.setTextSize(13f);
+                colonRow.addView(colonLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                com.google.android.material.materialswitch.MaterialSwitch colonSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
+                colonSwitch.setChecked(true);
+                colonRow.addView(colonSwitch);
+                formatSection.addView(colonRow, matchWrap());
+
+                LinearLayout caseRow = new LinearLayout(context);
+                caseRow.setOrientation(LinearLayout.HORIZONTAL);
+                caseRow.setGravity(Gravity.CENTER_VERTICAL);
+                TextView caseLabel = new TextView(context);
+                caseLabel.setText(context.getString(R.string.upper_case));
+                caseLabel.setTextSize(13f);
+                caseRow.addView(caseLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                com.google.android.material.materialswitch.MaterialSwitch caseSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
+                caseSwitch.setChecked(true);
+                caseRow.addView(caseSwitch);
+                formatSection.addView(caseRow, matchWrap());
+
+                android.widget.CompoundButton.OnCheckedChangeListener switchListener = (buttonView, isChecked) -> {
+                    boolean withColon = colonSwitch.isChecked();
+                    boolean upper = caseSwitch.isChecked();
+                    if (md5Val != null) md5Val.setText(formatHexCustom(rawMd5, withColon, upper));
+                    if (sha1Val != null) sha1Val.setText(formatHexCustom(rawSha1, withColon, upper));
+                    if (sha256Val != null) sha256Val.setText(formatHexCustom(rawSha256, withColon, upper));
+                };
+                colonSwitch.setOnCheckedChangeListener(switchListener);
+                caseSwitch.setOnCheckedChangeListener(switchListener);
+
+                block.addView(formatSection, matchWrap());
+
                 addRow(block, context.getString(R.string.sig_serial), cert.getSerialNumber().toString(16), false);
                 addRow(block, context.getString(R.string.sig_created), formatDate(cert.getNotBefore().getTime()), false);
                 addRow(block, context.getString(R.string.sig_expired), formatDate(cert.getNotAfter().getTime()), false);
                 addRow(block, context.getString(R.string.sig_algorithm), cert.getSigAlgName(), false);
-                addRow(block, "MD5", ApkSignatureInfo.md5Of(cert), false);
-                addRow(block, "SHA-1", ApkSignatureInfo.sha1Of(cert), false);
-                addRow(block, "SHA-256", ApkSignatureInfo.sha256Of(cert), false);
-                addRow(block, "CRC32", ApkSignatureInfo.crc32Of(cert), false);
+
                 block.setOnClickListener(v -> CopyUtil.copyToClipboard(context, blockToText(block)));
                 root.addView(block, matchWrap());
             }
@@ -169,6 +228,39 @@ public final class SignatureInfoDialog {
         if (!info.getErrors().isEmpty()) {
             sb.append("\n\nErrors:\n");
             for (String error : info.getErrors()) sb.append(error).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static TextView addRowWithView(LinearLayout parent, String label, String value) {
+        LinearLayout row = new LinearLayout(parent.getContext());
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(parent.getContext(), 2), 0, dp(parent.getContext(), 2));
+        TextView labelView = new TextView(parent.getContext());
+        labelView.setText(label);
+        labelView.setTextSize(13f);
+        int minWidth = dp(parent.getContext(), 92);
+        labelView.setMinWidth(minWidth);
+        row.addView(labelView, new LinearLayout.LayoutParams(minWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView valueView = new TextView(parent.getContext());
+        valueView.setText(TextUtils.isEmpty(value) ? "—" : value);
+        valueView.setTextSize(13f);
+        valueView.setTextIsSelectable(true);
+        row.addView(valueView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        parent.addView(row, matchWrap());
+        return valueView;
+    }
+
+    private static String formatHexCustom(String rawHex, boolean withColon, boolean upper) {
+        if (rawHex == null || rawHex.isEmpty()) return "";
+        String clean = rawHex.replace(":", "").replace(" ", "");
+        if (upper) clean = clean.toUpperCase(Locale.US);
+        else clean = clean.toLowerCase(Locale.US);
+        if (!withColon) return clean;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < clean.length(); i++) {
+            if (i > 0 && i % 2 == 0) sb.append(':');
+            sb.append(clean.charAt(i));
         }
         return sb.toString();
     }

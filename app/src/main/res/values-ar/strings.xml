@@ -1975,4 +1975,9 @@
     <string name="import_settings_failed">فشل استيراد الإعدادات</string>
     <string name="remember_password">تذكر كلمة المرور</string>
     <string name="confirm_move_f">هل أنت متأكد أنك تريد نقل %1$s؟</string>
+    <string name="owner_updated">تم تحديث المالك</string>
+    <string name="format_label">التنسيق</string>
+    <string name="add_colon">إضافة نقطتين</string>
+    <string name="upper_case">أحرف كبيرة</string>
+    <string name="hash_label">HASH</string>
 </resources>

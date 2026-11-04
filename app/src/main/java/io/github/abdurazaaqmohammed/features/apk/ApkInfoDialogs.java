@@ -1457,7 +1457,7 @@ public class ApkInfoDialogs {
                     apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
-                    apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
+                    if (apkCert != null) apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
                     apkInstalled.setText(comparison);
                 });
                 loaded[0] = true;
@@ -1467,12 +1467,14 @@ public class ApkInfoDialogs {
                         SignatureInfoDialog.show(context, dialogUtil, file);
                     }
                 }));
-                context.handler.post(() -> apkCert.setOnClickListener(v -> {
-                    if (finalSigInfo != null) {
-                        ad.dismiss();
-                        SignatureInfoDialog.show(context, dialogUtil, file);
-                    }
-                }));
+                context.handler.post(() -> {
+                    if (apkCert != null) apkCert.setOnClickListener(v -> {
+                        if (finalSigInfo != null) {
+                            ad.dismiss();
+                            SignatureInfoDialog.show(context, dialogUtil, file);
+                        }
+                    });
+                });
             } catch (Exception e) {
                 loaded[0] = false;
                 new ErrorUtil(context).showError(e);
@@ -1496,7 +1498,7 @@ public class ApkInfoDialogs {
                 fileSize.setOnLongClickListener(lcl);
                 apkTargetSdk.setOnLongClickListener(lcl);
                 apkMinSdk.setOnLongClickListener(lcl);
-                apkCert.setOnLongClickListener(lcl);
+                if (apkCert != null) apkCert.setOnLongClickListener(lcl);
                 apkInstalled.setOnLongClickListener(lcl);
                 apkPermissions.setOnLongClickListener(lcl);
             });

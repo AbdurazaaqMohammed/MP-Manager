@@ -95,10 +95,27 @@ public final class ApkSignatureInfo {
                 return "Not signed";
             default:
                 return "Unknown";
+    private static final java.util.Map<String, ApkSignatureInfo> sigInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static ApkSignatureInfo getCached(File apk) {
+        if (apk == null) return null;
+        try {
+            String key = apk.getAbsolutePath() + ":" + apk.length() + ":" + apk.lastModified();
+            return sigInfoCache.get(key);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
     public static ApkSignatureInfo analyze(File apk) {
+        if (apk == null) return null;
+        String cacheKey = null;
+        try {
+            cacheKey = apk.getAbsolutePath() + ":" + apk.length() + ":" + apk.lastModified();
+            ApkSignatureInfo cached = sigInfoCache.get(cacheKey);
+            if (cached != null) return cached;
+        } catch (Exception ignored) {
+        }
         List<X509Certificate> certs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         boolean v1 = false, v2 = false, v3 = false, v4 = false;
@@ -152,7 +169,11 @@ public final class ApkSignatureInfo {
         if (v2) schemes.append(schemes.length() == 0 ? "V2" : ", V2");
         if (v3) schemes.append(schemes.length() == 0 ? "V3" : ", V3");
         if (v4) schemes.append(schemes.length() == 0 ? "V4" : ", V4");
-        return new ApkSignatureInfo(apk, status, schemes.toString(), errors, certs, structural);
+        ApkSignatureInfo info = new ApkSignatureInfo(apk, status, schemes.toString(), errors, certs, structural);
+        if (cacheKey != null) {
+            sigInfoCache.put(cacheKey, info);
+        }
+        return info;
     }
 
     private static boolean safe(BooleanSupplier supplier) {

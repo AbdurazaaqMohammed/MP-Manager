@@ -841,6 +841,25 @@ final View.OnClickListener originalClickListener;
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMD, FileMenuOrder.labelFor(context, FileMenuOrder.CMD, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CHECK, FileMenuOrder.labelFor(context, FileMenuOrder.CHECK, direction)));
 
+                if (!isInZip) {
+                    boolean hasBak = false;
+                    if (multi) {
+                        for (int bp : selectedPositions) {
+                            if (bp >= 0 && bp < values.length && values[bp] instanceof File f) {
+                                if (f.getName().toLowerCase().endsWith(".bak")) {
+                                    hasBak = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } else if (file != null && file.getName().toLowerCase().endsWith(".bak")) {
+                        hasBak = true;
+                    }
+                    if (hasBak) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RESTORE, FileMenuOrder.labelFor(context, FileMenuOrder.RESTORE, direction)));
+                    }
+                }
+
                 if (multi && !isInZip) {
                     boolean allApks = true;
                     for (int bp : selectedPositions) {
@@ -1240,6 +1259,9 @@ final View.OnClickListener originalClickListener;
                                         break;
                                     case FileMenuOrder.COMPRESS:
                                         entryDialogs.showCompressDialog(file, fileName, multi);
+                                        break;
+                                    case FileMenuOrder.RESTORE:
+                                        entryDialogs.showRestoreDialog(finalPosition, file, multi);
                                         break;
                                     case FileMenuOrder.PROPERTIES:
                                         propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, entryDialogs.getFilesToDisplay(multi, finalPosition).toString());

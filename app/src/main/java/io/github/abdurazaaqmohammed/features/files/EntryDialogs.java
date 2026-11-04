@@ -20,6 +20,9 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
@@ -36,6 +39,7 @@ import org.apache.commons.io.FilenameUtils;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.adapters.main.CopyConflictDialog;
 import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -663,6 +667,110 @@ public class EntryDialogs {
         AlertDialog shownMove = moveDialog.create();
         dialogUtil.styleAlertDialog(shownMove);
         shownMove.show();
+    }
+
+    public void showRestoreDialog(int position, File file, boolean multi) {
+        Object[] values = state.values();
+        List<File> targets = new ArrayList<>();
+        if (multi) {
+            for (int i : state.selectedPositions()) {
+                if (values != null && i >= 0 && i < values.length && values[i] instanceof File) {
+                    File f = (File) values[i];
+                    if (f.getName().toLowerCase().endsWith(".bak")) targets.add(f);
+                }
+            }
+        } else if (file != null && file.getName().toLowerCase().endsWith(".bak")) {
+            targets.add(file);
+        }
+        if (targets.isEmpty()) return;
+
+        new Thread(() -> {
+            boolean applyToAll = false;
+            int rememberedAction = -1;
+            boolean anyRenamed = false;
+            boolean useElevated = AccessManager.fileOpsOn(context);
+
+            for (File src : targets) {
+                File parent = src.getParentFile();
+                if (parent == null) continue;
+                String srcName = src.getName();
+                String destName = srcName.substring(0, srcName.length() - 4);
+                File dest = new File(parent, destName);
+
+                if (dest.exists() && !RenameHelper.sameFile(src, dest)) {
+                    int action;
+                    if (applyToAll && rememberedAction != -1) {
+                        action = rememberedAction;
+                    } else {
+                        String suggestedName = getDuplicateRestoreName(destName, parent, useElevated);
+                        CopyConflictDialog.Conflict conflict = new CopyConflictDialog.Conflict(
+                                src, srcName, src.length(), src.lastModified(),
+                                dest.getName(), dest.length(), dest.lastModified(),
+                                suggestedName
+                        );
+                        CopyConflictDialog.Decision decision = CopyConflictDialog.askConflict(
+                                context, dialogUtil,
+                                R.string.copy_conflict_title, R.string.copy_conflict_title_all,
+                                java.util.Collections.singletonList(conflict), null
+                        );
+                        action = decision.action;
+                        if (decision.applyToAll) {
+                            applyToAll = true;
+                            rememberedAction = action;
+                        }
+                    }
+
+                    if (action == CopyConflictDialog.ACTION_CANCEL) {
+                        break;
+                    } else if (action == CopyConflictDialog.ACTION_SKIP) {
+                        continue;
+                    } else if (action == CopyConflictDialog.ACTION_KEEP_BOTH) {
+                        String newName = getDuplicateRestoreName(destName, parent, useElevated);
+                        dest = new File(parent, newName);
+                    } else if (action == CopyConflictDialog.ACTION_REPLACE) {
+                        if (!dest.delete()) {
+                            if (useElevated) {
+                                try {
+                                    AccessManager.delete(context, dest.getAbsolutePath());
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    }
+                }
+
+                if (RenameHelper.renameFile(context, src, dest)) {
+                    anyRenamed = true;
+                }
+            }
+
+            if (anyRenamed) {
+                context.handler.post(() -> {
+                    state.clearSelection();
+                    context.refreshPaneAfterChange(pane1, null);
+                });
+            }
+        }).start();
+    }
+
+    private String getDuplicateRestoreName(String fileName, File destinationFolder, boolean useElevated) {
+        String base = FilenameUtils.getBaseName(fileName);
+        String ext = FilenameUtils.getExtension(fileName);
+        int i = 1;
+        String candidate;
+        do {
+            candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
+            i++;
+        } while (useElevated ? dirHasEntry(destinationFolder, candidate)
+                : new File(destinationFolder, candidate).exists());
+        return candidate;
+    }
+
+    private boolean dirHasEntry(File dir, String name) {
+        try {
+            return AccessManager.hasEntry(context, dir.getAbsolutePath(), name);
+        } catch (Exception e) {
+            return new File(dir, name).exists();
+        }
     }
 
     private void appendDeleteSize(AlertDialog shown, TextView customMsg, boolean isInZip,
