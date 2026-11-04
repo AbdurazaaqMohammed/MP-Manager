@@ -52,8 +52,8 @@ public class DeepOptimizer {
             "provider", "instrumentation"));
     private static final Pattern FQCN = Pattern.compile(
             "^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\\.[a-zA-Z_$][a-zA-Z0-9_$]*)+$");
-    /** Binary XML chunk header: RES_XML_TYPE (0x0003) with header size 8. */
-    private static final int RES_XML_MAGIC = 0x00030008;
+    /** Binary XML chunk header: bytes 03 00 08 00 = RES_XML_TYPE (0x0003), header size 8. */
+    private static final int RES_XML_MAGIC = 0x00080003;
 
     private final APKLogger logger;
     private final OptimizerReport report;
@@ -130,7 +130,39 @@ public class DeepOptimizer {
         reachability.setNativeKeepClasses(keepRoots.nativeClasses);
         reachability.setNativeStrings(keepRoots.nativeStrings);
         reachability.setRoots(componentClasses, xmlClassRoots, xmlMethodRoots);
+        String debugType = System.getProperty("deepopt.debugType");
+        if (debugType != null) log("debug: xmlClassRoots=" + xmlClassRoots.size()
+                + " contains-debug-type=" + xmlClassRoots.contains(debugType.replace('/', '.')));
         reachability.run();
+        if (debugType != null) {
+            String dbg = "L" + debugType.replace('.', '/') + ";";
+            log("debug: after reachability kept=" + keptClasses.contains(dbg));
+        }
+        // JNI bridge safety net: native libraries (Rust bridges especially - libsignal
+        // encodes its JNI strings) can reference ANY class of the native class's package
+        // root by name at runtime. Keep the package root tree of every kept class that
+        // declares native methods, bounded so huge roots are skipped.
+        Set<String> nativeRoots = packageRootsOfNativeClasses(index, keptClasses);
+        if (!nativeRoots.isEmpty()) {
+            int expanded = 0;
+            for (String type : index.classByType.keySet()) {
+                String dotted = type.substring(1, type.length() - 1).replace('/', '.');
+                if (nativeRoots.contains(packageRoot(dotted))) {
+                    xmlClassRoots.add(dotted);
+                    expanded++;
+                }
+            }
+            log("JNI package-root keeps: " + expanded + " classes under " + nativeRoots);
+            // Native code can reach ANY member (private included) of these classes via
+            // encoded JNI strings - keep all members like scanner-found native classes.
+            Set<String> nativeMemberKeep = new HashSet<>(keepRoots.nativeClasses);
+            for (String type : index.classByType.keySet()) {
+                String dotted = type.substring(1, type.length() - 1).replace('/', '.');
+                if (nativeRoots.contains(packageRoot(dotted))) nativeMemberKeep.add(type);
+            }
+            reachability.setNativeKeepClasses(nativeMemberKeep);
+            reachability.run();
+        }
         if (!options.removeClasses) expandKeptClasses(index);
         log("Reachable: " + keptMethodKeys.size() + " methods, " + keptFieldKeys.size()
                 + " fields, " + keptClasses.size() + "/" + index.classesTotal + " classes");
@@ -146,6 +178,10 @@ public class DeepOptimizer {
                     + " fields, " + keptClasses.size() + " classes");
         } else {
             log("Method removal disabled - keeping all methods");
+        }
+        if (debugType != null) {
+            String dbg = "L" + debugType.replace('.', '/') + ";";
+            log("debug: after cascade kept=" + keptClasses.contains(dbg));
         }
 
         ResourceTableIndex tableIndex = module.hasTableBlock()
@@ -276,6 +312,42 @@ public class DeepOptimizer {
 
     private void expandKeptClasses(DexIndex index) {
         keptClasses.addAll(index.classByType.keySet());
+    }
+
+    /** Package roots (first three dot segments) of kept classes that declare native methods. */
+    private static Set<String> packageRootsOfNativeClasses(DexIndex index, Set<String> keptClasses) {
+        Set<String> roots = new HashSet<>();
+        for (String type : keptClasses) {
+            if (!index.nativeDeclaringClasses.contains(type)) continue;
+            String dotted = type.substring(1, type.length() - 1).replace('/', '.');
+            roots.add(packageRoot(dotted));
+        }
+        roots.remove(null);
+        roots.remove("");
+        // Guard: a root owning a huge slice of the app would defeat pruning entirely.
+        Set<String> bounded = new HashSet<>();
+        for (String root : roots) {
+            int count = 0;
+            for (String type : index.classByType.keySet()) {
+                String dotted = type.substring(1, type.length() - 1).replace('/', '.');
+                if (packageRoot(dotted).equals(root) && ++count > 2000) break;
+            }
+            if (count <= 2000) bounded.add(root);
+        }
+        return bounded;
+    }
+
+    /** First three segments of the class's package ("org.signal.libsignal.internal.Native" -> "org.signal.libsignal"). */
+    private static String packageRoot(String dottedClass) {
+        String pkg = dottedClass.contains(".") ? dottedClass.substring(0, dottedClass.lastIndexOf('.')) : dottedClass;
+        String[] seg = pkg.split("\\.");
+        int take = Math.min(3, seg.length);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < take; i++) {
+            if (i > 0) sb.append('.');
+            sb.append(seg[i]);
+        }
+        return sb.toString();
     }
 
     /**

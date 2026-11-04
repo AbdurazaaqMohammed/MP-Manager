@@ -73,6 +73,8 @@ public class DexIndex {
     public final Set<String> keepAnnotatedClasses = new HashSet<>();
     public final Set<String> keepAnnotatedMethodKeys = new HashSet<>();
     public final Set<String> keepAnnotatedFieldKeys = new HashSet<>();
+    /** Classes that declare at least one {@code native} method - JNI bridges. */
+    public final Set<String> nativeDeclaringClasses = new HashSet<>();
 
     public boolean reflectionMode;
     public int classesTotal;
@@ -162,6 +164,8 @@ public class DexIndex {
         boolean dynamicResource = false;
         boolean reflect = false;
         for (Method method : classDef.getMethods()) {
+            if ((method.getAccessFlags() & com.android.tools.smali.dexlib2.AccessFlags.NATIVE.getValue()) != 0)
+                nativeDeclaringClasses.add(classDef.getType());
             MethodImplementation impl = method.getImplementation();
             if (impl == null) continue;
             for (Instruction instruction : impl.getInstructions()) {

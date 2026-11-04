@@ -7,9 +7,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,10 +45,9 @@ public final class KeepRootScanner {
 
     private static final Pattern JNI_CLASS = Pattern.compile(
             "[a-zA-Z][a-zA-Z0-9_$]*(?:/[a-zA-Z][a-zA-Z0-9_$]*)+");
-    private static final Pattern DOTTED_CLASS = Pattern.compile(
-            "[a-z][a-z0-9_]*(?:\\.[a-zA-Z_$][a-zA-Z0-9_$]*){2,}");
-    private static final int ASCII_RUN_MIN = 6;
+    private static final int ASCII_RUN_MIN = 4;
     private static final int MAX_RUN = 512;
+    private static final int MAX_NAME_SEGMENTS = 14;
 
     public static final class Result {
         public final Set<String> classRoots = new HashSet<>();
@@ -61,11 +64,26 @@ public final class KeepRootScanner {
     private final DexIndex index;
     private final OptimizerReport report;
     private final Result result = new Result();
+    /** last dotted segment -> full dotted class names ("AuthCheckResult_Foo" -> "org.signal...Foo") */
+    private final Map<String, List<String>> byLastSegmentDotted = new HashMap<>();
+    /** last slash segment -> L-form class names */
+    private final Map<String, List<String>> byLastSegmentSlash = new HashMap<>();
 
     private KeepRootScanner(ApkModule module, DexIndex index, OptimizerReport report) {
         this.module = module;
         this.index = index;
         this.report = report;
+        for (String type : index.classByType.keySet()) {
+            if (!type.startsWith("L") || !type.endsWith(";")) continue;
+            String slash = type.substring(1, type.length() - 1);
+            String dotted = slash.replace('/', '.');
+            int dot = dotted.lastIndexOf('.');
+            if (dot >= 0 && dot < dotted.length() - 1)
+                byLastSegmentDotted.computeIfAbsent(dotted.substring(dot + 1), k -> new ArrayList<>()).add(dotted);
+            int slashSep = slash.lastIndexOf('/');
+            if (slashSep >= 0 && slashSep < slash.length() - 1)
+                byLastSegmentSlash.computeIfAbsent(slash.substring(slashSep + 1), k -> new ArrayList<>()).add(slash);
+        }
     }
 
     public static Result scan(ApkModule module, DexIndex index, OptimizerReport report) throws IOException {
@@ -163,7 +181,10 @@ public final class KeepRootScanner {
                 start = -1;
             } else if (start >= 0 && i - start > MAX_RUN) {
                 addRun(chunk, start, i, out);
-                start = -1;
+                // Long runs (native libraries concatenate thousands of strings) are
+                // scanned in overlapping windows: a class name that straddles a cut
+                // point appears complete in the next window.
+                start = i - (MAX_RUN / 2);
             }
         }
         if (start >= 0) addRun(chunk, start, chunk.length, out);
@@ -179,9 +200,42 @@ public final class KeepRootScanner {
                 String candidate = m.group();
                 if (candidate.length() >= ASCII_RUN_MIN) out.add(candidate);
             }
-        } else if (run.contains(".")) {
-            Matcher m = DOTTED_CLASS.matcher(run);
-            while (m.find()) out.add(m.group());
+        }
+        // Class names in native libraries are frequently stored back-to-back with no
+        // delimiter on EITHER side ("...Converterorg.signal.libsignal...Converterwrite_..."),
+        // so neither regexes nor exact token splits can recover them. Walk every token's
+        // prefixes against the last-segment index instead: any prefix that is a known
+        // last segment pins candidate classes, verified by a full-name substring check.
+        if (run.indexOf('.') >= 0) {
+            for (String token : run.split("\\.")) {
+                int max = Math.min(token.length(), 120);
+                for (int cut = ASCII_RUN_MIN; cut <= max; cut++) {
+                    List<String> candidates = byLastSegmentDotted.get(token.substring(0, cut));
+                    if (candidates == null) continue;
+                    int verified = 0;
+                    for (String dotted : candidates) {
+                        if (verified++ > 200) break;
+                        if (run.contains(dotted)) {
+                            out.add(dotted);
+                            result.nativeStrings.add(dotted);
+                        }
+                    }
+                }
+            }
+        }
+        if (run.indexOf('/') >= 0) {
+            for (String token : run.split("/")) {
+                int max = Math.min(token.length(), 120);
+                for (int cut = ASCII_RUN_MIN; cut <= max; cut++) {
+                    List<String> candidates = byLastSegmentSlash.get(token.substring(0, cut));
+                    if (candidates == null) continue;
+                    int verified = 0;
+                    for (String slash : candidates) {
+                        if (verified++ > 200) break;
+                        if (run.contains(slash)) out.add(slash);
+                    }
+                }
+            }
         }
     }
 
