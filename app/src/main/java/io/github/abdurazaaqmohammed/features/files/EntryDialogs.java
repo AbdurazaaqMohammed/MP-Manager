@@ -790,8 +790,21 @@ public class EntryDialogs {
         context.handler.post(compressDialog::show);
     }
 
+    /** Formats that compress exactly one stream (no container), so they only
+     *  make sense for a single selected file. */
+    private static boolean isSingleFileFormat(String format) {
+        String f = format == null ? "" : format.toLowerCase(Locale.ROOT);
+        return f.equals(".gz") || f.equals(".bz2") || f.equals(".xz") || f.equals(".zst");
+    }
+
     private void runCompress(File outputZip, String format, File file, String fileName, boolean multi, View compressView, ProgressManager pm) {
         Object[] values = state.values();
+        // Single-file methods cannot represent a multi-selection; stop here
+        // with a clear message instead of dying deep inside the archiver.
+        if (isSingleFileFormat(format) && multi && state.selectedPositions().size() > 1) {
+            Extensions.showMessage(context, context.rss.getString(R.string.compress_single_file_only, format));
+            return;
+        }
         // Compression honours the pause and cancel buttons.
         pm.setControllable(true);
         pm.show();

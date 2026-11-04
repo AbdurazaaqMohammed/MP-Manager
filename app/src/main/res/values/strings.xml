@@ -86,6 +86,7 @@
     <string name="deleting">Deleting %1$s</string>
     <string name="compressing">Compressing</string>
     <string name="compress">Compress</string>
+    <string name="compress_single_file_only">%1$s compresses a single file at a time — select one file, or use a .tar format (e.g. .tar.zst) for multiple files.</string>
     <string name="hist">Search History</string>
     <string name="filename">File name</string>
     <string name="install_location">Install Location</string>

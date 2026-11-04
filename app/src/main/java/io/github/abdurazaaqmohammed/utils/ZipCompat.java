@@ -8,6 +8,7 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import io.airlift.compress.zstd.ZstdInputStream;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -337,18 +338,13 @@ public final class ZipCompat {
                 new SequenceInputStream(new ByteArrayInputStream(header), raw));
     }
 
+    /**
+     * Zstandard (zip method 93) entries are decoded by aircompressor's
+     * pure-Java zstd stream (no JNI, so it works on every Android ABI too).
+     * The stream closes the underlying region stream, which closes the RAF.
+     */
     private static InputStream openZstd(InputStream raw) throws IOException {
-        try {
-            return (InputStream) Class
-                    .forName("org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream")
-                    .getConstructor(InputStream.class, boolean.class)
-                    .newInstance(raw, true);
-        } catch (ClassNotFoundException e) {
-            throw new IOException("Zstandard entries are not supported on this build", e);
-        } catch (ReflectiveOperationException | LinkageError e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            throw new IOException("Cannot read Zstandard entry: " + cause.getMessage(), cause);
-        }
+        return new ZstdInputStream(raw);
     }
 
     private static int readFully(InputStream in, byte[] buf, int off, int len) throws IOException {

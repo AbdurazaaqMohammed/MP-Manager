@@ -11,6 +11,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
+import io.airlift.compress.zstd.ZstdOutputStream;
 
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
@@ -61,11 +62,13 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
-                || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz");
+                || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
+                || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
+                || lower.endsWith(".zst") || lower.endsWith(".zstd");
     }
 
     public static String[] getSupportedCreateExts() {
-        return new String[] { ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".gz", ".bz2", ".xz" };
+        return new String[] { ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.zst", ".tzst", ".gz", ".bz2", ".xz", ".zst" };
     }
 
     public static void extract(File archive, File destDir) throws IOException {
@@ -113,6 +116,7 @@ public class ArchiveUtil {
             case GZIP:
             case BZIP2:
             case XZ:
+            case ZSTD:
                 if (ArchiveBrowseUtil.isTarPayload(archive, type)) {
                     extractTar(ArchiveBrowseUtil.openTar(archive, type), archive, destDir, preserveTime, listener);
                 } else {
@@ -198,10 +202,25 @@ public class ArchiveUtil {
         else if (lower.endsWith(".tar.bz2")) createTar(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".txz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".tar.xz")) createTar(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tzst")) createTar(new ZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
+        else if (lower.endsWith(".tar.zst")) createTar(new ZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources, listener);
         else if (lower.endsWith(".gz") && sources.size() == 1) compressSingle(new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
         else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
-        else throw new IOException("Unsupported archive format: " + output.getName());
+        else if (lower.endsWith(".zst") && sources.size() == 1) compressSingle(new ZstdOutputStream(new BufferedOutputStream(new FileOutputStream(output), BUFFER_SIZE)), sources.get(0), output, listener);
+        else {
+            // Known single-file methods with the wrong number of sources get a
+            // clear error instead of "Unsupported archive format".
+            for (String single : new String[]{".gz", ".bz2", ".xz", ".zst"}) {
+                if (lower.endsWith(single)) {
+                    throw new IOException(single + " compresses a single file only — use " +
+                            (single.equals(".gz") ? ".tar.gz" : single.equals(".bz2") ? ".tar.bz2"
+                                    : single.equals(".xz") ? ".tar.xz" : ".tar.zst")
+                            + " for multiple files");
+                }
+            }
+            throw new IOException("Unsupported archive format: " + output.getName());
+        }
     }
 
     private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password,
