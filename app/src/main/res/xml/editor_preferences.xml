@@ -44,12 +44,6 @@
             android:title="@string/edpref_syntax_highlight"
             android:summary="@string/edpref_syntax_highlight_summary"
             android:defaultValue="true"/>
-
-        <SwitchPreferenceCompat
-            android:key="pref_dex_translation_mode"
-            android:title="@string/edpref_translation_mode"
-            android:summary="@string/edpref_translation_mode_summary"
-            android:defaultValue="false"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/edpref_editing">

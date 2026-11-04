@@ -535,7 +535,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void postInitialize(boolean skipRestorePosition) {
         Activity activity = getActivity();
-        final boolean[] consumedPending = {false};
+        boolean consumedPending = false;
         if (isSmali && activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = null;
             for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
@@ -554,16 +554,14 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     tab.pendingLine = -1;
                     tab.pendingColumn = -1;
                     tab.pendingQuery = null;
-                    consumedPending[0] = true;
-                    editor.post(() -> navigateTo(line, col, q));
-                    editor.postDelayed(() -> navigateTo(line, col, q), 320);
+                    navigateTo(line, col, q);
+                    consumedPending = true;
                 }
             }
         }
         new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
-        if (!skipRestorePosition && !consumedPending[0] && positionManager != null) {
+        if (!skipRestorePosition && !consumedPending && positionManager != null) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (consumedPending[0]) return;
                 try {
                     EditorPositionManager.Position pos = positionManager.getPosition(className);
                     if (pos != null && pos.lineno >= 0 && pos.lineno < editor.getText().getLineCount()) {
@@ -1505,70 +1503,37 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void navigateTo(final int lineNum, final int column, final String query) {
         if (editor == null) return;
-        if (editor.getText().getLineCount() == 0) {
+        if (editor.getText().getLineCount() <= lineNum) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> navigateTo(lineNum, column, query), 100);
             return;
         }
         try {
-            int targetLine = lineNum;
-            String cleanQuery = (query != null && !query.isEmpty() && !query.contains("\n")) ? query.trim() : null;
-            if (cleanQuery != null) {
-                if (cleanQuery.startsWith("\"") && cleanQuery.endsWith("\"") && cleanQuery.length() > 1) {
-                    cleanQuery = cleanQuery.substring(1, cleanQuery.length() - 1).trim();
-                }
-            }
-
-            boolean targetMatches = false;
-            if (targetLine >= 0 && targetLine < editor.getText().getLineCount()) {
-                String lineText = editor.getText().getLineString(targetLine);
-                if (cleanQuery == null || lineText.toLowerCase().contains(cleanQuery.toLowerCase())) {
-                    targetMatches = true;
-                }
-            }
-
-            if (!targetMatches && cleanQuery != null && !cleanQuery.isEmpty()) {
-                int lineCount = editor.getText().getLineCount();
-                String queryLower = cleanQuery.toLowerCase();
-                for (int i = 0; i < lineCount; i++) {
-                    String line = editor.getText().getLineString(i).toLowerCase();
-                    if (line.contains(queryLower)) {
-                        targetLine = i;
-                        targetMatches = true;
-                        break;
+            if (lineNum >= 0 && lineNum < editor.getText().getLineCount()) {
+                String lineText = editor.getText().getLineString(lineNum);
+                if (column >= 0 && column < editor.getText().getColumnCount(lineNum))
+                    editor.getCursor().set(lineNum, column);
+                else
+                    editor.getCursor().set(lineNum, 0);
+                if (query != null && !query.isEmpty() && !query.contains("\n")) {
+                    int start = lineText.toLowerCase().indexOf(query.toLowerCase());
+                    if (start != -1) {
+                        editor.setSelectionRegion(lineNum, start, lineNum, start + query.length(), false, 0);
+                        dismissEditorWindow(editor);
+                        scrollSelectionIntoView();
+                        return;
                     }
                 }
-            }
-
-            if (targetLine < 0 || targetLine >= editor.getText().getLineCount()) {
-                targetLine = Math.max(0, Math.min(lineNum, editor.getText().getLineCount() - 1));
-            }
-
-            final int line = targetLine;
-            final int col = (column >= 0 && column < editor.getText().getColumnCount(line)) ? column : 0;
-            editor.jumpToLine(line);
-            editor.setSelection(line, col);
-            editor.ensurePositionVisible(line, col);
-
-            String lineText = editor.getText().getLineString(line);
-            if (cleanQuery != null && !cleanQuery.isEmpty()) {
-                int start = lineText.toLowerCase().indexOf(cleanQuery.toLowerCase());
-                if (start != -1) {
-                    editor.setSelectionRegion(line, start, line, start + cleanQuery.length(), false, 0);
-                    dismissEditorWindow(editor);
-                    scrollSelectionIntoView();
-                    return;
+                if (isSmali && lineText.contains("const-string")) {
+                    int[] positions = SmaliHelper.getOuterQuotePositions(lineText);
+                    if (positions[0] != -1 && positions[1] != -1) {
+                        editor.setSelectionRegion(lineNum, positions[0] + 1, lineNum, positions[1], false, 0);
+                        dismissEditorWindow(editor);
+                        scrollSelectionIntoView();
+                        return;
+                    }
                 }
+                scrollSelectionIntoView();
             }
-            if (isSmali && lineText.contains("const-string")) {
-                int[] positions = SmaliHelper.getOuterQuotePositions(lineText);
-                if (positions[0] != -1 && positions[1] != -1) {
-                    editor.setSelectionRegion(line, positions[0] + 1, line, positions[1], false, 0);
-                    dismissEditorWindow(editor);
-                    scrollSelectionIntoView();
-                    return;
-                }
-            }
-            scrollSelectionIntoView();
         } catch (Exception ignored) {}
     }
 

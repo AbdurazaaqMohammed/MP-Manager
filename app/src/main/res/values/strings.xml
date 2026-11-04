@@ -1821,8 +1821,6 @@ Strings are sent to the external service you configured.</string>
     <string name="edpref_word_wrap_summary">Wrap long lines to fit the screen</string>
     <string name="edpref_syntax_highlight">Syntax Highlighting</string>
     <string name="edpref_syntax_highlight_summary">Enable syntax highlighting for code files</string>
-    <string name="edpref_translation_mode">Translation Mode in STRINGS tab</string>
-    <string name="edpref_translation_mode_summary">Split the STRINGS view into original and translation columns</string>
     <string name="edpref_editing">Editing Settings</string>
     <string name="edpref_tab_size">Tab Size</string>
     <string name="edpref_tab_size_summary">Number of spaces for a tab</string>

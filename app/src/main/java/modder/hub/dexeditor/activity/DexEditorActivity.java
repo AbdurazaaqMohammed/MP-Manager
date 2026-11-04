@@ -1154,6 +1154,9 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     public void openClassAtLine(String className, int lineNumber, int column, String query) {
+        openClass(className);
+
+        // Find the tab we just opened or that was already open
         EditorTab targetTab = null;
         int tabIndex = -1;
         for (int i = 0; i < tabs.size(); i++) {
@@ -1165,38 +1168,19 @@ public class DexEditorActivity extends BaseActivity {
         }
 
         if (targetTab != null) {
+            // Set pending navigation info
             targetTab.pendingLine = lineNumber;
             targetTab.pendingColumn = column;
             targetTab.pendingQuery = query;
-            showEditor(tabIndex);
-            final int finalTabIndex = tabIndex;
+
+            // If fragment is already ready, navigate now
             UnifiedEditorFragment fragment = getFragmentAtIndex(tabIndex);
             if (fragment != null && fragment.getEditor() != null && fragment.getEditor().getText().getLineCount() > lineNumber) {
                 fragment.navigateTo(lineNumber, column, query);
-            }
-            viewPager.postDelayed(() -> {
-                UnifiedEditorFragment f = getFragmentAtIndex(finalTabIndex);
-                if (f != null) {
-                    f.navigateTo(lineNumber, column, query);
-                }
-            }, 320);
-        } else {
-            openClass(className);
-            for (int i = 0; i < tabs.size(); i++) {
-                if (tabs.get(i).className.equals(className) && tabs.get(i).type == 0) {
-                    targetTab = tabs.get(i);
-                    targetTab.pendingLine = lineNumber;
-                    targetTab.pendingColumn = column;
-                    targetTab.pendingQuery = query;
-                    final int finalIdx = i;
-                    viewPager.postDelayed(() -> {
-                        UnifiedEditorFragment f = getFragmentAtIndex(finalIdx);
-                        if (f != null) {
-                            f.navigateTo(lineNumber, column, query);
-                        }
-                    }, 350);
-                    break;
-                }
+                // Clear pending once navigated
+                targetTab.pendingLine = -1;
+                targetTab.pendingColumn = -1;
+                targetTab.pendingQuery = null;
             }
         }
     }
@@ -1309,7 +1293,6 @@ public class DexEditorActivity extends BaseActivity {
                         if (oldIndex != -1) {
                             tabsAdapter.notifyItemChanged(oldIndex + 1);
                         }
-                        refreshExplorerPage(2);
                     }
                 })
                 .start();
@@ -1411,11 +1394,6 @@ public class DexEditorActivity extends BaseActivity {
         });
 
         if (sessionOptions.removeAllDebug) {
-            swRemoveDebugSource.setChecked(true);
-            swRemoveDebugLine.setChecked(true);
-            swRemoveDebugParam.setChecked(true);
-            swRemoveDebugPrologue.setChecked(true);
-            swRemoveDebugLocal.setChecked(true);
             swRemoveDebugSource.setEnabled(false);
             swRemoveDebugLine.setEnabled(false);
             swRemoveDebugParam.setEnabled(false);
@@ -1440,8 +1418,8 @@ public class DexEditorActivity extends BaseActivity {
                     .putBoolean("compile_remember_options", remember)
                     .putBoolean("compile_autosave_background", autoSave)
                     .putString("compile_dex_version", remember ? sessionOptions.dexVersion : "Keep the same")
-                    .putBoolean("compile_remove_all_debug", remember ? sessionOptions.removeAllDebug : true)
-                    .putBoolean("compile_remove_debug_source", remember ? sessionOptions.removeDebugSource : false)
+                    .putBoolean("compile_remove_all_debug", remember && sessionOptions.removeAllDebug)
+                    .putBoolean("compile_remove_debug_source", remember && sessionOptions.removeDebugSource)
                     .putBoolean("compile_remove_debug_line", remember && sessionOptions.removeDebugLine)
                     .putBoolean("compile_remove_debug_param", remember && sessionOptions.removeDebugParam)
                     .putBoolean("compile_remove_debug_prologue", remember && sessionOptions.removeDebugPrologue)
