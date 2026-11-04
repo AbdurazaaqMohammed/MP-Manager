@@ -57,6 +57,23 @@ public class BootInspectManager {
         return null;
     }
 
+    /**
+     * Resolves the parent directory for navigation. If the folder is the root of an unpacked
+     * boot image inspection (inspectDir or ramdiskDir if inspectDir was directly opened),
+     * returns the folder containing the original .img file instead of going up into cache.
+     */
+    public static File getParentOrImageOrigin(File folder) {
+        if (folder == null) return null;
+        Session session = getSessionForFolder(folder);
+        if (session != null) {
+            // If we are at the top-level inspect dir, or ramdisk dir when ramdisk is top-level
+            if (folder.equals(session.inspectDir) || folder.equals(session.ramdiskDir)) {
+                return session.originalImg.getParentFile();
+            }
+        }
+        return folder.getParentFile();
+    }
+
     public static void openBootImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null || !imageFile.exists()) return;
         Extensions.showMessage(context, "Unpacking Boot Image...");

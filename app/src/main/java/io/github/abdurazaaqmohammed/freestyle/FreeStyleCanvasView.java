@@ -300,8 +300,8 @@ public class FreeStyleCanvasView extends View {
             case MotionEvent.ACTION_DOWN:
                 lastTouchX = touchX;
                 lastTouchY = touchY;
-                showSnapX = false;
-                showSnapY = false;
+                verticalGuideLines.clear();
+                horizontalGuideLines.clear();
 
                 // Check active layer handles first
                 if (activeLayer != null) {
