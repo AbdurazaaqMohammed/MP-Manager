@@ -19,7 +19,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
-import com.mp.mp_manager.R;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.util.ArrayList;
 import java.util.List;

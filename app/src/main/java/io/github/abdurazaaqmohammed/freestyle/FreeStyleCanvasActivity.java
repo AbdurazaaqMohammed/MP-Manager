@@ -18,7 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
-import com.mp.mp_manager.R;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.io.File;
 import java.io.FileOutputStream;
