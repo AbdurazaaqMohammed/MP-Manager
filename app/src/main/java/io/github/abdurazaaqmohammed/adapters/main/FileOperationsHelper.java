@@ -1767,10 +1767,13 @@ public class FileOperationsHelper {
         File parent = archive.getParentFile();
         String baseName = archive.getName();
         String folderName = baseName;
-        if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
-        else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
-        else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
-        else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
+        // ".tar.zst" and friends are in ArchiveBrowseUtil's strip list, so
+        // zstd archives get a proper folder name too; lastIndexOf covers the rest.
+        String stripped = ArchiveBrowseUtil.stripCompressorExtension(baseName);
+        int dot = baseName.lastIndexOf('.');
+        if (!stripped.equals(baseName)) folderName = stripped;
+        else if (dot > 0) folderName = baseName.substring(0, dot);
+        else folderName = baseName;
         // "Extract here" inside a provider location: the writers below need a
         // real folder, so the archive is extracted into a temp dir and the
         // results are streamed into the provider afterwards.

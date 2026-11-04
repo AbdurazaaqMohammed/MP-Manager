@@ -4,12 +4,12 @@
         android:id="@+id/search"
         android:title="@android:string/search_go"
         android:visible="true"
-        android:icon="@drawable/ic_search_mt"
+        android:icon="@drawable/baseline_search_24"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="always" />
     <item
         app:showAsAction="always"
-        android:icon="@drawable/ic_swap"
+        android:icon="@drawable/baseline_swap_horiz_24"
         android:id="@+id/strings_list"
         android:title="Show Strings"/>    
     <item

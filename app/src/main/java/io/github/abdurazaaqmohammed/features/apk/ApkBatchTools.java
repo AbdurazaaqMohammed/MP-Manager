@@ -85,30 +85,44 @@ public class ApkBatchTools {
         ProgressManager pm = new ProgressManager(context, true).show();
         APKLogger logger = pm.getLogger();
         boolean deepOpt = settings.getBoolean("deep_optimize", false);
-        Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
+        Set<String> filesToDelete = delFiles ? settings.getStringSet("filesToDelete", null) : null;
         new Thread(() -> {
-            try {
-                for (int i = 0; i < apks.size(); i++) {
-                    File apk = apks.get(i);
-                    String msg = context.rss.getString(R.string.optimizing, apk.getName());
-                    pm.setText(msg);
-                    logger.logMessage(msg);
-                    File opt = ApkOptimizer.optimize(context, apk, delFiles, settings, settings.getBoolean("ultra_compress", true), logger);
+            int failed = 0;
+            StringBuilder failures = new StringBuilder();
+            for (int i = 0; i < apks.size(); i++) {
+                File apk = apks.get(i);
+                String msg = context.rss.getString(R.string.optimizing, apk.getName())
+                        + " (" + (i + 1) + '/' + apks.size() + ')';
+                pm.setText(msg);
+                logger.logMessage(msg);
+                try {
+                    File opt;
                     if (deepOpt) {
                         logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
-                        opt = ApkDeepOptimizer.optimize(context, opt, filesToDelete, settings, logger);
+                        opt = ApkDeepOptimizer.optimize(context, apk, filesToDelete, settings, logger);
+                    } else {
+                        opt = ApkOptimizer.optimize(context, apk, delFiles, settings, logger);
                     }
                     if (wrapper != null) wrapper.signApk(opt);
+                } catch (Exception e) {
+                    failed++;
+                    failures.append(apk.getName()).append(": ").append(e.getMessage()).append('\n');
+                    logger.logMessage("FAILED: " + apk.getName() + " - " + e);
                 }
-                pm.dismiss();
-                context.handler.post(() -> {
-                    Extensions.showMessage(context, context.rss.getString(R.string.opt_done));
-                    context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
-                });
-            } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
             }
+            pm.dismiss();
+            int finalFailed = failed;
+            StringBuilder finalFailures = failures;
+            context.handler.post(() -> {
+                if (finalFailed == 0) {
+                    Extensions.showMessage(context, context.rss.getString(R.string.opt_done));
+                } else {
+                    Extensions.showMessage(context, context.rss.getString(R.string.opt_done)
+                            + " (" + finalFailed + " failed)");
+                    logger.logMessage("Failures:\n" + finalFailures);
+                }
+                context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
+            });
         }).start();
     }
 

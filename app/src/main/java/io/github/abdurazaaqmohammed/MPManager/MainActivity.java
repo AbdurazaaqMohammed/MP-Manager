@@ -202,6 +202,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final BookmarksController bookmarksUI = new BookmarksController(this);
     private final MultiSelectController multiSelect = new MultiSelectController(this);
     private final FtpController ftp = new FtpController(this);
+
+    public FtpController getFtp() {
+        return ftp;
+    }
     private final ApkResultHandler apkResults = new ApkResultHandler(this);
     private final UpdateController updates = new UpdateController(this);
     private final PaneHighlightController paneHighlight = new PaneHighlightController(this);
@@ -3142,15 +3146,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         try {
             updates.register();
-            // A provider location picked in the Documents providers screen.
-            String safTree = getIntent() == null ? null : getIntent().getStringExtra("safTree");
-            if (safTree != null && !safTree.isEmpty()) {
-                try {
-                    getIntent().removeExtra("safTree");
-                } catch (Exception ignored) {
-                }
-                openSafTree(safTree);
-            }
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
@@ -3184,6 +3179,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // preserving scroll position.
         try {
             refreshAllPanes();
+        } catch (Exception ignored) {
+        }
+        // A provider location picked in the Documents providers screen. Handled
+        // AFTER refreshAllPanes: that refresh re-lists the stale pane folders,
+        // and because every load is generation-guarded, the last one submitted
+        // wins - opening the tree first meant the plain reload silently
+        // cancelled it.
+        try {
+            String safTree = getIntent() == null ? null : getIntent().getStringExtra("safTree");
+            if (safTree != null && !safTree.isEmpty()) {
+                try {
+                    getIntent().removeExtra("safTree");
+                } catch (Exception ignored) {
+                }
+                openSafTree(safTree);
+            }
         } catch (Exception ignored) {
         }
         try {

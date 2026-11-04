@@ -1,11 +1,9 @@
 package io.github.abdurazaaqmohammed.utils.deepopt;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apk.APKLogger;
+import com.reandroid.apkeditor.refactor.AutoRefactor;
 import com.reandroid.app.AndroidManifest;
 import com.reandroid.archive.InputSource;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
@@ -14,9 +12,6 @@ import com.reandroid.arsc.chunk.xml.ResXmlDocument;
 import com.reandroid.arsc.chunk.xml.ResXmlElement;
 
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,19 +26,23 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 
 /**
  * Orchestrator for the deep APK optimization pipeline:
  * <ol>
- *   <li>manifest scan (components, resource roots, xml class/method roots)</li>
- *   <li>dex indexing (per-dex opcodes, subclass closures, reflection detection)</li>
- *   <li>res-XML scan (custom-view tags, {@code ?attr/} refs, {@code @type/name} refs)</li>
+ *   <li>signature strip + junk-file deletion (guarded against res/assets/lib/services)</li>
+ *   <li>manifest scan (components, resource roots, xml class/method roots, meta-data class roots)</li>
+ *   <li>dex indexing (single-pass member maps, string pool, reflection + dynamic-resource detection)</li>
+ *   <li>extended keep roots (META-INF/services, JNI strings in .so, packer/plugin detection)</li>
+ *   <li>res-XML scan (custom-view tags, refs; unparseable compiled XML forces conservative keeps)</li>
  *   <li>reachability fixpoint + safe empty-method cascade + dangling-ref verification</li>
- *   <li>resource roots from kept code (R$ fields, inlined const IDs, getIdentifier)</li>
+ *   <li>resource roots from kept code; name-match keep when resources are looked up by name</li>
  *   <li>Phase-A resource sweep (setNull + delete unused res files, IDs stay stable)</li>
+ *   <li>optional Phase-B resource name shortening (only when provably safe)</li>
  *   <li>dex rebuild via DexPool + swap into the module</li>
- *   <li>post-build validation, then write with max compression</li>
+ *   <li>post-build validation, falling back to a repack-only output instead of losing the run</li>
  * </ol>
  */
 public class DeepOptimizer {
@@ -51,16 +50,16 @@ public class DeepOptimizer {
     private static final Set<String> COMPONENT_TAGS = new HashSet<>(Arrays.asList(
             "application", "activity", "activity-alias", "service", "receiver",
             "provider", "instrumentation"));
+    private static final Pattern FQCN = Pattern.compile(
+            "^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\\.[a-zA-Z_$][a-zA-Z0-9_$]*)+$");
+    /** Binary XML chunk header: RES_XML_TYPE (0x0003) with header size 8. */
+    private static final int RES_XML_MAGIC = 0x00030008;
 
     private final APKLogger logger;
     private final OptimizerReport report;
+    private final DeepOptOptions options;
 
-    private boolean preserveDebug = true;
-    private int maxPasses = 25;
-    private boolean verifyOutput = true;
-    private boolean removeClasses = true;
-    private boolean removeMethods = true;
-    private boolean removeFields = true;
+    private boolean hardConservative;
     private String manifestPackage;
 
     private final Set<String> keptClasses = new HashSet<>();
@@ -68,29 +67,17 @@ public class DeepOptimizer {
     private final Set<String> keptFieldKeys = new HashSet<>();
     private final Set<String> modifiedClasses = new HashSet<>();
 
-    public static File optimize(Context context, File inputApk, APKLogger logger) throws Exception {
-        return optimize(context, inputApk, null, null, logger);
-    }
-
-    public static File optimize(Context context, File inputApk, Set<String> filesToDelete,
-                                SharedPreferences settings, APKLogger logger) throws Exception {
-        File outFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
-                FilenameUtils.getBaseName(inputApk.getName()) + "_deep.apk"));
-        new DeepOptimizer(logger, settings).run(inputApk, outFile, filesToDelete);
+    public static File optimize(File inputApk, File outFile, Set<String> filesToDelete,
+                                DeepOptOptions options, APKLogger logger) throws Exception {
+        DeepOptimizer optimizer = new DeepOptimizer(logger, options == null ? DeepOptOptions.defaults() : options);
+        optimizer.run(inputApk, outFile, filesToDelete);
         return outFile;
     }
 
-    private DeepOptimizer(APKLogger logger, SharedPreferences settings) {
+    private DeepOptimizer(APKLogger logger, DeepOptOptions options) {
         this.logger = logger;
+        this.options = options;
         this.report = new OptimizerReport(logger);
-        if (settings != null) {
-            preserveDebug = settings.getBoolean("deep_opt_preserve_debug", true);
-            maxPasses = Math.max(0, settings.getInt("deep_opt_max_passes", 25));
-            verifyOutput = settings.getBoolean("deep_opt_verify_output", true);
-            removeClasses = settings.getBoolean("deep_opt_remove_classes", true);
-            removeMethods = settings.getBoolean("deep_opt_remove_methods", true);
-            removeFields = settings.getBoolean("deep_opt_remove_fields", true);
-        }
     }
 
     private void log(String message) {
@@ -99,10 +86,14 @@ public class DeepOptimizer {
 
     private void run(File inputApk, File outFile, Set<String> filesToDelete) throws Exception {
         ApkModule module = ApkModule.loadApkFile(inputApk);
+        // The optimize pipeline never resolves attribute names against an android framework
+        // table; skipping it removes the /sdcard framework dependency (and its crash path).
+        module.setLoadDefaultFramework(false);
         try {
             manifestPackage = module.getPackageName();
         } catch (Exception ignored) {
         }
+        stripSignatures(module);
         deleteFiles(module, filesToDelete);
 
         Set<Integer> resourceRoots = new HashSet<>();
@@ -125,56 +116,138 @@ public class DeepOptimizer {
         index.build(dexFiles);
         log("Classes loaded: " + index.classesTotal);
         if (index.reflectionMode) log("Reflection usage detected - applying conservative keeps");
+        if (!index.dynamicResourceClasses.isEmpty())
+            log("Dynamic resource lookups in " + index.dynamicResourceClasses.size() + " classes");
+
+        KeepRootScanner.Result keepRoots = KeepRootScanner.scan(module, index, report);
+        xmlClassRoots.addAll(dottedOf(keepRoots.classRoots));
 
         scanResXml(module, componentClasses, resourceRoots, nameRefKeys, xmlMethodRoots, xmlClassRoots);
 
         ReachabilityAnalyzer reachability = new ReachabilityAnalyzer(index, keptClasses,
                 keptMethodKeys, keptFieldKeys, report);
+        reachability.setForceReflectionMode(keepRoots.reflectionConservative);
+        reachability.setNativeKeepClasses(keepRoots.nativeClasses);
+        reachability.setNativeStrings(keepRoots.nativeStrings);
         reachability.setRoots(componentClasses, xmlClassRoots, xmlMethodRoots);
         reachability.run();
-        if (!removeClasses) expandKeptClasses(index);
+        if (!options.removeClasses) expandKeptClasses(index);
         log("Reachable: " + keptMethodKeys.size() + " methods, " + keptFieldKeys.size()
                 + " fields, " + keptClasses.size() + "/" + index.classesTotal + " classes");
 
-        if (removeMethods) {
+        if (options.removeMethods && options.maxPasses > 0) {
             EmptyMethodCascade cascade = new EmptyMethodCascade(index, reachability, keptClasses,
-                    keptMethodKeys, keptFieldKeys, modifiedClasses, report, preserveDebug, maxPasses);
+                    keptMethodKeys, keptFieldKeys, modifiedClasses, report,
+                    options.preserveDebug, options.maxPasses);
             cascade.run();
             reachability.run();
-            if (!removeClasses) expandKeptClasses(index);
+            if (!options.removeClasses) expandKeptClasses(index);
             log("After cascade: " + keptMethodKeys.size() + " methods, " + keptFieldKeys.size()
                     + " fields, " + keptClasses.size() + " classes");
         } else {
             log("Method removal disabled - keeping all methods");
         }
 
-        boolean allKeep = module.hasTableBlock() && ResourceRootScanner.scan(index, keptClasses, keptMethodKeys,
-                resourceRoots, nameRefKeys, module.getTableBlock());
-        if (allKeep) log("getIdentifier/getString in kept code - keeping all resources");
+        ResourceTableIndex tableIndex = module.hasTableBlock()
+                ? ResourceTableIndex.build(module.getTableBlock(), manifestPackage) : null;
+        boolean dynamicLookup = tableIndex != null && ResourceRootScanner.scan(index, keptClasses,
+                keptMethodKeys, resourceRoots, nameRefKeys, tableIndex);
+        Set<String> keepNames = null;
+        if (dynamicLookup) {
+            if (options.safeMode) {
+                keepNames = index.allStrings;
+                report.dynamicNameKeep = true;
+                log("Resources resolved by name - keeping every entry whose name matches a dex string ("
+                        + keepNames.size() + " strings)");
+            } else {
+                log("Aggressive mode - ignoring dynamic resource lookups");
+            }
+        }
+        hardConservative |= keepRoots.keepAllResources;
 
-        ResourceSweeper.sweep(module, resourceRoots, nameRefKeys, allKeep, report);
+        if (tableIndex != null)
+            ResourceSweeper.sweep(module, tableIndex, resourceRoots, nameRefKeys, keepNames,
+                    hardConservative, report);
+
+        phaseB(module, dynamicLookup);
 
         DexRebuilder.rebuild(module, index, keptClasses, keptMethodKeys, keptFieldKeys,
-                modifiedClasses, removeClasses, removeMethods, removeFields, report);
+                modifiedClasses, options.removeClasses, options.removeMethods,
+                options.removeFields, report);
         report.classesTotal = index.classesTotal;
         report.logSummary();
 
         compressAll(module);
-        module.writeApk(outFile, (path, method, length) -> {
-        });
+        writeApk(module, outFile);
         ApkZipAlignUtil.ensureInstallable(outFile);
         log("Deep optimization complete: " + outFile.getName());
 
-        if (verifyOutput) {
+        if (options.verifyOutput) {
             try {
                 ApkValidator.validate(outFile, index, keptClasses, keptMethodKeys, keptFieldKeys);
                 log("Post-build validation passed");
             } catch (Exception e) {
+                report.log("Validation failed: " + e);
                 //noinspection ResultOfMethodCallIgnored
                 outFile.delete();
-                throw e;
+                writeFallbackRepack(inputApk, outFile, filesToDelete);
+                throw new Exception("Deep optimization failed validation; repack-only output written: " + e, e);
             }
         }
+    }
+
+    private void phaseB(ApkModule module, boolean dynamicLookup) {
+        if (!options.shortenNames || hardConservative || dynamicLookup || !module.hasTableBlock()) return;
+        boolean hasNative = false;
+        for (InputSource source : module.getInputSources()) {
+            String name = source.getName();
+            if (name != null && name.endsWith(".so")) { hasNative = true; break; }
+        }
+        if (hasNative) {
+            log("Native libraries present - skipping resource name shortening");
+            return;
+        }
+        try {
+            log("Phase B: shortening resource names");
+            AutoRefactor refactor = new AutoRefactor(module);
+            refactor.setApkLogger(logger);
+            refactor.refactor();
+        } catch (Exception e) {
+            report.log("Resource name shortening failed (kept original names): " + e);
+        }
+    }
+
+    /** Safety net: a valid, installable repack of the ORIGINAL apk instead of nothing. */
+    private void writeFallbackRepack(File inputApk, File outFile, Set<String> filesToDelete) throws Exception {
+        report.log("Writing repack-only fallback output");
+        ApkModule fresh = ApkModule.loadApkFile(inputApk);
+        fresh.setLoadDefaultFramework(false);
+        stripSignatures(fresh);
+        deleteFiles(fresh, filesToDelete);
+        compressAll(fresh);
+        fresh.writeApk(outFile, (path, method, length) -> {
+        });
+        ApkZipAlignUtil.ensureInstallable(outFile);
+    }
+
+    private void writeApk(ApkModule module, File outFile) throws Exception {
+        int[] counter = {0};
+        module.writeApk(outFile, (path, method, length) -> {
+            if (++counter[0] % 2048 == 0) log("Writing: " + counter[0] + " entries");
+        });
+    }
+
+    private void stripSignatures(ApkModule module) {
+        List<String> toRemove = new ArrayList<>();
+        for (InputSource source : module.getInputSources()) {
+            String name = source.getName();
+            if (name == null || !name.startsWith("META-INF/")) continue;
+            String entry = name.substring("META-INF/".length());
+            if (entry.endsWith(".SF") || entry.endsWith(".RSA") || entry.endsWith(".DSA")
+                    || entry.endsWith(".EC") || entry.equalsIgnoreCase("MANIFEST.MF"))
+                toRemove.add(name);
+        }
+        for (String name : toRemove) module.getZipEntryMap().remove(name);
     }
 
     private void deleteFiles(ApkModule module, Set<String> filesToDelete) {
@@ -182,6 +255,7 @@ public class DeepOptimizer {
         List<String> toRemove = new ArrayList<>();
         for (InputSource source : module.getInputSources()) {
             String name = source.getName();
+            if (name == null || isProtectedPath(name)) continue;
             for (String fd : filesToDelete) {
                 if (name.endsWith(fd) || name.matches(fd)) {
                     toRemove.add(name);
@@ -190,6 +264,14 @@ public class DeepOptimizer {
             }
         }
         for (String name : toRemove) module.getZipEntryMap().remove(name);
+    }
+
+    /** Paths the junk-file list must never touch - they are load-bearing at runtime. */
+    private static boolean isProtectedPath(String name) {
+        return name.startsWith("res/") || name.startsWith("assets/") || name.startsWith("lib/")
+                || name.startsWith("META-INF/services/") || name.endsWith(".dex")
+                || name.startsWith("r/") || name.equals("AndroidManifest.xml")
+                || name.equals("resources.arsc");
     }
 
     private void expandKeptClasses(DexIndex index) {
@@ -204,14 +286,15 @@ public class DeepOptimizer {
      * keep their original method.
      */
     private void compressAll(ApkModule module) {
-        try {
-            for (InputSource source : module.getInputSources()) {
-                String name = source.getName();
-                if (name != null && (ApkZipAlignUtil.mustStore(name)
-                        || (name.startsWith("lib/") && name.endsWith(".so")))) continue;
+        for (InputSource source : module.getInputSources()) {
+            String name = source.getName();
+            if (name != null && (ApkZipAlignUtil.mustStore(name)
+                    || (name.startsWith("lib/") && name.endsWith(".so")))) continue;
+            try {
                 source.setMethod(ZipEntry.DEFLATED);
+            } catch (Exception e) {
+                log("Compression skipped for " + name + ": " + e);
             }
-        } catch (Exception ignored) {
         }
         module.setCompressionLevel(9);
     }
@@ -242,17 +325,26 @@ public class DeepOptimizer {
         for (InputSource source : module.getInputSources()) {
             String name = source.getName();
             if (!name.startsWith("res/") || !name.endsWith(".xml")) continue;
-            try (InputStream is = source.openStream()) {
-                ResXmlDocument doc = AndroidManifestBlock.load(is);
+            try {
+                byte[] bytes = readAll(source.openStream());
+                if (!isBinaryXml(bytes)) continue; // plain-text XML (res/raw) holds no compiled refs
+                ResXmlDocument doc = AndroidManifestBlock.load(new java.io.ByteArrayInputStream(bytes));
                 for (Iterator<ResXmlElement> it = doc.getElements(); it.hasNext(); ) {
                     ResXmlElement element = it.next();
                     walkXml(element, componentClasses, resourceRoots, nameRefKeys,
                             xmlMethodRoots, xmlClassRoots, false);
                 }
             } catch (Exception e) {
-                log("XML scan skipped for " + name + ": " + e);
+                log("Unparseable compiled XML " + name + " - keeping all resources");
+                hardConservative = true;
             }
         }
+    }
+
+    private static boolean isBinaryXml(byte[] bytes) {
+        if (bytes.length < 4) return false;
+        int magic = (bytes[0] & 0xFF) | ((bytes[1] & 0xFF) << 8) | ((bytes[2] & 0xFF) << 16) | ((bytes[3] & 0xFF) << 24);
+        return magic == RES_XML_MAGIC;
     }
 
     private void walkXml(ResXmlElement element, Set<String> componentClasses, Set<Integer> resourceRoots,
@@ -278,6 +370,10 @@ public class DeepOptimizer {
                     if (value != null && value.contains(".") && !value.startsWith("@"))
                         componentClasses.add(toType(value));
                 }
+                // Reflection frameworks read class names from manifest metadata
+                // (WorkManager startup, Firebase init, appComponentFactory-like setups).
+                if (value != null && FQCN.matcher(value).matches() && !value.startsWith("@"))
+                    classRoots.add(toType(value));
             } else {
                 if (lower.endsWith("onclick") && value != null && !value.isEmpty())
                     methodRoots.add(value);
@@ -300,6 +396,15 @@ public class DeepOptimizer {
             walkXml(child, componentClasses, resourceRoots, nameRefKeys,
                     methodRoots, classRoots, isManifest);
         }
+    }
+
+    private Set<String> dottedOf(Set<String> types) {
+        Set<String> out = new HashSet<>();
+        for (String type : types) {
+            if (type.startsWith("L") && type.endsWith(";"))
+                out.add(type.substring(1, type.length() - 1).replace('/', '.'));
+        }
+        return out;
     }
 
     private String toType(String dotted) {

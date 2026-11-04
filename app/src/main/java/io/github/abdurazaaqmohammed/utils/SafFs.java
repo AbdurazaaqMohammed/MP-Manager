@@ -89,6 +89,20 @@ public final class SafFs {
                 DocumentsContract.Document.MIME_TYPE_DIR, 0L, 0L, true, true);
     }
 
+    /**
+     * Like {@link #wrap(File)}, then re-reads the document so the flag that
+     * decides file-against-directory (and the size and modification time) is
+     * the provider's answer, not the directory guess wrap() makes. Every byte
+     * operation that starts from a stored {@code saf:} path must use this -
+     * staging a file document through the guessed flag used to produce an
+     * empty directory instead of its bytes.
+     */
+    public static SafFile statWrap(String safPath) throws IOException {
+        File f = wrap(new File(safPath));
+        if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + safPath);
+        return stat((SafFile) f);
+    }
+
     static String pathFor(String authority, String treeUri, String docId) {
         String tree = treeUri == null ? NO_TREE : Uri.encode(treeUri);
         return PREFIX + authority + "/" + tree + "/" + Uri.encode(docId);
@@ -417,8 +431,7 @@ public final class SafFs {
 
     /** Streams a real file back into the document a {@code saf:} path addresses. */
     public static void writeBack(File source, String safPath) throws IOException {
-        SafFile target = (SafFile) wrap(new File(safPath));
-        if (!(target instanceof SafFile)) throw new IOException("Not a provider path: " + safPath);
+        SafFile target = statWrap(safPath);
         InputStream in = null;
         OutputStream out = null;
         try {

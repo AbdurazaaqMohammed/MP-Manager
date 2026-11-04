@@ -32,7 +32,7 @@
                 app:tint="?attr/colorOnSurface"
                 android:id="@+id/copy"
                 android:contentDescription="@android:string/copy"
-                android:src="@drawable/ic_copy_mt" />
+                android:src="@drawable/baseline_content_copy_24" />
             <ImageView
                 android:layout_width="wrap_content"
                 android:id="@+id/share"

@@ -89,7 +89,7 @@ public class NotificationUiManager {
                 actionCopyPendingIntent(CLASS_COPY_ACTION_ID, cls, classCopied)
         );
         NotificationCompat.Action stop = new NotificationCompat.Action(
-                R.drawable.ic_cancel, stopLabel, actionStopPendingIntent()
+                R.drawable.close_24px, stopLabel, actionStopPendingIntent()
         );
 
         Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)

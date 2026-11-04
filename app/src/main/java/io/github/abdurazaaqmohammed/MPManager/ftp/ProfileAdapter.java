@@ -22,10 +22,23 @@ public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileV
         void onProfileClick(FtpProfile profile);
     }
 
+    /** Long-press on a profile row; used for the sidebar pin toggle. */
+    public interface OnProfileLongClickListener {
+        void onProfileLongClick(FtpProfile profile, View anchor);
+    }
+
+    private final OnProfileLongClickListener longClickListener;
+
     public ProfileAdapter(List<FtpProfile> profiles, OnProfileClickListener listener, Runnable onAddClick) {
+        this(profiles, listener, onAddClick, null);
+    }
+
+    public ProfileAdapter(List<FtpProfile> profiles, OnProfileClickListener listener, Runnable onAddClick,
+                          OnProfileLongClickListener longClickListener) {
         this.profiles = new ArrayList<>(profiles);
         this.listener = listener;
         this.onAddClick = onAddClick;
+        this.longClickListener = longClickListener;
     }
 
     @NonNull
@@ -41,6 +54,12 @@ public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileV
         if (position < profiles.size()) {
             FtpProfile profile = profiles.get(position);
             holder.bind(profile, listener);
+            if (longClickListener != null) {
+                holder.itemView.setOnLongClickListener(v -> {
+                    longClickListener.onProfileLongClick(profile, v);
+                    return true;
+                });
+            } else holder.itemView.setOnLongClickListener(null);
         } else {
             holder.itemView.setOnClickListener(v -> onAddClick.run());
             holder.name.setText(R.string.add_profile);

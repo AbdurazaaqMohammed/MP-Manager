@@ -45,6 +45,9 @@ import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.reflect.TypeToken;
 
+import android.net.Uri;
+
+import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.utils.AppGson;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
@@ -165,6 +168,8 @@ public class SidebarController {
                     showSidebarBookmarkMenu(entry, view);
                 } else if (!sidebarOrganizeMode && "recycle_bin".equals(entry.id())) {
                     showRecycleBinOptionsDialog();
+                } else if (!sidebarOrganizeMode && entry.type() == SidebarAdapter.EntryType.PIN) {
+                    showPinMenu(entry, view);
                 }
             }
 
@@ -354,6 +359,7 @@ public class SidebarController {
             sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
                     data.storage, data.bookmarks, data.groups, data.labels,
                     data.showPlugins);
+            sidebarAdapter.setPinned(data.pinned);
         } catch (Exception ignored) {
         }
     }
@@ -380,6 +386,7 @@ public class SidebarController {
                         sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
                                 data.storage, data.bookmarks, data.groups, data.labels,
                                 data.showPlugins);
+                        sidebarAdapter.setPinned(data.pinned);
                     } catch (Exception ignored) {
                     }
                 });
@@ -424,6 +431,7 @@ public class SidebarController {
                         sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
                                 data.storage, data.bookmarks, data.groups, data.labels,
                                 data.showPlugins);
+                        sidebarAdapter.setPinned(data.pinned);
                     } catch (Exception ignored) {
                     }
                 });
@@ -475,6 +483,31 @@ public class SidebarController {
             if (labels != null) data.labels.putAll(labels);
         } catch (Exception ignored) {
         }
+        // Pinned provider locations and FTP profiles, shown after the volumes.
+        // Resolves names here: this runs on the sidebar-load background thread,
+        // where the DocumentsContract lookup is allowed.
+        data.pinned = new ArrayList<>();
+        try {
+            for (String pin : SidebarPins.get(activity)) {
+                if (pin.startsWith(SidebarPins.SAF_PREFIX)) {
+                    String uri = pin.substring(SidebarPins.SAF_PREFIX.length());
+                    String label;
+                    try {
+                        label = DocumentsBrowserActivity.treeDisplayName(activity, Uri.parse(uri));
+                    } catch (Exception ignored) {
+                        label = uri;
+                    }
+                    if (label == null || label.isEmpty()) label = uri;
+                    data.pinned.add(new SidebarAdapter.SidebarEntry(SidebarAdapter.EntryType.PIN,
+                            "storage", pin, label, R.drawable.folder_24px, null, null));
+                } else if (pin.startsWith(SidebarPins.FTP_PREFIX)) {
+                    String name = pin.substring(SidebarPins.FTP_PREFIX.length());
+                    data.pinned.add(new SidebarAdapter.SidebarEntry(SidebarAdapter.EntryType.PIN,
+                            "storage", pin, name, R.drawable.cloud_download_24px, null, null));
+                }
+            }
+        } catch (Exception ignored) {
+        }
         return data;
     }
 
@@ -487,6 +520,7 @@ public class SidebarController {
         List<File> bookmarks;
         Map<String, List<File>> groups;
         Map<String, String> labels;
+        List<SidebarAdapter.SidebarEntry> pinned;
     }
 
     private void openSidebarEntry(SidebarAdapter.SidebarEntry entry) {
@@ -497,10 +531,43 @@ public class SidebarController {
         } else if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
             File file = entry.file();
             activity.loadFolderInPaneAsync(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1, true);
+        } else if (entry.type() == SidebarAdapter.EntryType.PIN) {
+            String id = entry.id();
+            if (id != null && id.startsWith(SidebarPins.SAF_PREFIX)) {
+                activity.openSafTree(id.substring(SidebarPins.SAF_PREFIX.length()));
+            } else if (id != null && id.startsWith(SidebarPins.FTP_PREFIX)) {
+                activity.getFtp().connectProfile(id.substring(SidebarPins.FTP_PREFIX.length()),
+                        activity.lastPaneSelected == 1);
+            }
         } else {
             openSidebarTool(entry.id());
         }
         activity.closeSidebarDrawer();
+    }
+
+    /** Long-press on a pinned row: unpin (or jump to the source screen). */
+    private void showPinMenu(SidebarAdapter.SidebarEntry entry, View view) {
+        String id = entry.id();
+        boolean pinnedNow = id != null && SidebarPins.isPinned(activity, id);
+        PopupMenu menu = new PopupMenu(activity, view);
+        if (pinnedNow) menu.getMenu().add(0, 1, 0, R.string.unpin_from_sidebar);
+        if (id != null && id.startsWith(SidebarPins.SAF_PREFIX)) {
+            menu.getMenu().add(0, 2, 1, R.string.sidebar_documents);
+        }
+        menu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                SidebarPins.remove(activity, id);
+                refreshSidebar(getSidebarSectionOrder());
+                return true;
+            }
+            if (item.getItemId() == 2) {
+                activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
+                activity.closeSidebarDrawer();
+                return true;
+            }
+            return false;
+        });
+        menu.show();
     }
 
     private void openSidebarTool(String id) {

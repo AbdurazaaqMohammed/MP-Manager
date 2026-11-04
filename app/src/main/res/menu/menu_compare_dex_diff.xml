@@ -54,7 +54,7 @@
         android:title="@string/match_case" />
     <item
         android:id="@+id/action_diff_search"
-        android:icon="@drawable/ic_search_mt"
+        android:icon="@drawable/baseline_search_24"
         android:title="@string/search" />
     <item
         android:id="@+id/action_diff_jump"

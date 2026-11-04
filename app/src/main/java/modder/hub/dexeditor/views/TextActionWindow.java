@@ -371,11 +371,11 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		// Define all possible buttons with their resources
 		Map<String, ButtonConfig> allButtons = new HashMap<>();
 		allButtons.put("panel_btn_select_all", new ButtonConfig(R.drawable.ic_selectall_mt, android.R.string.selectAll));
-		allButtons.put("panel_btn_copy", new ButtonConfig(R.drawable.ic_copy_mt, android.R.string.copy));
+		allButtons.put("panel_btn_copy", new ButtonConfig(R.drawable.baseline_content_copy_24, android.R.string.copy));
 		allButtons.put("panel_btn_paste", new ButtonConfig(R.drawable.ic_paste_mt, android.R.string.paste));
 		allButtons.put("goto_btn", new ButtonConfig(R.drawable.ic_goto_mt, R.string.go_to));
 		allButtons.put("translate_btn", new ButtonConfig(R.drawable.ic_translate_mt, R.string.translate));
-		allButtons.put("panel_btn_cut", new ButtonConfig(R.drawable.ic_cut_mt, android.R.string.cut));
+		allButtons.put("panel_btn_cut", new ButtonConfig(R.drawable.baseline_content_cut_24, android.R.string.cut));
 		allButtons.put("comment_btn", new ButtonConfig(R.drawable.ic_hash_mt, R.string.comment));
 		allButtons.put("openLink_btn", new ButtonConfig(R.drawable.ic_link_mt, R.string.link));
 		allButtons.put("share_btn", new ButtonConfig(R.drawable.ic_share_mt, R.string.share_text));

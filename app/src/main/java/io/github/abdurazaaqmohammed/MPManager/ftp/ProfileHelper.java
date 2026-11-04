@@ -7,6 +7,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.PopupMenu;
+
+import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -145,6 +148,26 @@ public class ProfileHelper {
         }, () -> {
             ad.dismiss();
             showProfileDialog(true,null, isServer);
+        }, (profile, anchor) -> {
+            // Long-press pins/unpins the profile among the sidebar storage
+            // entries, so a server is one tap away.
+            if (!isServer) {
+                String pin = SidebarPins.FTP_PREFIX + profile.getName();
+                boolean pinnedNow = SidebarPins.isPinned(context, pin);
+                PopupMenu menu = new PopupMenu(context, anchor);
+                menu.getMenu().add(context.rss.getString(pinnedNow
+                        ? R.string.unpin_from_sidebar : R.string.pin_to_sidebar));
+                menu.setOnMenuItemClickListener(item -> {
+                    if (pinnedNow) SidebarPins.remove(context, pin);
+                    else SidebarPins.add(context, pin);
+                    android.widget.Toast.makeText(context, item.getTitle(), android.widget.Toast.LENGTH_SHORT).show();
+                    io.github.abdurazaaqmohammed.MPManager.MainActivity main =
+                            io.github.abdurazaaqmohammed.MPManager.MainActivity.current();
+                    if (main != null && !main.isFinishing()) main.refreshSidebar(main.getSidebarSectionOrder());
+                    return true;
+                });
+                menu.show();
+            }
         });
 
         recyclerView.setAdapter(adapter);

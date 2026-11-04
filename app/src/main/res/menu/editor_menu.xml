@@ -35,11 +35,11 @@
         <menu>
             <item
                 android:id="@+id/copy_line"
-                android:icon="@drawable/ic_copy_mt"
+                android:icon="@drawable/baseline_content_copy_24"
                 android:title="Copy line" />
             <item
                 android:id="@+id/cut_line"
-                android:icon="@drawable/ic_cut_mt"
+                android:icon="@drawable/baseline_content_cut_24"
                 android:title="Cut line" />
             <item
                 android:id="@+id/delete_line"
@@ -50,6 +50,7 @@
                 android:icon="@drawable/ic_empty_mt"
                 android:title="Empty line" />
             <item
+                android:id="@+id/replace_line"
                 android:icon="@drawable/ic_replace_mt"
                 android:title="Replace line" />
             <item
@@ -80,7 +81,8 @@
     </item>
     <item
         app:showAsAction="always"
-        android:icon="@drawable/ic_more_mt"
+        android:icon="@drawable/baseline_more_vert_24"
+        android:id="@+id/action_more"
         android:title="More">
         <menu>
             <item

@@ -56,9 +56,7 @@ public final class RootStaging {
     public static File stageForRead(Context context, String srcAbsPath) throws IOException {
         if (SafFs.isSafPath(srcAbsPath)) {
             SafFs.init(context);
-            File f = SafFs.wrap(new File(srcAbsPath));
-            if (!(f instanceof SafFile)) throw new IOException("Not a provider path: " + srcAbsPath);
-            return SafFs.materialize(context, (SafFile) f);
+            return SafFs.materialize(context, SafFs.statWrap(srcAbsPath));
         }
         return AccessManager.stageForRead(context, srcAbsPath);
     }

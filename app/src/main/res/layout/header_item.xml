@@ -34,7 +34,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_more_mt"
+            android:src="@drawable/baseline_more_vert_24"
             android:visibility="visible"
             app:tint="?attr/colorOnSurface" />
 

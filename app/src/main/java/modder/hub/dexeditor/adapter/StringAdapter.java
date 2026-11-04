@@ -40,9 +40,13 @@
     import androidx.recyclerview.widget.RecyclerView;
 
     import java.util.ArrayList;
+    import java.util.HashSet;
     import java.util.LinkedHashMap;
+    import java.util.LinkedHashSet;
     import java.util.List;
     import java.util.Map;
+    import java.util.Set;
+    import java.util.regex.Pattern;
 
     import io.github.abdurazaaqmohammed.MPManager.R;
 
@@ -53,7 +57,9 @@
      *  - MT-Manager-style two-column rows: original on the left, the pending
      *    translation on the right (green while unapplied, dash when untranslated)
      *  - a modification counter callback so the toolbar can show "x/y"
-     *  - live filtering (search within the list of strings)
+     *  - live filtering with a full FilterSpec (query, translated scope,
+     *    exclude/match-case/regex/exactly-match)
+     *  - multi-select mode (long-press to enter, tap to toggle)
      */
     public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder> {
 
@@ -61,25 +67,52 @@
         private final int COLOR_NORMAL;
         private final int COLOR_HINT;
 
+        /** Filter options shared by translation mode's Filter dialog. */
+        public static class FilterSpec {
+            public String query = "";
+            public int status;      // 0 = all, 1 = translated, 2 = untranslated
+            public boolean exclude; // invert the query match
+            public boolean matchCase;
+            public boolean regex;
+            public boolean exact;
+            public boolean active;  // whether any filter is currently applied
+        }
+
         // Full, unfiltered dataset - kept as a reference to the activity's backing list
         private final List<String> allStrings;
         // Subset currently shown (equals allStrings when no filter is active)
         private List<String> displayedStrings;
-        // original string -> pending new value (not yet applied to the dex classes)
+        // original string -> pending translation (not yet applied to the dex classes)
         private final Map<String, String> modifiedStrings = new LinkedHashMap<>();
 
         private final OnStringClickListener listener;
+        private OnStringLongClickListener longClickListener;
         private String currentFilter = null;
+        private FilterSpec currentSpec = null;
         private boolean untranslatedOnly;
         private OnModifiedCountChangedListener modifiedCountListener;
         private Boolean translationModeOverride = null;
+
+        // multi-select state
+        private boolean selectionMode;
+        private final Set<String> selected = new LinkedHashSet<>();
+        private int selectionHighlightColor = 0x66323232;
+        private OnSelectionChangedListener selectionListener;
 
         public interface OnStringClickListener {
             void onStringClick(String text);
         }
 
+        public interface OnStringLongClickListener {
+            void onStringLongClick(String text);
+        }
+
         public interface OnModifiedCountChangedListener {
             void onModifiedCountChanged(int modified, int total);
+        }
+
+        public interface OnSelectionChangedListener {
+            void onSelectionChanged(boolean selectionMode, int selectedCount);
         }
 
         public StringAdapter(List<String> strings, OnStringClickListener listener, int color) {
@@ -114,17 +147,241 @@
             this.modifiedCountListener = listener;
         }
 
+        public void setSelectionListener(OnSelectionChangedListener listener) {
+            this.selectionListener = listener;
+        }
+
+        public void setLongClickListener(OnStringLongClickListener listener) {
+            this.longClickListener = listener;
+        }
+
+        public void setSelectionHighlightColor(int color) {
+            this.selectionHighlightColor = color;
+        }
+
         /** Preloads translations (e.g. from a dictionary) as pending edits. */
         public void loadTranslations(java.util.Map<String, String> map) {
             modifiedStrings.clear();
             if (map != null) modifiedStrings.putAll(map);
-            applyFilter(currentFilter);
+            applyCurrentFilter();
         }
 
-        /** Shows only strings without a pending translation. */
+        /** Records a translation for a string, keeping it even when identical
+         *  to the original (translation-mode semantics: the counter counts
+         *  recorded translations). */
+        public void setTranslation(String original, String translation) {
+            if (translation == null) {
+                modifiedStrings.remove(original);
+            } else {
+                modifiedStrings.put(original, translation);
+            }
+            notifyDataSetChanged();
+            notifyCountChanged();
+        }
+
+        public boolean hasTranslation(String original) {
+            return modifiedStrings.containsKey(original);
+        }
+
+        /** Marks a pending edit, removing the entry when the value matches the
+         *  original (Dex Editor Plus strings-tab semantics). */
+        public void markModified(String original, String newValue) {
+            if (newValue == null || newValue.equals(original)) {
+                modifiedStrings.remove(original);
+            } else {
+                modifiedStrings.put(original, newValue);
+            }
+            notifyDataSetChanged();
+            notifyCountChanged();
+        }
+
+        /** Returns the pending edited value for a string, or the original if there is none. */
+        public String getPendingValue(String original) {
+            String v = modifiedStrings.get(original);
+            return v != null ? v : original;
+        }
+
+        public boolean hasModifications() {
+            return !modifiedStrings.isEmpty();
+        }
+
+        /** original -> new value, for every string the user has edited but not yet applied. */
+        public Map<String, String> getModifiedStrings() {
+            return modifiedStrings;
+        }
+
+        public void clearModifications() {
+            modifiedStrings.clear();
+            applyCurrentFilter();
+        }
+
+        // ------------------------------------------------------------------
+        // selection (multi-select) mode
+        // ------------------------------------------------------------------
+
+        public boolean isSelectionMode() {
+            return selectionMode;
+        }
+
+        public Set<String> getSelected() {
+            return selected;
+        }
+
+        public void enterSelectionMode(String first) {
+            selectionMode = true;
+            selected.clear();
+            if (first != null) selected.add(first);
+            notifyDataSetChanged();
+            notifySelectionChanged();
+        }
+
+        public void exitSelectionMode() {
+            selectionMode = false;
+            selected.clear();
+            notifyDataSetChanged();
+            notifySelectionChanged();
+        }
+
+        public void toggleSelected(String original) {
+            if (selected.contains(original)) {
+                selected.remove(original);
+                if (selected.isEmpty()) {
+                    exitSelectionMode();
+                    return;
+                }
+            } else {
+                selected.add(original);
+            }
+            notifyDataSetChanged();
+            notifySelectionChanged();
+        }
+
+        public void selectAll() {
+            selectionMode = true;
+            selected.clear();
+            if (displayedStrings != null) selected.addAll(displayedStrings);
+            notifyDataSetChanged();
+            notifySelectionChanged();
+        }
+
+        public void invertSelection() {
+            if (!selectionMode) {
+                enterSelectionMode(null);
+            }
+            Set<String> inverted = new LinkedHashSet<>();
+            if (displayedStrings != null) {
+                for (String s : displayedStrings) {
+                    if (!selected.contains(s)) inverted.add(s);
+                }
+            }
+            selected.clear();
+            selected.addAll(inverted);
+            notifyDataSetChanged();
+            notifySelectionChanged();
+        }
+
+        public void clearSelection() {
+            selected.clear();
+            if (selectionMode) exitSelectionMode();
+        }
+
+        private void notifySelectionChanged() {
+            if (selectionListener != null) {
+                selectionListener.onSelectionChanged(selectionMode, selected.size());
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // filtering
+        // ------------------------------------------------------------------
+
+        /**
+         * Re-applies the current dataset/filter. Call this after the backing list content
+         * has changed (e.g. after a reload) if the list reference itself was swapped.
+         */
+        public void refresh() {
+            applyCurrentFilter();
+        }
+
+        /** Simple query-only filter (Dex Editor Plus strings-tab compatibility). */
+        public void setFilter(String query) {
+            FilterSpec spec = new FilterSpec();
+            spec.query = query == null ? "" : query;
+            spec.active = query != null && !query.trim().isEmpty();
+            currentSpec = spec;
+            applyCurrentFilter();
+        }
+
+        /** Full filter (translation mode Filter dialog). */
+        public void applyFilter(FilterSpec spec) {
+            currentSpec = spec;
+            applyCurrentFilter();
+        }
+
+        public FilterSpec getCurrentSpec() {
+            FilterSpec out = currentSpec != null ? currentSpec : new FilterSpec();
+            out.query = currentFilter != null ? currentFilter : (currentSpec != null ? currentSpec.query : "");
+            return out;
+        }
+
+        public String getCurrentFilter() {
+            return currentFilter;
+        }
+
+        /** Legacy untranslated-only quick toggle (bottom bar no5). */
         public void setUntranslatedOnly(boolean only) {
-            untranslatedOnly = only;
-            applyFilter(currentFilter);
+            FilterSpec spec = currentSpec != null ? currentSpec : new FilterSpec();
+            spec.status = only ? 2 : 0;
+            spec.active = only || (spec.query != null && !spec.query.trim().isEmpty());
+            currentSpec = spec;
+            applyCurrentFilter();
+        }
+
+        private void applyCurrentFilter() {
+            FilterSpec spec = currentSpec;
+            List<String> filtered = new ArrayList<>();
+            Pattern regex = null;
+            if (spec != null && spec.regex && spec.query != null && !spec.query.isEmpty()) {
+                try {
+                    regex = Pattern.compile(spec.query,
+                            spec.matchCase ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                } catch (Exception ignored) {
+                    regex = null;
+                }
+            }
+            for (String s : allStrings) {
+                if (s == null) continue;
+                if (spec != null) {
+                    if (spec.status == 1 && !modifiedStrings.containsKey(s)) continue;
+                    if (spec.status == 2 && modifiedStrings.containsKey(s)) continue;
+                    boolean match = true;
+                    if (spec.query != null && !spec.query.isEmpty()) {
+                        if (spec.exact) {
+                            match = spec.matchCase ? s.equals(spec.query)
+                                    : s.equalsIgnoreCase(spec.query);
+                        } else if (regex != null) {
+                            match = regex.matcher(s).find();
+                        } else {
+                            match = spec.matchCase ? s.contains(spec.query)
+                                    : s.toLowerCase().contains(spec.query.toLowerCase());
+                        }
+                        if (spec.exclude) match = !match;
+                    }
+                    if (!match) continue;
+                } else if (untranslatedOnly && modifiedStrings.containsKey(s)) {
+                    continue;
+                }
+                filtered.add(s);
+            }
+            displayedStrings = filtered;
+            notifyDataSetChanged();
+            notifyCountChanged();
+        }
+
+        private void notifyCountChanged() {
+            if (modifiedCountListener != null) {
+                modifiedCountListener.onModifiedCountChanged(modifiedStrings.size(), allStrings.size());
+            }
         }
 
         @NonNull
@@ -176,85 +433,32 @@
                 holder.original.setLayoutParams(origParams);
             }
 
+            if (selectionMode) {
+                holder.itemView.setBackgroundColor(selected.contains(original)
+                        ? selectionHighlightColor : 0x00000000);
+            } else {
+                holder.itemView.setBackgroundColor(0x00000000);
+            }
+
             holder.itemView.setOnClickListener(v -> {
-                if (listener != null) listener.onStringClick(original);
+                if (selectionMode) {
+                    toggleSelected(original);
+                } else if (listener != null) {
+                    listener.onStringClick(original);
+                }
+            });
+            holder.itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    longClickListener.onStringLongClick(original);
+                    return true;
+                }
+                return false;
             });
         }
 
         @Override
         public int getItemCount() {
-            return displayedStrings.size();
-        }
-
-        /**
-         * Re-applies the current dataset/filter. Call this after the backing list content
-         * has changed (e.g. after a reload) if the list reference itself was swapped.
-         */
-        public void refresh() {
-            applyFilter(currentFilter);
-        }
-
-        /** Filters the visible list by substring match (case-insensitive). Pass null/empty to clear. */
-        public void setFilter(String query) {
-            currentFilter = (query == null || query.trim().isEmpty()) ? null : query.trim();
-            applyFilter(currentFilter);
-        }
-
-        public String getCurrentFilter() {
-            return currentFilter;
-        }
-
-        private void applyFilter(String query) {
-            if (query == null) {
-                displayedStrings = allStrings;
-            } else {
-                String lower = query.toLowerCase();
-                List<String> filtered = new ArrayList<>();
-                for (String s : allStrings) {
-                    if (s != null && s.toLowerCase().contains(lower)) filtered.add(s);
-                }
-                displayedStrings = filtered;
-            }
-            notifyDataSetChanged();
-            notifyCountChanged();
-        }
-
-        /** Marks (or unmarks, if newValue equals original) a string as having a pending edit. */
-        public void markModified(String original, String newValue) {
-            if (newValue == null || newValue.equals(original)) {
-                modifiedStrings.remove(original);
-            } else {
-                modifiedStrings.put(original, newValue);
-            }
-            notifyDataSetChanged();
-            notifyCountChanged();
-        }
-
-        /** Returns the pending edited value for a string, or the original if there is none. */
-        public String getPendingValue(String original) {
-            String v = modifiedStrings.get(original);
-            return v != null ? v : original;
-        }
-
-        public boolean hasModifications() {
-            return !modifiedStrings.isEmpty();
-        }
-
-        /** original -> new value, for every string the user has edited but not yet applied. */
-        public Map<String, String> getModifiedStrings() {
-            return modifiedStrings;
-        }
-
-        public void clearModifications() {
-            modifiedStrings.clear();
-            notifyDataSetChanged();
-            notifyCountChanged();
-        }
-
-        private void notifyCountChanged() {
-            if (modifiedCountListener != null) {
-                modifiedCountListener.onModifiedCountChanged(modifiedStrings.size(), allStrings.size());
-            }
+            return displayedStrings == null ? 0 : displayedStrings.size();
         }
 
         static class ViewHolder extends RecyclerView.ViewHolder {

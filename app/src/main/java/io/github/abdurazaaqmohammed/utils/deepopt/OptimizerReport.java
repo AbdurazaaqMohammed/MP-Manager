@@ -18,6 +18,7 @@ public class OptimizerReport {
     public boolean fixedPoint;
     public boolean reflectionMode;
     public boolean allResourcesKept;
+    public boolean dynamicNameKeep;
     public boolean conservativeLock;
 
     private final APKLogger logger;
@@ -37,7 +38,7 @@ public class OptimizerReport {
         log("  Methods removed: " + methodsRemoved);
         log("  Fields removed: " + fieldsRemoved);
         log("  Resources: " + entriesRemoved + " entries, " + filesRemoved + " files removed"
-                + (allResourcesKept ? " (all-keep mode)" : ""));
+                + (allResourcesKept ? " (all-keep mode)" : (dynamicNameKeep ? " (name-keep mode)" : "")));
         log("  Empty-method cascade passes: " + passesUsed);
         log("  Reflection mode: " + reflectionMode + ", fixed point: " + fixedPoint);
     }

@@ -37,20 +37,20 @@
         </LinearLayout>
 
         <com.google.android.material.checkbox.MaterialCheckBox
-            android:text="@string/ultra_compress"
-            android:textSize="20sp"
-            android:id="@+id/ultra_compress"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
-
-        <com.google.android.material.checkbox.MaterialCheckBox
             android:text="@string/deep_optimize"
             android:textSize="20sp"
             android:id="@+id/deep_optimize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:text="@string/deep_optimize_safe_mode"
+            android:textSize="16sp"
+            android:id="@+id/deep_optimize_safe_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:text="@string/deep_optimize_phase_b"

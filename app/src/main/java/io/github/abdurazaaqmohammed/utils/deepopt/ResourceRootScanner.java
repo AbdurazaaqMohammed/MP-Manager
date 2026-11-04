@@ -9,20 +9,15 @@ import com.android.tools.smali.dexlib2.iface.reference.Reference;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
-import com.reandroid.arsc.chunk.PackageBlock;
-import com.reandroid.arsc.chunk.TableBlock;
-import com.reandroid.arsc.model.ResourceEntry;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 /**
  * Extracts resource roots from the final kept code: {@code R$<type>} field references
- * (sget/iget/sput/iput), inlined {@code const} resource IDs (0x7f…) that resolve to a
- * real table entry, and {@code Resources->getIdentifier/getString} call sites which force
- * the all-keep mode.
+ * (sget/iget/sput/iput) and inlined {@code const} resource IDs (0x7f…) that resolve to a
+ * real table entry. Returns whether any kept code resolves resources by NAME at runtime
+ * (getIdentifier family), which - in safe mode - enables the name-match keep instead of
+ * the old keep-everything behavior.
  */
 public final class ResourceRootScanner {
 
@@ -30,16 +25,9 @@ public final class ResourceRootScanner {
     }
 
     public static boolean scan(DexIndex index, Set<String> keptClasses, Set<String> keptMethodKeys,
-                               Set<Integer> resourceRoots, Set<String> nameRefKeys, TableBlock table) {
-        if (table == null) return false;
-        Map<Integer, ResourceEntry> byId = new HashMap<>();
-        for (PackageBlock pkg : table.listPackages()) {
-            for (Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
-                ResourceEntry entry = it.next();
-                byId.put(entry.getResourceId(), entry);
-            }
-        }
-        boolean allKeep = false;
+                               Set<Integer> resourceRoots, Set<String> nameRefKeys,
+                               ResourceTableIndex tableIndex) {
+        boolean dynamicLookup = false;
         for (String type : keptClasses) {
             ClassDef classDef = index.classByType.get(type);
             if (classDef == null) continue;
@@ -56,18 +44,18 @@ public final class ResourceRootScanner {
                                 nameRefKeys.add(resourceType + ":" + ((FieldReference) ref).getName());
                         } else if (ref instanceof MethodReference methodRef) {
                             if ("Landroid/content/res/Resources;".equals(methodRef.getDefiningClass())
-                                    && DexIndex.RESOURCES_METHOD_NAMES.contains(methodRef.getName()))
-                                allKeep = true;
+                                    && DexIndex.DYNAMIC_RESOURCE_METHODS.contains(methodRef.getName()))
+                                dynamicLookup = true;
                         }
                     } else if (instruction instanceof NarrowLiteralInstruction) {
                         int literal = ((NarrowLiteralInstruction) instruction).getNarrowLiteral();
-                        if ((literal & 0xFF000000) == 0x7F000000 && byId.containsKey(literal))
+                        if ((literal & 0xFF000000) == 0x7F000000 && tableIndex.byId(literal) != null)
                             resourceRoots.add(literal);
                     }
                 }
             }
         }
-        return allKeep;
+        return dynamicLookup;
     }
 
     /** "Lcom/foo/R$string;" -> "string"; null for anything else. */

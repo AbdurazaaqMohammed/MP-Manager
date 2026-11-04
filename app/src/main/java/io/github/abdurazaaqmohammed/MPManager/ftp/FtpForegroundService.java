@@ -36,7 +36,7 @@ public class FtpForegroundService extends Service {
                 .setSmallIcon(R.drawable.cloud_upload_24px)
                 .setOngoing(true)
                 .addAction(R.drawable.stop_circle_24px, getString(R.string.ftp_stop), stopPendingIntent)
-                .addAction(R.drawable.ic_copy_mt, getString(R.string.ftp_copy_ip), copyPendingIntent)
+                .addAction(R.drawable.baseline_content_copy_24, getString(R.string.ftp_copy_ip), copyPendingIntent)
                 .build();
 
         startForeground(NOTIFICATION_ID, notification);

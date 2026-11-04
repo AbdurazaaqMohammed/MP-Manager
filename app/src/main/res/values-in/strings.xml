@@ -85,6 +85,7 @@
     <string name="deleting">Menghapus %1$s</string>
     <string name="compressing">Mengompres</string>
     <string name="compress">Kompres</string>
+    <string name="compress_single_file_only">%1$s hanya bisa mengompres satu file — pilih satu file, atau gunakan format .tar (mis. .tar.zst) untuk banyak file.</string>
     <string name="hist">Riwayat Pencarian</string>
     <string name="filename">Nama berkas</string>
     <string name="install_location">Lokasi Instalasi</string>

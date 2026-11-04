@@ -46,7 +46,7 @@ import io.github.abdurazaaqmohammed.utils.StorageUtil;
 public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     public enum EntryType {
-        HEADER, STORAGE, TOOL, BOOKMARK
+        HEADER, STORAGE, TOOL, BOOKMARK, PIN
     }
 
     public record SidebarEntry(EntryType type, String section, String id, String label, int icon,
@@ -89,6 +89,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private final List<String> toolOrder = new ArrayList<>();
     private final Map<String, String> labels = new LinkedHashMap<>();
     private final Set<String> hiddenItems = new HashSet<>();
+    private final List<SidebarEntry> pinned = new ArrayList<>();
     private String animateToggleSection;
 
     public SidebarAdapter(Context context, Callbacks callbacks) {
@@ -143,6 +144,18 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     public void refreshStorage(List<StorageUtil.StorageInfo> infos) {
         storage.clear();
         if (infos != null) storage.addAll(infos);
+        rebuild();
+    }
+
+    /**
+     * Rows shown after the storage volumes: pinned provider locations and FTP
+     * client profiles. Entries come prebuilt from the controller (their labels
+     * need provider queries), already typed {@link EntryType#PIN} with the
+     * "storage" section.
+     */
+    public void setPinned(List<SidebarEntry> rows) {
+        pinned.clear();
+        if (rows != null) pinned.addAll(rows);
         rebuild();
     }
 
@@ -210,6 +223,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 for (StorageUtil.StorageInfo info : storage) {
                     entries.add(new SidebarEntry(EntryType.STORAGE, section, info.path,
                             info.name, 0, null, info));
+                }
+                for (SidebarEntry pin : pinned) {
+                    if (organizeMode || !hiddenItems.contains(entryKey(pin))) entries.add(pin);
                 }
             } else if ("bookmarks".equals(section)) {
                 addBookmarks("bookmarks", section, defaultBookmarks);

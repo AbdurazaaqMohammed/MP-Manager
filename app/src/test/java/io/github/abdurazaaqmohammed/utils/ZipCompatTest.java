@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
+import io.airlift.compress.zstd.ZstdOutputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -34,6 +35,7 @@ import java.util.zip.ZipOutputStream;
 public class ZipCompatTest {
 
     private static final int METHOD_XZ = 95;
+    private static final int METHOD_ZSTD = 93;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -52,6 +54,45 @@ public class ZipCompatTest {
         File out = folder.newFile("extracted.bin");
         ZipCompat.extractEntry(zip, "module/framework.dex", out);
         assertTrue(Arrays.equals(payload, Files.readAllBytes(out.toPath())));
+    }
+
+    @Test
+    public void listsAndExtractsZstdEntries() throws Exception {
+        byte[] payload = payload(40000);
+        File zip = folder.newFile("zstd.zip");
+        writeSingleEntryZip(zip, "module/classes.dex", payload, METHOD_ZSTD, zstdCompress(payload));
+
+        List<FileHeader> headers = ZipCompat.listHeaders(zip);
+        assertEquals(1, headers.size());
+        assertEquals("module/classes.dex", headers.get(0).getFileName());
+        assertEquals(payload.length, headers.get(0).getUncompressedSize());
+
+        File out = folder.newFile("extracted-zstd.bin");
+        ZipCompat.extractEntry(zip, "module/classes.dex", out);
+        assertTrue(Arrays.equals(payload, Files.readAllBytes(out.toPath())));
+    }
+
+    @Test
+    public void computesCrcOfZstdEntry() throws Exception {
+        byte[] payload = payload(9000);
+        File zip = folder.newFile("zstd-crc.zip");
+        writeSingleEntryZip(zip, "data.bin", payload, METHOD_ZSTD, zstdCompress(payload));
+
+        CRC32 crc = new CRC32();
+        crc.update(payload);
+        assertEquals(crc.getValue(), ZipCompat.crc32(zip, "data.bin"));
+    }
+
+    @Test
+    public void extractsZstdArchiveViaFallback() throws Exception {
+        byte[] payload = payload(30000);
+        File zip = folder.newFile("zstd-all.zip");
+        writeSingleEntryZip(zip, "a/b/c.txt", payload, METHOD_ZSTD, zstdCompress(payload));
+
+        File dest = folder.newFolder("zstd-dest");
+        ZipCompat.extractAll(zip, dest, false);
+        assertTrue(Arrays.equals(payload,
+                Files.readAllBytes(new File(dest, "a/b/c.txt").toPath())));
     }
 
     @Test
@@ -122,6 +163,14 @@ public class ZipCompatTest {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (XZCompressorOutputStream xz = new XZCompressorOutputStream(bos)) {
             xz.write(data);
+        }
+        return bos.toByteArray();
+    }
+
+    private static byte[] zstdCompress(byte[] data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (ZstdOutputStream zstd = new ZstdOutputStream(bos)) {
+            zstd.write(data);
         }
         return bos.toByteArray();
     }

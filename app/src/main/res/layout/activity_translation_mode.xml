@@ -13,7 +13,7 @@
         app:title="@string/translation_mode"
         app:subtitle="@string/loading" />
 
-    <androidx.recyclerview.widget.RecyclerView
+    <modder.hub.dexeditor.views.FastScrollerRecyclerView
         android:id="@+id/translation_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -26,33 +26,23 @@
         android:orientation="horizontal">
 
         <ImageButton
-            android:id="@+id/btn_jump"
+            android:id="@+id/btn_select_all"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/translation_jump"
-            android:src="@drawable/ic_hash_mt"
+            android:contentDescription="@string/translation_select_all"
+            android:src="@drawable/baseline_select_all_24"
             app:tint="?attr/colorOnSurface" />
 
         <ImageButton
-            android:id="@+id/btn_copy"
+            android:id="@+id/btn_invert"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@android:string/copy"
-            android:src="@drawable/ic_copy_mt"
-            app:tint="?attr/colorOnSurface" />
-
-        <ImageButton
-            android:id="@+id/btn_edit"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/edit_string"
-            android:src="@drawable/edit_24px"
+            android:contentDescription="@string/translation_invert"
+            android:src="@drawable/baseline_swap_horiz_24"
             app:tint="?attr/colorOnSurface" />
 
         <ImageButton
@@ -63,6 +53,16 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/translation_auto"
             android:src="@drawable/ic_translate_mt"
+            app:tint="?attr/colorOnSurface" />
+
+        <ImageButton
+            android:id="@+id/btn_jump"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/translation_jump"
+            android:src="@drawable/ic_hash_mt"
             app:tint="?attr/colorOnSurface" />
 
         <ImageButton

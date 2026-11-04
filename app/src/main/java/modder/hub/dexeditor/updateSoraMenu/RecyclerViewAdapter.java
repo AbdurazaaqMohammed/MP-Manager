@@ -72,11 +72,11 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 	
 	private final Map<String, Integer> buttonIcons = new HashMap<>() {{
         put("panel_btn_select_all", R.drawable.ic_selectall_mt);
-        put("panel_btn_copy", R.drawable.ic_copy_mt);
+        put("panel_btn_copy", R.drawable.baseline_content_copy_24);
         put("panel_btn_paste", R.drawable.ic_paste_mt);
         put("goto_btn", R.drawable.ic_goto_mt);
         put("translate_btn", R.drawable.ic_translate_mt);
-        put("panel_btn_cut", R.drawable.ic_cut_mt);
+        put("panel_btn_cut", R.drawable.baseline_content_cut_24);
         put("comment_btn", R.drawable.ic_hash_mt);
         put("openLink_btn", R.drawable.ic_link_mt);
         put("share_btn", R.drawable.ic_share_mt);

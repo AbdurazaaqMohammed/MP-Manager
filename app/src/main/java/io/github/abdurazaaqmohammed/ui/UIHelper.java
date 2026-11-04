@@ -105,6 +105,7 @@ public class UIHelper {
                 new AboutLibrary("ZXing", "zxing", "https://github.com/zxing/zxing", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("JCommander", "Cedric Beust", "https://github.com/cbeust/jcommander", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Apache Commons Compress", "Apache Software Foundation", "https://commons.apache.org/proper/commons-compress", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("aircompressor (Zstandard)", "Airlift", "https://github.com/airlift/aircompressor", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Apache Commons Net", "Apache Software Foundation", "https://commons.apache.org/proper/commons-net", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("XZ for Java", "Tukaani", "https://tukaani.org/xz/java.html", "Public Domain", ""),
                 new AboutLibrary("JunRAR", "JunRAR", "https://github.com/junrar/junrar", "UnRAR License", ""),

@@ -30,7 +30,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import android.content.Context;
+
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.utils.SafFs;
@@ -85,10 +88,22 @@ public class DocumentsBrowserActivity extends BaseActivity {
         list.setOnItemClickListener((parent, view, position, id) -> openInPane(rows.get(position).treeUri));
         list.setOnItemLongClickListener((parent, view, position, id) -> {
             Row row = rows.get(position);
+            String pin = SidebarPins.SAF_PREFIX + row.treeUri;
+            boolean pinnedNow = SidebarPins.isPinned(this, pin);
             new MaterialAlertDialogBuilder(this)
                     .setTitle(row.title)
-                    .setItems(new String[]{getString(R.string.docs_forget)},
-                            (d, which) -> forgetTree(row.treeUri))
+                    .setItems(new String[]{
+                            getString(pinnedNow ? R.string.unpin_from_sidebar : R.string.pin_to_sidebar),
+                            getString(R.string.docs_forget)},
+                            (d, which) -> {
+                                if (which == 0) {
+                                    if (pinnedNow) SidebarPins.remove(this, pin);
+                                    else SidebarPins.add(this, pin);
+                                    refreshMainSidebar();
+                                } else {
+                                    forgetTree(row.treeUri);
+                                }
+                            })
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
             return true;
@@ -143,10 +158,15 @@ public class DocumentsBrowserActivity extends BaseActivity {
 
     /** Root title from the provider, falling back to its root summary and authority. */
     private String displayName(Uri treeUri) {
+        return treeDisplayName(this, treeUri);
+    }
+
+    /** Root title of a tree, resolvable from anywhere (sidebar pins use it). */
+    public static String treeDisplayName(Context context, Uri treeUri) {
         Cursor cursor = null;
         try {
             String docId = DocumentsContract.getTreeDocumentId(treeUri);
-            cursor = getContentResolver().query(
+            cursor = context.getContentResolver().query(
                     DocumentsContract.buildDocumentUriUsingTree(treeUri, docId),
                     new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME},
                     null, null, null);
@@ -166,7 +186,7 @@ public class DocumentsBrowserActivity extends BaseActivity {
         // The root summary names the location ("App data (internal,
         // /data/data)") when the document query is not allowed.
         try {
-            Cursor roots = getContentResolver().query(
+            Cursor roots = context.getContentResolver().query(
                     DocumentsContract.buildRootsUri(treeUri.getAuthority()), ROOT_PROJECTION, null, null, null);
             if (roots != null) {
                 try {
@@ -213,6 +233,14 @@ public class DocumentsBrowserActivity extends BaseActivity {
         granted.add(uri.toString());
         prefs().edit().putStringSet(KEY_TREES, granted).apply();
         loadLocations();
+    }
+
+    /** Live sidebar refresh when MainActivity is up (pin changes from here). */
+    private void refreshMainSidebar() {
+        MainActivity main = MainActivity.current();
+        if (main != null && !main.isFinishing()) {
+            main.refreshSidebar(main.getSidebarSectionOrder());
+        }
     }
 
     private void forgetTree(Uri uri) {
