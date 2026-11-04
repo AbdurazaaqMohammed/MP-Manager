@@ -1488,7 +1488,6 @@ public class ApkInfoDialogs {
                 fileSize.setOnLongClickListener(lcl);
                 apkTargetSdk.setOnLongClickListener(lcl);
                 apkMinSdk.setOnLongClickListener(lcl);
-                if (apkCert != null) apkCert.setOnLongClickListener(lcl);
                 apkInstalled.setOnLongClickListener(lcl);
                 apkPermissions.setOnLongClickListener(lcl);
             });
