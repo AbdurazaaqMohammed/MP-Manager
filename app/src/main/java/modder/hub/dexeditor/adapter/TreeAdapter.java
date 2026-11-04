@@ -505,8 +505,17 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         boolean visited = (isSearchList || isHistory) && isOpened(node);
         float wantedAlpha = visited ? 0.55f : 1.0f;
         holder.itemView.setAlpha(wantedAlpha);
-        if (holder.itemContent != null) holder.itemContent.setAlpha(1.0f);
-        if (holder.name != null) holder.name.setAlpha(1.0f);
+        if (holder.itemContent != null) holder.itemContent.setAlpha(wantedAlpha);
+        int wantedTextColor = visited ? openedTextColorResolved : defaultTextColor;
+        if (holder.name != null) {
+            holder.name.setAlpha(wantedAlpha);
+            if (holder.name.getCurrentTextColor() != wantedTextColor) {
+                holder.name.setTextColor(wantedTextColor);
+            }
+        }
+        if (holder.subtitle != null) {
+            holder.subtitle.setAlpha(wantedAlpha);
+        }
 
         // 5. Indentation
         int arrowWidth = (int) (14 * density);
