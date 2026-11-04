@@ -134,7 +134,6 @@ public class TranslationModeActivity extends BaseActivity {
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setMinItemsForScroller(50);
         adapter = new StringAdapter(originals, this::onStringTapped, onSurfaceColor());
-        adapter.setTranslationMode(true);
         adapter.setLongClickListener(this::onStringLongTapped);
         adapter.setModifiedCountListener((modified, total) -> {
             if (getSupportActionBar() != null && !adapter.isSelectionMode()) {
