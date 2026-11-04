@@ -95,6 +95,9 @@ public final class ApkSignatureInfo {
                 return "Not signed";
             default:
                 return "Unknown";
+        }
+    }
+
     private static final java.util.Map<String, ApkSignatureInfo> sigInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static ApkSignatureInfo getCached(File apk) {
