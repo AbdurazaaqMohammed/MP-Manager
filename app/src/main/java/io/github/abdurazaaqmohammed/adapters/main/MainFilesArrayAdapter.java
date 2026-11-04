@@ -171,6 +171,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (target == null) return;
         if (target.equals(context.pane1Folder) && pane1) return;
         if (target.equals(context.pane2Folder) && !pane1) return;
+        File current = pane1 ? context.pane1Folder : context.pane2Folder;
+        if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(current)) {
+            io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
+        }
         context.loadFolderInPaneAsync(target, pane1);
     }
 

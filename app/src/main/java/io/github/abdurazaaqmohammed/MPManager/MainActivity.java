@@ -1679,6 +1679,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                         } else {
                             File paneFolder = adapter.pane1 ? pane1Folder : pane2Folder;
+                            if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(paneFolder)) {
+                                io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(this, paneFolder, adapter.pane1);
+                            }
                             if (SafFs.isSaf(paneFolder)) {
                                 File parent = paneFolder.getParentFile();
                                 if (parent != null && !parent.equals(paneFolder)) {
