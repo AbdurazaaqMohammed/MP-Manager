@@ -91,30 +91,9 @@ public class HexEditorActivity extends BaseActivity {
     private GestureDetector tapDetector;
 
     private final View.OnTouchListener cellTouchListener = (v, ev) -> {
-        int action = ev.getActionMasked();
-        if (action == MotionEvent.ACTION_DOWN) {
-            lastTouchedCell = v;
-            if (v != null && v.getTag() instanceof Number) {
-                dragStartPos = ((Number) v.getTag()).longValue();
-                isDragging = false;
-            }
-        } else if (action == MotionEvent.ACTION_MOVE) {
-            if (dragStartPos >= 0) {
-                long target = findBytePosAtScreenCoords(ev.getRawX(), ev.getRawY());
-                if (target >= 0 && (target != cursorPos || !isDragging)) {
-                    isDragging = true;
-                    selectionStart = dragStartPos;
-                    selectionEnd = target;
-                    cursorPos = target;
-                    refreshSelection();
-                    updateStatus();
-                }
-            }
-        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-            isDragging = false;
-        }
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) lastTouchedCell = v;
         if (tapDetector != null) tapDetector.onTouchEvent(ev);
-        return true;
+        return false;
     };
 
     // Search panel state
@@ -202,21 +181,19 @@ public class HexEditorActivity extends BaseActivity {
         tapDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
-                if (dragStartPos >= 0) {
-                    selectionStart = dragStartPos;
-                    selectionEnd = dragStartPos;
-                    setCursor(dragStartPos, false);
+                View v = lastTouchedCell;
+                if (v != null && v.getTag() instanceof Number) {
+                    long pos = ((Number) v.getTag()).longValue();
+                    selectionStart = pos;
+                    selectionEnd = pos;
+                    setCursor(pos, false);
                 }
-                return true;
+                return false;
             }
 
             @Override
             public void onLongPress(MotionEvent e) {
-                View v = lastTouchedCell;
-                if (v != null) {
-                    long pos = (v.getTag() instanceof Number) ? ((Number) v.getTag()).longValue() : cursorPos;
-                    showCellContextMenu(v, pos);
-                }
+                // Deliberately not consumed: selectable TextView displays native selection handles
             }
         });
 
@@ -1260,10 +1237,7 @@ public class HexEditorActivity extends BaseActivity {
                 cells[5] = itemView.findViewById(R.id.cell5);
                 cells[6] = itemView.findViewById(R.id.cell6);
                 cells[7] = itemView.findViewById(R.id.cell7);
-                for (TextView cell : cells) {
-                    cell.setTextIsSelectable(false);
-                    cell.setFocusable(false);
-                }
+                for (TextView cell : cells) cell.setTextIsSelectable(true);
             }
         }
     }

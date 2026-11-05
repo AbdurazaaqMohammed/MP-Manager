@@ -177,22 +177,42 @@ public class CompareTextActivity extends BaseActivity {
     }
 
     private String readText(String path, boolean isZip, String zipPath) throws Exception {
-        StringBuilder sb = new StringBuilder();
         if (isZip) {
             try (ZipFile zf = new ZipFile(zipPath)) {
                 ZipEntry ze = zf.getEntry(path);
                 if (ze != null) {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(zf.getInputStream(ze)))) {
-                        appendLines(sb, reader);
+                    try (java.io.InputStream rawIs = zf.getInputStream(ze);
+                         java.io.BufferedInputStream bis = new java.io.BufferedInputStream(rawIs)) {
+                        if (io.github.abdurazaaqmohammed.utils.FileUtils.isAxml(bis)) {
+                            try {
+                                return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
+                            } catch (Exception ignored) {}
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(bis, java.nio.charset.StandardCharsets.UTF_8))) {
+                            appendLines(sb, reader);
+                        }
+                        return sb.toString();
                     }
                 }
             }
         } else {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(path))))) {
-                appendLines(sb, reader);
+            File f = new File(path);
+            try (java.io.InputStream rawIs = new FileInputStream(f);
+                 java.io.BufferedInputStream bis = new java.io.BufferedInputStream(rawIs)) {
+                if (io.github.abdurazaaqmohammed.utils.FileUtils.isAxml(bis)) {
+                    try {
+                        return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
+                    } catch (Exception ignored) {}
+                }
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(bis, java.nio.charset.StandardCharsets.UTF_8))) {
+                    appendLines(sb, reader);
+                }
+                return sb.toString();
             }
         }
-        return sb.toString();
+        return "";
     }
 
     private static void appendLines(StringBuilder sb, BufferedReader reader) throws Exception {

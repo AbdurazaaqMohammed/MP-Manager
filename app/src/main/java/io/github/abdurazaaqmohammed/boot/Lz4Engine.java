@@ -88,7 +88,42 @@ public class Lz4Engine {
                 }
             } catch (Exception ignored) {}
         }
-        return false;
+
+        // Streaming pure Java LZ4 Legacy compression (8MB chunks)
+        try (FileInputStream fis = new FileInputStream(inFile);
+             FileOutputStream fos = new FileOutputStream(outFile)) {
+            // Write magic 0x184C2102
+            fos.write(0x02);
+            fos.write(0x21);
+            fos.write(0x4C);
+            fos.write(0x18);
+
+            int blockSize = 8 * 1024 * 1024;
+            byte[] inBuf = new byte[blockSize];
+            int r;
+            while ((r = readChunk(fis, inBuf)) > 0) {
+                byte[] compressed = compressBlock(inBuf, 0, r);
+                int sz = compressed.length;
+                fos.write(sz & 0xFF);
+                fos.write((sz >>> 8) & 0xFF);
+                fos.write((sz >>> 16) & 0xFF);
+                fos.write((sz >>> 24) & 0xFF);
+                fos.write(compressed, 0, sz);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static int readChunk(FileInputStream fis, byte[] buf) throws IOException {
+        int total = 0;
+        while (total < buf.length) {
+            int r = fis.read(buf, total, buf.length - total);
+            if (r == -1) break;
+            total += r;
+        }
+        return total;
     }
 
     /**
@@ -297,18 +332,20 @@ public class Lz4Engine {
         int[] hashTable = new int[HASH_TABLE_SIZE];
         Arrays.fill(hashTable, -1);
 
-        byte[] dest = new byte[srcLen + (srcLen / 255) + 32];
+        byte[] dest = new byte[srcLen + (srcLen / 255) + 64];
         int srcIdx = srcOffset;
         int srcEnd = srcOffset + srcLen;
         int anchor = srcIdx;
         int destIdx = 0;
+        int mflimit = srcEnd - 12;
+        int matchlimit = srcEnd - 5;
 
-        while (srcIdx < srcEnd - 4) {
+        while (srcIdx < mflimit) {
             int hash = hash4(src, srcIdx);
             int matchPos = hashTable[hash];
             hashTable[hash] = srcIdx;
 
-            if (matchPos >= srcOffset && srcIdx - matchPos < 65536 &&
+            if (matchPos >= srcOffset && srcIdx - matchPos < 65536 && srcIdx - matchPos > 0 &&
                     src[matchPos] == src[srcIdx] &&
                     src[matchPos + 1] == src[srcIdx + 1] &&
                     src[matchPos + 2] == src[srcIdx + 2] &&
@@ -316,7 +353,7 @@ public class Lz4Engine {
 
                 int literalLen = srcIdx - anchor;
                 int matchLen = 4;
-                while (srcIdx + matchLen < srcEnd && src[matchPos + matchLen] == src[srcIdx + matchLen]) {
+                while (srcIdx + matchLen < matchlimit && src[matchPos + matchLen] == src[srcIdx + matchLen]) {
                     matchLen++;
                 }
 
@@ -324,8 +361,7 @@ public class Lz4Engine {
                 int tokenMatch = Math.min(matchLen - 4, 15);
                 token |= tokenMatch;
 
-                int tokenPos = destIdx++;
-                dest[tokenPos] = (byte) token;
+                dest[destIdx++] = (byte) token;
 
                 if (literalLen >= 15) {
                     int rem = literalLen - 15;
@@ -360,20 +396,18 @@ public class Lz4Engine {
         }
 
         int literalLen = srcEnd - anchor;
-        if (literalLen > 0) {
-            int token = Math.min(literalLen, 15) << 4;
-            dest[destIdx++] = (byte) token;
-            if (literalLen >= 15) {
-                int rem = literalLen - 15;
-                while (rem >= 255) {
-                    dest[destIdx++] = (byte) 255;
-                    rem -= 255;
-                }
-                dest[destIdx++] = (byte) rem;
+        int token = Math.min(literalLen, 15) << 4;
+        dest[destIdx++] = (byte) token;
+        if (literalLen >= 15) {
+            int rem = literalLen - 15;
+            while (rem >= 255) {
+                dest[destIdx++] = (byte) 255;
+                rem -= 255;
             }
-            System.arraycopy(src, anchor, dest, destIdx, literalLen);
-            destIdx += literalLen;
+            dest[destIdx++] = (byte) rem;
         }
+        System.arraycopy(src, anchor, dest, destIdx, literalLen);
+        destIdx += literalLen;
 
         return Arrays.copyOf(dest, destIdx);
     }

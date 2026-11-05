@@ -145,16 +145,15 @@ public class FileUtils {
         if (path == null) return false;
         String lower = path.toLowerCase(Locale.ROOT);
         if (!lower.endsWith(".xml")) return false;
-        int lastSlash = Math.max(lower.lastIndexOf('/'), lower.lastIndexOf('\\'));
-        if (lastSlash > 0) {
-            int prevSlash = Math.max(lower.lastIndexOf('/', lastSlash - 1), lower.lastIndexOf('\\', lastSlash - 1));
-            String parentFolder = prevSlash >= 0 ? lower.substring(prevSlash + 1, lastSlash) : lower.substring(0, lastSlash);
-            if (parentFolder.startsWith("drawable") || parentFolder.startsWith("mipmap")
-                    || parentFolder.contains("drawable") || parentFolder.contains("mipmap")) {
-                return true;
-            }
+        if (lower.contains("drawable") || lower.contains("mipmap") || lower.contains("color")
+                || lower.contains("anim") || lower.contains("interpolator")) {
+            return true;
         }
-        return false;
+        int lastSlash = Math.max(lower.lastIndexOf('/'), lower.lastIndexOf('\\'));
+        String fileName = lastSlash >= 0 ? lower.substring(lastSlash + 1) : lower;
+        return fileName.startsWith("ic_") || fileName.startsWith("img_") || fileName.startsWith("btn_")
+                || fileName.startsWith("bg_") || fileName.startsWith("shape_") || fileName.startsWith("vector_")
+                || fileName.startsWith("badge_") || fileName.startsWith("round_");
     }
 
     public static boolean isDrawableXmlContent(File file) {
@@ -162,18 +161,47 @@ public class FileUtils {
         if (isDrawableXml(file.getName()) || isDrawableXml(file.getAbsolutePath())) return true;
         if (!file.getName().toLowerCase(Locale.ROOT).endsWith(".xml")) return false;
         try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] buf = new byte[512];
+            byte[] buf = new byte[1024];
             int n = fis.read(buf);
             if (n > 0) {
+                // Check ASCII text
                 String s = new String(buf, 0, n, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
                 if (s.contains("<vector") || s.contains("<shape") || s.contains("<animated-vector")
                         || s.contains("<layer-list") || s.contains("<bitmap") || s.contains("<selector")
                         || s.contains("<ripple") || s.contains("<nine-patch") || s.contains("<inset")
-                        || s.contains("<clip") || s.contains("<scale")) {
+                        || s.contains("<clip") || s.contains("<scale") || s.contains("<gradient")) {
                     return true;
+                }
+                // Check raw bytes for binary AXML string pool containing drawable tags
+                byte[][] keywords = {
+                        "vector".getBytes(StandardCharsets.US_ASCII),
+                        "shape".getBytes(StandardCharsets.US_ASCII),
+                        "selector".getBytes(StandardCharsets.US_ASCII),
+                        "layer-list".getBytes(StandardCharsets.US_ASCII),
+                        "ripple".getBytes(StandardCharsets.US_ASCII),
+                        "drawable".getBytes(StandardCharsets.US_ASCII)
+                };
+                for (byte[] kw : keywords) {
+                    if (containsSubarray(buf, n, kw)) return true;
                 }
             }
         } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static boolean containsSubarray(byte[] data, int dataLen, byte[] sub) {
+        if (sub.length == 0 || dataLen < sub.length) return false;
+        int limit = dataLen - sub.length;
+        for (int i = 0; i <= limit; i++) {
+            boolean match = true;
+            for (int j = 0; j < sub.length; j++) {
+                if (data[i + j] != sub[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
         return false;
     }
     public static boolean doesNotHaveStoragePerm(Context context) {

@@ -810,7 +810,7 @@ public class FileIconLoader {
         } else if (".arsc".equals(ext)) {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            if (".xml".equals(ext) && !isInZip && FileUtils.isDrawableXmlContent(new File(path))) {
+            if (".xml".equals(ext) && (FileUtils.isDrawableXml(path) || (!isInZip && FileUtils.isDrawableXmlContent(new File(path))))) {
                 resolved = cachedImageIcon;
             } else {
                 resolved = cachedTextIcon;
