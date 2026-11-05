@@ -2323,7 +2323,8 @@ public class DexEditorActivity extends BaseActivity {
         etReplace.setHint(R.string.replace_with);
         final SwitchCompat swMatchCase = new SwitchCompat(this);
         swMatchCase.setText(R.string.match_case);
-        swMatchCase.setChecked(true);
+        swMatchCase.setChecked(getSharedPreferences("search_prefs", MODE_PRIVATE)
+                .getBoolean("strings_replace_all_match_case", true));
 
         container.addView(UiFields.wrap(this, etFind, null, 0));
         container.addView(UiFields.wrap(this, etReplace, null, 0));
@@ -2336,6 +2337,9 @@ public class DexEditorActivity extends BaseActivity {
                     String find = etFind.getText().toString();
                     String replace = etReplace.getText().toString();
                     if (find.isEmpty()) return;
+                    getSharedPreferences("search_prefs", MODE_PRIVATE).edit()
+                            .putBoolean("strings_replace_all_match_case", swMatchCase.isChecked())
+                            .apply();
                     new StringBatchTask(this, null, find, replace, swMatchCase.isChecked(), null).start();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
