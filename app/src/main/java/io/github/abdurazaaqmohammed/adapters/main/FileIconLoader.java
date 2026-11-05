@@ -793,7 +793,7 @@ public class FileIconLoader {
                 resolved = cachedApkIcon;
                 if (!isInZip) loadApkIconAsync(path, fileIconView);
             }
-        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS) || FileUtils.isDrawableXml(path)) {
             resolved = cachedImageIcon;
             if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
@@ -810,7 +810,11 @@ public class FileIconLoader {
         } else if (".arsc".equals(ext)) {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            resolved = cachedTextIcon;
+            if (".xml".equals(ext) && !isInZip && FileUtils.isDrawableXmlContent(new File(path))) {
+                resolved = cachedImageIcon;
+            } else {
+                resolved = cachedTextIcon;
+            }
         } else {
             resolved = cachedFileIcon;
         }

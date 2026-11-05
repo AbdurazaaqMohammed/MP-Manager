@@ -19,9 +19,9 @@ android {
     signingConfigs {
         release {
             storeFile file("release.keystore")
-            storePassword "mpmanager123"
-            keyAlias "mpmanager"
-            keyPassword "mpmanager123"
+            storePassword "000000"
+            keyAlias "mido"
+            keyPassword "000000"
         }
     }
 

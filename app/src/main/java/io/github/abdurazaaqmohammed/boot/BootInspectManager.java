@@ -180,6 +180,17 @@ public class BootInspectManager {
                 File tempOut = new File(context.getCacheDir(), "repack_" + System.currentTimeMillis() + ".img");
                 BootImageEngine.repack(session.inspectDir, tempOut, null);
                 if (tempOut.exists() && tempOut.length() > 0) {
+                    // Create .bak backup file if not already present
+                    File bakFile = new File(session.originalImg.getParentFile(), session.originalImg.getName() + ".bak");
+                    if (!bakFile.exists() && session.originalImg.exists()) {
+                        try (java.io.FileInputStream fis = new java.io.FileInputStream(session.originalImg);
+                             java.io.FileOutputStream fos = new java.io.FileOutputStream(bakFile)) {
+                            byte[] buf = new byte[65536];
+                            int r;
+                            while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
+                        }
+                    }
+
                     // Replace original file
                     try (java.io.FileInputStream fis = new java.io.FileInputStream(tempOut);
                          java.io.FileOutputStream fos = new java.io.FileOutputStream(session.originalImg)) {

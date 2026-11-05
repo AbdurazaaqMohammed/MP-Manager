@@ -51,6 +51,13 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_select"
+        android:title="@string/select"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/ic_text_select_start_mt"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_goto"
         android:title="@string/goto_offset"
         app:iconTint="?attr/colorOnSurface"

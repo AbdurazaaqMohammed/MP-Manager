@@ -203,6 +203,8 @@
     <string name="enter_path">Enter path</string>
     <string name="path">Path</string>
     <string name="start">Start</string>
+    <string name="end">End</string>
+    <string name="length">Length</string>
     <string name="only_for_this_folder">Only for this folder</string>
     <string name="ftp_server_started">FTP Server started on port %1$d</string>
     <string name="failed_to_start_ftp_server">Failed to start FTP server: %1$s</string>

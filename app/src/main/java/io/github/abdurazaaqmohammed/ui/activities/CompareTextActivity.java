@@ -21,8 +21,10 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.Patch;
 import com.github.difflib.text.DiffRow;
-import com.github.difflib.text.DiffRowGenerator;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -220,43 +222,75 @@ public class CompareTextActivity extends BaseActivity {
         int[] newNumbers = new int[newLines.size() + 1];
         List<String> oldForDiff = significantLines(oldLines, oldNumbers, dropBlanks);
         List<String> newForDiff = significantLines(newLines, newNumbers, dropBlanks);
-        DiffRowGenerator generator = DiffRowGenerator.create()
-                .showInlineDiffs(false)
-                .reportLinesUnchanged(true)
-                .equalizer(equalizer())
-                .build();
-        List<DiffRow> rows = generator.generateDiffRows(oldForDiff, newForDiff);
+        Patch<String> patch = DiffUtils.diff(oldForDiff, newForDiff, equalizer());
 
-        List<DiffLine> result = new ArrayList<>(rows.size());
-        int oldIndex = 0;
-        int newIndex = 0;
-        for (DiffRow row : rows) {
-            DiffRow.Tag tag = row.getTag();
-            int oldNum = 0;
-            int newNum = 0;
-            switch (tag) {
-                case EQUAL -> {
-                    oldNum = oldNumbers[oldIndex];
-                    newNum = newNumbers[newIndex];
-                    oldIndex++;
-                    newIndex++;
-                }
-                case CHANGE -> {
-                    oldNum = oldNumbers[oldIndex];
-                    newNum = newNumbers[newIndex];
-                    oldIndex++;
-                    newIndex++;
-                }
-                case DELETE -> {
-                    oldNum = oldNumbers[oldIndex];
-                    oldIndex++;
-                }
-                case INSERT -> {
-                    newNum = newNumbers[newIndex];
-                    newIndex++;
-                }
+        List<DiffLine> result = new ArrayList<>();
+        int oldCursor = 0;
+        int newCursor = 0;
+
+        for (AbstractDelta<String> delta : patch.getDeltas()) {
+            int srcPos = delta.getSource().getPosition();
+            int tgtPos = delta.getTarget().getPosition();
+
+            // 1. Equal lines before delta
+            int equalOld = srcPos - oldCursor;
+            int equalNew = tgtPos - newCursor;
+            int equalCount = Math.min(equalOld, equalNew);
+            for (int i = 0; i < equalCount; i++) {
+                int oIdx = oldCursor + i;
+                int nIdx = newCursor + i;
+                result.add(new DiffLine(DiffRow.Tag.EQUAL,
+                        oldForDiff.get(oIdx),
+                        newForDiff.get(nIdx),
+                        oldNumbers[oIdx],
+                        newNumbers[nIdx]));
             }
-            result.add(new DiffLine(tag, row.getOldLine(), row.getNewLine(), oldNum, newNum));
+            oldCursor = srcPos;
+            newCursor = tgtPos;
+
+            // 2. Delta lines
+            List<String> srcLines = delta.getSource().getLines();
+            List<String> tgtLines = delta.getTarget().getLines();
+            int srcSize = srcLines == null ? 0 : srcLines.size();
+            int tgtSize = tgtLines == null ? 0 : tgtLines.size();
+            int maxLines = Math.max(srcSize, tgtSize);
+
+            for (int i = 0; i < maxLines; i++) {
+                boolean hasOld = i < srcSize;
+                boolean hasNew = i < tgtSize;
+                String oldText = hasOld ? srcLines.get(i) : "";
+                String newText = hasNew ? tgtLines.get(i) : "";
+                int oldNum = hasOld ? oldNumbers[oldCursor + i] : 0;
+                int newNum = hasNew ? newNumbers[newCursor + i] : 0;
+
+                DiffRow.Tag tag;
+                if (hasOld && hasNew) tag = DiffRow.Tag.CHANGE;
+                else if (hasOld) tag = DiffRow.Tag.DELETE;
+                else tag = DiffRow.Tag.INSERT;
+
+                result.add(new DiffLine(tag, oldText, newText, oldNum, newNum));
+            }
+            oldCursor += srcSize;
+            newCursor += tgtSize;
+        }
+
+        // 3. Trailing equal lines
+        int remOld = oldForDiff.size() - oldCursor;
+        int remNew = newForDiff.size() - newCursor;
+        int remaining = Math.max(remOld, remNew);
+        for (int i = 0; i < remaining; i++) {
+            boolean hasOld = i < remOld;
+            boolean hasNew = i < remNew;
+            String oldText = hasOld ? oldForDiff.get(oldCursor + i) : "";
+            String newText = hasNew ? newForDiff.get(newCursor + i) : "";
+            int oldNum = hasOld ? oldNumbers[oldCursor + i] : 0;
+            int newNum = hasNew ? newNumbers[newCursor + i] : 0;
+            DiffRow.Tag tag;
+            if (hasOld && hasNew) tag = DiffRow.Tag.EQUAL;
+            else if (hasOld) tag = DiffRow.Tag.DELETE;
+            else tag = DiffRow.Tag.INSERT;
+
+            result.add(new DiffLine(tag, oldText, newText, oldNum, newNum));
         }
         return result;
     }

@@ -76,7 +76,7 @@ public class PickerIconLoader {
         if (ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             loadApkIconAsync(path, fileIconView);
-        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS) || FileUtils.isDrawableXml(path)) {
             fileIconView.setImageDrawable(cachedImageIcon);
             loadThumbnailAsync(path, fileIconView, false);
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
@@ -89,7 +89,11 @@ public class PickerIconLoader {
         } else if (".pdf".equals(ext)) {
             fileIconView.setImageDrawable(cachedPdfIcon);
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            fileIconView.setImageDrawable(cachedTextIcon);
+            if (".xml".equals(ext) && FileUtils.isDrawableXmlContent(new File(path))) {
+                fileIconView.setImageDrawable(cachedImageIcon);
+            } else {
+                fileIconView.setImageDrawable(cachedTextIcon);
+            }
         } else {
             fileIconView.setImageDrawable(cachedFileIcon);
         }

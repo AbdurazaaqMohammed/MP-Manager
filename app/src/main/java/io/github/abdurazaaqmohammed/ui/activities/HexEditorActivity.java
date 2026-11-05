@@ -75,18 +75,44 @@ public class HexEditorActivity extends BaseActivity {
     // Offsets are long: system images (.iso/.img) pass 2 GB, where int math
     // silently wraps and the editor would corrupt the wrong bytes.
     private long cursorPos;
+    private long selectionStart = -1;
+    private long selectionEnd = -1;
+    private long dragStartPos = -1;
+    private boolean isDragging = false;
     private boolean nibbleHigh = true;
     private HexRowAdapter adapter;
     private TextView statusText;
     private LinearLayoutManager layoutManager;
+    private FastScrollerRecyclerView recycler;
 
     private View lastTouchedCell;
     private GestureDetector tapDetector;
 
     private final View.OnTouchListener cellTouchListener = (v, ev) -> {
-        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) lastTouchedCell = v;
+        int action = ev.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            lastTouchedCell = v;
+            if (v != null && v.getTag() instanceof Number) {
+                dragStartPos = ((Number) v.getTag()).longValue();
+                isDragging = false;
+            }
+        } else if (action == MotionEvent.ACTION_MOVE) {
+            if (dragStartPos >= 0) {
+                long target = findBytePosAtScreenCoords(ev.getRawX(), ev.getRawY());
+                if (target >= 0 && (target != cursorPos || !isDragging)) {
+                    isDragging = true;
+                    selectionStart = dragStartPos;
+                    selectionEnd = target;
+                    cursorPos = target;
+                    refreshSelection();
+                    updateStatus();
+                }
+            }
+        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            isDragging = false;
+        }
         if (tapDetector != null) tapDetector.onTouchEvent(ev);
-        return false;
+        return true;
     };
 
     // Search panel state
@@ -174,23 +200,28 @@ public class HexEditorActivity extends BaseActivity {
         tapDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
-                View v = lastTouchedCell;
-                if (v != null && v.getTag() instanceof Number) {
-                    setCursor(((Number) v.getTag()).longValue(), false);
+                if (dragStartPos >= 0) {
+                    selectionStart = dragStartPos;
+                    selectionEnd = dragStartPos;
+                    setCursor(dragStartPos, false);
                 }
-                return false;
+                return true;
             }
 
             @Override
             public void onLongPress(MotionEvent e) {
-                // Deliberately not consumed: the selectable TextView starts text selection natively
+                View v = lastTouchedCell;
+                if (v != null) {
+                    long pos = (v.getTag() instanceof Number) ? ((Number) v.getTag()).longValue() : cursorPos;
+                    showCellContextMenu(v, pos);
+                }
             }
         });
 
         setupHeader();
 
         statusText = findViewById(R.id.statusText);
-        FastScrollerRecyclerView recycler = findViewById(R.id.hexRecycler);
+        recycler = findViewById(R.id.hexRecycler);
         layoutManager = new LinearLayoutManager(this);
         recycler.setLayoutManager(layoutManager);
         adapter = new HexRowAdapter();
@@ -355,11 +386,284 @@ public class HexEditorActivity extends BaseActivity {
         updateStatus();
     }
 
+    private void refreshSelection() {
+        if (adapter != null && layoutManager != null) {
+            int first = layoutManager.findFirstVisibleItemPosition();
+            int last = layoutManager.findLastVisibleItemPosition();
+            if (first >= 0 && last >= first) {
+                adapter.notifyItemRangeChanged(first, last - first + 1);
+            }
+        }
+    }
+
+    private long findBytePosAtScreenCoords(float rawX, float rawY) {
+        if (recycler == null) return -1;
+        int[] loc = new int[2];
+        recycler.getLocationOnScreen(loc);
+        float rx = rawX - loc[0];
+        float ry = rawY - loc[1];
+        if (ry < dp(30)) {
+            recycler.scrollBy(0, -dp(12));
+        } else if (ry > recycler.getHeight() - dp(30)) {
+            recycler.scrollBy(0, dp(12));
+        }
+        View rowView = recycler.findChildViewUnder(rx, ry);
+        if (rowView == null) return -1;
+        int rowPos = recycler.getChildAdapterPosition(rowView);
+        if (rowPos == RecyclerView.NO_POSITION) return -1;
+
+        long rowStart = rowPos * 8L;
+        int[] rowLoc = new int[2];
+        rowView.getLocationOnScreen(rowLoc);
+        float xInRow = rawX - rowLoc[0];
+
+        int[] cellIds = {R.id.cell0, R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4, R.id.cell5, R.id.cell6, R.id.cell7};
+        for (int i = 0; i < cellIds.length; i++) {
+            View cell = rowView.findViewById(cellIds[i]);
+            if (cell != null && xInRow >= cell.getLeft() && xInRow <= cell.getRight()) {
+                long pos = rowStart + i;
+                return Math.min(pos, Math.max(0, size - 1));
+            }
+        }
+        View cell0 = rowView.findViewById(R.id.cell0);
+        if (cell0 != null && xInRow < cell0.getLeft()) {
+            return Math.min(rowStart, Math.max(0, size - 1));
+        }
+        View cell7 = rowView.findViewById(R.id.cell7);
+        if (cell7 != null && xInRow > cell7.getRight()) {
+            return Math.min(rowStart + 7, Math.max(0, size - 1));
+        }
+        return Math.min(rowStart, Math.max(0, size - 1));
+    }
+
+    private void showCellContextMenu(View anchor, long bytePos) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenu().add(0, 1, 0, R.string.select);
+        popup.getMenu().add(0, 2, 1, "Copy Hex");
+        popup.getMenu().add(0, 3, 2, "Copy Text");
+        if (!readOnly) {
+            popup.getMenu().add(0, 4, 3, R.string.paste);
+            popup.getMenu().add(0, 5, 4, "Fill with zeroes (00)");
+        }
+        popup.getMenu().add(0, 6, 5, R.string.select_all);
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1 -> showSelectRangeDialog();
+                case 2 -> copySelectedHex();
+                case 3 -> copySelectedText();
+                case 4 -> pasteClipboard();
+                case 5 -> fillSelectedWithZero();
+                case 6 -> selectAll();
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    private void copySelectedHex() {
+        long min = selectionStart >= 0 && selectionEnd >= 0 ? Math.min(selectionStart, selectionEnd) : cursorPos;
+        long max = selectionStart >= 0 && selectionEnd >= 0 ? Math.max(selectionStart, selectionEnd) : cursorPos;
+        StringBuilder sb = new StringBuilder();
+        for (long p = min; p <= max && p < size; p++) {
+            int b = readByte(p);
+            if (b != -1) {
+                if (sb.length() > 0) sb.append(' ');
+                sb.append(String.format(Locale.US, "%02X", b));
+            }
+        }
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("hex", sb.toString()));
+            Extensions.showMessage(this, getString(R.string.copied));
+        }
+    }
+
+    private void copySelectedText() {
+        long min = selectionStart >= 0 && selectionEnd >= 0 ? Math.min(selectionStart, selectionEnd) : cursorPos;
+        long max = selectionStart >= 0 && selectionEnd >= 0 ? Math.max(selectionStart, selectionEnd) : cursorPos;
+        int len = (int) Math.min(max - min + 1, 1024 * 1024);
+        byte[] bytes = new byte[len];
+        for (int i = 0; i < len; i++) {
+            int b = readByte(min + i);
+            bytes[i] = (byte) (b == -1 ? 0 : b);
+        }
+        String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("text", text));
+            Extensions.showMessage(this, getString(R.string.copied));
+        }
+    }
+
+    private void selectAll() {
+        if (size <= 0) return;
+        selectionStart = 0;
+        selectionEnd = size - 1;
+        cursorPos = 0;
+        refreshSelection();
+        updateStatus();
+    }
+
+    private void fillSelectedWithZero() {
+        if (readOnly) return;
+        long min = selectionStart >= 0 && selectionEnd >= 0 ? Math.min(selectionStart, selectionEnd) : cursorPos;
+        long max = selectionStart >= 0 && selectionEnd >= 0 ? Math.max(selectionStart, selectionEnd) : cursorPos;
+        int len = (int) Math.min(max - min + 1, 1024 * 1024);
+        byte[] zero = new byte[len];
+        writeBytesAt(min, zero, null);
+        refreshSelection();
+        updateStatus();
+    }
+
+    private static byte[] parseHexBytes(String s) {
+        s = s.replaceAll("[^0-9A-Fa-f]", "");
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len - 1; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    private void pasteClipboard() {
+        if (readOnly) return;
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm == null || !cm.hasPrimaryClip() || cm.getPrimaryClip() == null || cm.getPrimaryClip().getItemCount() == 0) {
+            Extensions.showMessage(this, getString(R.string.hex_nothing_to_paste));
+            return;
+        }
+        CharSequence cs = cm.getPrimaryClip().getItemAt(0).getText();
+        if (cs == null || cs.length() == 0) return;
+        String s = cs.toString().trim();
+        byte[] data;
+        if (s.matches("^[0-9A-Fa-f\\s]+$") && s.replace(" ", "").length() % 2 == 0) {
+            data = parseHexBytes(s);
+        } else {
+            data = s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        long target = selectionStart >= 0 ? Math.min(selectionStart, selectionEnd) : cursorPos;
+        writeBytesAt(target, data, null);
+    }
+
+    private void showSelectRangeDialog() {
+        long curMin = selectionStart >= 0 && selectionEnd >= 0 ? Math.min(selectionStart, selectionEnd) : cursorPos;
+        long curMax = selectionStart >= 0 && selectionEnd >= 0 ? Math.max(selectionStart, selectionEnd) : cursorPos;
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        layout.setPadding(pad, pad, pad, pad);
+
+        TextView startLabel = new TextView(this);
+        startLabel.setText(R.string.start);
+        layout.addView(startLabel);
+
+        EditText startEt = new EditText(this);
+        startEt.setText(Long.toHexString(curMin).toUpperCase(Locale.ROOT));
+        startEt.setSingleLine(true);
+        layout.addView(startEt);
+
+        TextView endLabel = new TextView(this);
+        endLabel.setText(R.string.end);
+        endLabel.setPadding(0, dp(8), 0, 0);
+        layout.addView(endLabel);
+
+        EditText endEt = new EditText(this);
+        endEt.setText(Long.toHexString(curMax).toUpperCase(Locale.ROOT));
+        endEt.setSingleLine(true);
+        layout.addView(endEt);
+
+        CheckBox cbLength = new CheckBox(this);
+        cbLength.setText("Using Start address + Length");
+        cbLength.setPadding(0, dp(8), 0, dp(4));
+        layout.addView(cbLength);
+
+        CheckBox cbHex = new CheckBox(this);
+        cbHex.setText("Hex");
+        cbHex.setChecked(true);
+        layout.addView(cbHex);
+
+        final boolean[] isHex = {true};
+
+        cbHex.setOnCheckedChangeListener((btn, checked) -> {
+            int oldRadix = isHex[0] ? 16 : 10;
+            isHex[0] = checked;
+            try {
+                String sText = startEt.getText().toString().trim();
+                if (!sText.isEmpty()) {
+                    long sVal = Long.parseLong(sText, oldRadix);
+                    startEt.setText(checked ? Long.toHexString(sVal).toUpperCase(Locale.ROOT) : String.valueOf(sVal));
+                }
+            } catch (Exception ignored) {}
+            try {
+                String eText = endEt.getText().toString().trim();
+                if (!eText.isEmpty()) {
+                    long eVal = Long.parseLong(eText, oldRadix);
+                    endEt.setText(checked ? Long.toHexString(eVal).toUpperCase(Locale.ROOT) : String.valueOf(eVal));
+                }
+            } catch (Exception ignored) {}
+        });
+
+        cbLength.setOnCheckedChangeListener((btn, checked) -> {
+            int radix = isHex[0] ? 16 : 10;
+            try {
+                long sVal = Long.parseLong(startEt.getText().toString().trim(), radix);
+                long eVal = Long.parseLong(endEt.getText().toString().trim(), radix);
+                if (checked) {
+                    endLabel.setText(R.string.length);
+                    long len = Math.max(1, eVal - sVal + 1);
+                    endEt.setText(isHex[0] ? Long.toHexString(len).toUpperCase(Locale.ROOT) : String.valueOf(len));
+                } else {
+                    endLabel.setText(R.string.end);
+                    long end = sVal + eVal - 1;
+                    endEt.setText(isHex[0] ? Long.toHexString(end).toUpperCase(Locale.ROOT) : String.valueOf(end));
+                }
+            } catch (Exception ignored) {}
+        });
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.select)
+                .setView(layout)
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                    int radix = isHex[0] ? 16 : 10;
+                    try {
+                        long sVal = Long.parseLong(startEt.getText().toString().trim(), radix);
+                        long eVal = Long.parseLong(endEt.getText().toString().trim(), radix);
+                        long finalStart = sVal;
+                        long finalEnd = cbLength.isChecked() ? (sVal + eVal - 1) : eVal;
+                        finalStart = Math.max(0, Math.min(finalStart, Math.max(0, size - 1)));
+                        finalEnd = Math.max(0, Math.min(finalEnd, Math.max(0, size - 1)));
+                        selectionStart = finalStart;
+                        selectionEnd = finalEnd;
+                        cursorPos = finalStart;
+                        layoutManager.scrollToPositionWithOffset((int) (finalStart / 8), dp(80));
+                        refreshSelection();
+                        updateStatus();
+                    } catch (Exception e) {
+                        Extensions.showMessage(this, "Invalid number");
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        dialog.show();
+    }
+
     private void updateStatus() {
-        int val = readByte(cursorPos);
-        String text = String.format(Locale.US, "Val: %02Xh  Pos: %Xh  Size: %Xh [HEX]",
-                val == -1 ? 0 : val, cursorPos, size);
-        statusText.setText(text);
+        long selMin = Math.min(selectionStart, selectionEnd);
+        long selMax = Math.max(selectionStart, selectionEnd);
+        boolean hasRange = selectionStart >= 0 && selectionEnd >= 0 && selectionStart != selectionEnd;
+        if (hasRange) {
+            long len = selMax - selMin + 1;
+            statusText.setText(String.format(Locale.US, "Sel: %Xh - %Xh  Len: %Xh  Size: %Xh [HEX]",
+                    selMin, selMax, len, size));
+        } else {
+            int val = readByte(cursorPos);
+            String text = String.format(Locale.US, "Val: %02Xh  Pos: %Xh  Size: %Xh [HEX]",
+                    val == -1 ? 0 : val, cursorPos, size);
+            statusText.setText(text);
+        }
         updateInspector();
     }
 
@@ -815,6 +1119,7 @@ public class HexEditorActivity extends BaseActivity {
         else if (id == R.id.action_redo) redo();
         else if (id == R.id.action_save) saveChanges();
         else if (id == R.id.action_goto) showGotoDialog();
+        else if (id == R.id.action_select) showSelectRangeDialog();
         else if (id == R.id.action_revert) revertChanges();
         else if (id == R.id.action_search) {
             searchPanel.setVisibility(searchPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
@@ -875,21 +1180,39 @@ public class HexEditorActivity extends BaseActivity {
 
             holder.offsetCell.setText(String.format(Locale.US, "%04X", rowStart & 0xFFFF));
 
-            long selCol = cursorPos - rowStart;
+            long selMin = Math.min(selectionStart, selectionEnd);
+            long selMax = Math.max(selectionStart, selectionEnd);
+            boolean hasRange = selectionStart >= 0 && selectionEnd >= 0 && selectionStart != selectionEnd;
+
+            int primaryColor = getPrimaryColor();
+            int onPrimaryColor = getOnPrimaryColor();
+            int primaryContainerColor = getPrimaryContainerColor();
+            int onPrimaryContainer = MaterialColors.getColor(HexEditorActivity.this, com.google.android.material.R.attr.colorOnPrimaryContainer, Color.BLACK);
+            int normalTextColor = MaterialColors.getColor(HexEditorActivity.this, com.google.android.material.R.attr.colorOnSurface, Color.WHITE);
+
             for (int i = 0; i < 8; i++) {
                 TextView cell = holder.cells[i];
+                long bytePos = rowStart + i;
                 if (values[i] == -1) {
                     cell.setText("");
                     cell.setBackground(null);
                     continue;
                 }
                 cell.setText(String.format(Locale.US, "%02X", values[i]));
-                if (i == selCol) {
-                    cell.setBackgroundColor(getPrimaryContainerColor());
+                boolean inRange = hasRange && bytePos >= selMin && bytePos <= selMax;
+                boolean isCursor = bytePos == cursorPos;
+
+                if (isCursor) {
+                    cell.setBackgroundColor(primaryColor);
+                    cell.setTextColor(onPrimaryColor);
+                } else if (inRange) {
+                    cell.setBackgroundColor(primaryContainerColor);
+                    cell.setTextColor(onPrimaryContainer);
                 } else {
                     cell.setBackground(null);
+                    cell.setTextColor(normalTextColor);
                 }
-                cell.setTag(rowStart + i);
+                cell.setTag(bytePos);
                 cell.setOnTouchListener(cellTouchListener);
             }
 
@@ -899,9 +1222,17 @@ public class HexEditorActivity extends BaseActivity {
                 asciiBuilder.append(v >= 0x20 && v <= 0x7E ? (char) v : '.');
             }
             SpannableString ascii = new SpannableString(asciiBuilder.toString());
-            if (selCol >= 0 && selCol < 8) {
-                ascii.setSpan(new BackgroundColorSpan(getPrimaryColor()), (int) selCol, (int) selCol + 1, 0);
-                ascii.setSpan(new ForegroundColorSpan(getOnPrimaryColor()), (int) selCol, (int) selCol + 1, 0);
+            for (int i = 0; i < 8; i++) {
+                long bytePos = rowStart + i;
+                boolean inRange = hasRange && bytePos >= selMin && bytePos <= selMax;
+                boolean isCursor = bytePos == cursorPos;
+                if (isCursor) {
+                    ascii.setSpan(new BackgroundColorSpan(primaryColor), i, i + 1, 0);
+                    ascii.setSpan(new ForegroundColorSpan(onPrimaryColor), i, i + 1, 0);
+                } else if (inRange) {
+                    ascii.setSpan(new BackgroundColorSpan(primaryContainerColor), i, i + 1, 0);
+                    ascii.setSpan(new ForegroundColorSpan(onPrimaryContainer), i, i + 1, 0);
+                }
             }
             holder.asciiCell.setText(ascii);
         }
@@ -927,8 +1258,10 @@ public class HexEditorActivity extends BaseActivity {
                 cells[5] = itemView.findViewById(R.id.cell5);
                 cells[6] = itemView.findViewById(R.id.cell6);
                 cells[7] = itemView.findViewById(R.id.cell7);
-                // Selectable text lets the user pick individual nibbles (1 of the 2 chars) to copy them
-                for (TextView cell : cells) cell.setTextIsSelectable(true);
+                for (TextView cell : cells) {
+                    cell.setTextIsSelectable(false);
+                    cell.setFocusable(false);
+                }
             }
         }
     }

@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.Collection;
 import java.util.List;
@@ -137,6 +138,42 @@ public class FileUtils {
     public static boolean isImageFile(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
         for (String ext : IMAGE_EXTS) if (lower.endsWith(ext)) return true;
+        return isDrawableXml(name);
+    }
+
+    public static boolean isDrawableXml(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".xml")) return false;
+        int lastSlash = Math.max(lower.lastIndexOf('/'), lower.lastIndexOf('\\'));
+        if (lastSlash > 0) {
+            int prevSlash = Math.max(lower.lastIndexOf('/', lastSlash - 1), lower.lastIndexOf('\\', lastSlash - 1));
+            String parentFolder = prevSlash >= 0 ? lower.substring(prevSlash + 1, lastSlash) : lower.substring(0, lastSlash);
+            if (parentFolder.startsWith("drawable") || parentFolder.startsWith("mipmap")
+                    || parentFolder.contains("drawable") || parentFolder.contains("mipmap")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isDrawableXmlContent(File file) {
+        if (file == null || !file.exists() || !file.isFile() || file.length() == 0 || file.length() > 5 * 1024 * 1024) return false;
+        if (isDrawableXml(file.getName()) || isDrawableXml(file.getAbsolutePath())) return true;
+        if (!file.getName().toLowerCase(Locale.ROOT).endsWith(".xml")) return false;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buf = new byte[512];
+            int n = fis.read(buf);
+            if (n > 0) {
+                String s = new String(buf, 0, n, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+                if (s.contains("<vector") || s.contains("<shape") || s.contains("<animated-vector")
+                        || s.contains("<layer-list") || s.contains("<bitmap") || s.contains("<selector")
+                        || s.contains("<ripple") || s.contains("<nine-patch") || s.contains("<inset")
+                        || s.contains("<clip") || s.contains("<scale")) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
         return false;
     }
     public static boolean doesNotHaveStoragePerm(Context context) {

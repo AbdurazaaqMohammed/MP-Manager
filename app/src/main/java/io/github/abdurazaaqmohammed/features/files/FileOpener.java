@@ -28,6 +28,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.HorizontalScrollView;
 import android.widget.TextView;
 import android.widget.Button;
 import android.graphics.Bitmap;
@@ -877,6 +878,100 @@ public class FileOpener {
                 .putExtra(HtmlViewerActivity.EXTRA_NAME, fileName));
     }
 
+    public static boolean isElf(File file) {
+        if (file == null || !file.exists() || !file.isFile() || file.length() < 4) return false;
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
+            byte[] magic = new byte[4];
+            if (fis.read(magic) == 4) {
+                return magic[0] == 0x7F && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F';
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private void showElfOptionsDialog(File file, String fileName, File originalFile) {
+        String[] options = {
+                context.getString(R.string.hex_editor),
+                "ELF Inspector",
+                context.getString(R.string.text_editor),
+                context.getString(R.string.open_with)
+        };
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle("ELF: " + fileName)
+                .setItems(options, (d, which) -> {
+                    switch (which) {
+                        case 0 -> openHexEditorWithOriginal(file, originalFile);
+                        case 1 -> showElfInspectorDialog(file, fileName);
+                        case 2 -> openTextEditorWithOriginal(file, originalFile);
+                        case 3 -> showOpenWithDialog(file, fileName, null, null, originalFile);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void showElfInspectorDialog(File file, String fileName) {
+        new Thread(() -> {
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r");
+                 io.github.abdurazaaqmohammed.utils.nativelib.ElfParser elf = new io.github.abdurazaaqmohammed.utils.nativelib.ElfParser(raf)) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("File: ").append(fileName).append("\n");
+                sb.append("Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append("\n");
+                sb.append("Architecture: ").append(io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.machineName(elf.machine))
+                        .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
+                sb.append("Entry point: 0x").append(Long.toHexString(elf.entry)).append("\n");
+                sb.append("Size: ").append(Formatter.formatFileSize(context, file.length())).append("\n\n");
+
+                io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section[] sections = elf.sections();
+                if (sections != null && sections.length > 0) {
+                    sb.append("--- Sections (").append(sections.length).append(") ---\n");
+                    for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section s : sections) {
+                        if (s != null && s.name != null && !s.name.isEmpty()) {
+                            sb.append(String.format(java.util.Locale.ROOT, "%-16s addr:0x%08x size:0x%x\n", s.name, s.addr, s.size));
+                        }
+                    }
+                    sb.append("\n");
+                }
+
+                java.util.List<io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.DynamicEntry> dyn = elf.dynamic();
+                if (dyn != null && !dyn.isEmpty()) {
+                    sb.append("--- Dynamic / Dependencies ---\n");
+                    for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.DynamicEntry d : dyn) {
+                        if (d != null && d.name != null) {
+                            sb.append("NEEDED: ").append(d.name).append("\n");
+                        }
+                    }
+                }
+
+                String info = sb.toString();
+                context.runOnUiThread(() -> {
+                    ScrollView sv = new ScrollView(context);
+                    HorizontalScrollView hsv = new HorizontalScrollView(context);
+                    TextView tv = new TextView(context);
+                    tv.setText(info);
+                    tv.setTypeface(Typeface.MONOSPACE);
+                    tv.setTextSize(13);
+                    int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+                    tv.setPadding(pad, pad, pad, pad);
+                    tv.setTextIsSelectable(true);
+                    hsv.addView(tv);
+                    sv.addView(hsv);
+
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle("ELF: " + fileName)
+                            .setView(sv)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .setNeutralButton(R.string.hex_editor, (d, w) -> openHexEditorWithOriginal(file, file))
+                            .create());
+                });
+            } catch (Exception e) {
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
     private void showXmlFunctions(File file, String fileName) {
         withReadableCopy(file, readable -> {
             boolean binary = false;
@@ -1127,6 +1222,8 @@ public class FileOpener {
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
             || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
+        } else if (isElf(file) || fileName.endsWith(".so")) {
+            withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
             io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
