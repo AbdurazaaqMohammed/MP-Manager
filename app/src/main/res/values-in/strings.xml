@@ -1791,9 +1791,7 @@
     <string name="failed">Gagal</string>
     <string name="npatch_integrated">Patcher Xposed</string>
     <string name="npatch_title">Tambal dengan Xposed: %1$s</string>
-    <string name="npatch_hint">Menambal APK dengan NPatch atau LSPatch (mode terintegrasi): pemuat Xposed ditanam sehingga modul terpilih berjalan tanpa aplikasi manajer. Keluaran ditandatangani dengan kunci yang dikonfigurasi di Pengaturan Tanda Tangan — APK hasil tambalan baru dibuat.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">Menambal APK dengan LSPatch (mode terintegrasi): pemuat Xposed ditanam sehingga modul terpilih berjalan tanpa aplikasi manajer. Keluaran ditandatangani dengan kunci yang dikonfigurasi di Pengaturan Tanda Tangan — APK hasil tambalan baru dibuat.</string>
     <string name="npatch_bypass_lsp_0">Tembus: Tidak Ada</string>
     <string name="npatch_bypass_lsp_1">Tembus: PM</string>
     <string name="npatch_bypass_lsp_2">Tembus: PM + OpenAT</string>
@@ -1887,15 +1885,9 @@
     <string name="npatch_embed_modules_title">Pilih APK modul untuk ditanam</string>
     <string name="npatch_module_missing">Modul tidak ditemukan: %1$s</string>
     <string name="npatch_sigbypass_title">Tingkat tembus tanda tangan</string>
-    <string name="npatch_sigbypass_0">Tembus: Tidak Ada</string>
-    <string name="npatch_sigbypass_1">Tembus: Dasar</string>
-    <string name="npatch_sigbypass_2">Tembus: Tinggi</string>
     <string name="npatch_debuggable">Buat aplikasi dapat didebug</string>
     <string name="npatch_injectdex">Suntikkan dex pemuat ke urutan utama (hook sub-proses)</string>
-    <string name="npatch_microg">Arahkan ulang pemanggilan GMS ke MicroG</string>
-    <string name="npatch_hidelibs">Sembunyikan libs (sanitasi visibilitas pustaka ART/sistem)</string>
     <string name="npatch_cleartext">Paksa usesCleartextTraffic (HTTP polos)</string>
-    <string name="npatch_provider">Suntikkan provider berkas data MT</string>
     <string name="npatch_extractlibs">Paksa extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">Timpa versi SDK target</string>
     <string name="npatch_targetsdk_value">Nilai SDK target</string>
@@ -1907,7 +1899,7 @@
     <string name="npatch_done">Ditambal: %1$s</string>
     <string name="npatch_install_prompt">%1$s dibuat. Modul ditanam — aplikasi berjalan mandiri. Pasang?</string>
     <string name="xposed_patcher_lite_title">Patcher Xposed</string>
-    <string name="xposed_patcher_lite_message">Mesin patcher Xposed (NPatch / LSPatch) tidak disertakan dalam build lite. Pasang versi lengkap MP Manager untuk menambal APK dengan modul tertanam.</string>
+    <string name="xposed_patcher_lite_message">Mesin patcher Xposed (LSPatch) tidak disertakan dalam build lite. Pasang versi lengkap MP Manager untuk menambal APK dengan modul tertanam.</string>
     <string name="op_copying">SALIN</string>
     <string name="op_moving">PINDAH</string>
     <string name="op_deleting">HAPUS</string>

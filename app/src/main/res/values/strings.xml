@@ -239,6 +239,9 @@
     <string name="archive_viewer">Archive viewer</string>
     <string name="image_viewer">Image viewer</string>
     <string name="hex_editor">Hex editor</string>
+    <string name="file_too_large">File too large</string>
+    <string name="file_too_large_open_hex">This file is about %1$d MB, too big to open as text without running out of memory. Open it in the hex editor instead?</string>
+    <string name="out_of_memory_operation">Not enough free memory for this operation. Try a smaller file, or close other apps and retry.</string>
     <string name="media_player">Media player</string>
     <string name="apk_info">APK info</string>
     <string name="pdf_viewer">PDF viewer</string>
@@ -1024,6 +1027,44 @@ Layout Inspector
     <string name="sidebar_extract">Extract APK</string>
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Wi-Fi Manager</string>
+    <string name="sidebar_logcat">Logcat</string>
+    <string name="logcat_subtitle">View system log output</string>
+    <string name="logcat_mode_root">Root mode - all system logs</string>
+    <string name="logcat_mode_shizuku">Shizuku mode - shell-level logs</string>
+    <string name="logcat_mode_own">No root/Shizuku - showing this app\'s logs only</string>
+    <string name="logcat_live">Live stream</string>
+    <string name="logcat_starting">Starting logcat…</string>
+    <string name="logcat_stream_ended">Log stream ended</string>
+    <string name="logcat_search_hint">Filter text</string>
+    <string name="logcat_level_all">All levels</string>
+    <string name="logcat_level_verbose">Verbose (V)</string>
+    <string name="logcat_level_debug">Debug (D)</string>
+    <string name="logcat_level_info">Info (I)</string>
+    <string name="logcat_level_warning">Warning (W)</string>
+    <string name="logcat_level_error">Error (E)</string>
+    <string name="logcat_level_fatal">Fatal (F)</string>
+    <string name="logcat_level_silent">Silent (S)</string>
+    <string name="logcat_pause">Pause</string>
+    <string name="logcat_resume">Resume</string>
+    <string name="logcat_clear">Clear</string>
+    <string name="logcat_save">Save</string>
+    <string name="logcat_saved_to">Saved to %s</string>
+    <string name="logcat_save_failed">Failed: %s</string>
+    <string name="logcat_empty">No log lines</string>
+    <string name="logcat_copy">Copy</string>
+    <string name="logcat_copied">Copied</string>
+    <string name="logcat_filter_package">Filter by package: %s</string>
+    <string name="logcat_filter_tag">Filter by tag: %s</string>
+    <string name="logcat_filter_uid">Filter by owner (UID): %s</string>
+    <string name="logcat_filter_pid">Filter by PID: %s</string>
+    <string name="logcat_service_running">Capturing logs in background</string>
+    <string name="logcat_stop">Stop</string>
+    <string name="logcat_settings">Settings</string>
+    <string name="logcat_keep_running">Keep capturing in background (notification shown)</string>
+    <string name="logcat_auto_start">Start capturing when MP Manager opens</string>
+    <string name="logcat_add_shortcut">Add to home screen</string>
+    <string name="logcat_shortcut_old_android">Shortcuts need Android 8.0 or newer</string>
+    <string name="logcat_shortcut_unsupported">Launcher does not allow shortcuts</string>
     <string name="sidebar_tools">Plugins</string>
     <string name="sidebar_documents">Documents providers</string>
     <string name="sidebar_plugins">Plugins</string>
@@ -1901,9 +1942,7 @@ Strings are sent to the external service you configured.</string>
     <!-- NPatch integrated mode -->
     <string name="npatch_integrated">Signature killer &amp; xposed</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
-    <string name="npatch_hint">Patches the APK with NPatch or LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">Patches the APK with LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_bypass_lsp_0">Bypass: None</string>
     <string name="npatch_bypass_lsp_1">Bypass: PM</string>
     <string name="npatch_bypass_lsp_2">Bypass: PM + OpenAT</string>
@@ -2012,15 +2051,9 @@ Strings are sent to the external service you configured.</string>
     <string name="npatch_embed_modules_title">Select module APKs to embed</string>
     <string name="npatch_module_missing">Module not found: %1$s</string>
     <string name="npatch_sigbypass_title">Signature bypass level</string>
-    <string name="npatch_sigbypass_0">Bypass: None</string>
-    <string name="npatch_sigbypass_1">Bypass: Basic</string>
-    <string name="npatch_sigbypass_2">Bypass: High</string>
     <string name="npatch_debuggable">Make app debuggable</string>
     <string name="npatch_injectdex">Inject loader dex into main sequence (sub-process hooks)</string>
-    <string name="npatch_microg">Redirect GMS calls to MicroG</string>
-    <string name="npatch_hidelibs">Hide libs (sanitize ART/system library visibility)</string>
     <string name="npatch_cleartext">Force usesCleartextTraffic (plain HTTP)</string>
-    <string name="npatch_provider">Inject MT data-files provider</string>
     <string name="npatch_extractlibs">Force extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">Override target SDK version</string>
     <string name="npatch_targetsdk_value">Target SDK value</string>
@@ -2032,7 +2065,7 @@ Strings are sent to the external service you configured.</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">COPY</string>

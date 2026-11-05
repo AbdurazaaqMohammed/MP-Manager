@@ -302,7 +302,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "mcp_server", "color_picker", "layout", "wifi", "free_style", "tools", "settings"};
+        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "tools", "settings"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -313,6 +313,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
                 case "mcp_server": addTool(id, R.string.mcp_server, R.drawable.code_24px); break;
+                case "logcat": addTool(id, R.string.sidebar_logcat, R.drawable.terminal_24px); break;
                 case "ftp_client": addTool(id, R.string.ftp_client, R.drawable.cloud_download_24px); break;
                 case "color_picker": addTool(id, R.string.color_picker, R.drawable.colorize_24px); break;
                 case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;

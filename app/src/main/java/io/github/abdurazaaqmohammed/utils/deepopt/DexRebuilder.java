@@ -39,9 +39,10 @@ public final class DexRebuilder {
         int removedMethods = 0;
         int removedFields = 0;
         boolean multiDex = index.typesByDex.size() > 1;
-        for (Map.Entry<String, List<String>> dexEntry : index.typesByDex.entrySet()) {
-            String dexName = dexEntry.getKey();
-            List<String> types = dexEntry.getValue();
+        List<String> dexOrder = new ArrayList<>(index.typesByDex.keySet());
+        for (int dexIndex2 = 0; dexIndex2 < dexOrder.size(); dexIndex2++) {
+            String dexName = dexOrder.get(dexIndex2);
+            List<String> types = index.typesByDex.get(dexName);
             List<ImmutableClassDef> kept = new ArrayList<>();
             boolean dexModified = false;
             for (String type : types) {
@@ -95,9 +96,13 @@ public final class DexRebuilder {
                 }
             }
             if (kept.isEmpty()) {
-                if ("classes.dex".equals(dexName) && multiDex) {
+                // ART's multidex enumeration opens classesN.dex strictly sequentially and
+                // stops at the first missing number - a deleted middle dex makes every
+                // later dex invisible. Only drop an empty dex when nothing follows it.
+                boolean hasLaterDex = dexIndex2 < dexOrder.size() - 1;
+                if (multiDex && hasLaterDex) {
                     writeEmptyDex(module, dexName, index);
-                    report.log("Rewrote empty " + dexName + " (legacy ART safety)");
+                    report.log("Rewrote empty " + dexName + " (multidex numbering must stay contiguous)");
                 } else {
                     module.getZipEntryMap().remove(dexName);
                     report.log("Removed empty dex: " + dexName);

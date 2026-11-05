@@ -590,6 +590,13 @@ public class SidebarController {
             case "mcp_server":
                 activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.mcp.McpServerActivity.class));
                 break;
+            case "logcat":
+                // NEW_TASK + the activity's own taskAffinity give the viewer
+                // its own recents entry, so a home-screen shortcut and the
+                // in-app sidebar land in the same, separate task.
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.LogcatActivity.class)
+                        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
                 break;

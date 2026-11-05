@@ -283,7 +283,7 @@ ARSC Editor Plus also provides a translation mode for editing values side by sid
 
 <details><summary>Xposed patcher</summary>
 
-Patch an APK with [NPatch](https://github.com/nep-Timeline/NPatch) or [LSPatch](https://github.com/JingMatrix/LSPatch) in integrated mode: an Xposed loader is embedded so the selected modules run standalone without a manager app. Embed module APKs, choose an engine and signature bypass level, configure per-engine options (MicroG redirect, hiding libs, forcing cleartext traffic, overriding target SDK or version code and more), and save/load patch profiles. The output is signed with the key configured under Sign Settings.
+Patch an APK with [LSPatch](https://github.com/JingMatrix/LSPatch) in integrated mode: an Xposed loader is embedded so the selected modules run standalone without a manager app. Embed module APKs, choose a signature bypass level, configure options (DocumentsProvider injection, fake-signature, GMS replacement, forcing cleartext traffic, overriding target SDK or version code and more), and save/load patch profiles. The output is signed with the key configured under Sign Settings.
 
 <!-- TODO: Add screenshots/videos -->
 </details>

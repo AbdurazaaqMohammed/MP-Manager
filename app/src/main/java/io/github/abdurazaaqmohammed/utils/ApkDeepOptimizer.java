@@ -31,7 +31,7 @@ public class ApkDeepOptimizer {
         DeepOptOptions options = new DeepOptOptions();
         if (settings == null) return options;
         options.preserveDebug = settings.getBoolean("deep_opt_preserve_debug", true);
-        options.maxPasses = Math.max(0, settings.getInt("deep_opt_max_passes", 5));
+        options.maxPasses = Math.max(0, settings.getInt("deep_opt_max_passes", 0));
         options.verifyOutput = settings.getBoolean("deep_opt_verify_output", true);
         options.removeClasses = settings.getBoolean("deep_opt_remove_classes", true);
         options.removeMethods = settings.getBoolean("deep_opt_remove_methods", true);

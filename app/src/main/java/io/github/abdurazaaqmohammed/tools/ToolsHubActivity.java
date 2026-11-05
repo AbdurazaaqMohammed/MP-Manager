@@ -489,6 +489,9 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, AdbBrowserActivity.class));
         } else if ("mcpserver".equals(item.id())) {
             startActivity(new Intent(this, McpServerActivity.class));
+        } else if ("logcat".equals(item.id())) {
+            startActivity(new Intent(this, LogcatActivity.class)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } else if ("sslunpin".equals(item.id())) {
             startActivity(new Intent(this, SslUnpinningActivity.class));
         } else if ("documents".equals(item.id())) {

@@ -297,7 +297,7 @@ public final class LivenessAnalyzer {
             out.add(t.getRegisterB());
             out.add(t.getRegisterC());
         } else if (ins instanceof TwoRegisterInstruction t) {
-            if (op.startsWith("if-")) out.add(t.getRegisterA());
+            if (op.startsWith("if-") || op.startsWith("iput")) out.add(t.getRegisterA());
             out.add(t.getRegisterB());
         } else if (ins instanceof OneRegisterInstruction o) {
             if (op.startsWith("if-") || op.equals("return") || op.equals("return-wide") || op.equals("return-object")

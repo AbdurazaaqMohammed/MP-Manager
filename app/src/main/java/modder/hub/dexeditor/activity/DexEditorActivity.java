@@ -178,6 +178,9 @@ public class DexEditorActivity extends BaseActivity {
     /** Explicit tab requested via the "openTab" extra (-1 when none). The
      *  async class-tree load must not override it with the Explorer tab. */
     private int openTabRequested = -1;
+    /** True while the Strings tab data is being parsed, so a repeated
+     *  tab entry does not spawn a second loader / loading dialog. */
+    private volatile boolean stringsLoading;
     /** The project path subtitle shown on non-translation tabs. */
     public String projectSubtitle;
     private final Stack<Integer> tabNavigationHistory = new Stack<>();
@@ -539,12 +542,15 @@ public class DexEditorActivity extends BaseActivity {
 
     public void loadStrings() {
         if (classTree == null) return;
+        if (stringsLoading) return;
+        stringsLoading = true;
         showProcessingProgress(true);
         new Thread(() -> {
             try {
                 final List<String> strings = classTree.getAllStrings();
                 java.util.Collections.sort(strings);
                 runOnUiThread(() -> {
+                    stringsLoading = false;
                     stringList.clear();
                     stringList.addAll(strings);
                     refreshExplorerPage(3);
@@ -555,6 +561,7 @@ public class DexEditorActivity extends BaseActivity {
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
+                    stringsLoading = false;
                     showProcessingProgress(false);
                     showErrorDialog("Failed to load strings: " + e.getMessage());
                 });
@@ -1674,6 +1681,9 @@ public class DexEditorActivity extends BaseActivity {
         modifiedNodes.clear();
         searchNodes.clear();
         stringList.clear();
+        // A pending strings parse may still post back; reset so a re-entry
+        // into the editor (activity reuse) starts from a clean slate.
+        stringsLoading = false;
         isSaved = false;
         isChanged = false;
         finish();
@@ -2030,12 +2040,16 @@ public class DexEditorActivity extends BaseActivity {
                 if (currentAdapter instanceof TreeAdapter) {
                     ((TreeAdapter) currentAdapter).refreshVisibleNodes();
                 } else if (currentAdapter instanceof StringAdapter) {
-                    currentAdapter.notifyDataSetChanged();
+                    // refresh() re-snapshots from the backing list, not just
+                    // re-notifies: the tab may have been built while the
+                    // strings were still parsing (lazy load), leaving the
+                    // shown copy empty until a filter re-applied it.
+                    ((StringAdapter) currentAdapter).refresh();
                 } else if (currentAdapter instanceof ConcatAdapter) {
                     List<? extends RecyclerView.Adapter<?>> adapters = ((ConcatAdapter) currentAdapter).getAdapters();
                     if(adapters.size() > 1) {
                         RecyclerView.Adapter<?> adapter = adapters.get(1);
-                        if (adapter instanceof StringAdapter) adapter.notifyDataSetChanged();
+                        if (adapter instanceof StringAdapter) ((StringAdapter) adapter).refresh();
                     }
                 } else {
                     currentAdapter.notifyDataSetChanged();
@@ -2309,7 +2323,8 @@ public class DexEditorActivity extends BaseActivity {
         etReplace.setHint(R.string.replace_with);
         final SwitchCompat swMatchCase = new SwitchCompat(this);
         swMatchCase.setText(R.string.match_case);
-        swMatchCase.setChecked(true);
+        swMatchCase.setChecked(getSharedPreferences("search_prefs", MODE_PRIVATE)
+                .getBoolean("strings_replace_all_match_case", true));
 
         container.addView(UiFields.wrap(this, etFind, null, 0));
         container.addView(UiFields.wrap(this, etReplace, null, 0));
@@ -2322,6 +2337,9 @@ public class DexEditorActivity extends BaseActivity {
                     String find = etFind.getText().toString();
                     String replace = etReplace.getText().toString();
                     if (find.isEmpty()) return;
+                    getSharedPreferences("search_prefs", MODE_PRIVATE).edit()
+                            .putBoolean("strings_replace_all_match_case", swMatchCase.isChecked())
+                            .apply();
                     new StringBatchTask(this, null, find, replace, swMatchCase.isChecked(), null).start();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -2632,7 +2650,13 @@ public class DexEditorActivity extends BaseActivity {
                         // update toolbar
                         updateToolbar();
                         refreshExplorerPage(0);
-                        if (stringList.isEmpty()) loadStrings();
+                        // Strings are expensive to parse, so they load on
+                        // demand when the Strings tab is opened (see the
+                        // ViewPager callback) - never eagerly at startup.
+                        // Only exception: the tab is already on screen here,
+                        // e.g. entered via the "openTab" extra, whose tab
+                        // callback ran before the class tree existed.
+                        if (explorerViewPager.getCurrentItem() == 3 && stringList.isEmpty()) loadStrings();
                         if (openTabRequested < 0) showTreeView();
                     } catch (Exception e) {
                         handleUiThreadError(e);

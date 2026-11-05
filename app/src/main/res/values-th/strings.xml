@@ -1820,9 +1820,7 @@ androidx/
     <string name="failed">ล้มเหลว</string>
     <string name="npatch_integrated">ตัวแพตช์ Xposed</string>
     <string name="npatch_title">แพตช์ด้วย Xposed: %1$s</string>
-    <string name="npatch_hint">แพตช์ APK ด้วย NPatch หรือ LSPatch (โหมดรวม): ตัวโหลด Xposed ถูกฝังไว้เพื่อให้โมดูลที่ทำงานโดยไม่ต้องมีแอปจัดการ ผลลัพธ์เซ็นด้วยคีย์ที่ตั้งไว้ใน การตั้งค่าลายเซ็น — จะสร้าง APK ที่แพตช์แล้วไฟล์ใหม่</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">แพตช์ APK ด้วย LSPatch (โหมดรวม): ตัวโหลด Xposed ถูกฝังไว้เพื่อให้โมดูลที่ทำงานโดยไม่ต้องมีแอปจัดการ ผลลัพธ์เซ็นด้วยคีย์ที่ตั้งไว้ใน การตั้งค่าลายเซ็น — จะสร้าง APK ที่แพตช์แล้วไฟล์ใหม่</string>
     <string name="npatch_bypass_lsp_0">ข้าม: ไม่มี</string>
     <string name="npatch_bypass_lsp_1">ข้าม: PM</string>
     <string name="npatch_bypass_lsp_2">ข้าม: PM + OpenAT</string>
@@ -1916,15 +1914,9 @@ androidx/
     <string name="npatch_embed_modules_title">เลือก APK โมดูลที่จะฝัง</string>
     <string name="npatch_module_missing">ไม่พบโมดูล: %1$s</string>
     <string name="npatch_sigbypass_title">ระดับการข้ามลายเซ็น</string>
-    <string name="npatch_sigbypass_0">ข้าม: ไม่มี</string>
-    <string name="npatch_sigbypass_1">ข้าม: พื้นฐาน</string>
-    <string name="npatch_sigbypass_2">ข้าม: สูง</string>
     <string name="npatch_debuggable">ทำให้แอปดีบักได้</string>
     <string name="npatch_injectdex">แทรก dex ตัวโหลดเข้าหนลำดับหลัก (hook กระบวนการย่อย)</string>
-    <string name="npatch_microg">เปลี่ยนเส้นทางคำขอ GMS ไปยัง MicroG</string>
-    <string name="npatch_hidelibs">ซ่อนไลบรารี (กรองการมองเห็นไลบรารี ART/ระบบ)</string>
     <string name="npatch_cleartext">บังคับ usesCleartextTraffic (HTTP เปลือย)</string>
-    <string name="npatch_provider">แทรกผู้ให้บริการไฟล์ข้อมูล MT</string>
     <string name="npatch_extractlibs">บังคับ extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">เขียนทับเวอร์ชัน SDK เป้าหมาย</string>
     <string name="npatch_targetsdk_value">ค่า SDK เป้าหมาย</string>
@@ -1936,7 +1928,7 @@ androidx/
     <string name="npatch_done">แพตช์แล้ว: %1$s</string>
     <string name="npatch_install_prompt">สร้าง %1$s แล้ว โมดูลถูกฝังไว้ — แอปทำงานเองได้ ติดตั้งหรือไม่?</string>
     <string name="xposed_patcher_lite_title">ตวแพตช Xposed</string>
-    <string name="xposed_patcher_lite_message">ระบบตวแพตช Xposed (NPatch / LSPatch) ไมไดรวมมาในสรางไลต ติดตั้ ง MP Manager  เวอรชนเต็มเพือแพตช APK แบบฝงโมดูล</string>
+    <string name="xposed_patcher_lite_message">ระบบตวแพตช Xposed (LSPatch) ไมไดรวมมาในสรางไลต ติดตั้ ง MP Manager  เวอรชนเต็มเพือแพตช APK แบบฝงโมดูล</string>
     <string name="op_copying">คัดลอก</string>
     <string name="op_moving">ย้าย</string>
     <string name="op_deleting">ลบ</string>

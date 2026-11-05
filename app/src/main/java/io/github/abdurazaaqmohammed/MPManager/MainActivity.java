@@ -955,6 +955,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
         DirSizeCache.init(this);
+        // Logcat capture is opt-in at app start; opening the Logcat screen
+        // always starts it regardless of this preference.
+        if (PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean(io.github.abdurazaaqmohammed.tools.LogcatService.PREF_AUTO_START, false)) {
+            io.github.abdurazaaqmohammed.tools.LogcatService.start(this);
+        }
         if ("always".equals(PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("pref_folder_size_mode", "archive"))) {
             DirSizeCache.preload();
@@ -2192,6 +2198,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             final ZipRead read;
             try {
                 read = readZipFolder(zipFile, path);
+            } catch (OutOfMemoryError oom) {
+                // A huge central directory can exhaust the heap; an Error is
+                // not caught below and would crash instead of reporting.
+                handler.post(() -> Extensions.showMessage(this, R.string.out_of_memory_operation));
+                return;
             } catch (Exception e) {
                 if (zipFile != null && !zipFile.exists()) {
                     File fallback = zipFile.getParentFile();
@@ -2270,54 +2281,48 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             parent = new ZipEntryInfo("..", parentFull, true, 0L, 0L, zipFile);
             entries.add(parent);
 
-            List<ZipEntryInfo> all = new ArrayList<>();
+            String prefix = parentPath;
+            // Single pass: direct children are appended as they are met, and
+            // child directories accumulate stats plus one synthetic entry.
+            // The old code first materialized every entry of the whole
+            // archive into a ZipEntryInfo list (on top of the list
+            // listEntries already holds) before filtering - large archives
+            // with 100k+ entries tripled their footprint here.
+            Map<String, long[]> dirStats = new HashMap<>();
+            Map<String, ZipEntryInfo> dirEntries = new HashMap<>();
             for (ArchiveBrowseUtil.RawEntry re : ArchiveBrowseUtil.listEntries(zipFile)) {
                 String entryPath = re.path();
+                if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
                 boolean isDir = re.isDirectory();
-                String cleaned = isDir ? entryPath.replaceAll("/+$", "") : entryPath;
-                String name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
-                all.add(new ZipEntryInfo(name, entryPath, isDir, re.size(), re.lastModified(), zipFile));
-            }
-            String prefix = parentPath;
-            Map<String, long[]> dirStats = new HashMap<>();
-            for (ZipEntryInfo info : all) {
-                String entryPath = info.getFullPath();
-                if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
-                String rest = entryPath.substring(prefix.length());
-                int nextSlash = rest.indexOf('/');
-                if (nextSlash != -1) {
-                    String childFullPath = prefix + rest.substring(0, nextSlash + 1);
-                    long[] st = dirStats.get(childFullPath);
-                    if (st == null) {
-                        st = new long[2];
-                        dirStats.put(childFullPath, st);
-                    }
-                    long s = info.getSize();
-                    if (s > 0) st[0] += s;
-                    long t = info.getLastModified();
-                    if (t > st[1]) st[1] = t;
-                }
-            }
-            for (ZipEntryInfo info : all) {
-                String entryPath = info.getFullPath();
-                if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
                 String rest = entryPath.substring(prefix.length());
                 int nextSlash = rest.indexOf('/');
                 if (nextSlash == -1) {
+                    String cleaned = isDir ? entryPath.replaceAll("/+$", "") : entryPath;
+                    String name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
+                    ZipEntryInfo info = new ZipEntryInfo(name, entryPath, isDir, re.size(), re.lastModified(), zipFile);
                     if (isNotHidden(info)) entries.add(info);
                 } else {
-                    String childDirName = rest.substring(0, nextSlash + 1);
-                    String childFullPath = prefix + childDirName;
+                    String childFullPath = prefix + rest.substring(0, nextSlash + 1);
+                    long[] st = dirStats.computeIfAbsent(childFullPath, k -> new long[2]);
+                    long s = re.size();
+                    if (s > 0) st[0] += s;
+                    long t = re.lastModified();
+                    if (t > st[1]) st[1] = t;
                     if (seenDirs.add(childFullPath)) {
                         String cleaned = childFullPath.replaceAll("/+$", "");
                         ZipEntryInfo info2 = new ZipEntryInfo(
                                 cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1),
                                 childFullPath, true, 0L, 0L, zipFile);
-                        long[] st = dirStats.get(childFullPath);
-                        if (st != null) info2.setAggregated(st[0], st[1]);
+                        dirEntries.put(childFullPath, info2);
                         if (isNotHidden(info2)) entries.add(info2);
                     }
                 }
+            }
+            // Stats only settle once the scan is done; apply them to the
+            // already-added directory rows.
+            for (Map.Entry<String, long[]> e : dirStats.entrySet()) {
+                ZipEntryInfo info2 = dirEntries.get(e.getKey());
+                if (info2 != null) info2.setAggregated(e.getValue()[0], e.getValue()[1]);
             }
         }
         return new ZipRead(entries, parent);

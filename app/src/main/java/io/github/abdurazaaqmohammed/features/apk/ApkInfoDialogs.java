@@ -576,7 +576,7 @@ public class ApkInfoDialogs {
             removeFields.setChecked(settings.getBoolean("deep_opt_remove_fields", true));
             removeFields.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_fields", isChecked).apply());
             TextInputEditText passesInput = ll.findViewById(R.id.deep_optimize_passes);
-            passesInput.setText(String.valueOf(settings.getInt("deep_opt_max_passes", 5)));
+            passesInput.setText(String.valueOf(settings.getInt("deep_opt_max_passes", 0)));
             passesInput.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
                 @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
@@ -871,7 +871,7 @@ public class ApkInfoDialogs {
             manifestEditor.showManifestTogglesDialog(file);
         } else if (ApkMoreMenuOrder.PERMISSIONS.equals(actionId)) {
             manifestEditor.showPermissionsDialog(file);
-        } else if (ApkMoreMenuOrder.NPATCH.equals(actionId)) {
+        } else if (ApkMoreMenuOrder.XPOSED_PATCH.equals(actionId)) {
             XposedPatcherLauncher.open(context, dialogUtil, pane1, file, fileName);
         } else if (ApkMoreMenuOrder.MULTIPLEX.equals(actionId)) {
             showMultiplexDialog(file, fileName);
