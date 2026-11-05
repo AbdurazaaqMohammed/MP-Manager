@@ -14,6 +14,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
@@ -1251,12 +1253,10 @@ public class ApkInfoDialogs {
 
 
         MaterialAlertDialogBuilder adBuilder = dialogUtil.getDialogBuilder()
-                .setView(display);
-        if (!isApksSplit) {
-            adBuilder.setNeutralButton(R.string.more, (dialog, which) -> showApkMoreDialog(file, fileName, filePath, pane1))
-                    .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file));
-        }
-        adBuilder.setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file));
+                .setView(display)
+                .setNeutralButton(R.string.more, (dialog, which) -> showApkMoreDialog(file, fileName, filePath, pane1))
+                .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
+                .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file));
 
         AlertDialog ad = adBuilder.create();
         dialogUtil.styleAlertDialog(ad);
@@ -1268,7 +1268,7 @@ public class ApkInfoDialogs {
 
         RootManager rm = RootManager.getInstance(context);
         boolean elevatedFileOps = AccessManager.fileOpsOn(context);
-        if (elevatedFileOps && !isApksSplit) {
+        if (elevatedFileOps) {
             rootInfoSection.setVisibility(View.VISIBLE);
             rootInfoHeader.setOnClickListener(v -> {
                 if (rootInfoContent.getVisibility() == View.VISIBLE) {
@@ -1382,12 +1382,11 @@ public class ApkInfoDialogs {
         }
 
         View quickEditBtn = display.findViewById(R.id.quickEdit);
-        View bottomDivider = display.findViewById(R.id.bottomDivider);
-        if (isApksSplit) {
-            if (quickEditBtn != null) quickEditBtn.setVisibility(View.GONE);
-            if (bottomDivider != null) bottomDivider.setVisibility(View.GONE);
-        } else {
-            if (quickEditBtn != null) {
+        if (quickEditBtn != null) {
+            if (isApksSplit) {
+                quickEditBtn.setEnabled(false);
+                quickEditBtn.setAlpha(0.4f);
+            } else {
                 quickEditBtn.setOnClickListener(v7 -> {
                     ad.dismiss();
                     manifestEditor.showEditManifestDialog(file);
@@ -1395,6 +1394,18 @@ public class ApkInfoDialogs {
             }
         }
         ad.show();
+        if (isApksSplit) {
+            View installBtn = ad.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (installBtn != null) {
+                installBtn.setEnabled(false);
+                installBtn.setAlpha(0.4f);
+            }
+            View moreBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
+            if (moreBtn != null) {
+                moreBtn.setEnabled(false);
+                moreBtn.setAlpha(0.4f);
+            }
+        }
 
         new Thread(() -> {
             final boolean[] loaded = {false};
@@ -1451,13 +1462,42 @@ public class ApkInfoDialogs {
                 }
 
                 String finalProtectedStr = protectedStr;
-                // Hashing the candidate and the installed copy is real I/O, so it
-                // stays on this worker thread rather than blocking the dialog.
-                String comparisonText = ApkInfoUtil.getInstalledVersion(context, pkg);
-                if (comparisonText == null) comparisonText = context.getString(R.string.not_installed);
-                else if (ApkInfoUtil.isDowngrade(context, packageInfo))
-                    comparisonText += " (" + context.getString(R.string.downgrade) + ")";
-                final String comparison = comparisonText;
+                // Version comparison analysis: display only the status badge
+                PackageInfo installedPkgInfo = null;
+                try {
+                    installedPkgInfo = context.getPackageManager().getPackageInfo(pkg, 0);
+                } catch (Exception ignored) {}
+
+                final PackageInfo finalInstalledInfo = installedPkgInfo;
+                final PackageInfo candidatePkgInfo = packageInfo;
+                final SpannableStringBuilder comparisonSpannable = new SpannableStringBuilder();
+
+                if (finalInstalledInfo == null) {
+                    comparisonSpannable.append(context.getString(R.string.not_installed));
+                } else {
+                    String instVerName = finalInstalledInfo.versionName == null ? "" : finalInstalledInfo.versionName;
+                    long instVerCode = ApkInfoUtil.getVersionCode(finalInstalledInfo);
+                    comparisonSpannable.append(instVerName).append(" (").append(String.valueOf(instVerCode)).append(")");
+
+                    long candVerCode = ApkInfoUtil.getVersionCode(candidatePkgInfo);
+                    if (instVerCode > candVerCode) {
+                        comparisonSpannable.append(" ");
+                        int start = comparisonSpannable.length();
+                        comparisonSpannable.append("(").append(context.getString(R.string.downgrade)).append(")");
+                        int end = comparisonSpannable.length();
+                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF4444),
+                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    } else if (candVerCode > instVerCode) {
+                        comparisonSpannable.append(" ");
+                        int start = comparisonSpannable.length();
+                        comparisonSpannable.append("(").append(context.getString(R.string.upgrade)).append(")");
+                        int end = comparisonSpannable.length();
+                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFF4CAF50),
+                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+
+                final CharSequence comparison = comparisonSpannable;
                 final String finalVerName = (TextUtils.isEmpty(verName)
                         ? context.getString(R.string.version_name_unset) : verName)
                         + (TextUtils.isEmpty(vCode) ? "" : " (" + vCode + ")");
@@ -1476,7 +1516,9 @@ public class ApkInfoDialogs {
                     apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
+
                     apkInstalled.setText(comparison);
+                    uiHelper.scrollTextView(apkInstalled);
                 });
                 loaded[0] = true;
                 context.handler.post(() -> signaturesInApk.setOnClickListener(v -> {

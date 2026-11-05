@@ -11,6 +11,8 @@ on:
   push:
     branches:
       - main
+      - freestyle
+      - long-shot
 
 jobs:
   build:

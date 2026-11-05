@@ -1685,6 +1685,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                         } else {
                             File paneFolder = adapter.pane1 ? pane1Folder : pane2Folder;
+                            if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(paneFolder)) {
+                                io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(this, paneFolder, adapter.pane1);
+                                File target = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(paneFolder);
+                                if (target != null && (target.canRead() || canListViaRoot(target))) {
+                                    loadFolderInPane(target, adapter.pane1);
+                                    return;
+                                }
+                            }
                             if (SafFs.isSaf(paneFolder)) {
                                 File parent = paneFolder.getParentFile();
                                 if (parent != null && !parent.equals(paneFolder)) {
@@ -2135,7 +2143,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-        File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
+        File parent = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(folder);
+        if (parent == null) parent = folder;
         MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
         pane.setAdapter(adapter);
         

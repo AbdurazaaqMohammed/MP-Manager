@@ -167,7 +167,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
             return;
         }
+        File current = pane1 ? context.pane1Folder : context.pane2Folder;
         File target = upFile;
+        if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(current)) {
+            io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
+            File resolved = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(current);
+            if (resolved != null) target = resolved;
+        }
         if (target == null) return;
         if (target.equals(context.pane1Folder) && pane1) return;
         if (target.equals(context.pane2Folder) && !pane1) return;
