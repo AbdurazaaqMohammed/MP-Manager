@@ -4,6 +4,8 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.style.BackgroundColorSpan;
@@ -40,6 +42,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,6 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.zip.CRC32;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
@@ -61,6 +65,9 @@ import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 
 public class HexEditorActivity extends BaseActivity {
+
+    /** Upper bound for byte ranges read for copy-as / delete, keeping the copy and digest buffers sane. */
+    private static final int MAX_MENU_BYTES = 4 * 1024 * 1024;
 
     private File file;
     private RandomAccessFile raf;
@@ -79,6 +86,19 @@ public class HexEditorActivity extends BaseActivity {
     private HexRowAdapter adapter;
     private TextView statusText;
     private LinearLayoutManager layoutManager;
+    private FastScrollerRecyclerView recycler;
+
+    // Byte selection, MT-manager style: long-press a cell then drag across rows,
+    // or use the long-press menu's "Select range" dialog. Offsets are inclusive.
+    private long selStart = -1, selEnd = -1;
+    private volatile boolean selectionDrag;
+    private boolean selectionWasEmpty;
+    private boolean selectionIntercepted;
+    private long selectionAnchor;
+    /** Byte the current cell menu was opened on, so Copy works on the pressed cell. */
+    private long menuAnchorByte = -1;
+    private float lastDragX, lastDragY;
+    private final Handler dragHandler = new Handler(Looper.getMainLooper());
 
     private View lastTouchedCell;
     private GestureDetector tapDetector;
@@ -86,7 +106,60 @@ public class HexEditorActivity extends BaseActivity {
     private final View.OnTouchListener cellTouchListener = (v, ev) -> {
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) lastTouchedCell = v;
         if (tapDetector != null) tapDetector.onTouchEvent(ev);
-        return false;
+        int action = ev.getActionMasked();
+        if (action == MotionEvent.ACTION_UP) {
+            // The stream stayed with the cell, so no drag interception happened:
+            // a long-press without movement ends here and opens the cell menu.
+            endSelectionDrag(true);
+        } else if (action == MotionEvent.ACTION_CANCEL && !selectionDrag) {
+            // Canceled without an armed drag (parent scroll etc.) - nothing to keep.
+            endSelectionDrag(false);
+        }
+        // Consumed: cursor moves and selection drags are driven here instead of
+        // the TextView's own (single-cell) text selection.
+        return true;
+    };
+
+    /** Receives the touch stream once a selection drag is intercepted. */
+    private final RecyclerView.SimpleOnItemTouchListener dragInterceptor = new RecyclerView.SimpleOnItemTouchListener() {
+        @Override
+        public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent ev) {
+            if (selectionDrag && ev.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                selectionIntercepted = true;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void onTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent ev) {
+            int action = ev.getActionMasked();
+            if (action == MotionEvent.ACTION_MOVE) {
+                lastDragX = ev.getX();
+                lastDragY = ev.getY();
+                updateDragFocus();
+                startAutoScrollIfNeeded();
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                endSelectionDrag(false);
+            }
+        }
+    };
+
+    private final Runnable dragAutoScroll = new Runnable() {
+        @Override
+        public void run() {
+            if (!selectionDrag || recycler == null) return;
+            int height = recycler.getHeight();
+            if (height == 0) return;
+            int edge = dp(28);
+            int direction;
+            if (lastDragY < edge) direction = -1;
+            else if (lastDragY > height - edge) direction = 1;
+            else return;
+            recycler.scrollBy(0, direction * dp(28));
+            updateDragFocus();
+            dragHandler.postDelayed(this, 40);
+        }
     };
 
     // Search panel state
@@ -176,23 +249,34 @@ public class HexEditorActivity extends BaseActivity {
             public boolean onSingleTapUp(MotionEvent e) {
                 View v = lastTouchedCell;
                 if (v != null && v.getTag() instanceof Number) {
+                    clearSelection();
                     setCursor(((Number) v.getTag()).longValue(), false);
                 }
-                return false;
+                return true;
             }
 
             @Override
             public void onLongPress(MotionEvent e) {
-                // Deliberately not consumed: the selectable TextView starts text selection natively
+                View v = lastTouchedCell;
+                if (v == null || !(v.getTag() instanceof Number)) return;
+                selectionAnchor = ((Number) v.getTag()).longValue();
+                menuAnchorByte = selectionAnchor;
+                selectionWasEmpty = selStart < 0;
+                selectionIntercepted = false;
+                // Highlight the pressed byte immediately; it becomes the drag
+                // anchor as soon as the finger moves, or the menu opens on release.
+                if (selectionWasEmpty) setSelectionRange(selectionAnchor, selectionAnchor);
+                selectionDrag = true;
             }
         });
 
         setupHeader();
 
         statusText = findViewById(R.id.statusText);
-        FastScrollerRecyclerView recycler = findViewById(R.id.hexRecycler);
+        recycler = findViewById(R.id.hexRecycler);
         layoutManager = new LinearLayoutManager(this);
         recycler.setLayoutManager(layoutManager);
+        recycler.addOnItemTouchListener(dragInterceptor);
         adapter = new HexRowAdapter();
         recycler.setAdapter(adapter);
 
@@ -355,10 +439,431 @@ public class HexEditorActivity extends BaseActivity {
         updateStatus();
     }
 
+    // ==========================================
+    // Selection (drag multi-select + range dialog)
+    // ==========================================
+
+    private boolean isByteSelected(long offset) {
+        return selStart >= 0 && offset >= selStart && offset <= selEnd;
+    }
+
+    private void setSelectionRange(long start, long end) {
+        start = Math.max(0, Math.min(start, size - 1));
+        end = Math.max(0, Math.min(end, size - 1));
+        if (start > end) {
+            long t = start;
+            start = end;
+            end = t;
+        }
+        long oldStart = selStart, oldEnd = selEnd;
+        selStart = start;
+        selEnd = end;
+        if (adapter != null) refreshRange(oldStart, oldEnd, start, end);
+        updateStatus();
+    }
+
+    private void clearSelection() {
+        if (selStart < 0) return;
+        long s = selStart, e = selEnd;
+        selStart = selEnd = -1;
+        if (adapter != null) refreshRange(s, e, -1, -1);
+        updateStatus();
+    }
+
+    /** Repaints every row covered by either the previous or the new selection. */
+    private void refreshRange(long aStart, long aEnd, long bStart, long bEnd) {
+        long lo = -1, hi = -1;
+        if (aStart >= 0) {
+            lo = Math.min(aStart, aEnd);
+            hi = Math.max(aStart, aEnd);
+        }
+        if (bStart >= 0) {
+            lo = lo < 0 ? Math.min(bStart, bEnd) : Math.min(lo, Math.min(bStart, bEnd));
+            hi = hi < 0 ? Math.max(bStart, bEnd) : Math.max(hi, Math.max(bStart, bEnd));
+        }
+        if (hi < 0 || adapter == null) return;
+        int firstRow = (int) Math.max(0, lo / 8);
+        int lastRow = (int) Math.min(adapter.getItemCount() - 1, hi / 8);
+        for (int r = firstRow; r <= lastRow; r++) adapter.notifyItemChanged(r);
+    }
+
+    private void endSelectionDrag(boolean menuIfNoDrag) {
+        dragHandler.removeCallbacks(dragAutoScroll);
+        if (!selectionDrag) return;
+        selectionDrag = false;
+        if (menuIfNoDrag && !selectionIntercepted) {
+            // Long press released without dragging: restore the previous
+            // selection state and open the cell menu.
+            if (selectionWasEmpty) clearSelection();
+            showCellMenu();
+        }
+        selectionIntercepted = false;
+    }
+
+    private void updateDragFocus() {
+        long focus = byteAt(recycler, lastDragX, lastDragY);
+        if (focus < 0) return;
+        setSelectionRange(selectionAnchor, focus);
+    }
+
+    private void startAutoScrollIfNeeded() {
+        int height = recycler.getHeight();
+        if (height == 0) return;
+        int edge = dp(28);
+        boolean inEdge = lastDragY < edge || lastDragY > height - edge;
+        if (inEdge) dragHandler.removeCallbacks(dragAutoScroll);
+        if (inEdge) dragHandler.postDelayed(dragAutoScroll, 40);
+    }
+
+    /** Maps recycler-local coordinates to the byte offset under the pointer. */
+    private long byteAt(RecyclerView rv, float x, float y) {
+        if (rv == null) return -1;
+        View row = rv.findChildViewUnder(x, y);
+        if (row == null) return -1;
+        int pos = rv.getChildAdapterPosition(row);
+        if (pos == RecyclerView.NO_POSITION) return -1;
+        long rowStart = pos * 8L;
+        int[] rvLoc = new int[2];
+        rv.getLocationOnScreen(rvLoc);
+        int[] rowLoc = new int[2];
+        row.getLocationOnScreen(rowLoc);
+        float rowX = x + rvLoc[0] - rowLoc[0];
+
+        View ascii = row.findViewById(R.id.asciiCell);
+        if (ascii != null && ascii.getWidth() > 0 && rowX >= ascii.getLeft() && rowX < ascii.getRight()) {
+            int col = (int) (((rowX - ascii.getLeft()) * 8) / ascii.getWidth());
+            col = Math.max(0, Math.min(7, col));
+            return Math.min(rowStart + col, size - 1);
+        }
+        long best = -1;
+        long bestDist = Long.MAX_VALUE;
+        int slop = dp(4);
+        if (!(row instanceof ViewGroup rowGroup)) return -1;
+        for (int i = 0; i < rowGroup.getChildCount(); i++) {
+            View child = rowGroup.getChildAt(i);
+            if (!(child instanceof TextView) || !(child.getTag() instanceof Number)) continue;
+            long dist = (long) Math.abs(rowX - (child.getLeft() + child.getRight()) / 2);
+            if (rowX >= child.getLeft() - slop && rowX < child.getRight() + slop) dist = 0;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = ((Number) child.getTag()).longValue();
+            }
+        }
+        return best >= 0 ? Math.min(best, size - 1) : -1;
+    }
+
+    private int getSelectionColor() {
+        return (getPrimaryColor() & 0x00FFFFFF) | 0x55000000;
+    }
+
+    /** Long-press menu: copy, copy-as formats, delete, paste and the range dialog. */
+    private void showCellMenu() {
+        boolean hasSelection = selStart >= 0;
+        List<String> items = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        items.add(getString(hasSelection ? R.string.hex_copy_selection : R.string.hex_copy));
+        actions.add(this::copySelectionOrByte);
+        items.add(getString(R.string.hex_copy_as));
+        actions.add(this::showCopyAsDialog);
+        items.add(getString(R.string.hex_paste));
+        actions.add(this::pasteClipboardHex);
+        items.add(getString(R.string.delete));
+        actions.add(this::deleteSelectionOrByte);
+        items.add(getString(R.string.select));
+        actions.add(this::showSelectRangeDialog);
+        if (hasSelection) {
+            items.add(getString(R.string.hex_clear_selection));
+            actions.add(this::clearSelection);
+        }
+        CharSequence[] labels = items.toArray(new CharSequence[0]);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.select))
+                .setItems(labels, (d, w) -> actions.get(w).run())
+                .show();
+    }
+
+    /** Start of the byte range the cell menu operates on. */
+    private long menuRangeStart() {
+        return selStart >= 0 ? selStart : (menuAnchorByte >= 0 ? menuAnchorByte : cursorPos);
+    }
+
+    private long menuRangeEnd() {
+        return selStart >= 0 ? selEnd : menuRangeStart();
+    }
+
+    /** Reads the menu range; null (with a message) when it exceeds the copy cap. */
+    private byte[] readMenuRangeBytes() {
+        long start = menuRangeStart();
+        long end = menuRangeEnd();
+        long count = end - start + 1;
+        if (count > MAX_MENU_BYTES) {
+            Extensions.showMessage(this, getString(R.string.hex_selection_too_large, MAX_MENU_BYTES / (1024 * 1024)));
+            return null;
+        }
+        byte[] out = new byte[(int) count];
+        for (int i = 0; i < out.length; i++) {
+            int v = readByte(start + i);
+            if (v < 0) {
+                return Arrays.copyOf(out, i);
+            }
+            out[i] = (byte) v;
+        }
+        return out;
+    }
+
+    private void copySelectionOrByte() {
+        byte[] data = readMenuRangeBytes();
+        if (data == null || data.length == 0) return;
+        StringBuilder hex = new StringBuilder(data.length * 2);
+        for (byte b : data) hex.append(String.format(Locale.US, "%02X", b));
+        copyToClipboard(hex.toString());
+        Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+    }
+
+    private void showCopyAsDialog() {
+        byte[] data = readMenuRangeBytes();
+        if (data == null || data.length == 0) return;
+        String[] formats = {
+                getString(R.string.hex_copy_hex),
+                getString(R.string.hex_copy_dec),
+                getString(R.string.hex_copy_bin),
+                getString(R.string.hex_copy_ascii),
+                getString(R.string.hex_copy_b64),
+                getString(R.string.hex_copy_sha1),
+                getString(R.string.hex_copy_md5),
+                getString(R.string.hex_copy_crc32)
+        };
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.hex_copy_as))
+                .setItems(formats, (d, w) -> {
+                    String value = formatBytesAs(data, w);
+                    copyToClipboard(value);
+                    Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+                })
+                .show();
+    }
+
+    private static String formatBytesAs(byte[] data, int format) {
+        switch (format) {
+            case 0: { // Hex text
+                StringBuilder sb = new StringBuilder(data.length * 2);
+                for (byte b : data) sb.append(String.format(Locale.US, "%02X", b));
+                return sb.toString();
+            }
+            case 1: { // Decimal text
+                StringBuilder sb = new StringBuilder(data.length * 4);
+                for (int i = 0; i < data.length; i++) {
+                    if (i > 0) sb.append(' ');
+                    sb.append(data[i] & 0xFF);
+                }
+                return sb.toString();
+            }
+            case 2: { // Binary text
+                StringBuilder sb = new StringBuilder(data.length * 9);
+                for (int i = 0; i < data.length; i++) {
+                    if (i > 0) sb.append(' ');
+                    sb.append(String.format(Locale.US, "%8s", Integer.toBinaryString(data[i] & 0xFF)).replace(' ', '0'));
+                }
+                return sb.toString();
+            }
+            case 3: { // ASCII
+                StringBuilder sb = new StringBuilder(data.length);
+                for (byte b : data) {
+                    int v = b & 0xFF;
+                    sb.append(v >= 0x20 && v <= 0x7E ? (char) v : '.');
+                }
+                return sb.toString();
+            }
+            case 4: // Base64
+                return Base64.encodeToString(data, Base64.NO_WRAP);
+            case 5: // SHA1
+                return digestHex("SHA-1", data);
+            case 6: // MD5
+                return digestHex("MD5", data);
+            case 7: { // CRC32
+                CRC32 crc = new CRC32();
+                crc.update(data);
+                return String.format(Locale.US, "%08X", crc.getValue());
+            }
+            default:
+                return "";
+        }
+    }
+
+    private static String digestHex(String algorithm, byte[] data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance(algorithm);
+            byte[] digest = md.digest(data);
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) sb.append(String.format(Locale.US, "%02X", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private void pasteClipboardHex() {
+        if (readOnly) {
+            Extensions.showMessage(this, getString(R.string.hex_read_only));
+            return;
+        }
+        byte[] data;
+        try {
+            data = parsePastedBytes(0, getClipboardText());
+        } catch (IllegalArgumentException e) {
+            Extensions.showMessage(this, e.getMessage());
+            return;
+        }
+        if (data == null || data.length == 0) {
+            Extensions.showMessage(this, getString(R.string.hex_nothing_to_paste));
+            return;
+        }
+        writeBytesAt(menuRangeStart(), data, null);
+        clearSelection();
+        Extensions.showMessage(this, getString(R.string.hex_pasted_n, data.length));
+    }
+
+    /**
+     * Fills the menu range with 00. The editor model only supports in-place byte
+     * edits (a fixed file size), so a real shift-and-truncate delete is not
+     * possible; the dialog makes the zero fill explicit before it happens.
+     */
+    private void deleteSelectionOrByte() {
+        if (readOnly) {
+            Extensions.showMessage(this, getString(R.string.hex_read_only));
+            return;
+        }
+        long start = menuRangeStart();
+        int count;
+        try {
+            count = Math.toIntExact(menuRangeEnd() - start + 1);
+        } catch (ArithmeticException e) {
+            Extensions.showMessage(this, getString(R.string.hex_selection_too_large, MAX_MENU_BYTES / (1024 * 1024)));
+            return;
+        }
+        if (count <= 0) return;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.delete))
+                .setMessage(getString(R.string.hex_delete_selection_msg, count))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    writeBytesAt(start, new byte[count], null);
+                    clearSelection();
+                })
+                .show();
+    }
+
+    private void copyToClipboard(String text) {
+        ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("hex", text));
+    }
+
+    /**
+     * MT-style quick select: start address plus either a length or an end
+     * address ("Use Start address + Length" unchecked switches the field),
+     * each field interpreted in hex or decimal.
+     */
+    private void showSelectRangeDialog() {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        container.setPadding(pad, pad, pad, 0);
+
+        final EditText etStart = new EditText(this);
+        etStart.setHint(getString(R.string.hex_start_offset));
+        final EditText etLength = new EditText(this);
+        etLength.setHint(getString(R.string.hex_length));
+
+        final CheckBox cbStartLen = new CheckBox(this);
+        cbStartLen.setText(R.string.hex_use_start_plus_length);
+        cbStartLen.setChecked(true);
+        final CheckBox cbHex = new CheckBox(this);
+        cbHex.setText(R.string.hex_hexadecimal);
+        cbHex.setChecked(true);
+
+        container.addView(UiFields.wrap(this, etStart, null, 0));
+        container.addView(UiFields.wrap(this, etLength, null, 0));
+        container.addView(cbStartLen);
+        container.addView(cbHex);
+
+        final boolean[] reformatting = {false};
+        etStart.setText(formatOffset(cursorPos, true));
+        etLength.setText("1");
+
+        // Reformat both fields when the number base changes so a half-typed
+        // address survives the toggle.
+        cbHex.setOnCheckedChangeListener((b, hex) -> {
+            if (reformatting[0]) return;
+            try {
+                long start = parseOffset(etStart.getText().toString(), !hex);
+                long len = parseOffset(etLength.getText().toString(), !hex);
+                reformatting[0] = true;
+                etStart.setText(formatOffset(start, hex));
+                etLength.setText(formatOffset(len, hex));
+                reformatting[0] = false;
+            } catch (Exception ignored) {
+            }
+        });
+
+        // Switching between length and end converts the value so the visible
+        // range stays the same (start=100, len=8 becomes end=107).
+        cbStartLen.setOnCheckedChangeListener((b, useLength) -> {
+            if (reformatting[0]) return;
+            try {
+                boolean hex = cbHex.isChecked();
+                long start = parseOffset(etStart.getText().toString(), hex);
+                long value = parseOffset(etLength.getText().toString(), hex);
+                long converted = useLength ? value - start + 1 : start + value - 1;
+                if (converted < 0) converted = 0;
+                reformatting[0] = true;
+                etLength.setText(formatOffset(converted, hex));
+                etLength.setHint(getString(useLength ? R.string.hex_length : R.string.hex_end_offset));
+                reformatting[0] = false;
+            } catch (Exception ignored) {
+            }
+        });
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.hex_select_range))
+                .setView(container)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    try {
+                        boolean hex = cbHex.isChecked();
+                        long start = parseOffset(etStart.getText().toString(), hex);
+                        long end = cbStartLen.isChecked()
+                                ? start + parseOffset(etLength.getText().toString(), hex) - 1
+                                : parseOffset(etLength.getText().toString(), hex);
+                        if (start < 0 || end < start) {
+                            Extensions.showMessage(this, getString(R.string.hex_invalid_range));
+                            return;
+                        }
+                        setSelectionRange(start, end);
+                        setCursor(start, true);
+                    } catch (Exception e) {
+                        Extensions.showMessage(this, getString(R.string.hex_invalid_range));
+                    }
+                })
+                .show();
+    }
+
+    private static String formatOffset(long value, boolean hex) {
+        return hex ? String.format(Locale.US, "%X", value) : String.valueOf(value);
+    }
+
+    private static long parseOffset(String text, boolean hex) throws NumberFormatException {
+        String t = text == null ? "" : text.trim();
+        if (t.isEmpty()) throw new NumberFormatException("empty");
+        return hex ? Long.parseLong(t, 16) : Long.parseLong(t);
+    }
+
     private void updateStatus() {
         int val = readByte(cursorPos);
         String text = String.format(Locale.US, "Val: %02Xh  Pos: %Xh  Size: %Xh [HEX]",
                 val == -1 ? 0 : val, cursorPos, size);
+        if (selStart >= 0) {
+            text += String.format(Locale.US, "  Sel: %Xh-%Xh (%d)", selStart, selEnd, selEnd - selStart + 1);
+        }
         statusText.setText(text);
         updateInspector();
     }
@@ -832,6 +1337,7 @@ public class HexEditorActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        dragHandler.removeCallbacks(dragAutoScroll);
         if (raf != null) try {
             raf.close();
         } catch (IOException ignored) {
@@ -878,6 +1384,10 @@ public class HexEditorActivity extends BaseActivity {
             long selCol = cursorPos - rowStart;
             for (int i = 0; i < 8; i++) {
                 TextView cell = holder.cells[i];
+                // Tag every cell (even past EOF) so hit-testing during a
+                // selection drag never reads a recycled tag from another row.
+                cell.setTag(rowStart + i);
+                cell.setOnTouchListener(cellTouchListener);
                 if (values[i] == -1) {
                     cell.setText("");
                     cell.setBackground(null);
@@ -886,11 +1396,11 @@ public class HexEditorActivity extends BaseActivity {
                 cell.setText(String.format(Locale.US, "%02X", values[i]));
                 if (i == selCol) {
                     cell.setBackgroundColor(getPrimaryContainerColor());
+                } else if (isByteSelected(rowStart + i)) {
+                    cell.setBackgroundColor(getSelectionColor());
                 } else {
                     cell.setBackground(null);
                 }
-                cell.setTag(rowStart + i);
-                cell.setOnTouchListener(cellTouchListener);
             }
 
             StringBuilder asciiBuilder = new StringBuilder();
@@ -899,6 +1409,14 @@ public class HexEditorActivity extends BaseActivity {
                 asciiBuilder.append(v >= 0x20 && v <= 0x7E ? (char) v : '.');
             }
             SpannableString ascii = new SpannableString(asciiBuilder.toString());
+            // Selection spans first so the cursor span (set below) stays on top
+            // where both cover the same character.
+            if (selStart >= 0 && selEnd >= rowStart && selStart <= rowStart + 7) {
+                int from = (int) Math.max(0, selStart - rowStart);
+                int to = (int) Math.min(8, selEnd - rowStart + 1);
+                ascii.setSpan(new BackgroundColorSpan(getSelectionColor()), from, to, 0);
+                ascii.setSpan(new ForegroundColorSpan(getOnPrimaryColor()), from, to, 0);
+            }
             if (selCol >= 0 && selCol < 8) {
                 ascii.setSpan(new BackgroundColorSpan(getPrimaryColor()), (int) selCol, (int) selCol + 1, 0);
                 ascii.setSpan(new ForegroundColorSpan(getOnPrimaryColor()), (int) selCol, (int) selCol + 1, 0);
@@ -927,8 +1445,6 @@ public class HexEditorActivity extends BaseActivity {
                 cells[5] = itemView.findViewById(R.id.cell5);
                 cells[6] = itemView.findViewById(R.id.cell6);
                 cells[7] = itemView.findViewById(R.id.cell7);
-                // Selectable text lets the user pick individual nibbles (1 of the 2 chars) to copy them
-                for (TextView cell : cells) cell.setTextIsSelectable(true);
             }
         }
     }
