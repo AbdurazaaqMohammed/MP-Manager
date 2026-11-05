@@ -306,6 +306,11 @@
     <string name="installed_version">Installed version</string>
     <string name="not_installed">Not installed</string>
     <string name="downgrade">Downgrade</string>
+    <string name="upgrade">Upgrade</string>
+    <string name="same_version">Same version</string>
+    <string name="version_comparison">Version comparison</string>
+    <string name="installed_app">Installed app</string>
+    <string name="new_apk">New APK</string>
     <string name="permissions">Permissions</string>
     <string name="quick_edit">Quick edit</string>
     <string name="compare_apks">Compare APKs</string>

@@ -84,6 +84,7 @@ public class BootImageEngine {
         meta.put("cmdline", cmdline);
         meta.put("cmdline_extra", cmdlineExtra);
         meta.put("original_file_name", imageFile.getName());
+        meta.put("original_image_size", imageFile.length());
 
         File metaFile = new File(outputDir, "header_info.json");
         try (FileOutputStream fos = new FileOutputStream(metaFile)) {
@@ -277,6 +278,8 @@ public class BootImageEngine {
             System.arraycopy(extraBytes, 0, headerBuf, 1580, extraLen);
         }
 
+        long originalImgSize = meta != null ? meta.optLong("original_image_size", 0) : 0;
+
         File parentOut = outputImageFile.getParentFile();
         if (parentOut != null) parentOut.mkdirs();
 
@@ -303,6 +306,19 @@ public class BootImageEngine {
             writePadding(bos, compressedRamdiskLen, pageSize);
 
             bos.flush();
+
+            // Maintain partition / original size padding so the boot image matches partition size
+            long written = outputImageFile.length();
+            if (originalImgSize > written) {
+                long needed = originalImgSize - written;
+                byte[] zeros = new byte[65536];
+                while (needed > 0) {
+                    int chunk = (int) Math.min(zeros.length, needed);
+                    bos.write(zeros, 0, chunk);
+                    needed -= chunk;
+                }
+                bos.flush();
+            }
         }
 
         tempCpio.delete();

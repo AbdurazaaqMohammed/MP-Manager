@@ -11,6 +11,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 import java.security.MessageDigest;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,12 +28,54 @@ public class BootInspectManager {
         public final File inspectDir;
         public final File ramdiskDir;
         public long lastModifiedSnapshot;
+        public final Map<String, Long> fileSnapshots = new HashMap<>();
 
         public Session(File originalImg, File inspectDir, File ramdiskDir) {
             this.originalImg = originalImg;
             this.inspectDir = inspectDir;
             this.ramdiskDir = ramdiskDir;
             this.lastModifiedSnapshot = originalImg.lastModified();
+            takeSnapshot();
+        }
+
+        public void takeSnapshot() {
+            fileSnapshots.clear();
+            snapshotDirectory(inspectDir);
+        }
+
+        private void snapshotDirectory(File dir) {
+            if (dir == null || !dir.exists()) return;
+            File[] files = dir.listFiles();
+            if (files == null) return;
+            for (File f : files) {
+                fileSnapshots.put(f.getAbsolutePath(), f.lastModified() ^ (f.length() << 16));
+                if (f.isDirectory()) {
+                    snapshotDirectory(f);
+                }
+            }
+        }
+
+        public boolean isDirty() {
+            Map<String, Long> current = new HashMap<>();
+            collectCurrent(inspectDir, current);
+            return !fileSnapshots.equals(current);
+        }
+
+        private void collectCurrent(File dir, Map<String, Long> current) {
+            if (dir == null || !dir.exists()) return;
+            File[] files = dir.listFiles();
+            if (files == null) return;
+            for (File f : files) {
+                // Ignore temporary or tree metadata generated during pack/repack
+                String name = f.getName();
+                if (name.startsWith("temp_repack.") || name.equals("header_info.json") || name.equals("ramdisk_tree.json")) {
+                    continue;
+                }
+                current.put(f.getAbsolutePath(), f.lastModified() ^ (f.length() << 16));
+                if (f.isDirectory()) {
+                    collectCurrent(f, current);
+                }
+            }
         }
     }
 
@@ -105,6 +148,27 @@ public class BootInspectManager {
         Session session = getSessionForFolder(folder);
         if (session == null || !session.originalImg.exists()) return;
 
+        // Dirty checking: if no files were added, deleted or modified, skip repack entirely
+        if (!session.isDirty()) {
+            return;
+        }
+
+        // Changes were made — ask the user before overwriting the boot image
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                .setTitle("Save Changes to Boot Image?")
+                .setMessage("Modifications were detected in the ramdisk. Do you want to repack and update '" + session.originalImg.getName() + "'?")
+                .setPositiveButton(R.string.yes, (dialog, which) -> {
+                    executeRepack(context, session);
+                })
+                .setNegativeButton(R.string.no, (dialog, which) -> {
+                    // Discard changes snapshot so subsequent navigation doesn't prompt again unless modified
+                    session.takeSnapshot();
+                })
+                .show();
+    }
+
+    private static void executeRepack(MainActivity context, Session session) {
+        Extensions.showMessage(context, "Repacking Boot Image...");
         new Thread(() -> {
             try {
                 File tempOut = new File(context.getCacheDir(), "repack_" + System.currentTimeMillis() + ".img");
@@ -118,6 +182,7 @@ public class BootInspectManager {
                         while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
                     }
                     tempOut.delete();
+                    session.takeSnapshot();
                     new Handler(Looper.getMainLooper()).post(() -> {
                         Extensions.showMessage(context, "Boot image repacked and updated successfully!");
                     });

@@ -278,6 +278,11 @@
     <string name="installed_version">الإصدار المثبت</string>
     <string name="not_installed">غير مثبت</string>
     <string name="downgrade">رجوع لإصدار أقدم (Downgrade)</string>
+    <string name="upgrade">ترقية لإصدار أحدث (Upgrade)</string>
+    <string name="same_version">نفس الإصدار (Same version)</string>
+    <string name="version_comparison">مقارنة الإصدارات</string>
+    <string name="installed_app">التطبيق المثبت</string>
+    <string name="new_apk">حزمة APK الجديدة</string>
     <string name="permissions">الأذونات</string>
     <string name="quick_edit">تعديل سريع</string>
     <string name="compare_apks">مقارنة ملفات APK</string>
