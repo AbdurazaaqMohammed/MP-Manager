@@ -59,6 +59,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -104,6 +106,54 @@ public class ApkManifestEditor {
             if (l.startsWith("internal")) return 1;
             if (l.startsWith("prefer")) return 2;
             return 3;
+        }
+    }
+
+    /**
+     * True when the row is one inlined element line that carries its own
+     * attributes inside the tag text (the decoder merges short elements such
+     * as {@code <uses-sdk android:minSdkVersion="21" ... />} into a single
+     * entry whose value is empty).
+     */
+    private static boolean isInlinedElement(XMLEntry e) {
+        String tag = e.getTag();
+        return !"=\"".equals(e.getMiddleTag()) && tag != null && tag.contains("=\"");
+    }
+
+    /** Value of {@code name="..."} inside an inlined element line, or null when absent. */
+    private static String inlineAttrValue(String line, String name) {
+        if (line == null) return null;
+        Matcher m = Pattern.compile(Pattern.quote(name) + "=\"([^\"]*)\"").matcher(line);
+        return m.find() ? m.group(1) : null;
+    }
+
+    /**
+     * Reads an attribute's value from either entry form: split attribute rows
+     * hold it in the entry value, inlined element lines in the tag text.
+     */
+    private static String attrValue(XMLEntry e, String attrName) {
+        if ("=\"".equals(e.getMiddleTag())) return e.getValue();
+        return inlineAttrValue(e.getTag(), attrName);
+    }
+
+    /** Rewrites {@code name="..."} inside an inlined element line. */
+    private static void setInlineAttr(XMLEntry e, String attrName, String newValue) {
+        String tag = e.getTag();
+        if (tag == null) return;
+        Matcher m = Pattern.compile("(" + Pattern.quote(attrName) + "=\")[^\"]*(\")").matcher(tag);
+        if (m.find()) {
+            e.setTag(tag.substring(0, m.start()) + attrName + "=\"" + newValue + '"'
+                    + tag.substring(m.end()));
+        }
+    }
+
+    /** Deletes {@code name="..."} (with its leading space) from an inlined element line. */
+    private static void removeInlineAttr(XMLEntry e, String attrName) {
+        String tag = e.getTag();
+        if (tag == null) return;
+        Matcher m = Pattern.compile("\\s+" + Pattern.quote(attrName) + "=\"[^\"]*\"").matcher(tag);
+        if (m.find()) {
+            e.setTag(tag.substring(0, m.start()) + tag.substring(m.end()));
         }
     }
 
@@ -264,29 +314,40 @@ public class ApkManifestEditor {
                 if (pkgNameInput != null) pkgNameInput.setText(pkgName = e.getValue());
                 else pkgName = e.getValue();
             }
-            else if (tag.contains("android:installLocation")) installLoc = e.getValue();
+            else if (tag.contains("android:installLocation")) installLoc = attrValue(e, "android:installLocation");
             else if (!foundLabel && tag.contains("android:label")) {
                 foundLabel = true;
-                appNameInput.setText(appName = e.getValue());
+                String labelValue = attrValue(e, "android:label");
+                appNameInput.setText(appName = labelValue != null ? labelValue : "");
             }
-            else if (tag.contains("android:versionCode")) verCodeInput.setText(verCode = e.getValue());
-            else if (tag.contains("android:versionName")) verNameInput.setText(verName = e.getValue());
+            else if (tag.contains("android:versionCode")) {
+                String verCodeValue = attrValue(e, "android:versionCode");
+                verCodeInput.setText(verCode = verCodeValue != null ? verCodeValue : "");
+            }
+            else if (tag.contains("android:versionName")) {
+                String verNameValue = attrValue(e, "android:versionName");
+                verNameInput.setText(verName = verNameValue != null ? verNameValue : "");
+            }
             else if (!foundMinSdk && tag.contains("android:minSdkVersion")) {
                 foundMinSdk = true; // Avoid getting wrong minsdk from other property
+                String minSdkValue = attrValue(e, "android:minSdkVersion");
+                minSdkVersion = minSdkValue != null ? minSdkValue : "";
                 try {
-                    int minSdkVer = Integer.parseInt(minSdkVersion = e.getValue());
+                    int minSdkVer = Integer.parseInt(minSdkVersion);
                     if (minSdkVer >= 1 && minSdkVer <= versions.length)
                         minSdk.setText(rss.getString(R.string.android_ver_text, versions[minSdkVer-1], minSdkVer));
                     else minSdk.setText(minSdkVersion);
-                } catch (Exception ignored) { minSdk.setText(e.getValue()); }
+                } catch (Exception ignored) { minSdk.setText(minSdkVersion); }
             }
             else if (tag.contains("android:targetSdkVersion")) {
+                String targetSdkValue = attrValue(e, "android:targetSdkVersion");
+                targetSdkVersion = targetSdkValue != null ? targetSdkValue : "";
                 try {
-                    int targetSdkVer = Integer.parseInt(targetSdkVersion = e.getValue());
+                    int targetSdkVer = Integer.parseInt(targetSdkVersion);
                     if (targetSdkVer >= 1 && targetSdkVer <= versions.length)
                         targetSdk.setText(rss.getString(R.string.android_ver_text, versions[targetSdkVer-1], targetSdkVer));
                     else targetSdk.setText(targetSdkVersion);
-                } catch (Exception ignored) { targetSdk.setText(e.getValue()); }
+                } catch (Exception ignored) { targetSdk.setText(targetSdkVersion); }
             }
         }
         // Fallback: package name via PackageManager if manifest decode missed it.
@@ -433,6 +494,27 @@ public class ApkManifestEditor {
                                         for (int i = 0, entriesSize = entries.size(); i < entriesSize; i++) {
                                             XMLEntry e = entries.get(i);
                                             String tag = e.getTag();
+                                            if (isInlinedElement(e)) {
+                                                // One line can carry several edited
+                                                // attributes (<uses-sdk
+                                                // android:minSdkVersion=.. android:targetSdkVersion=.. />
+                                                // is always inlined by the decoder), so every
+                                                // pending change is applied to the tag text
+                                                // instead of only the first matching one.
+                                                if (minSdkVersionChanged && tag.contains("android:minSdkVersion")) {
+                                                    setInlineAttr(e, "android:minSdkVersion", minSdkVersionSelected[0]);
+                                                    foundMinSdk2 = true;
+                                                    tag = e.getTag();
+                                                }
+                                                if (targetSdkVersionChanged && tag.contains("android:targetSdkVersion")) {
+                                                    setInlineAttr(e, "android:targetSdkVersion", targetSdkVersionSelected[0]);
+                                                    tag = e.getTag();
+                                                }
+                                                if (appNameChanged && tag.contains("android:label")) {
+                                                    setInlineAttr(e, "android:label", appNameSelected);
+                                                }
+                                                continue;
+                                            }
                                             if (pkgNameChanged && tag.trim().equals("package"))
                                                 e.setValue(pkgNameSelected);
                                             else if (appNameChanged && tag.contains("android:label"))
@@ -997,14 +1079,21 @@ public class ApkManifestEditor {
     }
 
     private void toggleDisabled(XMLEntry entry, boolean disable) {
-        String current = entry.getValue();
+        // Inlined element lines keep their name in the tag text; the toggle
+        // only makes sense for entries that have one (permission lines).
+        boolean inline = isInlinedElement(entry);
+        String current = inline ? inlineAttrValue(entry.getTag(), "android:name") : entry.getValue();
+        if (current == null) current = "";
         if (disable) {
-            if (!current.startsWith("__DISABLED__")) {
-                entry.setValue("__DISABLED__" + current);
+            if (!current.startsWith(DISABLED_PREFIX)) {
+                if (inline) setInlineAttr(entry, "android:name", DISABLED_PREFIX + current);
+                else entry.setValue(DISABLED_PREFIX + current);
             }
         } else {
-            if (current.startsWith("__DISABLED__")) {
-                entry.setValue(current.substring("__DISABLED__".length()));
+            if (current.startsWith(DISABLED_PREFIX)) {
+                String restored = current.substring(DISABLED_PREFIX.length());
+                if (inline) setInlineAttr(entry, "android:name", restored);
+                else entry.setValue(restored);
             }
         }
     }
@@ -1014,7 +1103,10 @@ public class ApkManifestEditor {
                                      List<XMLEntry> entries,
                                      XMLEntry entry) {
 
-        String rawValue = entry.getValue().replace("__DISABLED__", "");
+        boolean inline = isInlinedElement(entry);
+        // Inlined lines are edited as raw text: their value slot is empty.
+        String current = inline ? entry.getTag() : entry.getValue();
+        String rawValue = current.replace("__DISABLED__", "");
 
         EditText input = new EditText(context);
         input.setText(rawValue);
@@ -1026,8 +1118,20 @@ public class ApkManifestEditor {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
                     String newVal = input.getText().toString();
-                    boolean wasDisabled = entry.getValue().startsWith("__DISABLED__");
-                    entry.setValue(wasDisabled ? "__DISABLED__" + newVal : newVal);
+                    boolean wasDisabled = current.startsWith(DISABLED_PREFIX);
+                    if (inline) {
+                        entry.setTag(newVal);
+                        // A stripped disabled marker only had somewhere to live
+                        // when the line carries the name it applies to.
+                        if (wasDisabled && newVal.contains("android:name=\"")) {
+                            String name = inlineAttrValue(newVal, "android:name");
+                            if (name != null && !name.isEmpty() && !name.startsWith(DISABLED_PREFIX)) {
+                                setInlineAttr(entry, "android:name", DISABLED_PREFIX + name);
+                            }
+                        }
+                    } else {
+                        entry.setValue(wasDisabled ? DISABLED_PREFIX + newVal : newVal);
+                    }
                 })
                 .create();
         dialogUtil.styleAlertDialog(d);
@@ -1049,7 +1153,10 @@ public class ApkManifestEditor {
         List<XMLEntry> entries = decodeManifest(apkFile);
         if (entries == null) return "";
         for (XMLEntry e : entries) {
-            if (e.getTag().contains(attrName)) return e.getValue();
+            if (e.getTag().contains(attrName)) {
+                String v = attrValue(e, attrName);
+                return v != null ? v : "";
+            }
         }
         return "";
     }
@@ -1061,7 +1168,8 @@ public class ApkManifestEditor {
         boolean found = false;
         for (XMLEntry e : entries) {
             if (e.getTag().contains(attrName.split(":")[1])) {
-                e.setValue(newValue);
+                if (isInlinedElement(e)) setInlineAttr(e, attrName, newValue);
+                else e.setValue(newValue);
                 found = true;
             }
         }
@@ -1077,7 +1185,11 @@ public class ApkManifestEditor {
         if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
         for (int i = 0, listSize = entries.size(); i < listSize; i++) {
             XMLEntry item = entries.get(i);
-            if (item.getTag().contains(attrName)) entries.remove(i);
+            if (!item.getTag().contains(attrName)) continue;
+            // An inlined line holds the whole element; deleting the row would
+            // take the element with it, so only the attribute is stripped.
+            if (isInlinedElement(item)) removeInlineAttr(item, attrName);
+            else entries.remove(i);
         }
         writeManifestEntries(apkFile, entries);
     }
@@ -1124,16 +1236,21 @@ public class ApkManifestEditor {
                 XMLEntry attr = entries.get(k);
                 String at = attr.getTag();
                 if (at == null || !at.contains("android:name")) continue;
-                String v = attr.getValue();
+                boolean inline = isInlinedElement(attr);
+                // Inlined <uses-permission android:name="..." /> lines carry
+                // the name in the tag text; split rows in the entry value.
+                String v = inline ? inlineAttrValue(at, "android:name") : attr.getValue();
                 if (v == null || v.isEmpty()) continue;
                 if (disableSet.contains(v)) {
-                    attr.setValue(DISABLED_PREFIX + v);
+                    if (inline) setInlineAttr(attr, "android:name", DISABLED_PREFIX + v);
+                    else attr.setValue(DISABLED_PREFIX + v);
                     changed++;
                 } else if (v.startsWith(DISABLED_PREFIX)
                         && enableSet.contains(v.substring(DISABLED_PREFIX.length()))) {
                     String restored = v.substring(DISABLED_PREFIX.length());
                     if (!restored.isEmpty()) {
-                        attr.setValue(restored);
+                        if (inline) setInlineAttr(attr, "android:name", restored);
+                        else attr.setValue(restored);
                         changed++;
                     }
                 }
@@ -1183,14 +1300,21 @@ public class ApkManifestEditor {
                 for (int k = i; k <= end; k++) {
                     XMLEntry attr = entries.get(k);
                     String at = attr.getTag();
-                    if (at != null && at.contains("android:name") && targets.contains(attr.getValue())) {
+                    if (at == null || !at.contains("android:name")) continue;
+                    // Inlined <uses-permission android:name="..." /> lines carry
+                    // the name in the tag text, not in the entry value.
+                    String v = isInlinedElement(attr) ? inlineAttrValue(at, "android:name") : attr.getValue();
+                    if (v != null && targets.contains(v)) {
                         match = true;
                         break;
                     }
                 }
             }
             if (match) {
-                for (int k = end; k >= i; k--) entries.remove(k);
+                // An inlined line is the whole element; removing it removes
+                // exactly the one permission.
+                if (isInlinedElement(item)) entries.remove(i);
+                else for (int k = end; k >= i; k--) entries.remove(k);
                 removed++;
             }
         }
@@ -1358,7 +1482,9 @@ public class ApkManifestEditor {
                     String key = attrs[i].split(":")[1];
                     for (XMLEntry e : entries) {
                         if (e.getTag().contains(key)) {
-                            current[i] = "true".equalsIgnoreCase(e.getValue());
+                            // attrValue also reads the tag text of inlined
+                            // element lines, where getValue() is empty.
+                            current[i] = "true".equalsIgnoreCase(attrValue(e, attrs[i]));
                             break;
                         }
                     }

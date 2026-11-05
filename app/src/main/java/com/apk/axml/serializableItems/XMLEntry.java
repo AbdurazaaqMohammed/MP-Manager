@@ -9,7 +9,11 @@ import java.util.UUID;
  */
 public class XMLEntry implements Serializable {
 
-    private final String mTag, mID = UUID.randomUUID().toString(), mMiddleTag, mEndTag;
+    // mTag is mutable: inlined element lines (the decoder merges short
+    // elements such as <uses-sdk android:minSdkVersion="21" ... /> into a
+    // single entry) carry their attributes in the tag text, and editors
+    // rewrite that text in place.
+    private String mTag, mID = UUID.randomUUID().toString(), mMiddleTag, mEndTag;
     private String mValue;
 
     public XMLEntry(String tag, String middleTag, String value, String endTag) {
@@ -65,6 +69,10 @@ public class XMLEntry implements Serializable {
 
     public String getTag() {
         return mTag;
+    }
+
+    public void setTag(String tag) {
+        mTag = tag;
     }
 
     public String getMiddleTag() {
