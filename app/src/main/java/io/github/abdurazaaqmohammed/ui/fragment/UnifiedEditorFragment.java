@@ -43,6 +43,8 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import android.view.inputmethod.InputMethodManager;
+
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -535,7 +537,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void postInitialize(boolean skipRestorePosition) {
         Activity activity = getActivity();
-        boolean consumedPending = false;
+        boolean pendingInFlight = false;
         if (isSmali && activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = null;
             for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
@@ -548,19 +550,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 if (type == TYPE_JAVA) editor.setEditable(false);
                 else editor.setEditable(!tab.isReadOnly);
                 if (tab.pendingLine >= 0) {
-                    int line = tab.pendingLine;
-                    int col = tab.pendingColumn;
-                    String q = tab.pendingQuery;
-                    tab.pendingLine = -1;
-                    tab.pendingColumn = -1;
-                    tab.pendingQuery = null;
-                    navigateTo(line, col, q);
-                    consumedPending = true;
+                    pendingInFlight = true;
+                    retryPendingNavigation(0);
                 }
             }
         }
         new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
-        if (!skipRestorePosition && !consumedPending && positionManager != null) {
+        if (!skipRestorePosition && !pendingInFlight && positionManager != null) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 try {
                     EditorPositionManager.Position pos = positionManager.getPosition(className);
@@ -575,6 +571,49 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 } catch (Exception ignored) {}
             }, 100);
         }
+    }
+
+    /** Keeps asking {@link #consumePendingNavigation()} until the editor can scroll. */
+    private void retryPendingNavigation(final int attempt) {
+        if (consumePendingNavigation()) return;
+        if (attempt >= 30) return; // ~3s; the pending info stays for later attempts
+        new Handler(Looper.getMainLooper()).postDelayed(() -> retryPendingNavigation(attempt + 1), 100);
+    }
+
+    /**
+     * Consumes the tab's pending search-result navigation when the editor is
+     * actually able to scroll to it: attached, shown (the editor ViewPager can
+     * still be GONE while the search list is on screen) and loaded. When it is
+     * not ready yet the pending info is kept and the caller may retry, so the
+     * jump lands on the right line at once instead of scrolling somewhere the
+     * view only settles on later.
+     *
+     * @return true when there is nothing pending (or it was consumed here)
+     */
+    public boolean consumePendingNavigation() {
+        if (editor == null || !isSmali) return true;
+        Activity activity = getActivity();
+        if (!(activity instanceof DexEditorActivity)) return true;
+        DexEditorActivity.EditorTab tab = null;
+        for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
+            if (t.className.equals(className) && t.type == 0) {
+                tab = t;
+                break;
+            }
+        }
+        if (tab == null || tab.pendingLine < 0) return true;
+        if (!editor.isAttachedToWindow() || !editor.isShown() || editor.getWidth() == 0
+                || editor.getText().getLineCount() <= tab.pendingLine) {
+            return false; // not ready yet: keep pending so the next attempt lands correctly
+        }
+        int line = tab.pendingLine;
+        int col = tab.pendingColumn;
+        String q = tab.pendingQuery;
+        tab.pendingLine = -1;
+        tab.pendingColumn = -1;
+        tab.pendingQuery = null;
+        navigateTo(line, col, q);
+        return true;
     }
 
     public void loadEditorSettings(boolean loadTypeface) {
@@ -908,7 +947,24 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             switch (actionId) {
                 case BottomBarMigration.ACTION_SEARCH:
-                    goToMatch(true);
+                    // The old behavior ran "find next" on an empty searcher, so
+                    // with no visible panel and no text it did nothing at all.
+                    // First press opens the search panel and focuses the field;
+                    // further presses jump to the next match.
+                    if (searchPanel == null) break;
+                    if (searchPanel.getVisibility() != View.VISIBLE
+                            || TextUtils.isEmpty(searchInput.getText())) {
+                        showSearchPanel();
+                        if (searchInput != null) {
+                            searchInput.requestFocus();
+                            Context ctx = requireContext().getApplicationContext();
+                            InputMethodManager imm = (InputMethodManager)
+                                    ctx.getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
+                        }
+                    } else {
+                        goToMatch(true);
+                    }
                     break;
                 case BottomBarMigration.ACTION_FIND_REPLACE:
                     // Buttons created before the options feature behaved as regex + match case
@@ -1502,9 +1558,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         public void navigateTo(int lineNum, String query) { navigateTo(lineNum, -1, query); }
 
     public void navigateTo(final int lineNum, final int column, final String query) {
+        navigateTo(lineNum, column, query, 0);
+    }
+
+    private void navigateTo(final int lineNum, final int column, final String query, final int attempt) {
         if (editor == null) return;
         if (editor.getText().getLineCount() <= lineNum) {
-            new Handler(Looper.getMainLooper()).postDelayed(() -> navigateTo(lineNum, column, query), 100);
+            // Content still loading; retry a bounded number of times (a class
+            // that fails to load would otherwise spin forever).
+            if (attempt < 50) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> navigateTo(lineNum, column, query, attempt + 1), 100);
+            }
             return;
         }
         try {
@@ -1538,23 +1602,56 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private void scrollSelectionIntoView() {
+        scrollSelectionIntoView(0);
+    }
+
+    /**
+     * Makes sure the selection ends up on screen, with the SAME animated scroll
+     * the in-editor search next/previous buttons use.
+     *
+     * <p>{@link CodeEditor#setSelectionRegion} already starts an animated
+     * make-visible scroll itself. Calling {@link CodeEditor#ensureSelectionVisible()}
+     * again right after that lands inside the editor's 100ms make-visible
+     * debounce, which switches to an instant snap (duration-0 scroll that also
+     * aborts the running animation) - that was the "jumps without animation"
+     * behavior. So this only OBSERVES while the scroller is animating, and once
+     * it settles verifies the line really is visible; only then does it issue
+     * one more (animated) make-visible call.</p>
+     */
+    private void scrollSelectionIntoView(final int attempt) {
         if (editor == null) return;
+        final int targetLine;
         try {
-            editor.post(() -> {
+            targetLine = editor.getCursor().getLeftLine();
+        } catch (Exception e) {
+            return;
+        }
+        if (attempt >= 15) return;
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (!isAdded() || editor == null) return;
+            boolean scrollerBusy = false;
+            boolean visible;
+            try {
+                scrollerBusy = !editor.getScroller().isFinished();
+                int first = editor.getFirstVisibleLine();
+                int last = editor.getLastVisibleLine();
+                visible = targetLine >= first && targetLine <= last;
+            } catch (Exception e) {
+                return;
+            }
+            if (scrollerBusy) {
+                // An animated scroll is already heading to the selection: let it run.
+                scrollSelectionIntoView(attempt + 1);
+                return;
+            }
+            if (!visible) {
                 try {
-                    editor.ensureSelectionVisible();
+                    if (editor.isAttachedToWindow()) editor.ensureSelectionVisible();
                 } catch (Exception ignored) {
                 }
-            });
-        } catch (Exception ignored) {
-        }
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            try {
-                if (!isAdded() || editor == null) return;
-                editor.ensureSelectionVisible();
-            } catch (Exception ignored) {
+                scrollSelectionIntoView(attempt + 1);
             }
-        }, 200);
+        }, 120);
     }
 
     public void showMethodFieldList() {

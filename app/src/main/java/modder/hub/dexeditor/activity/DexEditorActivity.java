@@ -1228,16 +1228,21 @@ public class DexEditorActivity extends BaseActivity {
             targetTab.pendingColumn = column;
             targetTab.pendingQuery = query;
 
-            // If fragment is already ready, navigate now
+            // Navigate as soon as the editor is actually able to scroll. When a
+            // result is opened from the search list the editor ViewPager is still
+            // animating in (or a tab's view was recycled): jumping immediately
+            // computed the scroll against a stale layout and the view ended up
+            // somewhere else until something forced it back. consumePendingNavigation
+            // waits for attach + shown + loaded, so the jump lands right at once.
             UnifiedEditorFragment fragment = getFragmentAtIndex(tabIndex);
-            if (fragment != null && fragment.getEditor() != null && fragment.getEditor().getText().getLineCount() > lineNumber) {
-                fragment.navigateTo(lineNumber, column, query);
-                // Clear pending once navigated
-                targetTab.pendingLine = -1;
-                targetTab.pendingColumn = -1;
-                targetTab.pendingQuery = null;
-            }
+            if (fragment != null) retryPendingNavigation(fragment, 0);
         }
+    }
+
+    private void retryPendingNavigation(UnifiedEditorFragment fragment, final int attempt) {
+        if (fragment.consumePendingNavigation()) return;
+        if (attempt >= 30) return; // ~3s; postInitialize/fragment recreation still consumes it
+        new Handler(Looper.getMainLooper()).postDelayed(() -> retryPendingNavigation(fragment, attempt + 1), 100);
     }
 
     @SuppressLint("NotifyDataSetChanged")
