@@ -14,6 +14,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;

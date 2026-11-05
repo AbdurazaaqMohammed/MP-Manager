@@ -160,7 +160,7 @@ public class BootInspectManager {
                 .setPositiveButton(R.string.yes, (dialog, which) -> {
                     executeRepack(context, session);
                 })
-                .setNegativeButton(R.string.no, (dialog, which) -> {
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {
                     // Discard changes snapshot so subsequent navigation doesn't prompt again unless modified
                     session.takeSnapshot();
                 })
