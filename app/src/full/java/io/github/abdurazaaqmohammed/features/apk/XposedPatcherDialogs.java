@@ -17,7 +17,6 @@ import android.widget.TextView;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
@@ -51,29 +50,22 @@ import com.google.gson.reflect.TypeToken;
 import org.lsposed.patch.ApkPatcher;
 import org.lsposed.patch.LSPatch;
 
-import top.nkbe.npatch.patch.NPatch;
-import top.nkbe.npatch.patch.util.Logger;
-
 /**
  * Xposed-patcher UI (integrated mode): patches an APK with Xposed modules
- * embedded so the result runs standalone without a manager app. Two vendored
- * engines are available — NPatch (top.nkbe.npatch.patch) and the JingMatrix
- * LSPatch fork (org.lsposed.patch). See docs/NPATCH_INTEGRATION.md.
+ * embedded so the result runs standalone without a manager app, using the
+ * vendored JingMatrix LSPatch fork (org.lsposed.patch). See
+ * docs/XPOSED_PATCHER.md.
  *
  * The output is always re-signed with the user's MP-Manager signing key
- * (Sign Settings); the engines' built-in signatures only carry the intermediate
- * APK until that happens.
+ * (Sign Settings); the engine's built-in signature only carries the
+ * intermediate APK until that happens.
  */
-public class NPatchDialogs {
+public class XposedPatcherDialogs {
 
-    private static final String PREF_ENGINE = "npatch_engine";
     private static final String PREF_SIGBYPASS = "npatch_sigbypass";
     private static final String PREF_DEBUGGABLE = "npatch_debuggable";
     private static final String PREF_INJECT_DEX = "npatch_injectdex";
-    private static final String PREF_MICROG = "npatch_microg";
-    private static final String PREF_HIDELIBS = "npatch_hidelibs";
     private static final String PREF_CLEARTEXT = "npatch_cleartext";
-    private static final String PREF_PROVIDER = "npatch_provider";
     private static final String PREF_EXTRACT_LIBS = "npatch_extractlibs";
     private static final String PREF_DOCS_PROVIDER = "npatch_docs_provider";
     private static final String PREF_FAKE_SIGNATURE = "npatch_fake_signature";
@@ -86,29 +78,23 @@ public class NPatchDialogs {
 
     private static final String BKS_PASSWORD = "npatch-bks";
     private static final String BKS_ALIAS = "mpkey";
-    private static final int ENGINE_NPATCH = 0;
-    private static final int ENGINE_LSPATCH = 1;
 
     private final MainActivity context;
     private final DialogUtil dialogUtil;
     private final boolean pane1;
 
-    public NPatchDialogs(MainActivity context, DialogUtil dialogUtil, boolean pane1) {
+    public XposedPatcherDialogs(MainActivity context, DialogUtil dialogUtil, boolean pane1) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.pane1 = pane1;
     }
 
     private static class Options {
-        int engine = ENGINE_NPATCH;
         final List<String> modules = new ArrayList<>();
         int sigBypassLevel = 2;
         boolean debuggable = false;
         boolean injectDex = false;
-        boolean useMicroG = false;
-        boolean hideLibs = false;
         boolean usesCleartextTraffic = false;
-        boolean injectProvider = false;
         boolean extractNativeLibs = false;
         boolean documentsProvider = false;
         boolean fakeSignature = false;
@@ -119,21 +105,16 @@ public class NPatchDialogs {
         int versionCodeValue = 1;
         String labelOverride = "";
         boolean autoSign = true;
-        File userKeyStoreBks;
-        File userKeyStoreDefault;
+        File userKeyStore;
     }
 
-    public void showNPatchDialog(File file, String fileName) {
+    public void showDialog(File file, String fileName) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         Options options = new Options();
-        options.engine = settings.getInt(PREF_ENGINE, ENGINE_NPATCH);
         options.sigBypassLevel = settings.getInt(PREF_SIGBYPASS, 2);
         options.debuggable = settings.getBoolean(PREF_DEBUGGABLE, false);
         options.injectDex = settings.getBoolean(PREF_INJECT_DEX, false);
-        options.useMicroG = settings.getBoolean(PREF_MICROG, false);
-        options.hideLibs = settings.getBoolean(PREF_HIDELIBS, false);
         options.usesCleartextTraffic = settings.getBoolean(PREF_CLEARTEXT, false);
-        options.injectProvider = settings.getBoolean(PREF_PROVIDER, false);
         options.extractNativeLibs = settings.getBoolean(PREF_EXTRACT_LIBS, false);
         options.documentsProvider = settings.getBoolean(PREF_DOCS_PROVIDER, false);
         options.fakeSignature = settings.getBoolean(PREF_FAKE_SIGNATURE, false);
@@ -143,40 +124,14 @@ public class NPatchDialogs {
         options.allowDowngrade = settings.getBoolean(PREF_ALLOW_DOWN, false);
         options.versionCodeValue = settings.getInt(PREF_VERSION_CODE, 1);
         options.labelOverride = settings.getString(PREF_LABEL, "");
-        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_npatch, null, false);
-
-        MaterialButtonToggleGroup engineGroup = dialogView.findViewById(R.id.engine_group);
-        View[] npatchOnly = {
-                dialogView.findViewById(R.id.npatch_microg),
-                dialogView.findViewById(R.id.npatch_hidelibs),
-                dialogView.findViewById(R.id.npatch_provider)};
-        View[] lspatchOnly = {
-                dialogView.findViewById(R.id.npatch_documents_provider),
-                dialogView.findViewById(R.id.npatch_fake_signature),
-                dialogView.findViewById(R.id.npatch_gms_layout)};
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_xposed_patcher, null, false);
 
         MaterialButton bypassBtn = dialogView.findViewById(R.id.npatch_sigbypass);
         Runnable updateBypassLabel = () -> {
-            String[] names = bypassNames(options);
+            String[] names = bypassNames();
             bypassBtn.setText(names[Math.min(options.sigBypassLevel, names.length - 1)]);
         };
-        Runnable updateEngineUi = () -> {
-            boolean npatch = options.engine == ENGINE_NPATCH;
-            for (View v : npatchOnly) v.setVisibility(npatch ? View.VISIBLE : View.GONE);
-            for (View v : lspatchOnly) v.setVisibility(npatch ? View.GONE : View.VISIBLE);
-            if (npatch && options.sigBypassLevel > 2) {
-                options.sigBypassLevel = 2;
-                persistInt(settings, PREF_SIGBYPASS, 2);
-            }
-            updateBypassLabel.run();
-        };
-        engineGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (!isChecked) return;
-            options.engine = checkedId == R.id.lspatch_engine ? ENGINE_LSPATCH : ENGINE_NPATCH;
-            persistInt(settings, PREF_ENGINE, options.engine);
-            updateEngineUi.run();
-        });
-        engineGroup.check(options.engine == ENGINE_LSPATCH ? R.id.lspatch_engine : R.id.npatch_engine);
+        updateBypassLabel.run();
 
         dialogView.findViewById(R.id.npatch_profiles)
                 .setOnClickListener(v -> showProfilesDialog(settings, options, dialogView));
@@ -205,18 +160,13 @@ public class NPatchDialogs {
         });
 
         bypassBtn.setOnClickListener(v -> {
-            String[] names = bypassNames(options);
+            String[] names = bypassNames();
             new MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.npatch_sigbypass_title)
                     .setSingleChoiceItems(names, options.sigBypassLevel, (d, which) -> {
                         options.sigBypassLevel = which;
                         bypassBtn.setText(names[which]);
                         persistInt(settings, PREF_SIGBYPASS, which);
-                        if (which == 0 && options.engine == ENGINE_NPATCH) {
-                            options.hideLibs = false;
-                            ((MaterialSwitch) dialogView.findViewById(R.id.npatch_hidelibs)).setChecked(false);
-                            persist(settings, PREF_HIDELIBS, false);
-                        }
                     })
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
@@ -226,14 +176,8 @@ public class NPatchDialogs {
                 value -> persist(settings, PREF_DEBUGGABLE, value), val -> options.debuggable = val);
         bindSwitch(dialogView, R.id.npatch_injectdex, options.injectDex,
                 value -> persist(settings, PREF_INJECT_DEX, value), val -> options.injectDex = val);
-        bindSwitch(dialogView, R.id.npatch_microg, options.useMicroG,
-                value -> persist(settings, PREF_MICROG, value), val -> options.useMicroG = val);
-        bindSwitch(dialogView, R.id.npatch_hidelibs, options.hideLibs,
-                value -> persist(settings, PREF_HIDELIBS, value), val -> options.hideLibs = val);
         bindSwitch(dialogView, R.id.npatch_cleartext, options.usesCleartextTraffic,
                 value -> persist(settings, PREF_CLEARTEXT, value), val -> options.usesCleartextTraffic = val);
-        bindSwitch(dialogView, R.id.npatch_provider, options.injectProvider,
-                value -> persist(settings, PREF_PROVIDER, value), val -> options.injectProvider = val);
         bindSwitch(dialogView, R.id.npatch_extractlibs, options.extractNativeLibs,
                 value -> persist(settings, PREF_EXTRACT_LIBS, value), val -> options.extractNativeLibs = val);
         bindSwitch(dialogView, R.id.npatch_documents_provider, options.documentsProvider,
@@ -303,8 +247,6 @@ public class NPatchDialogs {
         dialogView.findViewById(R.id.sign_settings)
                 .setOnClickListener(context.uiHelper.showSignSettingsDialog());
 
-        updateEngineUi.run();
-
         dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.npatch_title, fileName))
                 .setView(dialogView)
@@ -323,15 +265,11 @@ public class NPatchDialogs {
 
     /** A named snapshot of every patch option, persisted as JSON in prefs. */
     public static class Profile {
-        int engine;
         List<String> modules = new ArrayList<>();
         int sigBypassLevel = 2;
         boolean debuggable;
         boolean injectDex;
-        boolean useMicroG;
-        boolean hideLibs;
         boolean usesCleartextTraffic;
-        boolean injectProvider;
         boolean extractNativeLibs;
         boolean documentsProvider;
         boolean fakeSignature;
@@ -344,15 +282,11 @@ public class NPatchDialogs {
 
         static Profile of(Options o) {
             Profile p = new Profile();
-            p.engine = o.engine;
             p.modules = new ArrayList<>(o.modules);
             p.sigBypassLevel = o.sigBypassLevel;
             p.debuggable = o.debuggable;
             p.injectDex = o.injectDex;
-            p.useMicroG = o.useMicroG;
-            p.hideLibs = o.hideLibs;
             p.usesCleartextTraffic = o.usesCleartextTraffic;
-            p.injectProvider = o.injectProvider;
             p.extractNativeLibs = o.extractNativeLibs;
             p.documentsProvider = o.documentsProvider;
             p.fakeSignature = o.fakeSignature;
@@ -366,16 +300,12 @@ public class NPatchDialogs {
         }
 
         void into(Options o) {
-            o.engine = engine;
             o.modules.clear();
             o.modules.addAll(modules);
             o.sigBypassLevel = sigBypassLevel;
             o.debuggable = debuggable;
             o.injectDex = injectDex;
-            o.useMicroG = useMicroG;
-            o.hideLibs = hideLibs;
             o.usesCleartextTraffic = usesCleartextTraffic;
-            o.injectProvider = injectProvider;
             o.extractNativeLibs = extractNativeLibs;
             o.documentsProvider = documentsProvider;
             o.fakeSignature = fakeSignature;
@@ -409,8 +339,7 @@ public class NPatchDialogs {
 
     /**
      * Lists saved profiles (tap = load, long-press = delete) and lets the user
-     * save the current options - engine, modules and everything else - under a
-     * name.
+     * save the current options - modules and everything else - under a name.
      */
     private void showProfilesDialog(SharedPreferences settings, Options options, View dialogView) {
         Map<String, Profile> profiles = loadProfiles(settings);
@@ -433,7 +362,6 @@ public class NPatchDialogs {
         list.setOnItemClickListener((parent, view, position, id) -> {
             String name = names.get(position);
             profiles.get(name).into(options);
-            settings.edit().putInt(PREF_ENGINE, options.engine).apply();
             applyLoadedProfile(dialogView, options);
             Extensions.showMessage(context, context.getString(R.string.npatch_profile_loaded, name));
         });
@@ -491,14 +419,9 @@ public class NPatchDialogs {
      * {@code options} ends up mirroring the profile.
      */
     private void applyLoadedProfile(View dialogView, Options options) {
-        ((MaterialButtonToggleGroup) dialogView.findViewById(R.id.engine_group))
-                .check(options.engine == ENGINE_LSPATCH ? R.id.lspatch_engine : R.id.npatch_engine);
         bindSwitchSilently(dialogView, R.id.npatch_debuggable, options.debuggable);
         bindSwitchSilently(dialogView, R.id.npatch_injectdex, options.injectDex);
-        bindSwitchSilently(dialogView, R.id.npatch_microg, options.useMicroG);
-        bindSwitchSilently(dialogView, R.id.npatch_hidelibs, options.hideLibs);
         bindSwitchSilently(dialogView, R.id.npatch_cleartext, options.usesCleartextTraffic);
-        bindSwitchSilently(dialogView, R.id.npatch_provider, options.injectProvider);
         bindSwitchSilently(dialogView, R.id.npatch_extractlibs, options.extractNativeLibs);
         bindSwitchSilently(dialogView, R.id.npatch_documents_provider, options.documentsProvider);
         bindSwitchSilently(dialogView, R.id.npatch_fake_signature, options.fakeSignature);
@@ -508,25 +431,21 @@ public class NPatchDialogs {
         ((EditText) dialogView.findViewById(R.id.npatch_versioncode)).setText(String.valueOf(options.versionCodeValue));
         ((EditText) dialogView.findViewById(R.id.npatch_gms_replacement)).setText(options.gmsReplacement);
         ((EditText) dialogView.findViewById(R.id.npatch_label)).setText(options.labelOverride);
+        updateBypassLabel(dialogView, options);
     }
 
-    private void bindSwitchSilently(View root, int id, boolean value) {
-        MaterialSwitch sw = root.findViewById(id);
-        sw.setChecked(value);
+    private void updateBypassLabel(View dialogView, Options options) {
+        MaterialButton bypassBtn = dialogView.findViewById(R.id.npatch_sigbypass);
+        String[] names = bypassNames();
+        bypassBtn.setText(names[Math.min(options.sigBypassLevel, names.length - 1)]);
     }
 
-    private String[] bypassNames(Options options) {
-        if (options.engine == ENGINE_LSPATCH) {
-            return new String[]{
-                    context.getString(R.string.npatch_bypass_lsp_0),
-                    context.getString(R.string.npatch_bypass_lsp_1),
-                    context.getString(R.string.npatch_bypass_lsp_2),
-                    context.getString(R.string.npatch_bypass_lsp_3)};
-        }
+    private String[] bypassNames() {
         return new String[]{
-                context.getString(R.string.npatch_sigbypass_0),
-                context.getString(R.string.npatch_sigbypass_1),
-                context.getString(R.string.npatch_sigbypass_2)};
+                context.getString(R.string.npatch_bypass_lsp_0),
+                context.getString(R.string.npatch_bypass_lsp_1),
+                context.getString(R.string.npatch_bypass_lsp_2),
+                context.getString(R.string.npatch_bypass_lsp_3)};
     }
 
     private interface SwitchSetter {
@@ -544,6 +463,11 @@ public class NPatchDialogs {
             setter.set(isChecked);
             persist.persist(isChecked);
         });
+    }
+
+    private void bindSwitchSilently(View root, int id, boolean value) {
+        MaterialSwitch sw = root.findViewById(id);
+        sw.setChecked(value);
     }
 
     private void persist(SharedPreferences settings, String key, boolean value) {
@@ -574,7 +498,7 @@ public class NPatchDialogs {
 
     private void startPatch(File file, Options options) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        NpatchBridgeLogger npatchLogger = new NpatchBridgeLogger(pm);
+        LsBridgeLogger logger = new LsBridgeLogger(pm);
         final File[] resultHolder = new File[1];
         Runnable finish = () -> {
             File produced = resultHolder[0];
@@ -592,22 +516,22 @@ public class NPatchDialogs {
         };
         if (options.autoSign) {
             // Resolve (and possibly password-prompt) the user's key up front on
-            // the UI thread, then hand it to the engine (-k). The engines sign
-            // their data-multiplexed output in place with the user's key; a
+            // the UI thread, then hand it to the engine (-k). The engine signs
+            // its data-multiplexed output in place with the user's key; a
             // post-hoc apksig pass would re-serialize the zip and materialize
             // the entry links, roughly doubling the file size.
             SignWrapper.requireAuth(context, sw -> new Thread(() -> {
                 try {
                     exportUserKeys(sw, options);
-                    File produced = runEngine(file, options, pm);
+                    File produced = runLSPatch(file, options, logger);
                     resultHolder[0] = produced;
                     pm.dismiss();
                     finish.run();
                 } catch (Throwable t) {
-                    npatchLogger.e(rootCauseMessage(t));
+                    logger.e(rootCauseMessage(t));
                     try {
                         PrintWriter pw = new PrintWriter(
-                                new File(context.getCacheDir(), "npatch-last-error.txt"), "UTF-8");
+                                new File(context.getCacheDir(), "xposed-patcher-last-error.txt"), "UTF-8");
                         pw.print(rootCauseMessage(t));
                         for (Throwable c = t; c != null; c = c.getCause()) {
                             for (StackTraceElement el : c.getStackTrace()) pw.println("    at " + el);
@@ -622,12 +546,12 @@ public class NPatchDialogs {
         } else {
             new Thread(() -> {
                 try {
-                    File produced = runEngine(file, options, pm);
+                    File produced = runLSPatch(file, options, logger);
                     resultHolder[0] = produced;
                     pm.dismiss();
                     finish.run();
                 } catch (Throwable t) {
-                    npatchLogger.e(t.getMessage() == null ? t.toString() : t.getMessage());
+                    logger.e(t.getMessage() == null ? t.toString() : t.getMessage());
                     pm.dismiss();
                     context.handler.post(() -> new ErrorUtil(context).showError(t));
                 }
@@ -636,26 +560,24 @@ public class NPatchDialogs {
     }
 
     /**
-     * Writes the user's configured signing key into engine-readable keystores
-     * in the app-private cache (deleted on exit). NPatch hardcodes BKS; LSPatch
-     * reads KeyStore.getDefaultType(), which is JKS on some Android versions
-     * and BKS on others — so both formats are produced and verified.
+     * Writes the user's configured signing key into an engine-readable
+     * keystore in the app-private cache (deleted on exit). LSPatch reads
+     * KeyStore.getDefaultType(), which is JKS on some Android versions and
+     * BKS on others; if that type cannot hold the key, the BKS format is
+     * produced instead.
      */
     private void exportUserKeys(SignWrapper sw, Options options) throws Exception {
-        options.userKeyStoreBks = new File(context.getCacheDir(), "npatch-user-key.bks");
-        options.userKeyStoreDefault = new File(context.getCacheDir(), "npatch-user-key."
-                + KeyStore.getDefaultType().toLowerCase(Locale.ROOT));
-        sw.exportKey(options.userKeyStoreBks, "BKS", BKS_PASSWORD, BKS_ALIAS);
+        String defaultType = KeyStore.getDefaultType();
+        File keystore = new File(context.getCacheDir(), "xposed-user-key."
+                + defaultType.toLowerCase(Locale.ROOT));
         try {
-            sw.exportKey(options.userKeyStoreDefault, KeyStore.getDefaultType(),
-                    BKS_PASSWORD, BKS_ALIAS);
+            sw.exportKey(keystore, defaultType, BKS_PASSWORD, BKS_ALIAS);
         } catch (Exception e) {
-            // LSPatch falls back gracefully only if we pass a file it can open;
-            // if the default type cannot hold the key, hand it the BKS instead.
-            options.userKeyStoreDefault = options.userKeyStoreBks;
+            keystore = new File(context.getCacheDir(), "xposed-user-key.bks");
+            sw.exportKey(keystore, "BKS", BKS_PASSWORD, BKS_ALIAS);
         }
-        options.userKeyStoreBks.deleteOnExit();
-        options.userKeyStoreDefault.deleteOnExit();
+        options.userKeyStore = keystore;
+        keystore.deleteOnExit();
     }
 
     private static String rootCauseMessage(Throwable t) {
@@ -670,77 +592,11 @@ public class NPatchDialogs {
         return sb.toString();
     }
 
-    private File runEngine(File file, Options options, ProgressManager pm) throws Exception {
-        if (options.engine == ENGINE_LSPATCH) {
-            return runLSPatch(file, options, new LsBridgeLogger(pm));
-        }
-        return runNPatch(file, options, npatchLoggerOf(pm));
-    }
-
-    private static NpatchBridgeLogger npatchLoggerOf(ProgressManager pm) {
-        return new NpatchBridgeLogger(pm);
-    }
-
-    /**
-     * Runs the vendored NPatch engine in integrated mode, mirroring NPatch
-     * Manager's Patcher.Options.toStringArray() with useManager=false. The
-     * "-npa" built-in signature only carries the APK until the caller re-signs
-     * it with the user's key.
-     */
-    private File runNPatch(File srcApk, Options options, Logger logger) throws Exception {
-        File outputDir = outputDir(srcApk);
-        final String baseName = baseName(srcApk);
-        List<String> args = new ArrayList<>();
-        args.add("-o");
-        args.add(outputDir.getAbsolutePath());
-        args.add("--force");
-        if (options.debuggable) args.add("-d");
-        args.add("-l");
-        args.add(String.valueOf(options.sigBypassLevel));
-        if (options.injectDex) args.add("--injectdex");
-        if (options.allowDowngrade) {
-            args.add("--allowdown");
-            args.add("--versioncode");
-            args.add(String.valueOf(options.versionCodeValue));
-        }
-        if (options.overrideTargetSdk) {
-            args.add("--override-target-sdk");
-            args.add("--target-sdk");
-            args.add(String.valueOf(options.targetSdkValue));
-        }
-        for (String module : options.modules) {
-            args.add("-m");
-            args.add(module);
-        }
-        if (options.injectProvider) args.add("--provider");
-        if (options.useMicroG) args.add("--useMicroG");
-        if (options.hideLibs && options.sigBypassLevel > 0) args.add("--hidelibs");
-        if (options.usesCleartextTraffic) args.add("--cleartext");
-        if (!TextUtils.isEmpty(options.labelOverride.trim())) {
-            args.add("--name");
-            args.add(options.labelOverride.trim());
-        }
-        if (options.extractNativeLibs) args.add("--extract-libs");
-        if (options.userKeyStoreBks != null) {
-            args.add("-k");
-            args.add(options.userKeyStoreBks.getAbsolutePath());
-            args.add(BKS_PASSWORD);
-            args.add(BKS_ALIAS);
-            args.add(BKS_PASSWORD);
-        } else {
-            args.add("-npa");
-        }
-        args.add(srcApk.getAbsolutePath());
-
-        new NPatch(logger, args.toArray(new String[0])).doCommandLine();
-        return normalizeOutput(outputDir, baseName, top.nkbe.npatch.share.Constants.PATCH_FILE_SUFFIX);
-    }
-
     /**
      * Runs the vendored LSPatch (JingMatrix) engine via its CLI front end and
-     * ApkPatcher. Parse errors throw ParameterException (unlike NPatch's silent
-     * help-flag path), and the engine raises PatchException with an actionable
-     * message. Its built-in keystore signature is likewise replaced right after.
+     * ApkPatcher. Parse errors throw ParameterException, and the engine raises
+     * PatchException with an actionable message. Its built-in keystore
+     * signature is likewise replaced right after by the caller's Auto Sign key.
      */
     private File runLSPatch(File srcApk, Options options, org.lsposed.patch.util.Logger logger) throws Exception {
         File outputDir = outputDir(srcApk);
@@ -777,9 +633,9 @@ public class NPatchDialogs {
             args.add("--name");
             args.add(options.labelOverride.trim());
         }
-        if (options.userKeyStoreDefault != null) {
+        if (options.userKeyStore != null) {
             args.add("-k");
-            args.add(options.userKeyStoreDefault.getAbsolutePath());
+            args.add(options.userKeyStore.getAbsolutePath());
             args.add(BKS_PASSWORD);
             args.add(BKS_ALIAS);
             args.add(BKS_PASSWORD);
@@ -804,7 +660,7 @@ public class NPatchDialogs {
     }
 
     /**
-     * The engines write {@code <base>-<verCode><suffix>} into the output dir;
+     * The engine writes {@code <base>-<verCode><suffix>} into the output dir;
      * pick the newest and normalize to {@code <base><suffix>} (with _2, _3…
      * dedup suffixes).
      */
@@ -840,31 +696,7 @@ public class NPatchDialogs {
         return renamed;
     }
 
-    /** Bridges NPatch's Logger to the progress dialog text. */
-    private static class NpatchBridgeLogger extends Logger {
-        final ProgressManager pm;
-
-        NpatchBridgeLogger(ProgressManager pm) {
-            this.pm = pm;
-        }
-
-        @Override
-        public void d(String msg) {
-            if (verbose) pm.setText(msg);
-        }
-
-        @Override
-        public void i(String msg) {
-            pm.setText(msg);
-        }
-
-        @Override
-        public void e(String msg) {
-            pm.setText(msg);
-        }
-    }
-
-    /** Bridges LSPatch's Logger (same d/i/e shape, different class) to the progress dialog. */
+    /** Bridges LSPatch's Logger to the progress dialog. */
     private static class LsBridgeLogger extends org.lsposed.patch.util.Logger {
         final ProgressManager pm;
 

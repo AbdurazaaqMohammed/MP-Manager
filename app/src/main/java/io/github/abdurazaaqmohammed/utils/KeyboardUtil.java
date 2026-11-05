@@ -15,7 +15,13 @@ public final class KeyboardUtil {
         if (dialog == null || input == null) return;
         try {
             if (dialog.getWindow() != null)
-                dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                // ADJUST_RESIZE makes the window shrink to the space above the
+                // keyboard (the ScrollView inside then scrolls) instead of the
+                // device default, which on several ROMs pans the full-height
+                // window up and hides everything below the focused field.
+                dialog.getWindow().setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
+                                | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         } catch (Exception ignored) {
         }
         dialog.setOnShowListener(d -> {

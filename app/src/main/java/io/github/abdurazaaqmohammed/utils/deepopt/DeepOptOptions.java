@@ -20,8 +20,13 @@ public class DeepOptOptions {
     public boolean preserveDebug = true;
     /** Re-parse the output and verify reference integrity; fall back to repack-only on failure. */
     public boolean verifyOutput = true;
-    /** Max empty-method cascade passes. */
-    public int maxPasses = 5;
+    /**
+     * Max empty-method cascade passes. The cascade rewrites bytecode (nops dead call
+     * sites + dead-code elimination), which is a small size win but the riskiest pass of
+     * the pipeline - off by default so deep optimize never touches instruction bodies
+     * unless explicitly requested.
+     */
+    public int maxPasses = 0;
     /** Phase B: shorten resource entry names (opt-in, experimental; skipped when dynamic lookups or native libs exist). */
     public boolean shortenNames = false;
     /**

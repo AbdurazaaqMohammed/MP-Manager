@@ -744,8 +744,19 @@ public class RootManager {
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = executeFs("rm -rf -- " + escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        // The FUSE view of /storage/emulated is frequently unwritable (or not
+        // even mounted) for the su shell, while the raw backing directory
+        // /data/media/X is - stat/chmod already go through the alias for the
+        // same reason. Without it, deletes inside Android/{data,obb,media}
+        // failed silently on many ROMs.
+        String target = emulatedAlias(path);
+        String failure = rmProbe("rm -rf", target, 120);
+        if (failure != null) {
+            // One retry on the raw path, for setups where the alias does not
+            // resolve (e.g. secondary users with a different media node).
+            failure = rmProbe("rm -rf", path, 120);
+        }
+        if (failure != null) throw new IOException("delete failed: " + failure);
         invalidateListCache();
     }
 
@@ -756,9 +767,43 @@ public class RootManager {
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = executeFs("rm -f -- " + escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        String target = emulatedAlias(path);
+        String failure = rmProbe("rm -f", target, 30);
+        if (failure != null) failure = rmProbe("rm -f", path, 30);
+        if (failure != null) throw new IOException("delete failed: " + failure);
         invalidateListCache();
+    }
+
+    /**
+     * Runs one {@code rm} followed by an existence probe of the same path.
+     *
+     * <p>The probe matters because an {@code rm} that silently did nothing (a
+     * FUSE denial inside Android/data, a namespace where the target is not
+     * visible) still exits 0, so only {@code [ ! -e ]} can tell the two cases
+     * apart; the probe reports the @@MPFAIL marker the drain thread forwards.
+     *
+     * @return null when the path is gone, otherwise the failure detail
+     */
+    private String rmProbe(String rmKind, String target, int timeoutSeconds) {
+        java.util.concurrent.atomic.AtomicBoolean probeFailed =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        String arg = escapeShellArg(target);
+        ShellResult result = executeFs(rmKind + " -- " + arg
+                + " ; [ ! -e " + arg + " ] || echo @@MPFAIL", timeoutSeconds,
+                new ShellProgress.Listener() {
+                    @Override
+                    public void onProgress(int filesDone, long bytesDone) {
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        probeFailed.set(true);
+                    }
+                });
+        if (!result.isSuccess() || probeFailed.get()) {
+            return result.error == null || result.error.isEmpty() ? "path still exists" : result.error;
+        }
+        return null;
     }
 
     public void rename(String oldPath, String newPath) throws IOException {
@@ -1047,14 +1092,20 @@ public class RootManager {
 
         StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
         for (String path : targets) {
-            String arg = escapeShellArg(path);
+            // Delete through the /data/media alias (see {@link #delete}): the
+            // FUSE view often rejects even the root shell inside Android/data.
+            String arg = escapeShellArg(emulatedAlias(path));
             cmd.append(" ; find ").append(arg).append(" -depth -type d 2>/dev/null")
                     .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
                     .append(" echo @@MPPROG 1 0; done");
             // Whatever is left (the root itself, files at the top level) goes in
             // one more call, and still reports, so the counter always lands on
-            // the value the dialog was sized with.
-            cmd.append(" ; rm -rf -- ").append(arg).append(" ; echo @@MPPROG 1 0");
+            // the value the dialog was sized with. The probe afterwards turns a
+            // silent rm failure (FUSE denial, namespace mismatch) into @@MPFAIL
+            // so the caller falls back / reports instead of assuming success.
+            cmd.append(" ; rm -rf -- ").append(arg)
+                    .append(" ; [ ! -e ").append(arg).append(" ] || echo ").append("@@MPFAIL")
+                    .append(" ; echo @@MPPROG 1 0");
         }
         ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay, control);
         if (failed.get()) throw new IOException("delete failed: " + result.error);
@@ -1070,7 +1121,9 @@ public class RootManager {
         if (paths == null || paths.isEmpty()) return 0;
         StringBuilder cmd = new StringBuilder("echo @@MPDIRS $(");
         cmd.append("find");
-        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        // Same alias {@link #deleteTree} walks, so the dialog is sized by the
+        // same tree the delete actually sees.
+        for (String p : paths) cmd.append(' ').append(escapeShellArg(emulatedAlias(p)));
         cmd.append(" -type d 2>/dev/null | wc -l)");
         ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
         return parseCountMarker(r, "@@MPDIRS");

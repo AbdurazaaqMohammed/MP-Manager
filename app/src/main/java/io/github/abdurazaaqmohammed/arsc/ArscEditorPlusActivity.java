@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.arsc;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -130,6 +131,13 @@ public class ArscEditorPlusActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Restore the strings filter from the last session so it applies to
+        // the freshly loaded strings, not only after re-opening the dialog.
+        SharedPreferences bootPrefs = getSharedPreferences("search_prefs", MODE_PRIVATE);
+        stringsFilterQuery = bootPrefs.getString("arsc_strings_filter_query", stringsFilterQuery);
+        stringsMatchCase = bootPrefs.getBoolean("arsc_strings_filter_case", stringsMatchCase);
+        stringsRegex = bootPrefs.getBoolean("arsc_strings_filter_regex", stringsRegex);
+        stringsExact = bootPrefs.getBoolean("arsc_strings_filter_exact", stringsExact);
         mode = getIntent().getStringExtra("arscMode");
         if (mode == null) mode = MODE_PLUS;
         String path = getIntent().getStringExtra("path");
@@ -303,6 +311,16 @@ public class ArscEditorPlusActivity extends BaseActivity {
         layoutExcludeList.setVisibility(View.GONE);
         cbExactlyMatch.setVisibility(View.GONE);
         cbHex.setVisibility(View.GONE);
+        // Options persist across sessions under arsc_* keys (same file the
+        // dex editor uses, values kept separate since the types differ).
+        SharedPreferences prefs = getSharedPreferences("search_prefs", MODE_PRIVATE);
+        lastMatchCase = prefs.getBoolean("arsc_match_case", lastMatchCase);
+        lastIsRegex = prefs.getBoolean("arsc_is_regex", lastIsRegex);
+        lastSearchSubfolders = prefs.getBoolean("arsc_search_subfolders", lastSearchSubfolders);
+        String savedType = prefs.getString("arsc_search_type", null);
+        if (savedType != null) lastSearchType = savedType;
+        String savedPath = prefs.getString("arsc_search_path", null);
+        if (savedPath != null && !savedPath.isEmpty()) lastSearchPath = savedPath;
         if (lastSearchQuery == null || lastSearchQuery.isEmpty())
             lastSearchQuery = SearchHistoryHelper.lastQuery(this, SearchHistoryHelper.KEY_ARSC_PLUS);
         etFind.setText(lastSearchQuery == null ? "" : lastSearchQuery);
@@ -390,6 +408,13 @@ public class ArscEditorPlusActivity extends BaseActivity {
             lastSearchSubfolders = cbSearchSubfolders.isChecked();
             lastMatchCase = matchCase;
             lastIsRegex = regex;
+            prefs.edit()
+                    .putBoolean("arsc_match_case", matchCase)
+                    .putBoolean("arsc_is_regex", regex)
+                    .putBoolean("arsc_search_subfolders", lastSearchSubfolders)
+                    .putString("arsc_search_type", picked)
+                    .putString("arsc_search_path", lastSearchPath)
+                    .apply();
             if (!q.trim().isEmpty()) SearchHistoryHelper.push(this, SearchHistoryHelper.KEY_ARSC_PLUS, q);
             selectPage(2);
             runSearch();
@@ -422,6 +447,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             stringsMatchCase = false;
             stringsRegex = false;
             stringsExact = false;
+            saveStringsFilter();
             stringsAdapter.clearStaged();
             updateStringsApply();
             refreshStrings();
@@ -525,6 +551,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     stringsMatchCase = false;
                     stringsRegex = false;
                     stringsExact = false;
+                    saveStringsFilter();
                     refreshStrings();
                 })
                 .setPositiveButton(R.string.apply, (d, w) -> {
@@ -541,8 +568,19 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     stringsMatchCase = cbCase.isChecked();
                     stringsRegex = cbRegex.isChecked();
                     stringsExact = cbExact.isChecked();
+                    saveStringsFilter();
                     refreshStrings();
                 }).show();
+    }
+
+    /** Keeps the strings filter across sessions (also re-applied on create). */
+    private void saveStringsFilter() {
+        getSharedPreferences("search_prefs", MODE_PRIVATE).edit()
+                .putString("arsc_strings_filter_query", stringsFilterQuery)
+                .putBoolean("arsc_strings_filter_case", stringsMatchCase)
+                .putBoolean("arsc_strings_filter_regex", stringsRegex)
+                .putBoolean("arsc_strings_filter_exact", stringsExact)
+                .apply();
     }
 
     private void showStringsReplaceDialog() {
@@ -560,11 +598,15 @@ public class ArscEditorPlusActivity extends BaseActivity {
         root.addView(replBox, replParams);
         CheckBox cbCase = new MaterialCheckBox(this);
         cbCase.setText(R.string.match_case);
-        cbCase.setChecked(true);
         CheckBox cbRegex = new MaterialCheckBox(this);
         cbRegex.setText(R.string.regex);
         CheckBox cbExact = new MaterialCheckBox(this);
         cbExact.setText(R.string.match_exactly);
+        // Remembered from the last replace, case-insensitive by default.
+        SharedPreferences replacePrefs = getSharedPreferences("search_prefs", MODE_PRIVATE);
+        cbCase.setChecked(replacePrefs.getBoolean("arsc_strings_replace_case", true));
+        cbRegex.setChecked(replacePrefs.getBoolean("arsc_strings_replace_regex", false));
+        cbExact.setChecked(replacePrefs.getBoolean("arsc_strings_replace_exact", false));
         root.addView(cbCase);
         root.addView(cbRegex);
         root.addView(cbExact);
@@ -587,6 +629,11 @@ public class ArscEditorPlusActivity extends BaseActivity {
                             return;
                         }
                     }
+                    replacePrefs.edit()
+                            .putBoolean("arsc_strings_replace_case", mc)
+                            .putBoolean("arsc_strings_replace_regex", rx)
+                            .putBoolean("arsc_strings_replace_exact", ex)
+                            .apply();
                     stageStringsReplace(find, repl, mc, rx, ex);
                 }).show();
     }

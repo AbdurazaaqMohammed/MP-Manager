@@ -1810,9 +1810,7 @@ Layout Inspector
     <string name="failed">Error</string>
     <string name="npatch_integrated">Parcheador Xposed</string>
     <string name="npatch_title">Parchear con Xposed: %1$s</string>
-    <string name="npatch_hint">Parchea el APK con NPatch o LSPatch (modo integrado): se incrusta un cargador Xposed para que los módulos seleccionados funcionen sin una app gestora. La salida se firma con la clave configurada en Ajustes de firma — se crea un nuevo APK parcheado.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">Parchea el APK con LSPatch (modo integrado): se incrusta un cargador Xposed para que los módulos seleccionados funcionen sin una app gestora. La salida se firma con la clave configurada en Ajustes de firma — se crea un nuevo APK parcheado.</string>
     <string name="npatch_bypass_lsp_0">Evasión: ninguna</string>
     <string name="npatch_bypass_lsp_1">Evasión: PM</string>
     <string name="npatch_bypass_lsp_2">Evasión: PM + OpenAT</string>
@@ -1906,15 +1904,9 @@ Layout Inspector
     <string name="npatch_embed_modules_title">Selecciona los APK de módulos a incrustar</string>
     <string name="npatch_module_missing">Módulo no encontrado: %1$s</string>
     <string name="npatch_sigbypass_title">Nivel de evasión de firma</string>
-    <string name="npatch_sigbypass_0">Evasión: ninguna</string>
-    <string name="npatch_sigbypass_1">Evasión: básica</string>
-    <string name="npatch_sigbypass_2">Evasión: alta</string>
     <string name="npatch_debuggable">Hacer la app depurable</string>
     <string name="npatch_injectdex">Inyectar el dex del cargador en la secuencia principal (hooks de subprocesos)</string>
-    <string name="npatch_microg">Redirigir llamadas GMS a MicroG</string>
-    <string name="npatch_hidelibs">Ocultar libs (sanitizar la visibilidad de bibliotecas ART/sistema)</string>
     <string name="npatch_cleartext">Forzar usesCleartextTraffic (HTTP sin cifrar)</string>
-    <string name="npatch_provider">Inyectar proveedor de archivos de datos MT</string>
     <string name="npatch_extractlibs">Forzar extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">Anular la versión de SDK objetivo</string>
     <string name="npatch_targetsdk_value">Valor de SDK objetivo</string>
@@ -1926,7 +1918,7 @@ Layout Inspector
     <string name="npatch_done">Parcheado: %1$s</string>
     <string name="npatch_install_prompt">Se creó %1$s. Los módulos están incrustados — la app funciona de forma independiente. ¿Instalarla?</string>
     <string name="xposed_patcher_lite_title">Parcheador Xposed</string>
-    <string name="xposed_patcher_lite_message">Los motores del parcheador Xposed (NPatch / LSPatch) no se incluyen en la versión lite. Instala la versión completa de MP Manager para parchear APK con módulos incrustados.</string>
+    <string name="xposed_patcher_lite_message">El motor del parcheador Xposed (LSPatch) no se incluye en la versión lite. Instala la versión completa de MP Manager para parchear APK con módulos incrustados.</string>
     <string name="op_copying">COPIAR</string>
     <string name="op_moving">MOVER</string>
     <string name="op_deleting">ELIMINAR</string>

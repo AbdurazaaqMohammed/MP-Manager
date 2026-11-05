@@ -41,7 +41,6 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.apk.axml.aXMLDecoder;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -87,7 +86,6 @@ import io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
-import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
@@ -898,17 +896,12 @@ public class FileOpener {
                             context.startActivity(rootAwareEditorIntent(readable, file)
                                     .putExtra("path", readable.getPath()));
                         } else if (isBinary) {
-                            try (InputStream is2 = FileUtils.getInputStream(readable)) {
-                                aXMLDecoder decoder = new aXMLDecoder(is2);
-                                String decodedText = decoder.decodeAsString().trim();
-                                context.startActivity(rootAwareEditorIntent(readable, file)
-                                        .putExtra(Intent.EXTRA_TEXT, decodedText)
-                                        .putExtra("axml", true)
-                                        .putExtra("poolEncoding", decoder.getPoolEncoding() == com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UTF8 ? "UTF8" : "UNICODE")
-                                        .putExtra("path", readable.getPath()));
-                            } catch (Exception e) {
-                                new ErrorUtil(context).showError(e);
-                            }
+                            // Decoded by the editor from the staged copy (see the
+                            // note in handleFileClick): pre-decoded text can blow
+                            // the binder transaction limit on large binary XML.
+                            context.startActivity(rootAwareEditorIntent(readable, file)
+                                    .putExtra("axml", true)
+                                    .putExtra("path", readable.getPath()));
                         } else {
                             formatXmlFile(readable, file, fileName);
                         }
@@ -1145,30 +1138,12 @@ public class FileOpener {
             || FileUtils.isAxml(file) || FileUtils.isAbx(file)) {
             withReadableCopy(file, readable -> {
                 try {
-                    boolean abx;
-                    try (InputStream is = FileUtils.getInputStream(readable)) {
-                        abx = FileUtils.isAbx(is);
-                    }
-                    boolean axml = false;
-                    if (!abx) try (InputStream is = FileUtils.getInputStream(readable)) {
-                        axml = FileUtils.isAxml(is);
-                    }
-                    if (abx) try (InputStream is2 = FileUtils.getInputStream(readable)) {
-                        context.startActivity(rootAwareEditorIntent(readable, file)
-                                .putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is2).trim())
-                                .putExtra("abx", true)
-                                .putExtra("path", readable.getPath()));
-                    }
-                    else if (axml) try (InputStream is2 = FileUtils.getInputStream(readable)) {
-                        aXMLDecoder decoder = new aXMLDecoder(is2);
-                        String decodedText = decoder.decodeAsString().trim();
-                        context.startActivity(rootAwareEditorIntent(readable, file)
-                                .putExtra(Intent.EXTRA_TEXT, decodedText)
-                                .putExtra("axml", true)
-                                .putExtra("poolEncoding", decoder.getPoolEncoding() == com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UTF8 ? "UTF8" : "UNICODE")
-                                .putExtra("path", readable.getPath()));
-                    }
-                    else context.startActivity(rootAwareEditorIntent(readable, file)
+                    // Binary XML (ABX/AXML) is decoded by TextEditorActivity from
+                    // the staged copy; decoding here and shipping the text through
+                    // the intent can exceed the binder transaction limit on big
+                    // system XMLs (/data/system/packages.xml) and crash with
+                    // "Failure from system" (TransactionTooLargeException).
+                    context.startActivity(rootAwareEditorIntent(readable, file)
                             .putExtra("path", readable.getPath()));
                 } catch (Exception e) {
                     new ErrorUtil(context).showError(e);
@@ -1541,6 +1516,11 @@ public class FileOpener {
                                             } else {
                                                 context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
                                             }
+                                        } catch (OutOfMemoryError oom) {
+                                            // Errors are not caught below; a huge
+                                            // .apks should fail with a message,
+                                            // not a crash.
+                                            context.runOnUiThread(() -> Extensions.showMessage(context, R.string.out_of_memory_operation));
                                         } catch (Exception e) {
                                             context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
                                         }

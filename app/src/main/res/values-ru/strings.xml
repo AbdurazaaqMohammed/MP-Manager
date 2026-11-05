@@ -1791,9 +1791,7 @@
     <string name="failed">Ошибка</string>
     <string name="npatch_integrated">Xposed-патчер</string>
     <string name="npatch_title">Патчить с Xposed: %1$s</string>
-    <string name="npatch_hint">Патчит APK с помощью NPatch или LSPatch (интегрированный режим): встраивается загрузчик Xposed, так что выбранные модули работают без приложения-менеджера. Результат подписывается ключом из настроек подписи — создаётся новый пропатченный APK.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">Патчит APK с помощью LSPatch (интегрированный режим): встраивается загрузчик Xposed, так что выбранные модули работают без приложения-менеджера. Результат подписывается ключом из настроек подписи — создаётся новый пропатченный APK.</string>
     <string name="npatch_bypass_lsp_0">Обход: нет</string>
     <string name="npatch_bypass_lsp_1">Обход: PM</string>
     <string name="npatch_bypass_lsp_2">Обход: PM + OpenAT</string>
@@ -1887,15 +1885,9 @@
     <string name="npatch_embed_modules_title">Выберите APK модулей для встраивания</string>
     <string name="npatch_module_missing">Модуль не найден: %1$s</string>
     <string name="npatch_sigbypass_title">Уровень обхода подписи</string>
-    <string name="npatch_sigbypass_0">Обход: нет</string>
-    <string name="npatch_sigbypass_1">Обход: базовый</string>
-    <string name="npatch_sigbypass_2">Обход: высокий</string>
     <string name="npatch_debuggable">Сделать приложение отлаживаемым</string>
     <string name="npatch_injectdex">Внедрить dex загрузчика в основную последовательность (хуки subprocess)</string>
-    <string name="npatch_microg">Перенаправлять вызовы GMS в MicroG</string>
-    <string name="npatch_hidelibs">Скрыть libs (санитизировать видимость библиотек ART/системы)</string>
     <string name="npatch_cleartext">Принудительно usesCleartextTraffic (открытый HTTP)</string>
-    <string name="npatch_provider">Внедрить провайдер файлов данных MT</string>
     <string name="npatch_extractlibs">Принудительно extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">Переопределить версию целевого SDK</string>
     <string name="npatch_targetsdk_value">Значение целевого SDK</string>
@@ -1907,7 +1899,7 @@
     <string name="npatch_done">Запатчено: %1$s</string>
     <string name="npatch_install_prompt">Создан %1$s. Модули встроены — приложение работает автономно. Установить?</string>
     <string name="xposed_patcher_lite_title">Xposed-патчер</string>
-    <string name="xposed_patcher_lite_message">Движки Xposed-патчера (NPatch / LSPatch) не включены в lite-сборку. Установите полную версию MP Manager, чтобы патчить APK со встроенными модулями.</string>
+    <string name="xposed_patcher_lite_message">Движок Xposed-патчера (LSPatch) не включён в lite-сборку. Установите полную версию MP Manager, чтобы патчить APK со встроенными модулями.</string>
     <string name="op_copying">КОПИРОВАНИЕ</string>
     <string name="op_moving">ПЕРЕМЕЩЕНИЕ</string>
     <string name="op_deleting">УДАЛЕНИЕ</string>

@@ -467,8 +467,17 @@ public class SearchFragment extends Fragment {
         TextView tvExcludeList = dialogView.findViewById(R.id.tv_exclude_list);
 
         SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
+        // Options persist across sessions (search_prefs), not just this fragment.
         lastUseExcludeList = prefs.getBoolean("use_exclude_list", false);
         lastIsRegex = prefs.getBoolean("is_regex", false);
+        lastMatchCase = prefs.getBoolean("match_case", lastMatchCase);
+        lastExactlyMatch = prefs.getBoolean("exactly_match", lastExactlyMatch);
+        lastIsHex = prefs.getBoolean("is_hex", lastIsHex);
+        lastSearchSubfolders = prefs.getBoolean("search_subfolders", lastSearchSubfolders);
+        String savedType = prefs.getString("search_type", null);
+        if (savedType != null) lastSearchType = savedType;
+        String savedPath = prefs.getString("search_path", null);
+        if (savedPath != null && !savedPath.isEmpty()) lastSearchPath = savedPath;
 
         if (lastSearchQuery == null || lastSearchQuery.isEmpty())
             lastSearchQuery = SearchHistoryHelper.lastQuery(requireContext(), SearchHistoryHelper.KEY_DEX);
@@ -595,7 +604,14 @@ public class SearchFragment extends Fragment {
                 if (RegexGuard.mayBacktrackCatastrophically(query))
                     Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files"); }
             lastSearchQuery = query; lastSearchType = type;
-            prefs.edit().putBoolean("is_regex", lastIsRegex).apply();
+            prefs.edit().putBoolean("is_regex", lastIsRegex)
+                    .putBoolean("match_case", lastMatchCase)
+                    .putBoolean("exactly_match", lastExactlyMatch)
+                    .putBoolean("is_hex", lastIsHex)
+                    .putBoolean("search_subfolders", lastSearchSubfolders)
+                    .putString("search_type", lastSearchType)
+                    .putString("search_path", lastSearchPath)
+                    .apply();
             if (!query.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, query);
             if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
             List<String> scopeClasses = null;
@@ -625,6 +641,13 @@ public class SearchFragment extends Fragment {
         layoutExcludeList.setVisibility(View.GONE);
         cbSearchSubfolders.setVisibility(View.GONE);
         cbHex.setVisibility(View.GONE);
+
+        // Same persisted options as the search dialog, so a fresh session
+        // does not silently reset match case / regex / exactly-match.
+        SharedPreferences replacePrefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
+        lastIsRegex = replacePrefs.getBoolean("is_regex", lastIsRegex);
+        lastMatchCase = replacePrefs.getBoolean("match_case", lastMatchCase);
+        lastExactlyMatch = replacePrefs.getBoolean("exactly_match", lastExactlyMatch);
 
         etFind.setText(lastSearchQuery);
         etReplaceWith.setText(lastReplaceWith);
@@ -695,7 +718,11 @@ public class SearchFragment extends Fragment {
                     Extensions.showMessage(requireActivity(), "This pattern may take a very long time on large files");
             }
             lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = matchCaseMode; lastIsRegex = regexMode; lastExactlyMatch = cbExactlyMatch.isChecked();
-            requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE).edit().putBoolean("is_regex", lastIsRegex).apply();
+            replacePrefs.edit()
+                    .putBoolean("is_regex", lastIsRegex)
+                    .putBoolean("match_case", lastMatchCase)
+                    .putBoolean("exactly_match", lastExactlyMatch)
+                    .apply();
             // Same rule as the search dialog: "Exactly match" is hidden for Smali
             // and must not leak into the task.
             boolean exactlyMatchForType = lastExactlyMatch && !type.equals("Smali");

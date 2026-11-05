@@ -404,8 +404,26 @@ public class EntryDialogs {
                                             // whole item at once.
                                             removed[0] += perItem[i];
                                         } else {
-                                            FileUtils.deleteTree(f,
-                                                    countingDeleter(pm, removed, totalSelected));
+                                            // Bin staging failed: retry through the
+                                            // elevated backend before the plain walk,
+                                            // which cannot unlink inside Android/data
+                                            // anyway.
+                                            boolean gone = false;
+                                            if (useElevatedForDelete) {
+                                                try {
+                                                    List<String> one = new ArrayList<>(1);
+                                                    one.add(f.getAbsolutePath());
+                                                    AccessManager.deleteTree(context, one, true, null, pm.control());
+                                                    gone = !f.exists();
+                                                } catch (Exception ignored) {
+                                                }
+                                            }
+                                            if (gone) {
+                                                removed[0] += perItem[i];
+                                            } else {
+                                                FileUtils.deleteTree(f,
+                                                        countingDeleter(pm, removed, totalSelected));
+                                            }
                                         }
                                         pm.setProgress(Math.min(removed[0], totalSelected), totalSelected);
                                     }
@@ -459,7 +477,11 @@ public class EntryDialogs {
                                 for (File f : selectedFiles) {
                                     boolean gone;
                                     try {
-                                        gone = !f.exists() && !AccessManager.exists(context, f.getAbsolutePath());
+                                        // Same elevated-authoritative rule as
+                                        // the single delete above.
+                                        gone = useElevatedForDelete
+                                                ? !AccessManager.elevatedExists(context, f.getAbsolutePath())
+                                                : !f.exists();
                                     } catch (Exception e) {
                                         gone = true;
                                     }
@@ -533,7 +555,14 @@ public class EntryDialogs {
                             }
                             boolean stillThere;
                             try {
-                                stillThere = file.exists() || AccessManager.exists(context, file.getAbsolutePath());
+                                // When the elevated backend did the deleting,
+                                // only its own view is authoritative: the
+                                // app-uid FUSE view can cache the deleted
+                                // entry (root removed it via /data/media) and
+                                // File.exists() then still reports true.
+                                stillThere = useElevatedForDelete
+                                        ? AccessManager.elevatedExists(context, file.getAbsolutePath())
+                                        : file.exists();
                             } catch (Exception e) {
                                 stillThere = false;
                             }

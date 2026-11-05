@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Compact on purpose: this dialog opens with the keyboard up (both the dex
+     and the arsc editors use it), so every row it saves is a row that stays
+     visible above the IME instead of hiding behind it. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -9,14 +12,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="4dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/text_to_find"
-            android:textSize="13sp" />
+        android:paddingTop="6dp"
+        android:paddingBottom="2dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -29,6 +26,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:hint="@string/text_to_find"
                 android:inputType="text" />
 
             <ImageView
@@ -44,7 +42,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="2dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -79,24 +77,19 @@
             </LinearLayout>
         </RelativeLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_path"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_path"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="/"
-                android:inputType="text"
-                tools:ignore="HardcodedText" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="2dp"
+            android:inputType="text"
+            android:text="/"
+            tools:ignore="HardcodedText" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -111,57 +104,72 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp" />
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
         </LinearLayout>
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_search_subfolders"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
             android:checked="true"
             android:minHeight="0dp"
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
             android:text="@string/search_subfolders" />
 
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/cb_match_case"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="0dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:text="@string/match_case" />
+            android:orientation="horizontal">
 
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/cb_regex"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="0dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:text="@string/regex" />
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_match_case"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="0dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/match_case" />
 
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/cb_exactly_match"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="0dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:text="@string/exactly_match" />
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_regex"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="0dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/regex" />
+        </LinearLayout>
 
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/cb_hex"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="0dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:text="@string/hex"
-            android:visibility="gone" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_exactly_match"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="0dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/exactly_match" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_hex"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="0dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/hex"
+                android:visibility="gone" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

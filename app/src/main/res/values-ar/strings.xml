@@ -1821,9 +1821,7 @@
     <string name="save_elevated">الحفظ بصلاحية موسَّعة</string>
     <string name="npatch_integrated">مرقِّع Xposed</string>
     <string name="npatch_title">ترقيع بـXposed: %1$s</string>
-    <string name="npatch_hint">يرقِّع APK بـNPatch أو LSPatch (الوضع المدمج): يُضمَّن محمِّل Xposed بحيث تعمل الوحدات المحددة دون تطبيق مدير. يُوقَّع الناتج بالمفتاح المضبوط في «إعدادات التوقيع» — يُنشأ APK مرقَّع جديد.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">يرقِّع APK بـLSPatch (الوضع المدمج): يُضمَّن محمِّل Xposed بحيث تعمل الوحدات المحددة دون تطبيق مدير. يُوقَّع الناتج بالمفتاح المضبوط في «إعدادات التوقيع» — يُنشأ APK مرقَّع جديد.</string>
     <string name="npatch_bypass_lsp_0">تجاوز: لا شيء</string>
     <string name="npatch_bypass_lsp_1">تجاوز: PM</string>
     <string name="npatch_bypass_lsp_2">تجاوز: PM + OpenAT</string>
@@ -1917,15 +1915,9 @@
     <string name="npatch_embed_modules_title">اختر وحدات APK للتضمين</string>
     <string name="npatch_module_missing">لم تُعثر الوحدة: %1$s</string>
     <string name="npatch_sigbypass_title">مستوى تجاوز التوقيع</string>
-    <string name="npatch_sigbypass_0">تجاوز: لا شيء</string>
-    <string name="npatch_sigbypass_1">تجاوز: أساسي</string>
-    <string name="npatch_sigbypass_2">تجاوز: عالٍ</string>
     <string name="npatch_debuggable">جعل التطبيق قابلاً للتنقيح</string>
     <string name="npatch_injectdex">حقن dex المحمِّل في التسلسل الرئيسي (خطافات العمليات الفرعية)</string>
-    <string name="npatch_microg">تحويل استدعاءات GMS إلى MicroG</string>
-    <string name="npatch_hidelibs">إخفاء المكتبات (تنقية ظهور مكتبات ART/النظام)</string>
     <string name="npatch_cleartext">فرض usesCleartexTraffic (HTTP صريح)</string>
-    <string name="npatch_provider">حقن مزوِّد ملفات بيانات MT</string>
     <string name="npatch_extractlibs">فرض extracNativeLibs=true</string>
     <string name="npatch_override_targetsdk">تجاوز إصدار SDK المستهدف</string>
     <string name="npatch_targetsdk_value">قيمة SDK المستهدفة</string>
@@ -1937,7 +1929,7 @@
     <string name="npatch_done">تم الترقيع: %1$s</string>
     <string name="npatch_install_prompt">تم إنشاء %1$s. الوحدات مضمَّنة — يعمل التطبيق مستقلًا. هل تثبِّته؟</string>
     <string name="xposed_patcher_lite_title">مرقِّع Xposed</string>
-    <string name="xposed_patcher_lite_message">محركات مرقِّع Xposed (NPatch / LSPatch) غير مضمَّنة في نسخة lite. ثبِّت النسخة الكاملة من MP Manager لترقيع APK بوحدات مضمَّنة.</string>
+    <string name="xposed_patcher_lite_message">محركات مرقِّع Xposed (LSPatch) غير مضمَّنة في نسخة lite. ثبِّت النسخة الكاملة من MP Manager لترقيع APK بوحدات مضمَّنة.</string>
     <string name="op_copying">نسخ</string>
     <string name="op_moving">نقل</string>
     <string name="op_deleting">حذف</string>

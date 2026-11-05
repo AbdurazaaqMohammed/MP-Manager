@@ -122,6 +122,17 @@
             android:exported="false">
         </activity>
         <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.LogcatActivity"
+            android:label="@string/sidebar_logcat"
+            android:taskAffinity="io.github.abdurazaaqmohammed.MPManager.logcat"
+            android:exported="false">
+        </activity>
+        <service
+            android:name="io.github.abdurazaaqmohammed.tools.LogcatService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false" />
+        <activity
             android:name="modder.hub.dexeditor.activity.TranslationModeActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false"

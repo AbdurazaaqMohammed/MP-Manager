@@ -30,9 +30,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.apk.axml.ResourceTableParser;
-import com.apk.axml.aXMLDecoder;
-import com.apk.axml.serializableItems.ResEntry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -49,7 +46,6 @@ import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
-import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -1485,21 +1481,9 @@ public class FileSearchController {
                                     int n;
                                     while ((n = ris.read(buf)) != -1) rfos.write(buf, 0, n);
                                 }
+                                // rssPath alone is enough: the editor parses the
+                                // resource table and decodes the entry itself.
                                 intent.putExtra("rssPath", tmpRss.getAbsolutePath());
-                                try (InputStream is2 = new FileInputStream(tempFile);
-                                     InputStream ris2 = new FileInputStream(tmpRss)) {
-                                    ResourceTableParser rtp = new ResourceTableParser(ris2);
-                                    List<ResEntry> entries = rtp.parse();
-                                    aXMLDecoder decoder = new aXMLDecoder(is2, entries);
-                                    intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
-                                } catch (Exception ignored) {
-                                }
-                            } else {
-                                try (InputStream is2 = new FileInputStream(tempFile)) {
-                                    aXMLDecoder decoder = new aXMLDecoder(is2);
-                                    intent.putExtra(Intent.EXTRA_TEXT, decoder.decodeAsString().trim());
-                                } catch (Exception ignored) {
-                                }
                             }
                         }
                     }
@@ -1516,16 +1500,13 @@ public class FileSearchController {
                             isAxml = FileUtils.isAxml(is);
                         } catch (Exception ignored) {}
                     }
+                    // Flags only: the editor decodes ABX/AXML itself from the
+                    // file; pre-decoded text can exceed the intent/binder size
+                    // limit on big files (see FileOpener.handleFileClick).
                     if (isAbx) {
-                        try (InputStream is = FileUtils.getInputStream(file)) {
-                            intent.putExtra("abx", true);
-                            intent.putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is).trim());
-                        } catch (Exception ignored) {}
+                        intent.putExtra("abx", true);
                     } else if (isAxml) {
-                        try (InputStream is = FileUtils.getInputStream(file)) {
-                            intent.putExtra("axml", true);
-                            intent.putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is).decodeAsString().trim());
-                        } catch (Exception ignored) {}
+                        intent.putExtra("axml", true);
                     }
                 }
                 activity.runOnUiThread(() -> activity.startActivityForResult(intent, 757));
