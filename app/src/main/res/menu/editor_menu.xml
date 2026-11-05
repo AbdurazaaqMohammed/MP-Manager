@@ -86,6 +86,10 @@
         android:title="More">
         <menu>
             <item
+                android:id="@+id/action_search_panel"
+                android:icon="@drawable/baseline_search_24"
+                android:title="@string/search" />
+            <item
                 android:id="@+id/smali2java"
                 android:icon="@drawable/ic_java_mt"
                 android:title="Smali to Java" />
