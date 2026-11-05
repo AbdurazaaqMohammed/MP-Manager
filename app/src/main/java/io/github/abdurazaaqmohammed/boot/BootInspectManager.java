@@ -40,7 +40,8 @@ public class BootInspectManager {
 
         public void takeSnapshot() {
             fileSnapshots.clear();
-            snapshotDirectory(inspectDir);
+            File target = (ramdiskDir != null && ramdiskDir.exists()) ? ramdiskDir : inspectDir;
+            snapshotDirectory(target);
         }
 
         private void snapshotDirectory(File dir) {
@@ -48,6 +49,10 @@ public class BootInspectManager {
             File[] files = dir.listFiles();
             if (files == null) return;
             for (File f : files) {
+                String name = f.getName();
+                if (name.startsWith("temp_repack.") || name.equals("header_info.json") || name.equals("ramdisk_tree.json")) {
+                    continue;
+                }
                 fileSnapshots.put(f.getAbsolutePath(), f.lastModified() ^ (f.length() << 16));
                 if (f.isDirectory()) {
                     snapshotDirectory(f);
@@ -57,7 +62,8 @@ public class BootInspectManager {
 
         public boolean isDirty() {
             Map<String, Long> current = new HashMap<>();
-            collectCurrent(inspectDir, current);
+            File target = (ramdiskDir != null && ramdiskDir.exists()) ? ramdiskDir : inspectDir;
+            collectCurrent(target, current);
             return !fileSnapshots.equals(current);
         }
 

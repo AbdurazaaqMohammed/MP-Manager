@@ -176,6 +176,34 @@ public class BootImageEngine {
             cpioOut.delete();
         }
 
+        // Check for AVB footer at the end of the image (last 64 bytes)
+        long fileLen = imageFile.length();
+        if (fileLen >= 64) {
+            byte[] footerBuf = new byte[64];
+            try (FileInputStream fis = new FileInputStream(imageFile)) {
+                fis.skip(fileLen - 64);
+                fis.read(footerBuf);
+            }
+            if (footerBuf[0] == 'A' && footerBuf[1] == 'V' && footerBuf[2] == 'B' && footerBuf[3] == 'f') {
+                ByteBuffer fbb = ByteBuffer.wrap(footerBuf).order(ByteOrder.BIG_ENDIAN);
+                long vbmetaOffset = fbb.getLong(20);
+                long vbmetaSize = fbb.getLong(28);
+                if (vbmetaOffset > 0 && vbmetaSize > 0 && vbmetaOffset + vbmetaSize <= fileLen) {
+                    File vbmetaOut = new File(outputDir, "avb_vbmeta.bin");
+                    try (FileInputStream fis = new FileInputStream(imageFile);
+                         FileOutputStream fos = new FileOutputStream(vbmetaOut)) {
+                        fis.skip(vbmetaOffset);
+                        copyBytes(fis, fos, vbmetaSize);
+                    }
+                    meta.put("has_avb_footer", true);
+                    meta.put("avb_vbmeta_size", vbmetaSize);
+                    try (FileOutputStream fos = new FileOutputStream(metaFile)) {
+                        fos.write(meta.toString(2).getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+            }
+        }
+
         if (cb != null) {
             cb.onProgress("Unpack Finished!", 100);
         }
@@ -305,11 +333,46 @@ public class BootImageEngine {
             }
             writePadding(bos, compressedRamdiskLen, pageSize);
 
+            // Write AVB vbmeta if present
+            File vbmetaFile = new File(inputDir, "avb_vbmeta.bin");
+            boolean hasAvb = vbmetaFile.exists() && (meta != null && meta.optBoolean("has_avb_footer", false));
+            long vbmetaOffset = 0;
+            long vbmetaLen = 0;
+            if (hasAvb) {
+                bos.flush();
+                vbmetaOffset = outputImageFile.length();
+                vbmetaLen = vbmetaFile.length();
+                try (FileInputStream fis = new FileInputStream(vbmetaFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, vbmetaLen, pageSize);
+            }
+
             bos.flush();
 
             // Maintain partition / original size padding so the boot image matches partition size
             long written = outputImageFile.length();
-            if (originalImgSize > written) {
+            if (hasAvb && originalImgSize >= written + 64) {
+                long needed = (originalImgSize - 64) - written;
+                byte[] zeros = new byte[65536];
+                while (needed > 0) {
+                    int chunk = (int) Math.min(zeros.length, needed);
+                    bos.write(zeros, 0, chunk);
+                    needed -= chunk;
+                }
+                // Write AVB footer (64 bytes big-endian)
+                ByteBuffer fbb = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+                fbb.put("AVBf".getBytes(StandardCharsets.US_ASCII));
+                fbb.putInt(4, 1); // version_major
+                fbb.putInt(8, 0); // version_minor
+                fbb.putLong(12, vbmetaOffset); // original_image_size / image_size
+                fbb.putLong(20, vbmetaOffset); // vbmeta_offset
+                fbb.putLong(28, vbmetaLen);    // vbmeta_size
+                bos.write(fbb.array());
+                bos.flush();
+            } else if (originalImgSize > written) {
                 long needed = originalImgSize - written;
                 byte[] zeros = new byte[65536];
                 while (needed > 0) {

@@ -9,8 +9,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Pure Java CPIO SVR4 Archive extractor and packager.
@@ -74,6 +76,14 @@ public class CpioEngine {
             }
 
             if ("TRAILER!!!".equals(name)) {
+                // Count trailing padding bytes in stream
+                int trailingZeroes = 0;
+                int b;
+                while ((b = in.read()) != -1) {
+                    if (b == 0) trailingZeroes++;
+                    else break;
+                }
+                manifestEntries.add(new RamdiskManifest.Entry(name, ino, mode, uid, gid, nlink, mtime, trailingZeroes, "trailer", null));
                 break;
             }
 
@@ -128,7 +138,7 @@ public class CpioEngine {
                 bytesProcessed += pad;
             }
 
-            manifestEntries.add(new RamdiskManifest.Entry(name, mode, uid, gid, nlink, mtime, filesize, entryType, symTarget));
+            manifestEntries.add(new RamdiskManifest.Entry(name, ino, mode, uid, gid, nlink, mtime, filesize, entryType, symTarget));
 
             if (cb != null && totalLen > 0) {
                 int percent = (int) Math.min(100, (bytesProcessed * 100) / totalLen);
@@ -164,40 +174,128 @@ public class CpioEngine {
         List<FileEntry> entries = new ArrayList<>();
         collectEntries(rootDir, "", entries);
 
-        Collections.sort(entries, (a, b) -> a.relPath.compareTo(b.relPath));
-
-        int ino = 1;
+        // Map to quickly find entries by path
+        Map<String, FileEntry> diskEntries = new HashMap<>();
         for (FileEntry fe : entries) {
-            RamdiskManifest.Entry orig = manifestMap.get(fe.relPath);
-
-            int mode = orig != null ? orig.mode : (fe.isDir ? 0040755 : 0100644);
-            int uid = orig != null ? orig.uid : 0;
-            int gid = orig != null ? orig.gid : 0;
-            int nlink = orig != null ? orig.nlink : (fe.isDir ? 2 : 1);
-            int mtime = orig != null ? orig.mtime : (int) (fe.file.lastModified() / 1000);
-            long size = fe.isDir ? 0 : fe.file.length();
-
-            if (fe.relPath.endsWith(".symlink.txt")) {
-                continue;
-            }
-
-            File symlinkMarker = new File(rootDir, fe.relPath + ".symlink.txt");
-            boolean isSymlink = symlinkMarker.exists();
-            byte[] symlinkBytes = null;
-            if (isSymlink) {
-                mode = 0120777;
-                String line = new String(readFile(symlinkMarker), StandardCharsets.UTF_8).trim();
-                if (line.startsWith("Symlink to: ")) {
-                    line = line.substring(12).trim();
-                }
-                symlinkBytes = line.getBytes(StandardCharsets.UTF_8);
-                size = symlinkBytes.length;
-            }
-
-            writeEntry(out, ino++, mode, uid, gid, nlink, mtime, size, fe.relPath, fe.file, isSymlink ? symlinkBytes : null);
+            diskEntries.put(fe.relPath, fe);
         }
 
-        writeTrailer(out, ino++);
+        // Ordered list of entries to write
+        List<WriteTarget> targets = new ArrayList<>();
+        Set<String> processedPaths = new HashSet<>();
+
+        // 1. Follow original manifest order if present
+        if (originalManifest != null) {
+            for (RamdiskManifest.Entry orig : originalManifest) {
+                FileEntry fe = diskEntries.get(orig.name);
+                File symDesc = new File(rootDir, orig.name + ".symlink.txt");
+                File regularFile = new File(rootDir, orig.name);
+
+                if ("symlink".equals(orig.type) || symDesc.exists()) {
+                    String target = orig.symlinkTarget;
+                    if (symDesc.exists()) {
+                        String line = new String(readFile(symDesc), StandardCharsets.UTF_8).trim();
+                        if (line.startsWith("Symlink to: ")) {
+                            target = line.substring(12).trim();
+                        }
+                    }
+                    byte[] symBytes = (target != null ? target : "").getBytes(StandardCharsets.UTF_8);
+                    int symMode = orig.mode != 0 ? orig.mode : 0120777;
+                    targets.add(new WriteTarget(orig.name, orig.ino, symMode, orig.uid, orig.gid, orig.nlink, orig.mtime, symBytes.length, null, symBytes));
+                    processedPaths.add(orig.name);
+                } else if (fe != null || regularFile.exists()) {
+                    File f = fe != null ? fe.file : regularFile;
+                    boolean isDir = fe != null ? fe.isDir : f.isDirectory();
+                    int mode = orig.mode;
+                    long size = isDir ? 0 : f.length();
+                    targets.add(new WriteTarget(orig.name, orig.ino, mode, orig.uid, orig.gid, orig.nlink, orig.mtime, size, f, null));
+                    processedPaths.add(orig.name);
+                }
+            }
+        }
+
+        // 2. Add any newly added files/dirs that weren't in the original manifest
+        List<FileEntry> newEntries = new ArrayList<>();
+        for (FileEntry fe : entries) {
+            if (fe.relPath.endsWith(".symlink.txt")) continue;
+            if (!processedPaths.contains(fe.relPath)) {
+                newEntries.add(fe);
+            }
+        }
+        Collections.sort(newEntries, (a, b) -> a.relPath.compareTo(b.relPath));
+
+        int nextIno = 1000;
+        if (originalManifest != null) {
+            for (RamdiskManifest.Entry e : originalManifest) {
+                if (e.ino >= nextIno) nextIno = e.ino + 1;
+            }
+        }
+
+        for (FileEntry fe : newEntries) {
+            File symDesc = new File(rootDir, fe.relPath + ".symlink.txt");
+            if (symDesc.exists()) {
+                String line = new String(readFile(symDesc), StandardCharsets.UTF_8).trim();
+                if (line.startsWith("Symlink to: ")) line = line.substring(12).trim();
+                byte[] symBytes = line.getBytes(StandardCharsets.UTF_8);
+                targets.add(new WriteTarget(fe.relPath, nextIno++, 0120777, 0, 0, 1, (int) (System.currentTimeMillis() / 1000), symBytes.length, null, symBytes));
+            } else {
+                int mode = fe.isDir ? 0040755 : 0100644;
+                long size = fe.isDir ? 0 : fe.file.length();
+                targets.add(new WriteTarget(fe.relPath, nextIno++, mode, 0, 0, fe.isDir ? 2 : 1, (int) (fe.file.lastModified() / 1000), size, fe.file, null));
+            }
+        }
+
+        // Write entries
+        for (WriteTarget wt : targets) {
+            writeEntry(out, wt.ino, wt.mode, wt.uid, wt.gid, wt.nlink, wt.mtime, wt.size, wt.name, wt.file, wt.symlinkBytes);
+        }
+
+        RamdiskManifest.Entry trailerEntry = null;
+        if (originalManifest != null) {
+            for (RamdiskManifest.Entry e : originalManifest) {
+                if ("TRAILER!!!".equals(e.name)) {
+                    trailerEntry = e;
+                    break;
+                }
+            }
+        }
+
+        if (trailerEntry != null && newEntries.isEmpty()) {
+            writeEntry(out, trailerEntry.ino, trailerEntry.mode, trailerEntry.uid, trailerEntry.gid, trailerEntry.nlink, trailerEntry.mtime, 0, "TRAILER!!!", null, null);
+            int padCount = (int) trailerEntry.filesize;
+            for (int i = 0; i < padCount; i++) {
+                out.write(0);
+            }
+        } else {
+            int trailerMode = trailerEntry != null ? trailerEntry.mode : 0000755;
+            writeEntry(out, nextIno, trailerMode, 0, 0, 1, 0, 0, "TRAILER!!!", null, null);
+        }
+    }
+
+    private static class WriteTarget {
+        String name;
+        int ino;
+        int mode;
+        int uid;
+        int gid;
+        int nlink;
+        int mtime;
+        long size;
+        File file;
+        byte[] symlinkBytes;
+
+        WriteTarget(String name, int ino, int mode, int uid, int gid, int nlink, int mtime, long size, File file, byte[] symlinkBytes) {
+            this.name = name;
+            this.ino = ino;
+            this.mode = mode;
+            this.uid = uid;
+            this.gid = gid;
+            this.nlink = nlink;
+            this.mtime = mtime;
+            this.size = size;
+            this.file = file;
+            this.symlinkBytes = symlinkBytes;
+        }
     }
 
     private static void writeEntry(java.io.OutputStream out, int ino, int mode, int uid, int gid, int nlink, int mtime,
@@ -207,19 +305,19 @@ public class CpioEngine {
 
         StringBuilder sb = new StringBuilder();
         sb.append("070701");
-        sb.append(String.format("%08X", ino));
-        sb.append(String.format("%08X", mode));
-        sb.append(String.format("%08X", uid));
-        sb.append(String.format("%08X", gid));
-        sb.append(String.format("%08X", nlink));
-        sb.append(String.format("%08X", mtime));
-        sb.append(String.format("%08X", size));
-        sb.append(String.format("%08X", 0)); // devmajor
-        sb.append(String.format("%08X", 0)); // devminor
-        sb.append(String.format("%08X", 0)); // rdevmajor
-        sb.append(String.format("%08X", 0)); // rdevminor
-        sb.append(String.format("%08X", namesize));
-        sb.append(String.format("%08X", 0)); // check
+        sb.append(String.format("%08x", ino));
+        sb.append(String.format("%08x", mode));
+        sb.append(String.format("%08x", uid));
+        sb.append(String.format("%08x", gid));
+        sb.append(String.format("%08x", nlink));
+        sb.append(String.format("%08x", mtime));
+        sb.append(String.format("%08x", size));
+        sb.append(String.format("%08x", 0)); // devmajor
+        sb.append(String.format("%08x", 0)); // devminor
+        sb.append(String.format("%08x", 0)); // rdevmajor
+        sb.append(String.format("%08x", 0)); // rdevminor
+        sb.append(String.format("%08x", namesize));
+        sb.append(String.format("%08x", 0)); // check
 
         out.write(sb.toString().getBytes(StandardCharsets.US_ASCII));
         out.write(nameBytes);

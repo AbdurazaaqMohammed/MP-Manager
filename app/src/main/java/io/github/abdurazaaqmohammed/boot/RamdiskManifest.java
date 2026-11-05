@@ -20,6 +20,7 @@ public class RamdiskManifest {
 
     public static class Entry {
         public String name;
+        public int ino;
         public int mode;
         public int uid;
         public int gid;
@@ -29,8 +30,9 @@ public class RamdiskManifest {
         public String type; // "dir", "file", "symlink"
         public String symlinkTarget;
 
-        public Entry(String name, int mode, int uid, int gid, int nlink, int mtime, long filesize, String type, String symlinkTarget) {
+        public Entry(String name, int ino, int mode, int uid, int gid, int nlink, int mtime, long filesize, String type, String symlinkTarget) {
             this.name = name;
+            this.ino = ino;
             this.mode = mode;
             this.uid = uid;
             this.gid = gid;
@@ -44,6 +46,7 @@ public class RamdiskManifest {
         public JSONObject toJson() throws Exception {
             JSONObject obj = new JSONObject();
             obj.put("name", name);
+            obj.put("ino", ino);
             obj.put("mode", mode);
             obj.put("mode_oct", String.format("%06o", mode));
             obj.put("uid", uid);
@@ -61,6 +64,7 @@ public class RamdiskManifest {
         public static Entry fromJson(JSONObject obj) {
             return new Entry(
                     obj.optString("name"),
+                    obj.optInt("ino", 0),
                     obj.optInt("mode", 0100644),
                     obj.optInt("uid", 0),
                     obj.optInt("gid", 0),
