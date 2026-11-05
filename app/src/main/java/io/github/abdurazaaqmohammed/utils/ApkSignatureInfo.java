@@ -98,7 +98,27 @@ public final class ApkSignatureInfo {
         }
     }
 
+    private static final java.util.Map<String, ApkSignatureInfo> sigInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static ApkSignatureInfo getCached(File apk) {
+        if (apk == null) return null;
+        try {
+            String key = apk.getAbsolutePath() + ":" + apk.length() + ":" + apk.lastModified();
+            return sigInfoCache.get(key);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     public static ApkSignatureInfo analyze(File apk) {
+        if (apk == null) return null;
+        String cacheKey = null;
+        try {
+            cacheKey = apk.getAbsolutePath() + ":" + apk.length() + ":" + apk.lastModified();
+            ApkSignatureInfo cached = sigInfoCache.get(cacheKey);
+            if (cached != null) return cached;
+        } catch (Exception ignored) {
+        }
         List<X509Certificate> certs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         boolean v1 = false, v2 = false, v3 = false, v4 = false;
@@ -147,12 +167,25 @@ public final class ApkSignatureInfo {
             else status = STATUS_UNKNOWN;
             errors.add(t.getMessage() == null ? t.toString() : t.getMessage());
         }
+        if (!verified || !anyScheme) {
+            // Detect schemes structurally (like MT Manager) when verification fails or returns no verified schemes
+            if (!v1) v1 = hasV1Signature(apk);
+            boolean[] blockSchemes = detectSigningBlockSchemes(apk);
+            if (!v2 && blockSchemes[0]) v2 = true;
+            if (!v3 && blockSchemes[1]) v3 = true;
+            if (!v4 && blockSchemes[2]) v4 = true;
+            if (v1 || v2 || v3 || v4) anyScheme = true;
+        }
         StringBuilder schemes = new StringBuilder();
         if (v1) schemes.append("V1");
         if (v2) schemes.append(schemes.length() == 0 ? "V2" : ", V2");
         if (v3) schemes.append(schemes.length() == 0 ? "V3" : ", V3");
         if (v4) schemes.append(schemes.length() == 0 ? "V4" : ", V4");
-        return new ApkSignatureInfo(apk, status, schemes.toString(), errors, certs, structural);
+        ApkSignatureInfo info = new ApkSignatureInfo(apk, status, schemes.toString(), errors, certs, structural);
+        if (cacheKey != null) {
+            sigInfoCache.put(cacheKey, info);
+        }
+        return info;
     }
 
     private static boolean safe(BooleanSupplier supplier) {
@@ -161,6 +194,82 @@ public final class ApkSignatureInfo {
         } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    public static boolean hasV1Signature(File apk) {
+        if (apk == null || !apk.isFile()) return false;
+        try (ZipFile zf = new ZipFile(apk)) {
+            for (FileHeader header : zf.getFileHeaders()) {
+                String name = header.getFileName();
+                if (name == null) continue;
+                String upper = name.toUpperCase(Locale.US);
+                if (upper.startsWith("META-INF/") && (upper.endsWith(".RSA") || upper.endsWith(".DSA") || upper.endsWith(".EC"))) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    /** Returns boolean[]{hasV2, hasV3, hasV4} detected from APK signing block */
+    public static boolean[] detectSigningBlockSchemes(File apk) {
+        boolean[] res = new boolean[3]; // v2, v3, v4
+        if (apk == null || !apk.isFile()) return res;
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(apk, "r")) {
+            long fileLen = raf.length();
+            if (fileLen < 32 + 24) return res;
+
+            int tailSize = (int) Math.min(fileLen, 0xFFFF + 22);
+            byte[] tail = new byte[tailSize];
+            raf.seek(fileLen - tailSize);
+            raf.readFully(tail);
+            int eocdPos = -1;
+            for (int i = tail.length - 22; i >= 0; i--) {
+                if (tail[i] == 0x50 && tail[i + 1] == 0x4B && tail[i + 2] == 0x05 && tail[i + 3] == 0x06) {
+                    eocdPos = i;
+                    break;
+                }
+            }
+            if (eocdPos < 0) return res;
+            long cdOffset = (tail[eocdPos + 16] & 0xFFL)
+                    | ((tail[eocdPos + 17] & 0xFFL) << 8)
+                    | ((tail[eocdPos + 18] & 0xFFL) << 16)
+                    | ((tail[eocdPos + 19] & 0xFFL) << 24);
+            if (cdOffset < 32 + 8) return res;
+
+            byte[] footer = new byte[24];
+            raf.seek(cdOffset - 24);
+            raf.readFully(footer);
+            byte[] magic = "APK Sig Block 42".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+            for (int i = 0; i < 16; i++) {
+                if (footer[8 + i] != magic[i]) return res;
+            }
+            long blockSize = 0;
+            for (int i = 0; i < 8; i++) blockSize |= ((long) (footer[i] & 0xFF)) << (8 * i);
+            long blockStart = cdOffset - blockSize - 8;
+            if (blockStart < 0) return res;
+
+            byte[] pairs = new byte[(int) (blockSize - 24)];
+            raf.seek(blockStart + 8);
+            raf.readFully(pairs);
+
+            int pos = 0;
+            while (pos + 12 <= pairs.length) {
+                long pairLen = 0;
+                for (int i = 0; i < 8; i++) pairLen |= ((long) (pairs[pos + i] & 0xFF)) << (8 * i);
+                if (pos + 8 + pairLen > pairs.length) break;
+                long idLong = (pairs[pos + 8] & 0xFFL)
+                        | ((pairs[pos + 9] & 0xFFL) << 8)
+                        | ((pairs[pos + 10] & 0xFFL) << 16)
+                        | ((pairs[pos + 11] & 0xFFL) << 24);
+                int id = (int) idLong;
+                if (id == 0x7109871a) res[0] = true; // V2
+                else if (id == 0xf05368c0 || id == 0x1b93ad61) res[1] = true; // V3 or V3.1
+                else if (id == 0x2b09189e) res[2] = true; // V4
+                pos += 8 + (int) pairLen;
+            }
+        } catch (Exception ignored) {}
+        return res;
     }
 
     /**

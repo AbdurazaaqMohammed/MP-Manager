@@ -138,10 +138,30 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName) {
+        if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
+            withReadableCopy(file, readable -> {
+                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
+                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                } else {
+                    context.openImageViewer(readable.getPath());
+                }
+            });
+            return;
+        }
         showOpenWithDialog(file, fileName);
     }
 
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
+        if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
+            withReadableCopy(file, readable -> {
+                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
+                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                } else {
+                    context.openImageViewer(readable.getPath());
+                }
+            });
+            return;
+        }
         showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
     }
 
@@ -1104,8 +1124,11 @@ public class FileOpener {
             || fileName.endsWith(".gradle") || fileName.endsWith(".properties") || fileName.endsWith(".prop")
             || fileName.endsWith(".conf") || fileName.endsWith(".cfg") || fileName.endsWith(".ini")
             || fileName.endsWith(".log") || fileName.endsWith(".md") || fileName.endsWith(".csv")
-            || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")) {
+            || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
+            || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
+        } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
+            io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, readable -> {
                 if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);
@@ -1455,7 +1478,12 @@ public class FileOpener {
     }
 
     private void showSplitApkMenu(File readable, String displayName) {
-        String[] items = new String[] { context.rss.getString(R.string.install), context.rss.getString(R.string.view), context.rss.getString(R.string.sign), context.rss.getString(R.string.antisplit_merge_to_apk) };
+        String[] items = new String[] {
+                context.rss.getString(R.string.install),
+                context.rss.getString(R.string.view),
+                context.rss.getString(R.string.apk_info),
+                context.rss.getString(R.string.antisplit_merge_to_apk)
+        };
         dialogUtil.styleAlertDialog(
                 dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
                     dialog.dismiss();
@@ -1478,11 +1506,6 @@ public class FileOpener {
                                                         int n;
                                                         while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
                                                     } catch (EOFException | ZipException cappedRead) {
-                                                        // zip4j caps entry reads at the central directory's
-                                                        // declared compressed size and aborts with
-                                                        // "Unexpected end of input stream" when the archive
-                                                        // under-declares it (reported on large .apks). Re-read
-                                                        // the entry from its real local header without that cap.
                                                         ZipCompat.extractEntryTolerant(readable, fh.getFileName(), tmpApk);
                                                     }
                                                     apkFiles.add(tmpApk);
@@ -1511,7 +1534,41 @@ public class FileOpener {
                                 context.loadZipFolderInPane(readable, "", pane1, true);
                                 break;
                             case 2:
-                                SignatureKeyDialog.show(context, readable, true);
+                                // App/APK Info of the base APK inside the APKS
+                                new Thread(() -> {
+                                    try (ZipFile zf = new ZipFile(readable)) {
+                                        FileHeader baseHeader = null;
+                                        for (FileHeader fh : zf.getFileHeaders()) {
+                                            String fn = fh.getFileName().toLowerCase(Locale.ROOT);
+                                            if (fn.endsWith("base.apk")) {
+                                                baseHeader = fh;
+                                                break;
+                                            } else if (baseHeader == null && fn.endsWith(".apk")) {
+                                                baseHeader = fh;
+                                            }
+                                        }
+                                        if (baseHeader != null) {
+                                            File tmpApk = new File(context.getCacheDir(), "split_base_" + System.currentTimeMillis() + ".apk");
+                                            try (InputStream is = zf.getInputStream(baseHeader);
+                                                 FileOutputStream fos = new FileOutputStream(tmpApk)) {
+                                                byte[] buf = new byte[65536];
+                                                int n;
+                                                while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                                            } catch (Exception e) {
+                                                ZipCompat.extractEntryTolerant(readable, baseHeader.getFileName(), tmpApk);
+                                            }
+                                            File finalTmpApk = tmpApk;
+                                            String baseName = new File(baseHeader.getFileName()).getName();
+                                            context.runOnUiThread(() -> {
+                                                if (apkTools != null) apkTools.showApkInfoDialog(finalTmpApk, baseName, true);
+                                            });
+                                        } else {
+                                            context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
+                                        }
+                                    } catch (Exception e) {
+                                        context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                    }
+                                }).start();
                                 break;
                             case 3:
                                 MergeUtil.showAntisplitDialog(readable, context);

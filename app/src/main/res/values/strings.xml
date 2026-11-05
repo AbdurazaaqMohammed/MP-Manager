@@ -306,6 +306,11 @@
     <string name="installed_version">Installed version</string>
     <string name="not_installed">Not installed</string>
     <string name="downgrade">Downgrade</string>
+    <string name="upgrade">Upgrade</string>
+    <string name="same_version">Same version</string>
+    <string name="version_comparison">Version comparison</string>
+    <string name="installed_app">Installed app</string>
+    <string name="new_apk">New APK</string>
     <string name="permissions">Permissions</string>
     <string name="quick_edit">Quick edit</string>
     <string name="compare_apks">Compare APKs</string>
@@ -2174,4 +2179,14 @@ Patched code:</string>
     <string name="remember_password">Remember password</string>
     <string name="confirm_move_f">Are you sure you want to move %1$s?</string>
     <string name="img_unsaved_msg">Save changes before closing? Unsaved edits are discarded.</string>
+    <string name="owner_updated">Owner updated</string>
+    <string name="format_label">Format</string>
+    <string name="add_colon">Add colon</string>
+    <string name="upper_case">Upper case</string>
+    <string name="hash_label">HASH</string>
+    <string name="icon_saved">Icon exported to %1$s</string>
+    <string name="free_style">Free Style</string>
+    <string name="select_images">Select Images</string>
+    <string name="collage_saved">Image collage saved to %1$s</string>
+    <string name="apply_crop">Apply Crop</string>
 </resources>

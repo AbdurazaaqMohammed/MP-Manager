@@ -14,6 +14,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
@@ -1189,6 +1191,11 @@ public class ApkInfoDialogs {
 
     @SuppressLint("RequestInstallPackagesPolicy")
     public void showApkInfoDialog(File file, String fileName) {
+        showApkInfoDialog(file, fileName, false);
+    }
+
+    @SuppressLint("RequestInstallPackagesPolicy")
+    public void showApkInfoDialog(File file, String fileName, boolean isApksSplit) {
         String filePath = file.getPath();
         View display = LayoutInflater.from(context).inflate(R.layout.apk_display, null, false);
         ImageView apkIcon = display.findViewById(R.id.apkIcon);
@@ -1201,7 +1208,6 @@ public class ApkInfoDialogs {
         TextView fileSize = display.findViewById(R.id.fileSize);
         TextView apkTargetSdk = display.findViewById(R.id.apkTargetSdk);
         TextView apkMinSdk = display.findViewById(R.id.apkMinSdk);
-        TextView apkCert = display.findViewById(R.id.apkCert);
         TextView apkInstalled = display.findViewById(R.id.apkInstalled);
         TextView apkPermissions = display.findViewById(R.id.apkPermissions);
         LinearLayout permissionsHeader = display.findViewById(R.id.permissionsHeader);
@@ -1246,12 +1252,13 @@ public class ApkInfoDialogs {
         protectedDisplay.setText(R.string.loading);
 
 
-        AlertDialog ad = dialogUtil.getDialogBuilder()
+        MaterialAlertDialogBuilder adBuilder = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> showApkMoreDialog(file, fileName, filePath, pane1))
                 .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
-                .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file))
-                .create();
+                .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file));
+
+        AlertDialog ad = adBuilder.create();
         dialogUtil.styleAlertDialog(ad);
         LinearLayout rootInfoSection = display.findViewById(R.id.rootInfoSection);
         LinearLayout rootInfoHeader = display.findViewById(R.id.rootInfoHeader);
@@ -1374,14 +1381,35 @@ public class ApkInfoDialogs {
             });
         }
 
-        display.findViewById(R.id.quickEdit).setOnClickListener(v7 -> {
-            ad.dismiss();
-            manifestEditor.showEditManifestDialog(file);
-        });
+        View quickEditBtn = display.findViewById(R.id.quickEdit);
+        if (quickEditBtn != null) {
+            if (isApksSplit) {
+                quickEditBtn.setEnabled(false);
+                quickEditBtn.setAlpha(0.4f);
+            } else {
+                quickEditBtn.setOnClickListener(v7 -> {
+                    ad.dismiss();
+                    manifestEditor.showEditManifestDialog(file);
+                });
+            }
+        }
         ad.show();
+        if (isApksSplit) {
+            View installBtn = ad.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (installBtn != null) {
+                installBtn.setEnabled(false);
+                installBtn.setAlpha(0.4f);
+            }
+            View moreBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
+            if (moreBtn != null) {
+                moreBtn.setEnabled(false);
+                moreBtn.setAlpha(0.4f);
+            }
+        }
 
         new Thread(() -> {
             final boolean[] loaded = {false};
+            final String[] appMeta = new String[]{"", ""}; // [0]: label, [1]: verName
             try {
                 PackageManager pm = context.getPackageManager();
                 PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
@@ -1403,6 +1431,7 @@ public class ApkInfoDialogs {
                 Drawable icon = appInfo.loadIcon(pm);
                 String label = appInfo.loadLabel(pm).toString();
                 String verName = packageInfo.versionName;
+                appMeta[0] = label;
                 long versionCode = ApkInfoUtil.getVersionCode(packageInfo);
                 String vCode = versionCode > 0 ? String.valueOf(versionCode) : "";
                 String pkg = packageInfo.packageName;
@@ -1433,16 +1462,46 @@ public class ApkInfoDialogs {
                 }
 
                 String finalProtectedStr = protectedStr;
-                // Hashing the candidate and the installed copy is real I/O, so it
-                // stays on this worker thread rather than blocking the dialog.
-                String comparisonText = ApkInfoUtil.getInstalledVersion(context, pkg);
-                if (comparisonText == null) comparisonText = context.getString(R.string.not_installed);
-                else if (ApkInfoUtil.isDowngrade(context, packageInfo))
-                    comparisonText += " (" + context.getString(R.string.downgrade) + ")";
-                final String comparison = comparisonText;
+                // Version comparison analysis: display only the status badge
+                PackageInfo installedPkgInfo = null;
+                try {
+                    installedPkgInfo = context.getPackageManager().getPackageInfo(pkg, 0);
+                } catch (Exception ignored) {}
+
+                final PackageInfo finalInstalledInfo = installedPkgInfo;
+                final PackageInfo candidatePkgInfo = packageInfo;
+                final SpannableStringBuilder comparisonSpannable = new SpannableStringBuilder();
+
+                if (finalInstalledInfo == null) {
+                    comparisonSpannable.append(context.getString(R.string.not_installed));
+                } else {
+                    String instVerName = finalInstalledInfo.versionName == null ? "" : finalInstalledInfo.versionName;
+                    long instVerCode = ApkInfoUtil.getVersionCode(finalInstalledInfo);
+                    comparisonSpannable.append(instVerName).append(" (").append(String.valueOf(instVerCode)).append(")");
+
+                    long candVerCode = ApkInfoUtil.getVersionCode(candidatePkgInfo);
+                    if (instVerCode > candVerCode) {
+                        comparisonSpannable.append(" ");
+                        int start = comparisonSpannable.length();
+                        comparisonSpannable.append("(").append(context.getString(R.string.downgrade)).append(")");
+                        int end = comparisonSpannable.length();
+                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF4444),
+                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    } else if (candVerCode > instVerCode) {
+                        comparisonSpannable.append(" ");
+                        int start = comparisonSpannable.length();
+                        comparisonSpannable.append("(").append(context.getString(R.string.upgrade)).append(")");
+                        int end = comparisonSpannable.length();
+                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFF4CAF50),
+                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+
+                final CharSequence comparison = comparisonSpannable;
                 final String finalVerName = (TextUtils.isEmpty(verName)
                         ? context.getString(R.string.version_name_unset) : verName)
                         + (TextUtils.isEmpty(vCode) ? "" : " (" + vCode + ")");
+                appMeta[1] = finalVerName;
                 context.handler.post(() -> {
                     apkIcon.setImageDrawable(icon);
                     apkTitle.setText(label);
@@ -1457,17 +1516,12 @@ public class ApkInfoDialogs {
                     apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
-                    apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
+
                     apkInstalled.setText(comparison);
+                    uiHelper.scrollTextView(apkInstalled);
                 });
                 loaded[0] = true;
                 context.handler.post(() -> signaturesInApk.setOnClickListener(v -> {
-                    if (finalSigInfo != null) {
-                        ad.dismiss();
-                        SignatureInfoDialog.show(context, dialogUtil, file);
-                    }
-                }));
-                context.handler.post(() -> apkCert.setOnClickListener(v -> {
                     if (finalSigInfo != null) {
                         ad.dismiss();
                         SignatureInfoDialog.show(context, dialogUtil, file);
@@ -1484,9 +1538,13 @@ public class ApkInfoDialogs {
             }
             View.OnLongClickListener lcl = v -> {
                 if(v instanceof TextView tv) CopyUtil.copyToClipboard(ad, tv.getText());
-                return false;
+                return true;
             };
             context.handler.post(() -> {
+                apkIcon.setOnLongClickListener(v -> {
+                    exportApkIconZip(file, appMeta[0], appMeta[1]);
+                    return true;
+                });
                 signaturesInApk.setOnLongClickListener(lcl);
                 protectedDisplay.setOnLongClickListener(lcl);
                 pkgName.setOnLongClickListener(lcl);
@@ -1496,7 +1554,6 @@ public class ApkInfoDialogs {
                 fileSize.setOnLongClickListener(lcl);
                 apkTargetSdk.setOnLongClickListener(lcl);
                 apkMinSdk.setOnLongClickListener(lcl);
-                apkCert.setOnLongClickListener(lcl);
                 apkInstalled.setOnLongClickListener(lcl);
                 apkPermissions.setOnLongClickListener(lcl);
             });
@@ -1518,7 +1575,7 @@ public class ApkInfoDialogs {
             View root = ad.getWindow().getDecorView();
             int[] ids = {R.id.apkTitle, R.id.apkVersionName, R.id.verCode, R.id.pkgName,
                     R.id.signaturesInApk, R.id.protectedDisplay, R.id.fileSize,
-                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkCert, R.id.apkInstalled};
+                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkInstalled};
             for (int id : ids) {
                 TextView tv = root.findViewById(id);
                 if (tv != null) tv.setText(placeholder);
@@ -1593,6 +1650,83 @@ public class ApkInfoDialogs {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void exportApkIconZip(File apkFile, String appName, String versionName) {
+        new Thread(() -> {
+            try {
+                File parentDir = apkFile.getParentFile();
+                if (parentDir == null) parentDir = new File(Environment.getExternalStorageDirectory(), "Download");
+                String safeName = (TextUtils.isEmpty(appName) ? "App" : appName).replaceAll("[\\\\/:*?\"<>|]", "_");
+                String cleanVer = (TextUtils.isEmpty(versionName) ? "1.0" : versionName).replaceAll("[\\\\/:*?\"<>|]", "_");
+                int paren = cleanVer.indexOf('(');
+                if (paren > 0) cleanVer = cleanVer.substring(0, paren).trim();
+                String zipName = safeName + "_" + cleanVer + "_icon.zip";
+                File targetZip = new File(parentDir, zipName);
+
+                PackageManager pm = context.getPackageManager();
+                PackageInfo pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_ACTIVITIES);
+                Drawable defaultIcon = null;
+                if (pi != null && pi.applicationInfo != null) {
+                    pi.applicationInfo.sourceDir = apkFile.getAbsolutePath();
+                    pi.applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
+                    defaultIcon = pi.applicationInfo.loadIcon(pm);
+                }
+
+                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new FileOutputStream(targetZip))) {
+                    // 1. Write root icon.png
+                    if (defaultIcon != null) {
+                        android.graphics.Bitmap bmp;
+                        if (defaultIcon instanceof android.graphics.drawable.BitmapDrawable bd && bd.getBitmap() != null) {
+                            bmp = bd.getBitmap();
+                        } else {
+                            int w = Math.max(1, defaultIcon.getIntrinsicWidth());
+                            int h = Math.max(1, defaultIcon.getIntrinsicHeight());
+                            bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
+                            android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
+                            defaultIcon.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+                            defaultIcon.draw(canvas);
+                        }
+                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                        bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, baos);
+                        byte[] rootBytes = baos.toByteArray();
+                        java.util.zip.ZipEntry ze = new java.util.zip.ZipEntry("icon.png");
+                        zos.putNextEntry(ze);
+                        zos.write(rootBytes);
+                        zos.closeEntry();
+                    }
+
+                    // 2. Extract launcher icons from inside the APK archive
+                    try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(apkFile)) {
+                        java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zf.entries();
+                        while (entries.hasMoreElements()) {
+                            java.util.zip.ZipEntry entry = entries.nextElement();
+                            String name = entry.getName();
+                            if ((name.startsWith("res/mipmap-") || name.startsWith("res/drawable-"))
+                                    && (name.contains("ic_launcher") || name.endsWith("icon.png"))
+                                    && name.endsWith(".png")) {
+                                java.util.zip.ZipEntry outEntry = new java.util.zip.ZipEntry(name);
+                                zos.putNextEntry(outEntry);
+                                try (InputStream is = zf.getInputStream(entry)) {
+                                    byte[] buf = new byte[8192];
+                                    int len;
+                                    while ((len = is.read(buf)) > 0) zos.write(buf, 0, len);
+                                }
+                                zos.closeEntry();
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                final String finalZipPath = targetZip.getAbsolutePath();
+                context.handler.post(() -> {
+                    Extensions.showMessage(context, context.getString(R.string.icon_saved, targetZip.getName()));
+                    context.refreshPaneAfterChange(pane1, null);
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
     }
 
 }
