@@ -1942,9 +1942,7 @@ Strings are sent to the external service you configured.</string>
     <!-- NPatch integrated mode -->
     <string name="npatch_integrated">Signature killer &amp; xposed</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
-    <string name="npatch_hint">Patches the APK with NPatch or LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">Patches the APK with LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_bypass_lsp_0">Bypass: None</string>
     <string name="npatch_bypass_lsp_1">Bypass: PM</string>
     <string name="npatch_bypass_lsp_2">Bypass: PM + OpenAT</string>
@@ -2053,15 +2051,9 @@ Strings are sent to the external service you configured.</string>
     <string name="npatch_embed_modules_title">Select module APKs to embed</string>
     <string name="npatch_module_missing">Module not found: %1$s</string>
     <string name="npatch_sigbypass_title">Signature bypass level</string>
-    <string name="npatch_sigbypass_0">Bypass: None</string>
-    <string name="npatch_sigbypass_1">Bypass: Basic</string>
-    <string name="npatch_sigbypass_2">Bypass: High</string>
     <string name="npatch_debuggable">Make app debuggable</string>
     <string name="npatch_injectdex">Inject loader dex into main sequence (sub-process hooks)</string>
-    <string name="npatch_microg">Redirect GMS calls to MicroG</string>
-    <string name="npatch_hidelibs">Hide libs (sanitize ART/system library visibility)</string>
     <string name="npatch_cleartext">Force usesCleartextTraffic (plain HTTP)</string>
-    <string name="npatch_provider">Inject MT data-files provider</string>
     <string name="npatch_extractlibs">Force extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">Override target SDK version</string>
     <string name="npatch_targetsdk_value">Target SDK value</string>
@@ -2073,7 +2065,7 @@ Strings are sent to the external service you configured.</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engines (NPatch / LSPatch) are not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">COPY</string>

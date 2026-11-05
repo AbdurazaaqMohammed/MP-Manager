@@ -34,8 +34,8 @@ android {
         }
     }
 
-    // "full" carries the vendored Xposed-patcher engines (NPatch + LSPatch) and
-    // their loader assets; "lite" omits them entirely (the APK dialog entry
+    // "full" carries the vendored LSPatch patcher engine and its loader
+    // assets; "lite" omits them entirely (the APK dialog entry
     // explains where to get the full version). Everything else is shared.
     flavorDimensions "version"
     productFlavors {
@@ -143,12 +143,15 @@ dependencies {
     implementation "androidx.window:window:1.5.1"
 
     implementation files('libs/commons-net-3.11.1.jar')
-    // NPatch + LSPatch integrated-mode patcher engines (vendored, see
-    // docs/NPATCH_INTEGRATION.md) — full flavor only. Their deps are already
-    // provided: gson, jcommander, commons-io, bcprov above; NeoApk inside the
-    // NPatch jar is Kotlin 2.4.20 bytecode, so the stdlib must be >= 2.4.20.
-    fullImplementation files('libs/npatch-patcher.jar')
+    // LSPatch (JingMatrix fork) integrated-mode patcher engine (vendored, see
+    // docs/XPOSED_PATCHER.md) — full flavor only — plus the vendored classes it
+    // links against: the aXML manifest editor (com.wind.meditor, pxb.android)
+    // and the NeoApk raw-file V2/V3 signer used by APK multiplexing
+    // (top.nkbe.nza). Shared deps are already provided: gson, jcommander,
+    // commons-io, bcprov above; NeoApk is Kotlin 2.4.20 bytecode, so the
+    // stdlib must be >= 2.4.20.
     fullImplementation files('libs/lspatch-patcher.jar')
+    fullImplementation files('libs/patcher-common.jar')
     fullImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")

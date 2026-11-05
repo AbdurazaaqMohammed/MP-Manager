@@ -28,7 +28,7 @@ public final class ApkMoreMenuOrder {
     public static final String SIG_HEALTH = "sig_health";
     public static final String MANIFEST_TOGGLES = "manifest_toggles";
     public static final String PERMISSIONS = "permissions";
-    public static final String NPATCH = "npatch";
+    public static final String XPOSED_PATCH = "npatch";
     public static final String MULTIPLEX = "multiplex";
     public static final String IL2CPP = "il2cpp";
     public static final String PATCH_LIBS = "patch_libs";
@@ -37,7 +37,7 @@ public final class ApkMoreMenuOrder {
     public static final String[] DEFAULT_ORDER = {
             SIGN, OPT, DECOMPILE, REFACTOR, PROTECT, CLONE,
             ADD_TOAST, REMOVE_TOASTS, REMOVE_SIG, SIG_HEALTH,
-            MANIFEST_TOGGLES, PERMISSIONS, NPATCH, MULTIPLEX,
+            MANIFEST_TOGGLES, PERMISSIONS, XPOSED_PATCH, MULTIPLEX,
             IL2CPP, PATCH_LIBS, SSL_UNPIN
     };
 
@@ -123,7 +123,7 @@ public final class ApkMoreMenuOrder {
             case SIG_HEALTH: return context.getString(R.string.signature_health);
             case MANIFEST_TOGGLES: return context.getString(R.string.manifest_toggles);
             case PERMISSIONS: return context.getString(R.string.permissions);
-            case NPATCH: return context.getString(R.string.npatch_integrated);
+            case XPOSED_PATCH: return context.getString(R.string.npatch_integrated);
             case MULTIPLEX: return context.getString(R.string.multiplex_apk);
             case IL2CPP: return context.getString(R.string.il2cpp_dump_native);
             case PATCH_LIBS: return context.getString(R.string.patch_native_libs);
@@ -159,7 +159,7 @@ public final class ApkMoreMenuOrder {
             case SIG_HEALTH: return R.drawable.baseline_info_24;
             case MANIFEST_TOGGLES: return R.drawable.baseline_settings_24;
             case PERMISSIONS: return R.drawable.baseline_info_24;
-            case NPATCH: return R.drawable.tools_24px;
+            case XPOSED_PATCH: return R.drawable.tools_24px;
             case MULTIPLEX: return R.drawable.stacks_24px;
             case IL2CPP: return R.drawable.terminal_24px;
             case PATCH_LIBS: return R.drawable.tools_24px;

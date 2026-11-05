@@ -871,7 +871,7 @@ public class ApkInfoDialogs {
             manifestEditor.showManifestTogglesDialog(file);
         } else if (ApkMoreMenuOrder.PERMISSIONS.equals(actionId)) {
             manifestEditor.showPermissionsDialog(file);
-        } else if (ApkMoreMenuOrder.NPATCH.equals(actionId)) {
+        } else if (ApkMoreMenuOrder.XPOSED_PATCH.equals(actionId)) {
             XposedPatcherLauncher.open(context, dialogUtil, pane1, file, fileName);
         } else if (ApkMoreMenuOrder.MULTIPLEX.equals(actionId)) {
             showMultiplexDialog(file, fileName);

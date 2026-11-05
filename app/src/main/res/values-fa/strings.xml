@@ -1832,9 +1832,7 @@ com/gms/
     <string name="failed">ناموفق</string>
     <string name="npatch_integrated">وصله‌کنندهٔ Xposed</string>
     <string name="npatch_title">وصله با Xposed: %1$s</string>
-    <string name="npatch_hint">APK را با NPatch یا LSPatch (حالت یکپارچه) وصله می‌کند: یک بارگذار Xposed امبد می‌شود تا ماژول‌های انتخابی بدون برنامهٔ مدیر اجرا شوند. خروجی با کلید پیکربندی‌شده در «تنظیمات امضا» امضا می‌شود — یک APK وصله‌شدهٔ جدید ساخته می‌شود.</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">APK را با LSPatch (حالت یکپارچه) وصله می‌کند: یک بارگذار Xposed امبد می‌شود تا ماژول‌های انتخابی بدون برنامهٔ مدیر اجرا شوند. خروجی با کلید پیکربندی‌شده در «تنظیمات امضا» امضا می‌شود — یک APK وصله‌شدهٔ جدید ساخته می‌شود.</string>
     <string name="npatch_bypass_lsp_0">دورزدن: هیچ‌کدام</string>
     <string name="npatch_bypass_lsp_1">دورزدن: PM</string>
     <string name="npatch_bypass_lsp_2">دورزدن: PM + OpenAT</string>
@@ -1928,15 +1926,9 @@ com/gms/
     <string name="npatch_embed_modules_title">APK ماژول‌ها را برای امبد کردن انتخاب کنید</string>
     <string name="npatch_module_missing">ماژول پیدا نشد: %1$s</string>
     <string name="npatch_sigbypass_title">سطح دورزدن امضا</string>
-    <string name="npatch_sigbypass_0">دورزدن: هیچ‌کدام</string>
-    <string name="npatch_sigbypass_1">دورزدن: پایه</string>
-    <string name="npatch_sigbypass_2">دورزدن: بالا</string>
     <string name="npatch_debuggable">قابل‌اشکال‌زدایی کردن برنامه</string>
     <string name="npatch_injectdex">تزریق dex بارگذار به توالی اصلی (قلاب‌های زیرفرایند)</string>
-    <string name="npatch_microg">هدایت مجدد فراخوانی‌های GMS به MicroG</string>
-    <string name="npatch_hidelibs">پنهان کردن کتابخانه‌ها (پاک‌سازی دیده‌پذیری کتابخانه‌های ART/سیستم)</string>
     <string name="npatch_cleartext">اجبار usesCleartextTraffic (HTTP ساده)</string>
-    <string name="npatch_provider">تزریق ارائه‌دهندهٔ پرونده‌دادهٔ MT</string>
     <string name="npatch_extractlibs">اجبار extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">بازنویسی نسخهٔ SDK هدف</string>
     <string name="npatch_targetsdk_value">مقدار SDK هدف</string>
@@ -1948,7 +1940,7 @@ com/gms/
     <string name="npatch_done">وصله شد: %1$s</string>
     <string name="npatch_install_prompt">%1$s ساخته شد. ماژول‌ها امبد شده‌اند — برنامه مستقل اجرا می‌شود. نصب شود؟</string>
     <string name="xposed_patcher_lite_title">وصله‌کنندهٔ Xposed</string>
-    <string name="xposed_patcher_lite_message">موتورهای وصله‌کنندهٔ Xposed (NPatch / LSPatch) در نسخهٔ lite بسته‌بنده نشده‌اند. برای وصلهٔ APKها با ماژول‌های امبدشده، نسخهٔ کامل MP Manager را نصب کنید.</string>
+    <string name="xposed_patcher_lite_message">موتورهای وصله‌کنندهٔ Xposed (LSPatch) در نسخهٔ lite بسته‌بنده نشده‌اند. برای وصلهٔ APKها با ماژول‌های امبدشده، نسخهٔ کامل MP Manager را نصب کنید.</string>
     <string name="op_copying">رونوشت</string>
     <string name="op_moving">جابه‌جایی</string>
     <string name="op_deleting">حذف</string>

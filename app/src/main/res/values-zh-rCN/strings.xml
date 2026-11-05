@@ -1815,9 +1815,7 @@ Layout Inspector
     <string name="failed">失败</string>
     <string name="npatch_integrated">Xposed 修补器</string>
     <string name="npatch_title">用 Xposed 修补：%1$s</string>
-    <string name="npatch_hint">用 NPatch 或 LSPatch（集成模式）修补 APK：嵌入 Xposed 加载器，使所选模块无需管理器应用即可运行。输出使用“签名设置”中配置的密钥签名 — 会创建一个新的修补 APK。</string>
-    <string name="npatch_engine_npatch">NPatch</string>
-    <string name="npatch_engine_lspatch">LSPatch</string>
+    <string name="npatch_hint">用 LSPatch（集成模式）修补 APK：嵌入 Xposed 加载器，使所选模块无需管理器应用即可运行。输出使用“签名设置”中配置的密钥签名 — 会创建一个新的修补 APK。</string>
     <string name="npatch_bypass_lsp_0">绕过：无</string>
     <string name="npatch_bypass_lsp_1">绕过：PM</string>
     <string name="npatch_bypass_lsp_2">绕过：PM + OpenAT</string>
@@ -1911,15 +1909,9 @@ Layout Inspector
     <string name="npatch_embed_modules_title">选择要嵌入的模块 APK</string>
     <string name="npatch_module_missing">未找到模块：%1$s</string>
     <string name="npatch_sigbypass_title">签名绕过级别</string>
-    <string name="npatch_sigbypass_0">绕过：无</string>
-    <string name="npatch_sigbypass_1">绕过：基础</string>
-    <string name="npatch_sigbypass_2">绕过：高级</string>
     <string name="npatch_debuggable">使应用可调试</string>
     <string name="npatch_injectdex">将加载器 dex 注入主序列（子进程 hook）</string>
-    <string name="npatch_microg">将 GMS 调用重定向到 MicroG</string>
-    <string name="npatch_hidelibs">隐藏库（净化 ART/系统库可见性）</string>
     <string name="npatch_cleartext">强制 usesCleartextTraffic（明文 HTTP）</string>
-    <string name="npatch_provider">注入 MT 数据文件提供程序</string>
     <string name="npatch_extractlibs">强制 extractNativeLibs=true</string>
     <string name="npatch_override_targetsdk">覆盖目标 SDK 版本</string>
     <string name="npatch_targetsdk_value">目标 SDK 值</string>
@@ -1931,7 +1923,7 @@ Layout Inspector
     <string name="npatch_done">已修补：%1$s</string>
     <string name="npatch_install_prompt">已创建 %1$s。模块已嵌入 — 应用可独立运行。是否安装？</string>
     <string name="xposed_patcher_lite_title">Xposed 修补器</string>
-    <string name="xposed_patcher_lite_message">Xposed 修补引擎 (NPatch / LSPatch) 未包含在 lite 版中。请安装完整版 MP Manager 以修补内嵌模块的 APK。</string>
+    <string name="xposed_patcher_lite_message">Xposed 修补引擎 (LSPatch) 未包含在 lite 版中。请安装完整版 MP Manager 以修补内嵌模块的 APK。</string>
     <string name="op_copying">复制</string>
     <string name="op_moving">移动</string>
     <string name="op_deleting">删除</string>

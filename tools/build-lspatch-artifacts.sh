@@ -3,15 +3,14 @@
 # build-lspatch-artifacts.sh
 #
 # Rebuilds the LSPatch (JingMatrix fork) patcher artifacts that MP-Manager
-# embeds alongside NPatch:
+# embeds:
 #   app/libs/lspatch-patcher.jar             - LSPatch patcher engine classes
-#   app/src/main/assets/lspatch/loader.dex   - loader DEX embedded into patched apps
-#   app/src/main/assets/lspatch/metaloader.dex
-#   app/src/main/assets/lspatch/so/<abi>/liblspatch.so  (armeabi-v7a, arm64-v8a, x86, x86_64)
-#   app/src/main/assets/lspatch/keystore     - LSPatch's built-in signing keystore
+#   app/src/full/assets/lspatch/loader.dex   - loader DEX embedded into patched apps
+#   app/src/full/assets/lspatch/metaloader.dex
+#   app/src/full/assets/lspatch/so/<abi>/liblspatch.so  (armeabi-v7a, arm64-v8a, x86, x86_64)
+#   app/src/full/assets/lspatch/keystore     - LSPatch's built-in signing keystore
 #
-# See docs/NPATCH_INTEGRATION.md (covers both engines) for the full update
-# walkthrough.
+# See docs/XPOSED_PATCHER.md for the full update walkthrough.
 #
 # Requirements: JDK 21+ in JAVA_HOME, Android SDK with accepted licenses,
 # LSPatch source at <repo>/LSPatch-master with its `core` submodule checked out
@@ -23,12 +22,13 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 LSPATCH_DIR="$REPO_DIR/LSPatch-master"
-# Same reason as NPatch: the native build breaks when the path has spaces.
+# The native build breaks when the path has spaces (clang splits unquoted
+# -Wl,--thinlto-cache-dir=... arguments).
 BUILD_DIR="${LSPATCH_BUILD_DIR:-/c/lspatch-build}"
 JAR_DIR="$BUILD_DIR/LSPatch-master/out/release"
 ASSETS_DIR="$JAR_DIR/../assets/release"
 OUT_JAR="$REPO_DIR/app/libs/lspatch-patcher.jar"
-APP_ASSETS="$REPO_DIR/app/src/main/assets"
+APP_ASSETS="$REPO_DIR/app/src/full/assets"
 
 if [ ! -d "$LSPATCH_DIR" ]; then
   echo "ERROR: $LSPATCH_DIR not found." >&2
@@ -78,8 +78,8 @@ cd "$BUILD_DIR/LSPatch-master"
 #    com/android/apksig/** — MP-Manager vendors apksig inside the :apkkit
 #    module, so shipping it again would break the dex step with duplicates.
 #    The axml packages (com/wind/meditor, pxb/android) are excluded too —
-#    byte-identical copies are already vendored from the NPatch build; both
-#    engines share them.
+#    byte-identical copies are vendored in app/libs/patcher-common.jar, which
+#    also carries the NeoApk signer used by APK multiplexing.
 FAT_JAR="$(ls -t "$JAR_DIR"/lspatch-v*-release.jar | head -1)"
 echo "Repackaging $FAT_JAR -> $OUT_JAR"
 mkdir -p "$(dirname "$OUT_JAR")"
@@ -104,7 +104,7 @@ mkdir -p "$APP_ASSETS/lspatch/so"
 cp -r "$ASSETS_DIR/lspatch/." "$APP_ASSETS/lspatch/"
 FAT_JAR_ABS="$(cygpath -w "$FAT_JAR")"
 # KeystoreSpec.builtIn() loads "assets/keystore" from the classloader, i.e. the
-# APK zip root — like npatch.key, NOT under assets/lspatch/.
+# APK zip root — NOT under assets/lspatch/.
 unzip -p "$FAT_JAR_ABS" "assets/keystore" > "$APP_ASSETS/keystore"
 
 echo

@@ -14,6 +14,6 @@ public final class XposedPatcherLauncher {
     public static void open(MainActivity context,
                             DialogUtil dialogUtil,
                             boolean pane1, File file, String fileName) {
-        new NPatchDialogs(context, dialogUtil, pane1).showNPatchDialog(file, fileName);
+        new XposedPatcherDialogs(context, dialogUtil, pane1).showDialog(file, fileName);
     }
 }
