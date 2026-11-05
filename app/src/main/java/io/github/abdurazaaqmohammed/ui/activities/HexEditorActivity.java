@@ -22,10 +22,12 @@ import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -442,10 +444,10 @@ public class HexEditorActivity extends BaseActivity {
         popup.getMenu().add(0, 2, 1, "Copy Hex");
         popup.getMenu().add(0, 3, 2, "Copy Text");
         if (!readOnly) {
-            popup.getMenu().add(0, 4, 3, R.string.paste);
+            popup.getMenu().add(0, 4, 3, android.R.string.paste);
             popup.getMenu().add(0, 5, 4, "Fill with zeroes (00)");
         }
-        popup.getMenu().add(0, 6, 5, R.string.select_all);
+        popup.getMenu().add(0, 6, 5, android.R.string.selectAll);
 
         popup.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {

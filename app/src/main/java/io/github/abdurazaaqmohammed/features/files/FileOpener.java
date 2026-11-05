@@ -935,13 +935,11 @@ public class FileOpener {
                     sb.append("\n");
                 }
 
-                java.util.List<io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.DynamicEntry> dyn = elf.dynamic();
+                java.util.Map<String, String> dyn = elf.dynamicInfo();
                 if (dyn != null && !dyn.isEmpty()) {
                     sb.append("--- Dynamic / Dependencies ---\n");
-                    for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.DynamicEntry d : dyn) {
-                        if (d != null && d.name != null) {
-                            sb.append("NEEDED: ").append(d.name).append("\n");
-                        }
+                    for (java.util.Map.Entry<String, String> entry : dyn.entrySet()) {
+                        sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
                     }
                 }
 
