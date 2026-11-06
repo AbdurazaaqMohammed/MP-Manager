@@ -1,19 +1,23 @@
 package io.github.abdurazaaqmohammed.features.files;
 
-import android.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.radiobutton.MaterialRadioButton;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -86,12 +90,12 @@ public final class SplitDialog {
         modeGroup.setOrientation(LinearLayout.VERTICAL);
         modeGroup.setPadding(0, Extensions.dp2px(context, 8), 0, Extensions.dp2px(context, 8));
 
-        RadioButton rbBySize = new RadioButton(context);
+        MaterialRadioButton rbBySize = new MaterialRadioButton(context);
         rbBySize.setText(R.string.split_by_size);
         rbBySize.setChecked(true);
         modeGroup.addView(rbBySize);
 
-        RadioButton rbByCount = new RadioButton(context);
+        MaterialRadioButton rbByCount = new MaterialRadioButton(context);
         rbByCount.setText(R.string.split_by_count);
         modeGroup.addView(rbByCount);
         root.addView(modeGroup);
@@ -164,7 +168,7 @@ public final class SplitDialog {
         root.addView(previewText);
 
         // Delete original CheckBox
-        CheckBox deleteOriginal = new CheckBox(context);
+        MaterialCheckBox deleteOriginal = new MaterialCheckBox(context);
         deleteOriginal.setText(R.string.delete_original_after_split);
         root.addView(deleteOriginal);
 
@@ -266,11 +270,15 @@ public final class SplitDialog {
 
         updatePreview.run();
 
-        new AlertDialog.Builder(context)
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(root);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.split_dialog_title)
-                .setView(root)
+                .setIcon(R.drawable.call_split_24px)
+                .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.split_file, (dialog, which) -> {
+                .setPositiveButton(R.string.split_file, (dialogInterface, which) -> {
                     long partSizeBytes = chosenPartSize[0];
                     boolean isPartStyle = namingSpinner.getSelectedItemPosition() == 1;
                     String namingStyle = isPartStyle ? "part_ext" : "ext_numbered";
@@ -298,7 +306,8 @@ public final class SplitDialog {
                         }
                     }).start();
                 })
-                .show();
+                .create();
+        new DialogUtil(context).styleAlertDialog(dialog);
     }
 
     public static void showMerge(MainActivity context, File file) {
@@ -337,15 +346,19 @@ public final class SplitDialog {
         outputNameInput.setText(suggestedOutput);
         root.addView(outputNameInput);
 
-        CheckBox deleteParts = new CheckBox(context);
+        MaterialCheckBox deleteParts = new MaterialCheckBox(context);
         deleteParts.setText("Delete split parts after merging");
         root.addView(deleteParts);
 
-        new AlertDialog.Builder(context)
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(root);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.merge_split_files)
-                .setView(root)
+                .setIcon(R.drawable.baseline_compress_24)
+                .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.merge_split_files, (dialog, which) -> {
+                .setPositiveButton(R.string.merge_split_files, (dialogInterface, which) -> {
                     String outName = outputNameInput.getText().toString().trim();
                     if (outName.isEmpty()) outName = suggestedOutput;
                     File outFile = new File(file.getParentFile(), outName);
@@ -375,7 +388,8 @@ public final class SplitDialog {
                         }
                     }).start();
                 })
-                .show();
+                .create();
+        new DialogUtil(context).styleAlertDialog(dialog);
     }
 
     private static int findDefaultPreset(long fileLen) {

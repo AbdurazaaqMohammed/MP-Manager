@@ -1,10 +1,10 @@
 package io.github.abdurazaaqmohammed.features.apk.flutter;
 
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +17,14 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+
+import java.util.Locale;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -129,7 +137,7 @@ public final class FlutterToolsDialog {
         });
         root.addView(actionList);
 
-        AlertDialog dialog = new AlertDialog.Builder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.flutter_tools_title)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -183,7 +191,7 @@ public final class FlutterToolsDialog {
         });
         root.addView(actionList);
 
-        AlertDialog dialog = new AlertDialog.Builder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.flutter_tools_title)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -279,46 +287,81 @@ public final class FlutterToolsDialog {
         root.addView(countView);
 
         List<DartStringsExtractor.DartStringItem> filtered = new ArrayList<>(allItems);
-        ListView listView = new ListView(context);
-        ArrayAdapter<DartStringsExtractor.DartStringItem> adapter = new ArrayAdapter<>(context, android.R.layout.simple_list_item_2, android.R.id.text1, filtered) {
+        FastScrollerRecyclerView recyclerView = new FastScrollerRecyclerView(context);
+        recyclerView.setLayoutManager(new LinearLayoutManager(context));
+        recyclerView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(context, 380)));
+
+        class StringViewHolder extends RecyclerView.ViewHolder {
+            final TextView t1;
+            final TextView t2;
+
+            StringViewHolder(View itemView) {
+                super(itemView);
+                LinearLayout layout = (LinearLayout) itemView;
+                t1 = (TextView) layout.getChildAt(0);
+                t2 = (TextView) layout.getChildAt(1);
+            }
+        }
+
+        RecyclerView.Adapter<StringViewHolder> adapter = new RecyclerView.Adapter<>() {
             @NonNull
             @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                View v = super.getView(position, convertView, parent);
-                TextView t1 = v.findViewById(android.R.id.text1);
-                TextView t2 = v.findViewById(android.R.id.text2);
-                DartStringsExtractor.DartStringItem item = getItem(position);
-                if (item != null) {
-                    t1.setText(item.text());
-                    t2.setText(item.category());
-                }
-                return v;
+            public StringViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                LinearLayout itemLayout = new LinearLayout(context);
+                itemLayout.setOrientation(LinearLayout.VERTICAL);
+                int pVer = Extensions.dp2px(context, 6);
+                int pHor = Extensions.dp2px(context, 8);
+                itemLayout.setPadding(pHor, pVer, pHor, pVer);
+                itemLayout.setBackgroundResource(android.R.drawable.list_selector_background);
+
+                TextView text1 = new TextView(context);
+                text1.setTextSize(14f);
+                text1.setMaxLines(2);
+                text1.setEllipsize(TextUtils.TruncateAt.END);
+
+                TextView text2 = new TextView(context);
+                text2.setTextSize(12f);
+                text2.setAlpha(0.65f);
+
+                itemLayout.addView(text1);
+                itemLayout.addView(text2);
+                return new StringViewHolder(itemLayout);
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull StringViewHolder holder, int position) {
+                DartStringsExtractor.DartStringItem item = filtered.get(position);
+                holder.t1.setText(item.text());
+                holder.t2.setText(item.category());
+                holder.itemView.setOnClickListener(v -> {
+                    ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("Dart string", item.text()));
+                        Extensions.showMessage(context, R.string.flutter_copied);
+                    }
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return filtered.size();
             }
         };
-        listView.setAdapter(adapter);
-        listView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(context, 350)));
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            DartStringsExtractor.DartStringItem item = filtered.get(position);
-            ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) {
-                cm.setPrimaryClip(ClipData.newPlainText("Dart string", item.text()));
-                Extensions.showMessage(context, R.string.flutter_copied);
-            }
-        });
-        root.addView(listView);
+        recyclerView.setAdapter(adapter);
+        root.addView(recyclerView);
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                String q = s.toString().trim().toLowerCase(java.util.Locale.ROOT);
+                String q = s.toString().trim().toLowerCase(Locale.ROOT);
                 filtered.clear();
                 if (q.isEmpty()) {
                     filtered.addAll(allItems);
                 } else {
                     for (DartStringsExtractor.DartStringItem item : allItems) {
-                        if (item.text().toLowerCase(java.util.Locale.ROOT).contains(q) || item.category().toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                        if (item.text().toLowerCase(Locale.ROOT).contains(q) || item.category().toLowerCase(Locale.ROOT).contains(q)) {
                             filtered.add(item);
                         }
                     }
@@ -328,7 +371,7 @@ public final class FlutterToolsDialog {
             }
         });
 
-        new AlertDialog.Builder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.flutter_extract_strings)
                 .setView(root)
                 .setNeutralButton("Export .txt", (dialog, which) -> {
@@ -353,11 +396,19 @@ public final class FlutterToolsDialog {
         new Thread(() -> {
             try {
                 outDir.mkdirs();
-                try (ZipFile zf = new ZipFile(apkFile)) {
-                    for (FileHeader fh : zf.getFileHeaders()) {
-                        String name = fh.getFileName();
-                        if (name != null && name.startsWith(FlutterDetector.FLUTTER_ASSETS_DIR)) {
-                            zf.extractFile(fh, outDir.getAbsolutePath());
+                List<FileHeader> headers = ZipCompat.listHeaders(apkFile);
+                for (FileHeader fh : headers) {
+                    String name = fh.getFileName();
+                    if (name != null && name.startsWith(FlutterDetector.FLUTTER_ASSETS_DIR) && !fh.isDirectory()) {
+                        String rel = name.substring(FlutterDetector.FLUTTER_ASSETS_DIR.length());
+                        File target = new File(outDir, rel);
+                        File parent = target.getParentFile();
+                        if (parent != null && !parent.exists()) parent.mkdirs();
+                        try (java.io.InputStream is = ZipCompat.openEntry(apkFile, name);
+                             java.io.OutputStream os = new java.io.FileOutputStream(target)) {
+                            byte[] buf = new byte[64 * 1024];
+                            int n;
+                            while ((n = is.read(buf)) != -1) os.write(buf, 0, n);
                         }
                     }
                 }
@@ -387,7 +438,7 @@ public final class FlutterToolsDialog {
         }
         sb.append("• Assets: \n  ").append(info.assetsCount).append(" files (Manifest: ").append(info.hasManifest ? "yes" : "no").append(")");
 
-        new AlertDialog.Builder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.flutter_snapshot_info)
                 .setMessage(sb.toString())
                 .setPositiveButton(android.R.string.ok, null)

@@ -57,6 +57,7 @@ import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -971,7 +972,7 @@ final View.OnClickListener originalClickListener;
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
-                if (!multi && !isInZip && !file.isDirectory()) {
+                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.SPLIT, direction)));
                     if (SplitArchiveUtil.isSplitArchive(file)) {
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MERGE_SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.MERGE_SPLIT, direction)));
