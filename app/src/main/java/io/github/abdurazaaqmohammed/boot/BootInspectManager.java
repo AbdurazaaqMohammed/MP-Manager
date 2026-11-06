@@ -125,7 +125,10 @@ public class BootInspectManager {
 
     public static void openBootImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null || !imageFile.exists()) return;
-        Extensions.showMessage(context, "Unpacking Boot Image...");
+        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.utils.ProgressManager(context, true);
+        pm.setText(context.getString(R.string.extracting));
+        pm.show();
 
         new Thread(() -> {
             try {
@@ -142,10 +145,14 @@ public class BootInspectManager {
                 activeSessions.put(openTarget.getAbsolutePath(), session);
 
                 new Handler(Looper.getMainLooper()).post(() -> {
+                    pm.dismiss();
                     context.loadFolderInPane(openTarget, pane1, true);
                 });
             } catch (Exception e) {
-                new Handler(Looper.getMainLooper()).post(() -> new ErrorUtil(context).showError(e));
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                });
             }
         }).start();
     }
@@ -174,7 +181,11 @@ public class BootInspectManager {
     }
 
     private static void executeRepack(MainActivity context, Session session) {
-        Extensions.showMessage(context, "Repacking Boot Image...");
+        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.utils.ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+
         new Thread(() -> {
             try {
                 File tempOut = new File(context.getCacheDir(), "repack_" + System.currentTimeMillis() + ".img");
@@ -210,11 +221,18 @@ public class BootInspectManager {
                     }
                     session.takeSnapshot();
                     new Handler(Looper.getMainLooper()).post(() -> {
+                        pm.dismiss();
                         Extensions.showMessage(context, "Boot image repacked and updated successfully!");
+                        context.refreshAllPanes();
                     });
+                } else {
+                    new Handler(Looper.getMainLooper()).post(pm::dismiss);
                 }
             } catch (Exception e) {
-                new Handler(Looper.getMainLooper()).post(() -> new ErrorUtil(context).showError(e));
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                });
             }
         }).start();
     }

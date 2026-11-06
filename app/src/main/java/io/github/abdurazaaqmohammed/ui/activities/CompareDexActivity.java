@@ -1355,9 +1355,9 @@ public class CompareDexActivity extends BaseActivity {
         if (!downloadDir.exists()) downloadDir.mkdirs();
         File outFile = new File(downloadDir, outFileName);
 
-        final ProgressDialog progress = new ProgressDialog(this);
-        progress.setMessage(getString(R.string.exporting));
-        progress.setCancelable(false);
+        final io.github.abdurazaaqmohammed.utils.ProgressManager progress =
+                new io.github.abdurazaaqmohammed.utils.ProgressManager(this, true);
+        progress.setText(getString(R.string.exporting));
         progress.show();
 
         new Thread(() -> {

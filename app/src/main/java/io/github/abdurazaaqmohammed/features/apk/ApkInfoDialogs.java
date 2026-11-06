@@ -290,7 +290,7 @@ public class ApkInfoDialogs {
                                 pm.dismiss();
                                 context.handler.post(() -> {
                                     Extensions.showMessage(context, context.getString(R.string.il2cpp_done, out.getName()));
-                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                    context.refreshAllPanes();
                                 });
                             } catch (Exception e) {
                                 pm.dismiss();
@@ -449,7 +449,7 @@ public class ApkInfoDialogs {
                                 context.handler.post(() -> {
                                     Extensions.showMessage(context,
                                             context.getString(R.string.libpatcher_done, entry, out.getName()));
-                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                    context.refreshAllPanes();
                                 });
                             } catch (Exception e) {
                                 pm.dismiss();
@@ -655,7 +655,7 @@ public class ApkInfoDialogs {
                                     }
                                     if (sign[0]) wrapper[0].signApk(opt);
                                     pm.dismiss();
-                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                    context.handler.post(context::refreshAllPanes);
                                 } catch (Exception e) {
                                     pm.dismiss();
                                     new ErrorUtil(context).showError(e);
@@ -739,6 +739,7 @@ public class ApkInfoDialogs {
                                 logger.close();
                                 pm.dismiss();
                                 Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
+                                context.refreshAllPanes();
                             } catch (Exception e) {
                                 pm.dismiss();
                                 context.handler.post(() -> new ErrorUtil(context).showError(e));
@@ -811,7 +812,11 @@ public class ApkInfoDialogs {
                                 options.newCommandExecutor(logger).runCommand();
                                 logger.close();
                                 pm.dismiss();
-                                context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
+                                context.handler.post(() -> {
+                                    dialog2.dismiss();
+                                    Extensions.showMessage(context, context.rss.getString(R.string.protectd));
+                                    context.refreshAllPanes();
+                                });
                             } catch (Exception e) {
                                 pm.dismiss();
                                 context.handler.post(dialog2::dismiss);
@@ -852,7 +857,7 @@ public class ApkInfoDialogs {
                                         wrapper[0].signApk(cloned);
                                     }
                                     pm.dismiss();
-                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                    context.handler.post(context::refreshAllPanes);
                                 } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
                             }).start();
                         };
@@ -988,12 +993,12 @@ public class ApkInfoDialogs {
                                                         } catch (Exception e) {
                                                             new ErrorUtil(context).showError(e);
                                                         } finally {
-                                                            context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                            context.refreshAllPanes();
                                                         }
                                                     });
                                                 } else {
                                                     Extensions.showMessage(context, msg);
-                                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                    context.refreshAllPanes();
                                                 }
                                             }
                                         } catch (Exception ignored) {

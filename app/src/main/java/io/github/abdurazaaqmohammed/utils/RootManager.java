@@ -1762,12 +1762,21 @@ public class RootManager {
 
     private final Map<String, ListCacheEntry> listCache = new HashMap<>();
     private static final long LIST_CACHE_TTL = 8000L;
+    private static final long STATIC_DIR_CACHE_TTL = 15L * 60 * 1000L; // 15 minutes for static system dirs
+
+    private static boolean isStaticSystemDir(String dir) {
+        if (dir == null) return false;
+        return dir.startsWith("/system") || dir.startsWith("/vendor")
+                || dir.startsWith("/apex") || dir.startsWith("/product")
+                || dir.startsWith("/odm") || dir.startsWith("/system_ext");
+    }
 
     private synchronized File[] cachedList(String dirPath) {
         if (dirPath == null) return null;
         try {
             ListCacheEntry e = listCache.get(dirPath);
-            if (e != null && e.files != null && System.currentTimeMillis() - e.at < LIST_CACHE_TTL) {
+            long ttl = isStaticSystemDir(dirPath) ? STATIC_DIR_CACHE_TTL : LIST_CACHE_TTL;
+            if (e != null && e.files != null && System.currentTimeMillis() - e.at < ttl) {
                 return e.files.clone();
             }
             if (e != null) listCache.remove(dirPath);
@@ -1829,7 +1838,7 @@ public class RootManager {
             if (f == null) continue;
             if (f instanceof RootFile) {
                 RootFile r = (RootFile) f;
-                files[i] = new RootFile(cleanParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode());
+                files[i] = new RootFile(cleanParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode(), r.isLink());
             } else {
                 files[i] = new File(cleanParent, f.getName());
             }
@@ -1871,7 +1880,7 @@ public class RootManager {
                 linkNames.add(name);
             }
             files.add(new RootFile(cleanPath, name, true, type == 'd', type == '-',
-                    type == 'd' ? 0L : Math.max(0L, size), mtime, mode));
+                    type == 'd' ? 0L : Math.max(0L, size), mtime, mode, type == 'l'));
         }
         if (!linkNames.isEmpty()) {
             StringBuilder cmd = new StringBuilder();
@@ -1900,7 +1909,7 @@ public class RootManager {
                     for (int i = 0; i < linkNames.size(); i++) {
                         File old = files.get(linkIdx.get(i));
                         boolean isDir = linkIsDir.get(i);
-                        files.set(linkIdx.get(i), new RootFile(old.getParent(), old.getName(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null));
+                        files.set(linkIdx.get(i), new RootFile(old.getParent(), old.getName(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null, true));
                     }
                 }
             } catch (Exception ignored) {

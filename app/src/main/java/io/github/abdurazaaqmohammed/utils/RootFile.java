@@ -25,6 +25,7 @@ public class RootFile extends File {
     private final long statLength;
     private final long statLastModified;
     private final String statMode;
+    private final boolean isLink;
 
     public RootFile(String pathname,
                     boolean exists,
@@ -33,6 +34,17 @@ public class RootFile extends File {
                     long length,
                     long lastModified,
                     String mode) {
+        this(pathname, exists, isDirectory, isFile, length, lastModified, mode, mode != null && (mode.startsWith("l") || mode.charAt(0) == 'l'));
+    }
+
+    public RootFile(String pathname,
+                    boolean exists,
+                    boolean isDirectory,
+                    boolean isFile,
+                    long length,
+                    long lastModified,
+                    String mode,
+                    boolean isLink) {
         super(pathname);
         this.hasStat = true;
         this.statExists = exists;
@@ -41,6 +53,7 @@ public class RootFile extends File {
         this.statLength = length;
         this.statLastModified = lastModified;
         this.statMode = mode;
+        this.isLink = isLink;
     }
 
     public RootFile(String parent, String child,
@@ -50,6 +63,17 @@ public class RootFile extends File {
                     long length,
                     long lastModified,
                     String mode) {
+        this(parent, child, exists, isDirectory, isFile, length, lastModified, mode, mode != null && (mode.startsWith("l") || mode.charAt(0) == 'l'));
+    }
+
+    public RootFile(String parent, String child,
+                    boolean exists,
+                    boolean isDirectory,
+                    boolean isFile,
+                    long length,
+                    long lastModified,
+                    String mode,
+                    boolean isLink) {
         super(parent, child);
         this.hasStat = true;
         this.statExists = exists;
@@ -58,6 +82,7 @@ public class RootFile extends File {
         this.statLength = length;
         this.statLastModified = lastModified;
         this.statMode = mode;
+        this.isLink = isLink;
     }
 
     /** Plain wrapper without cached stat (behaves exactly like File). */
@@ -70,6 +95,11 @@ public class RootFile extends File {
         this.statLength = 0L;
         this.statLastModified = 0L;
         this.statMode = null;
+        this.isLink = false;
+    }
+
+    public boolean isLink() {
+        return isLink || (statMode != null && (statMode.startsWith("l") || statMode.charAt(0) == 'l'));
     }
 
     public boolean hasRootStat() {

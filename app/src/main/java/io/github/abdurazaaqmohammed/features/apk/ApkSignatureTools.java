@@ -68,7 +68,7 @@ public class ApkSignatureTools {
                     pm.dismiss();
                     context.handler.post(() -> {
                         Extensions.showMessage(context, context.rss.getString(R.string.signed, apks.size() + " APKs"));
-                        context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
+                        context.refreshAllPanes();
                     });
                 } catch (Exception e) {
                     pm.dismiss();
@@ -95,7 +95,7 @@ public class ApkSignatureTools {
             pm.dismiss();
             context.handler.post(() -> {
                 Extensions.showMessage(context, context.rss.getString(done ? R.string.signature_removed : R.string.failed_to_remove_signature));
-                if (done) context.loadFolderInPane(apk.getParentFile(), pane1, false);
+                if (done) context.refreshAllPanes();
             });
         }).start();
     }
