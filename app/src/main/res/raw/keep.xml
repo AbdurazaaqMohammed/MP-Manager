@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resource shrinking: some drawables are resolved at runtime through
+     Resources.getIdentifier (plugin icon names via ExtensionIcons,
+     ToolRegistry icon names), which the shrinker cannot see as references. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,@mipmap/*" />

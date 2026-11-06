@@ -28,8 +28,8 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -86,7 +86,6 @@ dependencies {
     implementation project(':zero-symbol-input-view')
     //implementation files('libs/APKEditor-1.4.8.jar')
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
-    implementation("androidx.multidex:multidex:2.0.1")
     implementation 'androidx.startup:startup-runtime:1.2.0'
     implementation 'androidx.media:media:1.8.0'
     // NIO variant: commons-compress's 7z reader touches java.nio.file (LinkOption
