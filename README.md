@@ -504,9 +504,16 @@ The app language can be picked manually (Russian, Simplified Chinese, Spanish, I
 </p>
 </details>
 
-# Todo
+## Why is AI used to develop MP Manager?
 
-This app still has lots of work to do and probably many bugs to fix but you can try it
+I had the idea for MP Manager almost 10 years ago and I planned and developed it for years with little progress. I did not even post it on GitHub for a long time because the app barely worked at all. With AI, I was able to advance the app massively in a short time.
 
-* Add patcher to support multiple patch formats like APK Editor and Lucky Patcher
-* Add improvements to APK optimization
+While some people use arguments like "AI only helps unskilled people" as insults, I believe MP Manager is an example of how AI can be used by regular people to create working alternatives to paid/closed source software. Big corporations love AI because they can save huge money from it, but they **want you and me** to hate AI because it allows regular people to not only save money, but create our own alternatives catered to our needs.
+
+So far I used only free AI in development of MP Manager. You can use AI to directly contribute to the development of MP Manager yourself.
+Some free AI services have referral program that can give me more free usage, you can help me by sign up for these programs with my referral code/link:
+  * [WorkBuddy](https://workbuddy.ai/invite?code=KGGFX6GZ) gives free monthly credits and limited free promotions with models like DeepSeek 4.1 Flash, GLM5.3 Flash, MiniMax M3.1 Flash and more available.
+    * You have to download the program and send at least one message (no charge) for me to get credits.
+  * [ZCode](https://zcode.z.ai/invite/CW3JK87H) offers GLM 5.3/Flash with regular free promotions like 500 million free tokens on weekends.
+    * You have to download the program and complete onboarding (no charge) for me to get credits.
+* If the app gets more pull requests it may become eligible for the free [Claude for Open Source](https://claude.com/contact-sales/claude-for-oss) program
