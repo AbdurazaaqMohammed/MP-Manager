@@ -470,6 +470,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
         }
         else {
+            boolean pane1 = lastPaneSelected == 1;
             if (requestCode == 11 && resultCode == RESULT_OK) {
                 String dirToLoad = data.getStringExtra("dirToLoad");
                 if (dirToLoad == null && data.getData() != null) {
