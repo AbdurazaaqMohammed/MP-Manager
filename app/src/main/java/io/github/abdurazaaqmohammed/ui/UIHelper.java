@@ -14,6 +14,7 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.MaterialColors;
@@ -24,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
@@ -129,10 +131,17 @@ public class UIHelper {
             libsContainer.addView(row);
         }
 
-        new MaterialAlertDialogBuilder(context)
+        AlertDialog aboutDialog = new MaterialAlertDialogBuilder(context)
                 .setPositiveButton(context.getString(R.string.close), null)
                 .setView(aboutView)
                 .show();
+
+        // Shortcut back into Settings (About is reached from the sidebar
+        // header or from inside Settings itself).
+        aboutView.findViewById(R.id.aboutSettings).setOnClickListener(v -> {
+            aboutDialog.dismiss();
+            if (context instanceof MainActivity main) main.showSettingsDialog();
+        });
     }
 
     public UIHelper (AppCompatActivity context) {
