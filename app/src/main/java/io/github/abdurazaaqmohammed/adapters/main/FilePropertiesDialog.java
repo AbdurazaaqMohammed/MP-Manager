@@ -55,6 +55,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
@@ -157,12 +158,23 @@ public class FilePropertiesDialog {
                 for (int p : selectedPositions) {
                     if (p < 0 || p >= values.length) continue;
                     Object o = values[p];
-                    if (o instanceof File) size += ((File) o).length();
-                    else if (o instanceof ZipEntryInfo) size += ((ZipEntryInfo) o).getSize();
+                    if (o instanceof File f) {
+                        Long cached = DirSizeCache.peek(f);
+                        size += (cached != null) ? cached : f.length();
+                    } else if (o instanceof ZipEntryInfo) {
+                        size += ((ZipEntryInfo) o).getSize();
+                    }
                 }
             }
-        } else size = isInZip ? entry.getSize() : file.length();
-        TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), Formatter.formatFileSize(context, size));
+        } else {
+            if (isInZip) {
+                size = entry.getSize();
+            } else if (file != null) {
+                Long cached = DirSizeCache.peek(file);
+                size = (cached != null) ? cached : file.length();
+            }
+        }
+        TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), FileSize.getHumanReadableFileSize(size));
 
         final List<File> selectedFilesList = new ArrayList<>();
         if (!isInZip) {
@@ -259,10 +271,35 @@ public class FilePropertiesDialog {
                 if (fullDateTaken != null) dateTakenView.setTag(fullDateTaken);
                 dateTakenHolder[0] = dateTakenView;
             }
-            if (!multi && file.isDirectory()) {
+
+            boolean hasDirectories = false;
+            if (multi) {
+                for (File f : selectedFilesList) {
+                    if (f.isDirectory()) {
+                        hasDirectories = true;
+                        break;
+                    }
+                }
+            } else if (file != null && file.isDirectory()) {
+                hasDirectories = true;
+            }
+
+            if (hasDirectories) {
                 new Thread(() -> {
-                    long folderSize = getFolderSize(file, null);
-                    context.handler.post(() -> sizeValue.setText(FileSize.getHumanReadableFileSize(folderSize)));
+                    long totalComputedSize = 0;
+                    for (File f : selectedFilesList) {
+                        if (f.isDirectory()) {
+                            totalComputedSize += getFolderSize(f, null);
+                        } else {
+                            totalComputedSize += f.length();
+                        }
+                    }
+                    long finalTotal = totalComputedSize;
+                    if (!multi && file != null && file.isDirectory()) {
+                        DirSizeCache.record(file, finalTotal);
+                        DirSizeCache.scheduleSave();
+                    }
+                    context.handler.post(() -> sizeValue.setText(FileSize.getHumanReadableFileSize(finalTotal)));
                 }).start();
             }
         } else if (!multi && !entry.isDirectory()) {

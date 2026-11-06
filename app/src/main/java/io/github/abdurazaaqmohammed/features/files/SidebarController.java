@@ -258,18 +258,6 @@ public class SidebarController {
             return false;
         });
         organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
-        View.OnClickListener onClickListener = v -> {
-            activity.showSettingsDialog();
-            activity.closeSidebarDrawer();
-        };
-        // Fixed Settings entry at the very bottom of the drawer (footer row).
-        activity.findViewById(R.id.sidebarSettingsFooter).setOnClickListener(onClickListener);
-        // Settings gear next to the organize button in the header, so the
-        // pencil-shaped organize control is not mistaken for settings.
-//        View settingsButton = activity.findViewById(R.id.sidebarSettingsButton);
-//        if (settingsButton != null) {
-//            settingsButton.setOnClickListener(onClickListener);
-//        }
         registerStorageRefreshReceiver();
     }
 
@@ -284,8 +272,7 @@ public class SidebarController {
             organizeDragView = childIndex >= 0 && childIndex < sidebarList.getChildCount()
                     ? sidebarList.getChildAt(childIndex) : null;
             organizeDragCard = organizeDragView;
-            if (organizeDragEntry != null && organizeDragEntry.type() != SidebarAdapter.EntryType.HEADER
-                    && organizeDragView != null) {
+            if (organizeDragEntry != null && organizeDragView != null) {
                 activity.handler.postDelayed(organizeLongPressRunnable, ViewConfiguration.getLongPressTimeout());
             }
             return true;
@@ -712,14 +699,9 @@ public class SidebarController {
             if (source == null || target == null) return false;
             if (source.type() == SidebarAdapter.EntryType.HEADER) {
                 String targetSection = target.section();
-                if (target.type() != SidebarAdapter.EntryType.HEADER) return false;
-                if (!source.section().equals(targetSection)) {
+                if (targetSection != null && !source.section().equals(targetSection)) {
                     sidebarAdapter.moveSection(source.section(), targetSection);
-                    List<String> order = new ArrayList<>();
-                    for (int i = 0; i < sidebarAdapter.getCount(); i++) {
-                        SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(i);
-                        if (entry.type() == SidebarAdapter.EntryType.HEADER && !order.contains(entry.section())) order.add(entry.section());
-                    }
+                    List<String> order = sidebarAdapter.getSectionOrder();
                     PreferenceManager.getDefaultSharedPreferences(activity).edit()
                             .putString("sidebar_section_order", AppGson.get().toJson(order)).apply();
                 }
@@ -934,13 +916,21 @@ public class SidebarController {
                         .setTitle(R.string.empty_recycle_bin)
                         .setMessage(R.string.empty_recycle_bin_confirm)
                         .setPositiveButton(R.string.delete, (d, w) -> {
-                            ProgressManager pm = new ProgressManager(activity, true);
+                            List<RecycleBin.Entry> toDel = new ArrayList<>(allEntries);
+                            ProgressManager pm = new ProgressManager(activity, false);
                             pm.setText(activity.getString(R.string.deleting));
                             pm.setOperation(R.string.op_deleting);
-                            pm.setSource(RecycleBin.binDir(activity));
+                            pm.setTotal(toDel.size());
                             pm.show();
                             new Thread(() -> {
-                                RecycleBin.emptyBin(activity);
+                                for (int i = 0; i < toDel.size(); i++) {
+                                    RecycleBin.Entry entry = toDel.get(i);
+                                    pm.setFile(entry.displayName());
+                                    pm.setPaths(entry.originPath != null ? entry.originPath
+                                            : entry.file.getAbsolutePath(), null);
+                                    RecycleBin.deleteEntry(activity, entry);
+                                    pm.setProgress(i + 1, toDel.size());
+                                }
                                 activity.runOnUiThread(() -> {
                                     pm.dismiss();
                                     allEntries.clear();

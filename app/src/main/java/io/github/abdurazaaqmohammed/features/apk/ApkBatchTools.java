@@ -121,7 +121,7 @@ public class ApkBatchTools {
                             + " (" + finalFailed + " failed)");
                     logger.logMessage("Failures:\n" + finalFailures);
                 }
-                context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
+                context.refreshAllPanes();
             });
         }).start();
     }

@@ -201,7 +201,7 @@ public final class ShizukuManager {
                 boolean isDir = type == 'd';
                 files.add(new RootFile(dirPath, name, true, isDir, type != 'd',
                         isDir ? 0L : Math.max(0L, size), mtime,
-                        mode.length() > 1 ? mode.substring(1) : null));
+                        mode.length() > 1 ? mode.substring(1) : null, type == 'l'));
             }
             return files.toArray(new File[0]);
         } catch (Throwable e) {

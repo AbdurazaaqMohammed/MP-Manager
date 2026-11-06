@@ -143,6 +143,11 @@ public class CompareTextActivity extends BaseActivity {
         String zip2 = intent.getStringExtra("zip2");
 
         progressBar.setVisibility(View.VISIBLE);
+        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.utils.ProgressManager(this, true);
+        pm.setText(getString(R.string.dex_comparing));
+        pm.show();
+
         new Thread(() -> {
             try {
                 // Read straight into line lists: buffering a multi-megabyte file
@@ -152,6 +157,7 @@ public class CompareTextActivity extends BaseActivity {
                 textRight = readLines(path2, isZip2, zip2);
                 final List<DiffLine> built = buildDiff(textLeft, textRight);
                 runOnUiThread(() -> {
+                    pm.dismiss();
                     diffLines.clear();
                     diffLines.addAll(built);
                     diffPositions.clear();
@@ -167,6 +173,7 @@ public class CompareTextActivity extends BaseActivity {
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
+                    pm.dismiss();
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareTextActivity.this).showError(e);
                 });

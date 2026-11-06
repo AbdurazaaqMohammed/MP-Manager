@@ -62,7 +62,8 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
                 || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
-                || lower.endsWith(".zst") || lower.endsWith(".zstd");
+                || lower.endsWith(".zst") || lower.endsWith(".zstd")
+                || SplitArchiveUtil.isSplitArchiveName(fileName);
     }
 
     public static String[] getSupportedCreateExts() {
@@ -260,8 +261,10 @@ public class ArchiveUtil {
      */
     private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
+        File target = SplitArchiveUtil.findFirstPart(archive);
+        if (target == null || !target.exists()) target = archive;
         TransferControl token = listener == null ? null : listener.control();
-        try (ZipFile zf = new ZipFile(archive)) {
+        try (ZipFile zf = new ZipFile(target)) {
             if (password != null) zf.setPassword(password);
             // Attached before the pump starts: the bridge may replace zip4j's
             // monitor, and the pump has to poll the one zip4j actually writes
@@ -356,7 +359,11 @@ public class ArchiveUtil {
 
     private static void extractRar(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
-        try (Archive rar = password == null ? new Archive(archive) : new Archive(archive, new String(password))) {
+        String passStr = password == null ? null : new String(password);
+        File first = SplitArchiveUtil.findFirstPart(archive);
+        try (Archive rar = (first != null && SplitArchiveUtil.isRarSplit(first))
+                ? new Archive(new com.github.junrar.volume.FileVolumeManager(first), null, passStr)
+                : (passStr == null ? new Archive(archive) : new Archive(archive, passStr))) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
                 if (listener != null) listener.checkpoint();

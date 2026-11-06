@@ -2459,7 +2459,7 @@ public class ApkOverlayTools {
                     File result = OverlayInjectorUtil.addOverlayToActivities(context, file, selectedActivities, toast, dialog, logger);
                     if (sign) wrapper[0].signApk(result);
                     pm.dismiss();
-                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                    context.handler.post(context::refreshAllPanes);
                 } catch (Exception e) {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
@@ -2510,7 +2510,7 @@ public class ApkOverlayTools {
                     File result = ToastInjectorUtil.removeAllToasts(context, file, logger);
                     if (sign) wrapper[0].signApk(result);
                     pm.dismiss();
-                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                    context.handler.post(context::refreshAllPanes);
                 } catch (Exception e) {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);

@@ -57,6 +57,8 @@ import io.github.abdurazaaqmohammed.boot.BootImageEngine;
 import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
 
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
@@ -68,15 +70,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayDeque;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -114,6 +120,9 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import io.github.abdurazaaqmohammed.utils.nativelib.ElfParser;
@@ -622,7 +631,9 @@ public class FileOpener {
             openWithDefaultOrDialog(file, file.getName());
             return;
         }
-        withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+        File firstPart = SplitArchiveUtil.findFirstPart(file);
+        File target = (firstPart != null && firstPart.exists()) ? firstPart : file;
+        withReadableCopy(target, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
     }
 
     private void showAppsForMime(File file, String fileName, boolean useActual) {
@@ -1358,6 +1369,8 @@ public class FileOpener {
                             .putExtra(CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
                     context.startActivity(intent);
                 });
+            } else if (fileName.equals("libapp.so") || fileName.equals("libflutter.so")) {
+                withReadableCopy(file, readable -> io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForLibrary(context, readable, fileName));
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
                 // tar/gz/...): an .epub lands here. The user's default app wins
@@ -1462,14 +1475,128 @@ public class FileOpener {
         }).start();
     }
 
+    private long calculateTotalSize(List<File> files) {
+        if (files == null || files.isEmpty()) return 0;
+        long total = 0;
+        ArrayDeque<File> stack = new ArrayDeque<>();
+        HashSet<String> seen = new HashSet<>();
+        for (File f : files) {
+            if (f == null) continue;
+            if (f.isFile()) {
+                total += f.length();
+            } else if (f.isDirectory()) {
+                stack.add(f);
+            }
+        }
+        while (!stack.isEmpty()) {
+            File d = stack.poll();
+            if (d == null) continue;
+            String canon;
+            try {
+                canon = d.getCanonicalPath();
+            } catch (Exception e) {
+                continue;
+            }
+            if (!seen.add(canon)) continue;
+            File[] kids = d.listFiles();
+            if (kids == null) {
+                long rootSize = getRootFolderSize(d.getAbsolutePath());
+                if (rootSize > 0) total += rootSize;
+                continue;
+            }
+            for (File k : kids) {
+                if (k == null) continue;
+                if (k.isFile()) {
+                    total += k.length();
+                } else if (k.isDirectory()) {
+                    stack.add(k);
+                }
+            }
+        }
+        return total;
+    }
+
+    private long getRootFolderSize(String path) {
+        try {
+            if (!AccessManager.fileOpsOn(context)) return 0;
+            String cmd = "du -sb " + RootManager.escapeShellArg(path);
+            String out = null;
+            if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
+                RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);
+                if (r != null && r.isSuccess()) out = r.output();
+            } else if (ShizukuManager.ready()) {
+                ShizukuShell.Result r = ShizukuShell.exec(cmd, 5);
+                if (r != null && r.success) out = r.stdout;
+            }
+            if (out != null) {
+                String first = out.trim().split("\\s+")[0];
+                return Long.parseLong(first);
+            }
+        } catch (Exception ignored) {}
+        return 0;
+    }
+
+    private long calculateZipEntryFolderSize(ZipEntryInfo entry) {
+        if (entry == null || entry.getZipFile() == null) return 0;
+        try (ZipFile srcZip = new ZipFile(entry.getZipFile())) {
+            String prefix = entry.getFullPath();
+            if (!prefix.endsWith("/")) prefix += "/";
+            long total = 0;
+            for (FileHeader fh : srcZip.getFileHeaders()) {
+                if (fh.getFileName().startsWith(prefix) && !fh.isDirectory()) {
+                    total += fh.getUncompressedSize();
+                }
+            }
+            return total;
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private void showShareZipConfirmDialog(String baseName, List<File> filesToMeasure, Runnable onConfirm) {
+        AtomicBoolean shown = new AtomicBoolean(false);
+        AtomicReference<AlertDialog> dialogRef = new AtomicReference<>();
+
+        Runnable showInitial = () -> {
+            if (shown.compareAndSet(false, true)) {
+                AlertDialog d = new MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.share_zip)
+                        .setMessage(context.getString(R.string.confirm_share_zip, baseName))
+                        .setPositiveButton(R.string.share, (dia, w) -> onConfirm.run())
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                dialogRef.set(d);
+            }
+        };
+        context.handler.postDelayed(showInitial, 80);
+
+        new Thread(() -> {
+            long size = calculateTotalSize(filesToMeasure);
+            String nameWithSize = size > 0
+                    ? baseName + " (" + FileSize.getHumanReadableFileSize(size) + ")"
+                    : baseName;
+            context.handler.post(() -> {
+                context.handler.removeCallbacks(showInitial);
+                if (shown.compareAndSet(false, true)) {
+                    new MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.share_zip)
+                            .setMessage(context.getString(R.string.confirm_share_zip, nameWithSize))
+                            .setPositiveButton(R.string.share, (dia, w) -> onConfirm.run())
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                } else {
+                    AlertDialog d = dialogRef.get();
+                    if (d != null && d.isShowing()) {
+                        d.setMessage(context.getString(R.string.confirm_share_zip, nameWithSize));
+                    }
+                }
+            });
+        }).start();
+    }
+
     public void shareFolderAsZip(File folder) {
         if (folder == null) return;
-        new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.share_zip)
-                .setMessage(context.getString(R.string.confirm_share_zip, folder.getName()))
-                .setPositiveButton(R.string.share, (d, w) -> doShareFolderAsZip(folder))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        showShareZipConfirmDialog(folder.getName(), Collections.singletonList(folder), () -> doShareFolderAsZip(folder));
     }
 
     private void doShareFolderAsZip(File folder) {
@@ -1543,12 +1670,7 @@ public class FileOpener {
             return;
         }
         String name = files.get(0).getParentFile() != null ? files.get(0).getParentFile().getName() : files.get(0).getName();
-        new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.share_zip)
-                .setMessage(context.getString(R.string.confirm_share_zip, name))
-                .setPositiveButton(R.string.share, (d, w) -> doShareFilesAsZip(files, name))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        showShareZipConfirmDialog(name, files, () -> doShareFilesAsZip(files, name));
     }
 
     private void doShareFilesAsZip(List<File> files, String baseName) {
@@ -1624,13 +1746,11 @@ public class FileOpener {
         if (folders == null || folders.isEmpty()) return;
         String name = folders.size() == 1
                 ? folders.get(0).getName()
-                : (folders.get(0).getParentFile() != null ? folders.get(0).getParentFile().getName() : folders.get(0).getName());
-        new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.share_zip)
-                .setMessage(context.getString(R.string.confirm_share_zip, name))
-                .setPositiveButton(R.string.share, (d, w) -> doShareMixedFilesAndFolders(folders, plainFiles, name))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                : folders.get(0).getName() + "_and_more";
+        List<File> all = new ArrayList<>(folders.size() + (plainFiles != null ? plainFiles.size() : 0));
+        all.addAll(folders);
+        if (plainFiles != null) all.addAll(plainFiles);
+        showShareZipConfirmDialog(name, all, () -> doShareMixedFilesAndFolders(folders, plainFiles, name));
     }
 
     private void doShareMixedFilesAndFolders(List<File> folders, List<File> plainFiles, String baseName) {
@@ -1722,12 +1842,44 @@ public class FileOpener {
 
     public void shareZipFolderAsZip(ZipEntryInfo entry) {
         if (entry == null) return;
-        new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.share_zip)
-                .setMessage(context.getString(R.string.confirm_share_zip, entry.getName()))
-                .setPositiveButton(R.string.share, (d, w) -> doShareZipFolderAsZip(entry))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        AtomicBoolean shown = new AtomicBoolean(false);
+        AtomicReference<AlertDialog> dialogRef = new AtomicReference<>();
+
+        Runnable showInitial = () -> {
+            if (shown.compareAndSet(false, true)) {
+                AlertDialog d = new MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.share_zip)
+                        .setMessage(context.getString(R.string.confirm_share_zip, entry.getName()))
+                        .setPositiveButton(R.string.share, (dia, w) -> doShareZipFolderAsZip(entry))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                dialogRef.set(d);
+            }
+        };
+        context.handler.postDelayed(showInitial, 80);
+
+        new Thread(() -> {
+            long size = calculateZipEntryFolderSize(entry);
+            String nameWithSize = size > 0
+                    ? entry.getName() + " (" + FileSize.getHumanReadableFileSize(size) + ")"
+                    : entry.getName();
+            context.handler.post(() -> {
+                context.handler.removeCallbacks(showInitial);
+                if (shown.compareAndSet(false, true)) {
+                    new MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.share_zip)
+                            .setMessage(context.getString(R.string.confirm_share_zip, nameWithSize))
+                            .setPositiveButton(R.string.share, (dia, w) -> doShareZipFolderAsZip(entry))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                } else {
+                    AlertDialog d = dialogRef.get();
+                    if (d != null && d.isShowing()) {
+                        d.setMessage(context.getString(R.string.confirm_share_zip, nameWithSize));
+                    }
+                }
+            });
+        }).start();
     }
 
     private void doShareZipFolderAsZip(ZipEntryInfo entry) {

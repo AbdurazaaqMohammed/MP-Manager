@@ -2223,4 +2223,41 @@ Patched code:</string>
     <string name="select_images">Select Images</string>
     <string name="collage_saved">Image collage saved to %1$s</string>
     <string name="apply_crop">Apply Crop</string>
+
+    <!-- Split & Merge Archive / File Tools -->
+    <string name="split_file">Split</string>
+    <string name="merge_split_files">Merge split files</string>
+    <string name="split_dialog_title">Split file</string>
+    <string name="split_by_size">By part size</string>
+    <string name="split_by_count">By number of parts</string>
+    <string name="split_part_size">Part size</string>
+    <string name="split_num_parts">Number of parts</string>
+    <string name="split_naming">Naming format</string>
+    <string name="split_naming_standard">Standard (.001, .002…)</string>
+    <string name="split_naming_part">Part format (.part1, .part2…)</string>
+    <string name="split_result_preview">Will create %1$d parts (~%2$s each)</string>
+    <string name="split_in_progress">Splitting %1$s…</string>
+    <string name="split_success">Split completed: %1$d parts created</string>
+    <string name="merge_in_progress">Merging parts…</string>
+    <string name="merge_success">Merged successfully: %1$s</string>
+    <string name="delete_original_after_split">Delete original file after splitting</string>
+    <string name="split_open_archive">Open archive</string>
+    <string name="split_missing_parts">Some parts are missing</string>
+
+    <!-- Flutter Tools & Inspection -->
+    <string name="flutter_tools">Flutter Tools</string>
+    <string name="flutter_tools_title">Flutter Inspector &amp; Modder</string>
+    <string name="flutter_engine_version">Engine commit: %1$s</string>
+    <string name="flutter_dart_version">Dart snapshot hash: %1$s</string>
+    <string name="flutter_ssl_unpin">Bypass SSL Pinning (Universal)</string>
+    <string name="flutter_ssl_unpin_desc">Patches libflutter.so to bypass certificate verification in BoringSSL.</string>
+    <string name="flutter_ssl_unpin_success">SSL Pinning bypassed for %1$s</string>
+    <string name="flutter_extract_strings">Extract Dart Strings &amp; Endpoints</string>
+    <string name="flutter_extract_assets">Extract Flutter Assets</string>
+    <string name="flutter_snapshot_info">Dart Snapshot Info</string>
+    <string name="flutter_dump_summary">Flutter App Summary</string>
+    <string name="flutter_not_found">No Flutter components found</string>
+    <string name="flutter_search_hint">Search strings / URLs / endpoints…</string>
+    <string name="flutter_copied">Copied to clipboard</string>
+    <string name="flutter_strings_count">%1$d strings found</string>
 </resources>

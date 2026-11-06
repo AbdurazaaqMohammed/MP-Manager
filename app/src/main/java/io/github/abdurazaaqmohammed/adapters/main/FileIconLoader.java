@@ -98,6 +98,7 @@ public class FileIconLoader {
     private static final SyncCache<String> pkgNameCache = new SyncCache<>(500);
     private static final SyncCache<Long> mtimeCache = new SyncCache<>(400);
     private static final SyncCache<Long> sizeCache = new SyncCache<>(400);
+    private static final SyncCache<Boolean> elfStatusCache = new SyncCache<>(1000);
     private static final Set<String> pendingStats = new HashSet<>();
 
     /** android.util.LruCache is not thread safe and rows bind on the UI thread
@@ -978,13 +979,40 @@ public class FileIconLoader {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             resolved = cachedTextIcon;
-        } else if (FileUtils.isElf(path) || (!isInZip && FileUtils.isElfFile(new File(path)))) {
+        } else if (FileUtils.isElf(path)) {
             resolved = cachedElfIcon;
+        } else if (!isInZip) {
+            Boolean isElf = elfStatusCache.get(path);
+            if (Boolean.TRUE.equals(isElf)) {
+                resolved = cachedElfIcon;
+            } else if (Boolean.FALSE.equals(isElf)) {
+                resolved = cachedFileIcon;
+            } else {
+                resolved = cachedFileIcon;
+                loadElfIconAsync(path, fileIconView);
+            }
         } else {
             resolved = cachedFileIcon;
         }
         iconMemo.put(path, resolved);
         return resolved;
+    }
+
+    private void loadElfIconAsync(String path, ImageView fileIconView) {
+        fileIconView.setTag(path);
+        iconLoaderService.execute(() -> {
+            try {
+                boolean elf = FileUtils.isElfFile(new File(path));
+                elfStatusCache.put(path, elf);
+                if (elf) {
+                    iconMemo.put(path, cachedElfIcon);
+                    iconCache.put(path, cachedElfIcon);
+                    context.runOnUiThread(() -> {
+                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedElfIcon);
+                    });
+                }
+            } catch (Exception ignored) {}
+        });
     }
 
     private static boolean isSplitApkExt(String extWithDot) {

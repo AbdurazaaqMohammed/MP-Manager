@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -59,6 +60,7 @@ import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -70,6 +72,8 @@ import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
+import io.github.abdurazaaqmohammed.features.files.SplitDialog;
+import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
@@ -153,8 +157,58 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final File upZipFile;
     private final String upZipPath;
 
-    /** Parent folder / parent archive location the ".." row navigates to. */
+    public File getUpZipFile() { return upZipFile; }
+    public String getUpZipPath() { return upZipPath; }
+    public File getUpFile() { return upFile; }
+
+    public boolean isParentDisplayedOnScreen() {
+        try {
+            RecyclerView otherPane = context.findViewById(!pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (otherPane == null || otherPane.getVisibility() != View.VISIBLE) return false;
+            RecyclerView.Adapter<?> otherAdapter = otherPane.getAdapter();
+            if (!(otherAdapter instanceof MainFilesArrayAdapter other)) return false;
+
+            if (isInZip) {
+                if (upZipFile == null) return false;
+                if (upZipPath == null) {
+                    if (!other.isInZip) {
+                        File otherFolder = !pane1 ? context.pane1Folder : context.pane2Folder;
+                        return otherFolder != null && otherFolder.equals(upZipFile.getParentFile());
+                    }
+                } else {
+                    if (other.isInZip && Objects.equals(other.upZipFile, upZipFile)) {
+                        String otherPath = other.currentZipPath != null ? other.currentZipPath : "";
+                        String targetPath = upZipPath != null ? upZipPath : "";
+                        return Objects.equals(otherPath, targetPath);
+                    }
+                }
+            } else {
+                File current = pane1 ? context.pane1Folder : context.pane2Folder;
+                File target = upFile;
+                if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(current)) {
+                    File resolved = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(current);
+                    if (resolved != null) target = resolved;
+                }
+                if (target == null) return false;
+                if (!other.isInZip) {
+                    File otherFolder = !pane1 ? context.pane1Folder : context.pane2Folder;
+                    return otherFolder != null && otherFolder.equals(target);
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
     public boolean goUp() {
+        return goUp(false);
+    }
+
+    public boolean goUpOnBack() {
+        return goUp(!isParentDisplayedOnScreen());
+    }
+
+    /** Parent folder / parent archive location the ".." row navigates to. */
+    public boolean goUp(boolean blink) {
         context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
         if (isSearchResultsMode) {
@@ -166,14 +220,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             if (upZipPath == null) {
                 final String exitedName = upZipFile.getName();
                 context.leaveArchive(upZipFile, pane1);
-                context.focusAndBlinkItemTwice(pane1, exitedName);
+                if (blink) context.focusAndBlinkItem(pane1, exitedName);
             } else {
                 String currentPath = currentZipPath != null ? currentZipPath : "";
                 String clean = currentPath.endsWith("/") ? currentPath.substring(0, currentPath.length() - 1) : currentPath;
                 int slash = clean.lastIndexOf('/');
                 final String exitedName = slash >= 0 ? clean.substring(slash + 1) : clean;
                 context.loadZipFolderInPane(upZipFile, upZipPath, pane1, true);
-                if (!exitedName.isEmpty()) context.focusAndBlinkItemTwice(pane1, exitedName);
+                if (blink && !exitedName.isEmpty()) context.focusAndBlinkItem(pane1, exitedName);
             }
             return true;
         }
@@ -190,8 +244,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (target.equals(context.pane2Folder) && !pane1 && (current == null || target.equals(current))) return false;
         final String exitedName = current != null ? current.getName() : null;
         context.loadFolderInPaneAsync(target, pane1, true, () -> {
-            if (exitedName != null) {
-                context.focusAndBlinkItemTwice(pane1, exitedName);
+            if (blink && exitedName != null) {
+                context.focusAndBlinkItem(pane1, exitedName);
             }
         });
         return true;
@@ -268,6 +322,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     static boolean isSymlink(File f) {
         if (f == null) return false;
         if (f instanceof ShizukuFile sf) return sf.isLink();
+        if (f instanceof io.github.abdurazaaqmohammed.utils.RootFile rf) return rf.isLink();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 return Files.isSymbolicLink(f.toPath());
@@ -649,12 +704,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
                     holder.appBadgeView.setVisibility(View.VISIBLE);
                 }
-            } else if (holder.appBadgeView != null && file.getParent() != null) {
+            } else if (holder.appBadgeView != null) {
                 if (isSymlink(file)) {
                     holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
                     holder.appBadgeView.setVisibility(View.VISIBLE);
-                } else {
+                } else if (file.getParent() != null) {
                     iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+                } else {
+                    holder.appBadgeView.setVisibility(View.GONE);
                 }
             }
         }
@@ -916,6 +973,13 @@ final View.OnClickListener originalClickListener;
                 // when the file's extension is missing or wrong.
                 if (!multi && !isInZip && !file.isDirectory() && (ArchiveUtil.isSupportedArchive(fileName) || ArchiveBrowseUtil.isBrowsable(file) || ArchiveUtil.isMiuiOrAndroidBackup(file))) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
+                }
+
+                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.SPLIT, direction)));
+                    if (SplitArchiveUtil.isSplitArchive(file)) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MERGE_SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.MERGE_SPLIT, direction)));
+                    }
                 }
 
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
@@ -1213,6 +1277,14 @@ final View.OnClickListener originalClickListener;
                             case FileMenuOrder.EXTRACT:
                                 if (isInZip || multi) return;
                                 fileOps.extractArchive(file);
+                                return;
+                            case FileMenuOrder.SPLIT:
+                                if (isInZip || multi) return;
+                                SplitDialog.showSplit(context, file);
+                                return;
+                            case FileMenuOrder.MERGE_SPLIT:
+                                if (isInZip || multi) return;
+                                SplitDialog.showMerge(context, file);
                                 return;
                             default:
                                 switch (actionId) {

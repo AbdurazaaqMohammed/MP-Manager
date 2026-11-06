@@ -1665,7 +1665,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     else if (adapter.isSearchResultsMode()) {
                         clearSearchResults(adapter.pane1);
                     } else {
-                        boolean handled = adapter.goUp();
+                        boolean handled = adapter.goUpOnBack();
                         if (!handled) {
                             if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
@@ -2139,11 +2139,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         saveCurrentPaneScroll(pane1);
         String targetKey = zipFile == null ? null : "zip:" + zipFile.getAbsolutePath() + "!" + (path == null ? "" : path);
         final int[] saved = sameZipFolderShown(zipFile, path, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
-        if (!sameZipFolderShown(zipFile, path, pane1)) {
-            clearGreen(pane1);
+        final ProgressManager[] zipPm = new ProgressManager[1];
+        final boolean[] loadFinished = new boolean[]{false};
+        final Runnable showProgressRunnable = () -> {
+            if (!loadFinished[0] && gen == (pane1 ? paneLoadGen1 : paneLoadGen2) && !isFinishing() && !isDestroyed()) {
+                zipPm[0] = new ProgressManager(this, true);
+                zipPm[0].setText(getString(R.string.loading));
+                zipPm[0].setFile(zipFile.getName());
+                zipPm[0].show();
+            }
+        };
+        if (zipFile != null && zipFile.length() > 20L * 1024 * 1024) {
+            handler.postDelayed(showProgressRunnable, 120);
         }
         listingExecutor.execute(() -> {
             if (zipFile == null || !zipFile.exists()) {
+                handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
+                    if (zipPm[0] != null) zipPm[0].dismiss();
+                });
                 File fallback = zipFile != null ? zipFile.getParentFile() : null;
                 while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
                 if (fallback == null || !fallback.exists()) fallback = Environment.getExternalStorageDirectory();
@@ -2157,9 +2172,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (OutOfMemoryError oom) {
                 // A huge central directory can exhaust the heap; an Error is
                 // not caught below and would crash instead of reporting.
-                handler.post(() -> Extensions.showMessage(this, R.string.out_of_memory_operation));
+                handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
+                    if (zipPm[0] != null) zipPm[0].dismiss();
+                    Extensions.showMessage(this, R.string.out_of_memory_operation);
+                });
                 return;
             } catch (Exception e) {
+                handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
+                    if (zipPm[0] != null) zipPm[0].dismiss();
+                });
                 if (zipFile != null && !zipFile.exists()) {
                     File fallback = zipFile.getParentFile();
                     while (fallback != null && !fallback.exists()) fallback = fallback.getParentFile();
@@ -2181,6 +2206,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (Exception ignored) {
             }
             handler.post(() -> {
+                loadFinished[0] = true;
+                handler.removeCallbacks(showProgressRunnable);
+                if (zipPm[0] != null) {
+                    try { zipPm[0].dismiss(); } catch (Exception ignored) {}
+                }
                 try {
                     if (isFinishing() || isDestroyed()) return;
                     if (gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
@@ -2606,6 +2636,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane1)).setRefreshing(false);
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setRefreshing(false);
         } catch (Exception ignored) { }
+        try {
+            File currentFolder = pane1 ? pane1Folder : pane2Folder;
+            if (currentFolder != null) DirSizeCache.invalidatePrefix(currentFolder);
+        } catch (Exception ignored) { }
         reloadOnePane(pane1, false);
         reloadOnePane(!pane1, false);
     }
@@ -2840,7 +2874,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-    public void focusAndBlinkItemTwice(boolean pane1, String name) {
+    public void focusAndBlinkItem(boolean pane1, String name) {
         if (name == null || name.isEmpty()) return;
         handler.postDelayed(() -> {
             try {
@@ -2852,30 +2886,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (pos < 0) return;
                 lm.scrollToPositionWithOffset(pos, 0);
 
-                // Flash 1: Green ON
+                // Single Green Flash: ON
                 markGreen(pane1, name);
                 filesAdapter.notifyItemChanged(pos);
 
-                // Flash 1: Green OFF
+                // Single Green Flash: OFF after 300ms
                 handler.postDelayed(() -> {
                     unmarkGreen(pane1, name);
                     filesAdapter.notifyItemChanged(pos);
-
-                    // Flash 2: Green ON
-                    handler.postDelayed(() -> {
-                        markGreen(pane1, name);
-                        filesAdapter.notifyItemChanged(pos);
-
-                        // Flash 2: Green OFF
-                        handler.postDelayed(() -> {
-                            unmarkGreen(pane1, name);
-                            filesAdapter.notifyItemChanged(pos);
-                        }, 220);
-                    }, 220);
-                }, 220);
+                }, 300);
             } catch (Exception ignored) {
             }
         }, 120);
+    }
+
+    public void focusAndBlinkItemTwice(boolean pane1, String name) {
+        focusAndBlinkItem(pane1, name);
     }
 
     public boolean isGreen(boolean pane1, String name) {

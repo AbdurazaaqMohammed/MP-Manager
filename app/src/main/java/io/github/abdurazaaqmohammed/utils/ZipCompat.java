@@ -74,11 +74,13 @@ public final class ZipCompat {
      */
     public static List<FileHeader> listHeaders(File zip) throws IOException {
         if (zip == null || !zip.isFile()) throw new IOException("Not a file: " + zip);
-        try (ZipFile zf = new ZipFile(zip)) {
+        File target = SplitArchiveUtil.findFirstPart(zip);
+        if (target == null || !target.exists()) target = zip;
+        try (ZipFile zf = new ZipFile(target)) {
             return zf.getFileHeaders();
         } catch (Exception zip4jFailure) {
             try {
-                return fromCentralDirectory(readCentralDirectory(zip));
+                return fromCentralDirectory(readCentralDirectory(target));
             } catch (IOException directFailure) {
                 directFailure.addSuppressed(zip4jFailure);
                 throw directFailure;
@@ -101,9 +103,11 @@ public final class ZipCompat {
      */
     public static InputStream openEntry(File zip, String entryName) throws IOException {
         if (zip == null || entryName == null) throw new IOException("Missing archive or entry name");
+        File target = SplitArchiveUtil.findFirstPart(zip);
+        if (target == null || !target.exists()) target = zip;
         ZipFile zf = null;
         try {
-            zf = new ZipFile(zip);
+            zf = new ZipFile(target);
             FileHeader fh = zf.getFileHeader(entryName);
             if (fh == null) throw new IOException("Entry not found: " + entryName);
             return closeZipWithStream(zf, zf.getInputStream(fh));
@@ -111,7 +115,7 @@ public final class ZipCompat {
             closeQuietly(zf);
             if (isPasswordProblem(zip4jFailure)) throw asIoException(zip4jFailure);
             try {
-                return openRawEntry(zip, entryName);
+                return openRawEntry(target, entryName);
             } catch (IOException directFailure) {
                 directFailure.addSuppressed(zip4jFailure);
                 throw directFailure;
