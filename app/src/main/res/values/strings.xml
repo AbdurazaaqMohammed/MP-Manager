@@ -1245,6 +1245,13 @@ Strings are sent to the external service you configured.</string>
     <string name="shared_entry_not_image">Not an image file.</string>
     <string name="shared_entry_single_image">Image editing needs a single image.</string>
     <string name="shared_entry_file_count">File %1$d of %2$d — tap list to switch</string>
+    <string name="shared_entry_no_media">Not a video or audio file.</string>
+    <string name="shared_entry_single_media">Media player needs a single media file.</string>
+    <string name="shared_entry_single_file">Hex editing needs a single file.</string>
+    <string name="shared_entry_not_archive">Not an archive (zip, 7z, rar, tar…).</string>
+    <string name="shared_entry_single_archive">Archive viewer needs a single archive.</string>
+    <string name="shared_entry_staging">Preparing a temporary copy…</string>
+    <string name="shared_entry_stage_failed">Could not prepare a temporary copy of this file.</string>
     <string name="color_stop">Stop</string>
     <string name="color_start">Start</string>
     <string name="storage_manager">Storage Manager</string>

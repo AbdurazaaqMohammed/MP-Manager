@@ -32,8 +32,12 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
  */
 public final class SharedPathResolver {
 
-    /** Hard stop for the last-resort disk walk so a huge tree can't hang the UI. */
-    private static final long DISK_WALK_BUDGET_MS = 8000L;
+    /**
+     * Hard stop for the last-resort disk walk so a huge tree can't hang the UI.
+     * This budget is shared by every expensive step (package data dirs + walk)
+     * so a no-hit resolution can't stack several full budgets.
+     */
+    private static final long DISK_WALK_BUDGET_MS = 5000L;
     private static final int DISK_WALK_MAX_DIRS = 4000;
     private static final int DISK_WALK_MAX_DEPTH = 6;
 
@@ -100,6 +104,10 @@ public final class SharedPathResolver {
     public static Result resolve(Context ctx, Uri uri, String sourcePackage, Cancel cancel) {
         Result r = new Result();
         if (ctx == null || uri == null) return r;
+        // One shared budget for every expensive step (package data dirs + disk
+        // walk). Previously each step got its own full budget, so a miss could
+        // burn two to three budgets before returning.
+        long deadline = System.currentTimeMillis() + DISK_WALK_BUDGET_MS;
         try {
             fillMeta(ctx, uri, r);
         } catch (Exception ignored) {
@@ -151,13 +159,33 @@ public final class SharedPathResolver {
         } catch (Exception ignored) {
         }
 
-        // 5. The sharing app's own data dirs, searched through the same elevated
+        // 5. Indexed DISPLAY_NAME lookup across the MediaStore collections.
+        // Confident only when the size confirms it is the same file; otherwise
+        // the newest same-name row is kept as a potential match. This runs
+        // BEFORE the expensive searches below: it is one indexed query, and a
+        // hit here usually makes them unnecessary.
+        Hit potential = null;
+        try {
+            if (r.displayName != null && !r.displayName.isEmpty()) {
+                Hit hit = queryMediaStoreByName(ctx, r.displayName, r.size);
+                if (hit != null && hit.sizeMatched && accept(ctx, hit.path, r)) {
+                    r.potential = false;
+                    return r;
+                }
+                if (hit != null) potential = hit;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 6. The sharing app's own data dirs, searched through the same elevated
         // backend the file manager uses to browse /data/data. Scoped to one
-        // package, so a name hit here is far more trustworthy than a global one.
+        // package, so a name hit here is far more trustworthy than a global
+        // same-name match — it replaces the MediaStore guess above. Skipped when
+        // the source app is unknown or the time budget is already spent.
         try {
             if (RootManager.isPackageNameValid(sourcePackage) && !isCancelled(cancel)) {
                 Hit hit = searchPackageDataDirs(ctx, sourcePackage, nameForSearch(uri, r),
-                        r.size, cancel, System.currentTimeMillis() + DISK_WALK_BUDGET_MS);
+                        r.size, cancel, deadline);
                 if (hit != null && accept(ctx, hit.path, r)) {
                     r.potential = !hit.sizeMatched;
                     return r;
@@ -165,18 +193,14 @@ public final class SharedPathResolver {
             }
         } catch (Exception ignored) {
         }
-
-        // 6. Indexed DISPLAY_NAME lookup across the MediaStore collections.
-        // Confident only when the size confirms it is the same file.
-        try {
-            if (r.displayName != null && !r.displayName.isEmpty()) {
-                Hit hit = queryMediaStoreByName(ctx, r.displayName, r.size);
-                if (hit != null && accept(ctx, hit.path, r)) {
-                    r.potential = !hit.sizeMatched;
-                    return r;
-                }
+        if (potential != null) {
+            // A same-name candidate already exists; burning seconds walking the
+            // disk for another guess is what made Locate feel slow. Prefer the
+            // indexed candidate and stop.
+            if (accept(ctx, potential.path, r)) {
+                r.potential = true;
+                return r;
             }
-        } catch (Exception ignored) {
         }
 
         // 7. Last resort: bounded walk of the likely dirs only. Same-name hits
@@ -184,7 +208,7 @@ public final class SharedPathResolver {
         try {
             String name = nameForSearch(uri, r);
             if (name != null && !name.isEmpty() && !isCancelled(cancel)) {
-                Hit hit = boundedWalk(ctx, name, r.size, cancel);
+                Hit hit = boundedWalk(ctx, name, r.size, cancel, deadline);
                 if (hit != null && accept(ctx, hit.path, r)) {
                     r.potential = !hit.sizeMatched;
                     return r;
@@ -338,7 +362,6 @@ public final class SharedPathResolver {
             elevated = false;
         }
         List<String> bases = new ArrayList<>(4);
-        bases.add("/data/data/" + pkg);
         bases.add("/data/user/0/" + pkg);
         bases.add("/data/user_de/0/" + pkg);
         try {
@@ -346,7 +369,11 @@ public final class SharedPathResolver {
             if (ext != null) bases.add(new File(ext, "Android/data/" + pkg).getAbsolutePath());
         } catch (Exception ignored) {
         }
+        // /data/data/<pkg> is the same directory as /data/user/0/<pkg> on
+        // modern Android; walking both doubled the elevated work for nothing.
+        bases.add("/data/data/" + pkg);
         int[] visited = {0};
+        boolean userZeroReachable = false;
         for (String base : bases) {
             if (isCancelled(cancel) || System.currentTimeMillis() > deadline) return null;
             boolean reachable;
@@ -358,6 +385,8 @@ public final class SharedPathResolver {
             if (!reachable) continue;
             // Without an elevated backend only the external dir is listable.
             if (!elevated && base.startsWith("/data/")) continue;
+            if (base.startsWith("/data/user/0/")) userZeroReachable = true;
+            else if (base.equals("/data/data/" + pkg) && userZeroReachable) continue;
             Hit hit = searchElevatedTree(ctx, base, name, size, cancel, deadline, visited);
             if (hit != null) return hit;
         }
@@ -382,6 +411,7 @@ public final class SharedPathResolver {
             String dir = paths.pop();
             int depth = depths.pop();
             if (depth > ELEVATED_MAX_DEPTH) continue;
+            if (isOwnStagingDir(ctx, dir)) continue;
             File[] entries = listDirAny(ctx, dir);
             if (entries == null) continue;
             for (File child : entries) {
@@ -438,43 +468,48 @@ public final class SharedPathResolver {
         }
         String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=?";
         String[] args = {name};
-        String[] projection = {MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.SIZE};
+        String[] projection = {
+                MediaStore.MediaColumns.DATA,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+        };
+        Hit best = null;
         for (Uri collection : collections) {
+            // Newest row first: when size cannot confirm anything, the most
+            // recently modified same-name file is the likeliest match (the
+            // first-found rule used to hand back any ancient copy).
             try (Cursor c = ctx.getContentResolver().query(
-                    collection, projection, selection, args, null)) {
-                if (c == null) continue;
+                    collection, projection, selection, args,
+                    MediaStore.MediaColumns.DATE_MODIFIED + " DESC")) {
+                if (c == null || c.getColumnIndex(MediaStore.MediaColumns.DATA) < 0) continue;
                 int dataIdx = c.getColumnIndex(MediaStore.MediaColumns.DATA);
                 int sizeIdx = c.getColumnIndex(MediaStore.MediaColumns.SIZE);
-                if (dataIdx < 0) continue;
-                String fallback = null;
                 while (c.moveToNext()) {
                     String p = c.getString(dataIdx);
                     if (p == null || p.isEmpty()) continue;
-                    // Only a size confirmation proves it is the same file;
-                    // same-name rows without one stay guesses (potential).
                     if (size > 0 && sizeIdx >= 0 && c.getLong(sizeIdx) == size) {
                         if (new File(p).exists()) return new Hit(p, true);
-                        if (fallback == null) fallback = p;
-                    } else if (fallback == null) {
-                        fallback = p;
+                        // Size confirms the row but the file is gone; keep it
+                        // as a better-than-nothing candidate for this collection.
+                        if (best == null) best = new Hit(p, false);
+                    } else if (best == null) {
+                        best = new Hit(p, false);
                     }
                 }
-                if (fallback != null) return new Hit(fallback, false);
             } catch (Exception ignored) {
             }
         }
-        return null;
+        return best;
     }
 
-    private static Hit boundedWalk(Context ctx, String name, long size, Cancel cancel) {
-        long deadline = System.currentTimeMillis() + DISK_WALK_BUDGET_MS;
+    private static Hit boundedWalk(Context ctx, String name, long size, Cancel cancel, long deadline) {
         int[] visited = {0};
         Hit nameMatch = null;
         for (String root : candidateRoots(ctx)) {
             if (isCancelled(cancel) || System.currentTimeMillis() > deadline) return nameMatch;
             File rootFile = new File(root);
             if (!rootFile.isDirectory()) continue;
-            Hit hit = searchDir(rootFile, name, size, 0, visited, deadline, cancel);
+            Hit hit = searchDir(ctx, rootFile, name, size, 0, visited, deadline, cancel);
             if (hit != null) {
                 if (hit.sizeMatched) return hit;
                 if (nameMatch == null) nameMatch = hit;
@@ -483,11 +518,29 @@ public final class SharedPathResolver {
         return nameMatch;
     }
 
-    private static Hit searchDir(File dir, String name, long size, int depth,
+    /**
+     * Copies this app staged in its own cache dirs (previous shares, editor
+     * scratch files). Locating the "original" there would hand back our own
+     * leftover temp copy.
+     */
+    private static boolean isOwnStagingDir(Context ctx, String path) {
+        try {
+            File cache = ctx.getCacheDir();
+            if (cache != null && path.startsWith(cache.getAbsolutePath())) return true;
+            for (File dir : ctx.getExternalCacheDirs()) {
+                if (dir != null && path.startsWith(dir.getAbsolutePath())) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private static Hit searchDir(Context ctx, File dir, String name, long size, int depth,
                                  int[] visited, long deadline, Cancel cancel) {
         if (depth > DISK_WALK_MAX_DEPTH) return null;
         if (isCancelled(cancel) || System.currentTimeMillis() > deadline) return null;
         if (visited[0]++ > DISK_WALK_MAX_DIRS) return null;
+        if (isOwnStagingDir(ctx, dir.getAbsolutePath())) return null;
         File[] children;
         try {
             children = dir.listFiles();
@@ -500,7 +553,7 @@ public final class SharedPathResolver {
             if (isCancelled(cancel) || System.currentTimeMillis() > deadline) return nameMatch;
             try {
                 if (child.isDirectory()) {
-                    Hit found = searchDir(child, name, size, depth + 1, visited, deadline, cancel);
+                    Hit found = searchDir(ctx, child, name, size, depth + 1, visited, deadline, cancel);
                     if (found != null) {
                         if (found.sizeMatched) return found;
                         if (nameMatch == null) nameMatch = found;
@@ -509,7 +562,12 @@ public final class SharedPathResolver {
                     if (size > 0 && child.length() == size) {
                         return new Hit(child.getAbsolutePath(), true);
                     }
-                    if (nameMatch == null) nameMatch = new Hit(child.getAbsolutePath(), false);
+                    // Among same-name guesses prefer the most recently modified
+                    // file instead of whichever the walk stumbled on first.
+                    if (nameMatch == null
+                            || child.lastModified() > new File(nameMatch.path).lastModified()) {
+                        nameMatch = new Hit(child.getAbsolutePath(), false);
+                    }
                 }
             } catch (Exception ignored) {
             }
