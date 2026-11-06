@@ -131,6 +131,15 @@ public class FilePropertiesDialog {
             if (!parentPath.endsWith("/")) parentPath += "/";
             addPropertyRow(propRows, context.getString(R.string.parent), parentPath);
         }
+        if (!isInZip && !multi && file != null) {
+            String symTarget = getSymlinkTarget(file);
+            if (symTarget != null) {
+                final TextView[] symHolder = new TextView[1];
+                symHolder[0] = addPropertyRow(propRows, "Symlink", symTarget,
+                        R.drawable.edit_24px,
+                        v -> showEditSymlinkDialog(file, symHolder[0]));
+            }
+        }
 
         long size = 0;
         if (multi) {
@@ -926,6 +935,116 @@ public class FilePropertiesDialog {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private String getSymlinkTarget(File file) {
+        if (file == null) return null;
+        if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile sf) {
+            if (sf.isLink()) {
+                try {
+                    if (io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()) {
+                        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
+                                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(
+                                        "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+                        if (res.isSuccess() && res.output != null && !res.output.trim().isEmpty()) {
+                            return res.output.trim();
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            try {
+                java.nio.file.Path p = file.toPath();
+                if (java.nio.file.Files.isSymbolicLink(p)) {
+                    return java.nio.file.Files.readSymbolicLink(p).toString();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            RootManager rm = RootManager.getInstance();
+            if (rm != null && rm.isRootAvailable()) {
+                RootManager.ShellResult res = rm.executeFs("readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+                if (res.isSuccess() && res.output() != null) {
+                    String out = res.output().trim();
+                    if (!out.isEmpty()) return out;
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void showEditSymlinkDialog(File file, TextView symTargetView) {
+        if (file == null) return;
+        String currentTarget = symTargetView != null && symTargetView.getText() != null
+                ? symTargetView.getText().toString() : "";
+        View view = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+        EditText input = view.findViewById(R.id.m_et_edittext);
+        input.setText(currentTarget);
+        if (!currentTarget.isEmpty()) {
+            input.setSelection(currentTarget.length());
+        }
+
+        AlertDialog editDialog = dialogUtil.getDialogBuilder()
+                .setTitle("Edit Symlink")
+                .setView(view)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String newTarget = input.getText() == null ? "" : input.getText().toString().trim();
+                    if (newTarget.isEmpty() || newTarget.equals(currentTarget)) return;
+                    new Thread(() -> {
+                        boolean updated = false;
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            try {
+                                java.nio.file.Path p = file.toPath();
+                                java.nio.file.Files.deleteIfExists(p);
+                                java.nio.file.Files.createSymbolicLink(p, java.nio.file.Paths.get(newTarget));
+                                updated = true;
+                            } catch (Exception ignored) {}
+                        }
+                        if (!updated) {
+                            try {
+                                RootManager rm = RootManager.getInstance();
+                                if (rm != null && rm.isRootAvailable()) {
+                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
+                                    RootManager.ShellResult res = rm.executeFs(cmd, 10);
+                                    if (res.isSuccess()) {
+                                        rm.invalidateListCache();
+                                        updated = true;
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        if (!updated) {
+                            try {
+                                if (io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()) {
+                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
+                                    io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
+                                            io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 10);
+                                    if (res.isSuccess()) {
+                                        updated = true;
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
+
+                        final boolean success = updated;
+                        context.handler.post(() -> {
+                            if (success) {
+                                if (symTargetView != null) symTargetView.setText(newTarget);
+                                boolean pane1 = context.lastPaneSelected == 1;
+                                context.refreshPaneAfterChange(pane1, file.getName());
+                                Extensions.showMessage(context, "Symlink updated");
+                            } else {
+                                Extensions.showMessage(context, "Failed to update symlink");
+                            }
+                        });
+                    }).start();
+                })
+                .create();
+        KeyboardUtil.focusOnShow(editDialog, input, false);
+        dialogUtil.styleAlertDialog(editDialog);
     }
 
     private View wrapInScroll(View content) {

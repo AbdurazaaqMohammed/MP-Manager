@@ -293,6 +293,11 @@ public class HexEditorActivity extends BaseActivity {
         setupInspector();
 
         updateStatus();
+
+        long initialOffset = getIntent().getLongExtra("offset", -1);
+        if (initialOffset >= 0) {
+            recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
+        }
     }
 
     private void setupSearch() {

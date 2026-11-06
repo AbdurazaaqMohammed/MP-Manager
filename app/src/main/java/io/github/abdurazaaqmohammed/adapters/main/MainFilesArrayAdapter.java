@@ -258,9 +258,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * links for isDirectory/isFile, so this is display-only there).
      */
     static boolean isSymlink(File f) {
+        if (f == null) return false;
         if (f instanceof ShizukuFile sf) return sf.isLink();
         try {
-            return !f.getCanonicalPath().equals(f.getAbsolutePath());
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                return java.nio.file.Files.isSymbolicLink(f.toPath());
+            }
+            File parent = f.getParentFile();
+            String parentCanonical = parent != null ? parent.getCanonicalPath() : "";
+            File inCanonicalParent = new File(parentCanonical, f.getName());
+            return !inCanonicalParent.getCanonicalPath().equals(inCanonicalParent.getAbsolutePath());
         } catch (Exception e) {
             return false;
         }

@@ -11,6 +11,11 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Environment;
 import android.text.Editable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.style.ClickableSpan;
+import android.text.method.LinkMovementMethod;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.text.format.Formatter;
@@ -916,53 +921,96 @@ public class FileOpener {
         new Thread(() -> {
             try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r");
                  io.github.abdurazaaqmohammed.utils.nativelib.ElfParser elf = new io.github.abdurazaaqmohammed.utils.nativelib.ElfParser(raf)) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("File: ").append(fileName).append("\n");
-                sb.append("Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append("\n");
-                sb.append("Architecture: ").append(io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.machineName(elf.machine))
+                final AlertDialog[] dialogRef = new AlertDialog[1];
+                SpannableStringBuilder ssb = new SpannableStringBuilder();
+                ssb.append("File: ").append(fileName).append("\n");
+                ssb.append("Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append("\n");
+                ssb.append("Architecture: ").append(io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.machineName(elf.machine))
                         .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
-                sb.append("Entry point: 0x").append(Long.toHexString(elf.entry)).append("\n");
-                sb.append("Size: ").append(Formatter.formatFileSize(context, file.length())).append("\n\n");
+
+                ssb.append("Entry point: ");
+                String entryAddrStr = "0x" + Long.toHexString(elf.entry);
+                int entryStart = ssb.length();
+                ssb.append(entryAddrStr);
+                int entryEnd = ssb.length();
+                final long entryOffset = elf.entry;
+                ssb.setSpan(new ClickableSpan() {
+                    @Override
+                    public void onClick(@NonNull View widget) {
+                        if (dialogRef[0] != null) dialogRef[0].dismiss();
+                        openHexEditorWithOriginal(file, file, entryOffset);
+                    }
+                    @Override
+                    public void updateDrawState(@NonNull TextPaint ds) {
+                        super.updateDrawState(ds);
+                        ds.setColor(0xFF29B6F6);
+                        ds.setUnderlineText(true);
+                    }
+                }, entryStart, entryEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.append("\n");
+
+                ssb.append("Size: ").append(Formatter.formatFileSize(context, file.length())).append("\n\n");
 
                 io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section[] sections = elf.sections();
                 if (sections != null && sections.length > 0) {
-                    sb.append("--- Sections (").append(sections.length).append(") ---\n");
+                    ssb.append("--- Sections (").append(String.valueOf(sections.length)).append(") ---\n");
                     for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section s : sections) {
                         if (s != null && s.name != null && !s.name.isEmpty()) {
-                            sb.append(String.format(java.util.Locale.ROOT, "%-16s addr:0x%08x size:0x%x\n", s.name, s.addr, s.size));
+                            ssb.append(String.format(java.util.Locale.ROOT, "%-16s ", s.name));
+                            String addrStr = String.format(java.util.Locale.ROOT, "addr:0x%08x", s.addr);
+                            int addrStart = ssb.length();
+                            ssb.append(addrStr);
+                            int addrEnd = ssb.length();
+                            final long targetOffset = s.offset > 0 ? s.offset : s.addr;
+                            ssb.setSpan(new ClickableSpan() {
+                                @Override
+                                public void onClick(@NonNull View widget) {
+                                    if (dialogRef[0] != null) dialogRef[0].dismiss();
+                                    openHexEditorWithOriginal(file, file, targetOffset);
+                                }
+                                @Override
+                                public void updateDrawState(@NonNull TextPaint ds) {
+                                    super.updateDrawState(ds);
+                                    ds.setColor(0xFF29B6F6);
+                                    ds.setUnderlineText(true);
+                                }
+                            }, addrStart, addrEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            ssb.append(String.format(java.util.Locale.ROOT, " size:0x%x\n", s.size));
                         }
                     }
-                    sb.append("\n");
+                    ssb.append("\n");
                 }
 
                 java.util.Map<String, String> dyn = elf.dynamicInfo();
                 if (dyn != null && !dyn.isEmpty()) {
-                    sb.append("--- Dynamic / Dependencies ---\n");
+                    ssb.append("--- Dynamic / Dependencies ---\n");
                     for (java.util.Map.Entry<String, String> entry : dyn.entrySet()) {
-                        sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                        ssb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
                     }
                 }
 
-                String info = sb.toString();
                 context.runOnUiThread(() -> {
                     ScrollView sv = new ScrollView(context);
                     HorizontalScrollView hsv = new HorizontalScrollView(context);
                     TextView tv = new TextView(context);
-                    tv.setText(info);
+                    tv.setText(ssb);
                     tv.setTypeface(Typeface.MONOSPACE);
                     tv.setTextSize(13);
                     int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
                     tv.setPadding(pad, pad, pad, pad);
-                    tv.setTextIsSelectable(true);
+                    tv.setMovementMethod(LinkMovementMethod.getInstance());
+                    tv.setHighlightColor(Color.TRANSPARENT);
                     hsv.addView(tv);
                     sv.addView(hsv);
 
-                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                    AlertDialog dialog = dialogUtil.getDialogBuilder()
                             .setTitle("ELF: " + fileName)
                             .setView(sv)
                             .setPositiveButton(android.R.string.ok, null)
                             .setNeutralButton(R.string.hex_editor, (d, w) -> openHexEditorWithOriginal(file, file))
-                            .create());
+                            .create();
+                    dialogRef[0] = dialog;
+                    dialogUtil.styleAlertDialog(dialog);
                 });
             } catch (Exception e) {
                 context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
@@ -1493,6 +1541,10 @@ public class FileOpener {
     }
 
     private void openHexEditorWithOriginal(File readable, File original) {
+        openHexEditorWithOriginal(readable, original, -1);
+    }
+
+    private void openHexEditorWithOriginal(File readable, File original, long offset) {
         if (readable == null || !readable.isFile()) {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
@@ -1500,6 +1552,9 @@ public class FileOpener {
         File orig = original != null ? original : readable;
         Intent i = new Intent(context, HexEditorActivity.class)
                 .putExtra("path", readable.getAbsolutePath());
+        if (offset >= 0) {
+            i.putExtra("offset", offset);
+        }
         if (!readable.getAbsolutePath().equals(orig.getAbsolutePath())) {
             i.putExtra("rootOriginalPath", orig.getAbsolutePath());
             Extensions.showMessage(context, R.string.opened_with_root);
