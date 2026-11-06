@@ -4,16 +4,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
-import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.ZipParameters;
 
 /**
  * Universal Flutter SSL Pinning bypass patcher.
@@ -140,19 +143,17 @@ public final class FlutterSslPatcher {
         if (apkFile == null || !apkFile.isFile()) throw new IOException("Invalid APK file");
         if (outputApk == null) outputApk = new File(apkFile.getParentFile(), apkFile.getName().replace(".apk", "_unpinned.apk"));
 
-        if (!outputApk.equals(apkFile)) {
-            FileUtils.copyFile(apkFile, outputApk);
-        }
-
         int patchedCount = 0;
-        File tempDir = new File(outputApk.getParentFile(), ".flutter_patch_tmp_" + System.currentTimeMillis());
+        File tempDir = new File(apkFile.getParentFile(), ".flutter_patch_tmp_" + System.currentTimeMillis());
         tempDir.mkdirs();
 
-        try (ZipFile zf = new ZipFile(outputApk)) {
-            List<FileHeader> headers = zf.getFileHeaders();
+        Map<String, File> replacements = new LinkedHashMap<>();
+
+        try {
+            List<FileHeader> headers = ZipCompat.listHeaders(apkFile);
             List<String> toPatch = new ArrayList<>();
             for (FileHeader fh : headers) {
-                if (fh.getFileName().endsWith(FlutterDetector.LIB_FLUTTER)) {
+                if (fh.getFileName() != null && fh.getFileName().endsWith(FlutterDetector.LIB_FLUTTER)) {
                     toPatch.add(fh.getFileName());
                 }
             }
@@ -160,19 +161,29 @@ public final class FlutterSslPatcher {
             for (String entryPath : toPatch) {
                 if (pm != null) pm.setText("Patching " + entryPath + "…");
                 File extractedLib = new File(tempDir, new File(entryPath).getName());
-                zf.extractFile(entryPath, tempDir.getAbsolutePath(), extractedLib.getName());
+                try (InputStream is = ZipCompat.openEntry(apkFile, entryPath);
+                     OutputStream os = new FileOutputStream(extractedLib)) {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = is.read(buf)) != -1) os.write(buf, 0, n);
+                }
 
                 PatchResult res = patchLibrary(extractedLib);
                 if (res.success) {
-                    ZipParameters params = new ZipParameters();
-                    String parentPath = new File(entryPath).getParent();
-                    if (parentPath != null) params.setRootFolderNameInZip(parentPath);
-                    zf.addFile(extractedLib, params);
+                    replacements.put(entryPath, extractedLib);
                     patchedCount++;
                 }
-                extractedLib.delete();
+            }
+
+            if (patchedCount > 0) {
+                if (pm != null) pm.setText("Aligning & rebuilding APK…");
+                ApkZipAlignUtil.rebuildApk(apkFile, outputApk, replacements, null, null, null);
             }
         } finally {
+            File[] files = tempDir.listFiles();
+            if (files != null) {
+                for (File f : files) f.delete();
+            }
             tempDir.delete();
         }
 

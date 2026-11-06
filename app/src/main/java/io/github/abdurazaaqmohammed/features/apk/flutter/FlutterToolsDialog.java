@@ -27,6 +27,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
@@ -192,29 +193,38 @@ public final class FlutterToolsDialog {
     }
 
     private static void performSslBypassApk(MainActivity context, File apkFile) {
-        ProgressManager pm = new ProgressManager(context, true).show();
-        pm.setText(context.getString(R.string.flutter_ssl_unpin));
+        SignWrapper.requireAuth(context, sw -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            pm.setText(context.getString(R.string.flutter_ssl_unpin));
 
-        new Thread(() -> {
-            try {
-                File outApk = new File(apkFile.getParentFile(), apkFile.getName().replace(".apk", "_ssl_unpinned.apk"));
-                int patched = FlutterSslPatcher.patchApk(apkFile, outApk, pm);
-                context.runOnUiThread(() -> {
-                    pm.dismiss();
+            new Thread(() -> {
+                try {
+                    File outApk = new File(apkFile.getParentFile(), apkFile.getName().replace(".apk", "_ssl_unpinned.apk"));
+                    int patched = FlutterSslPatcher.patchApk(apkFile, outApk, pm);
                     if (patched > 0) {
-                        Extensions.showMessage(context, context.getString(R.string.flutter_ssl_unpin_success, outApk.getName()));
-                        context.reloadCurrentFolder();
+                        pm.setText(context.getString(R.string.signing, outApk.getName()));
+                        if (sw != null) {
+                            sw.signApk(outApk);
+                        }
+                        context.runOnUiThread(() -> {
+                            pm.dismiss();
+                            Extensions.showMessage(context, context.getString(R.string.flutter_ssl_unpin_success, outApk.getName()));
+                            context.reloadCurrentFolder();
+                        });
                     } else {
-                        Extensions.showMessage(context, "No libflutter.so could be patched (already patched or unknown version)");
+                        context.runOnUiThread(() -> {
+                            pm.dismiss();
+                            Extensions.showMessage(context, "No libflutter.so could be patched (already patched or unknown version)");
+                        });
                     }
-                });
-            } catch (Exception e) {
-                context.runOnUiThread(() -> {
-                    pm.dismiss();
-                    Extensions.showMessage(context, "Patch failed: " + e.getMessage());
-                });
-            }
-        }).start();
+                } catch (Exception e) {
+                    context.runOnUiThread(() -> {
+                        pm.dismiss();
+                        Extensions.showMessage(context, "Patch failed: " + e.getMessage());
+                    });
+                }
+            }).start();
+        });
     }
 
     private static void performSslBypassLibrary(MainActivity context, File libFile) {

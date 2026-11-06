@@ -122,6 +122,25 @@ public final class FlutterInfo {
         );
     }
 
+    private static boolean hasHighEntropy(String s, int minUnique) {
+        if (s == null) return false;
+        int mask = 0;
+        int unique = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            int idx;
+            if (c >= '0' && c <= '9') idx = c - '0';
+            else if (c >= 'a' && c <= 'f') idx = 10 + (c - 'a');
+            else if (c >= 'A' && c <= 'F') idx = 10 + (c - 'A');
+            else return false;
+            if ((mask & (1 << idx)) == 0) {
+                mask |= (1 << idx);
+                unique++;
+            }
+        }
+        return unique >= minUnique;
+    }
+
     private static String scanEngineCommit(InputStream in) throws IOException {
         byte[] buf = new byte[64 * 1024];
         int n;
@@ -135,10 +154,10 @@ public final class FlutterInfo {
                 byte b = buf[i];
                 if ((b >= 'a' && b <= 'f') || (b >= '0' && b <= '9')) {
                     ascii.append((char) b);
-                    if (ascii.length() == 40) {
+                } else {
+                    if (ascii.length() == 40 && hasHighEntropy(ascii.toString(), 10)) {
                         return ascii.toString();
                     }
-                } else {
                     ascii.setLength(0);
                 }
             }
@@ -157,14 +176,19 @@ public final class FlutterInfo {
 
         while ((n = in.read(buf)) != -1 && totalRead < maxScan) {
             totalRead += n;
-            String chunk = new String(buf, 0, n, StandardCharsets.ISO_8859_1);
-
-            if (hash == null) {
-                Matcher mh = DART_HASH_PATTERN.matcher(chunk);
-                if (mh.find()) hash = mh.group(1);
+            for (int i = 0; i < n; i++) {
+                byte b = buf[i];
+                if ((b >= 'a' && b <= 'f') || (b >= '0' && b <= '9')) {
+                    ascii.append((char) b);
+                } else {
+                    if (hash == null && ascii.length() == 32 && hasHighEntropy(ascii.toString(), 8)) {
+                        hash = ascii.toString();
+                    }
+                    ascii.setLength(0);
+                }
             }
-
             if (features == null) {
+                String chunk = new String(buf, 0, n, StandardCharsets.ISO_8859_1);
                 Matcher mf = DART_FEATURES_PATTERN.matcher(chunk);
                 if (mf.find()) features = mf.group(1);
             }

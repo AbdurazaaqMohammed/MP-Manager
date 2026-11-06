@@ -2137,19 +2137,23 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         String targetKey = zipFile == null ? null : "zip:" + zipFile.getAbsolutePath() + "!" + (path == null ? "" : path);
         final int[] saved = sameZipFolderShown(zipFile, path, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
         final ProgressManager[] zipPm = new ProgressManager[1];
+        final boolean[] loadFinished = new boolean[]{false};
+        final Runnable showProgressRunnable = () -> {
+            if (!loadFinished[0] && gen == (pane1 ? paneLoadGen1 : paneLoadGen2) && !isFinishing() && !isDestroyed()) {
+                zipPm[0] = new ProgressManager(this, true);
+                zipPm[0].setText(getString(R.string.loading));
+                zipPm[0].setFile(zipFile.getName());
+                zipPm[0].show();
+            }
+        };
         if (zipFile != null && zipFile.length() > 20L * 1024 * 1024) {
-            handler.postDelayed(() -> {
-                if (gen == (pane1 ? paneLoadGen1 : paneLoadGen2) && !isFinishing() && !isDestroyed()) {
-                    zipPm[0] = new ProgressManager(this, true);
-                    zipPm[0].setText(getString(R.string.loading));
-                    zipPm[0].setFile(zipFile.getName());
-                    zipPm[0].show();
-                }
-            }, 120);
+            handler.postDelayed(showProgressRunnable, 120);
         }
         listingExecutor.execute(() -> {
             if (zipFile == null || !zipFile.exists()) {
                 handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
                     if (zipPm[0] != null) zipPm[0].dismiss();
                 });
                 File fallback = zipFile != null ? zipFile.getParentFile() : null;
@@ -2166,12 +2170,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 // A huge central directory can exhaust the heap; an Error is
                 // not caught below and would crash instead of reporting.
                 handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
                     if (zipPm[0] != null) zipPm[0].dismiss();
                     Extensions.showMessage(this, R.string.out_of_memory_operation);
                 });
                 return;
             } catch (Exception e) {
                 handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
                     if (zipPm[0] != null) zipPm[0].dismiss();
                 });
                 if (zipFile != null && !zipFile.exists()) {
@@ -2195,6 +2203,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (Exception ignored) {
             }
             handler.post(() -> {
+                loadFinished[0] = true;
+                handler.removeCallbacks(showProgressRunnable);
                 if (zipPm[0] != null) {
                     try { zipPm[0].dismiss(); } catch (Exception ignored) {}
                 }
