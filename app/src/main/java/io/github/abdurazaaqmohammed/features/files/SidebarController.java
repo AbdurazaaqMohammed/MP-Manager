@@ -255,6 +255,18 @@ public class SidebarController {
             return false;
         });
         organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
+        View.OnClickListener onClickListener = v -> {
+            activity.showSettingsDialog();
+            activity.closeSidebarDrawer();
+        };
+        // Fixed Settings entry at the very bottom of the drawer (footer row).
+        activity.findViewById(R.id.sidebarSettingsFooter).setOnClickListener(onClickListener);
+        // Settings gear next to the organize button in the header, so the
+        // pencil-shaped organize control is not mistaken for settings.
+//        View settingsButton = activity.findViewById(R.id.sidebarSettingsButton);
+//        if (settingsButton != null) {
+//            settingsButton.setOnClickListener(onClickListener);
+//        }
         registerStorageRefreshReceiver();
     }
 
@@ -324,7 +336,7 @@ public class SidebarController {
             organizeDragEntry = null;
         }
         ImageButton organizeButton = activity.findViewById(R.id.sidebarOrganizeButton);
-        organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.drag_handle_24px);
+        organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.edit_24px);
         String msg = activity.getString(enabled ? R.string.organize_sidebar : R.string.done_organizing_sidebar);
         organizeButton.setContentDescription(msg);
         Snackbar.make(activity.findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
@@ -599,9 +611,6 @@ public class SidebarController {
                 break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
-                break;
-            case "settings":
-                activity.showSettingsDialog();
                 break;
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));
