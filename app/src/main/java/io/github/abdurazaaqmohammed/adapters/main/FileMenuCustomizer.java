@@ -1,24 +1,21 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.app.Activity;
-import android.graphics.drawable.Drawable;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.res.ResourcesCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,9 +112,9 @@ public final class FileMenuCustomizer {
         });
         dialog.show();
         dialogUtil.styleAlertDialog(dialog);
-        android.view.Window window = dialog.getWindow();
+        Window window = dialog.getWindow();
         if (window != null) {
-            android.util.DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            DisplayMetrics dm = context.getResources().getDisplayMetrics();
             window.setLayout((int) (dm.widthPixels * 0.95f), (int) (dm.heightPixels * 0.8f));
         }
     }

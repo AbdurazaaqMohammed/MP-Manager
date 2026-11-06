@@ -339,7 +339,11 @@
             <service
                 android:name="io.github.abdurazaaqmohammed.mcp.McpServerService"
                 android:foregroundServiceType="specialUse"
-                android:exported="false" />
+                android:exported="false">
+                <property
+                    android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                    android:value="MCP server" />
+            </service>
            <service
                android:name="io.github.codehasan.colorpicker.services.ColorPickerService"
                android:enabled="true"

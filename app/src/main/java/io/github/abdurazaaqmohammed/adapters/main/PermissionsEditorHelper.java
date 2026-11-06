@@ -14,11 +14,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
-import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.UiFields;
 
 public class PermissionsEditorHelper {
 

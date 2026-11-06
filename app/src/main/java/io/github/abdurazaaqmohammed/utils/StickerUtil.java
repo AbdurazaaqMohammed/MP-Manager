@@ -1,5 +1,15 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Rect;
+
+import com.airbnb.lottie.LottieComposition;
+import com.airbnb.lottie.LottieCompositionFactory;
+import com.airbnb.lottie.LottieDrawable;
+import com.airbnb.lottie.LottieResult;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.util.zip.ZipEntry;
@@ -48,7 +58,7 @@ public class StickerUtil {
             while ((entry = zis.getNextEntry()) != null) {
                 String name = entry.getName();
                 if ("animation/animation.json".equals(name) || name.endsWith("/animation.json") || "animation.json".equals(name)) {
-                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     byte[] buf = new byte[8192];
                     int n;
                     while ((n = zis.read(buf)) != -1) {
@@ -64,16 +74,16 @@ public class StickerUtil {
     /**
      * Renders a representative frame from the Lottie sticker to a Bitmap thumbnail.
      */
-    public static android.graphics.Bitmap renderThumbnailBitmap(File file, int targetSize) {
+    public static Bitmap renderThumbnailBitmap(File file, int targetSize) {
         String json = extractLottieJson(file);
         if (json == null) return null;
         try {
-            com.airbnb.lottie.LottieResult<com.airbnb.lottie.LottieComposition> result =
-                    com.airbnb.lottie.LottieCompositionFactory.fromJsonStringSync(json, file.getName());
-            com.airbnb.lottie.LottieComposition composition = result.getValue();
+            LottieResult<LottieComposition> result =
+                    LottieCompositionFactory.fromJsonStringSync(json, file.getName());
+            LottieComposition composition = result.getValue();
             if (composition == null) return null;
 
-            com.airbnb.lottie.LottieDrawable drawable = new com.airbnb.lottie.LottieDrawable();
+            LottieDrawable drawable = new LottieDrawable();
             drawable.setComposition(composition);
 
             float startFrame = composition.getStartFrame();
@@ -82,7 +92,7 @@ public class StickerUtil {
             float midFrame = startFrame + (endFrame - startFrame) * 0.35f;
             drawable.setFrame((int) midFrame);
 
-            android.graphics.Rect bounds = composition.getBounds();
+            Rect bounds = composition.getBounds();
             int w = bounds.width() > 0 ? bounds.width() : 512;
             int h = bounds.height() > 0 ? bounds.height() : 512;
 
@@ -96,8 +106,8 @@ public class StickerUtil {
                 renderW = Math.max(1, (int) (targetSize * ((float) w / h)));
             }
 
-            android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(renderW, renderH, android.graphics.Bitmap.Config.ARGB_8888);
-            android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+            Bitmap bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
             drawable.setBounds(0, 0, renderW, renderH);
             drawable.draw(canvas);
             return bitmap;

@@ -17,7 +17,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -30,7 +29,6 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
-import io.github.abdurazaaqmohammed.utils.SectionCollapse;
 
 /**
  * Pre-install comparison sheet.

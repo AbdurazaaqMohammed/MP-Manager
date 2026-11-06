@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -894,8 +895,8 @@ public final class ShizukuManager {
         if (!shellPaths.isEmpty()) {
             StringBuilder shell = new StringBuilder(ShellProgress.reportPid());
             final int chunk = 32;
-            final java.util.concurrent.atomic.AtomicBoolean failed =
-                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            final AtomicBoolean failed =
+                    new AtomicBoolean(false);
             ShellProgress.Listener relay = new ShellProgress.Listener() {
                 @Override
                 public void onProgress(int filesDone, long bytesDone) {
@@ -978,8 +979,8 @@ public final class ShizukuManager {
         }
 
         final int[] done = {0};
-        final java.util.concurrent.atomic.AtomicBoolean failed =
-                new java.util.concurrent.atomic.AtomicBoolean(false);
+        final AtomicBoolean failed =
+                new AtomicBoolean(false);
         ShellProgress.Listener relay = new ShellProgress.Listener() {
             @Override
             public void onProgress(int delta, long bytesDone) {

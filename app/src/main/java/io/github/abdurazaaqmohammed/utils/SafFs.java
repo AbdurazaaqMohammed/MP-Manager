@@ -6,8 +6,11 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.provider.DocumentsContract;
 
+import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -278,7 +281,7 @@ public final class SafFs {
         OutputStream out = null;
         try {
             in = openInput(source);
-            out = new java.io.FileOutputStream(target);
+            out = new FileOutputStream(target);
             byte[] buffer = new byte[65536];
             int n;
             while ((n = in.read(buffer)) != -1) {
@@ -319,7 +322,7 @@ public final class SafFs {
         try {
             out = resolver().openOutputStream(created, "wt");
             if (out == null) throw new FileNotFoundException(source.getName());
-            in = new java.io.FileInputStream(source);
+            in = new FileInputStream(source);
             byte[] buffer = new byte[65536];
             int n;
             while ((n = in.read(buffer)) != -1) {
@@ -435,7 +438,7 @@ public final class SafFs {
         InputStream in = null;
         OutputStream out = null;
         try {
-            in = new java.io.FileInputStream(source);
+            in = new FileInputStream(source);
             out = openOutput(target);
             byte[] buffer = new byte[65536];
             int n;
@@ -558,7 +561,7 @@ public final class SafFs {
         }
     }
 
-    private static void closeQuietly(java.io.Closeable closeable) {
+    private static void closeQuietly(Closeable closeable) {
         if (closeable == null) return;
         try {
             closeable.close();

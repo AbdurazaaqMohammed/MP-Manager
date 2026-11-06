@@ -19,6 +19,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -831,18 +832,18 @@ public class SharedEntryActivity extends BaseActivity {
             try {
                 File base = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
                 File dir = new File(base, "shared_entry_" + System.currentTimeMillis());
-                if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("mkdirs failed");
+                if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("mkdirs failed");
                 String name = (item.name != null && !item.name.isEmpty() ? item.name : "shared_file")
                         .replaceAll("[\\\\/:*?\"<>|]", "_");
                 staged = new File(dir, name);
                 try (InputStream in = getContentResolver().openInputStream(uri);
                      OutputStream os = new FileOutputStream(staged)) {
-                    if (in == null) throw new java.io.IOException("stream closed");
+                    if (in == null) throw new IOException("stream closed");
                     byte[] buf = new byte[65536];
                     int read;
                     while ((read = in.read(buf)) != -1) os.write(buf, 0, read);
                 }
-                if (staged.length() == 0) throw new java.io.IOException("empty copy");
+                if (staged.length() == 0) throw new IOException("empty copy");
             } catch (Exception e) {
                 staged = null;
             }

@@ -101,6 +101,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -559,7 +560,7 @@ public class DexEditorActivity extends BaseActivity {
         new Thread(() -> {
             try {
                 final List<String> strings = classTree.getAllStrings();
-                java.util.Collections.sort(strings);
+                Collections.sort(strings);
                 runOnUiThread(() -> {
                     stringsLoading = false;
                     stringList.clear();

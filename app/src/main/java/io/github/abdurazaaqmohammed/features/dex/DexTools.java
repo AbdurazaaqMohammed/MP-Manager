@@ -71,6 +71,7 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
+import modder.hub.dexeditor.activity.TranslationModeActivity;
 
 /**
  * DEX/ARSC toolkit extracted from FileOperationsHelper.
@@ -265,7 +266,7 @@ public class DexTools {
             // (API 24/25), failing the whole extraction. Plain stream copy
             // keeps only what matters here: the bytes.
             try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
-                java.util.zip.ZipEntry fh = zf.getEntry("classes.dex");
+                ZipEntry fh = zf.getEntry("classes.dex");
                 int i = 2;
                 while (fh != null) {
                     session.dexNames.add(fh.getName());
@@ -276,7 +277,7 @@ public class DexTools {
                 byte[] buf = new byte[65536];
                 for (int j = 0; j < session.dexNames.size(); j++) {
                     String name = session.dexNames.get(j);
-                    java.util.zip.ZipEntry entry = zf.getEntry(name);
+                    ZipEntry entry = zf.getEntry(name);
                     if (entry == null) throw new IOException("Entry vanished: " + name);
                     File out = new File(session.outputDir, name);
                     long expected = entry.getSize();
@@ -449,7 +450,7 @@ public class DexTools {
     }
 
     private void openTranslationActivity(ArrayList<String> paths, File zipFile, String entryPath) {
-        Intent intent = new Intent(context, modder.hub.dexeditor.activity.TranslationModeActivity.class)
+        Intent intent = new Intent(context, TranslationModeActivity.class)
                 .putExtra("theme", context.theme)
                 .putStringArrayListExtra("SelectedDexFiles", paths);
         if (zipFile != null) {

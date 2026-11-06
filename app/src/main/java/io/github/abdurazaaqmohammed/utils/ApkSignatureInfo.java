@@ -6,12 +6,16 @@ import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
 import java.io.File;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.zip.CRC32;
 
@@ -98,7 +102,7 @@ public final class ApkSignatureInfo {
         }
     }
 
-    private static final java.util.Map<String, ApkSignatureInfo> sigInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, ApkSignatureInfo> sigInfoCache = new ConcurrentHashMap<>();
 
     public static ApkSignatureInfo getCached(File apk) {
         if (apk == null) return null;
@@ -215,7 +219,7 @@ public final class ApkSignatureInfo {
     public static boolean[] detectSigningBlockSchemes(File apk) {
         boolean[] res = new boolean[3]; // v2, v3, v4
         if (apk == null || !apk.isFile()) return res;
-        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(apk, "r")) {
+        try (RandomAccessFile raf = new RandomAccessFile(apk, "r")) {
             long fileLen = raf.length();
             if (fileLen < 32 + 24) return res;
 
@@ -240,7 +244,7 @@ public final class ApkSignatureInfo {
             byte[] footer = new byte[24];
             raf.seek(cdOffset - 24);
             raf.readFully(footer);
-            byte[] magic = "APK Sig Block 42".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+            byte[] magic = "APK Sig Block 42".getBytes(StandardCharsets.US_ASCII);
             for (int i = 0; i < 16; i++) {
                 if (footer[8 + i] != magic[i]) return res;
             }

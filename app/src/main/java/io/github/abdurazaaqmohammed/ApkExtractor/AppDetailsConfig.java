@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.ApkExtractor;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import io.github.abdurazaaqmohammed.MPManager.R;

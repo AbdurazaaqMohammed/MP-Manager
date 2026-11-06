@@ -20,8 +20,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -740,7 +739,7 @@ public class EntryDialogs {
                         CopyConflictDialog.Decision decision = CopyConflictDialog.askConflict(
                                 context, dialogUtil,
                                 R.string.copy_conflict_title, R.string.copy_conflict_title_all,
-                                java.util.Collections.singletonList(conflict), null
+                                Collections.singletonList(conflict), null
                         );
                         action = decision.action;
                         if (decision.applyToAll) {

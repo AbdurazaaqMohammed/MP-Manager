@@ -3,11 +3,17 @@ package io.github.abdurazaaqmohammed.mcp;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,9 +91,9 @@ public class McpNativeTools {
 
     static String findLibEntry(File apk, String libArg) {
         try {
-            java.util.List<String> names = new java.util.ArrayList<>();
-            try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(apk)) {
-                for (net.lingala.zip4j.model.FileHeader h : zf.getFileHeaders()) {
+            List<String> names = new ArrayList<>();
+            try (ZipFile zf = new ZipFile(apk)) {
+                for (FileHeader h : zf.getFileHeaders()) {
                     String name = h.getFileName();
                     if (name.startsWith("lib/") && name.endsWith(".so") && !h.isDirectory()) {
                         names.add(name);
@@ -113,8 +119,8 @@ public class McpNativeTools {
     private File extractEntry(File apk, String entry) throws McpJson.McpToolException {
         try {
             File temp = File.createTempFile("mcp_so_", ".so", ctx.context.getCacheDir());
-            try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(apk);
-                 java.io.InputStream in = zf.getInputStream(zf.getFileHeader(entry));
+            try (ZipFile zf = new ZipFile(apk);
+                 InputStream in = zf.getInputStream(zf.getFileHeader(entry));
                  FileOutputStream out = new FileOutputStream(temp)) {
                 byte[] buffer = new byte[16384];
                 int read;
@@ -628,8 +634,8 @@ public class McpNativeTools {
             ElfParser.Section sec = elf.section(sectionName);
             if (sec == null) throw new McpJson.McpToolException("Section not found: " + sectionName);
             byte[] data = elf.readBytes(sec.offset, (int) Math.min(sec.size, 32 * 1024 * 1024));
-            byte[] oldBytes = oldStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] newBytes = newStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            byte[] oldBytes = oldStr.getBytes(StandardCharsets.UTF_8);
+            byte[] newBytes = newStr.getBytes(StandardCharsets.UTF_8);
             int hits = 0;
             long firstAddr = -1;
             for (int i = 0; i + oldBytes.length + 1 <= data.length; i++) {

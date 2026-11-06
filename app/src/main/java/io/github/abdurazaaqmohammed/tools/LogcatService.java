@@ -14,7 +14,6 @@ import android.os.Looper;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.preference.PreferenceManager;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

@@ -1,9 +1,9 @@
 package io.github.abdurazaaqmohammed.mcp;
 
-import android.text.TextUtils;
+import android.os.Environment;
+import android.util.Base64;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.File;
@@ -11,12 +11,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import io.github.abdurazaaqmohammed.utils.HashUtil;
 
 /**
  * MCP file tools: browse, read, edit, search, manage, upload and download.
@@ -110,7 +115,7 @@ public final class McpFileTools {
         JsonObject obj = fileJson(file);
         if (file.isFile()) {
             try {
-                obj.addProperty("sha256", io.github.abdurazaaqmohammed.utils.HashUtil.hashFile(file, "SHA-256"));
+                obj.addProperty("sha256", HashUtil.hashFile(file, "SHA-256"));
             } catch (Exception ignored) {
             }
         }
@@ -120,7 +125,7 @@ public final class McpFileTools {
     public JsonObject listRoots(JsonObject args) {
         JsonObject result = new JsonObject();
         JsonArray roots = new JsonArray();
-        File ext = android.os.Environment.getExternalStorageDirectory();
+        File ext = Environment.getExternalStorageDirectory();
         if (ext != null) {
             JsonObject root = new JsonObject();
             root.addProperty("path", ext.getPath());
@@ -212,8 +217,8 @@ public final class McpFileTools {
         result.addProperty("offset", offset);
         result.addProperty("length", avail);
         result.addProperty("eof", offset + avail >= total);
-        result.addProperty("base64", avail == 0 ? "" : android.util.Base64.encodeToString(
-                java.util.Arrays.copyOf(chunk, avail), android.util.Base64.NO_WRAP));
+        result.addProperty("base64", avail == 0 ? "" : Base64.encodeToString(
+                Arrays.copyOf(chunk, avail), Base64.NO_WRAP));
         return result;
     }
 
@@ -235,7 +240,7 @@ public final class McpFileTools {
         String base64 = McpJson.reqStr(args, "base64");
         byte[] bytes;
         try {
-            bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
+            bytes = Base64.decode(base64, Base64.DEFAULT);
         } catch (IllegalArgumentException e) {
             throw new McpJson.McpToolException("Invalid base64 data");
         }
@@ -269,7 +274,7 @@ public final class McpFileTools {
         JsonObject result = new JsonObject();
         result.addProperty("path", file.getPath());
         result.addProperty("size", file.length());
-        result.addProperty("base64", android.util.Base64.encodeToString(readAll(file), android.util.Base64.NO_WRAP));
+        result.addProperty("base64", Base64.encodeToString(readAll(file), Base64.NO_WRAP));
         return result;
     }
 
@@ -316,18 +321,18 @@ public final class McpFileTools {
         String text = new String(bytes, StandardCharsets.UTF_8);
         int count;
         if (regex) {
-            java.util.regex.Pattern pattern;
+            Pattern pattern;
             try {
-                pattern = java.util.regex.Pattern.compile(oldText);
+                pattern = Pattern.compile(oldText);
             } catch (Exception e) {
                 throw new McpJson.McpToolException("Invalid regex: " + e.getMessage());
             }
-            java.util.regex.Matcher matcher = pattern.matcher(text);
+            Matcher matcher = pattern.matcher(text);
             // StringBuffer overload: the StringBuilder variant is API 26+.
             StringBuffer sb = new StringBuffer();
             count = 0;
             while (matcher.find()) {
-                matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(newText));
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(newText));
                 count++;
             }
             matcher.appendTail(sb);
@@ -402,7 +407,7 @@ public final class McpFileTools {
         if (position < 0 || position + patch.length > data.length) {
             throw new McpJson.McpToolException("Patch range out of bounds (file size " + data.length + ")");
         }
-        byte[] oldBytes = java.util.Arrays.copyOfRange(data, (int) position, (int) position + patch.length);
+        byte[] oldBytes = Arrays.copyOfRange(data, (int) position, (int) position + patch.length);
         System.arraycopy(patch, 0, data, (int) position, patch.length);
         writeBytes(file, data, false);
         JsonObject result = new JsonObject();
@@ -421,7 +426,7 @@ public final class McpFileTools {
         }
         long size = McpJson.longVal(args, "size", -1);
         if (size < 0) throw new McpJson.McpToolException("size must be >= 0");
-        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
             raf.setLength(size);
         } catch (IOException e) {
             throw new McpJson.McpToolException("Truncate failed: " + e.getMessage());
@@ -739,7 +744,7 @@ public final class McpFileTools {
 
     private static byte[] readAll(File file) throws McpJson.McpToolException {
         try {
-            return java.nio.file.Files.readAllBytes(file.toPath());
+            return Files.readAllBytes(file.toPath());
         } catch (IOException e) {
             throw new McpJson.McpToolException("Read failed: " + e.getMessage());
         }

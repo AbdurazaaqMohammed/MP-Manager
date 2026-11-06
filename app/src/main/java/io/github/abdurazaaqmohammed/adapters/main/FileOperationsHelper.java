@@ -228,9 +228,9 @@ public class FileOperationsHelper {
     /** Totals for the whole selection plus each item's own share of them. */
     private static final class MeasureInfo {
         final FileUtils.Measure total;
-        final java.util.Map<String, FileUtils.Measure> byPath;
+        final Map<String, FileUtils.Measure> byPath;
 
-        MeasureInfo(FileUtils.Measure total, java.util.Map<String, FileUtils.Measure> byPath) {
+        MeasureInfo(FileUtils.Measure total, Map<String, FileUtils.Measure> byPath) {
             this.total = total;
             this.byPath = byPath;
         }
@@ -285,7 +285,7 @@ public class FileOperationsHelper {
             }
         }
 
-        java.util.Map<String, FileUtils.Measure> byPath = new java.util.HashMap<>();
+        Map<String, FileUtils.Measure> byPath = new HashMap<>();
         int files = 0;
         long bytes = 0L;
         boolean blind = false;
@@ -302,7 +302,7 @@ public class FileOperationsHelper {
             FileUtils.MeasureSet elevated = AccessManager.measureSetElevated(context, paths);
             if (elevated != null && elevated.total.files > 0
                     && (elevated.total.files > local.files || elevated.total.bytes > local.bytes)) {
-                java.util.Map<String, FileUtils.Measure> mapped = new java.util.HashMap<>();
+                Map<String, FileUtils.Measure> mapped = new HashMap<>();
                 for (int i = 0; i < paths.size(); i++) {
                     FileUtils.Measure m = i < elevated.each.size() ? elevated.each.get(i) : null;
                     mapped.put(paths.get(i), m != null ? m : new FileUtils.Measure(1, 0L));
@@ -934,7 +934,7 @@ public class FileOperationsHelper {
                 // The FTP uploader reads real files: stage each document into
                 // the cache and hand the copies over. The upload reads the
                 // staged copy, so a move can delete the source right away.
-                java.util.List<Object> toUpload = new ArrayList<>();
+                List<Object> toUpload = new ArrayList<>();
                 for (Object item : items) {
                     if (!(item instanceof SafFile)) {
                         skipped++;

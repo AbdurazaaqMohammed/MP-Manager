@@ -81,7 +81,9 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -159,7 +161,7 @@ public class APKExtractorActivity extends BaseActivity {
         }
     }
 
-    private static final java.util.Map<String, String> sigTypeCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, String> sigTypeCache = new ConcurrentHashMap<>();
 
     public static String resolveSigType(File apk) {
         if (apk == null) return "Unknown";

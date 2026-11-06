@@ -6,8 +6,10 @@ import androidx.preference.PreferenceManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
@@ -119,25 +121,25 @@ public final class FileMenuOrder {
         }
     }
 
-    public static java.util.Set<String> getHiddenIds(Context context) {
+    public static Set<String> getHiddenIds(Context context) {
         try {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            return new java.util.HashSet<>(prefs.getStringSet("filemenu_hidden", new java.util.HashSet<>()));
+            return new HashSet<>(prefs.getStringSet("filemenu_hidden", new HashSet<>()));
         } catch (Exception e) {
-            return new java.util.HashSet<>();
+            return new HashSet<>();
         }
     }
 
-    public static void setHiddenIds(Context context, java.util.Set<String> hidden) {
+    public static void setHiddenIds(Context context, Set<String> hidden) {
         try {
             PreferenceManager.getDefaultSharedPreferences(context).edit()
-                    .putStringSet("filemenu_hidden", new java.util.HashSet<>(hidden)).apply();
+                    .putStringSet("filemenu_hidden", new HashSet<>(hidden)).apply();
         } catch (Exception ignored) {
         }
     }
 
     public static void toggleHidden(Context context, String id) {
-        java.util.Set<String> hidden = getHiddenIds(context);
+        Set<String> hidden = getHiddenIds(context);
         if (hidden.contains(id)) hidden.remove(id);
         else hidden.add(id);
         setHiddenIds(context, hidden);
@@ -145,7 +147,7 @@ public final class FileMenuOrder {
 
     public static List<MenuItem> sortItems(Context context, List<MenuItem> visible) {
         List<String> order = load(context);
-        java.util.Set<String> hidden = getHiddenIds(context);
+        Set<String> hidden = getHiddenIds(context);
         Map<String, Integer> rank = new HashMap<>();
         for (int i = 0; i < order.size(); i++) rank.put(order.get(i), i);
         List<MenuItem> sorted = new ArrayList<>();

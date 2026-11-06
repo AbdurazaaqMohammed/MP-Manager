@@ -1,10 +1,12 @@
 package io.github.abdurazaaqmohammed.features.files;
 
 import android.app.Activity;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -104,9 +106,9 @@ public final class RightMenuCustomizer {
         });
         dialog.show();
         dialogUtil.styleAlertDialog(dialog);
-        android.view.Window window = dialog.getWindow();
+        Window window = dialog.getWindow();
         if (window != null) {
-            android.util.DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            DisplayMetrics dm = context.getResources().getDisplayMetrics();
             window.setLayout((int) (dm.widthPixels * 0.95f), (int) (dm.heightPixels * 0.8f));
         }
     }

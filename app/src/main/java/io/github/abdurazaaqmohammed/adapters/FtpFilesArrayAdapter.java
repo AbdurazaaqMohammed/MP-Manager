@@ -38,6 +38,8 @@ import io.github.abdurazaaqmohammed.utils.FileSize;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
 
@@ -256,7 +258,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
             dir.mkdirs();
             File out = new File(dir, System.currentTimeMillis() + "_"
                     + file.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
-            java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            CountDownLatch latch = new CountDownLatch(1);
             ftpClient.downloadFile(file.getFtpFile(), out.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
                 @Override
                 public void onStateChanged(int state) {
@@ -279,7 +281,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                 }
             });
             try {
-                latch.await(60, java.util.concurrent.TimeUnit.SECONDS);
+                latch.await(60, TimeUnit.SECONDS);
             } catch (InterruptedException ignored) {
             }
             Exception fError = error[0];

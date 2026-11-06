@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import android.os.Environment;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -45,7 +47,7 @@ public final class McpPathPolicy {
         this.rules = parseRules(rulesJson);
         String ext = null;
         try {
-            ext = android.os.Environment.getExternalStorageDirectory().getCanonicalPath();
+            ext = Environment.getExternalStorageDirectory().getCanonicalPath();
         } catch (Exception ignored) {
         }
         this.externalRoot = ext;

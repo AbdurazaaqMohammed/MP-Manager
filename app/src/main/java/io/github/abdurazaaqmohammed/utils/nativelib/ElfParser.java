@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -366,7 +367,7 @@ public class ElfParser implements AutoCloseable {
         raf.seek(offset);
         int n = raf.read(out);
         if (n < 0) n = 0;
-        return n == length ? out : java.util.Arrays.copyOf(out, n);
+        return n == length ? out : Arrays.copyOf(out, n);
     }
 
     /** Reads a NUL-terminated C string at the given file offset (max 4 KiB). */

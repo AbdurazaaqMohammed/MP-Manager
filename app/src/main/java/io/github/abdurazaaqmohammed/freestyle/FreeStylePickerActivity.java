@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.LruCache;
+import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +38,6 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -291,7 +291,7 @@ public class FreeStylePickerActivity extends AppCompatActivity {
                         Bitmap thumb = null;
                         try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                thumb = getContentResolver().loadThumbnail(uri, new android.util.Size(300, 300), null);
+                                thumb = getContentResolver().loadThumbnail(uri, new Size(300, 300), null);
                             } else {
                                 thumb = MediaStore.Images.Thumbnails.getThumbnail(
                                         getContentResolver(), item.id, MediaStore.Images.Thumbnails.MINI_KIND, null);

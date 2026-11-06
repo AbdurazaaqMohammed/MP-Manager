@@ -11,10 +11,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
-
-import com.google.gson.JsonElement;
 
 import java.io.File;
 
@@ -27,6 +26,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
  * can observe status.
  */
 public class McpServerService extends Service {
+
+    public static final String EXTRA_RESTART = "restart";
 
     private static final String CHANNEL_ID = "McpChannel";
     private static final int NOTIFICATION_ID = 2;
@@ -53,7 +54,25 @@ public class McpServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Must be the very first thing: Android kills the service with
+        // ForegroundServiceDidNotStartInTimeException if startForeground() is
+        // not called promptly after startForegroundService().
         createNotificationChannel();
+        Notification notification = buildNotification();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            // Fall back to the pre-Q signature if the type check rejects it.
+            startForeground(NOTIFICATION_ID, notification);
+        }
+        if (intent != null && intent.getBooleanExtra(EXTRA_RESTART, false)) {
+            stopServer();
+        }
         if (!isRunning()) {
             startServer();
         }
@@ -63,10 +82,15 @@ public class McpServerService extends Service {
 
     private synchronized void startServer() {
         if (isRunning()) return;
+        // Fully release the previous socket if a restart was requested; otherwise
+        // the new bind would fail with "address in use" and immediately bounce.
+        McpHttpServer previous = server;
+        server = null;
+        if (previous != null) previous.stop();
         File home = McpPrefs.getHome(this);
         if (!home.isDirectory() && !home.mkdirs() && !home.isDirectory()) {
-            android.widget.Toast.makeText(this,
-                    getString(R.string.mcp_home_create_failed, home.getPath()), android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(this,
+                    getString(R.string.mcp_home_create_failed, home.getPath()), Toast.LENGTH_LONG).show();
         }
         McpPathPolicy policy = new McpPathPolicy(home, McpPrefs.getRulesJson(this));
         toolContext = new McpToolContext(this, policy);
@@ -85,8 +109,8 @@ public class McpServerService extends Service {
         try {
             httpServer.start();
         } catch (Exception e) {
-            android.widget.Toast.makeText(this,
-                    getString(R.string.mcp_start_failed, String.valueOf(e.getMessage())), android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(this,
+                    getString(R.string.mcp_start_failed, String.valueOf(e.getMessage())), Toast.LENGTH_LONG).show();
             stopSelf();
             return;
         }

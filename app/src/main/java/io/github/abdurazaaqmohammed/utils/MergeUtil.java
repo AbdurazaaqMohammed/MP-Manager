@@ -33,6 +33,7 @@ import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
@@ -101,7 +102,7 @@ public class MergeUtil {
     }
 
 
-    public static AutoCompleteTextView createCompressionDropdown(Context context) {
+    public static TextInputLayout createCompressionDropdown(Context context) {
         AutoCompleteTextView tv = new AutoCompleteTextView(context);
         tv.setInputType(InputType.TYPE_NULL);
         tv.setSingleLine(false);
@@ -128,13 +129,18 @@ public class MergeUtil {
         tv.setCursorVisible(false);
         tv.setLongClickable(false);
         tv.setOnClickListener(v -> tv.showDropDown());
-        tv.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                v.clearFocus();
-                tv.showDropDown();
-            }
-        });
-        return tv;
+//        tv.setOnFocusChangeListener((v, hasFocus) -> {
+//            if (hasFocus) {
+//                v.clearFocus();
+//                tv.showDropDown();
+//            }
+//        });
+        String hint = context.getString(R.string.compression_level);
+        TextInputLayout til = new TextInputLayout(context, null, com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle);
+        til.setHint(hint);
+        til.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        til.addView(tv);
+        return til;
     }
 
     /** Same dropdown wrapped in a labeled Material container for dialog rows. */

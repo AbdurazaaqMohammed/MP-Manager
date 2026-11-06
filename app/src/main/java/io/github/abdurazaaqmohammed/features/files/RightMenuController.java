@@ -1,24 +1,33 @@
 package io.github.abdurazaaqmohammed.features.files;
 
+import android.content.SharedPreferences;
+import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.GravityCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -68,7 +77,7 @@ public class RightMenuController {
 
         List<String> order = RightMenuOrder.load(activity);
         Set<String> hidden = RightMenuOrder.getHiddenIds(activity);
-        android.content.SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 
         RecyclerView.Adapter curAdapter = activity.getCurrentPane().getAdapter();
         boolean inSearchMode = curAdapter instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) curAdapter).isSearchResultsMode();
@@ -155,23 +164,23 @@ public class RightMenuController {
                                 activity.getString(R.string.folder_size_all),
                                 activity.getString(R.string.folder_size_none)
                         };
-                        int currentMode = io.github.abdurazaaqmohammed.utils.UiPrefs.folderSizeMode(activity);
-                        if (currentMode < 0 || currentMode > 2) currentMode = io.github.abdurazaaqmohammed.utils.UiPrefs.FOLDER_SIZE_USER;
-                        androidx.appcompat.app.AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+                        int currentMode = UiPrefs.folderSizeMode(activity);
+                        if (currentMode < 0 || currentMode > 2) currentMode = UiPrefs.FOLDER_SIZE_USER;
+                        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.show_folder_size)
                                 .setSingleChoiceItems(folderSizeLabels, currentMode, (d, which) -> {
-                                    prefs.edit().putInt(io.github.abdurazaaqmohammed.utils.UiPrefs.FOLDER_SIZE_KEY, which).apply();
+                                    prefs.edit().putInt(UiPrefs.FOLDER_SIZE_KEY, which).apply();
                                     d.dismiss();
                                     activity.reloadCurrentFolder();
                                 })
                                 .create();
                         dialog.setCanceledOnTouchOutside(true);
                         dialog.show();
-                        android.view.Window win = dialog.getWindow();
+                        Window win = dialog.getWindow();
                         if (win != null) {
-                            android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+                            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
                             int width = (int) (280 * dm.density);
-                            win.setLayout(Math.min((int) (dm.widthPixels * 0.75f), width), android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+                            win.setLayout(Math.min((int) (dm.widthPixels * 0.75f), width), ViewGroup.LayoutParams.WRAP_CONTENT);
                         }
                     });
                     break;
@@ -208,7 +217,7 @@ public class RightMenuController {
         }
     }
 
-    private void addRightDrawerCheckbox(LinearLayout container, int iconRes, String title, boolean initialValue, android.widget.CompoundButton.OnCheckedChangeListener onChecked) {
+    private void addRightDrawerCheckbox(LinearLayout container, int iconRes, String title, boolean initialValue, CompoundButton.OnCheckedChangeListener onChecked) {
         LinearLayout itemLayout = new LinearLayout(activity);
         itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -236,12 +245,12 @@ public class RightMenuController {
         text.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         text.setText(title);
         text.setMaxLines(1);
-        text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        text.setEllipsize(TextUtils.TruncateAt.END);
         text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         text.setTextColor(colorOnSurface.data);
         itemLayout.addView(text);
 
-        com.google.android.material.checkbox.MaterialCheckBox checkBox = new com.google.android.material.checkbox.MaterialCheckBox(activity);
+        MaterialCheckBox checkBox = new MaterialCheckBox(activity);
         LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         checkLp.setMarginStart((int) (6 * activity.getResources().getDisplayMetrics().density));

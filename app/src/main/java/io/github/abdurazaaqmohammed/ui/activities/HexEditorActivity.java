@@ -38,7 +38,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -1551,7 +1553,7 @@ public class HexEditorActivity extends BaseActivity {
             }
         }
         if (!temp.renameTo(file)) {
-            try (java.io.InputStream in = new java.io.FileInputStream(temp);
+            try (InputStream in = new FileInputStream(temp);
                  RandomAccessFile out = new RandomAccessFile(file, "rw")) {
                 out.setLength(0);
                 byte[] buf = new byte[64 * 1024];
