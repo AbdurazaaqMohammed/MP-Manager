@@ -1157,6 +1157,8 @@
     <string name="wifi_hide_passwords">إخفاء كلمات المرور</string>
     <string name="export">تصدير</string>
     <string name="share">مشاركة</string>
+    <string name="share_zip">مشاركة كـ ZIP</string>
+    <string name="confirm_share_zip">هل أنت متأكد أنك تريد مشاركة \"%s\" كملف ZIP؟</string>
     <string name="wifi_copy_all">نسخ الكل</string>
     <string name="wifi_open_network">فتح الشبكة</string>
     <string name="wifi_name_plus_password">الاسم + كلمة المرور</string>

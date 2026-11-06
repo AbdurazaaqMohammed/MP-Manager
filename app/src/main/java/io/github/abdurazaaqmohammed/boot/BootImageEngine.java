@@ -341,12 +341,13 @@ public class BootImageEngine {
             if (hasAvb) {
                 bos.flush();
                 vbmetaOffset = outputImageFile.length();
-                vbmetaLen = vbmetaFile.length();
-                try (FileInputStream fis = new FileInputStream(vbmetaFile)) {
-                    byte[] b = new byte[65536];
-                    int r;
-                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
-                }
+                byte[] vbmetaBytes = readFile(vbmetaFile);
+                vbmetaLen = vbmetaBytes.length;
+
+                // Update hash descriptor inside vbmeta to match new image size and digest
+                updateAvbHashDescriptor(vbmetaBytes, outputImageFile, vbmetaOffset);
+
+                bos.write(vbmetaBytes);
                 writePadding(bos, vbmetaLen, pageSize);
             }
 
@@ -439,6 +440,66 @@ public class BootImageEngine {
             }
         }
         return b;
+    }
+
+    private static void updateAvbHashDescriptor(byte[] vbmeta, File imageFile, long newImageSize) {
+        if (vbmeta == null || vbmeta.length < 256) return;
+        // Verify AVB0 magic
+        if (vbmeta[0] != 'A' || vbmeta[1] != 'V' || vbmeta[2] != 'B' || vbmeta[3] != '0') return;
+
+        try {
+            ByteBuffer bb = ByteBuffer.wrap(vbmeta).order(ByteOrder.BIG_ENDIAN);
+            long authBlockSize = bb.getLong(12);
+            long auxBlockSize = bb.getLong(20);
+
+            int descStart = (int) (256 + authBlockSize);
+            int descEnd = (int) Math.min(vbmeta.length, descStart + auxBlockSize);
+
+            int offset = descStart;
+            while (offset + 16 <= descEnd) {
+                long tag = bb.getLong(offset);
+                long nbf = bb.getLong(offset + 8);
+
+                // Tag 1 or 2 is AVB_DESCRIPTOR_TAG_HASH
+                if ((tag == 1 || tag == 2) && offset + 16 + nbf <= descEnd && nbf >= 56) {
+                    // Update image_size in descriptor
+                    bb.putLong(offset + 16, newImageSize);
+
+                    int partNameLen = bb.getInt(offset + 56);
+                    int saltLen = bb.getInt(offset + 60);
+                    int digestLen = bb.getInt(offset + 64);
+
+                    int saltOffset = offset + 132 + partNameLen;
+                    int digestOffset = saltOffset + saltLen;
+
+                    if (digestOffset + digestLen <= descEnd && digestLen == 32) {
+                        byte[] salt = new byte[saltLen];
+                        System.arraycopy(vbmeta, saltOffset, salt, 0, saltLen);
+
+                        // Calculate SHA-256 of salt + body (first newImageSize bytes of imageFile)
+                        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+                        md.update(salt);
+
+                        try (FileInputStream fis = new FileInputStream(imageFile)) {
+                            byte[] buf = new byte[65536];
+                            long remaining = newImageSize;
+                            while (remaining > 0) {
+                                int toRead = (int) Math.min(buf.length, remaining);
+                                int r = fis.read(buf, 0, toRead);
+                                if (r == -1) break;
+                                md.update(buf, 0, r);
+                                remaining -= r;
+                            }
+                        }
+
+                        byte[] newDigest = md.digest();
+                        System.arraycopy(newDigest, 0, vbmeta, digestOffset, digestLen);
+                    }
+                    break;
+                }
+                offset += 16 + (int) nbf;
+            }
+        } catch (Exception ignored) {}
     }
 
     private static String readNullTermString(byte[] b, int offset, int maxLen) {

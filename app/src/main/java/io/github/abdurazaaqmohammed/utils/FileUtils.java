@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.Collection;
 import java.util.List;
@@ -116,18 +117,6 @@ public class FileUtils {
     public static final String[] TEXT_EXTS = {".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".java", ".kt", ".md", ".smali", ".pro", ".gradle", ".properties"};
     public static final String[] HTML_EXTS = {".html", ".htm", ".xhtml"};
 
-    public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
-        if (files1 == null || files2 == null)
-            return files1 != files2;
-        if (files1.length != files2.length - 1)
-            return true;
-        for (int i = 0; i < files1.length; i++) {
-            if (!files1[i].exists() || !files2[i + 1].exists() || files1[i].length() != files2[i + 1].length()) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     public static boolean matchExt(String ext, String[] extensions) {
         for (String e : extensions) if (e.equals(ext)) return true;
@@ -137,6 +126,45 @@ public class FileUtils {
     public static boolean isImageFile(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
         for (String ext : IMAGE_EXTS) if (lower.endsWith(ext)) return true;
+        return false;
+    }
+
+    public static final String[] ELF_EXTS = {".so", ".elf", ".o", ".ko"};
+
+    public static boolean isElf(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase(Locale.ROOT);
+        for (String ext : ELF_EXTS) {
+            if (lower.endsWith(ext)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isElfFile(File file) {
+        if (file == null || !file.exists() || !file.isFile() || file.length() < 4) return false;
+        if (isElf(file.getName())) return true;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] header = new byte[4];
+            if (fis.read(header) == 4) {
+                return header[0] == 0x7F && header[1] == 'E' && header[2] == 'L' && header[3] == 'F';
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static boolean containsSubarray(byte[] data, int dataLen, byte[] sub) {
+        if (sub.length == 0 || dataLen < sub.length) return false;
+        int limit = dataLen - sub.length;
+        for (int i = 0; i <= limit; i++) {
+            boolean match = true;
+            for (int j = 0; j < sub.length; j++) {
+                if (data[i + j] != sub[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
         return false;
     }
     public static boolean doesNotHaveStoragePerm(Context context) {

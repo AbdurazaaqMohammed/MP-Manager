@@ -180,14 +180,34 @@ public class BootInspectManager {
                 File tempOut = new File(context.getCacheDir(), "repack_" + System.currentTimeMillis() + ".img");
                 BootImageEngine.repack(session.inspectDir, tempOut, null);
                 if (tempOut.exists() && tempOut.length() > 0) {
-                    // Replace original file
-                    try (java.io.FileInputStream fis = new java.io.FileInputStream(tempOut);
-                         java.io.FileOutputStream fos = new java.io.FileOutputStream(session.originalImg)) {
-                        byte[] buf = new byte[65536];
-                        int r;
-                        while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
+                    // Create .bak backup file if not already present by renaming original file to keep last modified time
+                    File bakFile = new File(session.originalImg.getParentFile(), session.originalImg.getName() + ".bak");
+                    if (!bakFile.exists() && session.originalImg.exists()) {
+                        long origMtime = session.originalImg.lastModified();
+                        boolean renamed = session.originalImg.renameTo(bakFile);
+                        if (!renamed) {
+                            // Fallback copy if rename across mount points fails
+                            try (java.io.FileInputStream fis = new java.io.FileInputStream(session.originalImg);
+                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(bakFile)) {
+                                byte[] buf = new byte[65536];
+                                int r;
+                                while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
+                            }
+                            bakFile.setLastModified(origMtime);
+                        }
                     }
-                    tempOut.delete();
+
+                    // Move or copy repacked temp image to original image path
+                    boolean moved = tempOut.renameTo(session.originalImg);
+                    if (!moved) {
+                        try (java.io.FileInputStream fis = new java.io.FileInputStream(tempOut);
+                             java.io.FileOutputStream fos = new java.io.FileOutputStream(session.originalImg)) {
+                            byte[] buf = new byte[65536];
+                            int r;
+                            while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
+                        }
+                        tempOut.delete();
+                    }
                     session.takeSnapshot();
                     new Handler(Looper.getMainLooper()).post(() -> {
                         Extensions.showMessage(context, "Boot image repacked and updated successfully!");

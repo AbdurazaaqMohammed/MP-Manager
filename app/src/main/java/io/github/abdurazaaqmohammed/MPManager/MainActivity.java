@@ -218,6 +218,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Generation per pane: a stale background listing never overwrites a newer pane. */
     private volatile long paneLoadGen1;
     private volatile long paneLoadGen2;
+    private String pendingDirToLoad;
 
     public ActivityResultLauncher<String> permissionLauncher() {
         return requestPermissionLauncher;
@@ -472,10 +473,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             boolean pane1 = lastPaneSelected == 1;
             if (requestCode == 11 && resultCode == RESULT_OK) {
                 String dirToLoad = data.getStringExtra("dirToLoad");
-                if (dirToLoad != null) loadFolderInPane(new File(dirToLoad), pane1);
-                else {
-                    Uri path = data.getData();
-                    if (path != null) loadFolderInPane(new File(path.toString()), pane1);
+                if (dirToLoad == null && data.getData() != null) {
+                    dirToLoad = data.getData().toString();
+                }
+                if (dirToLoad != null) {
+                    pendingDirToLoad = dirToLoad;
                 }
             } else if(requestCode == 757 || resultCode == 757) {
                 if (data == null || data.getData() == null) return;
@@ -1660,58 +1662,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     else if (adapter.isSearchResultsMode()) {
                         clearSearchResults(adapter.pane1);
                     } else {
-                        String s = adapter.currentZipPath;
-                        if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
-                            char[] chars = s.toCharArray();
-                            int i = 0;
-                            for(char c : chars) if (c == File.separatorChar) i++;
-                            boolean inOneLevelInZip = i < 2;
-                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, true);
-                        } else if (adapter.isInZip) {
-                            File zipFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
-                            if (zipFile != null && isStagedArchive(zipFile) && navigateBack(adapter.pane1)) {
-                                return;
-                            }
-                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                            File f = new File(path).getParentFile();
-                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
-                            else if (isBackPressedToExit) {
-                                handler.removeCallbacks(resetExitPrompt);
-                                finishAffinity();
-                            } else {
-                                isBackPressedToExit = true;
-                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                handler.postDelayed(resetExitPrompt, 2000);
-                            }
-                        } else {
-                            File paneFolder = adapter.pane1 ? pane1Folder : pane2Folder;
-                            if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(paneFolder)) {
-                                io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(this, paneFolder, adapter.pane1);
-                                File target = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(paneFolder);
-                                if (target != null && (target.canRead() || canListViaRoot(target))) {
-                                    loadFolderInPane(target, adapter.pane1);
-                                    return;
-                                }
-                            }
-                            if (SafFs.isSaf(paneFolder)) {
-                                File parent = paneFolder.getParentFile();
-                                if (parent != null && !parent.equals(paneFolder)) {
-                                    loadFolderInPane(parent, adapter.pane1);
-                                } else if (isBackPressedToExit) {
-                                    handler.removeCallbacks(resetExitPrompt);
-                                    finishAffinity();
-                                } else {
-                                    isBackPressedToExit = true;
-                                    Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                    handler.postDelayed(resetExitPrompt, 2000);
-                                }
-                                return;
-                            }
-                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                            File f = new File(path).getParentFile();
-                            while (f != null && !f.exists() && !canListViaRoot(f)) f = f.getParentFile();
-                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
-                            else if (isBackPressedToExit) {
+                        boolean handled = adapter.goUp();
+                        if (!handled) {
+                            if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
                             } else {
@@ -2876,6 +2829,52 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    public void unmarkGreen(boolean pane1, String name) {
+        if (name == null) return;
+        try {
+            (pane1 ? greenNames1 : greenNames2).remove(name);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void focusAndBlinkItemTwice(boolean pane1, String name) {
+        if (name == null || name.isEmpty()) return;
+        handler.postDelayed(() -> {
+            try {
+                RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                if (pane == null || !(pane.getLayoutManager() instanceof LinearLayoutManager lm)) return;
+                RecyclerView.Adapter<?> adapter = pane.getAdapter();
+                if (!(adapter instanceof MainFilesArrayAdapter filesAdapter)) return;
+                int pos = filesAdapter.findPositionByName(name);
+                if (pos < 0) return;
+                lm.scrollToPositionWithOffset(pos, 0);
+
+                // Flash 1: Green ON
+                markGreen(pane1, name);
+                filesAdapter.notifyItemChanged(pos);
+
+                // Flash 1: Green OFF
+                handler.postDelayed(() -> {
+                    unmarkGreen(pane1, name);
+                    filesAdapter.notifyItemChanged(pos);
+
+                    // Flash 2: Green ON
+                    handler.postDelayed(() -> {
+                        markGreen(pane1, name);
+                        filesAdapter.notifyItemChanged(pos);
+
+                        // Flash 2: Green OFF
+                        handler.postDelayed(() -> {
+                            unmarkGreen(pane1, name);
+                            filesAdapter.notifyItemChanged(pos);
+                        }, 220);
+                    }, 220);
+                }, 220);
+            } catch (Exception ignored) {
+            }
+        }, 120);
+    }
+
     public boolean isGreen(boolean pane1, String name) {
         if (name == null) return false;
         try {
@@ -3216,6 +3215,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             refreshAllPanes();
         } catch (Exception ignored) {
         }
+        try {
+            if (pendingDirToLoad != null) {
+                String toLoad = pendingDirToLoad;
+                pendingDirToLoad = null;
+                boolean p1 = lastPaneSelected == 1;
+                setSelectedPane(p1 ? 1 : 2);
+                loadFolderInPaneAsync(new File(toLoad), p1, true);
+            }
+        } catch (Exception ignored) {
+        }
         // A provider location picked in the Documents providers screen. Handled
         // AFTER refreshAllPanes: that refresh re-lists the stale pane folders,
         // and because every load is generation-guarded, the last one submitted
@@ -3238,20 +3247,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-
-
-    public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
-        if (files1 == null || files2 == null)
-            return files1 != files2;
-        if (files1.length != files2.length - 1)
-            return true;
-        for (int i = 0; i < files1.length; i++) {
-            if (!files1[i].exists() || !files2[i + 1].exists() || files1[i].length() != files2[i + 1].length()) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     @Override
     protected void onDestroy() {

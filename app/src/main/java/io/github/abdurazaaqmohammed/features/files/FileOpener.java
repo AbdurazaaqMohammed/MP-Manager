@@ -11,6 +11,11 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Environment;
 import android.text.Editable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.style.ClickableSpan;
+import android.text.method.LinkMovementMethod;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.text.format.Formatter;
@@ -28,6 +33,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.HorizontalScrollView;
 import android.widget.TextView;
 import android.widget.Button;
 import android.graphics.Bitmap;
@@ -47,6 +53,11 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.CompressionMethod;
+
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
@@ -148,6 +159,16 @@ public class FileOpener {
             });
             return;
         }
+        if (fileName != null && ApkIconHelper.isApkArchiveName(fileName)) {
+            if (apkTools != null) {
+                apkTools.showApkInfoDialog(file, fileName);
+                return;
+            }
+        }
+        if (FileUtils.isElf(fileName) || FileUtils.isElfFile(file)) {
+            showElfOptionsDialog(file, fileName, file);
+            return;
+        }
         showOpenWithDialog(file, fileName);
     }
 
@@ -160,6 +181,16 @@ public class FileOpener {
                     context.openImageViewer(readable.getPath());
                 }
             });
+            return;
+        }
+        if (fileName != null && ApkIconHelper.isApkArchiveName(fileName)) {
+            if (apkTools != null) {
+                apkTools.showApkInfoDialog(file, fileName);
+                return;
+            }
+        }
+        if (FileUtils.isElf(fileName) || FileUtils.isElfFile(file)) {
+            showElfOptionsDialog(file, fileName, file);
             return;
         }
         showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
@@ -877,6 +908,130 @@ public class FileOpener {
                 .putExtra(HtmlViewerActivity.EXTRA_NAME, fileName));
     }
 
+
+    private void showElfOptionsDialog(File file, String fileName, File originalFile) {
+        String[] options = {
+                context.getString(R.string.hex_editor),
+                "ELF Inspector",
+                context.getString(R.string.text_editor),
+                context.getString(R.string.open_with)
+        };
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle("ELF: " + fileName)
+                .setItems(options, (d, which) -> {
+                    switch (which) {
+                        case 0 -> openHexEditorWithOriginal(file, originalFile);
+                        case 1 -> showElfInspectorDialog(file, fileName, originalFile);
+                        case 2 -> openTextEditorWithOriginal(file, originalFile);
+                        case 3 -> showOpenWithDialog(file, fileName, null, null, originalFile);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void showElfInspectorDialog(File file, String fileName, File originalFile) {
+        final File targetOriginal = originalFile != null ? originalFile : file;
+        new Thread(() -> {
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r");
+                 io.github.abdurazaaqmohammed.utils.nativelib.ElfParser elf = new io.github.abdurazaaqmohammed.utils.nativelib.ElfParser(raf)) {
+                final AlertDialog[] dialogRef = new AlertDialog[1];
+                SpannableStringBuilder ssb = new SpannableStringBuilder();
+                ssb.append("File: ").append(fileName).append("\n");
+                ssb.append("Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append("\n");
+                ssb.append("Architecture: ").append(io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.machineName(elf.machine))
+                        .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
+
+                ssb.append("Entry point: ");
+                String entryAddrStr = "0x" + Long.toHexString(elf.entry);
+                int entryStart = ssb.length();
+                ssb.append(entryAddrStr);
+                int entryEnd = ssb.length();
+                final long entryOffset = elf.entry;
+                ssb.setSpan(new ClickableSpan() {
+                    @Override
+                    public void onClick(@NonNull View widget) {
+                        openHexEditorWithOriginal(file, targetOriginal, entryOffset);
+                    }
+                    @Override
+                    public void updateDrawState(@NonNull TextPaint ds) {
+                        super.updateDrawState(ds);
+                        ds.setColor(0xFF29B6F6);
+                        ds.setUnderlineText(true);
+                    }
+                }, entryStart, entryEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.append("\n");
+
+                ssb.append("Size: ").append(Formatter.formatFileSize(context, file.length())).append("\n\n");
+
+                io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section[] sections = elf.sections();
+                if (sections != null && sections.length > 0) {
+                    ssb.append("--- Sections (").append(String.valueOf(sections.length)).append(") ---\n");
+                    for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section s : sections) {
+                        if (s != null && s.name != null && !s.name.isEmpty()) {
+                            ssb.append(String.format(java.util.Locale.ROOT, "%-16s ", s.name));
+                            String addrStr = String.format(java.util.Locale.ROOT, "addr:0x%08x", s.addr);
+                            int addrStart = ssb.length();
+                            ssb.append(addrStr);
+                            int addrEnd = ssb.length();
+                            final long targetOffset = s.offset > 0 ? s.offset : s.addr;
+                            ssb.setSpan(new ClickableSpan() {
+                                @Override
+                                public void onClick(@NonNull View widget) {
+                                    openHexEditorWithOriginal(file, targetOriginal, targetOffset);
+                                }
+                                @Override
+                                public void updateDrawState(@NonNull TextPaint ds) {
+                                    super.updateDrawState(ds);
+                                    ds.setColor(0xFF29B6F6);
+                                    ds.setUnderlineText(true);
+                                }
+                            }, addrStart, addrEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            ssb.append(String.format(java.util.Locale.ROOT, " size:0x%x\n", s.size));
+                        }
+                    }
+                    ssb.append("\n");
+                }
+
+                java.util.Map<String, String> dyn = elf.dynamicInfo();
+                if (dyn != null && !dyn.isEmpty()) {
+                    ssb.append("--- Dynamic / Dependencies ---\n");
+                    for (java.util.Map.Entry<String, String> entry : dyn.entrySet()) {
+                        ssb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                    }
+                }
+
+                context.runOnUiThread(() -> {
+                    ScrollView sv = new ScrollView(context);
+                    HorizontalScrollView hsv = new HorizontalScrollView(context);
+                    TextView tv = new TextView(context);
+                    tv.setText(ssb);
+                    tv.setTypeface(Typeface.MONOSPACE);
+                    tv.setTextSize(13);
+                    int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+                    tv.setPadding(pad, pad, pad, pad);
+                    tv.setMovementMethod(LinkMovementMethod.getInstance());
+                    tv.setHighlightColor(Color.TRANSPARENT);
+                    hsv.addView(tv);
+                    sv.addView(hsv);
+
+                    AlertDialog dialog = dialogUtil.getDialogBuilder()
+                            .setTitle("ELF: " + fileName)
+                            .setView(sv)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .setNeutralButton(R.string.hex_editor, (d, w) -> openHexEditorWithOriginal(file, targetOriginal))
+                            .create();
+                    dialogRef[0] = dialog;
+                    dialogUtil.styleAlertDialog(dialog);
+                });
+            } catch (Exception e) {
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
     private void showXmlFunctions(File file, String fileName) {
         withReadableCopy(file, readable -> {
             boolean binary = false;
@@ -1127,6 +1282,8 @@ public class FileOpener {
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
             || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
+        } else if (FileUtils.isElfFile(file)) {
+            withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
             io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
@@ -1303,6 +1460,345 @@ public class FileOpener {
         }).start();
     }
 
+    public void shareFolderAsZip(File folder) {
+        if (folder == null) return;
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.share_zip)
+                .setMessage(context.getString(R.string.confirm_share_zip, folder.getName()))
+                .setPositiveButton(R.string.share, (d, w) -> doShareFolderAsZip(folder))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doShareFolderAsZip(File folder) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+        new Thread(() -> {
+            File zipFile = null;
+            File stagedDir = null;
+            try {
+                File cacheDir = new File(context.getCacheDir(), "shared_zips");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                File[] existing = cacheDir.listFiles();
+                if (existing != null) {
+                    long cutoff = System.currentTimeMillis() - (60 * 60 * 1000L);
+                    for (File f : existing) {
+                        if (f.lastModified() < cutoff) FileUtils.deleteTree(f, null);
+                    }
+                }
+                zipFile = new File(cacheDir, folder.getName() + ".zip");
+                if (zipFile.exists()) zipFile.delete();
+
+                File sourceToCompress = folder;
+                if (RootStaging.needsStaging(context, folder)) {
+                    stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
+                    stagedDir.mkdirs();
+                    sourceToCompress = new File(stagedDir, folder.getName());
+                    AccessManager.stageTree(context, folder.getAbsolutePath(), sourceToCompress);
+                }
+
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.DEFLATE);
+                params.setCompressionLevel(CompressionLevel.NORMAL);
+                try (ZipFile zf = new ZipFile(zipFile)) {
+                    zf.addFolder(sourceToCompress, params);
+                }
+
+                final File finalZip = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    try {
+                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Intent intent = new Intent(Intent.ACTION_SEND);
+                        intent.setType("application/zip");
+                        intent.putExtra(Intent.EXTRA_STREAM, uri);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + finalZip.getName()));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                final File fz = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (fz != null && fz.exists()) fz.delete();
+                    new ErrorUtil(context).showError(e);
+                });
+            } finally {
+                if (stagedDir != null) {
+                    FileUtils.deleteTree(stagedDir, null);
+                }
+            }
+        }).start();
+    }
+
+    public void shareFoldersAsZip(List<File> files) {
+        if (files == null || files.isEmpty()) return;
+        if (files.size() == 1 && files.get(0).isDirectory()) {
+            shareFolderAsZip(files.get(0));
+            return;
+        }
+        String name = files.get(0).getParentFile() != null ? files.get(0).getParentFile().getName() : files.get(0).getName();
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.share_zip)
+                .setMessage(context.getString(R.string.confirm_share_zip, name))
+                .setPositiveButton(R.string.share, (d, w) -> doShareFilesAsZip(files, name))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doShareFilesAsZip(List<File> files, String baseName) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+        new Thread(() -> {
+            File zipFile = null;
+            File stagedDir = null;
+            try {
+                File cacheDir = new File(context.getCacheDir(), "shared_zips");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                File[] existing = cacheDir.listFiles();
+                if (existing != null) {
+                    long cutoff = System.currentTimeMillis() - (60 * 60 * 1000L);
+                    for (File f : existing) {
+                        if (f.lastModified() < cutoff) FileUtils.deleteTree(f, null);
+                    }
+                }
+                zipFile = new File(cacheDir, (baseName != null && !baseName.isEmpty() ? baseName : "archive") + ".zip");
+                if (zipFile.exists()) zipFile.delete();
+
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.DEFLATE);
+                params.setCompressionLevel(CompressionLevel.NORMAL);
+                try (ZipFile zf = new ZipFile(zipFile)) {
+                    for (File f : files) {
+                        File source = f;
+                        if (RootStaging.needsStaging(context, f)) {
+                            if (stagedDir == null) {
+                                stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
+                                stagedDir.mkdirs();
+                            }
+                            source = new File(stagedDir, f.getName());
+                            if (f.isDirectory()) AccessManager.stageTree(context, f.getAbsolutePath(), source);
+                            else AccessManager.stageFile(context, f.getAbsolutePath(), source);
+                        }
+                        if (source.isDirectory()) zf.addFolder(source, params);
+                        else zf.addFile(source, params);
+                    }
+                }
+
+                final File finalZip = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    try {
+                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Intent intent = new Intent(Intent.ACTION_SEND);
+                        intent.setType("application/zip");
+                        intent.putExtra(Intent.EXTRA_STREAM, uri);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + finalZip.getName()));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                final File fz = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (fz != null && fz.exists()) fz.delete();
+                    new ErrorUtil(context).showError(e);
+                });
+            } finally {
+                if (stagedDir != null) {
+                    FileUtils.deleteTree(stagedDir, null);
+                }
+            }
+        }).start();
+    }
+
+    public void shareMixedFilesAndFolders(List<File> folders, List<File> plainFiles) {
+        if (folders == null || folders.isEmpty()) return;
+        String name = folders.size() == 1
+                ? folders.get(0).getName()
+                : (folders.get(0).getParentFile() != null ? folders.get(0).getParentFile().getName() : folders.get(0).getName());
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.share_zip)
+                .setMessage(context.getString(R.string.confirm_share_zip, name))
+                .setPositiveButton(R.string.share, (d, w) -> doShareMixedFilesAndFolders(folders, plainFiles, name))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doShareMixedFilesAndFolders(List<File> folders, List<File> plainFiles, String baseName) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+        new Thread(() -> {
+            File zipFile = null;
+            File stagedDir = null;
+            try {
+                File cacheDir = new File(context.getCacheDir(), "shared_zips");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                File[] existing = cacheDir.listFiles();
+                if (existing != null) {
+                    long cutoff = System.currentTimeMillis() - (60 * 60 * 1000L);
+                    for (File f : existing) {
+                        if (f.lastModified() < cutoff) FileUtils.deleteTree(f, null);
+                    }
+                }
+                zipFile = new File(cacheDir, (baseName != null && !baseName.isEmpty() ? baseName : "archive") + ".zip");
+                if (zipFile.exists()) zipFile.delete();
+
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.DEFLATE);
+                params.setCompressionLevel(CompressionLevel.NORMAL);
+                try (ZipFile zf = new ZipFile(zipFile)) {
+                    for (File f : folders) {
+                        File source = f;
+                        if (RootStaging.needsStaging(context, f)) {
+                            if (stagedDir == null) {
+                                stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
+                                stagedDir.mkdirs();
+                            }
+                            source = new File(stagedDir, f.getName());
+                            AccessManager.stageTree(context, f.getAbsolutePath(), source);
+                        }
+                        if (source.isDirectory()) zf.addFolder(source, params);
+                        else zf.addFile(source, params);
+                    }
+                }
+
+                List<Uri> uris = new ArrayList<>();
+                uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", zipFile));
+
+                if (plainFiles != null) {
+                    for (File sf : plainFiles) {
+                        File readableFile = sf;
+                        if (SafFs.isSaf(sf) || !(sf.exists() && sf.canRead() && appReadable(sf))) {
+                            if (AccessManager.fileOpsOn(context)) {
+                                readableFile = RootStaging.stageForRead(context, sf.getAbsolutePath());
+                            }
+                        }
+                        if (readableFile != null && readableFile.exists()) {
+                            try {
+                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readableFile);
+                                uris.add(uri);
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                }
+
+                final File finalZip = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                        intent.setType("*/*");
+                        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, new ArrayList<>(uris));
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + uris.size() + " files"));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                final File fz = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (fz != null && fz.exists()) fz.delete();
+                    new ErrorUtil(context).showError(e);
+                });
+            } finally {
+                if (stagedDir != null) {
+                    FileUtils.deleteTree(stagedDir, null);
+                }
+            }
+        }).start();
+    }
+
+    public void shareZipFolderAsZip(ZipEntryInfo entry) {
+        if (entry == null) return;
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.share_zip)
+                .setMessage(context.getString(R.string.confirm_share_zip, entry.getName()))
+                .setPositiveButton(R.string.share, (d, w) -> doShareZipFolderAsZip(entry))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doShareZipFolderAsZip(ZipEntryInfo entry) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+        new Thread(() -> {
+            File zipFile = null;
+            File stageExtractDir = null;
+            try {
+                File cacheDir = new File(context.getCacheDir(), "shared_zips");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                zipFile = new File(cacheDir, entry.getName().replaceAll("[^a-zA-Z0-9._-]", "_") + ".zip");
+                if (zipFile.exists()) zipFile.delete();
+
+                stageExtractDir = new File(context.getCacheDir(), "stage_zip_share_" + System.currentTimeMillis());
+                File extractTarget = new File(stageExtractDir, entry.getName());
+                extractTarget.mkdirs();
+
+                try (ZipFile srcZip = new ZipFile(entry.getZipFile())) {
+                    String prefix = entry.getFullPath();
+                    if (!prefix.endsWith("/")) prefix += "/";
+                    for (FileHeader fh : srcZip.getFileHeaders()) {
+                        if (fh.getFileName().startsWith(prefix)) {
+                            String rel = fh.getFileName().substring(prefix.length());
+                            if (rel.isEmpty()) continue;
+                            if (fh.isDirectory()) {
+                                new File(extractTarget, rel).mkdirs();
+                            } else {
+                                File dest = new File(extractTarget, rel);
+                                if (dest.getParentFile() != null) dest.getParentFile().mkdirs();
+                                srcZip.extractFile(fh, extractTarget.getAbsolutePath(), rel);
+                            }
+                        }
+                    }
+                }
+
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.DEFLATE);
+                params.setCompressionLevel(CompressionLevel.NORMAL);
+                try (ZipFile outZf = new ZipFile(zipFile)) {
+                    outZf.addFolder(extractTarget, params);
+                }
+
+                final File finalZip = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    try {
+                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Intent intent = new Intent(Intent.ACTION_SEND);
+                        intent.setType("application/zip");
+                        intent.putExtra(Intent.EXTRA_STREAM, uri);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + finalZip.getName()));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                final File fz = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (fz != null && fz.exists()) fz.delete();
+                    new ErrorUtil(context).showError(e);
+                });
+            } finally {
+                if (stageExtractDir != null) {
+                    FileUtils.deleteTree(stageExtractDir, null);
+                }
+            }
+        }).start();
+    }
+
     private static boolean appReadable(File file) {
         try {
             if (file instanceof ShizukuFile)
@@ -1398,6 +1894,10 @@ public class FileOpener {
     }
 
     private void openHexEditorWithOriginal(File readable, File original) {
+        openHexEditorWithOriginal(readable, original, -1);
+    }
+
+    private void openHexEditorWithOriginal(File readable, File original, long offset) {
         if (readable == null || !readable.isFile()) {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
@@ -1405,6 +1905,9 @@ public class FileOpener {
         File orig = original != null ? original : readable;
         Intent i = new Intent(context, HexEditorActivity.class)
                 .putExtra("path", readable.getAbsolutePath());
+        if (offset >= 0) {
+            i.putExtra("offset", offset);
+        }
         if (!readable.getAbsolutePath().equals(orig.getAbsolutePath())) {
             i.putExtra("rootOriginalPath", orig.getAbsolutePath());
             Extensions.showMessage(context, R.string.opened_with_root);

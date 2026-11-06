@@ -19,9 +19,9 @@ android {
     signingConfigs {
         release {
             storeFile file("release.keystore")
-            storePassword "mpmanager123"
-            keyAlias "mpmanager"
-            keyPassword "mpmanager123"
+            storePassword "000000"
+            keyAlias "mido"
+            keyPassword "000000"
         }
     }
 
@@ -58,14 +58,16 @@ android {
         buildConfig true
     }
 
-    // zstd for archives (.zst / .tar.zst): vendored sources, compiled per ABI.
-    externalNativeBuild {
-        cmake {
-            path file("src/main/cpp/CMakeLists.txt")
-            version "3.22.1"
+    // zstd for archives (.zst / .tar.zst): vendored sources, compiled per ABI when no prebuilt exists.
+    if (!file("src/main/jniLibs/arm64-v8a/libmp_zstd.so").exists()) {
+        externalNativeBuild {
+            cmake {
+                path file("src/main/cpp/CMakeLists.txt")
+                version "3.22.1"
+            }
         }
+        ndkVersion "29.0.14206865"
     }
-    ndkVersion "29.0.14206865"
 
     dependenciesInfo {
         // Disables dependency metadata when building APKs.

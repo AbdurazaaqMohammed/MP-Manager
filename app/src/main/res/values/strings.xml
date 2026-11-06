@@ -203,6 +203,8 @@
     <string name="enter_path">Enter path</string>
     <string name="path">Path</string>
     <string name="start">Start</string>
+    <string name="end">End</string>
+    <string name="length">Length</string>
     <string name="only_for_this_folder">Only for this folder</string>
     <string name="ftp_server_started">FTP Server started on port %1$d</string>
     <string name="failed_to_start_ftp_server">Failed to start FTP server: %1$s</string>
@@ -1387,6 +1389,8 @@ Strings are sent to the external service you configured.</string>
     <string name="wifi_hide_passwords">Hide passwords</string>
     <string name="export">Export</string>
     <string name="share">Share</string>
+    <string name="share_zip">Share ZIP</string>
+    <string name="confirm_share_zip">Are you sure you want to share \"%s\" as a ZIP?</string>
     <string name="wifi_copy_all">Copy all</string>
     <string name="wifi_open_network">Open network</string>
     <string name="wifi_name_plus_password">Name + password</string>

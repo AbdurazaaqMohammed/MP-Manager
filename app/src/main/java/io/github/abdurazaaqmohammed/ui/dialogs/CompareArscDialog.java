@@ -81,7 +81,8 @@ public class CompareArscDialog {
     }
 
     private TableBlock loadTableBlock(String path) throws Exception {
-        if (path.toLowerCase().endsWith(".apk")) {
+        String lower = path.toLowerCase(java.util.Locale.ROOT);
+        if (lower.endsWith(".apk") || lower.endsWith(".zip") || lower.endsWith(".jar")) {
             try (ZipFile zf = new ZipFile(path)) {
                 ZipEntry ze = zf.getEntry("resources.arsc");
                 if (ze != null) {
@@ -90,7 +91,11 @@ public class CompareArscDialog {
                     }
                 }
             }
-            throw new Exception("resources.arsc not found in APK");
+            try {
+                return TableBlock.load(new File(path));
+            } catch (Exception ignored) {
+                throw new Exception("resources.arsc not found in archive");
+            }
         } else {
             return TableBlock.load(new File(path));
         }
