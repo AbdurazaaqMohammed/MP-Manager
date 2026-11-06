@@ -75,8 +75,12 @@ public class ResXmlString extends StringItem {
         if(this.mResXmlID == resXmlID) {
             return;
         }
+        // Re-link after pool sort/reindex: the same logical Id was previously
+        // linked to a different ResXmlID instance (sort moved the old one).
+        // Unlink stale first instead of crashing every manifest refresh
+        // (Protect/DeepOpt/Merge hit this on small manifests).
         if(this.mResXmlID != null) {
-            throw new IllegalStateException("Resource id string item is already linked");
+            unLinkResourceIdInternal();
         }
         this.mResXmlID = resXmlID;
         resXmlID.setResXmlStringInternal(this);
