@@ -138,7 +138,7 @@ public class FileUtils {
     public static boolean isImageFile(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
         for (String ext : IMAGE_EXTS) if (lower.endsWith(ext)) return true;
-        return isDrawableXml(name);
+        return false;
     }
 
     public static boolean isDrawableXml(String path) {

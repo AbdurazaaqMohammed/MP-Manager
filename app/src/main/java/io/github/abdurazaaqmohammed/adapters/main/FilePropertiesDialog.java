@@ -946,8 +946,8 @@ public class FilePropertiesDialog {
                         io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
                                 io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(
                                         "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
-                        if (res.isSuccess() && res.output != null && !res.output.trim().isEmpty()) {
-                            return res.output.trim();
+                        if (res.success && res.stdout != null && !res.stdout.trim().isEmpty()) {
+                            return res.stdout.trim();
                         }
                     }
                 } catch (Exception ignored) {}
@@ -1022,7 +1022,7 @@ public class FilePropertiesDialog {
                                     String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
                                     io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
                                             io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 10);
-                                    if (res.isSuccess()) {
+                                    if (res.success) {
                                         updated = true;
                                     }
                                 }

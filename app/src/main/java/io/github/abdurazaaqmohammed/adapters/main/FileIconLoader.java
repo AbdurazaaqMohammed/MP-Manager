@@ -777,13 +777,6 @@ public class FileIconLoader {
         if (ext != null) ext = "." + ext.toLowerCase(Locale.ROOT);
         else ext = "";
 
-        if (".xml".equals(ext)) {
-            if (FileUtils.isDrawableXml(path) || FileUtils.isZipEntryDrawableXml(zipEntry.getZipFile(), path)) {
-                iconMemo.put(path, cachedImageIcon);
-                fileIconView.setImageDrawable(cachedImageIcon);
-                return;
-            }
-        }
         if (FileUtils.isElf(path)) {
             iconMemo.put(path, cachedElfIcon);
             fileIconView.setImageDrawable(cachedElfIcon);
@@ -823,7 +816,7 @@ public class FileIconLoader {
                 resolved = cachedApkIcon;
                 if (!isInZip) loadApkIconAsync(path, fileIconView);
             }
-        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS) || FileUtils.isDrawableXml(path)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             resolved = cachedImageIcon;
             if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
@@ -840,11 +833,7 @@ public class FileIconLoader {
         } else if (".arsc".equals(ext)) {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            if (".xml".equals(ext) && (FileUtils.isDrawableXml(path) || (!isInZip && FileUtils.isDrawableXmlContent(new File(path))))) {
-                resolved = cachedImageIcon;
-            } else {
-                resolved = cachedTextIcon;
-            }
+            resolved = cachedTextIcon;
         } else if (FileUtils.isElf(path) || (!isInZip && FileUtils.isElfFile(new File(path)))) {
             resolved = cachedElfIcon;
         } else {
