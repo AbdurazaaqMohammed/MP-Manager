@@ -123,21 +123,11 @@ public final class ThemeRegistry {
             {"Pink", "#FFAD1457"},
     };
 
-    private static int styleField(String name) {
-        try {
-            return io.github.abdurazaaqmohammed.MPManager.R.style.class.getField(name).getInt(null);
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    private static int presetOverlayRes(String name) {
+    /** ARGB for a preset name, or 0 if unknown. */
+    private static int presetArgb(String name) {
         for (String[] preset : ACCENT_PRESETS) {
             if (preset[0].equalsIgnoreCase(name)) {
-                // Named presets map onto the generated hue grid so both paths
-                // share one implementation.
-                int argb = (int) Long.parseLong(preset[1].substring(2), 16);
-                return hueOverlayRes(argb);
+                return (int) Long.parseLong(preset[1].substring(2), 16);
             }
         }
         return 0;
@@ -151,7 +141,7 @@ public final class ThemeRegistry {
 
     /** Finds the generated overlay closest to the given color: exact hue
      *  bucket (10-degree steps) and nearest saturation/lightness shade. */
-    private static int hueOverlayRes(int argb) {
+    private static int hueOverlayIndex(int argb) {
         float r = ((argb >> 16) & 0xFF) / 255f;
         float g = ((argb >> 8) & 0xFF) / 255f;
         float b = (argb & 0xFF) / 255f;
@@ -182,7 +172,7 @@ public final class ThemeRegistry {
                 bestV = vi;
             }
         }
-        return styleField("ThemeOverlay_Accent_H" + hueIdx + "V" + bestV);
+        return hueIdx * SHADES.length + bestV;
     }
 
     /** Pref key: most-recently-used custom accent colors (JSON int array). */
@@ -225,28 +215,57 @@ public final class ThemeRegistry {
         return out;
     }
 
-    /** Stacks the user's accent overlay onto the base theme. Call after
-     *  applySaved() and before super.onCreate() so inflation picks it up. */
+    /** Stacks the user's accent onto the base theme. Call after applySaved()
+     *  and before super.onCreate() so inflation picks it up.
+     *
+     *  Two paths (same visual goal, different mechanics):
+     *  - Devices with Material dynamic color support (API 31+, incl. Xiaomi):
+     *    feed the user's color as a content-based seed to DynamicColors, which
+     *    generates the full Material palette from it.
+     *  - Every other device: stack the closest generated accent overlay onto
+     *    the base theme with Theme.applyStyle(). The overlay only carries
+     *    accent attributes and its parent is an empty overlay, so the base
+     *    Dark/Black/Light mode is untouched.
+     *
+     *  The difference between paths doesn't affect behavior; on Black, dynamic
+     *  colors are skipped so surfaces stay pure black. */
     public static void applyAccent(Activity activity) {
         try {
             String mode = PreferenceManager.getDefaultSharedPreferences(activity)
                     .getString(ACCENT_PREF_KEY, null);
             if (mode == null || mode.isEmpty()) return; // follow material color
-            int overlay;
+            int argb;
             if (mode.startsWith("preset:")) {
-                overlay = presetOverlayRes(mode.substring("preset:".length()));
+                argb = presetArgb(mode.substring("preset:".length()));
             } else if ("custom".equals(mode)) {
-                int argb = PreferenceManager.getDefaultSharedPreferences(activity)
+                argb = PreferenceManager.getDefaultSharedPreferences(activity)
                         .getInt(ACCENT_CUSTOM_PREF_KEY, 0);
-                overlay = argb == 0 ? 0 : hueOverlayRes(argb);
             } else if (!"follow".equals(mode)) {
                 // Bare preset name (older builds stored just the name).
-                overlay = presetOverlayRes(mode);
+                argb = presetArgb(mode);
             } else {
-                overlay = 0;
+                return;
             }
+            if (argb == 0) return;
+
+            boolean blackTheme = BuiltInThemes.BLACK_ID.equals(getCurrentId(activity));
+            if (!blackTheme && com.google.android.material.color.DynamicColors.isDynamicColorAvailable()) {
+                com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(
+                        activity,
+                        new com.google.android.material.color.DynamicColorsOptions.Builder()
+                                .setContentBasedSource(argb)
+                                .build());
+                return;
+            }
+
+            int idx = hueOverlayIndex(argb);
+            int overlay = idx < 0 || idx >= AccentOverlays.RES.length
+                    ? 0 : AccentOverlays.RES[idx];
             if (overlay != 0) {
-                activity.setTheme(overlay);
+                android.content.res.Resources.Theme theme = activity.getTheme();
+                if (theme != null) {
+                    theme.applyStyle(overlay, true);
+                }
             }
         } catch (Exception ignored) {
         }

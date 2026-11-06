@@ -142,24 +142,23 @@ public final class ThemeDialogs {
     }
 
     private static void tintRow(View child, List<Integer> history, int count) {
+        // Single-choice rows in this dialog are usually a CheckedTextView or a
+        // container with the label nested deeper; handle both shapes.
+        if (child instanceof TextView) {
+            TextView text = (TextView) child;
+            String value = String.valueOf(text.getText());
+            for (int h = 0; h < history.size(); h++) {
+                if (String.format("#%06X", history.get(h) & 0xFFFFFF).equals(value)) {
+                    text.setTextColor(history.get(h));
+                    break;
+                }
+            }
+            return;
+        }
         if (!(child instanceof ViewGroup)) return;
         ViewGroup group = (ViewGroup) child;
         for (int i = 0; i < group.getChildCount(); i++) {
-            View grand = group.getChildAt(i);
-            if (grand instanceof TextView) {
-                TextView text = (TextView) grand;
-                String value = String.valueOf(text.getText());
-                int index = -1;
-                for (int h = 0; h < history.size(); h++) {
-                    if (String.format("#%06X", history.get(h) & 0xFFFFFF).equals(value)) {
-                        index = h;
-                        break;
-                    }
-                }
-                if (index >= 0) {
-                    text.setTextColor(history.get(index));
-                }
-            }
+            tintRow(group.getChildAt(i), history, count);
         }
     }
 
