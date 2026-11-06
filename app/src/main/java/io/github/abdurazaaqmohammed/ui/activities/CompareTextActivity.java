@@ -21,10 +21,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.AbstractDelta;
-import com.github.difflib.patch.Patch;
 import com.github.difflib.text.DiffRow;
+import com.github.difflib.text.DiffRowGenerator;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -54,11 +52,8 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
  */
 public class CompareTextActivity extends BaseActivity {
 
-    private static final int BG_DIFF = 0xFF2D435C;
     private static final int BG_DELETED = 0x33F44336;
     private static final int BG_INSERTED = 0x3334A853;
-    private static final int TEXT_NUM_DIFF = 0xFF90CAF9;
-    private static final int TEXT_NUM_EQUAL = 0xFF78909C;
 
     /** How whitespace and case are treated while matching lines. */
     private enum IgnoreMode {NONE, TRIM, WHITESPACE, WHITESPACE_EMPTY}
@@ -122,7 +117,7 @@ public class CompareTextActivity extends BaseActivity {
         if (bar != null) {
             bar.setTitle(R.string.compare_text);
             String subtitle = names1;
-            if (names2 != null && !names2.isEmpty()) subtitle = names1 + " > " + names2;
+            if (names2 != null && !names2.isEmpty()) subtitle = names1 + "  ⟷  " + names2;
             bar.setSubtitle(subtitle);
         }
         startCompare();
@@ -180,81 +175,29 @@ public class CompareTextActivity extends BaseActivity {
     }
 
     private String readText(String path, boolean isZip, String zipPath) throws Exception {
+        StringBuilder sb = new StringBuilder();
         if (isZip) {
             try (ZipFile zf = new ZipFile(zipPath)) {
                 ZipEntry ze = zf.getEntry(path);
                 if (ze != null) {
-                    try (java.io.InputStream rawIs = zf.getInputStream(ze);
-                         java.io.BufferedInputStream bis = new java.io.BufferedInputStream(rawIs)) {
-                        if (io.github.abdurazaaqmohammed.utils.FileUtils.isAxml(bis)) {
-                            try {
-                                return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
-                            } catch (Exception ignored) {}
-                        }
-                        int maxBytes = (int) Math.min(ze.getSize() > 0 ? ze.getSize() : 2 * 1024 * 1024, 2 * 1024 * 1024);
-                        return readStreamWithBinaryDetection(bis, maxBytes);
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(zf.getInputStream(ze)))) {
+                        appendLines(sb, reader);
                     }
                 }
             }
         } else {
-            File f = new File(path);
-            try (java.io.InputStream rawIs = new FileInputStream(f);
-                 java.io.BufferedInputStream bis = new java.io.BufferedInputStream(rawIs)) {
-                if (io.github.abdurazaaqmohammed.utils.FileUtils.isAxml(bis)) {
-                    try {
-                        return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
-                    } catch (Exception ignored) {}
-                }
-                int maxBytes = (int) Math.min(f.length() > 0 ? f.length() : 2 * 1024 * 1024, 2 * 1024 * 1024);
-                return readStreamWithBinaryDetection(bis, maxBytes);
-            }
-        }
-        return "";
-    }
-
-    private static String readStreamWithBinaryDetection(java.io.InputStream is, int maxBytes) throws Exception {
-        byte[] buf = new byte[Math.max(1024, maxBytes)];
-        int total = 0;
-        int n;
-        while (total < buf.length && (n = is.read(buf, total, buf.length - total)) != -1) {
-            total += n;
-        }
-        if (isBinary(buf, total)) {
-            return formatBinaryAsText(buf, total);
-        }
-        return new String(buf, 0, total, java.nio.charset.StandardCharsets.UTF_8);
-    }
-
-    private static boolean isBinary(byte[] data, int len) {
-        int checkLen = Math.min(len, 4096);
-        int nonPrintable = 0;
-        for (int i = 0; i < checkLen; i++) {
-            byte b = data[i];
-            if (b == 0) return true;
-            if ((b < 0x20 && b != '\t' && b != '\r' && b != '\n') || (b & 0xFF) == 0x7F) {
-                nonPrintable++;
-            }
-        }
-        return nonPrintable > (checkLen / 10);
-    }
-
-    private static String formatBinaryAsText(byte[] data, int len) {
-        StringBuilder sb = new StringBuilder(len + (len / 22) + 32);
-        int col = 0;
-        for (int i = 0; i < len; i++) {
-            int b = data[i] & 0xFF;
-            if (b >= 0x20 && b <= 0x7E) {
-                sb.append((char) b);
-            } else {
-                sb.append('\uFFFD');
-            }
-            col++;
-            if (col == 22) {
-                sb.append('\n');
-                col = 0;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(path))))) {
+                appendLines(sb, reader);
             }
         }
         return sb.toString();
+    }
+
+    private static void appendLines(StringBuilder sb, BufferedReader reader) throws Exception {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line).append('\n');
+        }
     }
 
     // ==========================================
@@ -277,75 +220,43 @@ public class CompareTextActivity extends BaseActivity {
         int[] newNumbers = new int[newLines.size() + 1];
         List<String> oldForDiff = significantLines(oldLines, oldNumbers, dropBlanks);
         List<String> newForDiff = significantLines(newLines, newNumbers, dropBlanks);
-        Patch<String> patch = DiffUtils.diff(oldForDiff, newForDiff, equalizer());
+        DiffRowGenerator generator = DiffRowGenerator.create()
+                .showInlineDiffs(false)
+                .reportLinesUnchanged(true)
+                .equalizer(equalizer())
+                .build();
+        List<DiffRow> rows = generator.generateDiffRows(oldForDiff, newForDiff);
 
-        List<DiffLine> result = new ArrayList<>();
-        int oldCursor = 0;
-        int newCursor = 0;
-
-        for (AbstractDelta<String> delta : patch.getDeltas()) {
-            int srcPos = delta.getSource().getPosition();
-            int tgtPos = delta.getTarget().getPosition();
-
-            // 1. Equal lines before delta
-            int equalOld = srcPos - oldCursor;
-            int equalNew = tgtPos - newCursor;
-            int equalCount = Math.min(equalOld, equalNew);
-            for (int i = 0; i < equalCount; i++) {
-                int oIdx = oldCursor + i;
-                int nIdx = newCursor + i;
-                result.add(new DiffLine(DiffRow.Tag.EQUAL,
-                        oldForDiff.get(oIdx),
-                        newForDiff.get(nIdx),
-                        oldNumbers[oIdx],
-                        newNumbers[nIdx]));
+        List<DiffLine> result = new ArrayList<>(rows.size());
+        int oldIndex = 0;
+        int newIndex = 0;
+        for (DiffRow row : rows) {
+            DiffRow.Tag tag = row.getTag();
+            int oldNum = 0;
+            int newNum = 0;
+            switch (tag) {
+                case EQUAL -> {
+                    oldNum = oldNumbers[oldIndex];
+                    newNum = newNumbers[newIndex];
+                    oldIndex++;
+                    newIndex++;
+                }
+                case CHANGE -> {
+                    oldNum = oldNumbers[oldIndex];
+                    newNum = newNumbers[newIndex];
+                    oldIndex++;
+                    newIndex++;
+                }
+                case DELETE -> {
+                    oldNum = oldNumbers[oldIndex];
+                    oldIndex++;
+                }
+                case INSERT -> {
+                    newNum = newNumbers[newIndex];
+                    newIndex++;
+                }
             }
-            oldCursor = srcPos;
-            newCursor = tgtPos;
-
-            // 2. Delta lines
-            List<String> srcLines = delta.getSource().getLines();
-            List<String> tgtLines = delta.getTarget().getLines();
-            int srcSize = srcLines == null ? 0 : srcLines.size();
-            int tgtSize = tgtLines == null ? 0 : tgtLines.size();
-            int maxLines = Math.max(srcSize, tgtSize);
-
-            for (int i = 0; i < maxLines; i++) {
-                boolean hasOld = i < srcSize;
-                boolean hasNew = i < tgtSize;
-                String oldText = hasOld ? srcLines.get(i) : "";
-                String newText = hasNew ? tgtLines.get(i) : "";
-                int oldNum = hasOld ? oldNumbers[oldCursor + i] : 0;
-                int newNum = hasNew ? newNumbers[newCursor + i] : 0;
-
-                DiffRow.Tag tag;
-                if (hasOld && hasNew) tag = DiffRow.Tag.CHANGE;
-                else if (hasOld) tag = DiffRow.Tag.DELETE;
-                else tag = DiffRow.Tag.INSERT;
-
-                result.add(new DiffLine(tag, oldText, newText, oldNum, newNum));
-            }
-            oldCursor += srcSize;
-            newCursor += tgtSize;
-        }
-
-        // 3. Trailing equal lines
-        int remOld = oldForDiff.size() - oldCursor;
-        int remNew = newForDiff.size() - newCursor;
-        int remaining = Math.max(remOld, remNew);
-        for (int i = 0; i < remaining; i++) {
-            boolean hasOld = i < remOld;
-            boolean hasNew = i < remNew;
-            String oldText = hasOld ? oldForDiff.get(oldCursor + i) : "";
-            String newText = hasNew ? newForDiff.get(newCursor + i) : "";
-            int oldNum = hasOld ? oldNumbers[oldCursor + i] : 0;
-            int newNum = hasNew ? newNumbers[newCursor + i] : 0;
-            DiffRow.Tag tag;
-            if (hasOld && hasNew) tag = DiffRow.Tag.EQUAL;
-            else if (hasOld) tag = DiffRow.Tag.DELETE;
-            else tag = DiffRow.Tag.INSERT;
-
-            result.add(new DiffLine(tag, oldText, newText, oldNum, newNum));
+            result.add(new DiffLine(tag, row.getOldLine(), row.getNewLine(), oldNum, newNum));
         }
         return result;
     }
@@ -784,21 +695,12 @@ public class CompareTextActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             DiffLine line = diffLines.get(position);
             if (holder instanceof SideHolder side) {
-                boolean isLeftDiff = line.tag == DiffRow.Tag.DELETE || line.tag == DiffRow.Tag.CHANGE;
-                boolean isRightDiff = line.tag == DiffRow.Tag.INSERT || line.tag == DiffRow.Tag.CHANGE;
-
                 side.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
                 side.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
                 side.old.setText(line.oldLine);
                 side.newText.setText(line.newLine);
-
-                side.old.setBackgroundColor(isLeftDiff ? BG_DIFF : 0);
-                side.numOld.setBackgroundColor(isLeftDiff ? BG_DIFF : 0);
-                side.numOld.setTextColor(isLeftDiff ? TEXT_NUM_DIFF : TEXT_NUM_EQUAL);
-
-                side.newText.setBackgroundColor(isRightDiff ? BG_DIFF : 0);
-                side.numNew.setBackgroundColor(isRightDiff ? BG_DIFF : 0);
-                side.numNew.setTextColor(isRightDiff ? TEXT_NUM_DIFF : TEXT_NUM_EQUAL);
+                side.old.setBackgroundColor(backgroundColor(line.tag, true));
+                side.newText.setBackgroundColor(backgroundColor(line.tag, false));
             } else if (holder instanceof UnifiedHolder unifiedHolder) {
                 bindUnified(unifiedHolder, line);
             }
