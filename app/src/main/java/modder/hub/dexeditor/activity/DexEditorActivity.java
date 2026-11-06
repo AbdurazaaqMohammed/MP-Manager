@@ -353,6 +353,17 @@ public class DexEditorActivity extends BaseActivity {
         ImageButton btnEdit = findViewById(R.id.btn_edit);
         ImageButton btnFile = findViewById(R.id.btn_file);
 
+        // The toolbar ImageButtons ship with white sources: on a light toolbar
+        // they were white-on-white. Tint with the on-surface color and dim the
+        // disabled state (undo/redo start disabled) so both themes read well.
+        ColorStateList buttonTint = new ColorStateList(
+                new int[][]{ {-android.R.attr.state_enabled}, {} },
+                new int[]{ (onSurfaceColor() & 0x00FFFFFF) | 0x61000000, onSurfaceColor() });
+        ImageButton[] toolbarButtons = {btnUndo, btnRedo, btnSave, btnEdit, btnFile};
+        for (ImageButton button : toolbarButtons) {
+            if (button != null) button.setImageTintList(buttonTint);
+        }
+
         if (btnUndo != null) btnUndo.setOnClickListener(v -> {
             UnifiedEditorFragment f = getCurrentFragment();
             if (f != null && f.getEditor() != null && f.getEditor().canUndo()) {
@@ -662,11 +673,41 @@ public class DexEditorActivity extends BaseActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         this.optionsMenu = menu;
         getMenuInflater().inflate(viewPager.getVisibility() == View.VISIBLE ? R.menu.editor_menu : R.menu.dex_editor_main_menu, menu);
+        tintMenuIcons(menu);
         return true;
+    }
+
+    /**
+     * The editor menu icons are white resources; on a light toolbar they were
+     * white-on-white and effectively invisible. Tint every icon (submenus
+     * included) with the theme's on-surface color so they stay readable on
+     * both light and dark toolbars.
+     */
+    private void tintMenuIcons(Menu menu) {
+        try {
+            int tint = onSurfaceColor();
+            for (int i = 0; i < menu.size(); i++) {
+                tintMenuItemAndSubmenu(menu.getItem(i), tint);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void tintMenuItemAndSubmenu(MenuItem item, int tint) {
+        if (item.getIcon() != null) {
+            DrawableCompat.setTint(item.getIcon(), tint);
+        }
+        if (item.hasSubMenu()) {
+            Menu submenu = item.getSubMenu();
+            for (int i = 0; i < submenu.size(); i++) {
+                tintMenuItemAndSubmenu(submenu.getItem(i), tint);
+            }
+        }
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+        tintMenuIcons(menu);
         if (viewPager.getVisibility() == View.VISIBLE && currentTabIndex != -1 && currentTabIndex < tabs.size()) {
             EditorTab tab = tabs.get(currentTabIndex);
             boolean isSmali = tab.type == 0;
@@ -693,7 +734,8 @@ public class DexEditorActivity extends BaseActivity {
             // Same options the regular text editor offers, available for smali
             // and plain text tabs alike (graph tabs have no text cursor).
             int[] commonItems = {R.id.search, R.id.syntax, R.id.previous_position,
-                    R.id.next_position, R.id.start_of_line, R.id.end_of_line};
+                    R.id.next_position, R.id.start_of_line, R.id.end_of_line,
+                    R.id.action_search_panel};
             for (int commonId : commonItems) {
                 MenuItem commonItem = menu.findItem(commonId);
                 if (commonItem != null) commonItem.setVisible(!isGraph);
@@ -767,6 +809,9 @@ public class DexEditorActivity extends BaseActivity {
                 saveCurrentTab();
                 return true;
             } else if (id == R.id.search) {
+                editorFragment.showSearchPanel();
+                return true;
+            } else if (id == R.id.action_search_panel) {
                 editorFragment.showSearchPanel();
                 return true;
             } else if (id == R.id.syntax) {
@@ -1018,14 +1063,17 @@ public class DexEditorActivity extends BaseActivity {
             if (undo != null) {
                 undo.setEnabled(fragment.getEditor().canUndo());
                 if (undo.getIcon() != null) {
-                    DrawableCompat.setTint(undo.getIcon(), Color.WHITE);
+                    // Used to force Color.WHITE here, which re-whitened the icons
+                    // on every undo/redo change and made them invisible on the
+                    // light toolbar no matter what onCreateOptionsMenu tinted.
+                    DrawableCompat.setTint(undo.getIcon(), onSurfaceColor());
                     undo.getIcon().setAlpha(undo.isEnabled() ? 255 : 100);
                 }
             }
             if (redo != null) {
                 redo.setEnabled(fragment.getEditor().canRedo());
                 if (redo.getIcon() != null) {
-                    DrawableCompat.setTint(redo.getIcon(), Color.WHITE);
+                    DrawableCompat.setTint(redo.getIcon(), onSurfaceColor());
                     redo.getIcon().setAlpha(redo.isEnabled() ? 255 : 100);
                 }
             }
@@ -1180,16 +1228,21 @@ public class DexEditorActivity extends BaseActivity {
             targetTab.pendingColumn = column;
             targetTab.pendingQuery = query;
 
-            // If fragment is already ready, navigate now
+            // Navigate as soon as the editor is actually able to scroll. When a
+            // result is opened from the search list the editor ViewPager is still
+            // animating in (or a tab's view was recycled): jumping immediately
+            // computed the scroll against a stale layout and the view ended up
+            // somewhere else until something forced it back. consumePendingNavigation
+            // waits for attach + shown + loaded, so the jump lands right at once.
             UnifiedEditorFragment fragment = getFragmentAtIndex(tabIndex);
-            if (fragment != null && fragment.getEditor() != null && fragment.getEditor().getText().getLineCount() > lineNumber) {
-                fragment.navigateTo(lineNumber, column, query);
-                // Clear pending once navigated
-                targetTab.pendingLine = -1;
-                targetTab.pendingColumn = -1;
-                targetTab.pendingQuery = null;
-            }
+            if (fragment != null) retryPendingNavigation(fragment, 0);
         }
+    }
+
+    private void retryPendingNavigation(UnifiedEditorFragment fragment, final int attempt) {
+        if (fragment.consumePendingNavigation()) return;
+        if (attempt >= 30) return; // ~3s; postInitialize/fragment recreation still consumes it
+        new Handler(Looper.getMainLooper()).postDelayed(() -> retryPendingNavigation(fragment, attempt + 1), 100);
     }
 
     @SuppressLint("NotifyDataSetChanged")

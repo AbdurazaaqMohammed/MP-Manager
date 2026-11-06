@@ -740,18 +740,22 @@ public class SearchFragment extends Fragment {
      * This is a sensitive operation as it involves re-assembling classes.
      * It still carries some bugs which I left open people around
      */
-    /** Runs an exact "String" type search for the given text across the whole project. */
+    /**
+     * Runs an exact "String" type search for the given text across the whole project.
+     * Launched from the Strings tab ("Search" button), so the query is always a whole
+     * string literal: searching {@code .json} must not surface {@code example.json}.
+     */
     public void runStringSearch(String query) {
         lastSearchQuery = query;
         lastSearchType = "String";
         lastMatchCase = true;
         lastIsRegex = false;
-        lastExactlyMatch = false;
+        lastExactlyMatch = true;
         searchResults.clear();
         currentQuery = null;
         if (adapter != null) adapter.refreshVisibleNodes();
         updateUIState();
-        new SearchTask(this, query, "/", "String", true, true, false, false, false, null, false).start();
+        new SearchTask(this, query, "/", "String", true, true, false, true, false, null, false).start();
     }
 
     public void runMethodUsageSearch(String slashClass, String methodName, String proto, boolean includeOverrides) {
@@ -2201,6 +2205,13 @@ public class SearchFragment extends Fragment {
                                     } catch (Exception ignored) {
                                     }
                                 } else {
+                                    // Instructions (and fields) appear in the generated
+                                    // smali in iteration order, so each occurrence is
+                                    // located after the previous match. Without the
+                                    // cursors every occurrence of the same string got
+                                    // the line of the FIRST occurrence and clicking
+                                    // the 2nd..nth result never moved the editor.
+                                    int methodLineCursor = 0;
                                     for (Method method : classDef.getMethods()) {
                                         MethodImplementation impl = method.getImplementation();
                                         if (impl != null) {
@@ -2213,7 +2224,12 @@ public class SearchFragment extends Fragment {
                                                             if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
                                                             if (smali == null) smali = generateSmaliSafe(classDef);
                                                             String snippetText = inst.getOpcode().name + " ..., \"" + str + "\"";
-                                                            int lineIdx = findLineOfText(smali, "\"" + str + "\"");
+                                                            int lineIdx = findLineOfTextFrom(smali, "\"" + str + "\"", methodLineCursor);
+                                                            if (lineIdx != -1) {
+                                                                methodLineCursor = lineIdx + 1;
+                                                            } else {
+                                                                lineIdx = findLineOfText(smali, "\"" + str + "\"");
+                                                            }
                                                             TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                             snippet.setSnippet(true);
                                                             snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
@@ -2226,6 +2242,7 @@ public class SearchFragment extends Fragment {
                                             }
                                         }
                                     }
+                                    int fieldLineCursor = 0;
                                     for (Field field : classDef.getFields()) {
                                         EncodedValue initialValue = field.getInitialValue();
                                         if (initialValue instanceof StringEncodedValue) {
@@ -2234,7 +2251,12 @@ public class SearchFragment extends Fragment {
                                                 if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
                                                 if (smali == null) smali = generateSmaliSafe(classDef);
                                                 String snippetText = ".field ... " + field.getName() + " = \"" + str + "\"";
-                                                int lineIdx = findLineOfText(smali, field.getName());
+                                                int lineIdx = findLineOfTextFrom(smali, field.getName(), fieldLineCursor);
+                                                if (lineIdx != -1) {
+                                                    fieldLineCursor = lineIdx + 1;
+                                                } else {
+                                                    lineIdx = findLineOfText(smali, field.getName());
+                                                }
                                                 TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                 snippet.setSnippet(true);
                                                 snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
@@ -2244,7 +2266,8 @@ public class SearchFragment extends Fragment {
                                             }
                                         }
                                     }
-                                    if (searchInAnnotations(classDef.getAnnotations(), className, snippets, smali, classDef)) match = true;
+                                    int[] annotationLineCursor = {0};
+                                    if (searchInAnnotations(classDef.getAnnotations(), className, snippets, smali, classDef, annotationLineCursor)) match = true;
                                 }
                                 break;
                             case "Integer":
@@ -2432,12 +2455,59 @@ public class SearchFragment extends Fragment {
                         if (checkMatch(literal)) {
                             return true;
                         }
+                        // The smali text stores the escaped form of the literal
+                        // (\n, \", \\...), while a query coming from the Strings
+                        // tab is the raw pool value. Exact comparisons must also
+                        // accept the unescaped form or strings with escapes
+                        // would never match themselves.
+                        if (exactlyMatch) {
+                            String unescaped = unescapeSmaliLiteral(literal);
+                            if (!unescaped.equals(literal) && checkMatch(unescaped)) {
+                                return true;
+                            }
+                        }
                         start = -1;
                     }
                 }
             }
             // Fallback for non-exact search if literal extraction didn't match (e.g. multi-line or malformed)
             return !exactlyMatch && checkMatch(lineText);
+        }
+
+        /** Resolves the standard smali string escapes so an exact query can be compared with a literal. */
+        private static String unescapeSmaliLiteral(String literal) {
+            StringBuilder out = new StringBuilder(literal.length());
+            for (int i = 0; i < literal.length(); i++) {
+                char c = literal.charAt(i);
+                if (c != '\\' || i + 1 >= literal.length()) {
+                    out.append(c);
+                    continue;
+                }
+                char n = literal.charAt(++i);
+                switch (n) {
+                    case 'n' -> out.append('\n');
+                    case 'r' -> out.append('\r');
+                    case 't' -> out.append('\t');
+                    case 'b' -> out.append('\b');
+                    case 'f' -> out.append('\f');
+                    case '\\' -> out.append('\\');
+                    case '"' -> out.append('"');
+                    case 'u' -> {
+                        if (i + 4 < literal.length()) {
+                            try {
+                                out.append((char) Integer.parseInt(literal.substring(i + 1, i + 5), 16));
+                                i += 4;
+                            } catch (Exception e) {
+                                out.append(c).append(n);
+                            }
+                        } else {
+                            out.append(c).append(n);
+                        }
+                    }
+                    default -> out.append(c).append(n);
+                }
+            }
+            return out.toString();
         }
 
         /**
@@ -2710,19 +2780,40 @@ public class SearchFragment extends Fragment {
             return countLinesBefore(smali, pos);
         }
 
-        private boolean searchInAnnotations(Set<? extends Annotation> annotations, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
+        /**
+         * Like {@link #findLineOfText} but only looks at lines after {@code fromLine},
+         * so repeated occurrences of the same text map to their own lines instead of
+         * every result collapsing onto the first one (which made clicking the 2nd..nth
+         * search result of the same string always jump to the same line).
+         */
+        private int findLineOfTextFrom(String smali, String searchText, int fromLine) {
+            if (smali == null || searchText == null || smali.isEmpty()) return -1;
+            String haystack = matchCase ? smali : smali.toLowerCase();
+            String needle = matchCase ? searchText : searchText.toLowerCase();
+            int pos = 0;
+            for (int line = 0; line < fromLine; line++) {
+                int nl = haystack.indexOf('\n', pos);
+                if (nl == -1) return -1;
+                pos = nl + 1;
+            }
+            int at = haystack.indexOf(needle, pos);
+            if (at == -1) return -1;
+            return countLinesBefore(smali, at);
+        }
+
+        private boolean searchInAnnotations(Set<? extends Annotation> annotations, String className, List<TreeNode> snippets, String smali, ClassDef classDef, int[] lineCursor) {
             if (annotations == null) return false;
             boolean matched = false;
             for (Annotation annotation : annotations) {
                 for (AnnotationElement element : annotation.getElements()) {
-                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
+                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef, lineCursor))
                         matched = true;
                 }
             }
             return matched;
         }
 
-        private boolean collectAnnotationMatches(String name, EncodedValue value, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
+        private boolean collectAnnotationMatches(String name, EncodedValue value, String className, List<TreeNode> snippets, String smali, ClassDef classDef, int[] lineCursor) {
             boolean matched = false;
             if (value instanceof StringEncodedValue) {
                 String str = ((StringEncodedValue) value).getValue();
@@ -2730,7 +2821,12 @@ public class SearchFragment extends Fragment {
                     if (foundCount.incrementAndGet() >= 250000) return true;
                     String currentSmali = smali;
                     if (currentSmali == null) currentSmali = generateSmaliSafe(classDef);
-                    int lineIdx = findLineOfText(currentSmali, "\"" + str + "\"");
+                    int lineIdx = findLineOfTextFrom(currentSmali, "\"" + str + "\"", lineCursor[0]);
+                    if (lineIdx != -1) {
+                        lineCursor[0] = lineIdx + 1;
+                    } else {
+                        lineIdx = findLineOfText(currentSmali, "\"" + str + "\"");
+                    }
                     TreeNode snippet = new TreeNode(name + " = \"" + str + "\"", className, 0, false);
                     snippet.setSnippet(true);
                     snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
@@ -2740,12 +2836,12 @@ public class SearchFragment extends Fragment {
                 }
             } else if (value instanceof AnnotationEncodedValue) {
                 for (AnnotationElement element : ((AnnotationEncodedValue) value).getElements()) {
-                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
+                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef, lineCursor))
                         matched = true;
                 }
             } else if (value instanceof ArrayEncodedValue) {
                 for (EncodedValue subValue : ((ArrayEncodedValue) value).getValue()) {
-                    if (collectAnnotationMatches(name, subValue, className, snippets, smali, classDef))
+                    if (collectAnnotationMatches(name, subValue, className, snippets, smali, classDef, lineCursor))
                         matched = true;
                 }
             }

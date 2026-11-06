@@ -31,7 +31,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiPredicate;
@@ -74,8 +73,8 @@ public class CompareTextActivity extends BaseActivity {
     private String names1 = "";
     private String names2 = "";
     /** Raw contents of both sides, kept so option changes rebuild without re-reading. */
-    private String textLeft;
-    private String textRight;
+    private List<String> textLeft;
+    private List<String> textRight;
 
     private MaterialToolbar toolbar;
     private View diffContainer;
@@ -146,11 +145,12 @@ public class CompareTextActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                String left = readText(path1, isZip1, zip1);
-                String right = readText(path2, isZip2, zip2);
-                textLeft = left;
-                textRight = right;
-                final List<DiffLine> built = buildDiff(left, right);
+                // Read straight into line lists: buffering a multi-megabyte file
+                // into one String and re-splitting it duplicates the whole file
+                // in memory and was a large part of the compare time on phones.
+                textLeft = readLines(path1, isZip1, zip1);
+                textRight = readLines(path2, isZip2, zip2);
+                final List<DiffLine> built = buildDiff(textLeft, textRight);
                 runOnUiThread(() -> {
                     diffLines.clear();
                     diffLines.addAll(built);
@@ -174,29 +174,29 @@ public class CompareTextActivity extends BaseActivity {
         }).start();
     }
 
-    private String readText(String path, boolean isZip, String zipPath) throws Exception {
-        StringBuilder sb = new StringBuilder();
+    private List<String> readLines(String path, boolean isZip, String zipPath) throws Exception {
+        ArrayList<String> lines = new ArrayList<>(4096);
         if (isZip) {
             try (ZipFile zf = new ZipFile(zipPath)) {
                 ZipEntry ze = zf.getEntry(path);
                 if (ze != null) {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(zf.getInputStream(ze)))) {
-                        appendLines(sb, reader);
+                        appendLines(lines, reader);
                     }
                 }
             }
         } else {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(path))))) {
-                appendLines(sb, reader);
+                appendLines(lines, reader);
             }
         }
-        return sb.toString();
+        return lines;
     }
 
-    private static void appendLines(StringBuilder sb, BufferedReader reader) throws Exception {
+    private static void appendLines(ArrayList<String> out, BufferedReader reader) throws Exception {
         String line;
         while ((line = reader.readLine()) != null) {
-            sb.append(line).append('\n');
+            out.add(line);
         }
     }
 
@@ -210,38 +210,51 @@ public class CompareTextActivity extends BaseActivity {
         return getResources().getConfiguration().screenWidthDp < 600;
     }
 
-    private List<DiffLine> buildDiff(String left, String right) {
-        List<String> oldLines = splitLines(left);
-        List<String> newLines = splitLines(right);
+    private List<DiffLine> buildDiff(List<String> leftRaw, List<String> rightRaw) {
         boolean dropBlanks = ignoreMode == IgnoreMode.WHITESPACE_EMPTY;
         // Keep the original 1-based numbers of every kept line so ignored lines
         // (blanks) don't shift the numbering.
-        int[] oldNumbers = new int[oldLines.size() + 1];
-        int[] newNumbers = new int[newLines.size() + 1];
-        List<String> oldForDiff = significantLines(oldLines, oldNumbers, dropBlanks);
-        List<String> newForDiff = significantLines(newLines, newNumbers, dropBlanks);
-        DiffRowGenerator generator = DiffRowGenerator.create()
-                .showInlineDiffs(false)
-                .reportLinesUnchanged(true)
-                .equalizer(equalizer())
-                .build();
-        List<DiffRow> rows = generator.generateDiffRows(oldForDiff, newForDiff);
+        int[] oldNumbers = new int[leftRaw.size() + 1];
+        int[] newNumbers = new int[rightRaw.size() + 1];
+        List<String> oldLines = significantLines(leftRaw, oldNumbers, dropBlanks);
+        List<String> newLines = significantLines(rightRaw, newNumbers, dropBlanks);
 
-        List<DiffLine> result = new ArrayList<>(rows.size());
-        int oldIndex = 0;
-        int newIndex = 0;
-        for (DiffRow row : rows) {
+        // The boot-image case: two files that are identical except for a couple
+        // of lines near the start. Running the full Myers diff over every line
+        // cost ~30s on phones for large files; trimming the shared prefix and
+        // suffix first (always safe: those lines are equal under the equalizer)
+        // reduces the engine's work to the region that actually differs.
+        BiPredicate<String, String> eq = equalizer();
+        int maxPrefix = Math.min(oldLines.size(), newLines.size());
+        int prefix = 0;
+        while (prefix < maxPrefix && eq.test(oldLines.get(prefix), newLines.get(prefix))) prefix++;
+        int maxSuffix = maxPrefix - prefix;
+        int suffix = 0;
+        while (suffix < maxSuffix
+                && eq.test(oldLines.get(oldLines.size() - 1 - suffix), newLines.get(newLines.size() - 1 - suffix))) {
+            suffix++;
+        }
+
+        List<String> midOld = oldLines.subList(prefix, oldLines.size() - suffix);
+        List<String> midNew = newLines.subList(prefix, newLines.size() - suffix);
+
+        List<DiffRow> midRows = midOld.isEmpty() && midNew.isEmpty()
+                ? new ArrayList<>(0)
+                : middleDiffRows(new ArrayList<>(midOld), new ArrayList<>(midNew));
+
+        List<DiffLine> result = new ArrayList<>(prefix + suffix + midRows.size());
+        for (int i = 0; i < prefix; i++) {
+            result.add(new DiffLine(DiffRow.Tag.EQUAL, oldLines.get(i), newLines.get(i),
+                    oldNumbers[i], newNumbers[i]));
+        }
+        int oldIndex = prefix;
+        int newIndex = prefix;
+        for (DiffRow row : midRows) {
             DiffRow.Tag tag = row.getTag();
             int oldNum = 0;
             int newNum = 0;
             switch (tag) {
-                case EQUAL -> {
-                    oldNum = oldNumbers[oldIndex];
-                    newNum = newNumbers[newIndex];
-                    oldIndex++;
-                    newIndex++;
-                }
-                case CHANGE -> {
+                case EQUAL, CHANGE -> {
                     oldNum = oldNumbers[oldIndex];
                     newNum = newNumbers[newIndex];
                     oldIndex++;
@@ -258,7 +271,24 @@ public class CompareTextActivity extends BaseActivity {
             }
             result.add(new DiffLine(tag, row.getOldLine(), row.getNewLine(), oldNum, newNum));
         }
+        for (int i = 0; i < suffix; i++) {
+            int oldPos = oldLines.size() - suffix + i;
+            int newPos = newLines.size() - suffix + i;
+            result.add(new DiffLine(DiffRow.Tag.EQUAL, oldLines.get(oldPos), newLines.get(newPos),
+                    oldNumbers[oldPos], newNumbers[newPos]));
+        }
         return result;
+    }
+
+    /** Diff of the differing middle region, matching how the diff rows are consumed. */
+    private List<DiffRow> middleDiffRows(List<String> midOld, List<String> midNew) {
+        // Same options as before, but now applied only to the region that can differ.
+        DiffRowGenerator generator = DiffRowGenerator.create()
+                .showInlineDiffs(false)
+                .reportLinesUnchanged(true)
+                .equalizer(equalizer())
+                .build();
+        return generator.generateDiffRows(midOld, midNew);
     }
 
     /** Keeps the lines the blank mode doesn't ignore, recording their original numbers. */
@@ -305,16 +335,6 @@ public class CompareTextActivity extends BaseActivity {
             if (!Character.isWhitespace(c)) sb.append(c);
         }
         return sb.toString();
-    }
-
-    private static List<String> splitLines(String text) {
-        if (text == null) text = "";
-        List<String> lines = new ArrayList<>(Arrays.asList(text.split("\n", -1)));
-        // Drop the single trailing empty line produced by a final newline.
-        if (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
-            lines.remove(lines.size() - 1);
-        }
-        return lines;
     }
 
     // ==========================================
@@ -616,8 +636,8 @@ public class CompareTextActivity extends BaseActivity {
         if (textLeft == null || textRight == null) return;
         progressBar.setVisibility(View.VISIBLE);
         diffListView.setVisibility(View.GONE);
-        final String left = textLeft;
-        final String right = textRight;
+        final List<String> left = textLeft;
+        final List<String> right = textRight;
         new Thread(() -> {
             try {
                 // Only the generator options change here, so the raw text is reused.
