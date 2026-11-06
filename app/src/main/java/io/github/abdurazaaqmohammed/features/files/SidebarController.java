@@ -255,18 +255,6 @@ public class SidebarController {
             return false;
         });
         organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
-        View.OnClickListener onClickListener = v -> {
-            activity.showSettingsDialog();
-            activity.closeSidebarDrawer();
-        };
-        // Fixed Settings entry at the very bottom of the drawer (footer row).
-        activity.findViewById(R.id.sidebarSettingsFooter).setOnClickListener(onClickListener);
-        // Settings gear next to the organize button in the header, so the
-        // pencil-shaped organize control is not mistaken for settings.
-//        View settingsButton = activity.findViewById(R.id.sidebarSettingsButton);
-//        if (settingsButton != null) {
-//            settingsButton.setOnClickListener(onClickListener);
-//        }
         registerStorageRefreshReceiver();
     }
 

@@ -1564,7 +1564,7 @@ public class FileOpener {
         new Thread(() -> {
             long size = calculateTotalSize(filesToMeasure);
             String nameWithSize = size > 0
-                    ? baseName + " (" + Formatter.formatFileSize(context, size) + ")"
+                    ? baseName + " (" + FileSize.getHumanReadableFileSize(size) + ")"
                     : baseName;
             context.handler.post(() -> {
                 context.handler.removeCallbacks(showInitial);
@@ -1852,7 +1852,7 @@ public class FileOpener {
         new Thread(() -> {
             long size = calculateZipEntryFolderSize(entry);
             String nameWithSize = size > 0
-                    ? entry.getName() + " (" + Formatter.formatFileSize(context, size) + ")"
+                    ? entry.getName() + " (" + FileSize.getHumanReadableFileSize(size) + ")"
                     : entry.getName();
             context.handler.post(() -> {
                 context.handler.removeCallbacks(showInitial);
