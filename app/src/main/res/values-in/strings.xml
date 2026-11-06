@@ -993,9 +993,9 @@
     <string name="sidebar_extract">Ekstrak APK</string>
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Pengelola Wi-Fi</string>
-    <string name="sidebar_tools">Plug-in</string>
+    <string name="sidebar_tools">Pusat Alat</string>
     <string name="sidebar_documents">Provider dokumen</string>
-    <string name="sidebar_plugins">Plug-in</string>
+    <string name="sidebar_plugins">Plugin/Alat</string>
     <string name="show_plugin_groups_sidebar">Tampilkan plug-in di bilah sisi</string>
     <string name="plugin_open">Buka</string>
     <string name="plugin_create_shortcut">Buat pintasan</string>

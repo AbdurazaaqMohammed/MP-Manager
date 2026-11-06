@@ -189,9 +189,12 @@ public final class FastDexPatch {
         PrintStream oldErr = System.err;
         ByteArrayOutputStream errBuf = new ByteArrayOutputStream();
         PrintStream capture;
+        // PrintStream(OutputStream,boolean,Charset) is missing below API 26
+        // (NoSuchMethodError is an Error, so catch(Throwable) - catching
+        // Exception alone leaks it and breaks add/remove-toast on SDK 24).
         try {
             capture = new PrintStream(errBuf, true, StandardCharsets.UTF_8);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             capture = new PrintStream(errBuf);
         }
         System.setErr(capture);
@@ -207,8 +210,8 @@ public final class FastDexPatch {
         }
         String captured = "";
         try {
-            captured = errBuf.toString(StandardCharsets.UTF_8);
-        } catch (Exception ignored) {
+            captured = new String(errBuf.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Throwable ignored) {
         }
         return ok ? captured : null;
     }

@@ -54,6 +54,17 @@
         <item name="alertDialogTheme">@style/AppCompat.Dialog</item>
     </style>
 
+    <!-- Invisible one-shot activity that writes the clipboard then finishes
+         (ClipboardActivity). Translucent so no blank flash while it runs. -->
+    <style name="ClipboardCopyTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+    </style>
+
     <style name="AppCompat.Dialog" parent="@style/ThemeOverlay.Material3.Dialog.Alert">
         <item name="android:windowTitleStyle">@style/RtlOverlay.DialogWindowTitle.AppCompat</item>
         <item name="buttonBarButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog.Flush</item>

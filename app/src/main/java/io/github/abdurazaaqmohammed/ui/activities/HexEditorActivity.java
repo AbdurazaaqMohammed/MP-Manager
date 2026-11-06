@@ -75,9 +75,61 @@ public class HexEditorActivity extends BaseActivity {
     private boolean readOnly;
     private String rootOriginalPath;
 
+    /**
+     * In-place byte edits (length preserving). Kept on the fast path: saving only
+     * rewrites these bytes. Once a length-changing edit happens (delete / paste of
+     * a different length) everything is baked into {@link #chunks} and this stays empty.
+     */
     private final TreeMap<Long, Integer> mods = new TreeMap<>();
-    private final ArrayDeque<long[]> undoStack = new ArrayDeque<>();
-    private final ArrayDeque<long[]> redoStack = new ArrayDeque<>();
+    /** True once a length-changing edit happened; all content then lives in chunks. */
+    private boolean structural;
+    /** Size of the file when it was opened / last saved; the chunk model resets to this. */
+    private long originalSize;
+
+    /** One applied content change; before/after may differ in length (insert/delete). */
+    private static final class EditOp {
+        final long pos;
+        final byte[] before;
+        byte[] after;
+
+        EditOp(long pos, byte[] before, byte[] after) {
+            this.pos = pos;
+            this.before = before;
+            this.after = after;
+        }
+    }
+
+    private final ArrayDeque<EditOp> undoStack = new ArrayDeque<>();
+    private final ArrayDeque<EditOp> redoStack = new ArrayDeque<>();
+
+    /**
+     * Virtual file model used after structural edits: the content is a sequence of
+     * chunks, each either a range of the original file or an in-memory byte array.
+     * A deletion removes chunks, a paste of any length splices a memory chunk in,
+     * so the virtual size can grow and shrink freely.
+     */
+    private static final class Chunk {
+        final boolean memory;
+        long origOffset;   // file chunk: offset in the original file
+        long length;
+        byte[] data;       // memory chunk
+
+        Chunk(long origOffset, long length) {
+            this.memory = false;
+            this.origOffset = origOffset;
+            this.length = length;
+        }
+
+        Chunk(byte[] data) {
+            this.memory = true;
+            this.data = data;
+            this.length = data.length;
+        }
+    }
+
+    private final List<Chunk> chunks = new ArrayList<>();
+    /** Cumulative virtual start offset of every chunk, kept in sync by {@link #rebuildIndex()}. */
+    private long[] chunkStarts = new long[0];
 
     // Offsets are long: system images (.iso/.img) pass 2 GB, where int math
     // silently wraps and the editor would corrupt the wrong bytes.
@@ -225,6 +277,7 @@ public class HexEditorActivity extends BaseActivity {
                 readOnly = true;
             }
             size = raf.length();
+            originalSize = size;
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
             finish();
@@ -372,18 +425,243 @@ public class HexEditorActivity extends BaseActivity {
         }
     }
 
+    // ==========================================
+    // Virtual content model
+    // ==========================================
+
+    /** Rebuilds the cumulative chunk index and the virtual size. */
+    private void rebuildIndex() {
+        chunkStarts = new long[chunks.size()];
+        long acc = 0;
+        for (int i = 0; i < chunks.size(); i++) {
+            chunkStarts[i] = acc;
+            acc += chunks.get(i).length;
+        }
+        size = acc;
+    }
+
+    /** Resets the content view to the original file (open / after save / revert). */
+    private void resetChunks() {
+        chunks.clear();
+        mods.clear();
+        structural = false;
+        size = originalSize;
+        if (size > 0) chunks.add(new Chunk(0, size));
+        rebuildIndex();
+    }
+
+    /** Index of the chunk containing {@code vpos} (or the last chunk when at the end). */
+    private int findChunkIndex(long vpos) {
+        int lo = 0, hi = chunkStarts.length - 1, ans = 0;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (chunkStarts[mid] <= vpos) {
+                ans = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return ans;
+    }
+
+    private Chunk sliceChunk(Chunk c, long from, long len) {
+        if (c.memory) {
+            byte[] part = new byte[(int) len];
+            System.arraycopy(c.data, (int) from, part, 0, (int) len);
+            return new Chunk(part);
+        }
+        return new Chunk(c.origOffset + from, len);
+    }
+
+    /** Splits the chunk containing {@code vpos} so a splice can start/end there. */
+    private void splitAt(long vpos) {
+        if (vpos <= 0 || vpos >= size || chunks.isEmpty()) return;
+        int idx = findChunkIndex(vpos);
+        if (idx >= chunks.size()) return;
+        Chunk c = chunks.get(idx);
+        long off = vpos - chunkStarts[idx];
+        if (off <= 0 || off >= c.length) return;
+        Chunk right = sliceChunk(c, off, c.length - off);
+        c.length = off;
+        if (c.memory) c.data = Arrays.copyOf(c.data, (int) off);
+        chunks.add(idx + 1, right);
+        rebuildIndex();
+    }
+
+    private void applyDeleteChunks(long pos, long end) {
+        if (end <= pos || pos >= size) return;
+        end = Math.min(end, size);
+        splitAt(pos);
+        splitAt(end);
+        List<Chunk> out = new ArrayList<>(chunks.size());
+        long start = 0;
+        for (Chunk c : chunks) {
+            long cStart = start;
+            long cEnd = start + c.length;
+            start = cEnd;
+            if (cEnd <= pos || cStart >= end) {
+                out.add(c);
+                continue;
+            }
+            if (cStart < pos) out.add(sliceChunk(c, 0, pos - cStart));
+            if (cEnd > end) out.add(sliceChunk(c, end - cStart, c.length - (end - cStart)));
+        }
+        chunks.clear();
+        chunks.addAll(out);
+        rebuildIndex();
+    }
+
+    private void applyInsertChunks(long pos, byte[] data) {
+        if (data.length == 0) return;
+        if (pos >= size || chunks.isEmpty()) {
+            chunks.add(new Chunk(data.clone()));
+            rebuildIndex();
+            return;
+        }
+        splitAt(pos);
+        int idx = findChunkIndex(pos);
+        if (idx >= chunks.size()) chunks.add(new Chunk(data.clone()));
+        else chunks.add(idx, new Chunk(data.clone()));
+        rebuildIndex();
+    }
+
+    /**
+     * Replaces {@code oldLen} virtual bytes at {@code pos} with {@code data} (any
+     * length, including empty for a deletion). Length-preserving edits on the
+     * un-structural path stay in the fast {@link #mods} map; anything else bakes
+     * the state into chunks once and splices there.
+     */
+    private void splice(long pos, long oldLen, byte[] data) {
+        if (oldLen < 0) oldLen = 0;
+        pos = Math.max(0, Math.min(pos, size));
+        long end = Math.min(pos + oldLen, size);
+        oldLen = end - pos;
+        if (!structural) {
+            if (data.length == oldLen && oldLen > 0) {
+                for (int i = 0; i < data.length; i++) mods.put(pos + i, data[i] & 0xFF);
+                return;
+            }
+            bakeStructural();
+        }
+        // Chunk fast path: same-length write fully inside one memory chunk.
+        if (data.length == oldLen && oldLen > 0 && !chunks.isEmpty()) {
+            int idx = findChunkIndex(pos);
+            if (idx < chunks.size()) {
+                Chunk c = chunks.get(idx);
+                long off = pos - chunkStarts[idx];
+                if (c.memory && off + oldLen <= c.length) {
+                    System.arraycopy(data, 0, c.data, (int) off, data.length);
+                    return;
+                }
+            }
+        }
+        if (oldLen > 0) applyDeleteChunks(pos, pos + oldLen);
+        applyInsertChunks(pos, data);
+    }
+
+    /** Moves all fast-path edits into the chunk model; from here on everything splices. */
+    private void bakeStructural() {
+        if (structural) return;
+        structural = true;
+        chunks.clear();
+        if (size > 0) chunks.add(new Chunk(0, size));
+        for (Map.Entry<Long, Integer> e : mods.entrySet()) {
+            applyDeleteChunks(e.getKey(), e.getKey() + 1);
+            applyInsertChunks(e.getKey(), new byte[]{e.getValue().byteValue()});
+        }
+        mods.clear();
+        rebuildIndex();
+    }
+
     private int readByte(long pos) {
-        Integer modded = mods.get(pos);
-        if (modded != null) return modded;
+        if (pos < 0 || pos >= size) return -1;
+        if (!structural) {
+            Integer modded = mods.get(pos);
+            if (modded != null) return modded;
+            try {
+                synchronized (raf) {
+                    raf.seek(pos);
+                    return raf.read();
+                }
+            } catch (IOException e) {
+                return -1;
+            }
+        }
+        if (chunks.isEmpty()) return -1;
+        int idx = findChunkIndex(pos);
+        if (idx >= chunks.size()) return -1;
+        Chunk c = chunks.get(idx);
+        long off = pos - chunkStarts[idx];
+        if (c.memory) return c.data[(int) off] & 0xFF;
         try {
-            if (pos >= size) return -1;
             synchronized (raf) {
-                raf.seek(pos);
+                raf.seek(c.origOffset + off);
                 return raf.read();
             }
         } catch (IOException e) {
             return -1;
         }
+    }
+
+    /** Reads [start, end) efficiently: bulk reads per chunk, byte-wise only where needed. */
+    private byte[] readRange(long start, long end) {
+        start = Math.max(0, start);
+        end = Math.min(end, size);
+        if (end <= start) return new byte[0];
+        byte[] out = new byte[(int) (end - start)];
+        int filled = 0;
+        long vpos = start;
+        while (vpos < end) {
+            if (structural && chunks.isEmpty()) break;
+            int idx = structural ? findChunkIndex(vpos) : -1;
+            Chunk c = structural && idx < chunks.size() ? chunks.get(idx) : null;
+            long take;
+            if (c == null) {
+                // Un-structural: a plain span of the original file + sparse in-place mods.
+                take = end - vpos;
+                try {
+                    synchronized (raf) {
+                        raf.seek(vpos);
+                        int done = 0;
+                        while (done < take) {
+                            int r = raf.read(out, filled + done, (int) (take - done));
+                            if (r <= 0) return Arrays.copyOf(out, filled);
+                            done += r;
+                        }
+                    }
+                } catch (IOException e) {
+                    return Arrays.copyOf(out, filled);
+                }
+                for (Map.Entry<Long, Integer> e : mods.tailMap(vpos).entrySet()) {
+                    if (e.getKey() >= vpos + take) break;
+                    out[filled + (int) (e.getKey() - vpos)] = e.getValue().byteValue();
+                }
+            } else if (c.memory) {
+                long inOff = vpos - chunkStarts[idx];
+                take = Math.min(c.length - inOff, end - vpos);
+                System.arraycopy(c.data, (int) inOff, out, filled, (int) take);
+            } else {
+                long inOff = vpos - chunkStarts[idx];
+                take = Math.min(c.length - inOff, end - vpos);
+                try {
+                    synchronized (raf) {
+                        raf.seek(c.origOffset + inOff);
+                        int done = 0;
+                        while (done < take) {
+                            int r = raf.read(out, filled + done, (int) (take - done));
+                            if (r <= 0) return Arrays.copyOf(out, filled);
+                            done += r;
+                        }
+                    }
+                } catch (IOException e) {
+                    return Arrays.copyOf(out, filled);
+                }
+            }
+            filled += (int) take;
+            vpos += take;
+        }
+        return out;
     }
 
     private void inputNibble(int digit) {
@@ -394,14 +672,17 @@ public class HexEditorActivity extends BaseActivity {
         int newVal = wasHigh ? ((digit << 4) | (oldVal & 0x0F)) : ((oldVal & 0xF0) | digit);
 
         if (wasHigh) {
-            undoStack.push(new long[]{cursorPos, oldVal, newVal});
+            undoStack.push(new EditOp(cursorPos, new byte[]{(byte) oldVal}, new byte[]{(byte) newVal}));
             redoStack.clear();
         } else {
-            long[] top = undoStack.peek();
-            if (top != null && top[0] == cursorPos) top[2] = newVal;
-            else undoStack.push(new long[]{cursorPos, oldVal, newVal});
+            EditOp top = undoStack.peek();
+            if (top != null && top.pos == cursorPos && top.after.length == 1) {
+                top.after = new byte[]{(byte) newVal};
+            } else {
+                undoStack.push(new EditOp(cursorPos, new byte[]{(byte) oldVal}, new byte[]{(byte) newVal}));
+            }
         }
-        mods.put(cursorPos, newVal);
+        splice(cursorPos, 1, new byte[]{(byte) newVal});
         nibbleHigh = !nibbleHigh;
         refreshRows(cursorPos, cursorPos);
         // Advance to the next byte only after the low (2nd) character was entered so both characters of the current byte can be edited
@@ -411,20 +692,22 @@ public class HexEditorActivity extends BaseActivity {
 
     private void undo() {
         if (undoStack.isEmpty()) return;
-        long[] e = undoStack.pop();
-        mods.put(e[0], (int) e[1]);
+        EditOp e = undoStack.pop();
+        splice(e.pos, e.after.length, e.before);
         redoStack.push(e);
         nibbleHigh = true;
-        setCursor(e[0], true);
+        if (adapter != null) adapter.notifyDataSetChanged();
+        setCursor(e.pos, true);
     }
 
     private void redo() {
         if (redoStack.isEmpty()) return;
-        long[] e = redoStack.pop();
-        mods.put(e[0], (int) e[2]);
+        EditOp e = redoStack.pop();
+        splice(e.pos, e.before.length, e.after);
         undoStack.push(e);
         nibbleHigh = true;
-        setCursor(e[0], true);
+        if (adapter != null) adapter.notifyDataSetChanged();
+        setCursor(e.pos, true);
     }
 
     private void setCursor(long pos, boolean scroll) {
@@ -600,20 +883,12 @@ public class HexEditorActivity extends BaseActivity {
     private byte[] readMenuRangeBytes() {
         long start = menuRangeStart();
         long end = menuRangeEnd();
-        long count = end - start + 1;
-        if (count > MAX_MENU_BYTES) {
+        if (end - start + 1 > MAX_MENU_BYTES) {
             Extensions.showMessage(this, getString(R.string.hex_selection_too_large, MAX_MENU_BYTES / (1024 * 1024)));
             return null;
         }
-        byte[] out = new byte[(int) count];
-        for (int i = 0; i < out.length; i++) {
-            int v = readByte(start + i);
-            if (v < 0) {
-                return Arrays.copyOf(out, i);
-            }
-            out[i] = (byte) v;
-        }
-        return out;
+        byte[] out = readRange(start, end + 1);
+        return out.length == 0 ? null : out;
     }
 
     private void copySelectionOrByte() {
@@ -729,9 +1004,8 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     /**
-     * Fills the menu range with 00. The editor model only supports in-place byte
-     * edits (a fixed file size), so a real shift-and-truncate delete is not
-     * possible; the dialog makes the zero fill explicit before it happens.
+     * Removes the menu range from the file entirely: the file shrinks by the
+     * deleted byte count and everything after shifts forward. Undoable.
      */
     private void deleteSelectionOrByte() {
         if (readOnly) {
@@ -739,21 +1013,26 @@ public class HexEditorActivity extends BaseActivity {
             return;
         }
         long start = menuRangeStart();
-        int count;
-        try {
-            count = Math.toIntExact(menuRangeEnd() - start + 1);
-        } catch (ArithmeticException e) {
+        long count = menuRangeEnd() - start + 1;
+        if (count <= 0) return;
+        if (count > MAX_MENU_BYTES) {
             Extensions.showMessage(this, getString(R.string.hex_selection_too_large, MAX_MENU_BYTES / (1024 * 1024)));
             return;
         }
-        if (count <= 0) return;
+        byte[] before = readRange(start, start + count);
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.delete))
-                .setMessage(getString(R.string.hex_delete_selection_msg, count))
+                .setMessage(getString(R.string.hex_delete_selection_msg, (int) count))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    writeBytesAt(start, new byte[count], null);
+                    splice(start, count, new byte[0]);
+                    undoStack.push(new EditOp(start, before, new byte[0]));
+                    redoStack.clear();
+                    nibbleHigh = true;
                     clearSelection();
+                    if (adapter != null) adapter.notifyDataSetChanged();
+                    setCursor(Math.min(start, Math.max(0, size - 1)), false);
+                    updateStatus();
                 })
                 .show();
     }
@@ -1059,23 +1338,27 @@ public class HexEditorActivity extends BaseActivity {
         findNext();
     }
 
+    /**
+     * Replaces the bytes starting at {@code pos} with {@code data} of any length:
+     * shorter data shrinks the file, longer data grows it. The change is undoable
+     * as a single operation.
+     */
     private void writeBytesAt(long pos, byte[] data, Runnable extraUndoAction) {
-        List<long[]> entries = new ArrayList<>();
-        for (int i = 0; i < data.length; i++) {
-            long p = pos + i;
-            if (p >= size) break;
-            int oldVal = readByte(p);
-            int newVal = data[i] & 0xFF;
-            mods.put(p, newVal);
-            entries.add(new long[]{p, oldVal, newVal});
-        }
-        undoStack.addAll(entries); // each entry undone individually
+        if (data.length == 0) return;
+        pos = Math.max(0, Math.min(pos, size));
+        byte[] before = readRange(pos, pos + data.length);
+        splice(pos, before.length, data);
+        undoStack.push(new EditOp(pos, before, data.clone()));
         redoStack.clear();
         nibbleHigh = true;
         if (adapter != null) {
-            int firstRow = (int) (pos / 8);
-            int lastRow = (int) ((pos + Math.max(1, entries.size()) - 1) / 8);
-            for (int r = firstRow; r <= lastRow && r < adapter.getItemCount(); r++) adapter.notifyItemChanged(r);
+            if (before.length != data.length) {
+                adapter.notifyDataSetChanged();
+            } else {
+                int firstRow = (int) (pos / 8);
+                int lastRow = (int) ((pos + Math.max(1, data.length) - 1) / 8);
+                for (int r = firstRow; r <= lastRow && r < adapter.getItemCount(); r++) adapter.notifyItemChanged(r);
+            }
         }
         setCursor(Math.min(pos + data.length, Math.max(0, size - 1)), false);
         updateStatus();
@@ -1174,7 +1457,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void saveChanges(Runnable onSaved) {
-        if (mods.isEmpty()) {
+        if (!hasUnsavedChanges()) {
             if (onSaved != null) onSaved.run();
             return;
         }
@@ -1195,17 +1478,28 @@ public class HexEditorActivity extends BaseActivity {
         saveChangesRoot(onSaved);
     }
 
+    private boolean hasUnsavedChanges() {
+        return !mods.isEmpty() || structural;
+    }
+
     private void saveChangesRoot(Runnable onSaved) {
         backupForSave();
-        try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
-            for (Map.Entry<Long, Integer> entry : mods.entrySet()) {
-                w.seek(entry.getKey());
-                w.writeByte(entry.getValue());
+        try {
+            if (structural) {
+                rebuildFileFromChunks();
+            } else {
+                try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
+                    for (Map.Entry<Long, Integer> entry : mods.entrySet()) {
+                        w.seek(entry.getKey());
+                        w.writeByte(entry.getValue());
+                    }
+                }
             }
-            mods.clear();
+            originalSize = structural ? size : originalSize;
+            resetChunks();
             undoStack.clear();
             redoStack.clear();
-            adapter.notifyDataSetChanged();
+            if (adapter != null) adapter.notifyDataSetChanged();
             updateStatus();
             Extensions.showMessage(this, R.string.saved);
         } catch (Exception e) {
@@ -1226,6 +1520,55 @@ public class HexEditorActivity extends BaseActivity {
         if (onSaved != null) onSaved.run();
     }
 
+    /**
+     * Streams the chunk model into a fresh file and swaps it in, so a crash
+     * mid-write cannot corrupt the original. Only used once a length-changing
+     * edit happened; plain byte edits keep the fast in-place save path.
+     */
+    private void rebuildFileFromChunks() throws IOException {
+        File temp = new File(file.getParentFile(), file.getName() + ".tmp_hex");
+        try (RandomAccessFile out = new RandomAccessFile(temp, "rw")) {
+            out.setLength(0);
+            byte[] buf = new byte[64 * 1024];
+            for (Chunk c : chunks) {
+                if (c.memory) {
+                    out.write(c.data);
+                    continue;
+                }
+                long remaining = c.length;
+                long src = c.origOffset;
+                while (remaining > 0) {
+                    int n;
+                    synchronized (raf) {
+                        raf.seek(src);
+                        n = raf.read(buf, 0, (int) Math.min(buf.length, remaining));
+                    }
+                    if (n <= 0) throw new IOException("Unexpected end of source file");
+                    out.write(buf, 0, n);
+                    src += n;
+                    remaining -= n;
+                }
+            }
+        }
+        if (!temp.renameTo(file)) {
+            try (java.io.InputStream in = new java.io.FileInputStream(temp);
+                 RandomAccessFile out = new RandomAccessFile(file, "rw")) {
+                out.setLength(0);
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            }
+            temp.delete();
+        }
+        try {
+            raf.close();
+        } catch (IOException ignored) {
+        }
+        raf = new RandomAccessFile(file, "rw");
+        size = raf.length();
+        originalSize = size;
+    }
+
     private void backupForSave() {
         try {
             if (!UiPrefs.genBackup(this)) return;
@@ -1244,17 +1587,19 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void revertChanges() {
-        if (mods.isEmpty()) return;
+        if (!hasUnsavedChanges()) return;
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_revert))
                 .setMessage(getString(R.string.hex_revert_msg))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    mods.clear();
+                    resetChunks();
                     undoStack.clear();
                     redoStack.clear();
                     nibbleHigh = true;
-                    adapter.notifyDataSetChanged();
+                    clearSelection();
+                    if (adapter != null) adapter.notifyDataSetChanged();
+                    setCursor(Math.min(cursorPos, Math.max(0, size - 1)), false);
                     updateStatus();
                 }).show();
     }
@@ -1278,7 +1623,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void confirmDiscardAndFinish() {
-        if (mods.isEmpty()) {
+        if (!hasUnsavedChanges()) {
             finish();
             return;
         }

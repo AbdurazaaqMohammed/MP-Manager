@@ -213,7 +213,9 @@ public class OverlayInjectorUtil {
                     if (!changed) continue;
                     File miniDex = FastDexPatch.assembleMiniDex(context, patchDir, api, logger);
                     byte[] merged = FastDexPatch.mergeDex(dex, miniDex, api);
-                    File mergedFile = new File(workDir, entry + ".merged");
+                    // entry can contain '/' (assets/lspatch/*.dex) - flatten
+                    // so workDir/<entry>.merged is writable.
+                    File mergedFile = new File(workDir, entry.replaceAll("[^A-Za-z0-9]", "_") + ".merged");
                     try (FileOutputStream fos = new FileOutputStream(mergedFile)) {
                         fos.write(merged);
                     }

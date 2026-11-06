@@ -85,6 +85,15 @@
             app:iconGravity="textStart"
             android:text="@string/donate" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/aboutSettings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/baseline_settings_24"
+            app:iconGravity="textStart"
+            android:text="@string/settings" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

@@ -23,6 +23,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileManager;
@@ -43,6 +44,7 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -167,7 +169,9 @@ public class FtpController {
                             if (ftpServer != null) ftpServer.stop();
                             tv.setText(activity.rss.getString(R.string.start));
                             e.printStackTrace();
-                            Extensions.showMessage(activity, activity.rss.getString(R.string.failed_to_start_ftp_server, e.getMessage()));
+                            Snackbar sb = Snackbar.make(activity.findViewById(R.id.bottomBar), activity.rss.getString(R.string.failed_to_start_ftp_server, e.getMessage()), Snackbar.LENGTH_LONG);
+                            sb.setAction(R.string.error, v1 -> new ErrorUtil(activity).showError(e));
+                            sb.show();
                         }
                         BroadcastReceiver ftpStopReceiver = new BroadcastReceiver() {
                             @Override

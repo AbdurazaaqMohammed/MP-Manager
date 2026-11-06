@@ -7,7 +7,7 @@
         android:interpolator="@android:interpolator/overshoot"
         android:propertyName="translateY"
         android:startOffset="90"
-        android:valueFrom="12"
+        android:valueFrom="65"
         android:valueTo="0"
         android:valueType="floatType" />
     <objectAnimator

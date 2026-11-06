@@ -16,8 +16,7 @@
  */
 package io.github.ratul.topactivity.repository;
 
-import androidx.multidex.BuildConfig;
-
+import io.github.abdurazaaqmohammed.MPManager.BuildConfig;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
 
 import java.util.ArrayDeque;

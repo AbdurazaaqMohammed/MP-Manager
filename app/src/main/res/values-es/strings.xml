@@ -833,7 +833,7 @@ Layout Inspector
     <string name="sidebar_extract">Extraer APK</string>
     <string name="sidebar_layout_inspector">Inspector de diseño</string>
     <string name="sidebar_wifi">Gestor de Wi-Fi</string>
-    <string name="sidebar_tools">Complementos</string>
+    <string name="sidebar_tools">Centro de herramientas</string>
     <string name="plugin_open">Abrir</string>
     <string name="plugin_create_shortcut">Crear acceso directo</string>
     <string name="plugin_expand">Expandir</string>
@@ -1644,7 +1644,7 @@ Layout Inspector
     <string name="install_grant_all">Conceder todos los permisos solicitados al instalar</string>
     <string name="install_bypass_low_target">Omitir bloqueo de target-SDK bajo</string>
     <string name="install_all_users">Instalar para todos los usuarios</string>
-    <string name="sidebar_plugins">Complementos</string>
+    <string name="sidebar_plugins">Complementos/Herramientas</string>
     <string name="show_plugin_groups_sidebar">Mostrar complementos en la barra lateral</string>
     <string name="install_initiator">Iniciador de instalación</string>
     <string name="install_origin">Origen de instalación</string>

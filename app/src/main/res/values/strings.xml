@@ -1072,9 +1072,9 @@ Layout Inspector
     <string name="logcat_add_shortcut">Add to home screen</string>
     <string name="logcat_shortcut_old_android">Shortcuts need Android 8.0 or newer</string>
     <string name="logcat_shortcut_unsupported">Launcher does not allow shortcuts</string>
-    <string name="sidebar_tools">Plugins</string>
+    <string name="sidebar_tools">Tools Hub</string>
     <string name="sidebar_documents">Documents providers</string>
-    <string name="sidebar_plugins">Plugins</string>
+    <string name="sidebar_plugins">Plugins/Tools</string>
     <string name="show_plugin_groups_sidebar">Show plugins in sidebar</string>
     <string name="plugin_open">Open</string>
     <string name="plugin_create_shortcut">Create shortcut</string>
@@ -1247,6 +1247,13 @@ Strings are sent to the external service you configured.</string>
     <string name="shared_entry_not_image">Not an image file.</string>
     <string name="shared_entry_single_image">Image editing needs a single image.</string>
     <string name="shared_entry_file_count">File %1$d of %2$d — tap list to switch</string>
+    <string name="shared_entry_no_media">Not a video or audio file.</string>
+    <string name="shared_entry_single_media">Media player needs a single media file.</string>
+    <string name="shared_entry_single_file">Hex editing needs a single file.</string>
+    <string name="shared_entry_not_archive">Not an archive (zip, 7z, rar, tar…).</string>
+    <string name="shared_entry_single_archive">Archive viewer needs a single archive.</string>
+    <string name="shared_entry_staging">Preparing a temporary copy…</string>
+    <string name="shared_entry_stage_failed">Could not prepare a temporary copy of this file.</string>
     <string name="color_stop">Stop</string>
     <string name="color_start">Start</string>
     <string name="storage_manager">Storage Manager</string>
@@ -1457,7 +1464,7 @@ Strings are sent to the external service you configured.</string>
     <string name="hex_copy_md5">MD5</string>
     <string name="hex_copy_crc32">CRC32</string>
     <string name="hex_paste">Paste</string>
-    <string name="hex_delete_selection_msg">Fill %1$d bytes with 00? The file size cannot change.</string>
+    <string name="hex_delete_selection_msg">Delete %1$d bytes? Everything after them shifts back and the file shrinks.</string>
     <string name="hex_selection_too_large">Selection too large (max %1$d MB)</string>
     <string name="native_required">Native tools required</string>
     <string name="native_need_download">This feature needs native binaries (~%1$s MB download). Download now?</string>

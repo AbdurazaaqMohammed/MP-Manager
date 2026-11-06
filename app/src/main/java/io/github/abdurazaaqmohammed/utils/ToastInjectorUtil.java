@@ -91,7 +91,7 @@ public class ToastInjectorUtil {
         try {
             Map<String, File> replacements = new LinkedHashMap<>();
             for (Map.Entry<String, byte[]> entry : patchedDexBytes.entrySet()) {
-                File outputDex = new File(workDir, entry.getKey() + ".patched");
+                File outputDex = new File(workDir, entry.getKey().replaceAll("[^A-Za-z0-9]", "_") + ".patched");
                 try (FileOutputStream fos = new FileOutputStream(outputDex)) {
                     fos.write(entry.getValue());
                 }
@@ -310,7 +310,11 @@ public class ToastInjectorUtil {
                 if (!changed) continue;
                 File miniDex = FastDexPatch.assembleMiniDex(context, patchDir, api, logger);
                 byte[] merged = FastDexPatch.mergeDex(dex, miniDex, api);
-                File mergedFile = new File(workDir, entryName + ".merged");
+                // entryName can contain '/' (e.g. assets/lspatch/loader.dex in
+                // this app's own APK) - File(..., entryName) then points into a
+                // non-existent subdirectory. Flatten like patchDir above.
+                String safeName = entryName.replaceAll("[^A-Za-z0-9]", "_");
+                File mergedFile = new File(workDir, safeName + ".merged");
                 try (FileOutputStream fos = new FileOutputStream(mergedFile)) {
                     fos.write(merged);
                 }

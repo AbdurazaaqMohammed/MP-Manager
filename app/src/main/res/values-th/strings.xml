@@ -1053,7 +1053,7 @@ androidx/
     <string name="sidebar_expand">ขยายส่วน</string>
     <string name="sidebar_extract">แตกไฟล์ APK</string>
     <string name="sidebar_layout_inspector">Layout Inspector</string>
-    <string name="sidebar_tools">ชุดเครื่องมือ</string>
+    <string name="sidebar_tools">ศูนย์เครื่องมือ</string>
     <string name="sidebar_wifi">ตัวจัดการ Wi-Fi</string>
     <string name="sig_auth_error">ข้อผิดพลาดในการยืนยันตัวตน: %1$s</string>
     <string name="sig_auth_failed">การยืนยันตัวตนล้มเหลว</string>
@@ -1654,7 +1654,7 @@ androidx/
     <string name="install_grant_all">ให้สิทธิ์ทั้งหมดที่ขอตอนติดตั้ง</string>
     <string name="install_bypass_low_target">ข้ามการบล็อก target-SDK ต่ำ</string>
     <string name="install_all_users">ติดตั้งสำหรับผู้ใช้ทั้งหมด</string>
-    <string name="sidebar_plugins">ปลั๊กอิน</string>
+    <string name="sidebar_plugins">ปลั๊กอิน/เครื่องมือ</string>
     <string name="show_plugin_groups_sidebar">แสดงปลั๊กอินในแถบด้านข้าง</string>
     <string name="install_initiator">ตัวเริ่มการติดตั้ง</string>
     <string name="install_origin">แหล่งที่มาติดตั้ง</string>

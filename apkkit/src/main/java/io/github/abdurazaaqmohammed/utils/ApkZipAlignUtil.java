@@ -186,7 +186,11 @@ public final class ApkZipAlignUtil {
         CDEntry n = e.copy();
         n.localOffset = off;
         n.flags = flags;
-        n.extra = extra;
+        // Central-directory extra must stay as the ORIGINAL central extra
+        // (Gradle leaves it empty for .so; padding belongs only in the local
+        // header). Copying the local align blob into central makes malformed
+        // (ID=0) central extras and breaks PackageInstaller on some ROMs
+        // ("Failed to extract native libraries") + other strict parsers.
         return n;
     }
 
@@ -226,7 +230,6 @@ public final class ApkZipAlignUtil {
         n.crc = (int) crc.getValue();
         n.compSize = size;
         n.uncompSize = size;
-        n.extra = extra;
         return n;
     }
 
@@ -260,7 +263,6 @@ public final class ApkZipAlignUtil {
         out_e.crc = (int) crc.getValue();
         out_e.compSize = bytes.length;
         out_e.uncompSize = bytes.length;
-        out_e.extra = extra;
         return out_e;
     }
 

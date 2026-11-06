@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
@@ -66,6 +67,24 @@ public class SharedEntryActivity extends BaseActivity {
             "h", "cpp", "hpp", "cs", "go", "rs", "rb", "php", "sh", "smali",
             "gradle", "srt", "vtt", "lrc", "tex", "axml"));
 
+    /** Matches the media extensions the player itself queues as siblings. */
+    private static final Set<String> MEDIA_EXTS = new HashSet<>(Arrays.asList(
+            "mp3", "wav", "flac", "ogg", "oga", "m4a", "aac", "wma", "opus",
+            "mp4", "mkv", "avi", "mov", "webm", "3gp", "3g2", "ts", "flv",
+            "wmv", "m4v"));
+
+    private static final Set<String> ARCHIVE_EXTS = new HashSet<>(Arrays.asList(
+            "zip", "jar", "apk", "apks", "xapk", "apkm", "epub", "cbz",
+            "tar", "tgz", "gz", "bz2", "xz", "zst", "lz4", "7z", "rar"));
+
+    private static final Set<String> ARCHIVE_MIMES = new HashSet<>(Arrays.asList(
+            "application/zip", "application/x-zip-compressed",
+            "application/java-archive", "application/vnd.android.package-archive",
+            "application/x-7z-compressed", "application/vnd.rar",
+            "application/x-rar-compressed", "application/x-tar",
+            "application/gzip", "application/x-gzip", "application/x-bzip2",
+            "application/x-xz", "application/zstd", "application/epub+zip"));
+
     private final List<Uri> uris = new ArrayList<>();
     private String sharedText;
     private String intentMime;
@@ -89,10 +108,16 @@ public class SharedEntryActivity extends BaseActivity {
     private MaterialButton locateBtn;
     private MaterialButton textBtn;
     private MaterialButton imageBtn;
+    private MaterialButton mediaBtn;
+    private MaterialButton hexBtn;
+    private MaterialButton archiveBtn;
     private MaterialButton saveBtn;
     private TextView locateHint;
     private TextView textHint;
     private TextView imageHint;
+    private TextView mediaHint;
+    private TextView hexHint;
+    private TextView archiveHint;
     private TextView saveHint;
 
     private static final class ItemState {
@@ -121,10 +146,16 @@ public class SharedEntryActivity extends BaseActivity {
         locateBtn = findViewById(R.id.sharedEntryLocate);
         textBtn = findViewById(R.id.sharedEntryText);
         imageBtn = findViewById(R.id.sharedEntryImage);
+        mediaBtn = findViewById(R.id.sharedEntryMedia);
+        hexBtn = findViewById(R.id.sharedEntryHex);
+        archiveBtn = findViewById(R.id.sharedEntryArchive);
         saveBtn = findViewById(R.id.sharedEntrySave);
         locateHint = findViewById(R.id.sharedEntryLocateHint);
         textHint = findViewById(R.id.sharedEntryTextHint);
         imageHint = findViewById(R.id.sharedEntryImageHint);
+        mediaHint = findViewById(R.id.sharedEntryMediaHint);
+        hexHint = findViewById(R.id.sharedEntryHexHint);
+        archiveHint = findViewById(R.id.sharedEntryArchiveHint);
         saveHint = findViewById(R.id.sharedEntrySaveHint);
 
         parseIntent(getIntent());
@@ -150,6 +181,9 @@ public class SharedEntryActivity extends BaseActivity {
         locateBtn.setOnClickListener(v -> openLocate());
         textBtn.setOnClickListener(v -> openTextEditor());
         imageBtn.setOnClickListener(v -> openImageEditor());
+        mediaBtn.setOnClickListener(v -> openMediaPlayer());
+        hexBtn.setOnClickListener(v -> openHexEditor());
+        archiveBtn.setOnClickListener(v -> openArchiveViewer());
         saveBtn.setOnClickListener(v -> pickSaveFolder());
 
         // Resolve immediately on a worker thread; the UI is already visible.
@@ -287,14 +321,24 @@ public class SharedEntryActivity extends BaseActivity {
         boolean anyImage = false;
         boolean anyTextLike = hasText;
         boolean allImages = hasUris;
+        boolean anyMedia = false;
+        boolean allMedia = hasUris;
+        boolean anyArchive = false;
+        boolean allArchive = hasUris;
         for (ItemState item : items) {
             String mime = effectiveMime(item);
             String ext = extensionOf(item.name);
             boolean image = isImage(mime, ext);
             boolean textLike = isTextLike(mime, ext);
+            boolean media = isMedia(mime, ext);
+            boolean archive = isArchive(mime, ext);
             anyImage |= image;
             anyTextLike |= textLike;
             allImages &= image;
+            anyMedia |= media;
+            allMedia &= media;
+            anyArchive |= archive;
+            allArchive &= archive;
         }
 
         // Save works for any stream, plus shared text saved as a .txt file.
@@ -315,6 +359,30 @@ public class SharedEntryActivity extends BaseActivity {
             else imageReason = getString(R.string.shared_entry_not_image);
         }
         setAction(imageBtn, imageHint, imageOk, imageReason);
+
+        // Media player needs exactly one video/audio file.
+        boolean mediaOk = items.size() == 1 && anyMedia && allMedia;
+        String mediaReason = null;
+        if (!mediaOk) {
+            if (items.size() != 1) mediaReason = getString(R.string.shared_entry_single_media);
+            else mediaReason = getString(R.string.shared_entry_no_media);
+        }
+        setAction(mediaBtn, mediaHint, mediaOk, mediaReason);
+
+        // Hex editor: any single file works. Without a directly readable path a
+        // temporary copy is staged from the shared stream, so nothing to check here.
+        boolean hexOk = hasUris && items.size() == 1;
+        setAction(hexBtn, hexHint, hexOk,
+                hexOk ? null : getString(R.string.shared_entry_single_file));
+
+        // Archive viewer needs exactly one archive.
+        boolean archiveOk = items.size() == 1 && anyArchive && allArchive;
+        String archiveReason = null;
+        if (!archiveOk) {
+            if (items.size() != 1) archiveReason = getString(R.string.shared_entry_single_archive);
+            else archiveReason = getString(R.string.shared_entry_not_archive);
+        }
+        setAction(archiveBtn, archiveHint, archiveOk, archiveReason);
 
         // Locate starts disabled; the resolver enables it per file below.
         // With no streams at all (shared text only) there is nothing to locate.
@@ -524,18 +592,7 @@ public class SharedEntryActivity extends BaseActivity {
         if (item == null || item.resolved == null
                 || item.resolved.path == null || item.resolved.inaccessible) return;
         try {
-            String path = item.resolved.path;
-            try {
-                RootManager rm = RootManager.getInstance(this);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    if (path.startsWith("/storage/emulated/0")) {
-                        path = "/data/media/0" + path.substring("/storage/emulated/0".length());
-                    } else if (path.startsWith("/storage/emulated/")) {
-                        path = "/data/media/" + path.substring("/storage/emulated/".length());
-                    }
-                }
-            } catch (Exception ignored) {}
-
+            String path = rootRemapForElevated(item.resolved.path);
             Intent open = new Intent(this, MainActivity.class);
             open.putExtra("locatePath", path);
             open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -593,19 +650,7 @@ public class SharedEntryActivity extends BaseActivity {
         try {
             String path = null;
             if (item.resolved != null && item.resolved.path != null && !item.resolved.inaccessible) {
-                path = item.resolved.path;
-            }
-            if (path != null) {
-                try {
-                    RootManager rm = RootManager.getInstance(this);
-                    if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                        if (path.startsWith("/storage/emulated/0")) {
-                            path = "/data/media/0" + path.substring("/storage/emulated/0".length());
-                        } else if (path.startsWith("/storage/emulated/")) {
-                            path = "/data/media/" + path.substring("/storage/emulated/".length());
-                        }
-                    }
-                } catch (Exception ignored) {}
+                path = rootRemapForElevated(item.resolved.path);
             }
             if (path != null && (new File(path).isFile() || isRootFilePath(path))) {
                 ImageEditActivity.sessionPath = path;
@@ -634,6 +679,187 @@ public class SharedEntryActivity extends BaseActivity {
             }
         } catch (Exception ignored) {}
         return false;
+    }
+
+    /**
+     * When elevated file ops are on, editors that browse through the elevated
+     * backend see the raw {@code /data/media} tree rather than the FUSE
+     * {@code /storage/emulated} view, so hand them the raw path.
+     */
+    private String rootRemapForElevated(String path) {
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                if (path.startsWith("/storage/emulated/0")) {
+                    return "/data/media/0" + path.substring("/storage/emulated/0".length());
+                } else if (path.startsWith("/storage/emulated/")) {
+                    return "/data/media/" + path.substring("/storage/emulated/".length());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return path;
+    }
+
+    // ------------------------------------------------------------ media / hex / archive
+
+    private void openMediaPlayer() {
+        ItemState item = current();
+        if (item == null || items.size() != 1) return;
+        File direct = usableResolvedPath(item);
+        if (direct != null) {
+            launchPlayer(direct.getAbsolutePath());
+        } else {
+            // No on-disk path (cloud or app-private content): stage a copy in a
+            // folder of its own so the player's sibling scan sees just this file.
+            stageTempCopy(item, staged -> {
+                if (!launchPlayer(staged.getAbsolutePath())) return;
+                finish();
+            });
+        }
+    }
+
+    private boolean launchPlayer(String path) {
+        try {
+            Intent open = new Intent(this, MediaPlayerActivity.class);
+            open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            open.putExtra("play_path", path);
+            startActivity(open);
+            return true;
+        } catch (Exception e) {
+            Extensions.showMessage(this, e.getMessage() != null ? e.getMessage() : e.toString());
+            return false;
+        }
+    }
+
+    private void openHexEditor() {
+        ItemState item = current();
+        if (item == null || items.size() != 1) return;
+        File direct = usableResolvedPath(item);
+        if (direct != null) {
+            launchHexEditor(direct.getAbsolutePath(), null);
+        } else if (item.resolved != null && item.resolved.path != null) {
+            // The file exists but only through root/Shizuku. Stage a readable
+            // copy from the shared stream and let the hex editor write changes
+            // back to the original through its root-original path flow.
+            String original = item.resolved.path;
+            stageTempCopy(item, staged -> {
+                String rootOriginal = original.equals(staged.getAbsolutePath())
+                        ? null : original;
+                if (!launchHexEditor(staged.getAbsolutePath(), rootOriginal)) return;
+                finish();
+            });
+        } else {
+            stageTempCopy(item, staged -> {
+                if (!launchHexEditor(staged.getAbsolutePath(), null)) return;
+                finish();
+            });
+        }
+    }
+
+    private boolean launchHexEditor(String path, String rootOriginalPath) {
+        try {
+            Intent open = new Intent(this, HexEditorActivity.class);
+            open.putExtra("path", path);
+            if (rootOriginalPath != null && !rootOriginalPath.equals(path)) {
+                open.putExtra("rootOriginalPath", rootOriginalPath);
+            }
+            startActivity(open);
+            return true;
+        } catch (Exception e) {
+            Extensions.showMessage(this, e.getMessage() != null ? e.getMessage() : e.toString());
+            return false;
+        }
+    }
+
+    private void openArchiveViewer() {
+        ItemState item = current();
+        if (item == null || items.size() != 1) return;
+        File direct = usableResolvedPath(item);
+        if (direct != null) {
+            launchArchiveViewer(direct.getAbsolutePath());
+        } else {
+            stageTempCopy(item, staged -> {
+                if (!launchArchiveViewer(staged.getAbsolutePath())) return;
+                finish();
+            });
+        }
+    }
+
+    private boolean launchArchiveViewer(String path) {
+        try {
+            Intent open = new Intent(this, MainActivity.class);
+            // locatePath puts MainActivity into locate mode (pane 1 is left for
+            // onResume); openArchivePath tells it to browse the archive itself
+            // instead of opening the parent folder.
+            open.putExtra("locatePath", path);
+            open.putExtra("openArchivePath", path);
+            open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(open);
+            return true;
+        } catch (Exception e) {
+            Extensions.showMessage(this, e.getMessage() != null ? e.getMessage() : e.toString());
+            return false;
+        }
+    }
+
+    /** The resolved path, when it is a plain file this process can read. */
+    private File usableResolvedPath(ItemState item) {
+        if (item.resolved == null || item.resolved.path == null || item.resolved.inaccessible) return null;
+        try {
+            File f = new File(item.resolved.path);
+            if (f.isFile()) return f;
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private interface StageConsumer {
+        void accept(File staged);
+    }
+
+    /**
+     * Copies the shared stream into a unique temp folder (so later operations
+     * never pick up unrelated leftovers) and hands the file to {@code consumer}
+     * on the UI thread.
+     */
+    private void stageTempCopy(ItemState item, StageConsumer consumer) {
+        ProgressManager pm = new ProgressManager(this, true).show();
+        Uri uri = item.uri;
+        new Thread(() -> {
+            File staged = null;
+            try {
+                File base = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
+                File dir = new File(base, "shared_entry_" + System.currentTimeMillis());
+                if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("mkdirs failed");
+                String name = (item.name != null && !item.name.isEmpty() ? item.name : "shared_file")
+                        .replaceAll("[\\\\/:*?\"<>|]", "_");
+                staged = new File(dir, name);
+                try (InputStream in = getContentResolver().openInputStream(uri);
+                     OutputStream os = new FileOutputStream(staged)) {
+                    if (in == null) throw new java.io.IOException("stream closed");
+                    byte[] buf = new byte[65536];
+                    int read;
+                    while ((read = in.read(buf)) != -1) os.write(buf, 0, read);
+                }
+                if (staged.length() == 0) throw new java.io.IOException("empty copy");
+            } catch (Exception e) {
+                staged = null;
+            }
+            final File result = staged;
+            runOnUiThread(() -> {
+                try {
+                    pm.dismiss();
+                } catch (Exception ignored) {
+                }
+                if (cancelled || isFinishing() || isDestroyed()) return;
+                if (result != null && result.isFile()) {
+                    consumer.accept(result);
+                } else {
+                    Extensions.showMessage(this, getString(R.string.shared_entry_stage_failed));
+                }
+            });
+        }).start();
     }
 
     private void pickSaveFolder() {
@@ -727,6 +953,20 @@ public class SharedEntryActivity extends BaseActivity {
     private static boolean isImage(String mime, String ext) {
         if (mime != null && mime.toLowerCase(Locale.US).startsWith("image/")) return true;
         return ext != null && IMAGE_EXTS.contains(ext);
+    }
+
+    private static boolean isMedia(String mime, String ext) {
+        if (mime != null) {
+            String m = mime.toLowerCase(Locale.US);
+            if (m.startsWith("video/") || m.startsWith("audio/")) return true;
+            if (m.equals("application/ogg")) return true;
+        }
+        return ext != null && MEDIA_EXTS.contains(ext);
+    }
+
+    private static boolean isArchive(String mime, String ext) {
+        if (mime != null && ARCHIVE_MIMES.contains(mime.toLowerCase(Locale.US))) return true;
+        return ext != null && ARCHIVE_EXTS.contains(ext);
     }
 
     private static boolean isTextLike(String mime, String ext) {
