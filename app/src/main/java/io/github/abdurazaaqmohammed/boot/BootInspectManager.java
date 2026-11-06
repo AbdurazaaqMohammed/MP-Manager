@@ -134,6 +134,8 @@ public class BootInspectManager {
             try {
                 String hash = hashPath(imageFile.getAbsolutePath());
                 File cacheDir = new File(context.getCacheDir(), "boot_inspect_" + hash);
+                cleanDirectory(cacheDir);
+                cacheDir.mkdirs();
                 // Unpack
                 BootImageEngine.unpack(imageFile, cacheDir, null);
 
@@ -247,5 +249,17 @@ public class BootInspectManager {
         } catch (Exception e) {
             return String.valueOf(Math.abs(path.hashCode()));
         }
+    }
+
+    private static void cleanDirectory(File dir) {
+        if (dir == null || !dir.exists()) return;
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isDirectory()) cleanDirectory(f);
+                f.delete();
+            }
+        }
+        dir.delete();
     }
 }

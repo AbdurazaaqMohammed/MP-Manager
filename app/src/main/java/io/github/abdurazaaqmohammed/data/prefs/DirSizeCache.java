@@ -16,6 +16,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class DirSizeCache {
 
     private static final int MAX_ENTRIES = 5000;
-    private static final long MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000;
+    private static final long MAX_AGE_MS = 6L * 60 * 60 * 1000; // 6 hours
     /** Debounce window for disk writes while a batch of walks is finishing. */
     private static final long SAVE_DELAY_MS = 1500;
 
@@ -115,6 +116,42 @@ public final class DirSizeCache {
                 measuredAt.put(key, System.currentTimeMillis());
             }
             dirty.set(true);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void invalidate(File dir) {
+        if (dir == null) return;
+        try {
+            String key = dir.getAbsolutePath();
+            synchronized (LOCK) {
+                sizes.remove(key);
+                measuredAt.remove(key);
+            }
+            dirty.set(true);
+            scheduleSave();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void invalidatePrefix(File root) {
+        if (root == null) return;
+        try {
+            String prefix = root.getAbsolutePath();
+            if (!prefix.endsWith(File.separator)) prefix += File.separator;
+            synchronized (LOCK) {
+                Iterator<Map.Entry<String, Long>> it = sizes.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<String, Long> entry = it.next();
+                    String k = entry.getKey();
+                    if (k.equals(root.getAbsolutePath()) || k.startsWith(prefix)) {
+                        it.remove();
+                        measuredAt.remove(k);
+                    }
+                }
+            }
+            dirty.set(true);
+            scheduleSave();
         } catch (Exception ignored) {
         }
     }

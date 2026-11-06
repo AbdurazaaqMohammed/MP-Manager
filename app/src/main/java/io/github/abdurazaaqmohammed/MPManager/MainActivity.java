@@ -2623,6 +2623,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane1)).setRefreshing(false);
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setRefreshing(false);
         } catch (Exception ignored) { }
+        try {
+            File currentFolder = pane1 ? pane1Folder : pane2Folder;
+            if (currentFolder != null) DirSizeCache.invalidatePrefix(currentFolder);
+        } catch (Exception ignored) { }
         reloadOnePane(pane1, false);
         reloadOnePane(!pane1, false);
     }

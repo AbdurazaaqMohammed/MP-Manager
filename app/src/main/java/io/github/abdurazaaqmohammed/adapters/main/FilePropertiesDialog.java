@@ -284,6 +284,10 @@ public class FilePropertiesDialog {
                         }
                     }
                     long finalTotal = totalComputedSize;
+                    if (!multi && file != null && file.isDirectory()) {
+                        DirSizeCache.record(file, finalTotal);
+                        DirSizeCache.scheduleSave();
+                    }
                     context.handler.post(() -> sizeValue.setText(FileSize.getHumanReadableFileSize(finalTotal)));
                 }).start();
             }
