@@ -68,6 +68,8 @@ import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
+import io.github.abdurazaaqmohammed.features.files.SplitDialog;
+import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
@@ -969,6 +971,13 @@ final View.OnClickListener originalClickListener;
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
+                if (!multi && !isInZip && !file.isDirectory()) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.SPLIT, direction)));
+                    if (SplitArchiveUtil.isSplitArchive(file)) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MERGE_SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.MERGE_SPLIT, direction)));
+                    }
+                }
+
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
@@ -1264,6 +1273,14 @@ final View.OnClickListener originalClickListener;
                             case FileMenuOrder.EXTRACT:
                                 if (isInZip || multi) return;
                                 fileOps.extractArchive(file);
+                                return;
+                            case FileMenuOrder.SPLIT:
+                                if (isInZip || multi) return;
+                                SplitDialog.showSplit(context, file);
+                                return;
+                            case FileMenuOrder.MERGE_SPLIT:
+                                if (isInZip || multi) return;
+                                SplitDialog.showMerge(context, file);
                                 return;
                             default:
                                 switch (actionId) {

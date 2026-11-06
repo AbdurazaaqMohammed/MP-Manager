@@ -627,7 +627,9 @@ public class FileOpener {
             openWithDefaultOrDialog(file, file.getName());
             return;
         }
-        withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+        File firstPart = SplitArchiveUtil.findFirstPart(file);
+        File target = (firstPart != null && firstPart.exists()) ? firstPart : file;
+        withReadableCopy(target, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
     }
 
     private void showAppsForMime(File file, String fileName, boolean useActual) {
@@ -1363,6 +1365,8 @@ public class FileOpener {
                             .putExtra(CompareDexActivity.EXTRA_MTCR_FILE, readable.getAbsolutePath());
                     context.startActivity(intent);
                 });
+            } else if (fileName.equals("libapp.so") || fileName.equals("libflutter.so")) {
+                withReadableCopy(file, readable -> io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForLibrary(context, readable, fileName));
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
                 // tar/gz/...): an .epub lands here. The user's default app wins

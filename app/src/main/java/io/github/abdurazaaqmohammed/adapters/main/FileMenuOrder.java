@@ -42,10 +42,12 @@ public final class FileMenuOrder {
     public static final String BATCH_STRIP_META = "batch_strip_meta";
     public static final String HIDE = "hide";
     public static final String RESTORE = "restore";
+    public static final String SPLIT = "split";
+    public static final String MERGE_SPLIT = "merge_split";
 
     public static final String[] DEFAULT_ORDER = {
             COPY, MOVE, RENAME, DELETE, SHARE, OPEN_WITH,
-            COMPRESS, EXTRACT, BOOKMARK, PROPERTIES,
+            COMPRESS, EXTRACT, SPLIT, MERGE_SPLIT, BOOKMARK, PROPERTIES,
             RESTORE, CMD, CHECK, HIDE, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
             CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX,
             BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
@@ -186,6 +188,8 @@ public final class FileMenuOrder {
             case BATCH_STRIP_META -> context.getString(R.string.remove_metadata);
             case HIDE -> context.getString(R.string.hide);
             case RESTORE -> context.getString(R.string.restore);
+            case SPLIT -> context.getString(R.string.split_file);
+            case MERGE_SPLIT -> context.getString(R.string.merge_split_files);
             default -> {
                 String pluginTitle = null;
                 try {
@@ -219,6 +223,8 @@ public final class FileMenuOrder {
             case CHECK -> R.drawable.tag_24px;
             case BATCH_SIGN, BATCH_OPT, BATCH_INSTALL -> R.drawable.apk_document_24px;
             case EXTRACT -> R.drawable.baseline_compress_24;
+            case SPLIT -> R.drawable.call_split_24px;
+            case MERGE_SPLIT -> R.drawable.baseline_compress_24;
             case CMP_ZIP, CMP_ARSC -> R.drawable.baseline_swap_horiz_24;
             case CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX -> R.drawable.baseline_swap_horiz_24;
             case BATCH_CROP -> R.drawable.edit_24px;

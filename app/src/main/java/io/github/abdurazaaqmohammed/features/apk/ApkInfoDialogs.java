@@ -165,13 +165,17 @@ public class ApkInfoDialogs {
         if (nativeScanResult != null && nativeScanFile != null && nativeScanFile.equals(file)) {
             return nativeScanResult;
         }
-        boolean[] r = new boolean[2];
+        boolean[] r = new boolean[3];
         try {
             r[0] = Il2CppDumperUtil.hasIl2Cpp(file);
         } catch (Exception ignored) {
         }
         try {
             r[1] = NativeLibPatcher.hasNativeLibs(file);
+        } catch (Exception ignored) {
+        }
+        try {
+            r[2] = io.github.abdurazaaqmohammed.features.apk.flutter.FlutterDetector.isFlutterApk(file);
         } catch (Exception ignored) {
         }
         nativeScanFile = file;
@@ -523,6 +527,7 @@ public class ApkInfoDialogs {
                 boolean enabled = true;
                 if (ApkMoreMenuOrder.IL2CPP.equals(actionId)) enabled = nativeState[0];
                 else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) enabled = nativeState[1];
+                else if (ApkMoreMenuOrder.FLUTTER.equals(actionId)) enabled = nativeState.length > 2 && nativeState[2];
 
                 holder.itemView.setAlpha(enabled ? 1f : 0.38f);
                 holder.itemView.setEnabled(enabled);
@@ -884,6 +889,8 @@ public class ApkInfoDialogs {
             showMultiplexDialog(file, fileName);
         } else if (ApkMoreMenuOrder.IL2CPP.equals(actionId)) {
             showIl2CppDumpDialog(file, fileName);
+        } else if (ApkMoreMenuOrder.FLUTTER.equals(actionId)) {
+            io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) {
             showLibPatcherDialog(file, fileName);
         } else if (ApkMoreMenuOrder.SSL_UNPIN.equals(actionId)) {

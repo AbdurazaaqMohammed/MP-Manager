@@ -91,7 +91,15 @@ public final class ArchiveBrowseUtil {
                 && magic[3] == 'X' && magic[4] == 'Z' && magic[5] == 0x00) return ArchiveType.XZ;
         if (n >= 4 && magic[0] == 0x28 && magic[1] == (byte) 0xB5 && magic[2] == 0x2F
                 && magic[3] == (byte) 0xFD) return ArchiveType.ZSTD;
-        return looksLikeTar(head, n) ? ArchiveType.TAR : (n >= 14 && (new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("MIUI BACKUP") || new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("ANDROID BACKUP")) ? ArchiveType.BACKUP : ArchiveType.NONE);
+        ArchiveType type = looksLikeTar(head, n) ? ArchiveType.TAR : (n >= 14 && (new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("MIUI BACKUP") || new String(head, 0, Math.min(n, 64), StandardCharsets.US_ASCII).startsWith("ANDROID BACKUP")) ? ArchiveType.BACKUP : ArchiveType.NONE);
+        if (type != ArchiveType.NONE) return type;
+        if (SplitArchiveUtil.isSplitArchive(file)) {
+            File firstPart = SplitArchiveUtil.findFirstPart(file);
+            if (firstPart != null && !firstPart.equals(file) && firstPart.exists()) {
+                return detectArchiveType(firstPart);
+            }
+        }
+        return ArchiveType.NONE;
     }
 
     /** True when the archive content can be listed in a pane. */
@@ -450,7 +458,10 @@ public final class ArchiveBrowseUtil {
     }
 
     private static List<RawEntry> listRar(File archive) throws IOException {
-        try (Archive rar = new Archive(archive)) {
+        File first = SplitArchiveUtil.findFirstPart(archive);
+        try (Archive rar = (first != null && SplitArchiveUtil.isRarSplit(first))
+                ? new Archive(new com.github.junrar.volume.FileVolumeManager(first), null, (String) null)
+                : new Archive(archive)) {
             List<RawEntry> out = new ArrayList<>();
             for (FileHeader fh : rar.getFileHeaders()) {
                 String name = fh.getFileName().replace('\\', '/');
@@ -466,7 +477,10 @@ public final class ArchiveBrowseUtil {
     }
 
     private static void extractRarEntry(File archive, String want, File outFile) throws IOException {
-        try (Archive rar = new Archive(archive)) {
+        File first = SplitArchiveUtil.findFirstPart(archive);
+        try (Archive rar = (first != null && SplitArchiveUtil.isRarSplit(first))
+                ? new Archive(new com.github.junrar.volume.FileVolumeManager(first), null, (String) null)
+                : new Archive(archive)) {
             for (FileHeader fh : rar.getFileHeaders()) {
                 if (!stripSlash(normalize(fh.getFileName())).equals(want)) continue;
                 if (fh.isDirectory()) {
@@ -574,6 +588,12 @@ public final class ArchiveBrowseUtil {
      * under the desugar layer that breaks 7z iteration under ART.
      */
     public static SevenZFile openSevenZ(File archive, char[] password) throws IOException {
+        File firstPart = SplitArchiveUtil.findFirstPart(archive);
+        if (firstPart != null && SplitArchiveUtil.hasSiblingParts(firstPart)) {
+            List<File> parts = SplitArchiveUtil.getOrderedParts(firstPart);
+            MultiFileSeekableByteChannel channel = new MultiFileSeekableByteChannel(parts);
+            return password == null ? new SevenZFile(channel) : new SevenZFile(channel, password);
+        }
         return password == null ? new SevenZFile(archive) : new SevenZFile(archive, password);
     }
 

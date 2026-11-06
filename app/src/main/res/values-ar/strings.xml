@@ -1984,4 +1984,41 @@
     <string name="select_images">اختر الصور</string>
     <string name="collage_saved">تم حفظ الصورة المجمعة في %1$s</string>
     <string name="apply_crop">تطبيق القص</string>
+
+    <!-- أدوات تقسيم ودمج الأرشيفات والملفات -->
+    <string name="split_file">تقسيم</string>
+    <string name="merge_split_files">دمج الأجزاء المتقسمة</string>
+    <string name="split_dialog_title">تقسيم الملف</string>
+    <string name="split_by_size">حسب حجم كل جزء</string>
+    <string name="split_by_count">حسب عدد الأجزاء</string>
+    <string name="split_part_size">حجم الجزء</string>
+    <string name="split_num_parts">عدد الأجزاء</string>
+    <string name="split_naming">نمط تسمية الأجزاء</string>
+    <string name="split_naming_standard">قياسي (.001, .002…)</string>
+    <string name="split_naming_part">نمط الأجزاء (.part1, .part2…)</string>
+    <string name="split_result_preview">سيتم إنشاء %1$d أجزاء (~%2$s لكل جزء)</string>
+    <string name="split_in_progress">جاري تقسيم %1$s…</string>
+    <string name="split_success">تم التقسيم بنجاح: تم إنشاء %1$d أجزاء</string>
+    <string name="merge_in_progress">جاري دمج الأجزاء…</string>
+    <string name="merge_success">تم الدمج بنجاح: %1$s</string>
+    <string name="delete_original_after_split">حذف الملف الأصلي بعد التقسيم</string>
+    <string name="split_open_archive">فتح الأرشيف</string>
+    <string name="split_missing_parts">بعض الأجزاء مفقودة</string>
+
+    <!-- أدوات فحص وتعديل تطبيقات فلاتر -->
+    <string name="flutter_tools">أدوات فلاتر</string>
+    <string name="flutter_tools_title">فحص وتعديل Flutter</string>
+    <string name="flutter_engine_version">كوميت المحرك: %1$s</string>
+    <string name="flutter_dart_version">هاش دارت: %1$s</string>
+    <string name="flutter_ssl_unpin">تجاوز SSL Pinning (شامل)</string>
+    <string name="flutter_ssl_unpin_desc">تعديل libflutter.so لتجاوز حظر فحص الشهادات في BoringSSL.</string>
+    <string name="flutter_ssl_unpin_success">تم تجاوز SSL Pinning بنجاح لـ %1$s</string>
+    <string name="flutter_extract_strings">استخراج الروابط والنصوص من Dart</string>
+    <string name="flutter_extract_assets">استخراج ملفات وحزم Flutter</string>
+    <string name="flutter_snapshot_info">معلومات Dart Snapshot</string>
+    <string name="flutter_dump_summary">ملخص تطبيق Flutter</string>
+    <string name="flutter_not_found">لم يتم العثور على مكتبات Flutter</string>
+    <string name="flutter_search_hint">بحث في الروابط والنصوص…</string>
+    <string name="flutter_copied">تم النسخ إلى الحافظة</string>
+    <string name="flutter_strings_count">تم العثور على %1$d نص/رابط</string>
 </resources>
