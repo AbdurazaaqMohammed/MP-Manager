@@ -1382,6 +1382,8 @@ Strings are sent to the external service you configured.</string>
     <string name="wifi_hide_passwords">Hide passwords</string>
     <string name="export">Export</string>
     <string name="share">Share</string>
+    <string name="share_zip">Share ZIP</string>
+    <string name="confirm_share_zip">Are you sure you want to share \"%s\" as a ZIP?</string>
     <string name="wifi_copy_all">Copy all</string>
     <string name="wifi_open_network">Open network</string>
     <string name="wifi_name_plus_password">Name + password</string>

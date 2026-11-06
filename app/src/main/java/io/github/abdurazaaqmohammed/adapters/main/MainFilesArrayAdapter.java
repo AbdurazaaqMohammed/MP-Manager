@@ -817,8 +817,8 @@ final View.OnClickListener originalClickListener;
                 // so /sdcard and /storage/emulated/0 count as the same pane
                 // folder and Move between the panes is then a no-op.
                 Set<String> disabledIds = new HashSet<>();
-                if (isTargetOnlyFolder(multi, isInZip, file, entry)) {
-                    disabledIds.add(FileMenuOrder.SHARE);
+                boolean isTargetFolder = isTargetOnlyFolder(multi, isInZip, file, entry);
+                if (isTargetFolder) {
                     disabledIds.add(FileMenuOrder.OPEN_WITH);
                 }
                 if (context.arePanesInSameFolder()) {
@@ -852,7 +852,8 @@ final View.OnClickListener originalClickListener;
 
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COMPRESS, FileMenuOrder.labelFor(context, FileMenuOrder.COMPRESS, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.PROPERTIES, FileMenuOrder.labelFor(context, FileMenuOrder.PROPERTIES, direction)));
-                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SHARE, FileMenuOrder.labelFor(context, FileMenuOrder.SHARE, direction)));
+                String shareLabel = isTargetFolder ? context.getString(R.string.share_zip) : FileMenuOrder.labelFor(context, FileMenuOrder.SHARE, direction);
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SHARE, shareLabel));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.OPEN_WITH, FileMenuOrder.labelFor(context, FileMenuOrder.OPEN_WITH, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BOOKMARK, FileMenuOrder.labelFor(context, FileMenuOrder.BOOKMARK, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMD, FileMenuOrder.labelFor(context, FileMenuOrder.CMD, direction)));
@@ -1259,54 +1260,88 @@ final View.OnClickListener originalClickListener;
                                             List<ZipEntryInfo> shareEntries = new ArrayList<>();
                                             for (int sp : selectedPositions) {
                                                 if (sp >= 0 && sp < values.length && values[sp] instanceof ZipEntryInfo ze) {
-                                                    if (!ze.isDirectory()) shareEntries.add(ze);
+                                                    shareEntries.add(ze);
                                                 }
                                             }
-                                            if (shareEntries.size() == 1) fileOpener.shareZipEntry(shareEntries.get(0), shareEntries.get(0).getName());
-                                            else if (shareEntries.size() > 1) fileOpener.shareZipEntries(shareEntries);
+                                            boolean allZipDirs = !shareEntries.isEmpty();
+                                            for (ZipEntryInfo ze : shareEntries) {
+                                                if (!ze.isDirectory()) {
+                                                    allZipDirs = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (allZipDirs && shareEntries.size() == 1) {
+                                                fileOpener.shareZipFolderAsZip(shareEntries.get(0));
+                                            } else {
+                                                List<ZipEntryInfo> plainEntries = new ArrayList<>();
+                                                for (ZipEntryInfo ze : shareEntries) {
+                                                    if (!ze.isDirectory()) plainEntries.add(ze);
+                                                }
+                                                if (plainEntries.size() == 1) fileOpener.shareZipEntry(plainEntries.get(0), plainEntries.get(0).getName());
+                                                else if (plainEntries.size() > 1) fileOpener.shareZipEntries(plainEntries);
+                                            }
                                         } else if (isInZip) {
-                                            fileOpener.shareZipEntry(item, fileName);
+                                            if (entry != null && entry.isDirectory()) {
+                                                fileOpener.shareZipFolderAsZip(entry);
+                                            } else {
+                                                fileOpener.shareZipEntry(item, fileName);
+                                            }
                                         } else if (multi) {
-                                            // Only real files can be staged as content URIs; directories
-                                            // can't be shared and must not count towards the completion
-                                            // check or the chooser never fires.
                                             List<File> shareFiles = new ArrayList<>();
                                             for (int sp : selectedPositions) {
                                                 if (sp >= 0 && sp < values.length && values[sp] instanceof File f) {
-                                                    if (!f.isDirectory()) shareFiles.add(f);
+                                                    shareFiles.add(f);
                                                 }
                                             }
-                                            if (shareFiles.size() == 1) {
-                                                File only = shareFiles.get(0);
-                                                fileOpener.withReadableCopy(only, readable -> {
-                                                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-                                                    String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
-                                                    context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
-                                                            .setType(shareMime != null ? shareMime : "application/octet-stream")
-                                                            .putExtra(Intent.EXTRA_STREAM, uri)
-                                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + only.getName()));
-                                                });
-                                            } else if (shareFiles.size() > 1) {
-                                                List<Uri> uris = Collections.synchronizedList(new ArrayList<>());
-                                                AtomicInteger pending =
-                                                        new AtomicInteger(shareFiles.size());
-                                                for (File sf : shareFiles) {
-                                                    fileOpener.withReadableCopy(sf, readable -> {
-                                                        try {
-                                                            Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-                                                            uris.add(uri);
-                                                        } catch (Exception ignored) {
-                                                        }
-                                                        if (pending.decrementAndGet() == 0) {
-                                                            Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-                                                            intent.setType("*/*");
-                                                            intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, new ArrayList<>(uris));
-                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                                            context.startActivity(Intent.createChooser(intent, "Share " + uris.size() + " files"));
-                                                        }
+                                            boolean allDirs = !shareFiles.isEmpty();
+                                            for (File f : shareFiles) {
+                                                if (!f.isDirectory()) {
+                                                    allDirs = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (allDirs) {
+                                                if (shareFiles.size() == 1) fileOpener.shareFolderAsZip(shareFiles.get(0));
+                                                else fileOpener.shareFoldersAsZip(shareFiles);
+                                            } else {
+                                                List<File> plainFiles = new ArrayList<>();
+                                                for (File f : shareFiles) {
+                                                    if (!f.isDirectory()) plainFiles.add(f);
+                                                }
+                                                if (plainFiles.size() == 1) {
+                                                    File only = plainFiles.get(0);
+                                                    fileOpener.withReadableCopy(only, readable -> {
+                                                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                        String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
+                                                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+                                                                .setType(shareMime != null ? shareMime : "application/octet-stream")
+                                                                .putExtra(Intent.EXTRA_STREAM, uri)
+                                                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + only.getName()));
                                                     });
+                                                } else if (plainFiles.size() > 1) {
+                                                    List<Uri> uris = Collections.synchronizedList(new ArrayList<>());
+                                                    AtomicInteger pending =
+                                                            new AtomicInteger(plainFiles.size());
+                                                    for (File sf : plainFiles) {
+                                                        fileOpener.withReadableCopy(sf, readable -> {
+                                                            try {
+                                                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                                uris.add(uri);
+                                                            } catch (Exception ignored) {
+                                                            }
+                                                            if (pending.decrementAndGet() == 0) {
+                                                                Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                                                                intent.setType("*/*");
+                                                                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, new ArrayList<>(uris));
+                                                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                                                context.startActivity(Intent.createChooser(intent, "Share " + uris.size() + " files"));
+                                                            }
+                                                        });
+                                                    }
                                                 }
                                             }
+                                        } else if (file != null && file.isDirectory()) {
+                                            fileOpener.shareFolderAsZip(file);
                                         } else fileOpener.withReadableCopy(file, readable -> {
                                             Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
                                             String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
