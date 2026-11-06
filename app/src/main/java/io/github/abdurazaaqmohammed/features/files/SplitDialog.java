@@ -22,7 +22,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.utils.FileSize;
@@ -281,7 +281,7 @@ public final class SplitDialog {
 
                     new Thread(() -> {
                         try {
-                            List<File> result = SplitArchiveUtil.splitFile(file, file.getParentFile(), partSizeBytes, namingStyle, pm);
+                            List<File> result = SplitArchiveUtil.splitFile(file, file.getParentFile(), partSizeBytes, namingStyle, pm != null ? pm.listener() : null);
                             if (del && file.exists()) {
                                 file.delete();
                             }
@@ -356,7 +356,7 @@ public final class SplitDialog {
 
                     new Thread(() -> {
                         try {
-                            SplitArchiveUtil.mergeParts(parts, outFile, pm);
+                            SplitArchiveUtil.mergeParts(parts, outFile, pm != null ? pm.listener() : null);
                             if (del) {
                                 for (File p : parts) {
                                     if (p.exists() && !p.equals(outFile)) p.delete();

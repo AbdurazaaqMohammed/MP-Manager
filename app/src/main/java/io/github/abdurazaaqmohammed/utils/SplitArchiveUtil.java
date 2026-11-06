@@ -128,7 +128,7 @@ public final class SplitArchiveUtil {
             String firstNum = String.format(Locale.ROOT, "%0" + width + "d", 1);
             File candidate = new File(parent, base + "." + firstNum);
             if (candidate.exists()) return candidate;
-            File zeroNum = String.format(Locale.ROOT, "%0" + width + "d", 0);
+            String zeroNum = String.format(Locale.ROOT, "%0" + width + "d", 0);
             File candidate0 = new File(parent, base + "." + zeroNum);
             if (candidate0.exists()) return candidate0;
             return file;
