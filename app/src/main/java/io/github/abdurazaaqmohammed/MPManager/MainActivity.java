@@ -1666,7 +1666,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             int i = 0;
                             for(char c : chars) if (c == File.separatorChar) i++;
                             boolean inOneLevelInZip = i < 2;
-                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, true);
+                            String parentZipPath = inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1));
+                            String clean = s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+                            int slash = clean.lastIndexOf('/');
+                            String exitedName = slash >= 0 ? clean.substring(slash + 1) : clean;
+                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), parentZipPath, adapter.pane1, true);
+                            if (!exitedName.isEmpty()) focusAndBlinkItemTwice(adapter.pane1, exitedName);
                         } else if (adapter.isInZip) {
                             File zipFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
                             if (zipFile != null && isStagedArchive(zipFile) && navigateBack(adapter.pane1)) {
@@ -1674,8 +1679,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
-                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
-                            else if (isBackPressedToExit) {
+                            final String exitedName = zipFile != null ? zipFile.getName() : new File(path).getName();
+                            final boolean p1 = lastPaneSelected == 1;
+                            if (f != null && (f.canRead() || canListViaRoot(f))) {
+                                loadFolderInPaneAsync(f, p1, true, () -> focusAndBlinkItemTwice(p1, exitedName));
+                            } else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
                             } else {
@@ -1689,14 +1697,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(this, paneFolder, adapter.pane1);
                                 File target = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(paneFolder);
                                 if (target != null && (target.canRead() || canListViaRoot(target))) {
-                                    loadFolderInPane(target, adapter.pane1);
+                                    final String exitedName = paneFolder.getName();
+                                    loadFolderInPaneAsync(target, adapter.pane1, true, () -> focusAndBlinkItemTwice(adapter.pane1, exitedName));
                                     return;
                                 }
                             }
                             if (SafFs.isSaf(paneFolder)) {
                                 File parent = paneFolder.getParentFile();
                                 if (parent != null && !parent.equals(paneFolder)) {
-                                    loadFolderInPane(parent, adapter.pane1);
+                                    final String exitedName = paneFolder.getName();
+                                    loadFolderInPaneAsync(parent, adapter.pane1, true, () -> focusAndBlinkItemTwice(adapter.pane1, exitedName));
                                 } else if (isBackPressedToExit) {
                                     handler.removeCallbacks(resetExitPrompt);
                                     finishAffinity();
@@ -1708,10 +1718,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 return;
                             }
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                            File f = new File(path).getParentFile();
+                            File currentFile = new File(path);
+                            File f = currentFile.getParentFile();
                             while (f != null && !f.exists() && !canListViaRoot(f)) f = f.getParentFile();
-                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
-                            else if (isBackPressedToExit) {
+                            if (f != null && (f.canRead() || canListViaRoot(f))) {
+                                final String exitedName = currentFile.getName();
+                                final boolean p1 = lastPaneSelected == 1;
+                                loadFolderInPaneAsync(f, p1, true, () -> focusAndBlinkItemTwice(p1, exitedName));
+                            } else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
                             } else {
@@ -2876,6 +2890,52 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    public void unmarkGreen(boolean pane1, String name) {
+        if (name == null) return;
+        try {
+            (pane1 ? greenNames1 : greenNames2).remove(name);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void focusAndBlinkItemTwice(boolean pane1, String name) {
+        if (name == null || name.isEmpty()) return;
+        handler.postDelayed(() -> {
+            try {
+                RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                if (pane == null || !(pane.getLayoutManager() instanceof LinearLayoutManager lm)) return;
+                RecyclerView.Adapter<?> adapter = pane.getAdapter();
+                if (!(adapter instanceof MainFilesArrayAdapter filesAdapter)) return;
+                int pos = filesAdapter.findPositionByName(name);
+                if (pos < 0) return;
+                lm.scrollToPositionWithOffset(pos, 0);
+
+                // Flash 1: Green ON
+                markGreen(pane1, name);
+                filesAdapter.notifyItemChanged(pos);
+
+                // Flash 1: Green OFF
+                handler.postDelayed(() -> {
+                    unmarkGreen(pane1, name);
+                    filesAdapter.notifyItemChanged(pos);
+
+                    // Flash 2: Green ON
+                    handler.postDelayed(() -> {
+                        markGreen(pane1, name);
+                        filesAdapter.notifyItemChanged(pos);
+
+                        // Flash 2: Green OFF
+                        handler.postDelayed(() -> {
+                            unmarkGreen(pane1, name);
+                            filesAdapter.notifyItemChanged(pos);
+                        }, 220);
+                    }, 220);
+                }, 220);
+            } catch (Exception ignored) {
+            }
+        }, 120);
+    }
+
     public boolean isGreen(boolean pane1, String name) {
         if (name == null) return false;
         try {
@@ -3217,20 +3277,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-
-
-    public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
-        if (files1 == null || files2 == null)
-            return files1 != files2;
-        if (files1.length != files2.length - 1)
-            return true;
-        for (int i = 0; i < files1.length; i++) {
-            if (!files1[i].exists() || !files2[i + 1].exists() || files1[i].length() != files2[i + 1].length()) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     @Override
     protected void onDestroy() {

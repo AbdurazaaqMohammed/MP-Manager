@@ -237,6 +237,23 @@ public final class ArchiveBrowseUtil {
         }
     }
 
+    /** Returns true if the archive entry begins with the 4-byte ELF magic (\x7fELF). */
+    public static boolean isElfEntry(File archive, String entryPath) {
+        if (archive == null || entryPath == null) return false;
+        try (InputStream in = openEntry(archive, entryPath)) {
+            byte[] buf = new byte[4];
+            int read = 0;
+            while (read < 4) {
+                int r = in.read(buf, read, 4 - read);
+                if (r < 0) break;
+                read += r;
+            }
+            return read == 4 && buf[0] == 0x7F && buf[1] == 'E' && buf[2] == 'L' && buf[3] == 'F';
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     /** Extracts one entry into {@code outFile}, restoring its stored mtime. */
     public static void extractEntry(File archive, String entryPath, File outFile) throws IOException {
         ArchiveType type = detectArchiveType(archive);

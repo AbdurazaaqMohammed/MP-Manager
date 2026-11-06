@@ -154,6 +154,16 @@ public class FileOpener {
             });
             return;
         }
+        if (fileName != null && ApkIconHelper.isApkArchiveName(fileName)) {
+            if (apkTools != null) {
+                apkTools.showApkInfoDialog(file, fileName);
+                return;
+            }
+        }
+        if (FileUtils.isElf(fileName) || FileUtils.isElfFile(file)) {
+            showElfOptionsDialog(file, fileName, file);
+            return;
+        }
         showOpenWithDialog(file, fileName);
     }
 
@@ -166,6 +176,16 @@ public class FileOpener {
                     context.openImageViewer(readable.getPath());
                 }
             });
+            return;
+        }
+        if (fileName != null && ApkIconHelper.isApkArchiveName(fileName)) {
+            if (apkTools != null) {
+                apkTools.showApkInfoDialog(file, fileName);
+                return;
+            }
+        }
+        if (FileUtils.isElf(fileName) || FileUtils.isElfFile(file)) {
+            showElfOptionsDialog(file, fileName, file);
             return;
         }
         showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
@@ -883,16 +903,6 @@ public class FileOpener {
                 .putExtra(HtmlViewerActivity.EXTRA_NAME, fileName));
     }
 
-    public static boolean isElf(File file) {
-        if (file == null || !file.exists() || !file.isFile() || file.length() < 4) return false;
-        try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
-            byte[] magic = new byte[4];
-            if (fis.read(magic) == 4) {
-                return magic[0] == 0x7F && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F';
-            }
-        } catch (Exception ignored) {}
-        return false;
-    }
 
     private void showElfOptionsDialog(File file, String fileName, File originalFile) {
         String[] options = {
@@ -907,7 +917,7 @@ public class FileOpener {
                 .setItems(options, (d, which) -> {
                     switch (which) {
                         case 0 -> openHexEditorWithOriginal(file, originalFile);
-                        case 1 -> showElfInspectorDialog(file, fileName);
+                        case 1 -> showElfInspectorDialog(file, fileName, originalFile);
                         case 2 -> openTextEditorWithOriginal(file, originalFile);
                         case 3 -> showOpenWithDialog(file, fileName, null, null, originalFile);
                     }
@@ -917,7 +927,8 @@ public class FileOpener {
         dialogUtil.styleAlertDialog(dialog);
     }
 
-    private void showElfInspectorDialog(File file, String fileName) {
+    private void showElfInspectorDialog(File file, String fileName, File originalFile) {
+        final File targetOriginal = originalFile != null ? originalFile : file;
         new Thread(() -> {
             try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r");
                  io.github.abdurazaaqmohammed.utils.nativelib.ElfParser elf = new io.github.abdurazaaqmohammed.utils.nativelib.ElfParser(raf)) {
@@ -937,8 +948,7 @@ public class FileOpener {
                 ssb.setSpan(new ClickableSpan() {
                     @Override
                     public void onClick(@NonNull View widget) {
-                        if (dialogRef[0] != null) dialogRef[0].dismiss();
-                        openHexEditorWithOriginal(file, file, entryOffset);
+                        openHexEditorWithOriginal(file, targetOriginal, entryOffset);
                     }
                     @Override
                     public void updateDrawState(@NonNull TextPaint ds) {
@@ -965,8 +975,7 @@ public class FileOpener {
                             ssb.setSpan(new ClickableSpan() {
                                 @Override
                                 public void onClick(@NonNull View widget) {
-                                    if (dialogRef[0] != null) dialogRef[0].dismiss();
-                                    openHexEditorWithOriginal(file, file, targetOffset);
+                                    openHexEditorWithOriginal(file, targetOriginal, targetOffset);
                                 }
                                 @Override
                                 public void updateDrawState(@NonNull TextPaint ds) {
@@ -1007,7 +1016,7 @@ public class FileOpener {
                             .setTitle("ELF: " + fileName)
                             .setView(sv)
                             .setPositiveButton(android.R.string.ok, null)
-                            .setNeutralButton(R.string.hex_editor, (d, w) -> openHexEditorWithOriginal(file, file))
+                            .setNeutralButton(R.string.hex_editor, (d, w) -> openHexEditorWithOriginal(file, targetOriginal))
                             .create();
                     dialogRef[0] = dialog;
                     dialogUtil.styleAlertDialog(dialog);
@@ -1268,7 +1277,7 @@ public class FileOpener {
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
             || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
-        } else if (isElf(file) || fileName.endsWith(".so")) {
+        } else if (FileUtils.isElfFile(file)) {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
             io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
