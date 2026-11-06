@@ -27,6 +27,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
  */
 public class McpServerService extends Service {
 
+    public static final String EXTRA_RESTART = "restart";
+
     private static final String CHANNEL_ID = "McpChannel";
     private static final int NOTIFICATION_ID = 2;
 
@@ -52,7 +54,25 @@ public class McpServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Must be the very first thing: Android kills the service with
+        // ForegroundServiceDidNotStartInTimeException if startForeground() is
+        // not called promptly after startForegroundService().
         createNotificationChannel();
+        Notification notification = buildNotification();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            // Fall back to the pre-Q signature if the type check rejects it.
+            startForeground(NOTIFICATION_ID, notification);
+        }
+        if (intent != null && intent.getBooleanExtra(EXTRA_RESTART, false)) {
+            stopServer();
+        }
         if (!isRunning()) {
             startServer();
         }
@@ -62,6 +82,11 @@ public class McpServerService extends Service {
 
     private synchronized void startServer() {
         if (isRunning()) return;
+        // Fully release the previous socket if a restart was requested; otherwise
+        // the new bind would fail with "address in use" and immediately bounce.
+        McpHttpServer previous = server;
+        server = null;
+        if (previous != null) previous.stop();
         File home = McpPrefs.getHome(this);
         if (!home.isDirectory() && !home.mkdirs() && !home.isDirectory()) {
             Toast.makeText(this,
