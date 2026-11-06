@@ -1460,7 +1460,7 @@ Strings are sent to the external service you configured.</string>
     <string name="hex_copy_md5">MD5</string>
     <string name="hex_copy_crc32">CRC32</string>
     <string name="hex_paste">Paste</string>
-    <string name="hex_delete_selection_msg">Fill %1$d bytes with 00? The file size cannot change.</string>
+    <string name="hex_delete_selection_msg">Delete %1$d bytes? Everything after them shifts back and the file shrinks.</string>
     <string name="hex_selection_too_large">Selection too large (max %1$d MB)</string>
     <string name="native_required">Native tools required</string>
     <string name="native_need_download">This feature needs native binaries (~%1$s MB download). Download now?</string>
