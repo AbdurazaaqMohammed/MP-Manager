@@ -3,10 +3,14 @@ package io.github.abdurazaaqmohammed.mcp;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.text.TextUtils;
+
 import androidx.preference.PreferenceManager;
 
 import java.io.File;
 import java.util.UUID;
+
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 /** Preferences for the MCP service (port, home folder, auth token, path rules). */
 public final class McpPrefs {
@@ -31,10 +35,7 @@ public final class McpPrefs {
     /** Home folder: base for relative paths and default output location (MT-style). */
     public static File getHome(Context context) {
         String saved = prefs(context).getString("mcp_home", null);
-        if (saved == null || saved.isEmpty()) {
-            return new File(Environment.getExternalStorageDirectory(), "MP2/mcp");
-        }
-        return new File(saved);
+        return TextUtils.isEmpty(saved) ? new File(new File(Environment.getExternalStorageDirectory(), UiPrefs.appPathDir(context, UiPrefs.defaultAppDir())), "mcp") : new File(saved);
     }
 
     public static void setHome(Context context, String path) {

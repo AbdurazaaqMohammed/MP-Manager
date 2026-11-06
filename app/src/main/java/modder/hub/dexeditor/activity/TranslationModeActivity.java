@@ -47,6 +47,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.adapter.StringAdapter;
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
@@ -744,9 +745,8 @@ public class TranslationModeActivity extends BaseActivity {
     // ------------------------------------------------------------------
 
     private File dictionaryDir() {
-        File dir = new File(Environment.getExternalStorageDirectory(), "MP2/dictionaries");
-        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) return null;
-        return dir;
+        File dir = new File(new File(Environment.getExternalStorageDirectory(), UiPrefs.appPathDir(this, UiPrefs.defaultAppDir())), "dictionaries");
+        return !dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory() ? null : dir;
     }
 
     private String dictionaryBase() {
