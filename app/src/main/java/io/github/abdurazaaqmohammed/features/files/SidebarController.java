@@ -269,8 +269,7 @@ public class SidebarController {
             organizeDragView = childIndex >= 0 && childIndex < sidebarList.getChildCount()
                     ? sidebarList.getChildAt(childIndex) : null;
             organizeDragCard = organizeDragView;
-            if (organizeDragEntry != null && organizeDragEntry.type() != SidebarAdapter.EntryType.HEADER
-                    && organizeDragView != null) {
+            if (organizeDragEntry != null && organizeDragView != null) {
                 activity.handler.postDelayed(organizeLongPressRunnable, ViewConfiguration.getLongPressTimeout());
             }
             return true;
@@ -697,14 +696,9 @@ public class SidebarController {
             if (source == null || target == null) return false;
             if (source.type() == SidebarAdapter.EntryType.HEADER) {
                 String targetSection = target.section();
-                if (target.type() != SidebarAdapter.EntryType.HEADER) return false;
-                if (!source.section().equals(targetSection)) {
+                if (targetSection != null && !source.section().equals(targetSection)) {
                     sidebarAdapter.moveSection(source.section(), targetSection);
-                    List<String> order = new ArrayList<>();
-                    for (int i = 0; i < sidebarAdapter.getCount(); i++) {
-                        SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(i);
-                        if (entry.type() == SidebarAdapter.EntryType.HEADER && !order.contains(entry.section())) order.add(entry.section());
-                    }
+                    List<String> order = sidebarAdapter.getSectionOrder();
                     PreferenceManager.getDefaultSharedPreferences(activity).edit()
                             .putString("sidebar_section_order", AppGson.get().toJson(order)).apply();
                 }

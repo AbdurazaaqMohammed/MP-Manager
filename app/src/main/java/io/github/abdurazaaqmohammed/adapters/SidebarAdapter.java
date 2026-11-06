@@ -443,12 +443,17 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         return null;
     }
 
+    public List<String> getSectionOrder() {
+        return new ArrayList<>(sectionOrder);
+    }
+
     public void moveSection(String source, String target) {
         if (source == null || target == null || source.equals(target)) return;
         int from = sectionOrder.indexOf(source);
         int to = sectionOrder.indexOf(target);
         if (from < 0 || to < 0) return;
-        Collections.swap(sectionOrder, from, to);
+        String s = sectionOrder.remove(from);
+        sectionOrder.add(to, s);
         rebuild();
     }
 
