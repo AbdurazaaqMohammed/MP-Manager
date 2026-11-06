@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import java.io.InputStream;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -22,9 +23,12 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.LruCache;
 import android.util.TypedValue;
+import android.util.Xml;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.apk.axml.aXMLDecoder;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -81,6 +85,8 @@ public class FileIconLoader {
     private static final Object STATS_LOCK = new Object();
     private static final SyncCache<Drawable> iconCache = new SyncCache<>(300);
     private static final SyncCache<Drawable> badgeCache = new SyncCache<>(500);
+    /** Rendered thumbnails for entries inside archives (images + drawable XMLs). */
+    private static final SyncCache<Drawable> zipThumbCache = new SyncCache<>(400);
     private static final SyncCache<String> pkgNameCache = new SyncCache<>(500);
     private static final SyncCache<Long> mtimeCache = new SyncCache<>(400);
     private static final SyncCache<Long> sizeCache = new SyncCache<>(400);
@@ -203,6 +209,9 @@ public class FileIconLoader {
             fileDateView.setVisibility(View.INVISIBLE);
         } else {
             setupNonFolderIconView(zipEntry.getFullPath(), fileIconView);
+            // Replaces the static type icon with the real picture / rendered
+            // drawable once the entry is decoded (kept as-is on failure).
+            setupZipThumbnailAsync(zipEntry, fileIconView);
             fileDateView.setVisibility(View.VISIBLE);
             applyDateTextSize(fileDateView);
             StringBuilder sb = new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified()));
@@ -210,6 +219,133 @@ public class FileIconLoader {
                 sb.append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize()));
             }
             fileDateView.setText(sb);
+        }
+    }
+
+    /** Cap so a giant archive entry is never decoded into memory for a row icon. */
+    private static final long MAX_ZIP_THUMB_BYTES = 5 * 1024 * 1024;
+
+    /** Images, plus drawable/mipmap XMLs (vector & shape drawables render like pictures). */
+    private static boolean isZipThumbnailCandidate(String fullPath) {
+        if (fullPath == null || fullPath.endsWith("/")) return false;
+        String lower = fullPath.toLowerCase(Locale.ROOT);
+        String ext = FilenameUtils.getExtension(lower);
+        String dot = ext == null || ext.isEmpty() ? "" : "." + ext;
+        if (FileUtils.matchExt(dot, FileUtils.IMAGE_EXTS)) return true;
+        return ".xml".equals(dot) && (lower.contains("/drawable") || lower.contains("/mipmap"));
+    }
+
+    /**
+     * Loads a real thumbnail for an archive entry: images are decoded straight
+     * from the entry stream; drawable XMLs (binary AXML inside APKs or plain
+     * text XML) are inflated into a Drawable and rendered. Results are cached
+     * per archive+entry+archive-mtime, including the fallback icon on failure,
+     * so scrolling never re-decodes.
+     */
+    public void setupZipThumbnailAsync(ZipEntryInfo zipEntry, ImageView fileIconView) {
+        if (zipEntry == null || fileIconView == null) return;
+        String fullPath = zipEntry.getFullPath();
+        File zip = zipEntry.getZipFile();
+        if (fullPath == null || zip == null || !isZipThumbnailCandidate(fullPath)) {
+            fileIconView.setTag(null);
+            return;
+        }
+        if (zipEntry.getSize() <= 0 || zipEntry.getSize() > MAX_ZIP_THUMB_BYTES) {
+            fileIconView.setTag(null);
+            return;
+        }
+        String key = "zip:" + zip.getAbsolutePath() + "!" + fullPath + ":" + zip.lastModified();
+        Drawable cached = zipThumbCache.get(key);
+        if (cached != null) {
+            fileIconView.setTag(null);
+            fileIconView.setImageDrawable(cached);
+            return;
+        }
+        fileIconView.setTag(key);
+        iconLoaderService.execute(() -> {
+            if (!key.equals(fileIconView.getTag())) return;
+            Drawable result = loadZipEntryDrawable(zip, fullPath);
+            if (result == null) result = cachedImageIcon;
+            final Drawable finalResult = result;
+            zipThumbCache.put(key, finalResult);
+            context.runOnUiThread(() -> {
+                if (key.equals(fileIconView.getTag())) fileIconView.setImageDrawable(finalResult);
+            });
+        });
+    }
+
+    private Drawable loadZipEntryDrawable(File zip, String fullPath) {
+        String lower = fullPath.toLowerCase(Locale.ROOT);
+        String ext = "." + FilenameUtils.getExtension(lower);
+        try {
+            if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+                Bitmap bm = decodeZipBitmap(zip, fullPath);
+                return bm != null ? new BitmapDrawable(context.getResources(), bm) : null;
+            }
+            // drawable / mipmap xml: inflate and render
+            byte[] data = readZipEntry(zip, fullPath);
+            if (data == null || data.length == 0) return null;
+            String xml;
+            if (data.length >= 2 && data[0] == 0x03 && data[1] == 0x00) {
+                // Binary AXML (compiled resource inside an APK)
+                xml = new aXMLDecoder(new java.io.ByteArrayInputStream(data)).decodeAsString();
+            } else {
+                xml = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+                if (!xml.contains("<")) return null;
+            }
+            org.xmlpull.v1.XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(new java.io.StringReader(xml));
+            int type = parser.next();
+            while (type != org.xmlpull.v1.XmlPullParser.START_TAG
+                    && type != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                type = parser.next();
+            }
+            if (type != org.xmlpull.v1.XmlPullParser.START_TAG) return null;
+            // Vectors/shapes inflate with the app resources + theme so ?attr
+            // references resolve; entries referencing APK-internal @color/@dimen
+            // values still fail here and keep the fallback icon.
+            return Drawable.createFromXml(context.getResources(), parser, context.getTheme());
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static byte[] readZipEntry(File zip, String entryPath) {
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        try (InputStream in = ArchiveBrowseUtil.openEntry(zip, entryPath)) {
+            byte[] buf = new byte[16 * 1024];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                if (baos.size() + n > MAX_ZIP_THUMB_BYTES) return null;
+                baos.write(buf, 0, n);
+            }
+        } catch (Throwable t) {
+            return null;
+        }
+        return baos.toByteArray();
+    }
+
+    private static Bitmap decodeZipBitmap(File zip, String entryPath) {
+        try (InputStream in = ArchiveBrowseUtil.openEntry(zip, entryPath)) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(in, null, options);
+            if (options.outWidth <= 0 || options.outHeight <= 0) return null;
+            int width = options.outWidth;
+            int height = options.outHeight;
+            int scale = 1;
+            while (width / 2 >= 128 && height / 2 >= 128) {
+                width /= 2;
+                height /= 2;
+                scale *= 2;
+            }
+            try (InputStream in2 = ArchiveBrowseUtil.openEntry(zip, entryPath)) {
+                options.inSampleSize = scale;
+                options.inJustDecodeBounds = false;
+                return BitmapFactory.decodeStream(in2, null, options);
+            }
+        } catch (Throwable t) {
+            return null;
         }
     }
 
