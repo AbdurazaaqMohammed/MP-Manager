@@ -99,7 +99,7 @@ public final class FlutterSslPatcher {
             return new PatchResult(false, -1, "Machine: " + machine, "Unsupported architecture");
         }
 
-        byte[] fileBytes = FileUtils.readAllBytes(libFile);
+        byte[] fileBytes = readFully(libFile);
 
         // Check if already patched
         for (long off : findSequence(fileBytes, patchOpcodes)) {
@@ -198,5 +198,20 @@ public final class FlutterSslPatcher {
             }
         }
         return results;
+    }
+
+    private static byte[] readFully(File file) throws IOException {
+        long len = file.length();
+        if (len > 50L * 1024 * 1024) throw new IOException("Library file too large");
+        byte[] bytes = new byte[(int) len];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            int read = 0;
+            while (read < bytes.length) {
+                int n = fis.read(bytes, read, bytes.length - read);
+                if (n < 0) break;
+                read += n;
+            }
+        }
+        return bytes;
     }
 }

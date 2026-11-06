@@ -117,6 +117,9 @@ public final class DartStringsExtractor {
         for (DartStringItem item : items) {
             sb.append("[").append(item.category).append("] ").append(item.text).append("\n");
         }
-        FileUtils.write(outputFile, sb.toString().getBytes(StandardCharsets.UTF_8));
+        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile)) {
+            fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+            fos.flush();
+        }
     }
 }
