@@ -21,8 +21,8 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.multidex.BuildConfig;
 
+import io.github.abdurazaaqmohammed.MPManager.BuildConfig;
 import io.github.ratul.topactivity.App;
 
 public class ClipboardActivity extends AppCompatActivity {
