@@ -218,6 +218,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Generation per pane: a stale background listing never overwrites a newer pane. */
     private volatile long paneLoadGen1;
     private volatile long paneLoadGen2;
+    private String pendingDirToLoad;
 
     public ActivityResultLauncher<String> permissionLauncher() {
         return requestPermissionLauncher;
@@ -469,13 +470,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
         }
         else {
-            boolean pane1 = lastPaneSelected == 1;
             if (requestCode == 11 && resultCode == RESULT_OK) {
                 String dirToLoad = data.getStringExtra("dirToLoad");
-                if (dirToLoad != null) loadFolderInPane(new File(dirToLoad), pane1);
-                else {
-                    Uri path = data.getData();
-                    if (path != null) loadFolderInPane(new File(path.toString()), pane1);
+                if (dirToLoad == null && data.getData() != null) {
+                    dirToLoad = data.getData().toString();
+                }
+                if (dirToLoad != null) {
+                    pendingDirToLoad = dirToLoad;
                 }
             } else if(requestCode == 757 || resultCode == 757) {
                 if (data == null || data.getData() == null) return;
@@ -1660,72 +1661,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     else if (adapter.isSearchResultsMode()) {
                         clearSearchResults(adapter.pane1);
                     } else {
-                        String s = adapter.currentZipPath;
-                        if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
-                            char[] chars = s.toCharArray();
-                            int i = 0;
-                            for(char c : chars) if (c == File.separatorChar) i++;
-                            boolean inOneLevelInZip = i < 2;
-                            String parentZipPath = inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1));
-                            String clean = s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
-                            int slash = clean.lastIndexOf('/');
-                            String exitedName = slash >= 0 ? clean.substring(slash + 1) : clean;
-                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), parentZipPath, adapter.pane1, true);
-                            if (!exitedName.isEmpty()) focusAndBlinkItemTwice(adapter.pane1, exitedName);
-                        } else if (adapter.isInZip) {
-                            File zipFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
-                            if (zipFile != null && isStagedArchive(zipFile) && navigateBack(adapter.pane1)) {
-                                return;
-                            }
-                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                            File f = new File(path).getParentFile();
-                            final String exitedName = zipFile != null ? zipFile.getName() : new File(path).getName();
-                            final boolean p1 = lastPaneSelected == 1;
-                            if (f != null && (f.canRead() || canListViaRoot(f))) {
-                                loadFolderInPaneAsync(f, p1, true, () -> focusAndBlinkItemTwice(p1, exitedName));
-                            } else if (isBackPressedToExit) {
-                                handler.removeCallbacks(resetExitPrompt);
-                                finishAffinity();
-                            } else {
-                                isBackPressedToExit = true;
-                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                handler.postDelayed(resetExitPrompt, 2000);
-                            }
-                        } else {
-                            File paneFolder = adapter.pane1 ? pane1Folder : pane2Folder;
-                            if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(paneFolder)) {
-                                io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(this, paneFolder, adapter.pane1);
-                                File target = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(paneFolder);
-                                if (target != null && (target.canRead() || canListViaRoot(target))) {
-                                    final String exitedName = paneFolder.getName();
-                                    loadFolderInPaneAsync(target, adapter.pane1, true, () -> focusAndBlinkItemTwice(adapter.pane1, exitedName));
-                                    return;
-                                }
-                            }
-                            if (SafFs.isSaf(paneFolder)) {
-                                File parent = paneFolder.getParentFile();
-                                if (parent != null && !parent.equals(paneFolder)) {
-                                    final String exitedName = paneFolder.getName();
-                                    loadFolderInPaneAsync(parent, adapter.pane1, true, () -> focusAndBlinkItemTwice(adapter.pane1, exitedName));
-                                } else if (isBackPressedToExit) {
-                                    handler.removeCallbacks(resetExitPrompt);
-                                    finishAffinity();
-                                } else {
-                                    isBackPressedToExit = true;
-                                    Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                    handler.postDelayed(resetExitPrompt, 2000);
-                                }
-                                return;
-                            }
-                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                            File currentFile = new File(path);
-                            File f = currentFile.getParentFile();
-                            while (f != null && !f.exists() && !canListViaRoot(f)) f = f.getParentFile();
-                            if (f != null && (f.canRead() || canListViaRoot(f))) {
-                                final String exitedName = currentFile.getName();
-                                final boolean p1 = lastPaneSelected == 1;
-                                loadFolderInPaneAsync(f, p1, true, () -> focusAndBlinkItemTwice(p1, exitedName));
-                            } else if (isBackPressedToExit) {
+                        boolean handled = adapter.goUp();
+                        if (!handled) {
+                            if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
                             } else {
@@ -3253,6 +3191,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // preserving scroll position.
         try {
             refreshAllPanes();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (pendingDirToLoad != null) {
+                String toLoad = pendingDirToLoad;
+                pendingDirToLoad = null;
+                boolean p1 = lastPaneSelected == 1;
+                setSelectedPane(p1 ? 1 : 2);
+                loadFolderInPaneAsync(new File(toLoad), p1, true);
+            }
         } catch (Exception ignored) {
         }
         // A provider location picked in the Documents providers screen. Handled

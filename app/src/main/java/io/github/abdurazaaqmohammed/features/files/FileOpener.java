@@ -1618,6 +1618,106 @@ public class FileOpener {
         }).start();
     }
 
+    public void shareMixedFilesAndFolders(List<File> folders, List<File> plainFiles) {
+        if (folders == null || folders.isEmpty()) return;
+        String name = folders.size() == 1
+                ? folders.get(0).getName()
+                : (folders.get(0).getParentFile() != null ? folders.get(0).getParentFile().getName() : folders.get(0).getName());
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.share_zip)
+                .setMessage(context.getString(R.string.confirm_share_zip, name))
+                .setPositiveButton(R.string.share, (d, w) -> doShareMixedFilesAndFolders(folders, plainFiles, name))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doShareMixedFilesAndFolders(List<File> folders, List<File> plainFiles, String baseName) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.getString(R.string.compressing));
+        pm.show();
+        new Thread(() -> {
+            File zipFile = null;
+            File stagedDir = null;
+            try {
+                File cacheDir = new File(context.getCacheDir(), "shared_zips");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                File[] existing = cacheDir.listFiles();
+                if (existing != null) {
+                    long cutoff = System.currentTimeMillis() - (60 * 60 * 1000L);
+                    for (File f : existing) {
+                        if (f.lastModified() < cutoff) FileUtils.deleteTree(f, null);
+                    }
+                }
+                zipFile = new File(cacheDir, (baseName != null && !baseName.isEmpty() ? baseName : "archive") + ".zip");
+                if (zipFile.exists()) zipFile.delete();
+
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.DEFLATE);
+                params.setCompressionLevel(CompressionLevel.NORMAL);
+                try (ZipFile zf = new ZipFile(zipFile)) {
+                    for (File f : folders) {
+                        File source = f;
+                        if (RootStaging.needsStaging(context, f)) {
+                            if (stagedDir == null) {
+                                stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
+                                stagedDir.mkdirs();
+                            }
+                            source = new File(stagedDir, f.getName());
+                            AccessManager.stageTree(context, f.getAbsolutePath(), source);
+                        }
+                        if (source.isDirectory()) zf.addFolder(source, params);
+                        else zf.addFile(source, params);
+                    }
+                }
+
+                List<Uri> uris = new ArrayList<>();
+                uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", zipFile));
+
+                if (plainFiles != null) {
+                    for (File sf : plainFiles) {
+                        File readableFile = sf;
+                        if (SafFs.isSaf(sf) || !(sf.exists() && sf.canRead() && appReadable(sf))) {
+                            if (AccessManager.fileOpsOn(context)) {
+                                readableFile = RootStaging.stageForRead(context, sf.getAbsolutePath());
+                            }
+                        }
+                        if (readableFile != null && readableFile.exists()) {
+                            try {
+                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readableFile);
+                                uris.add(uri);
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                }
+
+                final File finalZip = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                        intent.setType("*/*");
+                        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, new ArrayList<>(uris));
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + uris.size() + " files"));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                final File fz = zipFile;
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (fz != null && fz.exists()) fz.delete();
+                    new ErrorUtil(context).showError(e);
+                });
+            } finally {
+                if (stagedDir != null) {
+                    FileUtils.deleteTree(stagedDir, null);
+                }
+            }
+        }).start();
+    }
+
     public void shareZipFolderAsZip(ZipEntryInfo entry) {
         if (entry == null) return;
         new MaterialAlertDialogBuilder(context)

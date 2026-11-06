@@ -151,15 +151,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final String upZipPath;
 
     /** Parent folder / parent archive location the ".." row navigates to. */
-    public void goUp() {
+    public boolean goUp() {
         context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
         if (isSearchResultsMode) {
             context.clearSearchResults(pane1);
-            return;
+            return true;
         }
         if (isInZip) {
-            if (upZipFile == null) return;
+            if (upZipFile == null) return false;
             if (upZipPath == null) {
                 final String exitedName = upZipFile.getName();
                 context.leaveArchive(upZipFile, pane1);
@@ -172,7 +172,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 context.loadZipFolderInPane(upZipFile, upZipPath, pane1, true);
                 if (!exitedName.isEmpty()) context.focusAndBlinkItemTwice(pane1, exitedName);
             }
-            return;
+            return true;
         }
         File current = pane1 ? context.pane1Folder : context.pane2Folder;
         File target = upFile;
@@ -181,15 +181,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             File resolved = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
         }
-        if (target == null) return;
-        if (target.equals(context.pane1Folder) && pane1) return;
-        if (target.equals(context.pane2Folder) && !pane1) return;
+        if (target == null) return false;
+        if (current != null && target.equals(current)) return false;
+        if (target.equals(context.pane1Folder) && pane1 && (current == null || target.equals(current))) return false;
+        if (target.equals(context.pane2Folder) && !pane1 && (current == null || target.equals(current))) return false;
         final String exitedName = current != null ? current.getName() : null;
         context.loadFolderInPaneAsync(target, pane1, true, () -> {
             if (exitedName != null) {
                 context.focusAndBlinkItemTwice(pane1, exitedName);
             }
         });
+        return true;
     }
 
     /** True when the row at {@code position} is the synthetic parent entry. */
@@ -1293,21 +1295,16 @@ final View.OnClickListener originalClickListener;
                                                     shareFiles.add(f);
                                                 }
                                             }
-                                            boolean allDirs = !shareFiles.isEmpty();
+                                            List<File> folders = new ArrayList<>();
+                                            List<File> plainFiles = new ArrayList<>();
                                             for (File f : shareFiles) {
-                                                if (!f.isDirectory()) {
-                                                    allDirs = false;
-                                                    break;
-                                                }
+                                                if (f.isDirectory()) folders.add(f);
+                                                else plainFiles.add(f);
                                             }
-                                            if (allDirs) {
-                                                if (shareFiles.size() == 1) fileOpener.shareFolderAsZip(shareFiles.get(0));
-                                                else fileOpener.shareFoldersAsZip(shareFiles);
-                                            } else {
-                                                List<File> plainFiles = new ArrayList<>();
-                                                for (File f : shareFiles) {
-                                                    if (!f.isDirectory()) plainFiles.add(f);
-                                                }
+                                            if (!folders.isEmpty() && plainFiles.isEmpty()) {
+                                                if (folders.size() == 1) fileOpener.shareFolderAsZip(folders.get(0));
+                                                else fileOpener.shareFoldersAsZip(folders);
+                                            } else if (folders.isEmpty() && !plainFiles.isEmpty()) {
                                                 if (plainFiles.size() == 1) {
                                                     File only = plainFiles.get(0);
                                                     fileOpener.withReadableCopy(only, readable -> {
@@ -1339,6 +1336,8 @@ final View.OnClickListener originalClickListener;
                                                         });
                                                     }
                                                 }
+                                            } else if (!folders.isEmpty() && !plainFiles.isEmpty()) {
+                                                fileOpener.shareMixedFilesAndFolders(folders, plainFiles);
                                             }
                                         } else if (file != null && file.isDirectory()) {
                                             fileOpener.shareFolderAsZip(file);

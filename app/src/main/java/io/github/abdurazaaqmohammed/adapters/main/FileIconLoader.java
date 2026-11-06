@@ -782,22 +782,6 @@ public class FileIconLoader {
             fileIconView.setImageDrawable(cachedElfIcon);
             return;
         }
-        if (ext.isEmpty() && zipEntry != null && zipEntry.getZipFile() != null) {
-            fileIconView.setImageDrawable(cachedFileIcon);
-            fileIconView.setTag(path);
-            iconLoaderService.execute(() -> {
-                if (!path.equals(fileIconView.getTag())) return;
-                try {
-                    if (io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.isElfEntry(zipEntry.getZipFile(), path)) {
-                        iconMemo.put(path, cachedElfIcon);
-                        context.runOnUiThread(() -> {
-                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedElfIcon);
-                        });
-                    }
-                } catch (Exception ignored) {}
-            });
-            return;
-        }
         setupNonFolderIconView(path, fileIconView);
     }
 
