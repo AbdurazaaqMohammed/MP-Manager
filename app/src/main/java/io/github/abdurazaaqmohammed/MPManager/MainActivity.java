@@ -48,11 +48,14 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+
+import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
+import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.data.prefs.PaneCache;
 import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
@@ -68,6 +71,7 @@ import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
 import io.github.abdurazaaqmohammed.features.files.RightMenuController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
+import io.github.abdurazaaqmohammed.tools.LogcatService;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.StartupPrivileges;
@@ -92,7 +96,6 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.compile.BuildOptions;
 import com.reandroid.apkeditor.compile.Builder;
-import com.reandroid.utils.StringsUtil;
 import com.reandroid.utils.io.FileUtil;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -333,7 +336,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                     || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                     || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                         }
-                        io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(this);
+                        ListPrefs lp = new ListPrefs(this);
                         String dirPath = dir.getAbsolutePath();
                         File[] arr = media.toArray(new File[0]);
                         FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
@@ -960,8 +963,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // Logcat capture is opt-in at app start; opening the Logcat screen
         // always starts it regardless of this preference.
         if (PreferenceManager.getDefaultSharedPreferences(this)
-                .getBoolean(io.github.abdurazaaqmohammed.tools.LogcatService.PREF_AUTO_START, false)) {
-            io.github.abdurazaaqmohammed.tools.LogcatService.start(this);
+                .getBoolean(LogcatService.PREF_AUTO_START, false)) {
+            LogcatService.start(this);
         }
         if ("always".equals(PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("pref_folder_size_mode", "archive"))) {
@@ -1818,13 +1821,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         saveCurrentPaneScroll(pane1);
         final int[] saved = getSavedScrollForLocation(pane1, "saf:" + dir.getAbsolutePath());
         listingExecutor.execute(() -> {
-            final java.util.List<SafFile> children = SafFs.children(dir);
+            final List<SafFile> children = SafFs.children(dir);
             handler.post(() -> {
                 try {
                     if (isFinishing() || isDestroyed()) return;
                     if (gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
                     if (children == null) {
-                        new ErrorUtil(this).showError(new java.io.IOException(getString(R.string.docs_error)));
+                        new ErrorUtil(this).showError(new IOException(getString(R.string.docs_error)));
                         return;
                     }
                     bindSafFolder(dir, children, pane1, addToHistory);
@@ -1838,7 +1841,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         });
     }
 
-    private void bindSafFolder(SafFile folder, java.util.List<SafFile> children,
+    private void bindSafFolder(SafFile folder, List<SafFile> children,
                                boolean pane1, boolean addToHistory) {
         // The SAF pane uses the regular pane adapter: identical rows, the same
         // long-press menu and the same multi-select machinery. The documents
@@ -2096,7 +2099,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-        File parent = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(folder);
+        File parent = BootInspectManager.getParentOrImageOrigin(folder);
         if (parent == null) parent = folder;
         MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
         pane.setAdapter(adapter);

@@ -3,11 +3,14 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.media.MediaScannerConnection;
+import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.widget.EditText;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.exifinterface.media.ExifInterface;
+
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -23,6 +26,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -31,12 +36,19 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
+import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -47,14 +59,12 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.RootStaging;
 
 public class FilePropertiesDialog {
 
@@ -197,8 +207,8 @@ public class FilePropertiesDialog {
                     if (m <= 0 && isImage) {
                         try {
                             String path = resolveAccessiblePath(file.getAbsolutePath());
-                            androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(path);
-                            String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME);
+                            ExifInterface exif = new ExifInterface(path);
+                            String dt = exif.getAttribute(ExifInterface.TAG_DATETIME);
                             m = parseExifDate(dt);
                         } catch (Exception ignored) {}
                     }
@@ -228,8 +238,8 @@ public class FilePropertiesDialog {
                 if (sampleImg != null) {
                     try {
                         String samplePath = resolveAccessiblePath(sampleImg.getAbsolutePath());
-                        androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(samplePath);
-                        String dtOriginal = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+                        ExifInterface exif = new ExifInterface(samplePath);
+                        String dtOriginal = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
                         if (!TextUtils.isEmpty(dtOriginal)) {
                             long millis = parseExifDate(dtOriginal);
                             if (millis > 0) {
@@ -304,7 +314,7 @@ public class FilePropertiesDialog {
                 }
                 if (numeric == null || numeric.isEmpty()) {
                     try {
-                        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(
                                 Runtime.getRuntime().exec(new String[]{"stat", "-c", "%a", file.getAbsolutePath()}).getInputStream()));
                         numeric = reader.readLine();
                         if (numeric != null) numeric = numeric.trim();
@@ -312,7 +322,7 @@ public class FilePropertiesDialog {
                 }
                 if (ownerStr == null || ownerStr.isEmpty()) {
                     try {
-                        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(
                                 Runtime.getRuntime().exec(new String[]{"stat", "-c", "%U:%G", file.getAbsolutePath()}).getInputStream()));
                         ownerStr = reader.readLine();
                         if (ownerStr != null) ownerStr = ownerStr.trim();
@@ -348,7 +358,7 @@ public class FilePropertiesDialog {
             String currentOwner = rm.getOwner(file.getAbsolutePath());
             if (currentOwner == null || currentOwner.isEmpty()) currentOwner = "root:root";
             File parent = file.getParentFile();
-            java.util.LinkedHashSet<String> candidateOwners = new java.util.LinkedHashSet<>();
+            LinkedHashSet<String> candidateOwners = new LinkedHashSet<>();
             candidateOwners.add(currentOwner);
 
             if (parent != null) {
@@ -500,8 +510,8 @@ public class FilePropertiesDialog {
         if (files == null || files.isEmpty()) return;
         File firstFile = files.get(0);
         long currentMtime = lastKnownMtime(firstFile);
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
-        String initialText = sdf.format(new java.util.Date(currentMtime));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        String initialText = sdf.format(new Date(currentMtime));
 
         TextInputLayout box = UiFields.box(context, null);
         EditText input = UiFields.field(box, InputType.TYPE_CLASS_DATETIME);
@@ -525,7 +535,7 @@ public class FilePropertiesDialog {
             new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
                 Calendar res = Calendar.getInstance();
                 res.set(y, m, d, h, min, 0);
-                input.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+                input.setText(sdf.format(new Date(res.getTimeInMillis())));
             }, hour, minute, true).show(), year, month, day).show();
         });
 
@@ -568,9 +578,9 @@ public class FilePropertiesDialog {
         };
         for (String pattern : patterns) {
             try {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(pattern, java.util.Locale.US);
+                SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);
                 sdf.setLenient(false);
-                java.util.Date date = sdf.parse(str);
+                Date date = sdf.parse(str);
                 if (date != null) return date.getTime();
             } catch (Exception ignored) {}
         }
@@ -600,8 +610,8 @@ public class FilePropertiesDialog {
             for (File file : files) {
                 if (FileUtils.matchExt('.' + FilenameUtils.getExtension(file.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
                     try {
-                        androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
-                        exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME, formatExifDate(newTime));
+                        ExifInterface exif = new ExifInterface(file.getAbsolutePath());
+                        exif.setAttribute(ExifInterface.TAG_DATETIME, formatExifDate(newTime));
                         exif.saveAttributes();
                     } catch (Exception ignored) {}
                 }
@@ -630,8 +640,8 @@ public class FilePropertiesDialog {
         for (File f : files) {
             if (f.isFile() && FileUtils.matchExt('.' + FilenameUtils.getExtension(f.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
                 try {
-                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
-                    String dt = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL);
+                    ExifInterface exif = new ExifInterface(f.getAbsolutePath());
+                    String dt = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
                     current = parseExifDate(dt);
                     if (current > 0) break;
                 } catch (Exception ignored) {}
@@ -639,8 +649,8 @@ public class FilePropertiesDialog {
         }
         if (current <= 0) current = System.currentTimeMillis();
 
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
-        String initialText = sdf.format(new java.util.Date(current));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        String initialText = sdf.format(new Date(current));
 
         TextInputLayout box = UiFields.box(context, null);
         EditText input = UiFields.field(box, InputType.TYPE_CLASS_DATETIME);
@@ -665,7 +675,7 @@ public class FilePropertiesDialog {
             new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
                 Calendar res = Calendar.getInstance();
                 res.set(y, m, d, h, min, 0);
-                input.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+                input.setText(sdf.format(new Date(res.getTimeInMillis())));
             }, hour, minute, true).show(), year, month, day).show();
         });
 
@@ -712,14 +722,14 @@ public class FilePropertiesDialog {
                         } catch (Exception ignored) {}
                     }
                     String accessiblePath = resolveAccessiblePath(file.getAbsolutePath());
-                    androidx.exifinterface.media.ExifInterface exif = new androidx.exifinterface.media.ExifInterface(accessiblePath);
+                    ExifInterface exif = new ExifInterface(accessiblePath);
                     if (millis > 0) {
                         String formatted = formatExifDate(millis);
-                        exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, formatted);
-                        exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, formatted);
+                        exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, formatted);
+                        exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, formatted);
                     } else {
-                        exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL, null);
-                        exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_DIGITIZED, null);
+                        exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, null);
+                        exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, null);
                     }
                     exif.saveAttributes();
                     if (originalMtime > 0) {
@@ -751,10 +761,10 @@ public class FilePropertiesDialog {
     }
 
     private static long parseExifDate(String exifDate) {
-        if (android.text.TextUtils.isEmpty(exifDate)) return -1;
+        if (TextUtils.isEmpty(exifDate)) return -1;
         try {
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
-            java.util.Date d = sdf.parse(exifDate.trim());
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+            Date d = sdf.parse(exifDate.trim());
             return d != null ? d.getTime() : -1;
         } catch (Exception e) {
             return -1;
@@ -762,13 +772,13 @@ public class FilePropertiesDialog {
     }
 
     private static String formatExifDate(long millis) {
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
-        return sdf.format(new java.util.Date(millis));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+        return sdf.format(new Date(millis));
     }
 
     private static String formatFullTimestamp(long millis) {
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
-        return sdf.format(new java.util.Date(millis));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        return sdf.format(new Date(millis));
     }
 
     private static String resolveAccessiblePath(String path) {
@@ -939,12 +949,12 @@ public class FilePropertiesDialog {
 
     private String getSymlinkTarget(File file) {
         if (file == null) return null;
-        if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile sf) {
+        if (file instanceof ShizukuFile sf) {
             if (sf.isLink()) {
                 try {
-                    if (io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()) {
-                        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
-                                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(
+                    if (ShizukuShell.isGranted()) {
+                        ShizukuShell.Result res =
+                                ShizukuShell.exec(
                                         "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
                         if (res.success && res.stdout != null && !res.stdout.trim().isEmpty()) {
                             return res.stdout.trim();
@@ -953,11 +963,11 @@ public class FilePropertiesDialog {
                 } catch (Exception ignored) {}
             }
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                java.nio.file.Path p = file.toPath();
-                if (java.nio.file.Files.isSymbolicLink(p)) {
-                    return java.nio.file.Files.readSymbolicLink(p).toString();
+                Path p = file.toPath();
+                if (Files.isSymbolicLink(p)) {
+                    return Files.readSymbolicLink(p).toString();
                 }
             } catch (Exception ignored) {
             }
@@ -995,11 +1005,11 @@ public class FilePropertiesDialog {
                     if (newTarget.isEmpty() || newTarget.equals(currentTarget)) return;
                     new Thread(() -> {
                         boolean updated = false;
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             try {
-                                java.nio.file.Path p = file.toPath();
-                                java.nio.file.Files.deleteIfExists(p);
-                                java.nio.file.Files.createSymbolicLink(p, java.nio.file.Paths.get(newTarget));
+                                Path p = file.toPath();
+                                Files.deleteIfExists(p);
+                                Files.createSymbolicLink(p, Paths.get(newTarget));
                                 updated = true;
                             } catch (Exception ignored) {}
                         }
@@ -1018,10 +1028,10 @@ public class FilePropertiesDialog {
                         }
                         if (!updated) {
                             try {
-                                if (io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.isGranted()) {
+                                if (ShizukuShell.isGranted()) {
                                     String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
-                                    io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result res =
-                                            io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 10);
+                                    ShizukuShell.Result res =
+                                            ShizukuShell.exec(cmd, 10);
                                     if (res.success) {
                                         updated = true;
                                     }

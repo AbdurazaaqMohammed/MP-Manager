@@ -4,6 +4,8 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
@@ -20,6 +22,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
@@ -31,6 +34,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -148,12 +152,12 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
         Spinner levelSpinner = new Spinner(this);
         levelSpinner.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item, levelLabels()));
-        levelSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int pos, long id) {
+        levelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
                 minLevel = pos - 1; // index 0 = "All levels"
                 applyFilters();
             }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
         filterRow.addView(levelSpinner, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -169,8 +173,8 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
         // bursts they draw on top of each other. Kills the overlapping text.
         list.setItemAnimator(null);
         list.setAdapter(adapter);
-        list.addOnScrollListener(new androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
-            @Override public void onScrolled(@NonNull androidx.recyclerview.widget.RecyclerView rv, int dx, int dy) {
+        list.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 int last = layoutManager.findLastCompletelyVisibleItemPosition();
                 autoScroll = last < 0 || last >= adapter.getItemCount() - 2;
             }
@@ -411,15 +415,15 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
             return;
         }
         try {
-            android.content.pm.ShortcutManager sm = getSystemService(android.content.pm.ShortcutManager.class);
+            ShortcutManager sm = getSystemService(ShortcutManager.class);
             if (sm == null || !sm.isRequestPinShortcutSupported()) {
                 Extensions.showMessage(this, getString(R.string.logcat_shortcut_unsupported));
                 return;
             }
             Intent intent = new Intent(this, LogcatActivity.class);
             intent.setAction(Intent.ACTION_MAIN);
-            android.content.pm.ShortcutInfo info =
-                    new android.content.pm.ShortcutInfo.Builder(this, "logcat_viewer")
+            ShortcutInfo info =
+                    new ShortcutInfo.Builder(this, "logcat_viewer")
                             .setShortLabel(getString(R.string.sidebar_logcat))
                             .setIcon(Icon.createWithResource(this, R.drawable.terminal_24px))
                             .setIntent(intent)
@@ -475,7 +479,7 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
         return Math.round(v * getResources().getDisplayMetrics().density);
     }
 
-    private final class LogcatAdapter extends androidx.recyclerview.widget.RecyclerView.Adapter<LogcatAdapter.Holder> {
+    private final class LogcatAdapter extends RecyclerView.Adapter<LogcatAdapter.Holder> {
 
         @NonNull
         @Override
@@ -536,7 +540,7 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
             return tv;
         }
 
-        final class Holder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+        final class Holder extends RecyclerView.ViewHolder {
             final TextView time, level, tag, content;
             LogcatReader.LogLine currentLine;
 

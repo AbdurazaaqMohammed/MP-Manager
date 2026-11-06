@@ -15,11 +15,11 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.PopupMenu;
 
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.annotation.NonNull;
@@ -48,6 +48,9 @@ import com.google.gson.reflect.TypeToken;
 import android.net.Uri;
 
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
+import io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity;
+import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
+import io.github.abdurazaaqmohammed.tools.LogcatActivity;
 import io.github.abdurazaaqmohammed.utils.AppGson;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
@@ -600,13 +603,13 @@ public class SidebarController {
                 activity.showFtpClientDialog();
                 break;
             case "mcp_server":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.mcp.McpServerActivity.class));
+                activity.startActivity(new Intent(activity, McpServerActivity.class));
                 break;
             case "logcat":
                 // NEW_TASK + the activity's own taskAffinity give the viewer
                 // its own recents entry, so a home-screen shortcut and the
                 // in-app sidebar land in the same, separate task.
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.LogcatActivity.class)
+                activity.startActivity(new Intent(activity, LogcatActivity.class)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 break;
             case "wifi":
@@ -616,7 +619,7 @@ public class SidebarController {
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));
                 break;
             case "free_style":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity.class));
+                activity.startActivity(new Intent(activity, FreeStylePickerActivity.class));
                 break;
             case "color_picker":
                 activity.openColorPickerTool();
@@ -695,7 +698,7 @@ public class SidebarController {
                     ? null : event.getClipData().getItemAt(0).getText().toString();
             SidebarAdapter.SidebarEntry source = sidebarAdapter.findByPayload(payload);
             int dropPos = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
-            if (dropPos == android.widget.AdapterView.INVALID_POSITION) {
+            if (dropPos == AdapterView.INVALID_POSITION) {
                 int y = (int) event.getY();
                 for (int i = 0; i < sidebarList.getChildCount(); i++) {
                     View child = sidebarList.getChildAt(i);

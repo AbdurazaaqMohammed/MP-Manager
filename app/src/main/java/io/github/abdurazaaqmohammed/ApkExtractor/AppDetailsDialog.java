@@ -15,32 +15,24 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.ItemTouchHelper;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.AppRecyclerViewAdapter;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog;
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -247,7 +239,7 @@ public final class AppDetailsDialog {
                     if (sigParent != null) {
                         sigParent.setClickable(true);
                         sigParent.setBackgroundResource(getSelectableBackground(act));
-                        View.OnClickListener openSig = v -> io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog.show(act, new File(ai.filePath));
+                        View.OnClickListener openSig = v -> SignatureInfoDialog.show(act, new File(ai.filePath));
                         sigParent.setOnClickListener(openSig);
                         sigValue.setOnClickListener(openSig);
                     }
@@ -307,14 +299,14 @@ public final class AppDetailsDialog {
             }
             case "detail:target_sdk": {
                 if (ai.targetSdk > 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.targetSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.target_sdk), ApkInfoUtil.getAndroidVersionName(ai.targetSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;
             }
             case "detail:min_sdk": {
                 if (ai.minSdk >= 0) {
-                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), io.github.abdurazaaqmohammed.utils.ApkInfoUtil.getAndroidVersionName(ai.minSdk), null, false);
+                    TextView v = addRow(act, container, act.getString(R.string.min_sdk), ApkInfoUtil.getAndroidVersionName(ai.minSdk), null, false);
                     v.setOnLongClickListener(copy);
                 }
                 break;

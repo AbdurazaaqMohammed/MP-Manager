@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
@@ -1018,7 +1019,7 @@ public class MediaPlayerActivity extends BaseActivity implements
                                 || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                 || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                     }
-                    io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(this);
+                    ListPrefs lp = new ListPrefs(this);
                     String dirPath = dir.getAbsolutePath();
                     File[] arr = media.toArray(new File[0]);
                     FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));

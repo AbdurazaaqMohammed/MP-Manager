@@ -8,6 +8,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -15,6 +16,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
 import java.security.cert.X509Certificate;
@@ -156,7 +159,7 @@ public final class SignatureInfoDialog {
                 colonLabel.setTextSize(13f);
                 switchesRow.addView(colonLabel);
 
-                com.google.android.material.materialswitch.MaterialSwitch colonSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
+                MaterialSwitch colonSwitch = new MaterialSwitch(context);
                 colonSwitch.setChecked(true);
                 LinearLayout.LayoutParams colonParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 colonParams.setMarginStart(dp(context, 6));
@@ -168,13 +171,13 @@ public final class SignatureInfoDialog {
                 caseLabel.setTextSize(13f);
                 switchesRow.addView(caseLabel);
 
-                com.google.android.material.materialswitch.MaterialSwitch caseSwitch = new com.google.android.material.materialswitch.MaterialSwitch(context);
+                MaterialSwitch caseSwitch = new MaterialSwitch(context);
                 caseSwitch.setChecked(true);
                 LinearLayout.LayoutParams caseParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 caseParams.setMarginStart(dp(context, 6));
                 switchesRow.addView(caseSwitch, caseParams);
 
-                android.widget.CompoundButton.OnCheckedChangeListener switchListener = (buttonView, isChecked) -> {
+                CompoundButton.OnCheckedChangeListener switchListener = (buttonView, isChecked) -> {
                     boolean withColon = colonSwitch.isChecked();
                     boolean upper = caseSwitch.isChecked();
                     if (md5Val != null) md5Val.setText(formatHexCustom(rawMd5, withColon, upper));

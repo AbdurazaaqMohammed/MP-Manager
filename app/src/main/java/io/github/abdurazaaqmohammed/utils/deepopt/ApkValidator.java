@@ -7,9 +7,9 @@ import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apk.DexFileInputSource;
-import com.reandroid.app.AndroidManifest;
 import com.reandroid.arsc.array.ResValueMapArray;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
+import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValueMap;
 
@@ -83,7 +83,7 @@ public final class ApkValidator {
 
     private static void checkLive(ResourceTableIndex tableIndex, int resId, String what) throws IOException {
         if (resId == 0) return;
-        com.reandroid.arsc.model.ResourceEntry entry = tableIndex.byId(resId);
+        ResourceEntry entry = tableIndex.byId(resId);
         if (entry == null) return; // framework or unrelated package
         for (Entry config : entry) {
             if (config != null && !config.isNull()) return; // live
@@ -94,7 +94,7 @@ public final class ApkValidator {
 
     private static void verifyResources(ResourceTableIndex tableIndex) throws IOException {
         for (Integer id : tableIndex.byId.keySet()) {
-            com.reandroid.arsc.model.ResourceEntry resEntry = tableIndex.byId.get(id);
+            ResourceEntry resEntry = tableIndex.byId.get(id);
             for (Entry config : resEntry) {
                 if (config == null || config.isNull()) continue;
                 try {

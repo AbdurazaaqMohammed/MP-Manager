@@ -9,8 +9,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewParent;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -21,6 +19,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -654,7 +654,7 @@ public class BookmarksController {
         RecyclerView recyclerView = new RecyclerView(activity);
         recyclerView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(activity));
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setClipToPadding(false);
         int pad = (int) (12 * density);
         recyclerView.setPadding(pad, pad, pad, pad);
@@ -710,9 +710,9 @@ public class BookmarksController {
         ReorderAdapter reorderAdapter = new ReorderAdapter();
         recyclerView.setAdapter(reorderAdapter);
 
-        androidx.recyclerview.widget.ItemTouchHelper touchHelper = new androidx.recyclerview.widget.ItemTouchHelper(
-                new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
-                        androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+        ItemTouchHelper touchHelper = new ItemTouchHelper(
+                new ItemTouchHelper.SimpleCallback(
+                        ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
                     @Override
                     public boolean onMove(@NonNull RecyclerView rv,
                                           @NonNull RecyclerView.ViewHolder viewHolder,
@@ -743,7 +743,7 @@ public class BookmarksController {
                     @Override
                     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
                         super.onSelectedChanged(viewHolder, actionState);
-                        if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                        if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
                             viewHolder.itemView.setElevation(8f * density);
                         }
                     }

@@ -3,12 +3,26 @@ package io.github.abdurazaaqmohammed.core.ui.util;
 import android.R;
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.preference.PreferenceManager;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseDialog;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemePlugin;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.ui.ColorWheelView;
 
 import java.util.List;
 
@@ -64,8 +78,8 @@ public final class ThemeDialogs {
         String current = null;
         int currentColor = 0;
         try {
-            android.content.SharedPreferences prefs =
-                    androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+            SharedPreferences prefs =
+                    PreferenceManager.getDefaultSharedPreferences(context);
             current = prefs.getString(ThemeRegistry.ACCENT_PREF_KEY, null);
             currentColor = prefs.getInt(ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, 0);
         } catch (Exception ignored) {
@@ -81,8 +95,8 @@ public final class ThemeDialogs {
         }
         final List<Integer> historyFinal = history;
         final int[] selected = {checked};
-        com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+        MaterialAlertDialogBuilder builder =
+                new MaterialAlertDialogBuilder(context)
                         .setTitle("Accent color")
                         .setSingleChoiceItems(names, checked, (d, which) -> selected[0] = which)
                         .setPositiveButton(R.string.ok, (d, which) -> {
@@ -94,7 +108,7 @@ public final class ThemeDialogs {
                                 int color = historyFinal.get(selected[0] - 1);
                                 ThemeRegistry.pushAccentHistory(context, color);
                                 try {
-                                    androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                                    PreferenceManager.getDefaultSharedPreferences(context)
                                             .edit()
                                             .putString(ThemeRegistry.ACCENT_PREF_KEY, "custom")
                                             .putInt(ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, color)
@@ -106,18 +120,18 @@ public final class ThemeDialogs {
                         })
                         .setNegativeButton(R.string.cancel, null);
         // Color the radio labels with their swatches.
-        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        AlertDialog dialog = builder.create();
         dialog.show();
-        android.widget.ListView list = dialog.getListView();
+        ListView list = dialog.getListView();
         if (list != null) {
-            list.setOnHierarchyChangeListener(new android.view.ViewGroup.OnHierarchyChangeListener() {
+            list.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
                 @Override
-                public void onChildViewAdded(android.view.View parent, android.view.View child) {
+                public void onChildViewAdded(View parent, View child) {
                     tintRow(child, historyFinal, names.length);
                 }
 
                 @Override
-                public void onChildViewRemoved(android.view.View parent, android.view.View child) {
+                public void onChildViewRemoved(View parent, View child) {
                 }
             });
             // Rows already present at show-time.
@@ -127,13 +141,13 @@ public final class ThemeDialogs {
         }
     }
 
-    private static void tintRow(android.view.View child, List<Integer> history, int count) {
-        if (!(child instanceof android.view.ViewGroup)) return;
-        android.view.ViewGroup group = (android.view.ViewGroup) child;
+    private static void tintRow(View child, List<Integer> history, int count) {
+        if (!(child instanceof ViewGroup)) return;
+        ViewGroup group = (ViewGroup) child;
         for (int i = 0; i < group.getChildCount(); i++) {
-            android.view.View grand = group.getChildAt(i);
-            if (grand instanceof android.widget.TextView) {
-                android.widget.TextView text = (android.widget.TextView) grand;
+            View grand = group.getChildAt(i);
+            if (grand instanceof TextView) {
+                TextView text = (TextView) grand;
                 String value = String.valueOf(text.getText());
                 int index = -1;
                 for (int h = 0; h < history.size(); h++) {
@@ -151,7 +165,7 @@ public final class ThemeDialogs {
 
     private static void applyAccentMode(Context context, String mode) {
         try {
-            androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            PreferenceManager.getDefaultSharedPreferences(context)
                     .edit().putString(ThemeRegistry.ACCENT_PREF_KEY, mode).apply();
         } catch (Exception ignored) {
         }
@@ -168,7 +182,7 @@ public final class ThemeDialogs {
     private static void showCustomAccentPicker(final Context context) {
         final int initial;
         try {
-            initial = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            initial = PreferenceManager.getDefaultSharedPreferences(context)
                     .getInt(ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, 0xFF6750A4);
         } catch (Exception e) {
             return;
@@ -179,21 +193,21 @@ public final class ThemeDialogs {
         int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
         root.setPadding(pad, pad / 2, pad, 0);
 
-        io.github.abdurazaaqmohammed.ui.ColorWheelView wheel =
-                new io.github.abdurazaaqmohammed.ui.ColorWheelView(context);
+        ColorWheelView wheel =
+                new ColorWheelView(context);
         root.addView(wheel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (300 * context.getResources().getDisplayMetrics().density)));
 
         LinearLayout previewRow = new LinearLayout(context);
         previewRow.setOrientation(LinearLayout.HORIZONTAL);
-        previewRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        android.view.View previewSwatch = new android.view.View(context);
+        previewRow.setGravity(Gravity.CENTER_VERTICAL);
+        View previewSwatch = new View(context);
         LinearLayout.LayoutParams swatchParams = new LinearLayout.LayoutParams(
                 (int) (48 * context.getResources().getDisplayMetrics().density),
                 (int) (48 * context.getResources().getDisplayMetrics().density));
         swatchParams.rightMargin = pad / 2;
         previewRow.addView(previewSwatch, swatchParams);
-        final android.widget.EditText hexInput = new android.widget.EditText(context);
+        final EditText hexInput = new EditText(context);
         hexInput.setHint("#RRGGBB");
         hexInput.setSingleLine(true);
         previewRow.addView(hexInput, new LinearLayout.LayoutParams(
@@ -211,7 +225,7 @@ public final class ThemeDialogs {
             }
         };
         wheel.setListener(sync);
-        hexInput.addTextChangedListener(new android.text.TextWatcher() {
+        hexInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {
             }
@@ -232,19 +246,19 @@ public final class ThemeDialogs {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) {
+            public void afterTextChanged(Editable s) {
             }
         });
         wheel.setColor(initial);
 
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle("Custom color")
                 .setView(root)
                 .setPositiveButton(R.string.ok, (d, w) -> {
                     int color = chosen[0] | 0xFF000000;
                     ThemeRegistry.pushAccentHistory(context, color);
                     try {
-                        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                        PreferenceManager.getDefaultSharedPreferences(context)
                                 .edit()
                                 .putString(ThemeRegistry.ACCENT_PREF_KEY, "custom")
                                 .putInt(ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, color)

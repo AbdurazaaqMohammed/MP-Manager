@@ -7,6 +7,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.ShellProgress;
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuProcessFactory;
 import rikka.shizuku.ShizukuProvider;
@@ -147,12 +149,12 @@ public final class ShizukuShell {
     }
 
     /**
-     * @param progress receives {@link io.github.abdurazaaqmohammed.utils.ShellProgress}
+     * @param progress receives {@link ShellProgress}
      *                 markers from stdout while the command runs; marker lines are
      *                 stripped from {@link Result#stdout}
      */
     public static Result exec(String command, long timeoutSeconds,
-                              io.github.abdurazaaqmohammed.utils.ShellProgress.Listener progress) {
+                              ShellProgress.Listener progress) {
         if (!isGranted()) {
             Log.d(TAG, "exec: not granted, refusing: " + command);
             return new Result(false, "", "Shizuku not granted", -1);
@@ -284,12 +286,12 @@ public final class ShizukuShell {
     }
 
     private static Thread drain(InputStream is, StringBuilder sb,
-                                io.github.abdurazaaqmohammed.utils.ShellProgress.Listener progress) {
+                                ShellProgress.Listener progress) {
         Thread t = new Thread(() -> {
             try (BufferedReader r = new BufferedReader(new InputStreamReader(is))) {
                 String line;
                 while ((line = r.readLine()) != null) {
-                    if (progress != null && io.github.abdurazaaqmohammed.utils.ShellProgress
+                    if (progress != null && ShellProgress
                             .consume(line, progress)) {
                         continue;
                     }
@@ -311,7 +313,7 @@ public final class ShizukuShell {
      * Android/data streams through here instead, so the data crosses the binder
      * pipe once, in chunks, and never sits in the app's heap.
      */
-    public static final class Stream implements java.io.Closeable {
+    public static final class Stream implements Closeable {
         private final ShizukuRemoteProcess process;
         private final InputStream in;
         private final StringBuilder err = new StringBuilder();

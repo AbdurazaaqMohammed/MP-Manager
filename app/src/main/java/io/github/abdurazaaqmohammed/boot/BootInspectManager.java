@@ -1,8 +1,9 @@
 package io.github.abdurazaaqmohammed.boot;
 
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -10,6 +11,8 @@ import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
@@ -160,7 +163,7 @@ public class BootInspectManager {
         }
 
         // Changes were made — ask the user before overwriting the boot image
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle("Save Changes to Boot Image?")
                 .setMessage("Modifications were detected in the ramdisk. Do you want to repack and update '" + session.originalImg.getName() + "'?")
                 .setPositiveButton(R.string.yes, (dialog, which) -> {
@@ -187,8 +190,8 @@ public class BootInspectManager {
                         boolean renamed = session.originalImg.renameTo(bakFile);
                         if (!renamed) {
                             // Fallback copy if rename across mount points fails
-                            try (java.io.FileInputStream fis = new java.io.FileInputStream(session.originalImg);
-                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(bakFile)) {
+                            try (FileInputStream fis = new FileInputStream(session.originalImg);
+                                 FileOutputStream fos = new FileOutputStream(bakFile)) {
                                 byte[] buf = new byte[65536];
                                 int r;
                                 while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
@@ -200,8 +203,8 @@ public class BootInspectManager {
                     // Move or copy repacked temp image to original image path
                     boolean moved = tempOut.renameTo(session.originalImg);
                     if (!moved) {
-                        try (java.io.FileInputStream fis = new java.io.FileInputStream(tempOut);
-                             java.io.FileOutputStream fos = new java.io.FileOutputStream(session.originalImg)) {
+                        try (FileInputStream fis = new FileInputStream(tempOut);
+                             FileOutputStream fos = new FileOutputStream(session.originalImg)) {
                             byte[] buf = new byte[65536];
                             int r;
                             while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);

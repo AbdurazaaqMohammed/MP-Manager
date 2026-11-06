@@ -1,38 +1,75 @@
 package io.github.abdurazaaqmohammed.mcp;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
+import android.util.Base64;
 
+import androidx.core.content.FileProvider;
+import androidx.preference.PreferenceManager;
+
+import com.android.tools.smali.dexlib2.AccessFlags;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.dexlib2.iface.Field;
+import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
+import com.android.tools.smali.dexlib2.iface.reference.StringReference;
+import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
+import com.apk.axml.APKParser;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.reandroid.apk.ApkModule;
-import com.reandroid.archive.ByteInputSource;
-import com.reandroid.archive.InputSource;
+import com.reandroid.arsc.chunk.PackageBlock;
+import com.reandroid.arsc.chunk.TableBlock;
+import com.reandroid.arsc.chunk.TypeBlock;
+import com.reandroid.arsc.container.SpecTypePair;
+import com.reandroid.arsc.value.Entry;
+import com.reandroid.arsc.value.ValueType;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionLevel;
-import net.lingala.zip4j.model.enums.CompressionMethod;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.HashUtil;
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.SslUnpinning;
+import jadx.api.JadxArgs;
+import jadx.api.JadxDecompiler;
+import jadx.api.JavaClass;
 
 /**
  * MCP APK tools — the app's specialty. Wraps the same engines the GUI uses:
@@ -93,7 +130,7 @@ public final class McpApkTools {
             app.addProperty("package", info.packageName);
             app.addProperty("label", label);
             app.addProperty("version_name", info.versionName);
-            app.addProperty("version_code", android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P
+            app.addProperty("version_code", Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
                     ? info.getLongVersionCode() : info.versionCode);
             app.addProperty("apk_path", info.applicationInfo != null ? info.applicationInfo.sourceDir : null);
             apps.add(app);
@@ -117,7 +154,7 @@ public final class McpApkTools {
             throw new McpJson.McpToolException("Not an APK file: " + apk.getName());
         }
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setDataAndType(androidx.core.content.FileProvider.getUriForFile(ctx.context,
+        intent.setDataAndType(FileProvider.getUriForFile(ctx.context,
                 ctx.context.getPackageName() + ".provider", apk), "application/vnd.android.package-archive");
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
@@ -133,7 +170,7 @@ public final class McpApkTools {
     }
 
     private static boolean isApkFile(File file) {
-        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             return raf.readInt() == 0x504B0304;
         } catch (IOException e) {
             return false;
@@ -200,7 +237,7 @@ public final class McpApkTools {
     public JsonObject info(JsonObject args) throws McpJson.McpToolException {
         McpApkSessions.Session session = session(args);
         File apk = session.workApk;
-        com.apk.axml.APKParser parser = new com.apk.axml.APKParser();
+        APKParser parser = new APKParser();
         parser.parse(apk.getPath(), ctx.context);
         JsonObject result = new JsonObject();
         result.addProperty("session", session.id);
@@ -248,7 +285,7 @@ public final class McpApkTools {
 
     public JsonObject manifest(JsonObject args) throws McpJson.McpToolException {
         McpApkSessions.Session session = session(args);
-        com.apk.axml.APKParser parser = new com.apk.axml.APKParser();
+        APKParser parser = new APKParser();
         parser.parse(session.workApk.getPath(), ctx.context);
         JsonObject result = new JsonObject();
         result.addProperty("session", session.id);
@@ -303,7 +340,7 @@ public final class McpApkTools {
             if (isProbablyText(bytes)) {
                 result.addProperty("content", new String(bytes, StandardCharsets.UTF_8));
             } else {
-                result.addProperty("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP));
+                result.addProperty("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
                 result.addProperty("encoding", "base64");
             }
             return result;
@@ -321,7 +358,7 @@ public final class McpApkTools {
             throw new McpJson.McpToolException("Provide content (text) or base64");
         }
         byte[] bytes = base64 != null
-                ? android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                ? Base64.decode(base64, Base64.DEFAULT)
                 : text.getBytes(StandardCharsets.UTF_8);
         try {
             replaceEntry(session.workApk, entry, bytes);
@@ -394,15 +431,15 @@ public final class McpApkTools {
         }
         JsonArray strings = new JsonArray();
         try {
-            com.reandroid.arsc.chunk.TableBlock table = com.reandroid.arsc.chunk.TableBlock.load(arsc);
-            for (com.reandroid.arsc.chunk.PackageBlock pkg : table.listPackages()) {
-                for (com.reandroid.arsc.container.SpecTypePair spec : pkg.listSpecTypePairs()) {
+            TableBlock table = TableBlock.load(arsc);
+            for (PackageBlock pkg : table.listPackages()) {
+                for (SpecTypePair spec : pkg.listSpecTypePairs()) {
                     if (!"string".equals(spec.getTypeName())) continue;
-                    java.util.Iterator<com.reandroid.arsc.chunk.TypeBlock> blocks = spec.getTypeBlocks();
+                    Iterator<TypeBlock> blocks = spec.getTypeBlocks();
                     while (blocks.hasNext()) {
-                        com.reandroid.arsc.chunk.TypeBlock tb = blocks.next();
+                        TypeBlock tb = blocks.next();
                         String config = tb.getQualifiers();
-                        for (com.reandroid.arsc.value.Entry e : tb.listEntries(true)) {
+                        for (Entry e : tb.listEntries(true)) {
                             if (e == null || e.isNull()) continue;
                             String name;
                             try {
@@ -453,16 +490,16 @@ public final class McpApkTools {
         }
         int changed = 0;
         try {
-            com.reandroid.arsc.chunk.TableBlock table = com.reandroid.arsc.chunk.TableBlock.load(arsc);
-            for (com.reandroid.arsc.chunk.PackageBlock pkg : table.listPackages()) {
-                for (com.reandroid.arsc.container.SpecTypePair spec : pkg.listSpecTypePairs()) {
+            TableBlock table = TableBlock.load(arsc);
+            for (PackageBlock pkg : table.listPackages()) {
+                for (SpecTypePair spec : pkg.listSpecTypePairs()) {
                     if (!"string".equals(spec.getTypeName())) continue;
-                    java.util.Iterator<com.reandroid.arsc.chunk.TypeBlock> blocks = spec.getTypeBlocks();
+                    Iterator<TypeBlock> blocks = spec.getTypeBlocks();
                     while (blocks.hasNext()) {
-                        com.reandroid.arsc.chunk.TypeBlock tb = blocks.next();
+                        TypeBlock tb = blocks.next();
                         if (config != null && !config.isEmpty()
                                 && !config.equals(tb.getQualifiers())) continue;
-                        for (com.reandroid.arsc.value.Entry e : tb.listEntries(true)) {
+                        for (Entry e : tb.listEntries(true)) {
                             if (e == null || e.isNull()) continue;
                             String entryName;
                             try {
@@ -472,7 +509,7 @@ public final class McpApkTools {
                             }
                             if (!name.equals(entryName)) continue;
                             if (e.isComplex()) continue;
-                            if (e.getValueType() != com.reandroid.arsc.value.ValueType.STRING) continue;
+                            if (e.getValueType() != ValueType.STRING) continue;
                             e.setValueAsString(value);
                             changed++;
                         }
@@ -488,7 +525,7 @@ public final class McpApkTools {
             table.writeBytes(written);
             byte[] bytes;
             try {
-                bytes = java.nio.file.Files.readAllBytes(written.toPath());
+                bytes = Files.readAllBytes(written.toPath());
             } finally {
                 written.delete();
             }
@@ -516,8 +553,8 @@ public final class McpApkTools {
             if (header == null) return null;
             File temp = File.createTempFile("mcp_arsc_", ".arsc", ctx.context.getCacheDir());
             try (InputStream in = zf.getInputStream(header)) {
-                java.nio.file.Files.copy(in, temp.toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(in, temp.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
             }
             return temp;
         } catch (Exception e) {
@@ -543,11 +580,11 @@ public final class McpApkTools {
                     continue;
                 }
                 byte[] dexBytes = readZipEntry(session.workApk, dexName);
-                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dexFile =
-                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
-                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
-                                new java.io.ByteArrayInputStream(dexBytes));
-                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dexFile.getClasses()) {
+                DexBackedDexFile dexFile =
+                        DexBackedDexFile.fromInputStream(
+                                Opcodes.getDefault(),
+                                new ByteArrayInputStream(dexBytes));
+                for (ClassDef classDef : dexFile.getClasses()) {
                     total++;
                     String type = classDef.getType(); // Lcom/foo/Bar;
                     String dotted = type.substring(1, type.length() - 1).replace('/', '.');
@@ -564,8 +601,8 @@ public final class McpApkTools {
                         cls.addProperty("name", dotted);
                         cls.addProperty("dex", dexName);
                         int flags = classDef.getAccessFlags();
-                        boolean isInterface = (flags & com.android.tools.smali.dexlib2.AccessFlags.INTERFACE.getValue()) != 0;
-                        boolean isAbstract = (flags & com.android.tools.smali.dexlib2.AccessFlags.ABSTRACT.getValue()) != 0;
+                        boolean isInterface = (flags & AccessFlags.INTERFACE.getValue()) != 0;
+                        boolean isAbstract = (flags & AccessFlags.ABSTRACT.getValue()) != 0;
                         cls.addProperty("type", isInterface ? "interface" : isAbstract ? "abstract" : "class");
                         classes.add(cls);
                     }
@@ -594,11 +631,11 @@ public final class McpApkTools {
             outer:
             for (String dexName : dexNames(session.workApk)) {
                 byte[] dexBytes = readZipEntry(session.workApk, dexName);
-                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile parsed =
-                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
-                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
-                                new java.io.ByteArrayInputStream(dexBytes));
-                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : parsed.getClasses()) {
+                DexBackedDexFile parsed =
+                        DexBackedDexFile.fromInputStream(
+                                Opcodes.getDefault(),
+                                new ByteArrayInputStream(dexBytes));
+                for (ClassDef classDef : parsed.getClasses()) {
                     if (dexType.equals(classDef.getType())) {
                         dexFile = File.createTempFile("mcp_dex_", ".dex", ctx.context.getCacheDir());
                         try (FileOutputStream out = new FileOutputStream(dexFile)) {
@@ -615,14 +652,14 @@ public final class McpApkTools {
             throw new McpJson.McpToolException("Class not found in APK: " + className);
         }
         try {
-            jadx.api.JadxArgs jadxArgs = new jadx.api.JadxArgs();
+            JadxArgs jadxArgs = new JadxArgs();
             jadxArgs.setInputFile(dexFile);
             jadxArgs.setSkipResources(true);
             jadxArgs.setThreadsCount(1); // single thread keeps peak memory low
-            jadx.api.JadxDecompiler decompiler = new jadx.api.JadxDecompiler(jadxArgs);
+            JadxDecompiler decompiler = new JadxDecompiler(jadxArgs);
             try {
                 decompiler.load();
-                for (jadx.api.JavaClass cls : decompiler.getClasses()) {
+                for (JavaClass cls : decompiler.getClasses()) {
                     // getFullName() may diverge from the dex name for synthetic
                     // lambda classes; the raw name keeps the original form.
                     if (cls.getFullName().equals(className)
@@ -729,12 +766,12 @@ public final class McpApkTools {
      * app's debug keystore.
      */
     private SignWrapper defaultSignWrapper() throws Exception {
-        android.content.SharedPreferences prefs =
-                androidx.preference.PreferenceManager.getDefaultSharedPreferences(ctx.context);
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(ctx.context);
         String keyPath = prefs.getString("keyPath", null);
         if (keyPath != null && !keyPath.isEmpty() && new File(keyPath).isFile()
                 && !keyPath.endsWith("debug.keystore")) {
-            String keyPass = io.github.abdurazaaqmohammed.utils.PasswordEncryptor.decryptString(
+            String keyPass = PasswordEncryptor.decryptString(
                     prefs.getString("keyPass", ""));
             if (keyPass != null && !keyPass.isEmpty()) {
                 return new SignWrapper(keyPath, keyPass, true, true, true, false);
@@ -829,14 +866,14 @@ public final class McpApkTools {
             input = resolvePath(pathArg, false);
         }
         if (!input.isFile()) throw new McpJson.McpToolException("APK not found: " + input);
-        io.github.abdurazaaqmohammed.utils.ApkSignatureInfo sig =
-                io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.analyze(input);
+        ApkSignatureInfo sig =
+                ApkSignatureInfo.analyze(input);
         JsonObject result = new JsonObject();
         result.addProperty("apk", input.getPath());
         int status = sig.getStatus();
-        result.addProperty("status", status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_VERIFIED ? "verified"
-                : status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_INVALID ? "invalid"
-                : status == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_NOT_SIGNED ? "not_signed" : "unknown");
+        result.addProperty("status", status == ApkSignatureInfo.STATUS_VERIFIED ? "verified"
+                : status == ApkSignatureInfo.STATUS_INVALID ? "invalid"
+                : status == ApkSignatureInfo.STATUS_NOT_SIGNED ? "not_signed" : "unknown");
         result.addProperty("schemes", sig.getSchemes());
         if (!sig.getErrors().isEmpty()) {
             JsonArray errors = new JsonArray();
@@ -844,13 +881,13 @@ public final class McpApkTools {
             result.add("errors", errors);
         }
         JsonArray certs = new JsonArray();
-        for (java.security.cert.X509Certificate cert : sig.getCertificates()) {
+        for (X509Certificate cert : sig.getCertificates()) {
             JsonObject obj = new JsonObject();
             obj.addProperty("subject", cert.getSubjectX500Principal().getName());
             obj.addProperty("issuer", cert.getIssuerX500Principal().getName());
             try {
-                obj.addProperty("sha256", io.github.abdurazaaqmohammed.utils.HashUtil.hashStream(
-                        new java.io.ByteArrayInputStream(cert.getEncoded()), "SHA-256"));
+                obj.addProperty("sha256", HashUtil.hashStream(
+                        new ByteArrayInputStream(cert.getEncoded()), "SHA-256"));
             } catch (Exception ignored) {
             }
             obj.addProperty("not_before", cert.getNotBefore().toString());
@@ -907,11 +944,11 @@ public final class McpApkTools {
         try {
             for (String dexName : dexNames(session.workApk)) {
                 byte[] dexBytes = readZipEntry(session.workApk, dexName);
-                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex =
-                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
-                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
-                                new java.io.ByteArrayInputStream(dexBytes));
-                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
+                DexBackedDexFile dex =
+                        DexBackedDexFile.fromInputStream(
+                                Opcodes.getDefault(),
+                                new ByteArrayInputStream(dexBytes));
+                for (ClassDef classDef : dex.getClasses()) {
                     if (!dexType.equals(classDef.getType())) continue;
                     JsonObject result = new JsonObject();
                     result.addProperty("session", session.id);
@@ -922,26 +959,26 @@ public final class McpApkTools {
                     for (String iface : classDef.getInterfaces()) interfaces.add(iface);
                     result.add("interfaces", interfaces);
                     JsonArray methods = new JsonArray();
-                    for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
+                    for (Method method : classDef.getMethods()) {
                         JsonObject m = new JsonObject();
                         m.addProperty("name", method.getName());
                         m.addProperty("return", method.getReturnType());
                         JsonArray params = new JsonArray();
                         for (Object p : method.getParameterTypes()) params.add(String.valueOf(p));
                         m.add("params", params);
-                        m.addProperty("access", com.android.tools.smali.dexlib2.AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()));
-                        m.addProperty("direct", com.android.tools.smali.dexlib2.AccessFlags.STATIC.isSet(method.getAccessFlags())
+                        m.addProperty("access", AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()));
+                        m.addProperty("direct", AccessFlags.STATIC.isSet(method.getAccessFlags())
                                 || (method.getAccessFlags() & 0x2) != 0); // static or private -> direct table
                         m.addProperty("has_code", method.getImplementation() != null);
                         methods.add(m);
                     }
                     result.add("methods", methods);
                     JsonArray fields = new JsonArray();
-                    for (com.android.tools.smali.dexlib2.iface.Field field : classDef.getFields()) {
+                    for (Field field : classDef.getFields()) {
                         JsonObject f = new JsonObject();
                         f.addProperty("name", field.getName());
                         f.addProperty("type", field.getType());
-                        f.addProperty("access", com.android.tools.smali.dexlib2.AccessFlags.formatAccessFlagsForField(field.getAccessFlags()));
+                        f.addProperty("access", AccessFlags.formatAccessFlagsForField(field.getAccessFlags()));
                         fields.add(f);
                     }
                     result.add("fields", fields);
@@ -968,34 +1005,34 @@ public final class McpApkTools {
             outer:
             for (String dexName : dexNames(session.workApk)) {
                 byte[] dexBytes = readZipEntry(session.workApk, dexName);
-                com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex =
-                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile.fromInputStream(
-                                com.android.tools.smali.dexlib2.Opcodes.getDefault(),
-                                new java.io.ByteArrayInputStream(dexBytes));
-                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
+                DexBackedDexFile dex =
+                        DexBackedDexFile.fromInputStream(
+                                Opcodes.getDefault(),
+                                new ByteArrayInputStream(dexBytes));
+                for (ClassDef classDef : dex.getClasses()) {
                     String owner = classDef.getType();
-                    for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
-                        com.android.tools.smali.dexlib2.iface.MethodImplementation impl = method.getImplementation();
+                    for (Method method : classDef.getMethods()) {
+                        MethodImplementation impl = method.getImplementation();
                         if (impl == null) continue;
-                        java.util.List<String> hits = new java.util.ArrayList<>();
-                        for (com.android.tools.smali.dexlib2.iface.instruction.Instruction insn : impl.getInstructions()) {
-                            if (!(insn instanceof com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)) continue;
-                            Object reference = ((com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction) insn).getReference();
+                        List<String> hits = new ArrayList<>();
+                        for (Instruction insn : impl.getInstructions()) {
+                            if (!(insn instanceof ReferenceInstruction)) continue;
+                            Object reference = ((ReferenceInstruction) insn).getReference();
                             String hit = null;
-                            if ("method".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.MethodReference) {
-                                com.android.tools.smali.dexlib2.iface.reference.MethodReference mr =
-                                        (com.android.tools.smali.dexlib2.iface.reference.MethodReference) reference;
+                            if ("method".equals(kind) && reference instanceof MethodReference) {
+                                MethodReference mr =
+                                        (MethodReference) reference;
                                 String text = mr.getDefiningClass() + "->" + mr.getName() + mr.getReturnType();
                                 if (text.contains(query)) hit = text;
-                            } else if ("class".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.TypeReference) {
-                                String text = ((com.android.tools.smali.dexlib2.iface.reference.TypeReference) reference).getType();
+                            } else if ("class".equals(kind) && reference instanceof TypeReference) {
+                                String text = ((TypeReference) reference).getType();
                                 if (text.contains(query)) hit = text;
-                            } else if ("string".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.StringReference) {
-                                String text = ((com.android.tools.smali.dexlib2.iface.reference.StringReference) reference).getString();
+                            } else if ("string".equals(kind) && reference instanceof StringReference) {
+                                String text = ((StringReference) reference).getString();
                                 if (text.contains(query)) hit = text;
-                            } else if ("field".equals(kind) && reference instanceof com.android.tools.smali.dexlib2.iface.reference.FieldReference) {
-                                com.android.tools.smali.dexlib2.iface.reference.FieldReference fr =
-                                        (com.android.tools.smali.dexlib2.iface.reference.FieldReference) reference;
+                            } else if ("field".equals(kind) && reference instanceof FieldReference) {
+                                FieldReference fr =
+                                        (FieldReference) reference;
                                 String text = fr.getDefiningClass() + "->" + fr.getName() + ":" + fr.getType();
                                 if (text.contains(query)) hit = text;
                             }
@@ -1052,9 +1089,9 @@ public final class McpApkTools {
                 ? new File(input.getParentFile(), stripExt(input.getName()) + "-unpinned.apk")
                 : resolvePath(outputArg, true);
         boolean sign = McpJson.bool(args, "sign", true);
-        io.github.abdurazaaqmohammed.utils.SslUnpinning.Report report;
+        SslUnpinning.Report report;
         try {
-            report = io.github.abdurazaaqmohammed.utils.SslUnpinning.unpinApk(
+            report = SslUnpinning.unpinApk(
                     input, output, sign ? defaultSignWrapper() : null);
         } catch (McpJson.McpToolException e) {
             throw e;
@@ -1130,7 +1167,7 @@ public final class McpApkTools {
 
     private static byte[] readEntryBytes(ZipFile zf, FileHeader header) throws IOException {
         try (InputStream in = zf.getInputStream(header)) {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) != -1) {
@@ -1159,8 +1196,8 @@ public final class McpApkTools {
     private static void replaceEntry(File apk, String entry, byte[] bytes) throws IOException {
         File temp = new File(apk.getParentFile(), apk.getName() + ".mcp.tmp");
         try (ZipFile src = new ZipFile(apk);
-             java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp))) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+             ZipOutputStream out = new ZipOutputStream(new FileOutputStream(temp))) {
+            out.setLevel(Deflater.BEST_SPEED);
             boolean replaced = false;
             for (FileHeader header : src.getFileHeaders()) {
                 String name = header.getFileName();
@@ -1183,20 +1220,20 @@ public final class McpApkTools {
 
     private static void replaceEntryWithFile(File apk, ZipFile zf, File file, String entryName) throws IOException {
         File temp = new File(apk.getParentFile(), apk.getName() + ".mcp.tmp");
-        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp))) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(temp))) {
+            out.setLevel(Deflater.BEST_SPEED);
             boolean replaced = false;
             for (FileHeader header : zf.getFileHeaders()) {
                 String name = header.getFileName();
                 if (name.equals(entryName)) {
-                    putStream(out, entryName, new java.io.FileInputStream(file), false);
+                    putStream(out, entryName, new FileInputStream(file), false);
                     replaced = true;
                 } else if (!header.isDirectory()) {
                     putBytes(out, name, readEntryBytes(zf, header), name.equals("resources.arsc"));
                 }
             }
             if (!replaced) {
-                putStream(out, entryName, new java.io.FileInputStream(file), false);
+                putStream(out, entryName, new FileInputStream(file), false);
             }
         }
         zf.close();
@@ -1207,11 +1244,11 @@ public final class McpApkTools {
     }
 
     private static void deleteEntries(File apk, String[] names) throws IOException {
-        java.util.Set<String> set = new java.util.HashSet<>(java.util.Arrays.asList(names));
+        Set<String> set = new HashSet<>(Arrays.asList(names));
         File temp = new File(apk.getParentFile(), apk.getName() + ".mcp.tmp");
         try (ZipFile src = new ZipFile(apk);
-             java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp))) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+             ZipOutputStream out = new ZipOutputStream(new FileOutputStream(temp))) {
+            out.setLevel(Deflater.BEST_SPEED);
             for (FileHeader header : src.getFileHeaders()) {
                 String name = header.getFileName();
                 if (set.contains(name) || header.isDirectory()) continue;
@@ -1240,7 +1277,7 @@ public final class McpApkTools {
         }
     }
 
-    private static void putBytes(java.util.zip.ZipOutputStream out, String name, byte[] bytes, boolean stored)
+    private static void putBytes(ZipOutputStream out, String name, byte[] bytes, boolean stored)
             throws IOException {
         ZipEntry entry = new ZipEntry(name);
         if (stored) {
@@ -1256,7 +1293,7 @@ public final class McpApkTools {
         out.closeEntry();
     }
 
-    private static void putStream(java.util.zip.ZipOutputStream out, String name, InputStream in, boolean stored)
+    private static void putStream(ZipOutputStream out, String name, InputStream in, boolean stored)
             throws IOException {
         try {
             ZipEntry entry = new ZipEntry(name);
@@ -1284,7 +1321,7 @@ public final class McpApkTools {
 
     private static byte[] readAll(InputStream in) throws IOException {
         try {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) != -1) {
@@ -1297,16 +1334,16 @@ public final class McpApkTools {
     }
 
     private static long computeCrc(byte[] bytes) {
-        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        CRC32 crc = new CRC32();
         crc.update(bytes);
         return crc.getValue();
     }
 
     private static String describeSignature(File apk) {
         try {
-            io.github.abdurazaaqmohammed.utils.ApkSignatureInfo sig =
-                    io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.analyze(apk);
-            if (sig.getStatus() == io.github.abdurazaaqmohammed.utils.ApkSignatureInfo.STATUS_NOT_SIGNED) {
+            ApkSignatureInfo sig =
+                    ApkSignatureInfo.analyze(apk);
+            if (sig.getStatus() == ApkSignatureInfo.STATUS_NOT_SIGNED) {
                 return "not signed";
             }
             String schemes = sig.getSchemes();

@@ -3,11 +3,11 @@ package modder.hub.dexeditor.utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -121,7 +121,7 @@ public final class AutoTranslateClient {
                 for (String t : texts) q.put(t);
                 body.put("text", q);
                 body.put("target_lang", target.toUpperCase());
-                okhttp3.Headers headers = okhttp3.Headers.of("Authorization", "DeepL-Auth-Key " + apiKey);
+                Headers headers = Headers.of("Authorization", "DeepL-Auth-Key " + apiKey);
                 JSONObject response = new JSONObject(postJsonRaw(endpoint, body, headers, null));
                 JSONArray translations = response.getJSONArray("translations");
                 List<String> result = new ArrayList<>();
@@ -159,7 +159,7 @@ public final class AutoTranslateClient {
                                 + "Do not add commentary. Preserve formatting and placeholders."));
                 messages.put(new JSONObject().put("role", "user").put("content", stringsJson.toString()));
                 body.put("messages", messages);
-                okhttp3.Headers headers = okhttp3.Headers.of("Authorization", "Bearer " + apiKey);
+                Headers headers = Headers.of("Authorization", "Bearer " + apiKey);
                 JSONObject response = new JSONObject(postJsonRaw(endpoint, body, headers, null));
                 String content = response.getJSONArray("choices").getJSONObject(0)
                         .getJSONObject("message").optString("content", "");
@@ -185,12 +185,12 @@ public final class AutoTranslateClient {
     }
 
     private static JSONArray postJson(String url, JSONObject body,
-                                      okhttp3.Headers headers) throws Exception {
+                                      Headers headers) throws Exception {
         return new JSONArray(postJsonRaw(url, body, headers, null));
     }
 
     private static String postJsonRaw(String url, JSONObject body,
-                                      okhttp3.Headers headers, Integer timeoutOverride) throws Exception {
+                                      Headers headers, Integer timeoutOverride) throws Exception {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)

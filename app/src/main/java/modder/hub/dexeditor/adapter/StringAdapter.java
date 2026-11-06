@@ -40,7 +40,6 @@
     import androidx.recyclerview.widget.RecyclerView;
 
     import java.util.ArrayList;
-    import java.util.HashSet;
     import java.util.LinkedHashMap;
     import java.util.LinkedHashSet;
     import java.util.List;
@@ -143,7 +142,7 @@
         }
 
         /** Preloads translations (e.g. from a dictionary) as pending edits. */
-        public void loadTranslations(java.util.Map<String, String> map) {
+        public void loadTranslations(Map<String, String> map) {
             modifiedStrings.clear();
             if (map != null) modifiedStrings.putAll(map);
             applyCurrentFilter();

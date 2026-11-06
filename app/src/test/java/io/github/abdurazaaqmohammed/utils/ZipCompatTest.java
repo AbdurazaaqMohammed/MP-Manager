@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -56,7 +57,7 @@ public class ZipCompatTest {
     }
 
     private static void assumeNativeZstd() {
-        org.junit.Assume.assumeTrue("native zstd not available on this host",
+        Assume.assumeTrue("native zstd not available on this host",
                 ZstdBridge.isLoaded());
     }
 

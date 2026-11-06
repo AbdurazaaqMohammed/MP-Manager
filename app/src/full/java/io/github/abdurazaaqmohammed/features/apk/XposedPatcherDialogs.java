@@ -47,8 +47,10 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.lsposed.lspatch.share.Constants;
 import org.lsposed.patch.ApkPatcher;
 import org.lsposed.patch.LSPatch;
+import org.lsposed.patch.util.Logger;
 
 /**
  * Xposed-patcher UI (integrated mode): patches an APK with Xposed modules
@@ -598,7 +600,7 @@ public class XposedPatcherDialogs {
      * PatchException with an actionable message. Its built-in keystore
      * signature is likewise replaced right after by the caller's Auto Sign key.
      */
-    private File runLSPatch(File srcApk, Options options, org.lsposed.patch.util.Logger logger) throws Exception {
+    private File runLSPatch(File srcApk, Options options, Logger logger) throws Exception {
         File outputDir = outputDir(srcApk);
         final String baseName = baseName(srcApk);
         List<String> args = new ArrayList<>();
@@ -644,7 +646,7 @@ public class XposedPatcherDialogs {
 
         LSPatch cli = new LSPatch(args.toArray(new String[0]));
         new ApkPatcher(logger, cli.toSpec()).patch();
-        return normalizeOutput(outputDir, baseName, org.lsposed.lspatch.share.Constants.PATCH_FILE_SUFFIX);
+        return normalizeOutput(outputDir, baseName, Constants.PATCH_FILE_SUFFIX);
     }
 
     private File outputDir(File srcApk) {
@@ -697,7 +699,7 @@ public class XposedPatcherDialogs {
     }
 
     /** Bridges LSPatch's Logger to the progress dialog. */
-    private static class LsBridgeLogger extends org.lsposed.patch.util.Logger {
+    private static class LsBridgeLogger extends Logger {
         final ProgressManager pm;
 
         LsBridgeLogger(ProgressManager pm) {

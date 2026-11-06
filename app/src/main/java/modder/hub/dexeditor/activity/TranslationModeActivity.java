@@ -1,18 +1,22 @@
 package modder.hub.dexeditor.activity;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.TypedValue;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -20,8 +24,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -36,6 +43,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,7 +107,7 @@ public class TranslationModeActivity extends BaseActivity {
     private boolean loaded;
 
     // auto-translation state
-    private java.util.Iterator<String> autoTranslateQueue;
+    private Iterator<String> autoTranslateQueue;
     private String autoTranslateCurrent;
     private int autoTranslateDone;
     private boolean autoTranslateActive;
@@ -230,7 +238,7 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu(@NonNull android.view.Menu menu) {
+    public boolean onCreateOptionsMenu(@NonNull Menu menu) {
         getMenuInflater().inflate(R.menu.menu_translation_mode, menu);
         return true;
     }
@@ -258,7 +266,7 @@ public class TranslationModeActivity extends BaseActivity {
                     classTree = new ClassTree(dexPaths, getCacheDir().getAbsolutePath());
                 }
                 List<String> strings = classTree.getAllStrings();
-                java.util.Collections.sort(strings);
+                Collections.sort(strings);
                 runOnUiThread(() -> {
                     originals.clear();
                     originals.addAll(strings);
@@ -350,13 +358,13 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     /** API-translates one string and fills the edit field when done. */
-    private void translateSingle(String text, EditText target, android.widget.Button button) {
+    private void translateSingle(String text, EditText target, Button button) {
         if (!ensureServiceConfigured()) return;
         button.setEnabled(false);
         button.setText(R.string.translating);
         new Thread(() -> {
             try {
-                android.content.SharedPreferences prefs =
+                SharedPreferences prefs =
                         getSharedPreferences("translation_prefs", 0);
                 int provider = prefs.getInt(PREF_AT_PROVIDER, 0);
                 List<String> out = AutoTranslateClient.translate(
@@ -365,7 +373,7 @@ public class TranslationModeActivity extends BaseActivity {
                         prefs.getString(PREF_AT_KEY, ""),
                         prefs.getString(PREF_AT_MODEL, ""),
                         language,
-                        java.util.Collections.singletonList(text));
+                        Collections.singletonList(text));
                 runOnUiThread(() -> {
                     button.setEnabled(true);
                     button.setText(R.string.translate);
@@ -405,7 +413,7 @@ public class TranslationModeActivity extends BaseActivity {
     // ------------------------------------------------------------------
 
     private boolean ensureServiceConfigured() {
-        android.content.SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
+        SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
         if (prefs.contains(PREF_AT_PROVIDER)) return true;
         showServiceOptionsDialog(null);
         return false;
@@ -414,7 +422,7 @@ public class TranslationModeActivity extends BaseActivity {
     /** Service options: provider, endpoint, API key, model, target info, and a
      *  privacy warning. Passing a runnable runs it after the config is saved. */
     private void showServiceOptionsDialog(Runnable onConfigured) {
-        android.content.SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
+        SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
         int provider = prefs.getInt(PREF_AT_PROVIDER, 0);
 
         LinearLayout root = new LinearLayout(this);
@@ -423,7 +431,7 @@ public class TranslationModeActivity extends BaseActivity {
         root.setPadding(pad, pad / 2, pad, 0);
 
         MaterialAutoCompleteTextView providerView = new MaterialAutoCompleteTextView(this);
-        providerView.setAdapter(new android.widget.ArrayAdapter<>(this,
+        providerView.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1, AutoTranslateClient.PROVIDER_NAMES));
         providerView.setText(AutoTranslateClient.PROVIDER_NAMES[provider], false);
         TextInputLayout providerLayout = dropdownLayout(providerView,
@@ -439,14 +447,14 @@ public class TranslationModeActivity extends BaseActivity {
 
         TextInputEditText keyInput = new TextInputEditText(this);
         keyInput.setText(prefs.getString(PREF_AT_KEY, ""));
-        keyInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        keyInput.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         TextInputLayout keyLayout = filledLayout(keyInput, getString(R.string.translation_api_key));
         root.addView(keyLayout);
 
         TextInputEditText modelInput = new TextInputEditText(this);
         modelInput.setText(prefs.getString(PREF_AT_MODEL, "gpt-4o-mini"));
-        modelInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        modelInput.setInputType(InputType.TYPE_CLASS_TEXT);
         TextInputLayout modelLayout = filledLayout(modelInput, getString(R.string.translation_model));
         root.addView(modelLayout);
 
@@ -517,7 +525,7 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     private String endpointFor(int provider) {
-        android.content.SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
+        SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
         String saved = prefs.getString(PREF_AT_ENDPOINT, "");
         return saved.isEmpty() ? AutoTranslateClient.defaultEndpoint(provider) : saved;
     }
@@ -557,7 +565,7 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     private void startAutoTranslate(List<String> targets) {
-        android.content.SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
+        SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
         final int provider = prefs.getInt(PREF_AT_PROVIDER, 0);
         final String endpoint = endpointFor(provider);
         final String apiKey = prefs.getString(PREF_AT_KEY, "");
@@ -659,12 +667,12 @@ public class TranslationModeActivity extends BaseActivity {
         new Thread(() -> {
             try {
                 int dexVersion = classTree.getOpenedDexVersion();
-                List<com.android.tools.smali.dexlib2.iface.ClassDef> classes =
+                List<ClassDef> classes =
                         new ArrayList<>(classTree.classMap.values());
                 int total = classes.size();
                 int done = 0;
                 final int[] changed = {0};
-                for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : classes) {
+                for (ClassDef classDef : classes) {
                     try {
                         String smali = classTree.getSmaliByType(classDef);
                         Matcher m = LITERAL_PATTERN.matcher(smali);
@@ -684,8 +692,8 @@ public class TranslationModeActivity extends BaseActivity {
                         m.appendTail(sb);
                         if (count > 0) {
                             String modified = sb.toString();
-                            com.android.tools.smali.dexlib2.iface.ClassDef newDef =
-                                    com.android.tools.smali.smali2.Smali.assemble(
+                            ClassDef newDef =
+                                    Smali.assemble(
                                             modified, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
                             classTree.saveClassDefIfChanged(newDef, modified);
                             changed[0]++;
@@ -858,7 +866,7 @@ public class TranslationModeActivity extends BaseActivity {
     // ------------------------------------------------------------------
 
     private void showFilterDialog() {
-        android.content.SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
+        SharedPreferences prefs = getSharedPreferences("translation_prefs", 0);
         List<SearchHistoryHelper.Item> history = SearchHistoryHelper.load(this, FILTER_HISTORY_KEY);
         String lastSpecJson = prefs.getString(PREF_LAST_FILTER, null);
 
@@ -884,7 +892,7 @@ public class TranslationModeActivity extends BaseActivity {
 
         // Query with search-history dropdown, auto-filled with the last query.
         final MaterialAutoCompleteTextView queryView = new MaterialAutoCompleteTextView(this);
-        queryView.setAdapter(new android.widget.ArrayAdapter<>(this,
+        queryView.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line,
                 history.stream().map(i -> i.query).toArray(String[]::new)));
         queryView.setText(last != null ? last.query : "");
@@ -897,7 +905,7 @@ public class TranslationModeActivity extends BaseActivity {
                 getString(R.string.translation_scope_translated),
                 getString(R.string.translation_scope_untranslated)};
         final MaterialAutoCompleteTextView scopeView = new MaterialAutoCompleteTextView(this);
-        scopeView.setAdapter(new android.widget.ArrayAdapter<>(this,
+        scopeView.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1, scopes));
         int scopeIndex = last != null ? last.status : 0;
         scopeView.setText(scopes[scopeIndex], false);
@@ -1141,7 +1149,7 @@ public class TranslationModeActivity extends BaseActivity {
 
     private void showJumpDialog() {
         final EditText input = new EditText(this);
-        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setHint(getString(R.string.translation_jump_hint, originals.size()));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.translation_jump)
@@ -1193,10 +1201,10 @@ public class TranslationModeActivity extends BaseActivity {
 
     private int themeColor(int attr, int fallback) {
         try {
-            android.util.TypedValue value = new android.util.TypedValue();
+            TypedValue value = new TypedValue();
             if (getTheme().resolveAttribute(attr, value, true)) {
                 if (value.resourceId != 0) {
-                    int color = androidx.core.content.ContextCompat.getColor(this, value.resourceId);
+                    int color = ContextCompat.getColor(this, value.resourceId);
                     if (color != 0) return color;
                 }
                 if (value.data != 0) return value.data;

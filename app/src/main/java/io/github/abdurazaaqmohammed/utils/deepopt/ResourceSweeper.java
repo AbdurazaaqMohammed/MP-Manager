@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils.deepopt;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apk.ResFile;
 import com.reandroid.arsc.array.ResValueMapArray;
+import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValueMap;
@@ -145,7 +146,7 @@ public final class ResourceSweeper {
     private static void tableRefresh(ResourceTableIndex index, OptimizerReport report) throws Exception {
         try {
             index.table.refreshFull();
-            for (com.reandroid.arsc.chunk.PackageBlock pkg : index.table.listPackages())
+            for (PackageBlock pkg : index.table.listPackages())
                 pkg.removeUnusedSpecs();
         } catch (Exception e) {
             throw new Exception("Resource table refresh failed; aborting deep optimization: " + e, e);

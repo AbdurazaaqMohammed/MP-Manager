@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.PreferenceManager;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -194,7 +196,7 @@ public final class ThemeRegistry {
             List<Integer> history = new ArrayList<>();
             try {
                 String json = prefs.getString(ACCENT_HISTORY_PREF_KEY, "[]");
-                for (int value : new com.google.gson.Gson().fromJson(json, int[].class)) {
+                for (int value : new Gson().fromJson(json, int[].class)) {
                     history.add(value);
                 }
             } catch (Exception ignored) {
@@ -204,7 +206,7 @@ public final class ThemeRegistry {
             while (history.size() > ACCENT_HISTORY_MAX) history.remove(history.size() - 1);
             int[] arr = new int[history.size()];
             for (int i = 0; i < arr.length; i++) arr[i] = history.get(i);
-            prefs.edit().putString(ACCENT_HISTORY_PREF_KEY, new com.google.gson.Gson().toJson(arr)).apply();
+            prefs.edit().putString(ACCENT_HISTORY_PREF_KEY, new Gson().toJson(arr)).apply();
         } catch (Exception ignored) {
         }
     }
@@ -215,7 +217,7 @@ public final class ThemeRegistry {
         try {
             String json = PreferenceManager.getDefaultSharedPreferences(context)
                     .getString(ACCENT_HISTORY_PREF_KEY, "[]");
-            for (int value : new com.google.gson.Gson().fromJson(json, int[].class)) {
+            for (int value : new Gson().fromJson(json, int[].class)) {
                 out.add(value);
             }
         } catch (Exception ignored) {

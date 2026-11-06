@@ -3,6 +3,10 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.SafFs;
@@ -35,8 +39,11 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.preference.PreferenceManager;
 
 import org.apache.commons.io.FilenameUtils;
+import org.xmlpull.v1.XmlPullParser;
 
 import java.io.File;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Locale;
@@ -60,6 +67,7 @@ import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 public class FileIconLoader {
@@ -288,19 +296,19 @@ public class FileIconLoader {
             String xml;
             if (data.length >= 2 && data[0] == 0x03 && data[1] == 0x00) {
                 // Binary AXML (compiled resource inside an APK)
-                xml = new aXMLDecoder(new java.io.ByteArrayInputStream(data)).decodeAsString();
+                xml = new aXMLDecoder(new ByteArrayInputStream(data)).decodeAsString();
             } else {
-                xml = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+                xml = new String(data, StandardCharsets.UTF_8);
                 if (!xml.contains("<")) return null;
             }
-            org.xmlpull.v1.XmlPullParser parser = Xml.newPullParser();
-            parser.setInput(new java.io.StringReader(xml));
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(new StringReader(xml));
             int type = parser.next();
-            while (type != org.xmlpull.v1.XmlPullParser.START_TAG
-                    && type != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+            while (type != XmlPullParser.START_TAG
+                    && type != XmlPullParser.END_DOCUMENT) {
                 type = parser.next();
             }
-            if (type != org.xmlpull.v1.XmlPullParser.START_TAG) return null;
+            if (type != XmlPullParser.START_TAG) return null;
             // Vectors/shapes inflate with the app resources + theme so ?attr
             // references resolve; entries referencing APK-internal @color/@dimen
             // values still fail here and keep the fallback icon.
@@ -311,7 +319,7 @@ public class FileIconLoader {
     }
 
     private static byte[] readZipEntry(File zip, String entryPath) {
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (InputStream in = ArchiveBrowseUtil.openEntry(zip, entryPath)) {
             byte[] buf = new byte[16 * 1024];
             int n;
@@ -1018,8 +1026,8 @@ public class FileIconLoader {
                 try {
                     String resolved = resolveAccessiblePath(path);
                     File f = new File(resolved);
-                    if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(f)) {
-                        Bitmap stickerBm = io.github.abdurazaaqmohammed.utils.StickerUtil.renderThumbnailBitmap(f, 160);
+                    if (StickerUtil.isLottieSticker(f)) {
+                        Bitmap stickerBm = StickerUtil.renderThumbnailBitmap(f, 160);
                         Drawable icon = stickerBm != null ? new BitmapDrawable(context.getResources(), stickerBm) : cachedStickerIcon;
                         iconCache.put(path, icon);
                         context.runOnUiThread(() -> {
@@ -1042,7 +1050,7 @@ public class FileIconLoader {
             String resolved = resolveAccessiblePath(path);
             File f = new File(resolved);
             if (f.canRead()) {
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+                try (FileInputStream fis = new FileInputStream(f)) {
                     byte[] header = new byte[4];
                     if (fis.read(header) == 4) {
                         return header[0] == 0x50 && header[1] == 0x4B && header[2] == 0x03 && header[3] == 0x04;
@@ -1179,7 +1187,7 @@ public class FileIconLoader {
         try {
             RootManager rm = RootManager.getInstance();
             if (rm == null || !rm.isRootAvailable()) return null;
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             rm.streamFromRoot(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
             byte[] data = baos.toByteArray();
             if (data == null || data.length == 0) return null;

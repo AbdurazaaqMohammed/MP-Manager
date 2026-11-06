@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
+import android.system.Os;
+import android.system.OsConstants;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -18,7 +20,6 @@ import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.Collection;
 import java.util.List;
@@ -592,9 +593,9 @@ public class FileUtils {
         // One lstat decides link/dir/file, so a large tree does not pay three
         // stat syscalls per entry just to be measured.
         int mode = lstatMode(root);
-        boolean link = mode >= 0 && android.system.OsConstants.S_ISLNK(mode);
-        boolean isDir = !link && (mode >= 0 ? android.system.OsConstants.S_ISDIR(mode) : root.isDirectory());
-        boolean isFile = !link && (mode >= 0 ? android.system.OsConstants.S_ISREG(mode) : root.isFile());
+        boolean link = mode >= 0 && OsConstants.S_ISLNK(mode);
+        boolean isDir = !link && (mode >= 0 ? OsConstants.S_ISDIR(mode) : root.isDirectory());
+        boolean isFile = !link && (mode >= 0 ? OsConstants.S_ISREG(mode) : root.isFile());
 
         if (isDir) {
             File[] kids;
@@ -616,7 +617,7 @@ public class FileUtils {
     /** {@code st_mode} from lstat, or -1 when it cannot be read. */
     private static int lstatMode(File f) {
         try {
-            return android.system.Os.lstat(f.getAbsolutePath()).st_mode;
+            return Os.lstat(f.getAbsolutePath()).st_mode;
         } catch (Exception e) {
             return -1;
         }
@@ -625,7 +626,7 @@ public class FileUtils {
     /** True for a symbolic link; {@code File.isDirectory()} would follow it. */
     public static boolean isSymlink(File f) {
         if (f == null) return false;
-        return android.system.OsConstants.S_ISLNK(lstatMode(f));
+        return OsConstants.S_ISLNK(lstatMode(f));
     }
 
     private static long safeLength(File f) {

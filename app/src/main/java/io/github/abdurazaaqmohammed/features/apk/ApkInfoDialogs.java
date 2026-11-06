@@ -7,7 +7,10 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -19,11 +22,11 @@ import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -51,6 +54,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -73,6 +78,7 @@ import com.reandroid.archive.ArchiveFile;
 
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -81,12 +87,16 @@ import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -353,7 +363,7 @@ public class ApkInfoDialogs {
 
         final Map<String, TextInputEditText> offsetInputs = new LinkedHashMap<>();
         for (String type : NativeLibPatcher.PATCH_TYPES) {
-            com.google.android.material.textfield.TextInputLayout box = UiFields.box(context, context.getString(patchTypeLabel(type)));
+            TextInputLayout box = UiFields.box(context, context.getString(patchTypeLabel(type)));
             TextInputEditText edit = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
             edit.setText(settings.getString("libpatcher_" + type, ""));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -511,11 +521,11 @@ public class ApkInfoDialogs {
                 label.setText(ApkMoreMenuOrder.labelFor(context, actionId));
 
                 int iconRes = ApkMoreMenuOrder.iconFor(actionId);
-                Drawable drawable = androidx.core.content.res.ResourcesCompat.getDrawable(context.getResources(), iconRes, null);
+                Drawable drawable = ResourcesCompat.getDrawable(context.getResources(), iconRes, null);
                 if (drawable != null) {
                     int size = Extensions.dp2px(context, 24);
                     drawable.setBounds(0, 0, size, size);
-                    androidx.core.graphics.drawable.DrawableCompat.setTint(drawable, MaterialColors.getColor(label, android.R.attr.colorPrimary));
+                    DrawableCompat.setTint(drawable, MaterialColors.getColor(label, android.R.attr.colorPrimary));
                 }
                 label.setCompoundDrawablesRelative(drawable, null, null, null);
                 label.setCompoundDrawablePadding(Extensions.dp2px(context, 8));
@@ -1485,14 +1495,14 @@ public class ApkInfoDialogs {
                         int start = comparisonSpannable.length();
                         comparisonSpannable.append("(").append(context.getString(R.string.downgrade)).append(")");
                         int end = comparisonSpannable.length();
-                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF4444),
+                        comparisonSpannable.setSpan(new ForegroundColorSpan(0xFFFF4444),
                                 start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     } else if (candVerCode > instVerCode) {
                         comparisonSpannable.append(" ");
                         int start = comparisonSpannable.length();
                         comparisonSpannable.append("(").append(context.getString(R.string.upgrade)).append(")");
                         int end = comparisonSpannable.length();
-                        comparisonSpannable.setSpan(new android.text.style.ForegroundColorSpan(0xFF4CAF50),
+                        comparisonSpannable.setSpan(new ForegroundColorSpan(0xFF4CAF50),
                                 start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                 }
@@ -1673,39 +1683,39 @@ public class ApkInfoDialogs {
                     defaultIcon = pi.applicationInfo.loadIcon(pm);
                 }
 
-                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new FileOutputStream(targetZip))) {
+                try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(targetZip))) {
                     // 1. Write root icon.png
                     if (defaultIcon != null) {
-                        android.graphics.Bitmap bmp;
-                        if (defaultIcon instanceof android.graphics.drawable.BitmapDrawable bd && bd.getBitmap() != null) {
+                        Bitmap bmp;
+                        if (defaultIcon instanceof BitmapDrawable bd && bd.getBitmap() != null) {
                             bmp = bd.getBitmap();
                         } else {
                             int w = Math.max(1, defaultIcon.getIntrinsicWidth());
                             int h = Math.max(1, defaultIcon.getIntrinsicHeight());
-                            bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
-                            android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
+                            bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                            Canvas canvas = new Canvas(bmp);
                             defaultIcon.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
                             defaultIcon.draw(canvas);
                         }
-                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                        bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, baos);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        bmp.compress(Bitmap.CompressFormat.PNG, 100, baos);
                         byte[] rootBytes = baos.toByteArray();
-                        java.util.zip.ZipEntry ze = new java.util.zip.ZipEntry("icon.png");
+                        ZipEntry ze = new ZipEntry("icon.png");
                         zos.putNextEntry(ze);
                         zos.write(rootBytes);
                         zos.closeEntry();
                     }
 
                     // 2. Extract launcher icons from inside the APK archive
-                    try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(apkFile)) {
-                        java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zf.entries();
+                    try (ZipFile zf = new ZipFile(apkFile)) {
+                        Enumeration<? extends ZipEntry> entries = zf.entries();
                         while (entries.hasMoreElements()) {
-                            java.util.zip.ZipEntry entry = entries.nextElement();
+                            ZipEntry entry = entries.nextElement();
                             String name = entry.getName();
                             if ((name.startsWith("res/mipmap-") || name.startsWith("res/drawable-"))
                                     && (name.contains("ic_launcher") || name.endsWith("icon.png"))
                                     && name.endsWith(".png")) {
-                                java.util.zip.ZipEntry outEntry = new java.util.zip.ZipEntry(name);
+                                ZipEntry outEntry = new ZipEntry(name);
                                 zos.putNextEntry(outEntry);
                                 try (InputStream is = zf.getInputStream(entry)) {
                                     byte[] buf = new byte[8192];

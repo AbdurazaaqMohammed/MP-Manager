@@ -11,6 +11,7 @@ import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -163,7 +164,7 @@ public final class ZipCompat {
         if (parent != null) //noinspection ResultOfMethodCallIgnored
             parent.mkdirs();
         try (InputStream in = openEntry(zip, entryName);
-             OutputStream out = new java.io.BufferedOutputStream(new FileOutputStream(outFile), COPY_BUFFER)) {
+             OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile), COPY_BUFFER)) {
             byte[] buf = new byte[COPY_BUFFER];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
@@ -250,7 +251,7 @@ public final class ZipCompat {
                 parent.mkdirs();
             RandomAccessFile raf = new RandomAccessFile(zip, "r");
             try (InputStream in = openRawEntry(raf, e);
-                 OutputStream os = new java.io.BufferedOutputStream(new FileOutputStream(out), COPY_BUFFER)) {
+                 OutputStream os = new BufferedOutputStream(new FileOutputStream(out), COPY_BUFFER)) {
                 byte[] buf = new byte[COPY_BUFFER];
                 int n;
                 while ((n = in.read(buf)) != -1) {

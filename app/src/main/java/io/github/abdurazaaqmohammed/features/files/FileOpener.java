@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.features.files;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -20,11 +19,8 @@ import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.text.format.Formatter;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -57,6 +53,9 @@ import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
+import io.github.abdurazaaqmohammed.boot.BootImageEngine;
+import io.github.abdurazaaqmohammed.boot.BootInspectManager;
+import io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 
 import org.apache.commons.io.FilenameUtils;
@@ -69,11 +68,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -113,8 +114,9 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFs;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.utils.nativelib.ElfParser;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -151,8 +153,8 @@ public class FileOpener {
     public void openWithForFile(File file, String fileName) {
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
-                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
-                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                if (StickerUtil.isLottieSticker(readable)) {
+                    StickerPreviewDialog.show(context, readable);
                 } else {
                     context.openImageViewer(readable.getPath());
                 }
@@ -175,8 +177,8 @@ public class FileOpener {
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
-                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
-                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                if (StickerUtil.isLottieSticker(readable)) {
+                    StickerPreviewDialog.show(context, readable);
                 } else {
                     context.openImageViewer(readable.getPath());
                 }
@@ -935,13 +937,13 @@ public class FileOpener {
     private void showElfInspectorDialog(File file, String fileName, File originalFile) {
         final File targetOriginal = originalFile != null ? originalFile : file;
         new Thread(() -> {
-            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r");
-                 io.github.abdurazaaqmohammed.utils.nativelib.ElfParser elf = new io.github.abdurazaaqmohammed.utils.nativelib.ElfParser(raf)) {
+            try (RandomAccessFile raf = new RandomAccessFile(file, "r");
+                 ElfParser elf = new ElfParser(raf)) {
                 final AlertDialog[] dialogRef = new AlertDialog[1];
                 SpannableStringBuilder ssb = new SpannableStringBuilder();
                 ssb.append("File: ").append(fileName).append("\n");
                 ssb.append("Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append("\n");
-                ssb.append("Architecture: ").append(io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.machineName(elf.machine))
+                ssb.append("Architecture: ").append(ElfParser.machineName(elf.machine))
                         .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
 
                 ssb.append("Entry point: ");
@@ -966,13 +968,13 @@ public class FileOpener {
 
                 ssb.append("Size: ").append(Formatter.formatFileSize(context, file.length())).append("\n\n");
 
-                io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section[] sections = elf.sections();
+                ElfParser.Section[] sections = elf.sections();
                 if (sections != null && sections.length > 0) {
                     ssb.append("--- Sections (").append(String.valueOf(sections.length)).append(") ---\n");
-                    for (io.github.abdurazaaqmohammed.utils.nativelib.ElfParser.Section s : sections) {
+                    for (ElfParser.Section s : sections) {
                         if (s != null && s.name != null && !s.name.isEmpty()) {
-                            ssb.append(String.format(java.util.Locale.ROOT, "%-16s ", s.name));
-                            String addrStr = String.format(java.util.Locale.ROOT, "addr:0x%08x", s.addr);
+                            ssb.append(String.format(Locale.ROOT, "%-16s ", s.name));
+                            String addrStr = String.format(Locale.ROOT, "addr:0x%08x", s.addr);
                             int addrStart = ssb.length();
                             ssb.append(addrStr);
                             int addrEnd = ssb.length();
@@ -989,16 +991,16 @@ public class FileOpener {
                                     ds.setUnderlineText(true);
                                 }
                             }, addrStart, addrEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                            ssb.append(String.format(java.util.Locale.ROOT, " size:0x%x\n", s.size));
+                            ssb.append(String.format(Locale.ROOT, " size:0x%x\n", s.size));
                         }
                     }
                     ssb.append("\n");
                 }
 
-                java.util.Map<String, String> dyn = elf.dynamicInfo();
+                Map<String, String> dyn = elf.dynamicInfo();
                 if (dyn != null && !dyn.isEmpty()) {
                     ssb.append("--- Dynamic / Dependencies ---\n");
-                    for (java.util.Map.Entry<String, String> entry : dyn.entrySet()) {
+                    for (Map.Entry<String, String> entry : dyn.entrySet()) {
                         ssb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
                     }
                 }
@@ -1284,8 +1286,8 @@ public class FileOpener {
             openTextEditorRootAware(file);
         } else if (FileUtils.isElfFile(file)) {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
-        } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
-            io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+        } else if (fileName.endsWith(".img") && BootImageEngine.isBootImage(file)) {
+            BootInspectManager.openBootImage(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, readable -> {
                 if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);
@@ -1308,8 +1310,8 @@ public class FileOpener {
             });
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
-                if (io.github.abdurazaaqmohammed.utils.StickerUtil.isLottieSticker(readable)) {
-                    io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog.show(context, readable);
+                if (StickerUtil.isLottieSticker(readable)) {
+                    StickerPreviewDialog.show(context, readable);
                 } else {
                     context.openImageViewer(readable.getPath());
                 }

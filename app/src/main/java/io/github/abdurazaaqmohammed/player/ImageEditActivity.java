@@ -1,21 +1,27 @@
 package io.github.abdurazaaqmohammed.player;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.OpenableColumns;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -24,6 +30,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -36,7 +44,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -380,7 +391,7 @@ public class ImageEditActivity extends BaseActivity {
         TextView colon = new TextView(this);
         colon.setText(" : ");
         colon.setTextSize(16);
-        colon.setTypeface(colon.getTypeface(), android.graphics.Typeface.BOLD);
+        colon.setTypeface(colon.getTypeface(), Typeface.BOLD);
         colon.setPadding(dp(8), 0, dp(8), 0);
         inputRow.addView(colon);
 
@@ -393,13 +404,13 @@ public class ImageEditActivity extends BaseActivity {
 
         root.addView(inputRow);
 
-        android.widget.CheckBox keepAspect = new android.widget.CheckBox(this);
+        CheckBox keepAspect = new CheckBox(this);
         keepAspect.setText(getString(R.string.keep_aspect_ratio));
         keepAspect.setChecked(true);
         keepAspect.setPadding(dp(8), dp(8), dp(8), dp(8));
         root.addView(keepAspect);
 
-        android.widget.CheckBox stretchImage = new android.widget.CheckBox(this);
+        CheckBox stretchImage = new CheckBox(this);
         stretchImage.setText(getString(R.string.stretch_image));
         stretchImage.setChecked(false);
         stretchImage.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -426,10 +437,10 @@ public class ImageEditActivity extends BaseActivity {
             }
         });
 
-        widthView.addTextChangedListener(new android.text.TextWatcher() {
+        widthView.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
+            @Override public void afterTextChanged(Editable s) {
                 if (widthView.hasFocus() && keepAspect.isChecked()) {
                     try {
                         String str = s.toString().trim();
@@ -444,10 +455,10 @@ public class ImageEditActivity extends BaseActivity {
             }
         });
 
-        heightView.addTextChangedListener(new android.text.TextWatcher() {
+        heightView.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
+            @Override public void afterTextChanged(Editable s) {
                 if (heightView.hasFocus() && keepAspect.isChecked()) {
                     try {
                         String str = s.toString().trim();
@@ -462,7 +473,7 @@ public class ImageEditActivity extends BaseActivity {
             }
         });
 
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.resize_and_save))
                 .setView(root)
                 .setPositiveButton(android.R.string.ok, null)
@@ -471,7 +482,7 @@ public class ImageEditActivity extends BaseActivity {
                 .create();
 
         dialog.setOnShowListener(d -> {
-            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
                 int targetW = 0, targetH = 0;
                 try {
                     targetW = Integer.parseInt(widthView.getText().toString().trim());
@@ -484,7 +495,7 @@ public class ImageEditActivity extends BaseActivity {
                 showResizePreview(targetW, targetH, cropX, cropY, baseCropW, baseCropH);
             });
 
-            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 int targetW = 0, targetH = 0;
                 try {
                     targetW = Integer.parseInt(widthView.getText().toString().trim());
@@ -967,7 +978,7 @@ public class ImageEditActivity extends BaseActivity {
 
         EditText dateTakenInput = new EditText(this);
         EditText mtimeInput = new EditText(this);
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
 
         try {
             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
@@ -998,7 +1009,7 @@ public class ImageEditActivity extends BaseActivity {
             String origDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
             long parsedTaken = parseDateTime(origDate);
             if (parsedTaken > 0) {
-                dateTakenInput.setText(sdf.format(new java.util.Date(parsedTaken)));
+                dateTakenInput.setText(sdf.format(new Date(parsedTaken)));
             } else {
                 dateTakenInput.setText(origDate != null ? origDate : "");
             }
@@ -1039,7 +1050,7 @@ public class ImageEditActivity extends BaseActivity {
             }
             if (curMtime <= 0) curMtime = workingFile.lastModified();
             if (curMtime <= 0) curMtime = System.currentTimeMillis();
-            mtimeInput.setText(sdf.format(new java.util.Date(curMtime)));
+            mtimeInput.setText(sdf.format(new Date(curMtime)));
             mtimeInput.setSingleLine(true);
             mtimeRow.addView(mtimeInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
 
@@ -1072,8 +1083,8 @@ public class ImageEditActivity extends BaseActivity {
                             String takenText = dateTakenInput.getText() == null ? "" : dateTakenInput.getText().toString().trim();
                             if (!takenText.isEmpty()) {
                                 long takenMillis = parseDateTime(takenText);
-                                java.text.SimpleDateFormat exifSdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
-                                String formattedTaken = takenMillis > 0 ? exifSdf.format(new java.util.Date(takenMillis)) : takenText;
+                                SimpleDateFormat exifSdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+                                String formattedTaken = takenMillis > 0 ? exifSdf.format(new Date(takenMillis)) : takenText;
                                 exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, formattedTaken);
                                 exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, formattedTaken);
                             } else {
@@ -1086,8 +1097,8 @@ public class ImageEditActivity extends BaseActivity {
                             long parsedMtime = parseDateTime(mtimeText);
                             if (parsedMtime > 0) {
                                 targetMtime = parsedMtime;
-                                java.text.SimpleDateFormat exifSdf = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
-                                exif.setAttribute(ExifInterface.TAG_DATETIME, exifSdf.format(new java.util.Date(parsedMtime)));
+                                SimpleDateFormat exifSdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+                                exif.setAttribute(ExifInterface.TAG_DATETIME, exifSdf.format(new Date(parsedMtime)));
                             }
 
                             exif.saveAttributes();
@@ -1122,23 +1133,23 @@ public class ImageEditActivity extends BaseActivity {
                 }).show();
     }
 
-    private void showDateTimePicker(EditText targetInput, java.text.SimpleDateFormat sdf) {
+    private void showDateTimePicker(EditText targetInput, SimpleDateFormat sdf) {
         long current = parseDateTime(targetInput.getText() != null ? targetInput.getText().toString().trim() : "");
         if (current <= 0) current = System.currentTimeMillis();
 
-        java.util.Calendar cal = java.util.Calendar.getInstance();
+        Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(current);
-        int year = cal.get(java.util.Calendar.YEAR);
-        int month = cal.get(java.util.Calendar.MONTH);
-        int day = cal.get(java.util.Calendar.DAY_OF_MONTH);
-        int hour = cal.get(java.util.Calendar.HOUR_OF_DAY);
-        int minute = cal.get(java.util.Calendar.MINUTE);
+        int year = cal.get(Calendar.YEAR);
+        int month = cal.get(Calendar.MONTH);
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        int minute = cal.get(Calendar.MINUTE);
 
-        new android.app.DatePickerDialog(this, (dp, y, m, d) ->
-                new android.app.TimePickerDialog(this, (tp, h, min) -> {
-                    java.util.Calendar res = java.util.Calendar.getInstance();
+        new DatePickerDialog(this, (dp, y, m, d) ->
+                new TimePickerDialog(this, (tp, h, min) -> {
+                    Calendar res = Calendar.getInstance();
                     res.set(y, m, d, h, min, 0);
-                    targetInput.setText(sdf.format(new java.util.Date(res.getTimeInMillis())));
+                    targetInput.setText(sdf.format(new Date(res.getTimeInMillis())));
                 }, hour, minute, true).show(), year, month, day).show();
     }
 
@@ -1153,9 +1164,9 @@ public class ImageEditActivity extends BaseActivity {
         };
         for (String pattern : patterns) {
             try {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(pattern, Locale.US);
+                SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);
                 sdf.setLenient(false);
-                java.util.Date date = sdf.parse(str.trim());
+                Date date = sdf.parse(str.trim());
                 if (date != null) return date.getTime();
             } catch (Exception ignored) {}
         }

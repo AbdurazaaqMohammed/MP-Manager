@@ -11,10 +11,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
-
-import com.google.gson.JsonElement;
 
 import java.io.File;
 
@@ -65,8 +64,8 @@ public class McpServerService extends Service {
         if (isRunning()) return;
         File home = McpPrefs.getHome(this);
         if (!home.isDirectory() && !home.mkdirs() && !home.isDirectory()) {
-            android.widget.Toast.makeText(this,
-                    getString(R.string.mcp_home_create_failed, home.getPath()), android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(this,
+                    getString(R.string.mcp_home_create_failed, home.getPath()), Toast.LENGTH_LONG).show();
         }
         McpPathPolicy policy = new McpPathPolicy(home, McpPrefs.getRulesJson(this));
         toolContext = new McpToolContext(this, policy);
@@ -85,8 +84,8 @@ public class McpServerService extends Service {
         try {
             httpServer.start();
         } catch (Exception e) {
-            android.widget.Toast.makeText(this,
-                    getString(R.string.mcp_start_failed, String.valueOf(e.getMessage())), android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(this,
+                    getString(R.string.mcp_start_failed, String.valueOf(e.getMessage())), Toast.LENGTH_LONG).show();
             stopSelf();
             return;
         }

@@ -21,6 +21,7 @@ import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkSigner;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 import org.bouncycastle.jcajce.provider.keystore.pkcs12.PKCS12KeyStoreSpi;
 
@@ -152,7 +153,7 @@ public class SignWrapper {
         EditText pwInput = new EditText(activity);
         pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pwInput.setHint(activity.getString(R.string.enter_password));
-        com.google.android.material.materialswitch.MaterialSwitch cbRemember = new com.google.android.material.materialswitch.MaterialSwitch(activity);
+        MaterialSwitch cbRemember = new MaterialSwitch(activity);
         cbRemember.setText(activity.getString(R.string.remember_password));
         cbRemember.setChecked(prefs.getBoolean("save_password", false));
         LinearLayout layout = new LinearLayout(activity);
