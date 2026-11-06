@@ -3160,6 +3160,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         try {
             updates.register();
+            // Shared-entry "Archive viewer": browse the archive itself in pane 1
+            // instead of locating its parent folder. locatePath was set alongside
+            // it only to put startup into locate mode (pane 1 left for here).
+            String openArchive = getIntent() == null ? null : getIntent().getStringExtra("openArchivePath");
+            if (openArchive != null && !openArchive.isEmpty()) {
+                try {
+                    getIntent().removeExtra("openArchivePath");
+                } catch (Exception ignored) {
+                }
+                try {
+                    getIntent().removeExtra("locatePath");
+                } catch (Exception ignored) {
+                }
+                File archive = new File(openArchive);
+                if (archive.isFile()) {
+                    loadZipFolderInPane(archive, "", true, false);
+                    Extensions.showMessage(this, rss.getString(R.string.loaded_X, archive.getName()));
+                } else {
+                    Extensions.showMessage(this, rss.getString(R.string.cannot_open_item));
+                }
+            }
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {

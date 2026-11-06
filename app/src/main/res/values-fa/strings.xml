@@ -1142,7 +1142,7 @@ com/gms/
     <string name="sidebar_expand">گسترش انتخاب‌ها</string>
     <string name="sidebar_extract">استخراج APK</string>
     <string name="sidebar_layout_inspector">ناظر لایه</string>
-    <string name="sidebar_tools">جعبه ابزار</string>
+    <string name="sidebar_tools">میز ابزار</string>
     <string name="sidebar_wifi">مدیر Wi-Fi</string>
     <string name="sig_auth_error">خطای احراز هویت: %1$s</string>
     <string name="sig_auth_failed">احراز هویت انجام نشد</string>
@@ -1666,7 +1666,7 @@ com/gms/
     <string name="install_grant_all">اعطای همه مجوزهای درخواستی هنگام نصب</string>
     <string name="install_bypass_low_target">دور زدن مسدودیت target-SDK پایین</string>
     <string name="install_all_users">نصب برای همه کاربران</string>
-    <string name="sidebar_plugins">افزونه‌ها</string>
+    <string name="sidebar_plugins">افزونه‌ها/ابزارها</string>
     <string name="show_plugin_groups_sidebar">نمایش افزونه‌ها در نوار کناری</string>
     <string name="install_initiator">آغازگر نصب</string>
     <string name="install_origin">مبدأ نصب</string>

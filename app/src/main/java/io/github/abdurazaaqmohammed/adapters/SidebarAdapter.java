@@ -215,7 +215,6 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (String section : sectionOrder) {
             if ("bookmarks".equals(section) && !showBookmarks) continue;
             if (section.startsWith(BOOKMARK_GROUP_PREFIX) && !showGroups) continue;
-            if ("plugins".equals(section) && !showPlugins) continue;
             entries.add(new SidebarEntry(EntryType.HEADER, section, section,
                     sectionTitle(section), 0, null, null));
             if (Boolean.TRUE.equals(collapsed.get(section))) continue;
@@ -233,7 +232,11 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 String group = section.substring(BOOKMARK_GROUP_PREFIX.length());
                 addBookmarks(group, section, groups.getOrDefault(group, new ArrayList<>()));
             } else if ("plugins".equals(section)) {
-                addPluginGroups();
+                int before = entries.size();
+                addPluginsAndTools();
+                // Nothing followed the header (no extras, packs hidden and no
+                // external plugin actions): drop the empty section header.
+                if (entries.size() == before) entries.remove(before - 1);
             } else {
                 addTools();
             }
@@ -266,12 +269,47 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     /**
-     * Plugins section body: one row per installed pack tool, flat, no group
-     * headers. Each row uses the tool's own icon. Ordering round-trips
-     * through the shared toolOrder like built-in tools; newly installed
-     * tools are appended.
+     * Plugins/Tools section body: built-in extra tools first (dev/auxiliary
+     * utilities kept out of the main Tools section), then pack tools when the
+     * "Show plugins in sidebar" setting is on, then external plugin sidebar
+     * actions. Flat rows, no group headers; each row uses the tool's own
+     * icon. Ordering round-trips through the shared toolOrder like built-in
+     * tools; newly installed entries are appended.
+     */
+    private void addPluginsAndTools() {
+        List<String> order = new ArrayList<>();
+        for (String id : toolOrder) if (isPluginsSectionTool(id) && !order.contains(id)) order.add(id);
+        for (String id : PLUGINS_SECTION_TOOLS) if (!order.contains(id)) order.add(id);
+        for (String id : order) {
+            switch (id) {
+                case "mcp_server": addToolTo("plugins", id, R.string.mcp_server, R.drawable.code_24px); break;
+                case "logcat": addToolTo("plugins", id, R.string.sidebar_logcat, R.drawable.terminal_24px); break;
+                case "color_picker": addToolTo("plugins", id, R.string.color_picker, R.drawable.colorize_24px); break;
+                case "layout": addToolTo("plugins", id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
+                case "wifi": addToolTo("plugins", id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
+                case "free_style": addToolTo("plugins", id, R.string.free_style, R.drawable.image_24px); break;
+            }
+        }
+        addPluginGroups();
+        addExternalPluginActions();
+    }
+
+    /** Built-in tools that live in the Plugins/Tools section. */
+    private static final String[] PLUGINS_SECTION_TOOLS =
+            {"mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style"};
+
+    private static boolean isPluginsSectionTool(String id) {
+        for (String tool : PLUGINS_SECTION_TOOLS) if (tool.equals(id)) return true;
+        return false;
+    }
+
+    /**
+     * Pack tools part of the section: one row per installed pack tool. Gated
+     * by the "Show plugins in sidebar" setting; the rest of the section shows
+     * regardless.
      */
     private void addPluginGroups() {
+        if (!showPlugins) return;
         List<PluginRegistry.PackTools> packs = PluginRegistry.installedPacks();
         if (packs.isEmpty()) return;
         // index of "packtool:<pack>.<tool>" for order lookups.
@@ -301,8 +339,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         }
     }
 
+    /** Core file-manager tools; the main Tools section of the sidebar. */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "tools", "settings"};
+        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "tools"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -312,72 +351,69 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "documents": addTool(id, R.string.sidebar_documents, R.drawable.folder_24px); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
-                case "mcp_server": addTool(id, R.string.mcp_server, R.drawable.code_24px); break;
-                case "logcat": addTool(id, R.string.sidebar_logcat, R.drawable.terminal_24px); break;
                 case "ftp_client": addTool(id, R.string.ftp_client, R.drawable.cloud_download_24px); break;
-                case "color_picker": addTool(id, R.string.color_picker, R.drawable.colorize_24px); break;
-                case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
-                case "wifi": addTool(id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
-                case "free_style": addTool(id, R.string.free_style, R.drawable.image_24px); break;
                 case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
-                case "settings": addTool(id, R.string.settings, R.drawable.baseline_settings_24); break;
-                default: {
-                    // Third-party sidebar actions (ids unknown to the switch).
-                    SidebarAction inProc = ExtensionRegistry.findSidebar(id);
-                    if (inProc != null) {
-                        addToolEntry(id, inProc);
-                        break;
-                    }
-                    ExternalActions.Entry ext =
-                            ExternalActions.findById(ExternalActions.sidebarEntries(context), id);
-                    if (ext != null) addExternalTool(ext);
-                    break;
-                }
             }
-        }
-        // External (out-of-process) actions discovered after the saved order
-        // was written are appended once, then round-trip like built-ins.
-        for (ExternalActions.Entry e : ExternalActions.sidebarEntries(context)) {
-            if (e == null || e.id == null) continue;
-            boolean present = false;
-            for (SidebarEntry se : entries) {
-                if (se.type == EntryType.TOOL && e.id.equals(se.id())) {
-                    present = true;
-                    break;
-                }
-            }
-            if (!present) addExternalTool(e);
-        }
-        // Actions installed after the saved order was written are appended once;
-        // from then on they round-trip through toolOrder like built-ins.
-        for (SidebarAction ext : ExtensionRegistry.sidebarActions()) {
-            if (ext == null || ext.id() == null) continue;
-            boolean present = false;
-            for (SidebarEntry e : entries) {
-                if (e.type == EntryType.TOOL && ext.id().equals(e.id())) {
-                    present = true;
-                    break;
-                }
-            }
-            if (!present) addToolEntry(ext.id(), ext);
         }
     }
 
     private void addTool(String id, int text, int icon) {
-        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", id, context.getString(text), icon, null, null);
+        addToolTo("tools", id, text, icon);
+    }
+
+    private void addToolTo(String section, String id, int text, int icon) {
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, id, context.getString(text), icon, null, null);
         if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }
 
-    private void addToolEntry(String id, SidebarAction ext) {
+    /**
+     * External (out-of-process) plugin sidebar actions and in-process
+     * extension actions, shown after the pack tools. Ids already in the
+     * saved order come first; entries installed after that order was
+     * written are appended once, then round-trip like built-ins.
+     */
+    private void addExternalPluginActions() {
+        List<String> order = new ArrayList<>();
+        for (String id : toolOrder) {
+            if (!order.contains(id) && !isPluginsSectionTool(id) && !id.startsWith(PACK_TOOL_PREFIX)) order.add(id);
+        }
+        for (String id : order) {
+            SidebarAction inProc = ExtensionRegistry.findSidebar(id);
+            if (inProc != null) {
+                addToolEntry("plugins", id, inProc);
+                continue;
+            }
+            ExternalActions.Entry ext =
+                    ExternalActions.findById(ExternalActions.sidebarEntries(context), id);
+            if (ext != null) addExternalTool("plugins", ext);
+        }
+        for (ExternalActions.Entry e : ExternalActions.sidebarEntries(context)) {
+            if (e == null || e.id == null) continue;
+            if (!presentAsTool(e.id)) addExternalTool("plugins", e);
+        }
+        for (SidebarAction ext : ExtensionRegistry.sidebarActions()) {
+            if (ext == null || ext.id() == null) continue;
+            if (!presentAsTool(ext.id())) addToolEntry("plugins", ext.id(), ext);
+        }
+    }
+
+    private boolean presentAsTool(String id) {
+        for (SidebarEntry se : entries) {
+            if (se.type == EntryType.TOOL && id.equals(se.id())) return true;
+        }
+        return false;
+    }
+
+    private void addToolEntry(String section, String id, SidebarAction ext) {
         String label = ext.title() == null || ext.title().isEmpty() ? id : ext.title();
         int icon = ExtensionIcons.resId(context, ext.iconName(), R.drawable.tools_24px);
-        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", id, label, icon, null, null);
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, id, label, icon, null, null);
         if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }
 
-    private void addExternalTool(ExternalActions.Entry e) {
+    private void addExternalTool(String section, ExternalActions.Entry e) {
         String label = e.title == null || e.title.isEmpty() ? e.id : e.title;
-        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", e.id,
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, e.id,
                 label, R.drawable.tools_24px, null, null);
         if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }

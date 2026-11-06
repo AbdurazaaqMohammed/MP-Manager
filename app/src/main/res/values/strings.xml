@@ -1070,9 +1070,9 @@ Layout Inspector
     <string name="logcat_add_shortcut">Add to home screen</string>
     <string name="logcat_shortcut_old_android">Shortcuts need Android 8.0 or newer</string>
     <string name="logcat_shortcut_unsupported">Launcher does not allow shortcuts</string>
-    <string name="sidebar_tools">Plugins</string>
+    <string name="sidebar_tools">Tools Hub</string>
     <string name="sidebar_documents">Documents providers</string>
-    <string name="sidebar_plugins">Plugins</string>
+    <string name="sidebar_plugins">Plugins/Tools</string>
     <string name="show_plugin_groups_sidebar">Show plugins in sidebar</string>
     <string name="plugin_open">Open</string>
     <string name="plugin_create_shortcut">Create shortcut</string>

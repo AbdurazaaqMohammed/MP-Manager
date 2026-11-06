@@ -919,8 +919,8 @@
     <string name="sidebar_extract">استخراج APK</string>
     <string name="sidebar_layout_inspector">فاحص التخطيط</string>
     <string name="sidebar_wifi">مدير Wi-Fi</string>
-    <string name="sidebar_tools">الإضافات</string>
-    <string name="sidebar_plugins">الإضافات</string>
+    <string name="sidebar_tools">مركز الأدوات</string>
+    <string name="sidebar_plugins">الإضافات/الأدوات</string>
     <string name="show_plugin_groups_sidebar">إظهار الإضافات في الشريط الجانبي</string>
     <string name="plugin_open">فتح</string>
     <string name="plugin_create_shortcut">إنشاء اختصار</string>
