@@ -108,7 +108,7 @@ public class FileIconLoader {
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
-            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon;
+            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
 
@@ -202,7 +202,7 @@ public class FileIconLoader {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
         } else {
-            setupNonFolderIconView(zipEntry.getFullPath(), fileIconView);
+            setupZipEntryNonFolderIconView(zipEntry, fileIconView);
             fileDateView.setVisibility(View.VISIBLE);
             applyDateTextSize(fileDateView);
             StringBuilder sb = new StringBuilder(UiPrefs.formatDate(datePattern, zipEntry.getLastModified()));
@@ -762,6 +762,36 @@ public class FileIconLoader {
         }
     }
 
+    private void setupZipEntryNonFolderIconView(ZipEntryInfo zipEntry, ImageView fileIconView) {
+        String path = zipEntry != null ? zipEntry.getFullPath() : null;
+        if (path == null) {
+            setupNonFolderIconView("", fileIconView);
+            return;
+        }
+        Drawable memo = iconMemo.get(path);
+        if (memo != null) {
+            fileIconView.setImageDrawable(memo);
+            return;
+        }
+        String ext = FilenameUtils.getExtension(path);
+        if (ext != null) ext = "." + ext.toLowerCase(Locale.ROOT);
+        else ext = "";
+
+        if (".xml".equals(ext)) {
+            if (FileUtils.isDrawableXml(path) || FileUtils.isZipEntryDrawableXml(zipEntry.getZipFile(), path)) {
+                iconMemo.put(path, cachedImageIcon);
+                fileIconView.setImageDrawable(cachedImageIcon);
+                return;
+            }
+        }
+        if (FileUtils.isElf(path)) {
+            iconMemo.put(path, cachedElfIcon);
+            fileIconView.setImageDrawable(cachedElfIcon);
+            return;
+        }
+        setupNonFolderIconView(path, fileIconView);
+    }
+
     private void setupNonFolderIconView(String path, ImageView fileIconView) {
         if (!isInZip) {
             Drawable cached = iconCache.get(path);
@@ -815,6 +845,8 @@ public class FileIconLoader {
             } else {
                 resolved = cachedTextIcon;
             }
+        } else if (FileUtils.isElf(path) || (!isInZip && FileUtils.isElfFile(new File(path)))) {
+            resolved = cachedElfIcon;
         } else {
             resolved = cachedFileIcon;
         }
@@ -913,6 +945,7 @@ public class FileIconLoader {
         cachedStickerIcon = badge(res, density, R.drawable.ic_sticker_24px, 0xFF00897B, true);
         cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
+        cachedElfIcon     = badge(res, density, R.drawable.terminal_24px, 0xFF37474F, true);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
                 theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
     }

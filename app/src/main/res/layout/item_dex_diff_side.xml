@@ -2,59 +2,70 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="20dp"
+    android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/side_num_old"
-        android:layout_width="34dp"
-        android:layout_height="wrap_content"
-        android:gravity="top|end"
-        android:paddingTop="2dp"
-        android:paddingEnd="4dp"
-        android:textSize="10sp"
-        android:textColor="?android:attr/textColorSecondary" />
-
+    <!-- Left Text Pane -->
     <TextView
         android:id="@+id/side_old"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
         android:fontFamily="monospace"
+        android:gravity="center_vertical"
         android:paddingStart="4dp"
-        android:paddingTop="2dp"
         android:paddingEnd="4dp"
-        android:paddingBottom="2dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:textSize="11sp"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="#E0E0E0"
+        android:singleLine="true"
+        android:ellipsize="none"
         android:textIsSelectable="false" />
 
+    <!-- Left Line Number (Center Gutter) -->
+    <TextView
+        android:id="@+id/side_num_old"
+        android:layout_width="26dp"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:fontFamily="monospace"
+        android:textSize="10sp"
+        android:textColor="#78909C" />
+
+    <!-- Center Thin Divider -->
     <View
         android:layout_width="1dp"
         android:layout_height="match_parent"
-        android:background="#40808080" />
+        android:background="#22FFFFFF" />
 
+    <!-- Right Line Number (Center Gutter) -->
     <TextView
         android:id="@+id/side_num_new"
-        android:layout_width="34dp"
-        android:layout_height="wrap_content"
-        android:gravity="top|end"
-        android:paddingTop="2dp"
-        android:paddingEnd="4dp"
+        android:layout_width="26dp"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:fontFamily="monospace"
         android:textSize="10sp"
-        android:textColor="?android:attr/textColorSecondary" />
+        android:textColor="#78909C" />
 
+    <!-- Right Text Pane -->
     <TextView
         android:id="@+id/side_new"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
         android:fontFamily="monospace"
+        android:gravity="center_vertical"
         android:paddingStart="4dp"
-        android:paddingTop="2dp"
         android:paddingEnd="4dp"
-        android:paddingBottom="2dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:textSize="11sp"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="#E0E0E0"
+        android:singleLine="true"
+        android:ellipsize="none"
         android:textIsSelectable="false" />
 
 </LinearLayout>

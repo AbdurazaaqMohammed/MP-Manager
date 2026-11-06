@@ -21,9 +21,11 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.util.TypedValue;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -79,20 +81,73 @@ public class HexEditorActivity extends BaseActivity {
     private long cursorPos;
     private long selectionStart = -1;
     private long selectionEnd = -1;
-    private long dragStartPos = -1;
-    private boolean isDragging = false;
     private boolean nibbleHigh = true;
     private HexRowAdapter adapter;
     private TextView statusText;
     private LinearLayoutManager layoutManager;
     private FastScrollerRecyclerView recycler;
 
+    private View hexRoot;
+    private ImageView hexStartHandle, hexEndHandle;
+    private boolean isDraggingStartHandle = false;
+    private boolean isDraggingEndHandle = false;
+    private float cellDownX, cellDownY;
+    private long cellDownPos = -1;
+    private boolean isCellDragging = false;
+    private PopupMenu currentSelectionMenu;
+
     private View lastTouchedCell;
     private GestureDetector tapDetector;
 
     private final View.OnTouchListener cellTouchListener = (v, ev) -> {
-        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) lastTouchedCell = v;
-        if (tapDetector != null) tapDetector.onTouchEvent(ev);
+        int action = ev.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            lastTouchedCell = v;
+            cellDownX = ev.getRawX();
+            cellDownY = ev.getRawY();
+            if (v != null && v.getTag() instanceof Number) {
+                cellDownPos = ((Number) v.getTag()).longValue();
+            } else {
+                cellDownPos = -1;
+            }
+            isCellDragging = false;
+            if (tapDetector != null) tapDetector.onTouchEvent(ev);
+            return true;
+        } else if (action == MotionEvent.ACTION_MOVE) {
+            float dx = Math.abs(ev.getRawX() - cellDownX);
+            float dy = Math.abs(ev.getRawY() - cellDownY);
+            if (!isCellDragging && (dx > dp(8) || dy > dp(8)) && cellDownPos >= 0) {
+                isCellDragging = true;
+                if (v != null && v.getParent() != null) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                dismissSelectionMenu();
+            }
+            if (isCellDragging && cellDownPos >= 0) {
+                long target = findBytePosAtScreenCoords(ev.getRawX(), ev.getRawY());
+                if (target >= 0 && (target != cursorPos || selectionStart != cellDownPos || selectionEnd != target)) {
+                    selectionStart = cellDownPos;
+                    selectionEnd = target;
+                    cursorPos = target;
+                    refreshSelection();
+                    updateStatus();
+                    updateSelectionHandles();
+                }
+            }
+            if (!isCellDragging && tapDetector != null) {
+                tapDetector.onTouchEvent(ev);
+            }
+            return true;
+        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            if (isCellDragging) {
+                isCellDragging = false;
+                updateSelectionHandles();
+                showSelectionMenu();
+            } else {
+                if (tapDetector != null) tapDetector.onTouchEvent(ev);
+            }
+            return true;
+        }
         return false;
     };
 
@@ -187,13 +242,25 @@ public class HexEditorActivity extends BaseActivity {
                     selectionStart = pos;
                     selectionEnd = pos;
                     setCursor(pos, false);
+                    dismissSelectionMenu();
+                    updateSelectionHandles();
                 }
                 return false;
             }
 
             @Override
             public void onLongPress(MotionEvent e) {
-                // Deliberately not consumed: selectable TextView displays native selection handles
+                View v = lastTouchedCell;
+                if (v != null && v.getTag() instanceof Number) {
+                    long pos = ((Number) v.getTag()).longValue();
+                    selectionStart = pos;
+                    selectionEnd = pos;
+                    cursorPos = pos;
+                    refreshSelection();
+                    updateStatus();
+                    updateSelectionHandles();
+                    showSelectionMenu();
+                }
             }
         });
 
@@ -205,6 +272,14 @@ public class HexEditorActivity extends BaseActivity {
         recycler.setLayoutManager(layoutManager);
         adapter = new HexRowAdapter();
         recycler.setAdapter(adapter);
+
+        setupSelectionHandles();
+        recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                updateSelectionHandles();
+            }
+        });
 
         setupKeypad();
 
@@ -415,7 +490,119 @@ public class HexEditorActivity extends BaseActivity {
         return Math.min(rowStart, Math.max(0, size - 1));
     }
 
-    private void showCellContextMenu(View anchor, long bytePos) {
+    private void setupSelectionHandles() {
+        hexRoot = findViewById(R.id.hexRoot);
+        hexStartHandle = findViewById(R.id.hexStartHandle);
+        hexEndHandle = findViewById(R.id.hexEndHandle);
+
+        View.OnTouchListener handleTouchListener = (v, ev) -> {
+            boolean isStart = (v == hexStartHandle);
+            int action = ev.getActionMasked();
+            switch (action) {
+                case MotionEvent.ACTION_DOWN -> {
+                    if (isStart) isDraggingStartHandle = true;
+                    else isDraggingEndHandle = true;
+                    dismissSelectionMenu();
+                    if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                    return true;
+                }
+                case MotionEvent.ACTION_MOVE -> {
+                    long target = findBytePosAtScreenCoords(ev.getRawX(), ev.getRawY());
+                    if (target >= 0) {
+                        if (isStart && target != selectionStart) {
+                            selectionStart = target;
+                            cursorPos = target;
+                            refreshSelection();
+                            updateStatus();
+                            updateSelectionHandles();
+                        } else if (!isStart && target != selectionEnd) {
+                            selectionEnd = target;
+                            cursorPos = target;
+                            refreshSelection();
+                            updateStatus();
+                            updateSelectionHandles();
+                        }
+                    }
+                    return true;
+                }
+                case MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (isStart) isDraggingStartHandle = false;
+                    else isDraggingEndHandle = false;
+                    updateSelectionHandles();
+                    showSelectionMenu();
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if (hexStartHandle != null) hexStartHandle.setOnTouchListener(handleTouchListener);
+        if (hexEndHandle != null) hexEndHandle.setOnTouchListener(handleTouchListener);
+    }
+
+    private void updateSelectionHandles() {
+        if (hexStartHandle == null || hexEndHandle == null || hexRoot == null || layoutManager == null) return;
+        boolean hasRange = selectionStart >= 0 && selectionEnd >= 0 && selectionStart != selectionEnd;
+        if (!hasRange) {
+            hexStartHandle.setVisibility(View.GONE);
+            hexEndHandle.setVisibility(View.GONE);
+            return;
+        }
+        long minPos = Math.min(selectionStart, selectionEnd);
+        long maxPos = Math.max(selectionStart, selectionEnd);
+
+        positionHandle(hexStartHandle, minPos, true);
+        positionHandle(hexEndHandle, maxPos, false);
+    }
+
+    private void positionHandle(ImageView handle, long bytePos, boolean isStart) {
+        int row = (int) (bytePos / 8);
+        int col = (int) (bytePos % 8);
+        View rowView = layoutManager.findViewByPosition(row);
+        if (rowView == null) {
+            handle.setVisibility(View.GONE);
+            return;
+        }
+        int[] cellIds = {R.id.cell0, R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4, R.id.cell5, R.id.cell6, R.id.cell7};
+        View cell = rowView.findViewById(cellIds[col]);
+        if (cell == null) {
+            handle.setVisibility(View.GONE);
+            return;
+        }
+        int[] cellLoc = new int[2];
+        cell.getLocationInWindow(cellLoc);
+        int[] rootLoc = new int[2];
+        hexRoot.getLocationInWindow(rootLoc);
+
+        int cellLeftInRoot = cellLoc[0] - rootLoc[0];
+        int cellTopInRoot = cellLoc[1] - rootLoc[1];
+
+        int handleW = handle.getWidth();
+        if (handleW <= 0) handleW = dp(44);
+
+        float targetX = isStart
+                ? (cellLeftInRoot + cell.getWidth() / 2f - handleW + dp(4))
+                : (cellLeftInRoot + cell.getWidth() / 2f - dp(4));
+        float targetY = cellTopInRoot + cell.getHeight() - dp(4);
+
+        handle.setX(targetX);
+        handle.setY(targetY);
+        handle.setVisibility(View.VISIBLE);
+        handle.bringToFront();
+    }
+
+    private void dismissSelectionMenu() {
+        if (currentSelectionMenu != null) {
+            currentSelectionMenu.dismiss();
+            currentSelectionMenu = null;
+        }
+    }
+
+    private void showSelectionMenu() {
+        dismissSelectionMenu();
+        View anchor = (hexEndHandle != null && hexEndHandle.getVisibility() == View.VISIBLE) ? hexEndHandle : lastTouchedCell;
+        if (anchor == null || !anchor.isAttachedToWindow()) anchor = recycler;
+        if (anchor == null) return;
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, R.string.select);
         popup.getMenu().add(0, 2, 1, "Copy Hex");
@@ -437,7 +624,12 @@ public class HexEditorActivity extends BaseActivity {
             }
             return true;
         });
+        currentSelectionMenu = popup;
         popup.show();
+    }
+
+    private void showCellContextMenu(View anchor, long bytePos) {
+        showSelectionMenu();
     }
 
     private void copySelectedHex() {
@@ -1237,7 +1429,10 @@ public class HexEditorActivity extends BaseActivity {
                 cells[5] = itemView.findViewById(R.id.cell5);
                 cells[6] = itemView.findViewById(R.id.cell6);
                 cells[7] = itemView.findViewById(R.id.cell7);
-                for (TextView cell : cells) cell.setTextIsSelectable(true);
+                for (TextView cell : cells) {
+                    cell.setTextIsSelectable(false);
+                    cell.setFocusable(false);
+                }
             }
         }
     }

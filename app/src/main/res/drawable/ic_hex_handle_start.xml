@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+    <!-- Teardrop shape pointing to top-right (26, 0) -->
+    <path
+        android:fillColor="?attr/colorPrimary"
+        android:pathData="M26,0 C26,0 26,14 13,14 C6.37,14 1,19.37 1,26 C1,12.75 12.75,0 26,0 Z" />
+    <path
+        android:fillColor="?attr/colorPrimary"
+        android:pathData="M13,26 C5.82,26 0,20.18 0,13 C0,8.22 2.68,4.07 6.64,1.96 C11.02,7.31 18.06,12.92 26,0 C26,14.36 14.36,26 13,26 Z" />
+</vector>

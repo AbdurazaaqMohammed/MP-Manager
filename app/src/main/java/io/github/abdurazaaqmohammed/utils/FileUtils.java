@@ -156,6 +156,59 @@ public class FileUtils {
                 || fileName.startsWith("badge_") || fileName.startsWith("round_");
     }
 
+    private static final byte[][] DRAWABLE_KEYWORDS = {
+            "vector".getBytes(StandardCharsets.US_ASCII),
+            "shape".getBytes(StandardCharsets.US_ASCII),
+            "selector".getBytes(StandardCharsets.US_ASCII),
+            "layer-list".getBytes(StandardCharsets.US_ASCII),
+            "ripple".getBytes(StandardCharsets.US_ASCII),
+            "drawable".getBytes(StandardCharsets.US_ASCII),
+            "pathData".getBytes(StandardCharsets.US_ASCII),
+            "fillColor".getBytes(StandardCharsets.US_ASCII),
+            "strokeColor".getBytes(StandardCharsets.US_ASCII),
+            "viewportWidth".getBytes(StandardCharsets.US_ASCII),
+            "viewportHeight".getBytes(StandardCharsets.US_ASCII),
+            "gradient".getBytes(StandardCharsets.US_ASCII),
+            "corners".getBytes(StandardCharsets.US_ASCII),
+            "solid".getBytes(StandardCharsets.US_ASCII),
+            "stroke".getBytes(StandardCharsets.US_ASCII),
+            "padding".getBytes(StandardCharsets.US_ASCII),
+            "size".getBytes(StandardCharsets.US_ASCII),
+            "item".getBytes(StandardCharsets.US_ASCII)
+    };
+
+    public static boolean isDrawableBytes(byte[] buf, int n) {
+        if (buf == null || n <= 0) return false;
+        String s = new String(buf, 0, Math.min(n, 1024), StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+        if (s.contains("<vector") || s.contains("<shape") || s.contains("<animated-vector")
+                || s.contains("<layer-list") || s.contains("<bitmap") || s.contains("<selector")
+                || s.contains("<ripple") || s.contains("<nine-patch") || s.contains("<inset")
+                || s.contains("<clip") || s.contains("<scale") || s.contains("<gradient")) {
+            return true;
+        }
+        for (byte[] kw : DRAWABLE_KEYWORDS) {
+            if (containsSubarray(buf, n, kw)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isZipEntryDrawableXml(File zipFile, String entryPath) {
+        if (zipFile == null || !zipFile.isFile() || entryPath == null) return false;
+        if (!entryPath.toLowerCase(Locale.ROOT).endsWith(".xml")) return false;
+        if (isDrawableXml(entryPath)) return true;
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+            java.util.zip.ZipEntry ze = zf.getEntry(entryPath);
+            if (ze != null && !ze.isDirectory()) {
+                try (InputStream is = zf.getInputStream(ze)) {
+                    byte[] buf = new byte[1024];
+                    int n = is.read(buf);
+                    return isDrawableBytes(buf, n);
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
     public static boolean isDrawableXmlContent(File file) {
         if (file == null || !file.exists() || !file.isFile() || file.length() == 0 || file.length() > 5 * 1024 * 1024) return false;
         if (isDrawableXml(file.getName()) || isDrawableXml(file.getAbsolutePath())) return true;
@@ -163,27 +216,29 @@ public class FileUtils {
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] buf = new byte[1024];
             int n = fis.read(buf);
-            if (n > 0) {
-                // Check ASCII text
-                String s = new String(buf, 0, n, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
-                if (s.contains("<vector") || s.contains("<shape") || s.contains("<animated-vector")
-                        || s.contains("<layer-list") || s.contains("<bitmap") || s.contains("<selector")
-                        || s.contains("<ripple") || s.contains("<nine-patch") || s.contains("<inset")
-                        || s.contains("<clip") || s.contains("<scale") || s.contains("<gradient")) {
-                    return true;
-                }
-                // Check raw bytes for binary AXML string pool containing drawable tags
-                byte[][] keywords = {
-                        "vector".getBytes(StandardCharsets.US_ASCII),
-                        "shape".getBytes(StandardCharsets.US_ASCII),
-                        "selector".getBytes(StandardCharsets.US_ASCII),
-                        "layer-list".getBytes(StandardCharsets.US_ASCII),
-                        "ripple".getBytes(StandardCharsets.US_ASCII),
-                        "drawable".getBytes(StandardCharsets.US_ASCII)
-                };
-                for (byte[] kw : keywords) {
-                    if (containsSubarray(buf, n, kw)) return true;
-                }
+            return isDrawableBytes(buf, n);
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    public static final String[] ELF_EXTS = {".so", ".elf", ".o", ".ko"};
+
+    public static boolean isElf(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase(Locale.ROOT);
+        for (String ext : ELF_EXTS) {
+            if (lower.endsWith(ext)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isElfFile(File file) {
+        if (file == null || !file.exists() || !file.isFile() || file.length() < 4) return false;
+        if (isElf(file.getName())) return true;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] header = new byte[4];
+            if (fis.read(header) == 4) {
+                return header[0] == 0x7F && header[1] == 'E' && header[2] == 'L' && header[3] == 'F';
             }
         } catch (Exception ignored) {}
         return false;

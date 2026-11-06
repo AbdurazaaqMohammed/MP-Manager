@@ -54,8 +54,11 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
  */
 public class CompareTextActivity extends BaseActivity {
 
+    private static final int BG_DIFF = 0xFF2D435C;
     private static final int BG_DELETED = 0x33F44336;
     private static final int BG_INSERTED = 0x3334A853;
+    private static final int TEXT_NUM_DIFF = 0xFF90CAF9;
+    private static final int TEXT_NUM_EQUAL = 0xFF78909C;
 
     /** How whitespace and case are treated while matching lines. */
     private enum IgnoreMode {NONE, TRIM, WHITESPACE, WHITESPACE_EMPTY}
@@ -119,7 +122,7 @@ public class CompareTextActivity extends BaseActivity {
         if (bar != null) {
             bar.setTitle(R.string.compare_text);
             String subtitle = names1;
-            if (names2 != null && !names2.isEmpty()) subtitle = names1 + "  ⟷  " + names2;
+            if (names2 != null && !names2.isEmpty()) subtitle = names1 + " > " + names2;
             bar.setSubtitle(subtitle);
         }
         startCompare();
@@ -188,11 +191,8 @@ public class CompareTextActivity extends BaseActivity {
                                 return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
                             } catch (Exception ignored) {}
                         }
-                        StringBuilder sb = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(bis, java.nio.charset.StandardCharsets.UTF_8))) {
-                            appendLines(sb, reader);
-                        }
-                        return sb.toString();
+                        int maxBytes = (int) Math.min(ze.getSize() > 0 ? ze.getSize() : 2 * 1024 * 1024, 2 * 1024 * 1024);
+                        return readStreamWithBinaryDetection(bis, maxBytes);
                     }
                 }
             }
@@ -205,21 +205,56 @@ public class CompareTextActivity extends BaseActivity {
                         return new com.apk.axml.aXMLDecoder(bis).decodeAsString();
                     } catch (Exception ignored) {}
                 }
-                StringBuilder sb = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(bis, java.nio.charset.StandardCharsets.UTF_8))) {
-                    appendLines(sb, reader);
-                }
-                return sb.toString();
+                int maxBytes = (int) Math.min(f.length() > 0 ? f.length() : 2 * 1024 * 1024, 2 * 1024 * 1024);
+                return readStreamWithBinaryDetection(bis, maxBytes);
             }
         }
         return "";
     }
 
-    private static void appendLines(StringBuilder sb, BufferedReader reader) throws Exception {
-        String line;
-        while ((line = reader.readLine()) != null) {
-            sb.append(line).append('\n');
+    private static String readStreamWithBinaryDetection(java.io.InputStream is, int maxBytes) throws Exception {
+        byte[] buf = new byte[Math.max(1024, maxBytes)];
+        int total = 0;
+        int n;
+        while (total < buf.length && (n = is.read(buf, total, buf.length - total)) != -1) {
+            total += n;
         }
+        if (isBinary(buf, total)) {
+            return formatBinaryAsText(buf, total);
+        }
+        return new String(buf, 0, total, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static boolean isBinary(byte[] data, int len) {
+        int checkLen = Math.min(len, 4096);
+        int nonPrintable = 0;
+        for (int i = 0; i < checkLen; i++) {
+            byte b = data[i];
+            if (b == 0) return true;
+            if ((b < 0x20 && b != '\t' && b != '\r' && b != '\n') || (b & 0xFF) == 0x7F) {
+                nonPrintable++;
+            }
+        }
+        return nonPrintable > (checkLen / 10);
+    }
+
+    private static String formatBinaryAsText(byte[] data, int len) {
+        StringBuilder sb = new StringBuilder(len + (len / 22) + 32);
+        int col = 0;
+        for (int i = 0; i < len; i++) {
+            int b = data[i] & 0xFF;
+            if (b >= 0x20 && b <= 0x7E) {
+                sb.append((char) b);
+            } else {
+                sb.append('\uFFFD');
+            }
+            col++;
+            if (col == 22) {
+                sb.append('\n');
+                col = 0;
+            }
+        }
+        return sb.toString();
     }
 
     // ==========================================
@@ -749,12 +784,21 @@ public class CompareTextActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             DiffLine line = diffLines.get(position);
             if (holder instanceof SideHolder side) {
+                boolean isLeftDiff = line.tag == DiffRow.Tag.DELETE || line.tag == DiffRow.Tag.CHANGE;
+                boolean isRightDiff = line.tag == DiffRow.Tag.INSERT || line.tag == DiffRow.Tag.CHANGE;
+
                 side.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
                 side.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
                 side.old.setText(line.oldLine);
                 side.newText.setText(line.newLine);
-                side.old.setBackgroundColor(backgroundColor(line.tag, true));
-                side.newText.setBackgroundColor(backgroundColor(line.tag, false));
+
+                side.old.setBackgroundColor(isLeftDiff ? BG_DIFF : 0);
+                side.numOld.setBackgroundColor(isLeftDiff ? BG_DIFF : 0);
+                side.numOld.setTextColor(isLeftDiff ? TEXT_NUM_DIFF : TEXT_NUM_EQUAL);
+
+                side.newText.setBackgroundColor(isRightDiff ? BG_DIFF : 0);
+                side.numNew.setBackgroundColor(isRightDiff ? BG_DIFF : 0);
+                side.numNew.setTextColor(isRightDiff ? TEXT_NUM_DIFF : TEXT_NUM_EQUAL);
             } else if (holder instanceof UnifiedHolder unifiedHolder) {
                 bindUnified(unifiedHolder, line);
             }
