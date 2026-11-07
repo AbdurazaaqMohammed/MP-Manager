@@ -41,6 +41,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 
 public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
@@ -288,6 +289,12 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "layout": addToolTo("plugins", id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
                 case "wifi": addToolTo("plugins", id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
                 case "free_style": addToolTo("plugins", id, R.string.free_style, R.drawable.image_24px); break;
+                case "frida_console":
+                    // Root-only: the console drives frida-inject through su.
+                    if (RootManager.getInstance(context).isRootAvailable()) {
+                        addToolTo("plugins", id, R.string.frida_console, R.drawable.terminal_24px);
+                    }
+                    break;
             }
         }
         addPluginGroups();
@@ -296,7 +303,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     /** Built-in tools that live in the Plugins/Tools section. */
     private static final String[] PLUGINS_SECTION_TOOLS =
-            {"mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style"};
+            {"mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "frida_console"};
 
     private static boolean isPluginsSectionTool(String id) {
         for (String tool : PLUGINS_SECTION_TOOLS) if (tool.equals(id)) return true;

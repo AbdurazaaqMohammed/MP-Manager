@@ -901,6 +901,8 @@ public class ApkInfoDialogs {
             showIl2CppDumpDialog(file, fileName);
         } else if (ApkMoreMenuOrder.FLUTTER.equals(actionId)) {
             io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForApk(context, file, fileName);
+        } else if (ApkMoreMenuOrder.FRIDA.equals(actionId)) {
+            io.github.abdurazaaqmohammed.features.apk.frida.FridaGadgetDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) {
             showLibPatcherDialog(file, fileName);
         } else if (ApkMoreMenuOrder.SSL_UNPIN.equals(actionId)) {

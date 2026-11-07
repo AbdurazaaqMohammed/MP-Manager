@@ -71,6 +71,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.tools.ToolRunnerActivity;
 import io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity;
+import io.github.abdurazaaqmohammed.tools.FridaConsoleActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -601,6 +602,10 @@ public class SidebarController {
                 break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
+                break;
+            case "frida_console":
+                activity.startActivity(new Intent(activity, FridaConsoleActivity.class)
+                        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 break;
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));

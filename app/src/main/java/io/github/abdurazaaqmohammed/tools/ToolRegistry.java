@@ -37,6 +37,9 @@ public class ToolRegistry {
         tools.add(new ToolItem("sslunpin", context.getString(R.string.ssl_unpin_title),
                 context.getString(R.string.ssl_unpin_subtitle),
                 resId(context, "lock_open_24px", pkg), context.getString(R.string.cat_device)));
+        tools.add(new ToolItem("frida", context.getString(R.string.frida_console),
+                context.getString(R.string.frida_console_subtitle),
+                resId(context, "terminal_24px", pkg), context.getString(R.string.cat_device)));
         tools.add(new ToolItem("documents", context.getString(R.string.docs_tool_title),
                 context.getString(R.string.docs_tool_subtitle),
                 resId(context, "folder_24px", pkg), context.getString(R.string.cat_storage)));

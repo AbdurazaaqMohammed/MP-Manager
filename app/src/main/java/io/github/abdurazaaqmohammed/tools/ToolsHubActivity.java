@@ -96,6 +96,14 @@ public class ToolsHubActivity extends BaseActivity {
         });
         grid.setLayoutManager(layout);
         allTools = ToolRegistry.getTools(this);
+        // The Frida console needs root (frida-inject via su) — hide it otherwise.
+        if (!io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable()) {
+            List<ToolRegistry.ToolItem> filtered = new java.util.ArrayList<>();
+            for (ToolRegistry.ToolItem item : allTools) {
+                if (!"frida".equals(item.id())) filtered.add(item);
+            }
+            allTools = filtered;
+        }
         adapter = new ToolAdapter(displayRows());
         grid.setAdapter(adapter);
         searchInput.addTextChangedListener(new TextWatcher() {
@@ -494,6 +502,8 @@ public class ToolsHubActivity extends BaseActivity {
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } else if ("sslunpin".equals(item.id())) {
             startActivity(new Intent(this, SslUnpinningActivity.class));
+        } else if ("frida".equals(item.id())) {
+            startActivity(new Intent(this, FridaConsoleActivity.class));
         } else if ("documents".equals(item.id())) {
             startActivity(new Intent(this, DocumentsBrowserActivity.class));
         } else {
