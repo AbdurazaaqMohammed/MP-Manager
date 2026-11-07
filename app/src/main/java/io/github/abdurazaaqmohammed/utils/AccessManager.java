@@ -366,6 +366,23 @@ public final class AccessManager {
      * streaming the bytes.</p>
      */
     public static void move(Context context, String src, String dest, boolean useElevated) throws IOException {
+        move(context, src, dest, useElevated, null);
+    }
+
+    /**
+     * Moves one path, with a pause / cancel token attached.
+     *
+     * <p>Uses rename semantics rather than copy+delete: {@code mv} (root and
+     * Shizuku) and {@link File#renameTo} are a directory-entry update on the
+     * same filesystem, so a 2 GB file moves as fast as a 2 byte one. Only when
+     * the two paths are really on different filesystems does this fall back to
+     * streaming the bytes.</p>
+     *
+     * @param control optional pause / cancel token; a cancelled {@code mv} is
+     *                stopped through the elevated backend that started it
+     */
+    public static void move(Context context, String src, String dest, boolean useElevated,
+                            TransferControl control) throws IOException {
         File from = new File(src);
         File to = new File(dest);
         // Always try the app's own rename first, even in root/Shizuku mode: it
@@ -375,7 +392,7 @@ public final class AccessManager {
         if (useElevated) {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
-                RootManager.getInstance(context).rename(src, dest);
+                RootManager.getInstance(context).rename(src, dest, control);
                 return;
             }
             if (backend == Backend.SHIZUKU) {
@@ -383,9 +400,27 @@ public final class AccessManager {
                 return;
             }
         }
-        if (from.isDirectory()) FileUtils.copyFolder(from, to);
-        else FileUtils.copyFile(from, to);
+        if (control != null) control.checkpoint();
+        if (from.isDirectory()) FileUtils.copyFolder(from, to, listenerFor(control));
+        else FileUtils.copyFile(from, to, listenerFor(control));
         delete(context, src, false);
+    }
+
+    /** Adapts the token to the copy helpers, or null when there is none. */
+    private static FileUtils.TransferListener listenerFor(TransferControl control) {
+        if (control == null) return null;
+        return new FileUtils.TransferListener() {
+            @Override public void onFile(File source, File destination) {
+            }
+            @Override public void onBytes(long count) {
+            }
+            @Override public void checkpoint() {
+                control.checkpoint();
+            }
+            @Override public TransferControl control() {
+                return control;
+            }
+        };
     }
 
     /**

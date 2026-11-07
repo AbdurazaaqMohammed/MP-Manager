@@ -347,6 +347,23 @@ public class RootManager {
                     // The batch's own progress markers still reach the caller.
                     drainListener = batchControl.wrap(progress);
                 }
+                // The batch reports its own pid first (ShellProgress.reportPid);
+                // capture it so a timeout can stop the root work, not just the
+                // su client this JVM spawned.
+                final long[] batchPid = {-1L};
+                ShellProgress.Listener delegate = drainListener;
+                drainListener = new ShellProgress.Listener() {
+                    @Override public void onProgress(int filesDone, long bytesDone) {
+                        if (delegate != null) delegate.onProgress(filesDone, bytesDone);
+                    }
+                    @Override public void onFailure() {
+                        if (delegate != null) delegate.onFailure();
+                    }
+                    @Override public void onPid(int pid) {
+                        batchPid[0] = pid;
+                        if (delegate != null) delegate.onPid(pid);
+                    }
+                };
                 final ShellProgress.Listener listener = drainListener;
                 try {
                     BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -381,6 +398,15 @@ public class RootManager {
                     boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
                     if (!finished) {
                         process.destroyForcibly();
+                        // destroyForcibly only kills the su client; the root
+                        // child it spawned (cp/mv/rm of a long transfer) is
+                        // reparented to init and would keep streaming bytes in
+                        // the background — work the caller believes is dead.
+                        // The batch reported its own pid first, so the whole
+                        // tree can be signalled through the elevated backend.
+                        if (batchPid[0] > 0) {
+                            ShellProcess.kill(batchPid[0], this::runSignalCommand);
+                        }
                     }
                     try {
                         drainOut.join(2000);
@@ -808,9 +834,30 @@ public class RootManager {
     }
 
     public void rename(String oldPath, String newPath) throws IOException {
-        ShellResult result = executeFs("mv " + escapeShellArg(oldPath) + " " + escapeShellArg(newPath), 30);
-        if (!result.isSuccess()) throw new IOException("rename failed: " + result.error);
+        rename(oldPath, newPath, null);
+    }
+
+    /**
+     * Moves one path with {@code mv}, with a pause / cancel token attached.
+     *
+     * <p>The timeout is generous because a cross-filesystem {@code mv} streams
+     * the whole payload; the transfer honours {@code control}, so a cancelled
+     * move is stopped through the elevated backend instead of waiting for the
+     * cap. A non-zero exit after the data landed (a failed preserve step) is
+     * not a failure: the filesystem is the truth, not the exit code.
+     */
+    public void rename(String oldPath, String newPath, TransferControl control) throws IOException {
+        ShellResult result = executeFs("mv " + escapeShellArg(oldPath) + " " + escapeShellArg(newPath),
+                3600, null, control);
+        if (!result.isSuccess() && !(isGone(oldPath) && exists(newPath))) {
+            throw new IOException("rename failed: " + result.error);
+        }
         invalidateListCache();
+    }
+
+    /** Single-path existence test that tolerates already-vanished sources. */
+    private boolean isGone(String path) {
+        return !exists(path);
     }
 
     public void copyFile(String src, String dest) throws IOException {
@@ -913,7 +960,10 @@ public class RootManager {
             bytesDone += Math.max(0L, op.bytes);
             cmd.append(ShellProgress.report(filesDone, bytesDone));
             count++;
-            timeout += op.directory ? 120 : 60;
+            // The batch is killed when this expires and its work is thrown
+            // away, so the budget must cover what the payload really needs:
+            // per-item handling plus a conservative 10 MB/s of transfer time.
+            timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
         }
         if (count == 0) return;
         ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
@@ -964,12 +1014,44 @@ public class RootManager {
             bytesDone += Math.max(0L, op.bytes);
             cmd.append(ShellProgress.report(filesDone, bytesDone));
             count++;
-            timeout += op.directory ? 120 : 60;
+            // The batch is killed when this expires and its work is thrown
+            // away, so the budget must cover what the payload really needs:
+            // per-item handling plus a conservative 10 MB/s of transfer time.
+            timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
         }
         if (count == 0) return;
         ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
-        if (!result.isSuccess()) throw new IOException("move failed: " + result.error);
+        if (!result.isSuccess() && !moveCompletedDespiteError(ops)) {
+            throw new IOException("move failed: " + result.error);
+        }
         invalidateListCache();
+    }
+
+    /**
+     * True when a "failed" {@code mv} batch actually landed.
+     *
+     * <p>{@code mv} across filesystems copies, unlinks the source and can still
+     * exit non-zero afterwards (a failed preserve step, a late stat error), and
+     * on a full disk it may fail while a partial destination sits next to an
+     * intact source. The exit code alone cannot tell those apart, and treating
+     * a completed move as failed makes the caller's fallback recycle the good
+     * destination and re-copy from a source that no longer exists — observed as
+     * a moved file "disappearing" into the recycle bin. Trusting the filesystem
+     * state is the only reliable signal: every source gone and every
+     * destination present means the batch succeeded.
+     */
+    private boolean moveCompletedDespiteError(List<CopyOp> ops) {
+        if (ops == null || ops.isEmpty()) return false;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            // Complete only when the source is gone AND the destination is there.
+            // A partial failure (source intact, partial destination) and a batch
+            // that never started both read as "not moved" and stay failures.
+            if (exists(src) || !exists(dest)) return false;
+        }
+        return true;
     }
 
     /**

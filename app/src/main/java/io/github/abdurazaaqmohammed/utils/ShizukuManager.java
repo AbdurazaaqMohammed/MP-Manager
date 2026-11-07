@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -241,6 +242,40 @@ public final class ShizukuManager {
 
     private static void throwIfShellFails(String command, String what, int timeout) throws IOException {
         throwIfShellFails(command, what, timeout, null);
+    }
+
+    /**
+     * Wall-clock budget for a shell batch: per-item handling plus a
+     * conservative 10 MB/s for the payload. A timeout kills the batch and
+     * throws its work away, so big transfers must get the time they need
+     * instead of a flat per-item count that a multi-gigabyte copy blows
+     * through while it is still making progress.
+     */
+    private static int batchTimeout(List<RootManager.CopyOp> ops) {
+        int timeout = 60;
+        if (ops != null) {
+            for (RootManager.CopyOp op : ops) {
+                if (op.src == null || op.dest == null) continue;
+                timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
+            }
+        }
+        return timeout;
+    }
+
+    /**
+     * True when a "failed" move batch actually landed: every source is gone and
+     * every destination is present. See the matching check in
+     * {@link RootManager#moveAll} for why the exit code alone cannot be trusted.
+     */
+    private static boolean moveCompletedDespiteError(Context context, List<RootManager.CopyOp> ops) {
+        if (ops == null || ops.isEmpty()) return false;
+        for (RootManager.CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (exists(context, src) || !exists(context, dest)) return false;
+        }
+        return true;
     }
 
     private static void throwIfShellFails(String command, String what, int timeout,
@@ -706,7 +741,15 @@ public final class ShizukuManager {
             }
         }
         if (shellOps > 0) {
-            throwIfShellFails(shell.toString(), "move", Math.max(60, shellOps * 60), progress, control);
+            try {
+                throwIfShellFails(shell.toString(), "move", batchTimeout(ops), progress, control);
+            } catch (IOException e) {
+                // mv can exit non-zero after the data landed (a failed preserve
+                // step on a cross-filesystem move). Trust the filesystem over
+                // the exit code, or the caller's fallback would recycle the
+                // good destination and re-copy from a vanished source.
+                if (!moveCompletedDespiteError(context, ops)) throw e;
+            }
         }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
@@ -782,7 +825,7 @@ public final class ShizukuManager {
             }
         }
         if (shellOps > 0) {
-            throwIfShellFails(shell.toString(), "copy", Math.max(60, shellOps * 60), progress, control);
+            throwIfShellFails(shell.toString(), "copy", batchTimeout(ops), progress, control);
         }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
@@ -1067,7 +1110,12 @@ public final class ShizukuManager {
 
     public static void rename(Context context, String oldPath, String newPath) throws IOException {
         if (useShell(oldPath) || useShell(newPath)) {
-            throwIfShellFails("mv " + shellArg(oldPath) + " " + shellArg(newPath), "rename", 120);
+            try {
+                throwIfShellFails("mv " + shellArg(oldPath) + " " + shellArg(newPath), "rename", 120);
+            } catch (IOException e) {
+                if (!moveCompletedDespiteError(context,
+                        Collections.singletonList(new RootManager.CopyOp(oldPath, newPath, false, false, 1, 0L)))) throw e;
+            }
             return;
         }
         requireAllowed(oldPath);
