@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -83,6 +85,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         volatile boolean loadFailed;
         boolean modified;
         boolean pendingArchiveUpdate;
+        String exportedCopyPath;
         /**
          * Bumped whenever a load is started or superseded. A background read from
          * an earlier attempt compares against it before touching the tab, so a
@@ -317,6 +320,14 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         });
 
         btnSave.setOnClickListener(v -> saveButtonFlow());
+        btnSave.setOnLongClickListener(v -> {
+            EditorTab tab = getCurrentTab();
+            if (tab == null) return true;
+            UnifiedEditorFragment f = getFragment();
+            String text = f != null && f.getEditor() != null ? f.getEditor().getText().toString() : tab.content;
+            pickSaveCopyDir(tab, text != null ? text : "", true);
+            return true;
+        });
 
         btnEdit.setOnClickListener(v -> {
             UnifiedEditorFragment f = getFragment();
@@ -879,6 +890,19 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             removeTab(position);
             return;
         }
+        if (tab.exportedCopyPath != null) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.changes_made)
+                    .setMessage(R.string.confirm_save_exported_or_original)
+                    .setPositiveButton(R.string.save_to_original, (dialog, which) -> {
+                        if (position == currentIndex) saveFile(() -> removeTabRef(tab));
+                        else saveTabText(tab, tab.content, () -> removeTabRef(tab));
+                    })
+                    .setNegativeButton(R.string.keep_exported_copy_only, (dialog, which) -> removeTab(position))
+                    .setNeutralButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
         new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                 .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                     if (position == currentIndex) saveFile(() -> removeTabRef(tab)); // editor holds the latest text
@@ -983,6 +1007,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
             tab.content = text;
             tab.modified = false;
+            tab.exportedCopyPath = null;
             runOnUiThread(() -> {
                 Extensions.showMessage(this, getString(R.string.saved));
                 if (onDone != null) onDone.run();
@@ -1019,6 +1044,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
             tab.content = text;
             tab.modified = false;
+            tab.exportedCopyPath = null;
             runOnUiThread(() -> {
                 Extensions.showMessage(this, getString(R.string.saved_elevated));
                 if (onDone != null) onDone.run();
@@ -1069,6 +1095,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     /** "Save a copy": pick a destination folder and write the buffer there. */
     private void pickSaveCopyDir(EditorTab tab, String text) {
+        pickSaveCopyDir(tab, text, false);
+    }
+
+    private void pickSaveCopyDir(EditorTab tab, String text, boolean isExportCopy) {
         FilePickerDialog.Properties props =
                 new FilePickerDialog.Properties();
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
@@ -1079,23 +1109,61 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         picker.setTitle(getString(R.string.save_copy));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;
-            new Thread(() -> {
-                try {
-                    String name = tab.file != null ? tab.file.getName()
-                            : (tab.title != null ? tab.title : "untitled.txt");
-                    File dest = FileUtils.getUnusedFile(new File(files[0], name));
-                    byte[] payload = encodeTabPayload(tab, text);
-                    try (OutputStream os = FileUtils.getOutputStream(dest)) {
-                        os.write(payload);
-                    }
-                    tab.content = text;
-                    tab.modified = false;
-                    runOnUiThread(() -> Extensions.showMessage(this,
-                            getString(R.string.saved_to_x, dest.getAbsolutePath())));
-                } catch (Exception e) {
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
-                }
-            }).start();
+            File targetDir = new File(files[0]);
+            String initialName = tab.file != null ? tab.file.getName()
+                    : (tab.title != null ? tab.title : "untitled.txt");
+            if (initialName.endsWith(" (root)")) {
+                initialName = initialName.substring(0, initialName.length() - 7);
+            }
+
+            final String defaultName = initialName;
+            final EditText input = new EditText(this);
+            input.setText(defaultName);
+            input.setSelection(defaultName.length());
+
+            int pad = (int) (18 * getResources().getDisplayMetrics().density);
+            FrameLayout container = new FrameLayout(this);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.leftMargin = pad;
+            lp.rightMargin = pad;
+            input.setLayoutParams(lp);
+            container.addView(input);
+
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.save_copy)
+                    .setMessage(targetDir.getAbsolutePath())
+                    .setView(container)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        String chosenName = input.getText().toString().trim();
+                        if (chosenName.isEmpty()) chosenName = defaultName;
+                        final String finalName = chosenName;
+                        new Thread(() -> {
+                            try {
+                                File dest = FileUtils.getUnusedFile(new File(targetDir, finalName));
+                                byte[] payload = encodeTabPayload(tab, text);
+                                try (OutputStream os = FileUtils.getOutputStream(dest)) {
+                                    os.write(payload);
+                                }
+                                tab.content = text;
+                                if (isExportCopy) {
+                                    tab.exportedCopyPath = dest.getAbsolutePath();
+                                    tab.modified = true;
+                                } else {
+                                    tab.modified = false;
+                                }
+                                runOnUiThread(() -> {
+                                    updateTabsList();
+                                    Extensions.showMessage(this,
+                                            getString(R.string.saved_to_x, dest.getAbsolutePath()));
+                                });
+                            } catch (Exception e) {
+                                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
         });
         picker.show();
     }
@@ -1182,6 +1250,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             RootStaging.writeBack(this, tab.file, tab.rootOriginalPath);
             runOnUiThread(() -> {
                 tab.modified = false;
+                tab.exportedCopyPath = null;
                 updateTabsList();
                 persistSession();
                 Extensions.showMessage(this, getString(R.string.editor_saved_root));
@@ -1284,6 +1353,31 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     public void onCloseRequested() {
         EditorTab t = getCurrentTab();
         if (t != null && t.modified) {
+            if (t.exportedCopyPath != null) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.changes_made)
+                        .setMessage(R.string.confirm_save_exported_or_original)
+                        .setPositiveButton(R.string.save_to_original, (dialog, which) -> {
+                            saveFile(() -> {
+                                manualFinish = true;
+                                currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
+                                Intent resultIntent = new Intent();
+                                resultIntent.setData(currentFileUri);
+                                resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                if (t.zipFilePath != null) resultIntent.putExtra("zipFilePath", t.zipFilePath);
+                                if (t.zipEntryPath != null) resultIntent.putExtra("zipEntryPath", t.zipEntryPath);
+                                setResult(757, resultIntent);
+                                finish();
+                            });
+                        })
+                        .setNegativeButton(R.string.keep_exported_copy_only, (dialog, which) -> {
+                            manualFinish = true;
+                            finish();
+                        })
+                        .setNeutralButton(android.R.string.cancel, null)
+                        .show();
+                return;
+            }
             new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         saveFile(() -> {
@@ -1339,7 +1433,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         if (f != null && f.getEditor() != null) {
             f.getEditor().release();
             EditorTab t = getCurrentTab();
-            if (!manualFinish && t != null && t.modified) {
+            if (!manualFinish && t != null && t.modified && t.exportedCopyPath == null) {
                 boolean isFromFile = currentFile != null;
                 if (isFromFile) try (OutputStream os = FileUtils.getOutputStream(
                         new File(getCacheDir(), currentFile.getPath().replace(File.separator, ".")))) {
@@ -1355,6 +1449,31 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         UnifiedEditorFragment f = getFragment();
         EditorTab t = getCurrentTab();
         if (t != null && t.modified && f != null && f.getEditor() != null) {
+            if (t.exportedCopyPath != null) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.changes_made)
+                        .setMessage(R.string.confirm_save_exported_or_original)
+                        .setPositiveButton(R.string.save_to_original, (dialog, which) -> {
+                            saveFile(() -> {
+                                manualFinish = true;
+                                currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
+                                Intent resultIntent = new Intent();
+                                resultIntent.setData(currentFileUri);
+                                resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                if (t.zipFilePath != null) resultIntent.putExtra("zipFilePath", t.zipFilePath);
+                                if (t.zipEntryPath != null) resultIntent.putExtra("zipEntryPath", t.zipEntryPath);
+                                setResult(757, resultIntent);
+                                finish();
+                            });
+                        })
+                        .setNegativeButton(R.string.keep_exported_copy_only, (dialog, which) -> {
+                            manualFinish = true;
+                            finish();
+                        })
+                        .setNeutralButton(android.R.string.cancel, null)
+                        .show();
+                return;
+            }
             new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         saveFile(() -> {

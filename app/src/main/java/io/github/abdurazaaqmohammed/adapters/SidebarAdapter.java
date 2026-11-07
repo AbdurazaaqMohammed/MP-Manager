@@ -341,14 +341,26 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     /** Core file-manager tools; the main Tools section of the sidebar. */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "ftp_client", "tools"};
+        String[] defaults = {"extract", "documents", "set_edit", "partition_dumper", "recycle_bin", "ftp_server", "ftp_client", "tools"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
+        if (!order.contains("set_edit")) {
+            int idx = order.indexOf("documents");
+            if (idx >= 0) order.add(idx + 1, "set_edit");
+            else order.add(0, "set_edit");
+        }
+        if (!order.contains("partition_dumper")) {
+            int idx = order.indexOf("set_edit");
+            if (idx >= 0) order.add(idx + 1, "partition_dumper");
+            else order.add(0, "partition_dumper");
+        }
         for (String id : defaults) if (!order.contains(id)) order.add(id);
         for (String id : order) {
             switch (id) {
                 case "extract": addTool(id, R.string.sidebar_extract, R.drawable.apk_document_24px); break;
                 case "documents": addTool(id, R.string.sidebar_documents, R.drawable.folder_24px); break;
+                case "set_edit": addTool(id, R.string.set_edit, R.drawable.baseline_settings_24); break;
+                case "partition_dumper": addTool(id, R.string.tool_partition_dumper, R.drawable.ic_disk_drive_24px); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
                 case "ftp_client": addTool(id, R.string.ftp_client, R.drawable.cloud_download_24px); break;

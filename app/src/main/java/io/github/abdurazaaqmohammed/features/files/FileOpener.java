@@ -638,8 +638,16 @@ public class FileOpener {
             openWithDefaultOrDialog(file, file.getName());
             return;
         }
-        File firstPart = SplitArchiveUtil.findFirstPart(file);
-        File target = (firstPart != null && firstPart.exists()) ? firstPart : file;
+        File target = file;
+        if (SplitArchiveUtil.isRarSplit(file) || SplitArchiveUtil.isSevenZSplit(file) || SplitArchiveUtil.isZipSplit(file)) {
+            File firstPart = SplitArchiveUtil.findFirstPart(file);
+            if (firstPart != null && firstPart.exists()) target = firstPart;
+        } else if (ArchiveBrowseUtil.detectArchiveType(file) == ArchiveBrowseUtil.ArchiveType.NONE) {
+            File firstPart = SplitArchiveUtil.findFirstPart(file);
+            if (firstPart != null && firstPart.exists() && ArchiveBrowseUtil.detectArchiveType(firstPart) != ArchiveBrowseUtil.ArchiveType.NONE) {
+                target = firstPart;
+            }
+        }
         withReadableCopy(target, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
     }
 

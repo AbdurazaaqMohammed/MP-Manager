@@ -1960,6 +1960,28 @@ Strings are sent to the external service you configured.</string>
     <string name="save_read_only_reason">The file was opened from another app that only granted read access, so writing back to the original is not permitted by Android.</string>
     <string name="save_denied_reason">The storage location denied write access. Removable SD cards on Android 10+ only accept writes through SAF, root or Shizuku.</string>
     <string name="save_copy">Save a copy</string>
+    <string name="confirm_save_exported_or_original">Do you want to apply these changes to the original file as well, or keep only the exported copy?</string>
+    <string name="save_to_original">Apply to original</string>
+    <string name="keep_exported_copy_only">Keep exported copy only</string>
+    <string name="set_edit">SetEdit</string>
+    <string name="settings_editor_title">Settings Editor</string>
+    <string name="global_settings">Global Settings</string>
+    <string name="secure_settings">Secure Settings</string>
+    <string name="system_settings">System Settings</string>
+    <string name="android_properties">Android Properties</string>
+    <string name="entries_count">%1$d entries</string>
+    <string name="search_key_or_value">Search key or value</string>
+    <string name="overview">Overview</string>
+    <string name="overview_subtitle">Entries per source. Tap one to open it.</string>
+    <string name="add_setting">New Setting</string>
+    <string name="edit_setting">Edit Setting</string>
+    <string name="delete_setting">Delete Setting</string>
+    <string name="setting_key">Key</string>
+    <string name="setting_value">Value</string>
+    <string name="setting_table">Table / Namespace</string>
+    <string name="confirm_delete_setting">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="setting_saved">Setting saved successfully</string>
+    <string name="setting_deleted">Setting deleted</string>
     <string name="saved_to_x">Saved copy to %1$s</string>
     <string name="saved_elevated">Saved using elevated access</string>
     <string name="save_elevated">Save with elevated access</string>
@@ -2278,8 +2300,13 @@ Patched code:</string>
 
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">Partition Dumper</string>
-    <string name="tool_partition_dumper_subtitle">Dump device hardware &amp; dynamic partitions to .img</string>
     <string name="partition_dumper_title">Partition Dumper (Root)</string>
+    <string name="partition_info_title">Partition Details</string>
+    <string name="partition_batch_dump">Dump Selected (%d)</string>
+    <string name="partition_select_all">Select All</string>
+    <string name="partition_deselect_all">Deselect All</string>
+    <string name="partition_copy_details">Copy Details</string>
+    <string name="partition_refresh">Refresh</string>
     <string name="partition_search_hint">Search partitions (recovery, boot, vendor, system…)…</string>
     <string name="partition_slot_a">Slot A</string>
     <string name="partition_slot_b">Slot B</string>

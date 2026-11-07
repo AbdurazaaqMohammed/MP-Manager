@@ -60,6 +60,7 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
+import io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -68,6 +69,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.abdurazaaqmohammed.tools.SetEditActivity;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.tools.ToolRunnerActivity;
 import io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity;
@@ -579,6 +581,12 @@ public class SidebarController {
                 break;
             case "documents":
                 activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
+                break;
+            case "set_edit":
+                activity.startActivity(new Intent(activity, SetEditActivity.class));
+                break;
+            case "partition_dumper":
+                PartitionDumperDialog.show(activity);
                 break;
             case "recycle_bin":
                 showRecycleBinDialog();

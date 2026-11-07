@@ -1824,6 +1824,28 @@
     <string name="save_read_only_reason">فُتح الملف من تطبيق آخر منح صلاحية القراءة فقط، لذلك لا يسمح أندرويد بالكتابة مرة أخرى إلى الأصل.</string>
     <string name="save_denied_reason">رفض موقع التخزين صلاحية الكتابة. بطاقات SD القابلة للإزالة على أندرويد 10+ تقبل الكتابة عبر SAF أو root أو Shizuku فقط.</string>
     <string name="save_copy">حفظ نسخة</string>
+    <string name="confirm_save_exported_or_original">هل تريد تطبيق هذه التعديلات على الملف الأصلي أيضاً، أم الاكتفاء بالنسخة المصدرة؟</string>
+    <string name="save_to_original">تطبيق على الملف الأصلي</string>
+    <string name="keep_exported_copy_only">الاكتفاء بالنسخة المصدرة</string>
+    <string name="set_edit">SetEdit</string>
+    <string name="settings_editor_title">محرر إعدادات النظام</string>
+    <string name="global_settings">إعدادات عامة (Global)</string>
+    <string name="secure_settings">إعدادات آمنة (Secure)</string>
+    <string name="system_settings">إعدادات النظام (System)</string>
+    <string name="android_properties">خصائص أندرويد (Properties)</string>
+    <string name="entries_count">%1$d إدخال</string>
+    <string name="search_key_or_value">بحث بالاسم أو القيمة</string>
+    <string name="overview">نظرة عامة</string>
+    <string name="overview_subtitle">الإدخالات لكل مصدر. اضغط على أي منها لفتحه.</string>
+    <string name="add_setting">إضافة إعداد جديد</string>
+    <string name="edit_setting">تعديل الإعداد</string>
+    <string name="delete_setting">حذف الإعداد</string>
+    <string name="setting_key">المفتاح (Key)</string>
+    <string name="setting_value">القيمة (Value)</string>
+    <string name="setting_table">الجدول / النطاق</string>
+    <string name="confirm_delete_setting">هل أنت متأكد من حذف \"%1$s\"؟</string>
+    <string name="setting_saved">تم حفظ الإعداد بنجاح</string>
+    <string name="setting_deleted">تم حذف الإعداد</string>
     <string name="saved_to_x">حُفظت نسخة إلى %1$s</string>
     <string name="saved_elevated">حُفظ باستخدام صلاحية موسَّعة</string>
     <string name="save_elevated">الحفظ بصلاحية موسَّعة</string>
@@ -2039,8 +2061,13 @@
 
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">ساحب الأقسام (Partition Dumper)</string>
-    <string name="tool_partition_dumper_subtitle">استخراج وتفريغ أقسام الهاردوير والأقسام الديناميكية بصيغة .img</string>
     <string name="partition_dumper_title">ساحب الأقسام (Root)</string>
+    <string name="partition_info_title">معلومات البارتيشن</string>
+    <string name="partition_batch_dump">تفريغ المحدد (%d)</string>
+    <string name="partition_select_all">تحديد الكل</string>
+    <string name="partition_deselect_all">إلغاء التحديد</string>
+    <string name="partition_copy_details">نسخ التفاصيل</string>
+    <string name="partition_refresh">تحديث</string>
     <string name="partition_search_hint">ابحث في الأقسام (ريكفري، بوت، فيندور، سيستم…)…</string>
     <string name="partition_slot_a">السلوت A</string>
     <string name="partition_slot_b">السلوت B</string>

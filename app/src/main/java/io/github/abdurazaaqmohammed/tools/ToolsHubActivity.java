@@ -498,6 +498,8 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, DocumentsBrowserActivity.class));
         } else if ("partitiondumper".equals(item.id())) {
             io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(this);
+        } else if ("setedit".equals(item.id())) {
+            startActivity(new Intent(this, SetEditActivity.class));
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());

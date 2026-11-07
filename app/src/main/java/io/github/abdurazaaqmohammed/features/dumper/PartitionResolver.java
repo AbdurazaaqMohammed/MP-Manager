@@ -58,17 +58,19 @@ public final class PartitionResolver {
     public static List<String> findSlotDifferences() {
         List<String> diffs = new ArrayList<>();
         String cmd = "sh -c '"
-                + "for dir in /dev/block/bootdevice/by-name /dev/block/by-name /dev/block/mapper; do "
-                + "  [ -d \"$dir\" ] || continue; "
-                + "  for a in \"$dir\"/*_a; do "
-                + "    [ -e \"$a\" ] || continue; "
-                + "    b=\"${a%_a}_b\"; "
-                + "    [ -e \"$b\" ] || continue; "
-                + "    pname=$(basename \"$a\" _a); "
-                + "    if ! cmp -n 65536 \"$a\" \"$b\" >/dev/null 2>&1; then "
-                + "      echo \"$pname\"; "
-                + "    fi; "
-                + "  done; "
+                + "dir=\"\"; "
+                + "for d in /dev/block/bootdevice/by-name /dev/block/by-name /dev/block/mapper; do "
+                + "  if [ -d \"$d\" ]; then dir=\"$d\"; break; fi; "
+                + "done; "
+                + "[ -n \"$dir\" ] || exit 0; "
+                + "for a in \"$dir\"/*_a; do "
+                + "  [ -e \"$a\" ] || continue; "
+                + "  b=\"${a%_a}_b\"; "
+                + "  [ -e \"$b\" ] || continue; "
+                + "  pname=$(basename \"$a\" _a); "
+                + "  if ! cmp -n 65536 \"$a\" \"$b\" >/dev/null 2>&1; then "
+                + "    echo \"$pname\"; "
+                + "  fi; "
                 + "done'";
         try {
             Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
@@ -99,57 +101,17 @@ public final class PartitionResolver {
                 + "slot=$(getprop ro.boot.slot_suffix 2>/dev/null); "
                 + "[ -z \"$slot\" ] && slot=$(getprop ro.boot.slot 2>/dev/null); "
                 + "echo \"ACTIVE_SLOT|$slot\"; "
-                + "for dir in /dev/block/bootdevice/by-name /dev/block/by-name /dev/block/platform/*/by-name /dev/block/platform/*/*/by-name; do "
-                + "  if [ -d \"$dir\" ]; then "
-                + "    for f in \"$dir\"/*; do "
-                + "      [ -e \"$f\" ] || continue; "
-                + "      b=$(basename \"$f\"); "
-                + "      case \"$b\" in "
-                + "        com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
-                + "      esac; "
-                + "      target=$(readlink -f \"$f\" 2>/dev/null || echo \"$f\"); "
-                + "      tbase=$(basename \"$target\"); "
-                + "      sec=0; "
-                + "      if [ -f \"/sys/class/block/$tbase/size\" ]; then "
-                + "        sec=$(cat \"/sys/class/block/$tbase/size\" 2>/dev/null || echo 0); "
-                + "      fi; "
-                + "      echo \"BYNAME|$b|$f|$target|$sec\"; "
-                + "    done; "
-                + "  fi; "
+                + "awk \"NR>2 {print \\\"SIZE|\\\" \\$4 \\\"|\\\" (\\$3*2)}\" /proc/partitions 2>/dev/null; "
+                + "for dir in /dev/block/bootdevice/by-name /dev/block/by-name /dev/block/platform/*/by-name /dev/block/platform/*/*/by-name /dev/block/mapper; do "
+                + "  [ -d \"$dir\" ] || continue; "
+                + "  ls -l \"$dir\" 2>/dev/null | awk -v d=\"$dir\" \"/->/ {print \\\"BYNAME|\\\" \\$(NF-2) \\\"|\\\" d \\\"/\\\" \\$(NF-2) \\\"|\\\" \\$NF}\"; "
                 + "done; "
-                + "for u in /sys/class/block/*/uevent; do "
-                + "  if grep -q \"PARTNAME=\" \"$u\" 2>/dev/null; then "
-                + "    devname=$(grep \"^DEVNAME=\" \"$u\" | cut -d= -f2); "
-                + "    partname=$(grep \"^PARTNAME=\" \"$u\" | cut -d= -f2); "
-                + "    case \"$partname\" in "
-                + "      com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
-                + "    esac; "
-                + "    sec=0; "
-                + "    if [ -f \"/sys/class/block/$devname/size\" ]; then "
-                + "      sec=$(cat \"/sys/class/block/$devname/size\" 2>/dev/null || echo 0); "
-                + "    fi; "
-                + "    echo \"SYSFS|$partname|/dev/block/$devname|/dev/block/$devname|$sec\"; "
-                + "  fi; "
-                + "done; "
-                + "if [ -d /dev/block/mapper ]; then "
-                + "  for f in /dev/block/mapper/*; do "
-                + "    [ -e \"$f\" ] || continue; "
-                + "    b=$(basename \"$f\"); "
-                + "    case \"$b\" in "
-                + "      com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
-                + "    esac; "
-                + "    target=$(readlink -f \"$f\" 2>/dev/null || echo \"$f\"); "
-                + "    tbase=$(basename \"$target\"); "
-                + "    sec=0; "
-                + "    if [ -f \"/sys/class/block/$tbase/size\" ]; then "
-                + "      sec=$(cat \"/sys/class/block/$tbase/size\" 2>/dev/null || echo 0); "
-                + "    fi; "
-                + "    echo \"MAPPER|$b|$f|$target|$sec\"; "
-                + "  done; "
-                + "fi'";
+                + "grep -H \"PARTNAME=\" /sys/class/block/*/uevent 2>/dev/null | awk -F/ \"{dev=\\$5; sub(/.*PARTNAME=/, \\\"\\\", \\$0); print \\\"SYSFS|\\\" \\$0 \\\"|/dev/block/\\\" dev \\\"|/dev/block/\\\" dev}\""
+                + "'";
 
         Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
         Map<String, PartitionItem> itemMap = new HashMap<>();
+        Map<String, Long> devSizes = new HashMap<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
             String line;
@@ -165,17 +127,24 @@ public final class PartitionResolver {
                     }
                     continue;
                 }
-                if (parts.length < 5) continue;
+                if (parts[0].equals("SIZE") && parts.length >= 3) {
+                    try {
+                        devSizes.put(parts[1], Long.parseLong(parts[2]));
+                    } catch (Exception ignored) {
+                    }
+                    continue;
+                }
+                if (parts.length < 4) continue;
 
                 String source = parts[0];
                 String rawName = parts[1];
                 String blockPath = parts[2];
                 String targetDev = parts[3];
-                long sectors = 0;
-                try {
-                    sectors = Long.parseLong(parts[4]);
-                } catch (Exception ignored) {
-                }
+
+                String devBase = targetDev.substring(targetDev.lastIndexOf('/') + 1);
+                Long sec = devSizes.get(devBase);
+                if (sec == null) sec = devSizes.get(rawName);
+                long sectors = sec != null ? sec : 0;
                 long sizeBytes = sectors * 512L;
 
                 // Skip zero-sized, dummy, or empty placeholder partitions
