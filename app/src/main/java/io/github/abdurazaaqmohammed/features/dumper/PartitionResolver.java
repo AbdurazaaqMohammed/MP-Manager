@@ -105,7 +105,7 @@ public final class PartitionResolver {
                 + "      [ -e \"$f\" ] || continue; "
                 + "      b=$(basename \"$f\"); "
                 + "      case \"$b\" in "
-                + "        com.android.*|by-uuid|userdata-verity|*-verity) continue ;; "
+                + "        com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
                 + "      esac; "
                 + "      target=$(readlink -f \"$f\" 2>/dev/null || echo \"$f\"); "
                 + "      tbase=$(basename \"$target\"); "
@@ -121,6 +121,9 @@ public final class PartitionResolver {
                 + "  if grep -q \"PARTNAME=\" \"$u\" 2>/dev/null; then "
                 + "    devname=$(grep \"^DEVNAME=\" \"$u\" | cut -d= -f2); "
                 + "    partname=$(grep \"^PARTNAME=\" \"$u\" | cut -d= -f2); "
+                + "    case \"$partname\" in "
+                + "      com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
+                + "    esac; "
                 + "    sec=0; "
                 + "    if [ -f \"/sys/class/block/$devname/size\" ]; then "
                 + "      sec=$(cat \"/sys/class/block/$devname/size\" 2>/dev/null || echo 0); "
@@ -133,7 +136,7 @@ public final class PartitionResolver {
                 + "    [ -e \"$f\" ] || continue; "
                 + "    b=$(basename \"$f\"); "
                 + "    case \"$b\" in "
-                + "      com.android.*|by-uuid|userdata-verity|*-verity) continue ;; "
+                + "      com.android.*|by-uuid|userdata-verity|*-verity|[Aa][Ll][Ii][Gg][Nn]_[Tt][Oo]_*|bk[0-9]*|dummy*|unused*) continue ;; "
                 + "    esac; "
                 + "    target=$(readlink -f \"$f\" 2>/dev/null || echo \"$f\"); "
                 + "    tbase=$(basename \"$target\"); "
@@ -174,6 +177,11 @@ public final class PartitionResolver {
                 } catch (Exception ignored) {
                 }
                 long sizeBytes = sectors * 512L;
+
+                // Skip zero-sized, dummy, or empty placeholder partitions
+                if (sectors <= 0 || isDummyOrEmptyPartition(rawName)) {
+                    continue;
+                }
 
                 // Prefer MAPPER & BYNAME over SYSFS raw block devices
                 if (itemMap.containsKey(rawName) && "SYSFS".equals(source)) {
@@ -398,5 +406,30 @@ public final class PartitionResolver {
                         PartitionItem.Group.OTHER
                 );
         }
+    }
+
+    public static boolean isDummyOrEmptyPartition(String rawName) {
+        if (rawName == null || rawName.isEmpty()) return true;
+        String lower = rawName.toLowerCase(Locale.ROOT);
+        return lower.startsWith("align_to_")
+                || lower.matches("^bk\\d+.*")
+                || lower.equals("cdt")
+                || lower.equals("connsec")
+                || lower.equals("dbg")
+                || lower.equals("dpm")
+                || lower.equals("ffu")
+                || lower.equals("fsc")
+                || lower.equals("keystore")
+                || lower.equals("mbnconfig")
+                || lower.equals("mdcompress")
+                || lower.equals("mem")
+                || lower.equals("mtdblk")
+                || lower.startsWith("multiimgoem")
+                || lower.equals("opconfig")
+                || lower.equals("ssd")
+                || lower.equals("switch")
+                || lower.equals("tzsc")
+                || lower.startsWith("dummy")
+                || lower.startsWith("unused");
     }
 }

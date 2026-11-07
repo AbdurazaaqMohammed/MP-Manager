@@ -729,6 +729,7 @@ public final class PartitionDumperDialog {
                     byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
                     int read;
                     long lastUpdate = 0;
+                    boolean hasNonZero = false;
 
                     while ((read = is.read(buffer)) != -1) {
                         if (pm.isCancelling()) {
@@ -737,6 +738,15 @@ public final class PartitionDumperDialog {
                             outFile.delete();
                             activity.runOnUiThread(pm::dismiss);
                             return;
+                        }
+
+                        if (!hasNonZero) {
+                            for (int i = 0; i < read; i++) {
+                                if (buffer[i] != 0) {
+                                    hasNonZero = true;
+                                    break;
+                                }
+                            }
                         }
 
                         os.write(buffer, 0, read);
@@ -762,6 +772,23 @@ public final class PartitionDumperDialog {
                         }
                     }
                     os.flush();
+
+                    if (!hasNonZero) {
+                        os.close();
+                        outFile.delete();
+                        p.destroy();
+                        activity.runOnUiThread(() -> {
+                            pm.dismiss();
+                            boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+                            new MaterialAlertDialogBuilder(activity)
+                                    .setTitle(activity.getString(R.string.title_warning))
+                                    .setMessage(isAr ? "تم إلغاء السحب: هذا البارتشن فارغ تماماً (ممتلئ بنسبة 100% بالأصفار فقط 0x00 ولا يحتوي على أي بيانات)!"
+                                                     : "Dump canceled: Partition is completely empty (100% all zeros) and contains no data!")
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show();
+                        });
+                        return;
+                    }
                 }
 
                 p.waitFor();
