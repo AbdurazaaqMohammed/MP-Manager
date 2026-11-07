@@ -1,9 +1,3 @@
-# Build MP-Manager APK
-# Note: Offline project rules reside locally at /storage/emulated/0/Download/apks/Pref/Antigravity/project_rules.md
-# (These offline/CI configuration notes are strictly local to our test repo and must be excluded from any future upstream PR).
-# Always review project rules before any build unless already reviewed in the current session.
-# Rule 3 & 5: Builds are triggered strictly and exclusively on branch main with the commit message phrase 'action do build'.
-
 name: Build MP-Manager APK
 
 on:
@@ -11,12 +5,9 @@ on:
   push:
     branches:
       - main
-      - split-archives-flutter
-      - payload-dumper
 
 jobs:
   build:
-    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'action do build')"
     runs-on: ubuntu-latest
 
     steps:
@@ -54,7 +45,7 @@ jobs:
           PY
 
       - name: Build APK
-        run: ./gradlew assembleFullRelease
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
