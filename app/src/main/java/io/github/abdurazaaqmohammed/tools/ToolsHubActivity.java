@@ -500,8 +500,6 @@ public class ToolsHubActivity extends BaseActivity {
         } else if ("logcat".equals(item.id())) {
             startActivity(new Intent(this, LogcatActivity.class)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        } else if ("sslunpin".equals(item.id())) {
-            startActivity(new Intent(this, SslUnpinningActivity.class));
         } else if ("frida".equals(item.id())) {
             startActivity(new Intent(this, FridaConsoleActivity.class));
         } else if ("documents".equals(item.id())) {

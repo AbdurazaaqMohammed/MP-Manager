@@ -11,7 +11,7 @@ import java.util.List;
  * MCP protocol layer: JSON-RPC 2.0 dispatch for initialize, tools/list,
  * tools/call and ping over the transports served by {@link McpHttpServer}.
  * Tool execution happens on the HTTP thread pool; the heavyweight ones
- * (decompile, build, unpin) may take a while, which Streamable HTTP clients
+ * (decompile, build) may take a while, which Streamable HTTP clients
  * tolerate with their request timeouts.
  */
 public class McpProtocol implements McpHttpServer.JsonRpcHandler {
@@ -105,8 +105,8 @@ public class McpProtocol implements McpHttpServer.JsonRpcHandler {
                 "MP Manager on-device file, ZIP and APK tools. Files: list/read/edit/search/upload/download"
                         + " via mp_file_*. Archives: mp_zip_*. APKs (specialty): open a session with mp_apk_open"
                         + " (path or installed package), analyze with mp_apk_info/manifest/list_classes/decompile_class,"
-                        + " edit with mp_apk_write_entry/set_string, rebuild+sign with mp_apk_build, patch SSL pinning"
-                        + " with mp_apk_ssl_unpin. Relative paths resolve against the home folder: " + homePath);
+                        + " edit with mp_apk_write_entry/set_string, rebuild+sign with mp_apk_build."
+                        + " Relative paths resolve against the home folder: " + homePath);
         return result;
     }
 
