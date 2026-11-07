@@ -54,14 +54,7 @@ jobs:
           PY
 
       - name: Build APK
-        run: |
-          if echo "${{ github.event.head_commit.message }}" | grep -q "\[build-type debug\]"; then
-            echo "Special debug tag detected: building uncompressed Debug APK..."
-            ./gradlew assembleFullDebug
-          else
-            echo "Default release build: building compressed Release APK..."
-            ./gradlew assembleFullRelease
-          fi
+        run: ./gradlew assembleFullRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
