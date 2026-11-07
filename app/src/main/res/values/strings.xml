@@ -2245,6 +2245,7 @@ Patched code:</string>
     <string name="delete_parts_after_merge">Delete split parts after merging</string>
     <string name="split_open_archive">Open archive</string>
     <string name="split_missing_parts">No other split parts found for this file in this folder.</string>
+    <string name="output_filename">Output filename:</string>
 
     <!-- Flutter Tools & Inspection -->
     <string name="flutter_tools">Flutter Tools</string>

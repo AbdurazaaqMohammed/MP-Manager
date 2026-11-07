@@ -781,7 +781,7 @@ public final class PartitionDumperDialog {
                             pm.dismiss();
                             boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
                             new MaterialAlertDialogBuilder(activity)
-                                    .setTitle(activity.getString(R.string.title_warning))
+                                    .setTitle(activity.getString(R.string.warning))
                                     .setMessage(isAr ? "تم إلغاء السحب: هذا البارتشن فارغ تماماً (ممتلئ بنسبة 100% بالأصفار فقط 0x00 ولا يحتوي على أي بيانات)!"
                                                      : "Dump canceled: Partition is completely empty (100% all zeros) and contains no data!")
                                     .setPositiveButton(android.R.string.ok, null)
