@@ -313,11 +313,20 @@ public final class SplitDialog {
     public static void showMerge(MainActivity context, File file) {
         if (file == null) return;
         List<File> parts = SplitArchiveUtil.getOrderedParts(file);
-        if (parts == null || parts.size() < 2) {
-            Extensions.showMessage(context, R.string.split_missing_parts);
+        showMerge(context, parts);
+    }
+
+    public static void showMerge(MainActivity context, List<File> selectedParts) {
+        if (selectedParts == null || selectedParts.size() < 2) {
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.merge_split_files)
+                    .setMessage(R.string.split_missing_parts)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
             return;
         }
 
+        List<File> parts = SplitArchiveUtil.sortParts(selectedParts);
         long totalSize = 0;
         for (File p : parts) totalSize += p.length();
 
@@ -329,17 +338,27 @@ public final class SplitDialog {
         root.setPadding(pad, pad, pad, pad);
 
         TextView partsInfo = new TextView(context);
-        partsInfo.setText("Parts found: " + parts.size() + " (" + parts.get(0).getName() + " … " + parts.get(parts.size() - 1).getName() + ")");
+        partsInfo.setText(context.getString(R.string.merge_split_files) + ": " + parts.size() + " (" + FileSize.getHumanReadableFileSize(totalSize) + ")");
         partsInfo.setTypeface(null, android.graphics.Typeface.BOLD);
         root.addView(partsInfo);
 
-        TextView sizeInfo = new TextView(context);
-        sizeInfo.setText("Total merged size: " + FileSize.getHumanReadableFileSize(totalSize));
-        sizeInfo.setPadding(0, Extensions.dp2px(context, 4), 0, Extensions.dp2px(context, 8));
-        root.addView(sizeInfo);
+        // List of checkboxes for each detected split part (all checked by default)
+        LinearLayout partsListLayout = new LinearLayout(context);
+        partsListLayout.setOrientation(LinearLayout.VERTICAL);
+        partsListLayout.setPadding(0, Extensions.dp2px(context, 8), 0, Extensions.dp2px(context, 8));
+
+        List<MaterialCheckBox> partCheckBoxes = new ArrayList<>();
+        for (File p : parts) {
+            MaterialCheckBox cb = new MaterialCheckBox(context);
+            cb.setText(p.getName() + " (" + FileSize.getHumanReadableFileSize(p.length()) + ")");
+            cb.setChecked(true);
+            partCheckBoxes.add(cb);
+            partsListLayout.addView(cb);
+        }
+        root.addView(partsListLayout);
 
         TextView nameLabel = new TextView(context);
-        nameLabel.setText("Output filename:");
+        nameLabel.setText(R.string.output_filename);
         root.addView(nameLabel);
 
         EditText outputNameInput = new EditText(context);
@@ -347,7 +366,7 @@ public final class SplitDialog {
         root.addView(outputNameInput);
 
         MaterialCheckBox deleteParts = new MaterialCheckBox(context);
-        deleteParts.setText("Delete split parts after merging");
+        deleteParts.setText(R.string.delete_parts_after_merge);
         root.addView(deleteParts);
 
         ScrollView scroll = new ScrollView(context);
@@ -359,9 +378,20 @@ public final class SplitDialog {
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.merge_split_files, (dialogInterface, which) -> {
+                    List<File> toMerge = new ArrayList<>();
+                    for (int i = 0; i < parts.size(); i++) {
+                        if (partCheckBoxes.get(i).isChecked()) {
+                            toMerge.add(parts.get(i));
+                        }
+                    }
+                    if (toMerge.isEmpty()) {
+                        Extensions.showMessage(context, "No parts selected");
+                        return;
+                    }
+
                     String outName = outputNameInput.getText().toString().trim();
                     if (outName.isEmpty()) outName = suggestedOutput;
-                    File outFile = new File(file.getParentFile(), outName);
+                    File outFile = new File(parts.get(0).getParentFile(), outName);
                     boolean del = deleteParts.isChecked();
 
                     ProgressManager pm = new ProgressManager(context, true).show();
@@ -369,9 +399,9 @@ public final class SplitDialog {
 
                     new Thread(() -> {
                         try {
-                            SplitArchiveUtil.mergeParts(parts, outFile, pm != null ? pm.listener() : null);
+                            SplitArchiveUtil.mergeParts(toMerge, outFile, pm != null ? pm.listener() : null);
                             if (del) {
-                                for (File p : parts) {
+                                for (File p : toMerge) {
                                     if (p.exists() && !p.equals(outFile)) p.delete();
                                 }
                             }

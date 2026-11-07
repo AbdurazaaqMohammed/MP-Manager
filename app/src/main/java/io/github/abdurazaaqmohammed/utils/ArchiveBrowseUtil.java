@@ -24,8 +24,11 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.zip.CRC32;
 import java.util.zip.InflaterInputStream;
 
@@ -145,11 +148,46 @@ public final class ArchiveBrowseUtil {
         return true;
     }
 
-    /** Every entry in the archive, directories marked by a trailing '/'. */
+    private record CacheEntry(long lastModified, long length, List<RawEntry> entries) {}
+
+    private static final int MAX_CACHE_SIZE = 16;
+    private static final Map<String, CacheEntry> entriesCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, CacheEntry>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
+                    return size() > MAX_CACHE_SIZE;
+                }
+            }
+    );
+
+    public static void invalidateCache(File archive) {
+        if (archive != null) {
+            entriesCache.remove(archive.getAbsolutePath());
+        }
+    }
+
+    public static void clearCache() {
+        entriesCache.clear();
+    }
+
+    /** Every entry in the archive, directories marked by a trailing '/'. Cached in memory for instant browsing. */
     public static List<RawEntry> listEntries(File archive) throws IOException {
         if (archive == null || !archive.exists() || archive.length() == 0) {
             return new ArrayList<>();
         }
+        String key = archive.getAbsolutePath();
+        long mtime = archive.lastModified();
+        long len = archive.length();
+        CacheEntry ce = entriesCache.get(key);
+        if (ce != null && ce.lastModified == mtime && ce.length == len) {
+            return ce.entries;
+        }
+        List<RawEntry> result = doListEntries(archive);
+        entriesCache.put(key, new CacheEntry(mtime, len, result));
+        return result;
+    }
+
+    private static List<RawEntry> doListEntries(File archive) throws IOException {
         ArchiveType type = detectArchiveType(archive);
         switch (type) {
             case ZIP: {
@@ -625,6 +663,7 @@ public final class ArchiveBrowseUtil {
     private static String normalize(String path) {
         String out = path == null ? "" : path.replace('\\', '/').trim();
         while (out.startsWith("./")) out = out.substring(2);
+        while (out.startsWith("/")) out = out.substring(1);
         return out;
     }
 

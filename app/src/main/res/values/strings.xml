@@ -260,6 +260,7 @@
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>
+    <string name="elf_extract_strings">Decompile &amp; Extract Readable Code</string>
     <string name="saved">Saved</string>
     <string name="goto_offset">Go to offset</string>
     <string name="revert_changes">Revert changes</string>
@@ -2226,7 +2227,7 @@ Patched code:</string>
 
     <!-- Split & Merge Archive / File Tools -->
     <string name="split_file">Split</string>
-    <string name="merge_split_files">Merge split files</string>
+    <string name="merge_split_files">Merge</string>
     <string name="split_dialog_title">Split file</string>
     <string name="split_by_size">By part size</string>
     <string name="split_by_count">By number of parts</string>
@@ -2241,8 +2242,9 @@ Patched code:</string>
     <string name="merge_in_progress">Merging parts…</string>
     <string name="merge_success">Merged successfully: %1$s</string>
     <string name="delete_original_after_split">Delete original file after splitting</string>
+    <string name="delete_parts_after_merge">Delete split parts after merging</string>
     <string name="split_open_archive">Open archive</string>
-    <string name="split_missing_parts">Some parts are missing</string>
+    <string name="split_missing_parts">No other split parts found for this file in this folder.</string>
 
     <!-- Flutter Tools & Inspection -->
     <string name="flutter_tools">Flutter Tools</string>

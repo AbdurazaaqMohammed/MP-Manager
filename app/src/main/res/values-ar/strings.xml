@@ -230,6 +230,7 @@
     <string name="fix_mime_type">إصلاح نوع MIME قبل المشاركة/الفتح (اكتشاف من البايتات)</string>
     <string name="reported_mime">MIME المُبلغ عنه</string>
     <string name="real_mime">MIME الحقيقي</string>
+    <string name="elf_extract_strings">تحويل إلى كود واستخراج النصوص المقروءة</string>
     <string name="saved">تم الحفظ</string>
     <string name="goto_offset">الانتقال إلى الإزاحة (Offset)</string>
     <string name="revert_changes">التراجع عن التغييرات</string>
@@ -1987,7 +1988,7 @@
 
     <!-- أدوات تقسيم ودمج الأرشيفات والملفات -->
     <string name="split_file">تقسيم</string>
-    <string name="merge_split_files">دمج الأجزاء المتقسمة</string>
+    <string name="merge_split_files">دمج الأجزاء</string>
     <string name="split_dialog_title">تقسيم الملف</string>
     <string name="split_by_size">حسب حجم كل جزء</string>
     <string name="split_by_count">حسب عدد الأجزاء</string>
@@ -2002,8 +2003,9 @@
     <string name="merge_in_progress">جاري دمج الأجزاء…</string>
     <string name="merge_success">تم الدمج بنجاح: %1$s</string>
     <string name="delete_original_after_split">حذف الملف الأصلي بعد التقسيم</string>
+    <string name="delete_parts_after_merge">حذف الأجزاء بعد الدمج</string>
     <string name="split_open_archive">فتح الأرشيف</string>
-    <string name="split_missing_parts">بعض الأجزاء مفقودة</string>
+    <string name="split_missing_parts">لم يتم العثور على أجزاء أخرى لهذا الملف داخل هذا المجلد.</string>
 
     <!-- أدوات فحص وتعديل تطبيقات فلاتر -->
     <string name="flutter_tools">أدوات فلاتر</string>

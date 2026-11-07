@@ -392,10 +392,18 @@ public class FilePropertiesDialog {
                 .setPositiveButton(R.string.close, null);
 
         if (!isInZip && !multi && file != null && file.isFile()) {
-            dialogBuilder.setNeutralButton(R.string.mime, (d, w) -> showMimeDialog(file));
+            dialogBuilder.setNeutralButton(R.string.mime, null);
         }
 
         selfDialog[0] = dialogBuilder.create();
+        if (!isInZip && !multi && file != null && file.isFile()) {
+            selfDialog[0].setOnShowListener(di -> {
+                android.widget.Button neutral = selfDialog[0].getButton(AlertDialog.BUTTON_NEUTRAL);
+                if (neutral != null) {
+                    neutral.setOnClickListener(v -> showMimeDialog(file));
+                }
+            });
+        }
         dialogUtil.styleAlertDialog(selfDialog[0]);
     }
 

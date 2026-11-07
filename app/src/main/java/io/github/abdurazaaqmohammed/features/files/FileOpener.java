@@ -38,6 +38,8 @@ import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+
+import java.nio.charset.StandardCharsets;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -65,9 +67,12 @@ import io.github.abdurazaaqmohammed.features.payload.PayloadParser;
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -928,6 +933,7 @@ public class FileOpener {
         String[] options = {
                 context.getString(R.string.hex_editor),
                 "ELF Inspector",
+                context.getString(R.string.elf_extract_strings),
                 context.getString(R.string.text_editor),
                 context.getString(R.string.open_with)
         };
@@ -938,13 +944,208 @@ public class FileOpener {
                     switch (which) {
                         case 0 -> openHexEditorWithOriginal(file, originalFile);
                         case 1 -> showElfInspectorDialog(file, fileName, originalFile);
-                        case 2 -> openTextEditorWithOriginal(file, originalFile);
-                        case 3 -> showOpenWithDialog(file, fileName, null, null, originalFile);
+                        case 2 -> decompileElfToReadableCode(file, fileName, originalFile);
+                        case 3 -> openTextEditorWithOriginal(file, originalFile);
+                        case 4 -> showOpenWithDialog(file, fileName, null, null, originalFile);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void decompileElfToReadableCode(File file, String fileName, File originalFile) {
+        final File targetOriginal = originalFile != null ? originalFile : file;
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText("Decompiling ELF to readable code…");
+
+        new Thread(() -> {
+            try (RandomAccessFile raf = new RandomAccessFile(file, "r");
+                 ElfParser elf = new ElfParser(raf)) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("// =====================================================================\n");
+                sb.append("// DECOMPILED ELF SUMMARY & READABLE CODE\n");
+                sb.append("// File: ").append(fileName).append(" (").append(file.length()).append(" bytes)\n");
+                sb.append("// Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append(" (Little-Endian)\n");
+                sb.append("// Architecture: ").append(ElfParser.machineName(elf.machine))
+                        .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
+                sb.append("// Entry Point: 0x").append(Long.toHexString(elf.entry)).append("\n");
+                sb.append("// =====================================================================\n\n");
+
+                // 1. Dependencies & Dynamic Info
+                Map<String, String> dyn = elf.dynamicInfo();
+                if (!dyn.isEmpty()) {
+                    sb.append("// =================== [1] SHARED LIBRARIES & METADATA ===================\n");
+                    if (dyn.containsKey("soname")) {
+                        sb.append("// Internal Library Name (SONAME): ").append(dyn.get("soname")).append("\n");
+                    }
+                    if (dyn.containsKey("needed")) {
+                        sb.append("// Imported Dependencies (DT_NEEDED):\n");
+                        for (String lib : dyn.get("needed").split(",\\s*")) {
+                            sb.append("#include <").append(lib.trim()).append(">\n");
+                        }
+                    }
+                    sb.append("\n");
+                }
+
+                // 2. Symbols & Functions
+                List<ElfParser.Symbol> allSymbols = new ArrayList<>();
+                try {
+                    allSymbols.addAll(elf.symbols(".dynsym"));
+                } catch (Exception ignored) {}
+                try {
+                    List<ElfParser.Symbol> symtab = elf.symbols(".symtab");
+                    if (symtab != null && !symtab.isEmpty()) allSymbols.addAll(symtab);
+                } catch (Exception ignored) {}
+
+                List<ElfParser.Symbol> exports = new ArrayList<>();
+                List<ElfParser.Symbol> jniFuncs = new ArrayList<>();
+                List<ElfParser.Symbol> imports = new ArrayList<>();
+                Set<String> seen = new HashSet<>();
+
+                for (ElfParser.Symbol s : allSymbols) {
+                    if (s.name == null || s.name.isEmpty() || !seen.add(s.name)) continue;
+                    if (s.name.startsWith("Java_") || s.name.contains("JNI_OnLoad") || s.name.contains("JNI_OnUnload")) {
+                        jniFuncs.add(s);
+                    } else if (s.shndx == 0) {
+                        imports.add(s);
+                    } else if (s.type == 2 /* FUNC */ || s.type == 10 /* IFUNC */) {
+                        exports.add(s);
+                    }
+                }
+
+                if (!jniFuncs.isEmpty()) {
+                    sb.append("// =================== [2] JNI EXPORTED METHODS (JAVA BINDINGS) ===================\n");
+                    sb.append("extern \"C\" {\n");
+                    for (ElfParser.Symbol jni : jniFuncs) {
+                        sb.append("    // Addr: 0x").append(Long.toHexString(jni.value))
+                                .append(" | Size: ").append(jni.size).append("\n");
+                        sb.append("    JNIEXPORT void JNICALL ").append(jni.name).append("(JNIEnv* env, jobject thiz);\n\n");
+                    }
+                    sb.append("}\n\n");
+                }
+
+                if (!exports.isEmpty()) {
+                    sb.append("// =================== [3] DEFINED FUNCTIONS (CODE LOGIC) ===================\n");
+                    for (ElfParser.Symbol exp : exports) {
+                        sb.append("// [FUNC] 0x").append(Long.toHexString(exp.value))
+                                .append(" (size: ").append(exp.size).append(" bytes) [")
+                                .append(exp.bindName()).append("]\n");
+                        sb.append("int ").append(exp.name).append("();\n");
+                    }
+                    sb.append("\n");
+                }
+
+                if (!imports.isEmpty()) {
+                    sb.append("// =================== [4] IMPORTED SYSTEM CALLS & API FUNCTIONS ===================\n");
+                    sb.append("// External functions invoked by this binary (reveals capabilities):\n");
+                    for (ElfParser.Symbol imp : imports) {
+                        sb.append("extern int ").append(imp.name).append("();\n");
+                    }
+                    sb.append("\n");
+                }
+
+                // 3. Sections Overview
+                sb.append("// =================== [5] ELF SECTIONS ===================\n");
+                for (ElfParser.Section sec : elf.sections()) {
+                    sb.append(String.format(Locale.ROOT, "// %-20s  offset: 0x%08x  size: %-8d  addr: 0x%08x\n",
+                            sec.name, sec.offset, sec.size, sec.addr));
+                }
+                sb.append("\n");
+
+                // 4. Embedded Strings, URLs, Paths, and Commands
+                sb.append("// =================== [6] EMBEDDED STRINGS, COMMANDS & URLS ===================\n");
+                List<String[]> rodataStrings = new ArrayList<>();
+                try {
+                    rodataStrings.addAll(elf.strings(".rodata", 4, 1500));
+                } catch (Exception ignored) {}
+                try {
+                    rodataStrings.addAll(elf.strings(".data", 4, 500));
+                } catch (Exception ignored) {}
+
+                if (rodataStrings.size() < 10) {
+                    extractGenericStrings(file, 4, 2000, rodataStrings);
+                }
+
+                Set<String> seenStrings = new HashSet<>();
+                List<String> pathsAndCommands = new ArrayList<>();
+                List<String> urlsAndWeb = new ArrayList<>();
+                List<String> otherStrings = new ArrayList<>();
+
+                for (String[] entry : rodataStrings) {
+                    String str = entry[1].trim();
+                    if (str.length() < 3 || !seenStrings.add(str)) continue;
+                    if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("ftp://")) {
+                        urlsAndWeb.add(entry[0] + ": " + str);
+                    } else if (str.startsWith("/") || str.contains("/bin/") || str.contains("/system/") || str.startsWith("su ") || str.startsWith("sh ")) {
+                        pathsAndCommands.add(entry[0] + ": " + str);
+                    } else {
+                        otherStrings.add(entry[0] + ": " + str);
+                    }
+                }
+
+                if (!urlsAndWeb.isEmpty()) {
+                    sb.append("// --- Network Endpoints & URLs ---\n");
+                    for (String s : urlsAndWeb) sb.append(s).append("\n");
+                    sb.append("\n");
+                }
+
+                if (!pathsAndCommands.isEmpty()) {
+                    sb.append("// --- System Paths & Shell Commands ---\n");
+                    for (String s : pathsAndCommands) sb.append(s).append("\n");
+                    sb.append("\n");
+                }
+
+                if (!otherStrings.isEmpty()) {
+                    sb.append("// --- Error Messages, Format Strings & Identifiers ---\n");
+                    for (String s : otherStrings) sb.append(s).append("\n");
+                    sb.append("\n");
+                }
+
+                File outFile = new File(context.getCacheDir(), fileName + "_readable.c");
+                try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                    fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                context.runOnUiThread(() -> {
+                    pm.dismiss();
+                    openTextEditorWithOriginal(outFile, targetOriginal);
+                });
+            } catch (Exception e) {
+                context.runOnUiThread(() -> {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                });
+            }
+        }).start();
+    }
+
+    private static void extractGenericStrings(File file, int minLen, int maxResults, List<String[]> out) {
+        try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] buf = new byte[64 * 1024];
+            ByteArrayOutputStream cur = new ByteArrayOutputStream();
+            long offset = 0;
+            long strStart = 0;
+            int n;
+            while ((n = in.read(buf)) != -1 && out.size() < maxResults) {
+                for (int i = 0; i < n && out.size() < maxResults; i++) {
+                    byte b = buf[i];
+                    if (b >= 0x20 && b <= 0x7E) {
+                        if (cur.size() == 0) strStart = offset + i;
+                        cur.write(b);
+                    } else {
+                        if (cur.size() >= minLen) {
+                            out.add(new String[]{"0x" + Long.toHexString(strStart), cur.toString("UTF-8")});
+                        }
+                        cur.reset();
+                    }
+                }
+                offset += n;
+            }
+            if (cur.size() >= minLen && out.size() < maxResults) {
+                out.add(new String[]{"0x" + Long.toHexString(strStart), cur.toString("UTF-8")});
+            }
+        } catch (Exception ignored) {}
     }
 
     private void showElfInspectorDialog(File file, String fileName, File originalFile) {

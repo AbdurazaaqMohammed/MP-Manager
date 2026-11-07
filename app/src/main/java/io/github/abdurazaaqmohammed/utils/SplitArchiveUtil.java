@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,13 +31,25 @@ public final class SplitArchiveUtil {
     private static final Pattern PATTERN_OLD_RAR =
             Pattern.compile("^(.*?)[.](rar|r\\d{2,})$", Pattern.CASE_INSENSITIVE);
 
-    // Numbered split: name.7z.001, name.zip.001, name.tar.001, name.001
+    // Numbered split: name.7z.001, name.zip.001, name.tar.001, name.001, name.01
     private static final Pattern PATTERN_NUMBERED_SPLIT =
-            Pattern.compile("^(.*?)[.](\\d{3,})$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("^(.*?)[.](\\d{2,})$", Pattern.CASE_INSENSITIVE);
 
     // Split ZIP: name.z01, name.z02, ..., name.zip
     private static final Pattern PATTERN_ZIP_SPLIT =
             Pattern.compile("^(.*?)[.](z\\d{2,}|zip)$", Pattern.CASE_INSENSITIVE);
+
+    // Numbered split with alphanumeric extension prefix: name.win000, name.w01, name.tar001, etc.
+    private static final Pattern PATTERN_ALPHANUM_SPLIT =
+            Pattern.compile("^(.*?)[.]([a-zA-Z]+)(\\d{2,})$", Pattern.CASE_INSENSITIVE);
+
+    // Chunk / Part split: name_part01.tar, name_01.tar, name-01.img, etc.
+    private static final Pattern PATTERN_CHUNK_SPLIT =
+            Pattern.compile("^(.*?)[._-](?:part|vol|chunk|seg)?[._-]?(\\d{2,})[.]([a-zA-Z0-9]+)$", Pattern.CASE_INSENSITIVE);
+
+    // Suffix numeric split without extension: name_01, name-01
+    private static final Pattern PATTERN_SUFFIX_SPLIT =
+            Pattern.compile("^(.*?)[._-](\\d{2,})$", Pattern.CASE_INSENSITIVE);
 
     private static final int BUFFER_SIZE = 64 * 1024;
 
@@ -48,17 +61,61 @@ public final class SplitArchiveUtil {
      */
     public static boolean isSplitArchiveName(String name) {
         if (name == null || name.isEmpty()) return false;
+        if (ApkIconHelper.isApkLikeFile(name)) return false;
         return PATTERN_PART_RAR.matcher(name).matches()
                 || PATTERN_NUMBERED_SPLIT.matcher(name).matches()
                 || PATTERN_OLD_RAR.matcher(name).matches()
-                || PATTERN_ZIP_SPLIT.matcher(name).matches();
+                || PATTERN_ZIP_SPLIT.matcher(name).matches()
+                || PATTERN_ALPHANUM_SPLIT.matcher(name).matches()
+                || PATTERN_CHUNK_SPLIT.matcher(name).matches();
     }
 
     /**
-     * Returns true if the given file looks like a part of a split archive.
+     * Fast local candidate check on the file itself (NO directory listing or sibling scanning).
+     * Returns true ONLY if:
+     * 1. The name indicates it is a split archive part (RAR, ZIP, 7Z, .001, .win000, etc.), OR
+     * 2. The physical file header indicates an archive/disk image AND the filename has numeric indexing.
+     */
+    public static boolean isPotentialSplitCandidate(File file) {
+        if (file == null || !file.isFile()) return false;
+        String name = file.getName();
+        if (name == null || name.isEmpty() || ApkIconHelper.isApkLikeFile(name)) return false;
+
+        // 1. By naming convention
+        if (isSplitArchiveName(name)) {
+            return true;
+        }
+
+        // 2. By content header + numeric indexing
+        if (hasNumericIndex(name) && detectMergedExtension(file) != null) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean hasNumericIndex(String name) {
+        if (name == null || name.isEmpty()) return false;
+        return PATTERN_PART_RAR.matcher(name).matches()
+                || PATTERN_NUMBERED_SPLIT.matcher(name).matches()
+                || PATTERN_OLD_RAR.matcher(name).matches()
+                || PATTERN_ZIP_SPLIT.matcher(name).matches()
+                || PATTERN_ALPHANUM_SPLIT.matcher(name).matches()
+                || PATTERN_CHUNK_SPLIT.matcher(name).matches()
+                || PATTERN_SUFFIX_SPLIT.matcher(name).matches();
+    }
+
+    /**
+     * Returns true if the given file looks like a part of a split archive AND
+     * has sibling parts in the same directory forming a multi-volume sequence.
+     * APK files and their derivatives are strictly excluded.
+     *
+     * Performance optimization: First checks name and header on the file itself.
+     * Only if the file qualifies as a candidate does it scan the directory for siblings.
      */
     public static boolean isSplitArchive(File file) {
-        return file != null && file.isFile() && isSplitArchiveName(file.getName());
+        if (!isPotentialSplitCandidate(file)) return false;
+        return hasSiblingParts(file);
     }
 
     /**
@@ -140,6 +197,22 @@ public final class SplitArchiveUtil {
             String base = mZip.group(1);
             File zipFile = new File(parent, base + ".zip");
             if (zipFile.exists()) return zipFile;
+            return file;
+        }
+
+        // 5. Alphanumeric split: name.win002 -> name.win000 or name.win001
+        Matcher mAlpha = PATTERN_ALPHANUM_SPLIT.matcher(name);
+        if (mAlpha.matches()) {
+            String base = mAlpha.group(1);
+            String prefix = mAlpha.group(2);
+            String numStr = mAlpha.group(3);
+            int width = numStr.length();
+            String zeroNum = String.format(Locale.ROOT, "%0" + width + "d", 0);
+            File candidate0 = new File(parent, base + "." + prefix + zeroNum);
+            if (candidate0.exists()) return candidate0;
+            String firstNum = String.format(Locale.ROOT, "%0" + width + "d", 1);
+            File candidate1 = new File(parent, base + "." + prefix + firstNum);
+            if (candidate1.exists()) return candidate1;
             return file;
         }
 
@@ -270,19 +343,197 @@ public final class SplitArchiveUtil {
             return res.isEmpty() ? Collections.singletonList(anyPart) : res;
         }
 
+        // 5. Alphanumeric split: name.win000, name.win001, etc.
+        Matcher mAlpha = PATTERN_ALPHANUM_SPLIT.matcher(name);
+        if (mAlpha.matches()) {
+            String base = mAlpha.group(1);
+            String prefix = mAlpha.group(2);
+            File[] siblings = parent.listFiles();
+            if (siblings == null) return Collections.singletonList(anyPart);
+
+            List<PartInfo> matched = new ArrayList<>();
+            for (File sib : siblings) {
+                if (!sib.isFile()) continue;
+                Matcher sm = PATTERN_ALPHANUM_SPLIT.matcher(sib.getName());
+                if (sm.matches() && sm.group(1).equalsIgnoreCase(base) && sm.group(2).equalsIgnoreCase(prefix)) {
+                    try {
+                        int num = Integer.parseInt(sm.group(3));
+                        matched.add(new PartInfo(sib, num));
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            matched.sort(Comparator.comparingInt(p -> p.number));
+            List<File> res = new ArrayList<>();
+            for (PartInfo pi : matched) res.add(pi.file);
+            return res.isEmpty() ? Collections.singletonList(anyPart) : res;
+        }
+
         return Collections.singletonList(anyPart);
+    }
+
+    /**
+     * Checks if a user-selected set of files can be merged together as split parts.
+     * Evaluates naming conventions, shared base prefixes, and content headers.
+     */
+    public static boolean areMergeableParts(List<File> files) {
+        if (files == null || files.size() < 2) return false;
+        for (File f : files) {
+            if (f == null || !f.isFile() || ApkIconHelper.isApkLikeFile(f.getName())) {
+                return false;
+            }
+        }
+
+        // 1. By naming scheme: if files have split patterns and share a base
+        String base0 = getFileBasePrefix(files.get(0).getName());
+        boolean allShareBase = true;
+        for (File f : files) {
+            String b = getFileBasePrefix(f.getName());
+            if (!b.equalsIgnoreCase(base0)) {
+                allShareBase = false;
+                break;
+            }
+        }
+
+        if (allShareBase) {
+            for (File f : files) {
+                if (isSplitArchiveName(f.getName()) || hasNumericIndex(f.getName())) {
+                    return true;
+                }
+            }
+        }
+
+        // 2. Check if first part has an archive/image container header
+        List<File> sorted = sortParts(files);
+        if (sorted != null && !sorted.isEmpty()) {
+            File first = sorted.get(0);
+            if (detectMergedExtension(first) != null && hasNumericIndex(first.getName())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static String getFileBasePrefix(String name) {
+        if (name == null) return "";
+        Matcher mPart = PATTERN_PART_RAR.matcher(name);
+        if (mPart.matches()) return mPart.group(1);
+        Matcher mNum = PATTERN_NUMBERED_SPLIT.matcher(name);
+        if (mNum.matches()) return mNum.group(1);
+        Matcher mOldRar = PATTERN_OLD_RAR.matcher(name);
+        if (mOldRar.matches()) return mOldRar.group(1);
+        Matcher mZip = PATTERN_ZIP_SPLIT.matcher(name);
+        if (mZip.matches()) return mZip.group(1);
+        Matcher mAlpha = PATTERN_ALPHANUM_SPLIT.matcher(name);
+        if (mAlpha.matches()) return mAlpha.group(1);
+        Matcher mChunk = PATTERN_CHUNK_SPLIT.matcher(name);
+        if (mChunk.matches()) return mChunk.group(1);
+        Matcher mSuffix = PATTERN_SUFFIX_SPLIT.matcher(name);
+        if (mSuffix.matches()) return mSuffix.group(1);
+        return name.replaceAll("[._-]?\\d+$", "");
+    }
+
+    /**
+     * Sorts the given split parts into their correct sequential order
+     * (e.g. part1, part2, part3... or 000, 001, 002... or .z01, .z02... .zip).
+     */
+    public static List<File> sortParts(List<File> parts) {
+        if (parts == null || parts.isEmpty()) return new ArrayList<>();
+        List<File> sorted = new ArrayList<>(parts);
+        sorted.sort((f1, f2) -> {
+            int n1 = extractPartNumber(f1.getName());
+            int n2 = extractPartNumber(f2.getName());
+            if (n1 != -1 && n2 != -1 && n1 != n2) {
+                return Integer.compare(n1, n2);
+            }
+            return naturalCompare(f1.getName(), f2.getName());
+        });
+        return sorted;
+    }
+
+    public static int extractPartNumber(String name) {
+        if (name == null || name.isEmpty()) return -1;
+        Matcher mPart = PATTERN_PART_RAR.matcher(name);
+        if (mPart.matches()) {
+            try { return Integer.parseInt(mPart.group(2)); } catch (Exception ignored) {}
+        }
+        Matcher mOldRar = PATTERN_OLD_RAR.matcher(name);
+        if (mOldRar.matches()) {
+            String ext = mOldRar.group(2).toLowerCase(Locale.ROOT);
+            if (ext.equals("rar")) return 0;
+            if (ext.startsWith("r")) {
+                try { return Integer.parseInt(ext.substring(1)); } catch (Exception ignored) {}
+            }
+        }
+        Matcher mNum = PATTERN_NUMBERED_SPLIT.matcher(name);
+        if (mNum.matches()) {
+            try { return Integer.parseInt(mNum.group(2)); } catch (Exception ignored) {}
+        }
+        Matcher mZip = PATTERN_ZIP_SPLIT.matcher(name);
+        if (mZip.matches()) {
+            String ext = mZip.group(2).toLowerCase(Locale.ROOT);
+            if (ext.equals("zip")) return Integer.MAX_VALUE;
+            if (ext.startsWith("z")) {
+                try { return Integer.parseInt(ext.substring(1)); } catch (Exception ignored) {}
+            }
+        }
+        Matcher mAlpha = PATTERN_ALPHANUM_SPLIT.matcher(name);
+        if (mAlpha.matches()) {
+            try { return Integer.parseInt(mAlpha.group(3)); } catch (Exception ignored) {}
+        }
+        Matcher mChunk = PATTERN_CHUNK_SPLIT.matcher(name);
+        if (mChunk.matches()) {
+            try { return Integer.parseInt(mChunk.group(2)); } catch (Exception ignored) {}
+        }
+        Matcher mSuffix = PATTERN_SUFFIX_SPLIT.matcher(name);
+        if (mSuffix.matches()) {
+            try { return Integer.parseInt(mSuffix.group(2)); } catch (Exception ignored) {}
+        }
+        return -1;
+    }
+
+    public static int naturalCompare(String s1, String s2) {
+        int i1 = 0, i2 = 0;
+        int len1 = s1.length(), len2 = s2.length();
+        while (i1 < len1 && i2 < len2) {
+            char c1 = s1.charAt(i1);
+            char c2 = s2.charAt(i2);
+            if (Character.isDigit(c1) && Character.isDigit(c2)) {
+                int start1 = i1;
+                while (i1 < len1 && Character.isDigit(s1.charAt(i1))) i1++;
+                int start2 = i2;
+                while (i2 < len2 && Character.isDigit(s2.charAt(i2))) i2++;
+                String numStr1 = s1.substring(start1, i1);
+                String numStr2 = s2.substring(start2, i2);
+                try {
+                    long l1 = Long.parseLong(numStr1);
+                    long l2 = Long.parseLong(numStr2);
+                    if (l1 != l2) return Long.compare(l1, l2);
+                } catch (NumberFormatException ignored) {}
+                int cmp = numStr1.compareTo(numStr2);
+                if (cmp != 0) return cmp;
+            } else {
+                int cmp = Character.compare(Character.toLowerCase(c1), Character.toLowerCase(c2));
+                if (cmp != 0) return cmp;
+                i1++;
+                i2++;
+            }
+        }
+        return Integer.compare(len1, len2);
     }
 
     /**
      * Returns true if there are sibling parts forming a multi-volume sequence.
      */
     public static boolean hasSiblingParts(File file) {
+        if (file == null || !file.isFile() || ApkIconHelper.isApkLikeFile(file.getName())) return false;
         List<File> parts = getOrderedParts(file);
         return parts != null && parts.size() > 1;
     }
 
     /**
      * Determines the suggested merged output filename when combining split files.
+     * Checks the physical magic bytes of the file first to suggest the true extension.
      */
     public static String getMergedFileName(File file) {
         if (file == null) return "merged.bin";
@@ -295,7 +546,12 @@ public final class SplitArchiveUtil {
 
         Matcher mNum = PATTERN_NUMBERED_SPLIT.matcher(name);
         if (mNum.matches()) {
-            return mNum.group(1);
+            String base = mNum.group(1);
+            String detected = detectMergedExtension(file);
+            if (detected != null && !base.toLowerCase(Locale.ROOT).endsWith("." + detected)) {
+                return base + "." + detected;
+            }
+            return base;
         }
 
         Matcher mOldRar = PATTERN_OLD_RAR.matcher(name);
@@ -308,7 +564,85 @@ public final class SplitArchiveUtil {
             return mZip.group(1) + ".zip";
         }
 
+        Matcher mAlpha = PATTERN_ALPHANUM_SPLIT.matcher(name);
+        if (mAlpha.matches()) {
+            String base = mAlpha.group(1);
+            String extPrefix = mAlpha.group(2).toLowerCase(Locale.ROOT);
+            String detected = detectMergedExtension(file);
+            if (detected != null) {
+                return base + "." + detected;
+            }
+            if ("win".equals(extPrefix)) {
+                return base + ".tar";
+            }
+            return base;
+        }
+
         return name + ".merged";
+    }
+
+    /**
+     * Inspects leading bytes to detect true archive/image container kind.
+     */
+    public static String detectMergedExtension(File file) {
+        if (file == null || !file.isFile() || file.length() < 16) return null;
+        byte[] head = new byte[1088];
+        int n;
+        try (InputStream in = new FileInputStream(file)) {
+            n = in.read(head);
+        } catch (Exception e) {
+            return null;
+        }
+        if (n < 4) return null;
+        // Zip: PK\x03\x04 or PK\x07\x08
+        if (head[0] == 'P' && head[1] == 'K' && (head[2] == 3 || head[2] == 7) && (head[3] == 4 || head[3] == 8)) {
+            return "zip";
+        }
+        // 7z: 37 7a bc af 27 1c
+        if (n >= 6 && head[0] == 0x37 && head[1] == 0x7A && head[2] == (byte) 0xBC && head[3] == (byte) 0xAF && head[4] == 0x27 && head[5] == 0x1C) {
+            return "7z";
+        }
+        // RAR: Rar!\x1a\x07
+        if (n >= 6 && head[0] == 'R' && head[1] == 'a' && head[2] == 'r' && head[3] == '!' && head[4] == 0x1A && head[5] == 0x07) {
+            return "rar";
+        }
+        // Gzip: \x1f\x8b
+        if (head[0] == (byte) 0x1F && head[1] == (byte) 0x8B) {
+            return "tar.gz";
+        }
+        // Tar POSIX: "ustar" at 257
+        if (n >= 262 && head[257] == 'u' && head[258] == 's' && head[259] == 't' && head[260] == 'a' && head[261] == 'r') {
+            return "tar";
+        }
+        // Tar Checksum
+        if (n >= 512 && isTarHeader(head)) {
+            return "tar";
+        }
+        // EXT4 superblock at 1080: 0x53 0xef
+        if (n >= 1082 && (head[1080] & 0xFF) == 0x53 && (head[1081] & 0xFF) == 0xEF) {
+            return "img";
+        }
+        // Android Boot Image ("ANDROID!")
+        if (head[0] == 'A' && head[1] == 'N' && head[2] == 'D' && head[3] == 'R' && head[4] == 'O' && head[5] == 'I' && head[6] == 'D' && head[7] == '!') {
+            return "img";
+        }
+        return null;
+    }
+
+    private static boolean isTarHeader(byte[] head) {
+        if (head.length < 512 || head[0] == 0) return false;
+        try {
+            String chk = new String(head, 148, 8, StandardCharsets.ISO_8859_1).trim();
+            if (chk.isEmpty()) return false;
+            long stored = Long.parseLong(chk, 8);
+            long sum = 0;
+            for (int i = 0; i < 512; i++) {
+                sum += (i >= 148 && i < 156) ? 0x20 : (head[i] & 0xFF);
+            }
+            return sum == stored;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
