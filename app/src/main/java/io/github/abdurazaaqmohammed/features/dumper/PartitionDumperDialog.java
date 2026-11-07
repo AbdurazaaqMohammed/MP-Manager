@@ -1,58 +1,48 @@
 package io.github.abdurazaaqmohammed.features.dumper;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Environment;
-import android.os.StatFs;
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
-import android.graphics.Typeface;
-import android.widget.CheckBox;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.boot.BootImageEngine;
-import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.features.system.SystemImageEngine;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
-import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 /**
  * Universal Android Partition Dumper dialog with A/B slot switching in the header
@@ -109,452 +99,720 @@ public final class PartitionDumperDialog {
         }).start();
     }
 
+    public static class GroupedPartition {
+        public final String baseName;
+        public PartitionItem slotA;
+        public PartitionItem slotB;
+        public PartitionItem shared;
+
+        public GroupedPartition(String baseName) {
+            this.baseName = baseName;
+        }
+
+        public boolean hasBothSlots() {
+            return slotA != null && slotB != null;
+        }
+
+        public String getSlotText(boolean isAr) {
+            if (hasBothSlots()) {
+                return isAr ? "السلوت: A & B" : "Slot: A & B";
+            } else if (slotA != null) {
+                return isAr ? "السلوت: A" : "Slot: A";
+            } else if (slotB != null) {
+                return isAr ? "السلوت: B" : "Slot: B";
+            } else if (shared != null) {
+                if (shared.sizeBytes > 0) {
+                    return FileSize.getHumanReadableFileSize(shared.sizeBytes);
+                }
+                return isAr ? "قسم عام" : "Shared";
+            }
+            return isAr ? "عام" : "Shared";
+        }
+
+        public PartitionItem getActiveSlotItem(String activeSlot) {
+            if ("b".equalsIgnoreCase(activeSlot) && slotB != null) return slotB;
+            if (slotA != null) return slotA;
+            if (slotB != null) return slotB;
+            return shared;
+        }
+
+        public PartitionItem getOtherSlotItem(String activeSlot) {
+            if ("b".equalsIgnoreCase(activeSlot) && slotA != null) return slotA;
+            if (slotB != null) return slotB;
+            return slotA != null ? slotA : shared;
+        }
+
+        public PartitionItem getPrimaryItem() {
+            if (slotA != null) return slotA;
+            if (slotB != null) return slotB;
+            return shared;
+        }
+    }
+
     private static void displayMainDialog(AppCompatActivity activity, List<PartitionItem> allPartitions,
                                           String activeSlot, List<String> slotDiffs) {
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+
+        // Group partitions by base name
+        Map<String, GroupedPartition> map = new LinkedHashMap<>();
+        for (PartitionItem p : allPartitions) {
+            String raw = p.rawName;
+            String base = raw;
+            if (base.endsWith("_a") || base.endsWith("_b")) {
+                base = base.substring(0, base.length() - 2);
+            }
+            GroupedPartition gp = map.computeIfAbsent(base, GroupedPartition::new);
+            if (p.slot == PartitionItem.Slot.A) gp.slotA = p;
+            else if (p.slot == PartitionItem.Slot.B) gp.slotB = p;
+            else gp.shared = p;
+        }
+
+        // Whitelist for primary partitions matching the image
+        List<String> PRIMARY_WHITELIST = List.of(
+                "init_boot",
+                "boot",
+                "vendor_boot",
+                "recovery",
+                "dtbo"
+        );
+
+        List<GroupedPartition> primaryGrouped = new ArrayList<>();
+        List<GroupedPartition> moreGrouped = new ArrayList<>();
+
+        for (String key : PRIMARY_WHITELIST) {
+            GroupedPartition gp = map.remove(key);
+            if (gp != null) {
+                primaryGrouped.add(gp);
+            }
+        }
+
+        moreGrouped.addAll(map.values());
+        moreGrouped.sort((a, b) -> a.baseName.compareToIgnoreCase(b.baseName));
+
+        // Create Fullscreen Dialog
+        final Dialog dialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = Extensions.dp2px(activity, 14);
-        root.setPadding(pad, pad, pad, pad);
+        root.setBackgroundColor(0xFF11141B);
+        root.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Check if device uses A/B slots
-        boolean hasSlotA = false;
-        boolean hasSlotB = false;
-        for (PartitionItem p : allPartitions) {
-            if (p.slot == PartitionItem.Slot.A) hasSlotA = true;
-            if (p.slot == PartitionItem.Slot.B) hasSlotB = true;
+        // Top Toolbar
+        LinearLayout topBar = new LinearLayout(activity);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(Extensions.dp2px(activity, 16), Extensions.dp2px(activity, 16),
+                Extensions.dp2px(activity, 16), Extensions.dp2px(activity, 10));
+
+        ImageView btnClose = new ImageView(activity);
+        int closeSize = Extensions.dp2px(activity, 32);
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(closeSize, closeSize);
+        closeLp.setMarginEnd(Extensions.dp2px(activity, 14));
+        btnClose.setLayoutParams(closeLp);
+        btnClose.setImageResource(R.drawable.ic_close);
+        btnClose.setColorFilter(0xFFFFFFFF);
+        int cPad = Extensions.dp2px(activity, 4);
+        btnClose.setPadding(cPad, cPad, cPad, cPad);
+        android.util.TypedValue outValBg = new android.util.TypedValue();
+        if (activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValBg, true)) {
+            btnClose.setBackgroundResource(outValBg.resourceId);
         }
-        boolean isDeviceAB = hasSlotA || hasSlotB;
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        topBar.addView(btnClose);
 
-        // Current selected slot: defaults to active slot or Slot A
-        final PartitionItem.Slot[] selectedSlot = {
-                "b".equals(activeSlot) ? PartitionItem.Slot.B : PartitionItem.Slot.A
-        };
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // Filter state: 0=All, 1=Common, 2=Dynamic, 3=DiffOnly
-        final int[] currentCat = {0};
-        final Runnable[] applyFiltersRef = new Runnable[1];
-        final java.util.Set<PartitionItem> selectedPartitions = new java.util.HashSet<>();
+        TextView tvTitle = new TextView(activity);
+        tvTitle.setText(isAr ? "بارتيشن النظام" : "System Partition");
+        tvTitle.setTextColor(0xFFFFFFFF);
+        tvTitle.setTextSize(20f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        titleCol.addView(tvTitle);
 
-        // Header top row with slot switch and refresh button
-        LinearLayout headerTop = new LinearLayout(activity);
-        headerTop.setOrientation(LinearLayout.HORIZONTAL);
-        headerTop.setGravity(Gravity.CENTER_VERTICAL);
-        headerTop.setPadding(0, 0, 0, Extensions.dp2px(activity, 6));
+        TextView tvSubtitle = new TextView(activity);
+        tvSubtitle.setText(isAr ? "نسخ احتياطي / تفليش الأقسام والكيرنل" : "Backup / flash partitions & kernel");
+        tvSubtitle.setTextColor(0xFF8A96A0);
+        tvSubtitle.setTextSize(13f);
+        tvSubtitle.setPadding(0, Extensions.dp2px(activity, 2), 0, 0);
+        titleCol.addView(tvSubtitle);
 
-        if (isDeviceAB) {
-            TextView slotTitle = new TextView(activity);
-            slotTitle.setText(isAr ? "السلوت:" : "Slot:");
-            slotTitle.setTextSize(13f);
-            slotTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-            slotTitle.setPadding(0, 0, Extensions.dp2px(activity, 8), 0);
-            headerTop.addView(slotTitle);
+        topBar.addView(titleCol);
 
-            String labelA = activity.getString(R.string.partition_slot_a);
-            if ("a".equals(activeSlot)) labelA += activity.getString(R.string.partition_slot_active_tag);
-            MaterialButton btnSlotA = createHeaderTabButton(activity, labelA, selectedSlot[0] == PartitionItem.Slot.A);
-
-            String labelB = activity.getString(R.string.partition_slot_b);
-            if ("b".equals(activeSlot)) labelB += activity.getString(R.string.partition_slot_active_tag);
-            MaterialButton btnSlotB = createHeaderTabButton(activity, labelB, selectedSlot[0] == PartitionItem.Slot.B);
-
-            headerTop.addView(btnSlotA);
-            headerTop.addView(btnSlotB);
-
-            btnSlotA.setOnClickListener(v -> {
-                selectedSlot[0] = PartitionItem.Slot.A;
-                btnSlotA.setStrokeColorResource(R.color.md_theme_primary);
-                btnSlotB.setStrokeColorResource(android.R.color.transparent);
-                if (applyFiltersRef[0] != null) applyFiltersRef[0].run();
-            });
-
-            btnSlotB.setOnClickListener(v -> {
-                selectedSlot[0] = PartitionItem.Slot.B;
-                btnSlotB.setStrokeColorResource(R.color.md_theme_primary);
-                btnSlotA.setStrokeColorResource(android.R.color.transparent);
-                if (applyFiltersRef[0] != null) applyFiltersRef[0].run();
-            });
-        }
-
-        View spacer = new View(activity);
-        headerTop.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
-
-        MaterialButton btnRefresh = new MaterialButton(activity, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btnRefresh.setText(activity.getString(R.string.partition_refresh));
-        btnRefresh.setTextSize(11f);
-        btnRefresh.setInsetTop(0);
-        btnRefresh.setInsetBottom(0);
-        btnRefresh.setMinHeight(0);
-        btnRefresh.setMinimumHeight(0);
-        int rPadH = Extensions.dp2px(activity, 8);
-        int rPadV = Extensions.dp2px(activity, 4);
-        btnRefresh.setPadding(rPadH, rPadV, rPadH, rPadV);
-        headerTop.addView(btnRefresh);
-
-        root.addView(headerTop);
-
-        AlertDialog[] dialogRef = new AlertDialog[1];
+        ImageView btnRefresh = new ImageView(activity);
+        btnRefresh.setLayoutParams(new LinearLayout.LayoutParams(closeSize, closeSize));
+        btnRefresh.setImageResource(R.drawable.baseline_refresh_24);
+        btnRefresh.setColorFilter(0xFFFFFFFF);
+        btnRefresh.setPadding(cPad, cPad, cPad, cPad);
+        if (outValBg.resourceId != 0) btnRefresh.setBackgroundResource(outValBg.resourceId);
         btnRefresh.setOnClickListener(v -> {
             clearCache();
-            if (dialogRef[0] != null) dialogRef[0].dismiss();
+            dialog.dismiss();
             show(activity);
         });
+        topBar.addView(btnRefresh);
 
-        // Red differences line directly under header (hidden if no differences)
-        if (slotDiffs != null && !slotDiffs.isEmpty()) {
-            TextView diffBanner = new TextView(activity);
-            diffBanner.setTextColor(0xFFD32F2F); // Deep Red
-            diffBanner.setTextSize(12f);
-            diffBanner.setTypeface(null, android.graphics.Typeface.BOLD);
-            diffBanner.setBackgroundColor(0x1AD32F2F); // Light red highlight
-            int bPad = Extensions.dp2px(activity, 8);
-            diffBanner.setPadding(bPad, bPad, bPad, bPad);
-            diffBanner.setText(activity.getString(R.string.partition_diff_banner, slotDiffs.size()));
+        root.addView(topBar);
 
-            LinearLayout.LayoutParams bannerParams = new LinearLayout.LayoutParams(
+        // Scrollable content
+        ScrollView scrollView = new ScrollView(activity);
+        scrollView.setFillViewport(true);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scrollView.setLayoutParams(scrollLp);
+
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int padH = Extensions.dp2px(activity, 16);
+        content.setPadding(padH, Extensions.dp2px(activity, 8), padH, Extensions.dp2px(activity, 24));
+
+        // 📱 Device Info Card
+        content.addView(createDeviceInfoCard(activity, activeSlot, isAr));
+
+        // Section: "Available Partitions"
+        TextView secTitle = new TextView(activity);
+        secTitle.setText(isAr ? "الأقسام المتاحة" : "Available Partitions");
+        secTitle.setTextColor(0xFFFFFFFF);
+        secTitle.setTextSize(16f);
+        secTitle.setTypeface(null, Typeface.BOLD);
+        secTitle.setPadding(0, Extensions.dp2px(activity, 8), 0, Extensions.dp2px(activity, 12));
+        content.addView(secTitle);
+
+        // Primary Cards
+        for (GroupedPartition gp : primaryGrouped) {
+            content.addView(createPartitionCard(activity, gp, activeSlot, isAr, dialog));
+        }
+
+        // More Expandable Section
+        if (!moreGrouped.isEmpty()) {
+            LinearLayout moreCard = new LinearLayout(activity);
+            moreCard.setOrientation(LinearLayout.HORIZONTAL);
+            moreCard.setGravity(Gravity.CENTER_VERTICAL);
+            GradientDrawable moreBg = new GradientDrawable();
+            moreBg.setColor(0xFF1A202C);
+            moreBg.setCornerRadius(Extensions.dp2px(activity, 16));
+            moreCard.setBackground(moreBg);
+            int mPadH = Extensions.dp2px(activity, 16);
+            int mPadV = Extensions.dp2px(activity, 14);
+            moreCard.setPadding(mPadH, mPadV, mPadH, mPadV);
+            LinearLayout.LayoutParams moreCardLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            bannerParams.setMargins(0, 0, 0, Extensions.dp2px(activity, 8));
-            diffBanner.setLayoutParams(bannerParams);
+            moreCardLp.setMargins(0, Extensions.dp2px(activity, 6), 0, Extensions.dp2px(activity, 6));
+            moreCard.setLayoutParams(moreCardLp);
 
-            diffBanner.setOnClickListener(v -> {
-                showDiffDetailsDialog(activity, allPartitions, slotDiffs, () -> {
-                    currentCat[0] = 3; // Show only diffs
-                    if (applyFiltersRef[0] != null) applyFiltersRef[0].run();
-                });
-            });
+            LinearLayout moreTextCol = new LinearLayout(activity);
+            moreTextCol.setOrientation(LinearLayout.VERTICAL);
+            moreTextCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-            root.addView(diffBanner);
-        }
+            TextView tvMoreTitle = new TextView(activity);
+            tvMoreTitle.setText(isAr ? "المزيد (" + moreGrouped.size() + " بارتيشن)" : "More (" + moreGrouped.size() + " partitions)");
+            tvMoreTitle.setTextColor(0xFFFFFFFF);
+            tvMoreTitle.setTextSize(15f);
+            tvMoreTitle.setTypeface(null, Typeface.BOLD);
+            moreTextCol.addView(tvMoreTitle);
 
-        // Search input
-        EditText searchInput = new EditText(activity);
-        searchInput.setHint(R.string.partition_search_hint);
-        searchInput.setTextSize(14f);
-        root.addView(searchInput);
+            TextView tvMoreSub = new TextView(activity);
+            tvMoreSub.setText(isAr ? "اضغط لعرض أو إخفاء باقي أقسام النظام والفيرموير" : "Tap to expand/collapse remaining partitions");
+            tvMoreSub.setTextColor(0xFF7E8E9E);
+            tvMoreSub.setTextSize(12f);
+            tvMoreSub.setPadding(0, Extensions.dp2px(activity, 2), 0, 0);
+            moreTextCol.addView(tvMoreSub);
 
-        // Filter chips bar (All, Common, Dynamic)
-        LinearLayout filterBar = new LinearLayout(activity);
-        filterBar.setOrientation(LinearLayout.HORIZONTAL);
-        filterBar.setPadding(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 8));
+            moreCard.addView(moreTextCol);
 
-        MaterialButton btnAll = createFilterButton(activity, isAr ? "الكل" : "All", true);
-        MaterialButton btnCommon = createFilterButton(activity, isAr ? "الرئيسية" : "Common", false);
-        MaterialButton btnDynamic = createFilterButton(activity, isAr ? "الديناميكية" : "Dynamic", false);
+            TextView tvChevron = new TextView(activity);
+            tvChevron.setText("▼");
+            tvChevron.setTextColor(0xFF8A98A8);
+            tvChevron.setTextSize(16f);
+            moreCard.addView(tvChevron);
 
-        filterBar.addView(btnAll);
-        filterBar.addView(btnCommon);
-        filterBar.addView(btnDynamic);
-        root.addView(filterBar);
+            content.addView(moreCard);
 
-        // Partitions list with FastScroller
-        List<PartitionItem> displayedItems = new ArrayList<>();
-        FastScrollerRecyclerView recyclerView = new FastScrollerRecyclerView(activity);
-        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
-        recyclerView.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(activity, 340)));
+            // Container for all other partitions
+            LinearLayout moreContainer = new LinearLayout(activity);
+            moreContainer.setOrientation(LinearLayout.VERTICAL);
+            moreContainer.setVisibility(View.GONE);
 
-        // Batch Action Bar
-        LinearLayout batchBar = new LinearLayout(activity);
-        batchBar.setOrientation(LinearLayout.HORIZONTAL);
-        batchBar.setGravity(Gravity.CENTER_VERTICAL);
-        batchBar.setPadding(0, Extensions.dp2px(activity, 8), 0, 0);
-        batchBar.setVisibility(View.GONE);
-
-        MaterialButton btnBatchDump = new MaterialButton(activity, null,
-                com.google.android.material.R.attr.materialButtonStyle);
-        btnBatchDump.setText(activity.getString(R.string.partition_batch_dump, 0));
-        btnBatchDump.setTextSize(12f);
-
-        MaterialButton btnSelectAll = new MaterialButton(activity, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btnSelectAll.setText(activity.getString(R.string.partition_select_all));
-        btnSelectAll.setTextSize(11f);
-        btnSelectAll.setInsetTop(0);
-        btnSelectAll.setInsetBottom(0);
-        btnSelectAll.setMinHeight(0);
-        btnSelectAll.setMinimumHeight(0);
-        int padH = Extensions.dp2px(activity, 8);
-        int padV = Extensions.dp2px(activity, 6);
-        btnSelectAll.setPadding(padH, padV, padH, padV);
-        LinearLayout.LayoutParams selLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        selLp.setMarginEnd(Extensions.dp2px(activity, 8));
-        btnSelectAll.setLayoutParams(selLp);
-
-        MaterialButton btnClearSel = new MaterialButton(activity, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btnClearSel.setText(activity.getString(R.string.partition_deselect_all));
-        btnClearSel.setTextSize(11f);
-        btnClearSel.setInsetTop(0);
-        btnClearSel.setInsetBottom(0);
-        btnClearSel.setMinHeight(0);
-        btnClearSel.setMinimumHeight(0);
-        btnClearSel.setPadding(padH, padV, padH, padV);
-        btnClearSel.setLayoutParams(selLp);
-
-        batchBar.addView(btnSelectAll);
-        batchBar.addView(btnClearSel);
-        batchBar.addView(btnBatchDump);
-
-        final Runnable updateBatchBar = () -> {
-            int count = selectedPartitions.size();
-            if (count > 0) {
-                batchBar.setVisibility(View.VISIBLE);
-                btnBatchDump.setText(activity.getString(R.string.partition_batch_dump, count));
-            } else {
-                batchBar.setVisibility(View.GONE);
+            for (GroupedPartition gp : moreGrouped) {
+                moreContainer.addView(createPartitionCard(activity, gp, activeSlot, isAr, dialog));
             }
-        };
+            content.addView(moreContainer);
 
-        class PartitionViewHolder extends RecyclerView.ViewHolder {
-            final CheckBox cbSelect;
-            final TextView title;
-            final TextView subtitle;
-            final TextView badgeSlot;
-            final ImageView btnInfo;
-            final MaterialButton btnDump;
-
-            PartitionViewHolder(@NonNull View itemView, CheckBox cbSelect, TextView title, TextView subtitle,
-                                TextView badgeSlot, ImageView btnInfo, MaterialButton btnDump) {
-                super(itemView);
-                this.cbSelect = cbSelect;
-                this.title = title;
-                this.subtitle = subtitle;
-                this.badgeSlot = badgeSlot;
-                this.btnInfo = btnInfo;
-                this.btnDump = btnDump;
-            }
-        }
-
-        android.util.TypedValue outVal = new android.util.TypedValue();
-        int selectableBg = activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outVal, true)
-                ? outVal.resourceId : 0;
-
-        RecyclerView.Adapter<PartitionViewHolder> adapter = new RecyclerView.Adapter<>() {
-            @NonNull
-            @Override
-            public PartitionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                LinearLayout row = new LinearLayout(parent.getContext());
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(Gravity.CENTER_VERTICAL);
-                int rPad = Extensions.dp2px(parent.getContext(), 8);
-                row.setPadding(rPad, rPad, rPad, rPad);
-                row.setLayoutParams(new RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-                CheckBox cb = new CheckBox(parent.getContext());
-                LinearLayout.LayoutParams cbParams = new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cbParams.setMarginEnd(Extensions.dp2px(parent.getContext(), 6));
-                cb.setLayoutParams(cbParams);
-                row.addView(cb);
-
-                LinearLayout col = new LinearLayout(parent.getContext());
-                col.setOrientation(LinearLayout.VERTICAL);
-                LinearLayout.LayoutParams colParams = new LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                col.setLayoutParams(colParams);
-
-                LinearLayout titleLine = new LinearLayout(parent.getContext());
-                titleLine.setOrientation(LinearLayout.HORIZONTAL);
-                titleLine.setGravity(Gravity.CENTER_VERTICAL);
-
-                TextView tvTitle = new TextView(parent.getContext());
-                tvTitle.setTextSize(14f);
-                tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-                titleLine.addView(tvTitle);
-
-                TextView tvBadge = new TextView(parent.getContext());
-                tvBadge.setTextSize(10f);
-                tvBadge.setTextColor(0xFF2E7D32);
-                tvBadge.setPadding(Extensions.dp2px(parent.getContext(), 6), 0, 0, 0);
-                titleLine.addView(tvBadge);
-                col.addView(titleLine);
-
-                TextView tvSub = new TextView(parent.getContext());
-                tvSub.setTextSize(12f);
-                tvSub.setTextColor(0xFF757575);
-                col.addView(tvSub);
-                row.addView(col);
-
-                ImageView ivInfo = new ImageView(parent.getContext());
-                int infoSize = Extensions.dp2px(parent.getContext(), 32);
-                LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(infoSize, infoSize);
-                infoParams.setMarginEnd(Extensions.dp2px(parent.getContext(), 6));
-                ivInfo.setLayoutParams(infoParams);
-                int iPad = Extensions.dp2px(parent.getContext(), 4);
-                ivInfo.setPadding(iPad, iPad, iPad, iPad);
-                ivInfo.setImageResource(R.drawable.ic_circle_exclamation_24);
-                if (selectableBg != 0) ivInfo.setBackgroundResource(selectableBg);
-                row.addView(ivInfo);
-
-                MaterialButton action = new MaterialButton(parent.getContext(), null,
-                        com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                action.setText(isAr ? "إجراءات" : "Actions");
-                action.setTextSize(11f);
-                action.setInsetTop(0);
-                action.setInsetBottom(0);
-                action.setMinHeight(0);
-                action.setMinimumHeight(0);
-                int bPad = Extensions.dp2px(parent.getContext(), 6);
-                action.setPadding(bPad, bPad, bPad, bPad);
-                row.addView(action);
-
-                return new PartitionViewHolder(row, cb, tvTitle, tvSub, tvBadge, ivInfo, action);
-            }
-
-            @Override
-            public void onBindViewHolder(@NonNull PartitionViewHolder holder, int position) {
-                PartitionItem item = displayedItems.get(position);
-                holder.title.setText(item.friendlyName);
-
-                String sizeStr = item.sizeBytes > 0 ? FileSize.getHumanReadableFileSize(item.sizeBytes) : (isAr ? "ديناميكي" : "Dynamic");
-                holder.subtitle.setText(item.rawName + " • " + sizeStr);
-
-                if (item.isActiveSlot) {
-                    holder.badgeSlot.setVisibility(View.VISIBLE);
-                    holder.badgeSlot.setText(activity.getString(R.string.partition_slot_active_tag).trim());
-                } else if (item.isDynamic) {
-                    holder.badgeSlot.setVisibility(View.VISIBLE);
-                    holder.badgeSlot.setText(isAr ? "ديناميكي" : "Dynamic");
+            // Toggle Expand / Collapse
+            moreCard.setOnClickListener(v -> {
+                if (moreContainer.getVisibility() == View.GONE) {
+                    moreContainer.setVisibility(View.VISIBLE);
+                    tvChevron.setText("▲");
+                    tvMoreSub.setText(isAr ? "اضغط لإخفاء الأقسام الإضافية" : "Tap to collapse remaining partitions");
                 } else {
-                    holder.badgeSlot.setVisibility(View.GONE);
+                    moreContainer.setVisibility(View.GONE);
+                    tvChevron.setText("▼");
+                    tvMoreSub.setText(isAr ? "اضغط لعرض أو إخفاء باقي أقسام النظام والفيرموير" : "Tap to expand/collapse remaining partitions");
                 }
+            });
+        }
 
-                holder.cbSelect.setOnCheckedChangeListener(null);
-                holder.cbSelect.setChecked(selectedPartitions.contains(item));
-                holder.cbSelect.setOnCheckedChangeListener((btn, isChecked) -> {
-                    if (isChecked) selectedPartitions.add(item);
-                    else selectedPartitions.remove(item);
-                    updateBatchBar.run();
-                });
+        scrollView.addView(content);
+        root.addView(scrollView);
 
-                holder.itemView.setOnClickListener(v -> holder.cbSelect.toggle());
-                holder.btnInfo.setOnClickListener(v -> showPartitionInfoDialog(activity, item));
-                holder.btnDump.setOnClickListener(v -> showPartitionActionDialog(activity, item, dialogRef[0]));
-            }
+        dialog.setContentView(root);
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            w.setBackgroundDrawable(new ColorDrawable(0xFF11141B));
+            w.setStatusBarColor(0xFF11141B);
+            w.setNavigationBarColor(0xFF11141B);
+        }
+        dialog.show();
+    }
 
-            @Override
-            public int getItemCount() {
-                return displayedItems.size();
-            }
+    private static View createDeviceInfoCard(Context context, String activeSlot, boolean isAr) {
+        LinearLayout card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF1A202C);
+        bg.setCornerRadius(Extensions.dp2px(context, 16));
+        card.setBackground(bg);
+        int pad = Extensions.dp2px(context, 16);
+        card.setPadding(pad, pad, pad, pad);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, Extensions.dp2px(context, 4), 0, Extensions.dp2px(context, 14));
+        card.setLayoutParams(lp);
+
+        TextView tvHeader = new TextView(context);
+        tvHeader.setText(isAr ? "📱 معلومات الجهاز" : "📱 Device Info");
+        tvHeader.setTextColor(0xFFFFFFFF);
+        tvHeader.setTextSize(15f);
+        tvHeader.setTypeface(null, Typeface.BOLD);
+        card.addView(tvHeader);
+
+        TextView tvDevice = new TextView(context);
+        String devName = android.os.Build.MODEL + " (" + android.os.Build.DEVICE + ")";
+        tvDevice.setText((isAr ? "الجهاز: " : "Device: ") + devName);
+        tvDevice.setTextColor(0xFFB0BEC5);
+        tvDevice.setTextSize(13f);
+        tvDevice.setPadding(0, Extensions.dp2px(context, 6), 0, 0);
+        card.addView(tvDevice);
+
+        LinearLayout slotLine = new LinearLayout(context);
+        slotLine.setOrientation(LinearLayout.HORIZONTAL);
+        slotLine.setPadding(0, Extensions.dp2px(context, 4), 0, 0);
+
+        TextView tvSlotLabel = new TextView(context);
+        tvSlotLabel.setText(isAr ? "السلوت النشط: " : "Active Slot: ");
+        tvSlotLabel.setTextColor(0xFFB0BEC5);
+        tvSlotLabel.setTextSize(13f);
+        slotLine.addView(tvSlotLabel);
+
+        TextView tvSlotVal = new TextView(context);
+        String slotDisplay = (!TextUtils.isEmpty(activeSlot)) ? activeSlot.toUpperCase(Locale.ROOT) : (isAr ? "غير محدد" : "N/A");
+        tvSlotVal.setText(slotDisplay);
+        tvSlotVal.setTextColor(0xFF4CAF50); // Bright Green
+        tvSlotVal.setTypeface(null, Typeface.BOLD);
+        tvSlotVal.setTextSize(13f);
+        slotLine.addView(tvSlotVal);
+
+        card.addView(slotLine);
+        return card;
+    }
+
+    private static View createPartitionCard(AppCompatActivity activity, GroupedPartition gp,
+                                           String activeSlot, boolean isAr, Dialog parentDialog) {
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF1A202C);
+        bg.setCornerRadius(Extensions.dp2px(activity, 16));
+        card.setBackground(bg);
+        int padH = Extensions.dp2px(activity, 16);
+        int padV = Extensions.dp2px(activity, 13);
+        card.setPadding(padH, padV, padH, padV);
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLp.setMargins(0, 0, 0, Extensions.dp2px(activity, 10));
+        card.setLayoutParams(cardLp);
+
+        // Green Indicator Dot
+        View dot = new View(activity);
+        GradientDrawable dotBg = new GradientDrawable();
+        dotBg.setShape(GradientDrawable.OVAL);
+        dotBg.setColor(0xFF4CAF50);
+        dot.setBackground(dotBg);
+        int dotSize = Extensions.dp2px(activity, 10);
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dotSize, dotSize);
+        dotLp.setMarginEnd(Extensions.dp2px(activity, 12));
+        dot.setLayoutParams(dotLp);
+        card.addView(dot);
+
+        // Partition Name and Slot Subtitle
+        LinearLayout col = new LinearLayout(activity);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView tvName = new TextView(activity);
+        tvName.setText(gp.baseName);
+        tvName.setTextColor(0xFFFFFFFF);
+        tvName.setTextSize(15f);
+        tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        tvName.setSingleLine(true);
+        tvName.setEllipsize(TextUtils.TruncateAt.END);
+        col.addView(tvName);
+
+        TextView tvSub = new TextView(activity);
+        tvSub.setText(gp.getSlotText(isAr));
+        tvSub.setTextColor(0xFF7E8E9E);
+        tvSub.setTextSize(12f);
+        tvSub.setPadding(0, Extensions.dp2px(activity, 2), 0, 0);
+        col.addView(tvSub);
+
+        card.addView(col);
+
+        // Right Action Buttons
+        LinearLayout btnContainer = new LinearLayout(activity);
+        btnContainer.setOrientation(LinearLayout.HORIZONTAL);
+        btnContainer.setGravity(Gravity.CENTER_VERTICAL);
+
+        // [ Backup ] Button
+        TextView btnBackup = new TextView(activity);
+        btnBackup.setText(isAr ? "نسخ احتياطي" : "Backup");
+        btnBackup.setTextColor(0xFFFFFFFF);
+        btnBackup.setTextSize(12f);
+        btnBackup.setTypeface(null, Typeface.BOLD);
+        GradientDrawable backupBg = new GradientDrawable();
+        backupBg.setColor(0xFF303845);
+        backupBg.setCornerRadius(Extensions.dp2px(activity, 20));
+        btnBackup.setBackground(backupBg);
+        int bPadH = Extensions.dp2px(activity, 14);
+        int bPadV = Extensions.dp2px(activity, 7);
+        btnBackup.setPadding(bPadH, bPadV, bPadH, bPadV);
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bLp.setMarginEnd(Extensions.dp2px(activity, 8));
+        btnBackup.setLayoutParams(bLp);
+        btnBackup.setOnClickListener(v -> onBackupClicked(activity, gp, activeSlot, isAr));
+        btnContainer.addView(btnBackup);
+
+        // [ Flash ] Button
+        TextView btnFlash = new TextView(activity);
+        btnFlash.setText(isAr ? "تفليش" : "Flash");
+        btnFlash.setTextColor(0xFFFF8A80);
+        btnFlash.setTextSize(12f);
+        btnFlash.setTypeface(null, Typeface.BOLD);
+        GradientDrawable flashBg = new GradientDrawable();
+        flashBg.setColor(0xFF4A2328);
+        flashBg.setCornerRadius(Extensions.dp2px(activity, 20));
+        btnFlash.setBackground(flashBg);
+        btnFlash.setPadding(bPadH, bPadV, bPadH, bPadV);
+        btnFlash.setOnClickListener(v -> onFlashClicked(activity, gp, activeSlot, isAr));
+        btnContainer.addView(btnFlash);
+
+        card.addView(btnContainer);
+
+        // Clicking the card itself shows details dialog
+        card.setOnClickListener(v -> {
+            PartitionItem target = gp.getActiveSlotItem(activeSlot);
+            if (target != null) showPartitionInfoDialog(activity, target);
+        });
+
+        return card;
+    }
+
+    private interface SlotChoiceListener {
+        void onChoice(int choice); // 0=Slot A, 1=Slot B, 2=Both
+    }
+
+    private static void showSlotSelectionDialog(AppCompatActivity activity, String actionTitle,
+                                                String partitionName, boolean allowBoth, boolean isAr,
+                                                SlotChoiceListener listener) {
+        final Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF222834);
+        bg.setCornerRadius(Extensions.dp2px(activity, 20));
+        layout.setBackground(bg);
+        int pad = Extensions.dp2px(activity, 20);
+        layout.setPadding(pad, pad, pad, pad);
+
+        // Title: e.g. Backup — init_boot
+        TextView tvTitle = new TextView(activity);
+        tvTitle.setText(actionTitle + " — " + partitionName);
+        tvTitle.setTextColor(0xFFFFFFFF);
+        tvTitle.setTextSize(18f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        layout.addView(tvTitle);
+
+        // Subtitle: Select Slot
+        TextView tvSub = new TextView(activity);
+        tvSub.setText(isAr ? "اختر السلوت" : "Select Slot");
+        tvSub.setTextColor(0xFF8E9DAE);
+        tvSub.setTextSize(13f);
+        tvSub.setPadding(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 16));
+        layout.addView(tvSub);
+
+        // Slot buttons builder
+        View.OnClickListener btnClick = v -> {
+            dialog.dismiss();
+            int choice = (int) v.getTag();
+            if (listener != null) listener.onChoice(choice);
         };
 
-        btnSelectAll.setOnClickListener(v -> {
-            selectedPartitions.addAll(displayedItems);
-            adapter.notifyDataSetChanged();
-            updateBatchBar.run();
-        });
+        layout.addView(createSlotCardButton(activity, isAr ? "السلوت A" : "Slot A", 0, btnClick));
+        layout.addView(createSlotCardButton(activity, isAr ? "السلوت B" : "Slot B", 1, btnClick));
 
-        btnClearSel.setOnClickListener(v -> {
-            selectedPartitions.clear();
-            adapter.notifyDataSetChanged();
-            updateBatchBar.run();
-        });
+        if (allowBoth) {
+            layout.addView(createSlotCardButton(activity, isAr ? "كلا السلوتين (A & B)" : "Both Slots (A & B)", 2, btnClick));
+        }
 
-        btnBatchDump.setOnClickListener(v -> {
-            if (selectedPartitions.isEmpty()) return;
-            promptBatchDumpFolder(activity, new ArrayList<>(selectedPartitions), dialogRef[0]);
-        });
+        // Cancel button
+        LinearLayout cancelRow = new LinearLayout(activity);
+        cancelRow.setOrientation(LinearLayout.HORIZONTAL);
+        cancelRow.setGravity(Gravity.END);
+        cancelRow.setPadding(0, Extensions.dp2px(activity, 8), 0, 0);
 
-        recyclerView.setAdapter(adapter);
-        root.addView(recyclerView);
-        root.addView(batchBar);
+        TextView btnCancel = new TextView(activity);
+        btnCancel.setText(isAr ? "إلغاء" : "Cancel");
+        btnCancel.setTextColor(0xFFB0BEC5);
+        btnCancel.setTextSize(14f);
+        btnCancel.setTypeface(null, Typeface.BOLD);
+        btnCancel.setPadding(Extensions.dp2px(activity, 12), Extensions.dp2px(activity, 8),
+                Extensions.dp2px(activity, 12), Extensions.dp2px(activity, 8));
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        cancelRow.addView(btnCancel);
 
-        // Core filter method
-        applyFiltersRef[0] = () -> {
-            String q = searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
-            displayedItems.clear();
-            for (PartitionItem p : allPartitions) {
-                // Slot filter: if A is selected, show Slot A + SHARED. If B is selected, show Slot B + SHARED.
-                if (isDeviceAB) {
-                    if (selectedSlot[0] == PartitionItem.Slot.A) {
-                        if (p.slot == PartitionItem.Slot.B) continue;
-                    } else if (selectedSlot[0] == PartitionItem.Slot.B) {
-                        if (p.slot == PartitionItem.Slot.A) continue;
-                    }
+        layout.addView(cancelRow);
+
+        dialog.setContentView(layout);
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+            int width = (int) (activity.getResources().getDisplayMetrics().widthPixels * 0.90);
+            w.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.show();
+    }
+
+    private static View createSlotCardButton(Context context, String text, int tag, View.OnClickListener onClick) {
+        TextView btn = new TextView(context);
+        btn.setText(text);
+        btn.setTextColor(0xFFFFFFFF);
+        btn.setTextSize(15f);
+        btn.setTypeface(null, Typeface.NORMAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF2A3140);
+        bg.setCornerRadius(Extensions.dp2px(context, 12));
+        btn.setBackground(bg);
+        int padH = Extensions.dp2px(context, 16);
+        int padV = Extensions.dp2px(context, 14);
+        btn.setPadding(padH, padV, padH, padV);
+        btn.setTag(tag);
+        btn.setOnClickListener(onClick);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, 0, Extensions.dp2px(context, 10));
+        btn.setLayoutParams(lp);
+        return btn;
+    }
+
+    private static void onBackupClicked(AppCompatActivity activity, GroupedPartition gp, String activeSlot, boolean isAr) {
+        if (gp.hasBothSlots()) {
+            showSlotSelectionDialog(activity, isAr ? "نسخ احتياطي" : "Backup", gp.baseName, true, isAr, choice -> {
+                if (choice == 0) {
+                    showDumpConfirmDialog(activity, gp.slotA != null ? gp.slotA : gp.getPrimaryItem());
+                } else if (choice == 1) {
+                    showDumpConfirmDialog(activity, gp.slotB != null ? gp.slotB : gp.getPrimaryItem());
+                } else {
+                    List<PartitionItem> items = new ArrayList<>();
+                    if (gp.slotA != null) items.add(gp.slotA);
+                    if (gp.slotB != null) items.add(gp.slotB);
+                    promptBatchDumpFolder(activity, items, null);
                 }
+            });
+        } else {
+            showDumpConfirmDialog(activity, gp.getPrimaryItem());
+        }
+    }
 
-                // Category filter
-                if (currentCat[0] == 1 && p.group != PartitionItem.Group.COMMON) continue;
-                if (currentCat[0] == 2 && !p.isDynamic) continue;
-                if (currentCat[0] == 3) {
-                    // Differences filter: only show partitions that differ between A and B
-                    boolean isDiff = false;
-                    if (slotDiffs != null) {
-                        for (String diff : slotDiffs) {
-                            if (p.rawName.startsWith(diff)) {
-                                isDiff = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!isDiff) continue;
+    private static void onFlashClicked(AppCompatActivity activity, GroupedPartition gp, String activeSlot, boolean isAr) {
+        if (gp.hasBothSlots()) {
+            showSlotSelectionDialog(activity, isAr ? "تفليش" : "Flash", gp.baseName, true, isAr, choice -> {
+                if (choice == 0) {
+                    pickFileAndFlash(activity, gp.slotA != null ? gp.slotA : gp.getPrimaryItem());
+                } else if (choice == 1) {
+                    pickFileAndFlash(activity, gp.slotB != null ? gp.slotB : gp.getPrimaryItem());
+                } else {
+                    pickFileAndFlashBoth(activity, gp.slotA, gp.slotB);
                 }
+            });
+        } else {
+            pickFileAndFlash(activity, gp.getPrimaryItem());
+        }
+    }
 
-                // Search query match
-                if (!q.isEmpty()) {
-                    boolean match = p.rawName.toLowerCase(Locale.ROOT).contains(q)
-                            || p.friendlyName.toLowerCase(Locale.ROOT).contains(q)
-                            || p.description.toLowerCase(Locale.ROOT).contains(q)
-                            || p.blockPath.toLowerCase(Locale.ROOT).contains(q);
-                    // Smart aliases
-                    if (!match) {
-                        if (q.contains("recov") || q.contains("ريكفر")) {
-                            match = p.rawName.contains("recovery") || p.friendlyName.toLowerCase().contains("recovery");
-                        } else if (q.contains("boot") || q.contains("بوت") || q.contains("كيرنل")) {
-                            match = p.rawName.contains("boot") || p.friendlyName.toLowerCase().contains("boot");
-                        } else if (q.contains("system") || q.contains("سيستم") || q.contains("نظام")) {
-                            match = p.rawName.contains("system") || p.friendlyName.toLowerCase().contains("system");
-                        } else if (q.contains("vendor") || q.contains("فيندور")) {
-                            match = p.rawName.contains("vendor") || p.friendlyName.toLowerCase().contains("vendor");
-                        } else if (q.contains("vbmeta") || q.contains("حماي")) {
-                            match = p.rawName.contains("vbmeta") || p.friendlyName.toLowerCase().contains("vbmeta");
-                        }
-                    }
-                    if (!match) continue;
-                }
-                displayedItems.add(p);
+    private static void pickFileAndFlash(AppCompatActivity activity, PartitionItem target) {
+        if (activity == null || target == null) return;
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties props =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties();
+        props.selection_mode = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.SINGLE_MODE;
+        props.selection_type = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.FILE_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        props.offset = new File(Environment.getExternalStorageDirectory(), "Download");
+        props.extensions = new String[]{"img", "bin"};
+
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog picker =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog(activity, props);
+        picker.setTitle(isAr ? "اختر ملف الصورة (.img)" : "Select Image File (.img)");
+        picker.setDialogSelectionListener(files -> {
+            if (files != null && files.length > 0) {
+                File chosen = new File(files[0]);
+                confirmAndExecuteFlash(activity, target, chosen);
             }
-            adapter.notifyDataSetChanged();
-        };
-
-        // Initialize default view
-        applyFiltersRef[0].run();
-
-        searchInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                applyFiltersRef[0].run();
-            }
-            @Override
-            public void afterTextChanged(Editable s) {}
         });
+        picker.show();
+    }
 
-        View.OnClickListener catClick = v -> {
-            btnAll.setStrokeColorResource(v == btnAll ? R.color.md_theme_primary : android.R.color.transparent);
-            btnCommon.setStrokeColorResource(v == btnCommon ? R.color.md_theme_primary : android.R.color.transparent);
-            btnDynamic.setStrokeColorResource(v == btnDynamic ? R.color.md_theme_primary : android.R.color.transparent);
+    private static void pickFileAndFlashBoth(AppCompatActivity activity, PartitionItem slotA, PartitionItem slotB) {
+        if (activity == null) return;
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
 
-            if (v == btnCommon) currentCat[0] = 1;
-            else if (v == btnDynamic) currentCat[0] = 2;
-            else currentCat[0] = 0;
-            applyFiltersRef[0].run();
-        };
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties props =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.Properties();
+        props.selection_mode = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.SINGLE_MODE;
+        props.selection_type = io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog.FILE_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        props.offset = new File(Environment.getExternalStorageDirectory(), "Download");
+        props.extensions = new String[]{"img", "bin"};
 
-        btnAll.setOnClickListener(catClick);
-        btnCommon.setOnClickListener(catClick);
-        btnDynamic.setOnClickListener(catClick);
+        io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog picker =
+                new io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog(activity, props);
+        picker.setTitle(isAr ? "اختر ملف الصورة للتفليش في كلا السلوتين (.img)" : "Select Image File for Both Slots (.img)");
+        picker.setDialogSelectionListener(files -> {
+            if (files != null && files.length > 0) {
+                File chosen = new File(files[0]);
+                confirmAndExecuteFlashBoth(activity, slotA, slotB, chosen);
+            }
+        });
+        picker.show();
+    }
 
-        dialogRef[0] = new MaterialAlertDialogBuilder(activity)
-                .setTitle(activity.getString(R.string.partition_dumper_title))
-                .setView(root)
+    private static void confirmAndExecuteFlash(AppCompatActivity activity, PartitionItem target, File imgFile) {
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle("⚠️ " + (isAr ? "تحذير تفليش البارتيشن" : "Partition Flash Warning"))
+                .setMessage((isAr ? "أنت على وشك تفليش الملف التالي إلى البارتيشن:\n\n" : "You are about to flash this image to partition:\n\n")
+                        + "• " + (isAr ? "البارتيشن: " : "Partition: ") + target.rawName + "\n"
+                        + "• " + (isAr ? "المسار: " : "Block Device: ") + target.blockPath + "\n"
+                        + "• " + (isAr ? "ملف الصورة: " : "Image File: ") + imgFile.getAbsolutePath()
+                        + " (" + FileSize.getHumanReadableFileSize(imgFile.length()) + ")\n\n"
+                        + (isAr ? "⚠️ تحذير: تفليش ملف تالف أو غير متوافق قد يسبب عدم إقلاع الهاتف (Bootloop). هل أنت متأكد من الاستمرار؟"
+                        : "⚠️ Warning: Flashing an incompatible or corrupt image can cause a bootloop. Are you sure you want to proceed?"))
                 .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(isAr ? "تفليش الآن" : "Flash Now", (d, w) -> {
+                    executeFlashDirect(activity, target, imgFile);
+                })
                 .show();
-        DialogUtil.keepButtonsHorizontal(dialogRef[0]);
+    }
+
+    private static void confirmAndExecuteFlashBoth(AppCompatActivity activity, PartitionItem slotA, PartitionItem slotB, File imgFile) {
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle("⚠️ " + (isAr ? "تحذير تفليش كلا السلوتين" : "Dual Slot Flash Warning"))
+                .setMessage((isAr ? "أنت على وشك تفليش الصورة إلى كلا السلوتين (A & B):\n\n" : "You are about to flash this image to BOTH slots (A & B):\n\n")
+                        + "• Slot A: " + (slotA != null ? slotA.blockPath : "N/A") + "\n"
+                        + "• Slot B: " + (slotB != null ? slotB.blockPath : "N/A") + "\n"
+                        + "• " + (isAr ? "ملف الصورة: " : "Image File: ") + imgFile.getAbsolutePath() + "\n\n"
+                        + (isAr ? "⚠️ تحذير: هذه العملية لا يمكن التراجع عنها. هل أنت متأكد؟"
+                        : "⚠️ Warning: This operation cannot be undone. Are you sure?"))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(isAr ? "تفليش السلوتين" : "Flash Both", (d, w) -> {
+                    executeFlashDirectDual(activity, slotA, slotB, imgFile);
+                })
+                .show();
+    }
+
+    private static void executeFlashDirect(AppCompatActivity activity, PartitionItem target, File imgFile) {
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+        ProgressManager pm = new ProgressManager(activity, false).show();
+        pm.setText(isAr ? "جاري تفليش " + target.rawName + "..." : "Flashing " + target.rawName + "...");
+
+        new Thread(() -> {
+            boolean success = false;
+            String errorMsg = "";
+            try {
+                String cmd = "dd if='" + imgFile.getAbsolutePath() + "' of='" + target.blockPath + "' bs=4M";
+                Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+                int code = p.waitFor();
+                success = (code == 0);
+            } catch (Exception e) {
+                errorMsg = e.getMessage();
+            }
+
+            final boolean finalSuccess = success;
+            final String finalErr = errorMsg;
+            activity.runOnUiThread(() -> {
+                pm.dismiss();
+                if (finalSuccess) {
+                    new MaterialAlertDialogBuilder(activity)
+                            .setTitle(isAr ? "تم التفليش بنجاح" : "Flash Succeeded")
+                            .setMessage(isAr ? "تم تفليش " + target.rawName + " بنجاح!\nيرجى إعادة تشغيل الجهاز لتطبيق التغييرات."
+                                    : "Successfully flashed " + target.rawName + "!\nPlease reboot your device to apply changes.")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                } else {
+                    Extensions.showMessage(activity, isAr ? "فشل التفليش: " + finalErr : "Flash failed: " + finalErr);
+                }
+            });
+        }).start();
+    }
+
+    private static void executeFlashDirectDual(AppCompatActivity activity, PartitionItem slotA, PartitionItem slotB, File imgFile) {
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+        ProgressManager pm = new ProgressManager(activity, false).show();
+        pm.setText(isAr ? "جاري تفليش كلا السلوتين..." : "Flashing both slots...");
+
+        new Thread(() -> {
+            boolean success = true;
+            String errorMsg = "";
+            try {
+                if (slotA != null) {
+                    Process p1 = Runtime.getRuntime().exec(new String[]{"su", "-c", "dd if='" + imgFile.getAbsolutePath() + "' of='" + slotA.blockPath + "' bs=4M"});
+                    if (p1.waitFor() != 0) success = false;
+                }
+                if (slotB != null) {
+                    Process p2 = Runtime.getRuntime().exec(new String[]{"su", "-c", "dd if='" + imgFile.getAbsolutePath() + "' of='" + slotB.blockPath + "' bs=4M"});
+                    if (p2.waitFor() != 0) success = false;
+                }
+            } catch (Exception e) {
+                success = false;
+                errorMsg = e.getMessage();
+            }
+
+            final boolean finalSuccess = success;
+            final String finalErr = errorMsg;
+            activity.runOnUiThread(() -> {
+                pm.dismiss();
+                if (finalSuccess) {
+                    new MaterialAlertDialogBuilder(activity)
+                            .setTitle(isAr ? "تم تفليش السلوتين بنجاح" : "Dual Flash Succeeded")
+                            .setMessage(isAr ? "تم تفليش كلا السلوتين (A & B) بنجاح!\nيرجى إعادة تشغيل الجهاز لتطبيق التغييرات."
+                                    : "Successfully flashed both slots (A & B)!\nPlease reboot your device to apply changes.")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                } else {
+                    Extensions.showMessage(activity, isAr ? "فشل تفليش السلوتين: " + finalErr : "Dual flash failed: " + finalErr);
+                }
+            });
+        }).start();
     }
 
     private static void showPartitionInfoDialog(AppCompatActivity activity, PartitionItem item) {
@@ -738,205 +996,6 @@ public final class PartitionDumperDialog {
             });
         }).start();
     }
-
-    private static void showDiffDetailsDialog(AppCompatActivity activity, List<PartitionItem> allPartitions,
-                                              List<String> slotDiffs, Runnable onFilterDifferences) {
-        StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (String diffName : slotDiffs) {
-            count++;
-            String friendly = diffName;
-            for (PartitionItem p : allPartitions) {
-                if (p.rawName.startsWith(diffName)) {
-                    friendly = p.friendlyName;
-                    break;
-                }
-            }
-            sb.append("• ").append(friendly).append(" (").append(diffName).append(")\n");
-        }
-
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity)
-                .setTitle(activity.getString(R.string.partition_diff_dialog_title, count))
-                .setMessage(activity.getString(R.string.partition_diff_dialog_msg, sb.toString().trim()))
-                .setNegativeButton(android.R.string.ok, null);
-
-        if (onFilterDifferences != null) {
-            builder.setPositiveButton(R.string.partition_diff_filter_btn, (d, w) -> onFilterDifferences.run());
-        }
-
-        AlertDialog ad = builder.show();
-        DialogUtil.keepButtonsHorizontal(ad);
-    }
-
-    private static MaterialButton createHeaderTabButton(Context context, String text, boolean selected) {
-        MaterialButton btn = new MaterialButton(context, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btn.setText(text);
-        btn.setTextSize(12f);
-        btn.setInsetTop(0);
-        btn.setInsetBottom(0);
-        btn.setMinHeight(0);
-        btn.setMinimumHeight(0);
-        int padH = Extensions.dp2px(context, 10);
-        int padV = Extensions.dp2px(context, 6);
-        btn.setPadding(padH, padV, padH, padV);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMarginEnd(Extensions.dp2px(context, 8));
-        btn.setLayoutParams(lp);
-        if (selected) {
-            btn.setStrokeColorResource(R.color.md_theme_primary);
-        }
-        return btn;
-    }
-
-    private static MaterialButton createFilterButton(Context context, String text, boolean selected) {
-        MaterialButton btn = new MaterialButton(context, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btn.setText(text);
-        btn.setTextSize(11f);
-        btn.setInsetTop(0);
-        btn.setInsetBottom(0);
-        btn.setMinHeight(0);
-        btn.setMinimumHeight(0);
-        int padH = Extensions.dp2px(context, 8);
-        int padV = Extensions.dp2px(context, 4);
-        btn.setPadding(padH, padV, padH, padV);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMarginEnd(Extensions.dp2px(context, 6));
-        btn.setLayoutParams(lp);
-        if (selected) {
-            btn.setStrokeColorResource(R.color.md_theme_primary);
-        }
-        return btn;
-    }
-
-    public static void showPartitionActionDialog(AppCompatActivity activity, PartitionItem item, AlertDialog parentDialogToDismiss) {
-        if (activity == null || activity.isFinishing() || item == null) return;
-
-        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
-
-        LinearLayout root = new LinearLayout(activity);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int pad = Extensions.dp2px(activity, 20);
-        root.setPadding(pad, Extensions.dp2px(activity, 14), pad, pad);
-
-        // Header details
-        TextView tvSub = new TextView(activity);
-        tvSub.setTextSize(13f);
-        tvSub.setTextColor(0xFF757575);
-        String sizeStr = item.sizeBytes > 0 ? FileSize.getHumanReadableFileSize(item.sizeBytes) : (isAr ? "ديناميكي" : "Dynamic");
-        String headerDetails = (isAr ? "المسار: " : "Node: ") + item.blockPath + " • " + sizeStr;
-        if (item.isActiveSlot) {
-            headerDetails += " • " + activity.getString(R.string.partition_slot_active_tag).trim();
-        }
-        tvSub.setText(headerDetails);
-        root.addView(tvSub);
-
-        // Live hardware detected type line
-        TextView tvDetected = new TextView(activity);
-        tvDetected.setTextSize(12f);
-        tvDetected.setTextColor(0xFF1976D2);
-        tvDetected.setTypeface(null, Typeface.BOLD);
-        tvDetected.setText(activity.getString(R.string.partition_detected_type, isAr ? "جاري الفحص..." : "Inspecting..."));
-        tvDetected.setPadding(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 16));
-        root.addView(tvDetected);
-
-        new Thread(() -> {
-            SystemImageEngine.ImageIdentity id = SystemImageEngine.identifyImage(new File(item.blockPath));
-            activity.runOnUiThread(() -> {
-                tvDetected.setText(activity.getString(R.string.partition_detected_type, id.getDisplayName(isAr)));
-            });
-        }).start();
-
-        AlertDialog[] dialogHolder = new AlertDialog[1];
-
-        // 1. Copy / Backup (Dump)
-        root.addView(createActionCard(activity,
-                R.drawable.ic_disk_drive_24px,
-                activity.getString(R.string.partition_opt_copy),
-                activity.getString(R.string.partition_opt_copy_desc),
-                0xFF1976D2,
-                v -> {
-                    if (dialogHolder[0] != null) dialogHolder[0].dismiss();
-                    showDumpConfirmDialog(activity, item);
-                }));
-
-        // 2. Flash Image to Partition
-        root.addView(createActionCard(activity,
-                R.drawable.ic_flash_on_24px,
-                activity.getString(R.string.partition_opt_flash),
-                activity.getString(R.string.partition_opt_flash_desc),
-                0xFFE65100,
-                v -> {
-                    if (dialogHolder[0] != null) dialogHolder[0].dismiss();
-                    showFlashDialog(activity, item);
-                }));
-
-        ScrollView sv = new ScrollView(activity);
-        sv.addView(root);
-
-        dialogHolder[0] = new MaterialAlertDialogBuilder(activity)
-                .setTitle(activity.getString(R.string.partition_action_dialog_title, item.friendlyName))
-                .setView(sv)
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
-        DialogUtil.keepButtonsHorizontal(dialogHolder[0]);
-    }
-
-    private static MaterialCardView createActionCard(AppCompatActivity activity, int iconRes, String title,
-                                                     String description, int accentColor, View.OnClickListener onClick) {
-        MaterialCardView card = new MaterialCardView(activity);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, Extensions.dp2px(activity, 10));
-        card.setLayoutParams(lp);
-        card.setCardElevation(Extensions.dp2px(activity, 1));
-        card.setRadius(Extensions.dp2px(activity, 12));
-        card.setStrokeWidth(Extensions.dp2px(activity, 1));
-        card.setStrokeColor(0x22888888);
-        card.setClickable(true);
-        card.setFocusable(true);
-
-        LinearLayout row = new LinearLayout(activity);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = Extensions.dp2px(activity, 12);
-        row.setPadding(pad, pad, pad, pad);
-
-        ImageView iv = new ImageView(activity);
-        iv.setImageResource(iconRes);
-        iv.setColorFilter(accentColor);
-        int iconSize = Extensions.dp2px(activity, 30);
-        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
-        iconLp.setMargins(0, 0, Extensions.dp2px(activity, 12), 0);
-        iv.setLayoutParams(iconLp);
-        row.addView(iv);
-
-        LinearLayout textCol = new LinearLayout(activity);
-        textCol.setOrientation(LinearLayout.VERTICAL);
-        textCol.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
-
-        TextView tvTitle = new TextView(activity);
-        tvTitle.setText(title);
-        tvTitle.setTextSize(14f);
-        tvTitle.setTypeface(null, Typeface.BOLD);
-        textCol.addView(tvTitle);
-
-        TextView tvDesc = new TextView(activity);
-        tvDesc.setText(description);
-        tvDesc.setTextSize(12f);
-        tvDesc.setTextColor(0xFF757575);
-        tvDesc.setPadding(0, Extensions.dp2px(activity, 2), 0, 0);
-        textCol.addView(tvDesc);
-
-        row.addView(textCol);
-        card.addView(row);
-        card.setOnClickListener(onClick);
-        return card;
-    }
-
     public static void showDumpConfirmDialog(AppCompatActivity activity, PartitionItem item) {
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         LinearLayout root = new LinearLayout(activity);
@@ -1085,23 +1144,6 @@ public final class PartitionDumperDialog {
                         }
                     }
                     os.flush();
-
-                    if (!hasNonZero) {
-                        os.close();
-                        outFile.delete();
-                        p.destroy();
-                        activity.runOnUiThread(() -> {
-                            pm.dismiss();
-                            boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
-                            new MaterialAlertDialogBuilder(activity)
-                                    .setTitle(activity.getString(R.string.warning))
-                                    .setMessage(isAr ? "تم إلغاء السحب: هذا البارتشن فارغ تماماً (ممتلئ بنسبة 100% بالأصفار فقط 0x00 ولا يحتوي على أي بيانات)!"
-                                                     : "Dump canceled: Partition is completely empty (100% all zeros) and contains no data!")
-                                    .setPositiveButton(android.R.string.ok, null)
-                                    .show();
-                        });
-                        return;
-                    }
                 }
 
                 p.waitFor();
@@ -1110,6 +1152,7 @@ public final class PartitionDumperDialog {
                     pm.dismiss();
                     if (activity instanceof MainActivity ma) {
                         ma.reloadCurrentFolder();
+                        ma.refreshPane(true);
                     }
                     showDumpSuccessDialog(activity, outFile);
                 });

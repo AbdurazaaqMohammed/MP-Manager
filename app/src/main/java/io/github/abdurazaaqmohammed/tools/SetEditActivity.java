@@ -95,6 +95,7 @@ public class SetEditActivity extends BaseActivity {
     private FloatingActionButton fabAdd;
 
     private final List<SettingEntry> allEntries = new ArrayList<>();
+    private final java.util.Map<SettingType, List<SettingEntry>> entriesByType = new java.util.EnumMap<>(SettingType.class);
     private final List<SettingEntry> displayedEntries = new ArrayList<>();
     private SettingAdapter adapter;
 
@@ -181,17 +182,48 @@ public class SetEditActivity extends BaseActivity {
             if (id == R.id.chipGlobal) currentFilter = SettingType.GLOBAL;
             else if (id == R.id.chipSecure) currentFilter = SettingType.SECURE;
             else if (id == R.id.chipSystem) currentFilter = SettingType.SYSTEM;
-            else if (id == R.id.chipProps) currentFilter = SettingType.PROP;
-            else currentFilter = null; // All
+            else if (id == R.id.chipProps) {
+                currentFilter = SettingType.PROP;
+                ensurePropsLoaded();
+            } else currentFilter = null; // All
             applyFilter();
         });
 
         cardGlobal.setOnClickListener(v -> chipGlobal.setChecked(true));
         cardSecure.setOnClickListener(v -> chipSecure.setChecked(true));
         cardSystem.setOnClickListener(v -> chipSystem.setChecked(true));
-        cardProps.setOnClickListener(v -> chipProps.setChecked(true));
+        cardProps.setOnClickListener(v -> {
+            chipProps.setChecked(true);
+            ensurePropsLoaded();
+        });
 
         fabAdd.setOnClickListener(v -> showAddDialog());
+    }
+
+    private boolean propsLoaded = false;
+    private boolean isLoadingProps = false;
+
+    private void ensurePropsLoaded() {
+        if (propsLoaded || isLoadingProps) return;
+        isLoadingProps = true;
+        progressBar.setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            List<SettingEntry> propList = new ArrayList<>();
+            queryProperties(propList);
+            Collections.sort(propList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+            final int pCount = propList.size();
+            runOnUiThread(() -> {
+                propsLoaded = true;
+                isLoadingProps = false;
+                progressBar.setVisibility(View.GONE);
+                allEntries.addAll(propList);
+                entriesByType.put(SettingType.PROP, propList);
+                tvCountProps.setText(getString(R.string.entries_count, pCount));
+                chipProps.setText("Props " + pCount);
+                chipAll.setText(getString(R.string.all) + " " + allEntries.size());
+                applyFilter();
+            });
+        }).start();
     }
 
     private void loadAllSettings() {
@@ -200,56 +232,81 @@ public class SetEditActivity extends BaseActivity {
 
         new Thread(() -> {
             List<SettingEntry> loaded = new ArrayList<>();
+            List<SettingEntry> gList = new ArrayList<>();
+            List<SettingEntry> sList = new ArrayList<>();
+            List<SettingEntry> sysList = new ArrayList<>();
 
-            // 1. Global Settings
-            querySettingsList(SettingType.GLOBAL, loaded);
+            // Single fast root execution combining all 3 main tables
+            String cmd = "settings list global; echo '===SECURE==='; settings list secure; echo '===SYSTEM==='; settings list system";
+            String output = executeSu(cmd);
 
-            // 2. Secure Settings
-            querySettingsList(SettingType.SECURE, loaded);
-
-            // 3. System Settings
-            querySettingsList(SettingType.SYSTEM, loaded);
-
-            // 4. Android Properties
-            queryProperties(loaded);
-
-            // Sort alphabetically by key
-            Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
-
-            int countGlobal = 0, countSecure = 0, countSystem = 0, countProps = 0;
-            for (SettingEntry e : loaded) {
-                switch (e.type) {
-                    case GLOBAL -> countGlobal++;
-                    case SECURE -> countSecure++;
-                    case SYSTEM -> countSystem++;
-                    case PROP -> countProps++;
+            if (output != null && output.contains("===SECURE===") && output.contains("===SYSTEM===")) {
+                String[] parts = output.split("===SECURE===|===SYSTEM===");
+                if (parts.length >= 3) {
+                    parseSettingsOutput(SettingType.GLOBAL, parts[0], gList);
+                    parseSettingsOutput(SettingType.SECURE, parts[1], sList);
+                    parseSettingsOutput(SettingType.SYSTEM, parts[2], sysList);
                 }
+            } else {
+                querySettingsList(SettingType.GLOBAL, gList);
+                querySettingsList(SettingType.SECURE, sList);
+                querySettingsList(SettingType.SYSTEM, sysList);
             }
 
-            final int gCount = countGlobal;
-            final int sCount = countSecure;
-            final int sysCount = countSystem;
-            final int pCount = countProps;
+            Collections.sort(gList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+            Collections.sort(sList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+            Collections.sort(sysList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+
+            loaded.addAll(gList);
+            loaded.addAll(sList);
+            loaded.addAll(sysList);
+            Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
+
+            final int gCount = gList.size();
+            final int sCount = sList.size();
+            final int sysCount = sysList.size();
 
             runOnUiThread(() -> {
                 allEntries.clear();
                 allEntries.addAll(loaded);
+                entriesByType.put(SettingType.GLOBAL, gList);
+                entriesByType.put(SettingType.SECURE, sList);
+                entriesByType.put(SettingType.SYSTEM, sysList);
 
                 tvCountGlobal.setText(getString(R.string.entries_count, gCount));
                 tvCountSecure.setText(getString(R.string.entries_count, sCount));
                 tvCountSystem.setText(getString(R.string.entries_count, sysCount));
-                tvCountProps.setText(getString(R.string.entries_count, pCount));
+                tvCountProps.setText(getString(R.string.entries_count, 0));
 
                 chipAll.setText(getString(R.string.all) + " " + loaded.size());
                 chipGlobal.setText("Global " + gCount);
                 chipSecure.setText("Secure " + sCount);
                 chipSystem.setText("System " + sysCount);
-                chipProps.setText("Props " + pCount);
+                chipProps.setText("Props");
 
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
             });
         }).start();
+    }
+
+    private static String executeSu(String cmd) {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+            String output = readStream(p.getInputStream());
+            p.waitFor();
+            if (output != null && !output.trim().isEmpty()) {
+                return output;
+            }
+        } catch (Exception ignored) {}
+        try {
+            Process p = Runtime.getRuntime().exec(cmd.split(" "));
+            String output = readStream(p.getInputStream());
+            p.waitFor();
+            return output;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String readStream(InputStream is) {
@@ -266,51 +323,33 @@ public class SetEditActivity extends BaseActivity {
         }
     }
 
-    private void querySettingsList(SettingType type, List<SettingEntry> out) {
+    private void parseSettingsOutput(SettingType type, String text, List<SettingEntry> out) {
+        if (text == null) return;
+        BufferedReader reader = new BufferedReader(new StringReader(text));
+        String line;
         try {
-            RootManager rm = RootManager.getInstance(this);
-            RootManager.ShellResult result = rm.execute("settings list " + type.alias);
-            String output = (result != null && result.isSuccess() && result.output() != null)
-                    ? result.output() : null;
-
-            if (output == null || output.trim().isEmpty()) {
-                // Fallback to runtime exec directly
-                Process p = Runtime.getRuntime().exec(new String[]{"settings", "list", type.alias});
-                output = readStream(p.getInputStream());
-            }
-
-            if (output != null) {
-                BufferedReader reader = new BufferedReader(new StringReader(output));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    int eq = line.indexOf('=');
-                    if (eq > 0) {
-                        String key = line.substring(0, eq).trim();
-                        String val = line.substring(eq + 1).trim();
-                        out.add(new SettingEntry(type, key, val));
-                    }
+            while ((line = reader.readLine()) != null) {
+                int eq = line.indexOf('=');
+                if (eq > 0) {
+                    String key = line.substring(0, eq).trim();
+                    String val = line.substring(eq + 1).trim();
+                    out.add(new SettingEntry(type, key, val));
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception ignored) {}
+    }
+
+    private void querySettingsList(SettingType type, List<SettingEntry> out) {
+        String output = executeSu("settings list " + type.alias);
+        parseSettingsOutput(type, output, out);
     }
 
     private void queryProperties(List<SettingEntry> out) {
-        try {
-            RootManager rm = RootManager.getInstance(this);
-            RootManager.ShellResult result = rm.execute("getprop");
-            String output = (result != null && result.isSuccess() && result.output() != null)
-                    ? result.output() : null;
-
-            if (output == null || output.trim().isEmpty()) {
-                Process p = Runtime.getRuntime().exec(new String[]{"getprop"});
-                output = readStream(p.getInputStream());
-            }
-
-            if (output != null) {
-                BufferedReader reader = new BufferedReader(new StringReader(output));
-                String line;
+        String output = executeSu("getprop");
+        if (output != null) {
+            BufferedReader reader = new BufferedReader(new StringReader(output));
+            String line;
+            try {
                 while ((line = reader.readLine()) != null) {
                     Matcher m = PROP_LINE.matcher(line.trim());
                     if (m.matches()) {
@@ -319,22 +358,30 @@ public class SetEditActivity extends BaseActivity {
                         out.add(new SettingEntry(SettingType.PROP, key, val));
                     }
                 }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            } catch (Exception ignored) {}
         }
     }
 
     private void applyFilter() {
         displayedEntries.clear();
         boolean hasQuery = !TextUtils.isEmpty(currentQuery);
-        String q = currentQuery.toLowerCase(Locale.ROOT);
 
-        for (SettingEntry e : allEntries) {
-            if (currentFilter != null && e.type != currentFilter) continue;
-            if (hasQuery && !e.key.toLowerCase(Locale.ROOT).contains(q)
-                    && !e.value.toLowerCase(Locale.ROOT).contains(q)) continue;
-            displayedEntries.add(e);
+        if (!hasQuery) {
+            if (currentFilter == null) {
+                displayedEntries.addAll(allEntries);
+            } else {
+                List<SettingEntry> list = entriesByType.get(currentFilter);
+                if (list != null) displayedEntries.addAll(list);
+            }
+        } else {
+            String q = currentQuery.toLowerCase(Locale.ROOT);
+            List<SettingEntry> source = (currentFilter == null) ? allEntries : entriesByType.getOrDefault(currentFilter, Collections.emptyList());
+            for (SettingEntry e : source) {
+                if (e.key.toLowerCase(Locale.ROOT).contains(q)
+                        || e.value.toLowerCase(Locale.ROOT).contains(q)) {
+                    displayedEntries.add(e);
+                }
+            }
         }
 
         // Show overview only when no search query and on 'All' tab
@@ -467,14 +514,13 @@ public class SetEditActivity extends BaseActivity {
     private void saveSetting(SettingEntry entry, String newValue) {
         new Thread(() -> {
             try {
-                RootManager rm = RootManager.getInstance(this);
                 String cmd;
                 if (entry.type == SettingType.PROP) {
                     cmd = "setprop " + escape(entry.key) + " " + escape(newValue);
                 } else {
                     cmd = "settings put " + entry.type.alias + " " + escape(entry.key) + " " + escape(newValue);
                 }
-                rm.execute(cmd);
+                executeSu(cmd);
 
                 runOnUiThread(() -> {
                     entry.value = newValue;
@@ -494,14 +540,13 @@ public class SetEditActivity extends BaseActivity {
     private void deleteSetting(SettingEntry entry) {
         new Thread(() -> {
             try {
-                RootManager rm = RootManager.getInstance(this);
                 String cmd;
                 if (entry.type == SettingType.PROP) {
                     cmd = "setprop " + escape(entry.key) + " ''";
                 } else {
                     cmd = "settings delete " + entry.type.alias + " " + escape(entry.key);
                 }
-                rm.execute(cmd);
+                executeSu(cmd);
 
                 runOnUiThread(() -> {
                     allEntries.remove(entry);

@@ -2313,7 +2313,7 @@ Patched code:</string>
     <string name="partition_search_hint">Search partitions (recovery, boot, vendor, system…)…</string>
     <string name="partition_slot_a">Slot A</string>
     <string name="partition_slot_b">Slot B</string>
-    <string name="partition_slot_active_tag"> (Active)</string>
+    <string name="partition_slot_active_tag"> Active</string>
     <string name="partition_dump_btn">Dump (.img)</string>
     <string name="partition_dump_dialog_title">Dump %1$s</string>
     <string name="partition_dump_dest_label">Destination directory:</string>

@@ -1146,6 +1146,7 @@ public class FileOpener {
                 final File finalExportFile = exportFile;
                 context.runOnUiThread(() -> {
                     pm.dismiss();
+                    context.refreshPane(true);
                     android.widget.Toast.makeText(context, "Exported: " + finalExportFile.getName() + " to Download", android.widget.Toast.LENGTH_LONG).show();
                 });
             } catch (Exception e) {

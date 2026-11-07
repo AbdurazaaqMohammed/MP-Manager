@@ -2074,7 +2074,7 @@
     <string name="partition_search_hint">ابحث في الأقسام (ريكفري، بوت، فيندور، سيستم…)…</string>
     <string name="partition_slot_a">السلوت A</string>
     <string name="partition_slot_b">السلوت B</string>
-    <string name="partition_slot_active_tag"> (النشط)</string>
+    <string name="partition_slot_active_tag"> النشط</string>
     <string name="partition_dump_btn">سحب (.img)</string>
     <string name="partition_dump_dialog_title">سحب وتفريغ %1$s</string>
     <string name="partition_dump_dest_label">مجلد الحفظ:</string>

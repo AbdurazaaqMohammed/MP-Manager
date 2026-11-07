@@ -147,10 +147,7 @@ public final class PartitionResolver {
                 long sectors = sec != null ? sec : 0;
                 long sizeBytes = sectors * 512L;
 
-                // Skip zero-sized, dummy, or empty placeholder partitions
-                if (sectors <= 0 || isDummyOrEmptyPartition(rawName)) {
-                    continue;
-                }
+                // Keep all partitions including zero-sized or dummy ones (categorized as other/more)
 
                 // Prefer MAPPER & BYNAME over SYSFS raw block devices
                 if (itemMap.containsKey(rawName) && "SYSFS".equals(source)) {
@@ -231,98 +228,98 @@ public final class PartitionResolver {
         switch (base) {
             case "boot":
                 return new PartitionMeta(
-                        isAr ? "البوت / الكيرنل (Boot)" : "Boot (Kernel & Ramdisk)",
+                        isAr ? "البوت" : "Boot",
                         isAr ? "نواة نظام التشغيل ورمديسك الإقلاع" : "Android Kernel & Ramdisk",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "recovery":
                 return new PartitionMeta(
-                        isAr ? "الريكفري (Recovery)" : "Recovery (TWRP / OrangeFox)",
+                        isAr ? "الريكفري" : "Recovery",
                         isAr ? "بيئة الاسترداد وتفليش الرومات" : "Recovery Environment & ROM Flasher",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "init_boot":
                 return new PartitionMeta(
-                        isAr ? "البوت الأولي (Init Boot)" : "Init Boot (Android 13+ Ramdisk)",
-                        isAr ? "رمديسك الإقلاع الأولي وحقن الروت (Magisk / KSU)" : "Generic Ramdisk & Root Injection",
+                        isAr ? "البوت الأولي" : "Init Boot",
+                        isAr ? "رمديسك الإقلاع الأولي وحقن الروت" : "Generic Ramdisk & Root Injection",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "vendor_boot":
                 return new PartitionMeta(
-                        isAr ? "بوت الفيندور (Vendor Boot)" : "Vendor Boot (OEM Drivers)",
+                        isAr ? "بوت الفيندور" : "Vendor Boot",
                         isAr ? "رمديسك تعريفات الشركة المصنعة للهاتف" : "OEM Hardware Drivers Ramdisk",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "vbmeta":
                 return new PartitionMeta(
-                        isAr ? "حماية النظام (VBMeta)" : "VBMeta (AVB Signature)",
-                        isAr ? "توقيع التحقق من إقلاع أندرويد (AVB / dm-verity)" : "Android Verified Boot Metadata",
+                        isAr ? "حماية النظام" : "VBMeta",
+                        isAr ? "توقيع التحقق من إقلاع أندرويد" : "Android Verified Boot Metadata",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "vbmeta_system":
                 return new PartitionMeta(
-                        isAr ? "حماية قسم النظام (VBMeta System)" : "VBMeta System",
-                        isAr ? "التحقق من سلامة قسم النظام (Verity)" : "AVB Verity for System Partition",
+                        isAr ? "حماية قسم النظام" : "VBMeta System",
+                        isAr ? "التحقق من سلامة قسم النظام" : "AVB Verity for System Partition",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "system":
                 return new PartitionMeta(
-                        isAr ? "النظام الأساسي (System)" : "System (Android OS Core)",
+                        isAr ? "النظام" : "System",
                         isAr ? "نظام أندرويد الأساسي وتطبيقات النظام" : "Core Android OS Filesystem & Apps",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "vendor":
                 return new PartitionMeta(
-                        isAr ? "الفيندور (Vendor)" : "Vendor (Hardware HAL & Drivers)",
+                        isAr ? "الفيندور" : "Vendor",
                         isAr ? "تعريفات ومكتبات الهاردوير والشرائح" : "Device Hardware Abstraction & Proprietary Blobs",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "product":
                 return new PartitionMeta(
-                        isAr ? "البرودكت (Product)" : "Product (OEM Apps & Overlays)",
+                        isAr ? "البرودكت" : "Product",
                         isAr ? "تطبيقات وتخصيصات الشركة المصنعة" : "OEM Specific Features, Overlays & Apps",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "system_ext":
                 return new PartitionMeta(
-                        isAr ? "امتداد النظام (System Ext)" : "System Ext (Framework Addons)",
+                        isAr ? "امتداد النظام" : "System Ext",
                         isAr ? "امتدادات فريم وورك نظام أندرويد" : "Android Framework Extensions",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "odm":
                 return new PartitionMeta(
-                        isAr ? "تخصيصات المصنع (ODM)" : "ODM (Original Design Manufacturer)",
+                        isAr ? "تخصيصات المصنع" : "ODM",
                         isAr ? "تخصيصات مصنع العتاد الأصلي" : "Original Design Manufacturer Customizations",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "mi_ext":
                 return new PartitionMeta(
-                        isAr ? "امتدادات شاومي (Mi Ext)" : "Mi Ext (Xiaomi / HyperOS)",
+                        isAr ? "امتدادات شاومي" : "Mi Ext",
                         isAr ? "تخصيصات واجهة شاومي وهايبر أو إس" : "HyperOS / MIUI Vendor Framework Addons",
                         cleanOut,
                         PartitionItem.Group.DYNAMIC
                 );
             case "super":
                 return new PartitionMeta(
-                        isAr ? "قسم السوبر (Super Container)" : "Super (Dynamic Partitions Container)",
-                        isAr ? "حاوية الأقسام الديناميكية (system, vendor, product...)" : "Host Container for Dynamic Partitions",
+                        isAr ? "قسم السوبر" : "Super",
+                        isAr ? "حاوية الأقسام الديناميكية" : "Host Container for Dynamic Partitions",
                         cleanOut,
                         PartitionItem.Group.COMMON
                 );
             case "dtbo":
                 return new PartitionMeta(
-                        isAr ? "شجرة العتاد (DTBO)" : "DTBO (Device Tree Blob Overlay)",
+                        isAr ? "شجرة العتاد" : "DTBO",
                         isAr ? "مخطط عتاد وتوصيلات المعالج والهاتف" : "Hardware Device Tree Overlay",
                         cleanOut,
                         PartitionItem.Group.FIRMWARE
@@ -330,21 +327,21 @@ public final class PartitionResolver {
             case "modem":
             case "radio":
                 return new PartitionMeta(
-                        isAr ? "المودم والشبكة (Modem / Baseband)" : "Modem (Cellular Firmware)",
+                        isAr ? "المودم" : "Modem",
                         isAr ? "فيرموير شبكة الاتصال والبيانات والـ GPS" : "Cellular Baseband & Radio Firmware",
                         cleanOut,
                         PartitionItem.Group.FIRMWARE
                 );
             case "persist":
                 return new PartitionMeta(
-                        isAr ? "البيانات الدائمة (Persist)" : "Persist (Sensors & Calibration)",
+                        isAr ? "البيانات الدائمة" : "Persist",
                         isAr ? "معايرة الحساسات وماك الوايفاي والبلوتوث" : "Sensor Calibration & Device Unique Config",
                         cleanOut,
                         PartitionItem.Group.FIRMWARE
                 );
             case "misc":
                 return new PartitionMeta(
-                        isAr ? "أوامر الإقلاع (Misc)" : "Misc (Bootloader & Recovery Flags)",
+                        isAr ? "أوامر الإقلاع" : "Misc",
                         isAr ? "أوامر التوجيه للريكفري والبوتلودر" : "Recovery Directives & Bootloader Controls",
                         cleanOut,
                         PartitionItem.Group.BOOTLOADER
@@ -352,7 +349,7 @@ public final class PartitionResolver {
             case "userdata":
             case "data":
                 return new PartitionMeta(
-                        isAr ? "بيانات المستخدم (Userdata)" : "Userdata (Internal Storage)",
+                        isAr ? "بيانات المستخدم" : "Userdata",
                         isAr ? "وحدة التخزين الداخلية وتطبيقات المستخدم" : "Apps, Cache & Internal User Storage",
                         cleanOut,
                         PartitionItem.Group.OTHER
@@ -362,7 +359,7 @@ public final class PartitionResolver {
             case "uefi":
             case "tz":
                 return new PartitionMeta(
-                        base.toUpperCase(Locale.ROOT) + " (Bootloader)",
+                        base.toUpperCase(Locale.ROOT),
                         isAr ? "مكون من مكونات البوتلودر منخفض المستوى" : "Low-Level Bootloader Component",
                         cleanOut,
                         PartitionItem.Group.BOOTLOADER
