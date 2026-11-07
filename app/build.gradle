@@ -32,6 +32,9 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            signingConfig signingConfigs.release
+        }
     }
 
     // "full" carries the vendored LSPatch patcher engine and its loader
