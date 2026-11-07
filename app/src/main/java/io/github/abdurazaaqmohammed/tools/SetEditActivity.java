@@ -414,7 +414,7 @@ public class SetEditActivity extends BaseActivity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
 
-        int primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, 0xFF64B5F6);
+        int primaryColor = MaterialColors.getColor(this, R.attr.colorPrimary, 0xFF64B5F6);
 
         TextView btnCopyKey = createActionPill("📋 " + (isAr() ? "نسخ المفتاح" : "Copy Key"), primaryColor, () -> {
             copyToClipboard(entry.key);
