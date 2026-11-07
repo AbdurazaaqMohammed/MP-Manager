@@ -33,7 +33,8 @@ public class BootImageEngine {
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] magic = new byte[8];
             if (fis.read(magic) < 8) return false;
-            return "ANDROID!".equals(new String(magic, StandardCharsets.US_ASCII));
+            String m = new String(magic, StandardCharsets.US_ASCII);
+            return "ANDROID!".equals(m) || "VNDRBOOT".equals(m);
         } catch (Exception ignored) {
             return false;
         }
@@ -56,28 +57,52 @@ public class BootImageEngine {
         }
 
         String magic = new String(headerData, 0, 8, StandardCharsets.US_ASCII);
-        if (!"ANDROID!".equals(magic)) {
-            throw new IOException("Not a valid Android Boot Image ('ANDROID!' magic missing)");
+        boolean isVendorBoot = "VNDRBOOT".equals(magic);
+        if (!"ANDROID!".equals(magic) && !isVendorBoot) {
+            throw new IOException("Not a valid Android Boot Image ('ANDROID!' or 'VNDRBOOT' magic missing)");
         }
 
         ByteBuffer bb = ByteBuffer.wrap(headerData).order(ByteOrder.LITTLE_ENDIAN);
-        int kernelSize = bb.getInt(8);
-        int ramdiskSize = bb.getInt(12);
-        int osVersionRaw = bb.getInt(16);
-        int headerSize = bb.getInt(20);
-        int headerVersion = bb.getInt(40);
+        int kernelSize = 0;
+        int ramdiskSize;
+        int osVersionRaw = 0;
+        int headerSize;
+        int headerVersion;
+        int pageSize;
+        String cmdline;
+        String cmdlineExtra = "";
+        int dtbSize = 0;
+        int bootconfigSize = 0;
 
-        int pageSize = 4096;
-        if (headerVersion < 3) {
-            pageSize = bb.getInt(36);
-            if (pageSize <= 0) pageSize = 2048;
+        if (isVendorBoot) {
+            headerVersion = bb.getInt(8);
+            pageSize = bb.getInt(12);
+            if (pageSize <= 0) pageSize = 4096;
+            ramdiskSize = bb.getInt(24); // vendor_ramdisk_size
+            cmdline = readNullTermString(headerData, 28, 2048);
+            headerSize = bb.getInt(2096);
+            dtbSize = bb.getInt(2100);
+            if (headerVersion >= 4 && headerData.length >= 2128) {
+                bootconfigSize = bb.getInt(2124);
+            }
+        } else {
+            kernelSize = bb.getInt(8);
+            ramdiskSize = bb.getInt(12);
+            osVersionRaw = bb.getInt(16);
+            headerSize = bb.getInt(20);
+            headerVersion = bb.getInt(40);
+            pageSize = 4096;
+            if (headerVersion < 3) {
+                pageSize = bb.getInt(36);
+                if (pageSize <= 0) pageSize = 2048;
+            }
+            cmdline = readNullTermString(headerData, 44, 1536);
+            cmdlineExtra = headerSize > 1580 ? readNullTermString(headerData, 1580, 512) : "";
         }
-
-        String cmdline = readNullTermString(headerData, 44, 1536);
-        String cmdlineExtra = headerSize > 1580 ? readNullTermString(headerData, 1580, 512) : "";
 
         JSONObject meta = new JSONObject();
         meta.put("magic", magic);
+        meta.put("is_vendor_boot", isVendorBoot);
         meta.put("header_version", headerVersion);
         meta.put("kernel_size", kernelSize);
         meta.put("ramdisk_size", ramdiskSize);
@@ -86,6 +111,8 @@ public class BootImageEngine {
         meta.put("page_size", pageSize);
         meta.put("cmdline", cmdline);
         meta.put("cmdline_extra", cmdlineExtra);
+        meta.put("dtb_size", dtbSize);
+        meta.put("bootconfig_size", bootconfigSize);
         meta.put("original_file_name", imageFile.getName());
         meta.put("original_image_size", imageFile.length());
 
@@ -95,17 +122,49 @@ public class BootImageEngine {
         }
 
         long headerBlockSize = pageSize;
-        long kernelOffset = headerBlockSize;
-        long kernelPadded = align(kernelSize, pageSize);
-        long ramdiskOffset = kernelOffset + kernelPadded;
+        long ramdiskOffset;
+        long dtbOffset = 0;
+        long bootconfigOffset = 0;
 
-        // If kernel is present, extract it as kernel / Image
-        if (kernelSize > 0) {
-            File kernelOut = new File(outputDir, "kernel");
+        if (isVendorBoot) {
+            ramdiskOffset = headerBlockSize;
+            long ramdiskPadded = align(ramdiskSize, pageSize);
+            dtbOffset = ramdiskOffset + ramdiskPadded;
+            long dtbPadded = align(dtbSize, pageSize);
+            bootconfigOffset = dtbOffset + dtbPadded;
+        } else {
+            long kernelOffset = headerBlockSize;
+            long kernelPadded = align(kernelSize, pageSize);
+            ramdiskOffset = kernelOffset + kernelPadded;
+
+            // If kernel is present, extract it as kernel / Image
+            if (kernelSize > 0) {
+                File kernelOut = new File(outputDir, "kernel");
+                try (FileInputStream fis = new FileInputStream(imageFile);
+                     FileOutputStream fos = new FileOutputStream(kernelOut)) {
+                    fis.skip(kernelOffset);
+                    copyBytes(fis, fos, kernelSize);
+                }
+            }
+        }
+
+        // If dtb is present in vendor_boot, extract it
+        if (dtbSize > 0) {
+            File dtbOut = new File(outputDir, "dtb");
             try (FileInputStream fis = new FileInputStream(imageFile);
-                 FileOutputStream fos = new FileOutputStream(kernelOut)) {
-                fis.skip(kernelOffset);
-                copyBytes(fis, fos, kernelSize);
+                 FileOutputStream fos = new FileOutputStream(dtbOut)) {
+                fis.skip(dtbOffset);
+                copyBytes(fis, fos, dtbSize);
+            }
+        }
+
+        // If bootconfig is present in vendor_boot v4, extract it
+        if (bootconfigSize > 0) {
+            File bcOut = new File(outputDir, "bootconfig");
+            try (FileInputStream fis = new FileInputStream(imageFile);
+                 FileOutputStream fos = new FileOutputStream(bcOut)) {
+                fis.skip(bootconfigOffset);
+                copyBytes(fis, fos, bootconfigSize);
             }
         }
 
@@ -286,27 +345,49 @@ public class BootImageEngine {
 
         int compressedRamdiskLen = (int) tempCompressed.length();
 
+        boolean isVendorBoot = meta != null && (meta.optBoolean("is_vendor_boot", false) || "VNDRBOOT".equals(meta.optString("magic")));
         byte[] headerBuf = new byte[pageSize];
-        System.arraycopy("ANDROID!".getBytes(StandardCharsets.US_ASCII), 0, headerBuf, 0, 8);
-
         ByteBuffer bb = ByteBuffer.wrap(headerBuf).order(ByteOrder.LITTLE_ENDIAN);
-        bb.putInt(8, kernelSize);
-        bb.putInt(12, compressedRamdiskLen);
-        bb.putInt(16, osVersionRaw);
-        bb.putInt(20, headerSize);
-        if (headerVersion < 3) {
-            bb.putInt(36, pageSize);
-        }
-        bb.putInt(40, headerVersion);
 
-        byte[] cmdBytes = cmdline.getBytes(StandardCharsets.UTF_8);
-        int cmdLen = Math.min(cmdBytes.length, 1536);
-        System.arraycopy(cmdBytes, 0, headerBuf, 44, cmdLen);
+        File dtbFile = new File(inputDir, "dtb");
+        int dtbLen = dtbFile.exists() ? (int) dtbFile.length() : (meta != null ? meta.optInt("dtb_size", 0) : 0);
+        File bootconfigFile = new File(inputDir, "bootconfig");
+        int bootconfigLen = bootconfigFile.exists() ? (int) bootconfigFile.length() : (meta != null ? meta.optInt("bootconfig_size", 0) : 0);
 
-        if (!cmdlineExtra.isEmpty() && headerSize > 1580) {
-            byte[] extraBytes = cmdlineExtra.getBytes(StandardCharsets.UTF_8);
-            int extraLen = Math.min(extraBytes.length, 512);
-            System.arraycopy(extraBytes, 0, headerBuf, 1580, extraLen);
+        if (isVendorBoot) {
+            System.arraycopy("VNDRBOOT".getBytes(StandardCharsets.US_ASCII), 0, headerBuf, 0, 8);
+            bb.putInt(8, headerVersion);
+            bb.putInt(12, pageSize);
+            bb.putInt(16, meta != null ? meta.optInt("kernel_addr", 0) : 0);
+            bb.putInt(20, meta != null ? meta.optInt("ramdisk_addr", 0) : 0);
+            bb.putInt(24, compressedRamdiskLen);
+            byte[] cmdBytes = cmdline.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(cmdBytes, 0, headerBuf, 28, Math.min(cmdBytes.length, 2048));
+            bb.putInt(2096, headerSize > 0 ? headerSize : 2112);
+            bb.putInt(2100, dtbLen);
+            if (headerVersion >= 4) {
+                bb.putInt(2124, bootconfigLen);
+            }
+        } else {
+            System.arraycopy("ANDROID!".getBytes(StandardCharsets.US_ASCII), 0, headerBuf, 0, 8);
+            bb.putInt(8, kernelSize);
+            bb.putInt(12, compressedRamdiskLen);
+            bb.putInt(16, osVersionRaw);
+            bb.putInt(20, headerSize);
+            if (headerVersion < 3) {
+                bb.putInt(36, pageSize);
+            }
+            bb.putInt(40, headerVersion);
+
+            byte[] cmdBytes = cmdline.getBytes(StandardCharsets.UTF_8);
+            int cmdLen = Math.min(cmdBytes.length, 1536);
+            System.arraycopy(cmdBytes, 0, headerBuf, 44, cmdLen);
+
+            if (!cmdlineExtra.isEmpty() && headerSize > 1580) {
+                byte[] extraBytes = cmdlineExtra.getBytes(StandardCharsets.UTF_8);
+                int extraLen = Math.min(extraBytes.length, 512);
+                System.arraycopy(extraBytes, 0, headerBuf, 1580, extraLen);
+            }
         }
 
         long originalImgSize = meta != null ? meta.optLong("original_image_size", 0) : 0;
@@ -318,8 +399,8 @@ public class BootImageEngine {
              BufferedOutputStream bos = new BufferedOutputStream(fos, 65536)) {
             bos.write(headerBuf);
 
-            // Write Kernel if exists
-            if (kernelSize > 0 && kernelFile.exists()) {
+            // Write Kernel if exists (only for boot.img)
+            if (!isVendorBoot && kernelSize > 0 && kernelFile.exists()) {
                 try (FileInputStream fis = new FileInputStream(kernelFile)) {
                     byte[] b = new byte[65536];
                     int r;
@@ -335,6 +416,26 @@ public class BootImageEngine {
                 while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
             }
             writePadding(bos, compressedRamdiskLen, pageSize);
+
+            // Write DTB if vendor_boot
+            if (isVendorBoot && dtbFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(dtbFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, dtbLen, pageSize);
+            }
+
+            // Write Bootconfig if vendor_boot v4
+            if (isVendorBoot && bootconfigFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(bootconfigFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, bootconfigLen, pageSize);
+            }
 
             // Write AVB vbmeta if present
             File vbmetaFile = new File(inputDir, "avb_vbmeta.bin");

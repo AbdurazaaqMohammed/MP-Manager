@@ -44,7 +44,9 @@ import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.codehasan.colorpicker.extensions.Extensions;
+import com.google.android.material.color.MaterialColors;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * Settings Editor (SetEdit): browse, search, edit, add, and delete Android
@@ -250,17 +252,31 @@ public class SetEditActivity extends BaseActivity {
         }).start();
     }
 
+    private static String readStream(InputStream is) {
+        if (is == null) return null;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append('\n');
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void querySettingsList(SettingType type, List<SettingEntry> out) {
         try {
             RootManager rm = RootManager.getInstance(this);
             RootManager.ShellResult result = rm.execute("settings list " + type.alias);
-            String output = (result != null && result.isSuccess() && result.stdout != null)
-                    ? result.stdout : null;
+            String output = (result != null && result.isSuccess() && result.output() != null)
+                    ? result.output() : null;
 
             if (output == null || output.trim().isEmpty()) {
                 // Fallback to runtime exec directly
                 Process p = Runtime.getRuntime().exec(new String[]{"settings", "list", type.alias});
-                output = FileUtils.readAllText(p.getInputStream());
+                output = readStream(p.getInputStream());
             }
 
             if (output != null) {
@@ -284,12 +300,12 @@ public class SetEditActivity extends BaseActivity {
         try {
             RootManager rm = RootManager.getInstance(this);
             RootManager.ShellResult result = rm.execute("getprop");
-            String output = (result != null && result.isSuccess() && result.stdout != null)
-                    ? result.stdout : null;
+            String output = (result != null && result.isSuccess() && result.output() != null)
+                    ? result.output() : null;
 
             if (output == null || output.trim().isEmpty()) {
                 Process p = Runtime.getRuntime().exec(new String[]{"getprop"});
-                output = FileUtils.readAllText(p.getInputStream());
+                output = readStream(p.getInputStream());
             }
 
             if (output != null) {
@@ -341,9 +357,11 @@ public class SetEditActivity extends BaseActivity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, 0, 0, pad / 2);
 
+        int primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, 0xFF00796B);
+
         TextView btnCopyKey = new TextView(this);
         btnCopyKey.setText("📋 Copy Key");
-        btnCopyKey.setTextColor(Extensions.getAttrColor(this, com.google.android.material.R.attr.colorPrimary));
+        btnCopyKey.setTextColor(primaryColor);
         btnCopyKey.setPadding(0, 0, pad, 0);
         btnCopyKey.setOnClickListener(v -> {
             copyToClipboard(entry.key);
@@ -352,7 +370,7 @@ public class SetEditActivity extends BaseActivity {
 
         TextView btnCopyVal = new TextView(this);
         btnCopyVal.setText("📋 Copy Value");
-        btnCopyVal.setTextColor(Extensions.getAttrColor(this, com.google.android.material.R.attr.colorPrimary));
+        btnCopyVal.setTextColor(primaryColor);
         btnCopyVal.setOnClickListener(v -> {
             copyToClipboard(entry.value);
             Toast.makeText(this, "Value copied", Toast.LENGTH_SHORT).show();

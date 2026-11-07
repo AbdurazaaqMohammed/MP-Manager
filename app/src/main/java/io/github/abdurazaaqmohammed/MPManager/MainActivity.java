@@ -2166,6 +2166,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                 return;
             }
+            if (ArchiveBrowseUtil.detectArchiveType(zipFile) == ArchiveBrowseUtil.ArchiveType.NONE) {
+                handler.post(() -> {
+                    loadFinished[0] = true;
+                    handler.removeCallbacks(showProgressRunnable);
+                    if (zipPm[0] != null) zipPm[0].dismiss();
+                    Extensions.showMessage(this, getString(R.string.not_an_archive) + ": " + zipFile.getName());
+                });
+                return;
+            }
             final ZipRead read;
             try {
                 read = readZipFolder(zipFile, path);

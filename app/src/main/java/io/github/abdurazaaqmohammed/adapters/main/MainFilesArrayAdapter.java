@@ -975,7 +975,12 @@ final View.OnClickListener originalClickListener;
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)) {
+                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)
+                        && (ArchiveUtil.isSupportedArchive(fileName)
+                            || ArchiveBrowseUtil.isBrowsable(file)
+                            || ArchiveUtil.isMiuiOrAndroidBackup(file)
+                            || SplitArchiveUtil.isSplitArchive(file)
+                            || SplitArchiveUtil.detectMergedExtension(file) != null)) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.SPLIT, direction)));
                 }
 
