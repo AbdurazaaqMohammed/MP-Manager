@@ -2061,6 +2061,8 @@
 
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">ساحب الأقسام (Partition Dumper)</string>
+    <string name="tool_partition_dumper_subtitle">استخراج وتفريغ أقسام الهاردوير والأقسام الديناميكية بصيغة .img</string>
+    <string name="set_edit_subtitle">تعديل إعدادات النظام العامة والآمنة وخصائص أندرويد</string>
     <string name="partition_dumper_title">ساحب الأقسام (Root)</string>
     <string name="partition_info_title">معلومات البارتيشن</string>
     <string name="partition_batch_dump">تفريغ المحدد (%d)</string>

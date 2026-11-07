@@ -728,7 +728,7 @@ public final class PartitionDumperDialog {
             int finalCount = successCount;
             activity.runOnUiThread(() -> {
                 pm.dismiss();
-                if (activity instanceof MainActivity ma) ma.refreshCurrentPath();
+                if (activity instanceof MainActivity ma) ma.refreshPane(true);
                 new MaterialAlertDialogBuilder(activity)
                         .setTitle(isAr ? "اكتمل التفريغ المتعدد" : "Batch Dump Complete")
                         .setMessage(isAr ? "تم تفريغ " + finalCount + " من أصل " + total + " بارتيشن بنجاح إلى:\n" + outDir.getAbsolutePath()

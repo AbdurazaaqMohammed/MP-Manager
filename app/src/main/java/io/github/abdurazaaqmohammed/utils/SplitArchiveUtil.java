@@ -138,6 +138,15 @@ public final class SplitArchiveUtil {
     }
 
     /**
+     * Determines whether the file is part of a split ZIP archive (.z01, .zip.001).
+     */
+    public static boolean isZipSplit(File file) {
+        if (file == null) return false;
+        String name = file.getName();
+        return PATTERN_ZIP_SPLIT.matcher(name).matches() || name.toLowerCase(Locale.ROOT).endsWith(".zip.001");
+    }
+
+    /**
      * Given any part in a split archive sequence, finds the primary (first) part.
      * For .part2.rar -> returns .part1.rar (or .part01.rar).
      * For .7z.002 -> returns .7z.001.

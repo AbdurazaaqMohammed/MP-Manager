@@ -2300,6 +2300,8 @@ Patched code:</string>
 
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">Partition Dumper</string>
+    <string name="tool_partition_dumper_subtitle">Dump device hardware &amp; dynamic partitions to .img</string>
+    <string name="set_edit_subtitle">Edit Android system, global, and secure settings</string>
     <string name="partition_dumper_title">Partition Dumper (Root)</string>
     <string name="partition_info_title">Partition Details</string>
     <string name="partition_batch_dump">Dump Selected (%d)</string>
