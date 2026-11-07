@@ -357,7 +357,7 @@ public class SetEditActivity extends BaseActivity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, 0, 0, pad / 2);
 
-        int primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, 0xFF00796B);
+        int primaryColor = MaterialColors.getColor(this, android.R.attr.colorPrimary, 0xFF00796B);
 
         TextView btnCopyKey = new TextView(this);
         btnCopyKey.setText("📋 Copy Key");
