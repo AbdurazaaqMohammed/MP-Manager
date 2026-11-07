@@ -364,6 +364,15 @@ public class FilePropertiesDialog {
                     permView.setText(permText);
                     ownerView.setText(finalOwner);
                 });
+
+                io.github.abdurazaaqmohammed.features.system.SystemImageEngine.ImageIdentity identity =
+                        io.github.abdurazaaqmohammed.features.system.SystemImageEngine.identifyImage(file);
+                if (identity != null && !"unknown".equals(identity.typeKey)) {
+                    context.handler.post(() -> {
+                        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+                        addPropertyRow(propRows, context.getString(R.string.property_image_type), identity.getDisplayName(isAr));
+                    });
+                }
             }).start();
         }
 

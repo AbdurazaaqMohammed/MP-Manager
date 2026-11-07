@@ -1296,8 +1296,14 @@ public class FileOpener {
             openTextEditorRootAware(file);
         } else if (FileUtils.isElfFile(file)) {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
-        } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
-            io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+        } else if (fileName.endsWith(".img")) {
+            if (io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
+                io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+            } else if (io.github.abdurazaaqmohammed.features.system.SystemImageEngine.isSparseImage(file)) {
+                promptUnsparseImage(file, fileName);
+            } else {
+                openWithDefaultOrDialog(file, fileName);
+            }
         } else if (("payload.bin".equalsIgnoreCase(fileName) || fileName.endsWith(".bin") || fileName.endsWith(".payload")) && PayloadParser.isPayload(file)) {
             PayloadDialog.showForPayload(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
@@ -1381,6 +1387,74 @@ public class FileOpener {
                 openWithDefaultOrDialog(file, fileName);
             }
         }
+    }
+
+    private void promptUnsparseImage(File file, String fileName) {
+        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+        io.github.abdurazaaqmohammed.features.system.SystemImageEngine.SparseInfo sInfo =
+                io.github.abdurazaaqmohammed.features.system.SystemImageEngine.readSparseInfo(file);
+        long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
+        String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
+                io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
+
+        String msg = (isAr
+                ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"
+                : "This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?") + sizeStr;
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                .setTitle(isAr ? "فك ضغط Sparse Image" : "Unsparse Image")
+                .setMessage(msg)
+                .setPositiveButton(isAr ? "📂 فك الضغط" : "📂 Unsparse", (d, w) -> {
+                    String baseName = fileName;
+                    int dotIdx = baseName.lastIndexOf('.');
+                    if (dotIdx > 0) baseName = baseName.substring(0, dotIdx);
+                    File outRaw = new File(file.getParentFile(), baseName + "_raw.img");
+
+                    ProgressManager pm = new ProgressManager(context, false).show();
+                    pm.setText(isAr ? ("جاري فك ضغط " + fileName + "...") : ("Unsparsing " + fileName + "..."));
+
+                    new Thread(() -> {
+                        try {
+                            io.github.abdurazaaqmohammed.features.system.SystemImageEngine.unsparseToFile(file, outRaw,
+                                    new io.github.abdurazaaqmohammed.features.system.SystemImageEngine.ProgressCallback() {
+                                @Override
+                                public void onProgress(String message, int percent) {
+                                    context.runOnUiThread(() -> {
+                                        pm.setText(message);
+                                        pm.setProgress(percent, 100);
+                                    });
+                                }
+
+                                @Override
+                                public void onError(String error) {
+                                    context.runOnUiThread(() -> {
+                                        pm.dismiss();
+                                        Extensions.showMessage(context, "Error: " + error);
+                                    });
+                                }
+
+                                @Override
+                                public void onSuccess(File result) {
+                                    context.runOnUiThread(() -> {
+                                        pm.dismiss();
+                                        android.widget.Toast.makeText(context,
+                                                (isAr ? "تم فك الضغط بنجاح: " : "Unsparsed successfully: ") + result.getName(),
+                                                android.widget.Toast.LENGTH_LONG).show();
+                                        context.reloadCurrentFolder();
+                                    });
+                                }
+                            });
+                        } catch (Exception e) {
+                            context.runOnUiThread(() -> {
+                                pm.dismiss();
+                                Extensions.showMessage(context, "Unsparse failed: " + e.getMessage());
+                            });
+                        }
+                    }).start();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.open_with, (d, w) -> openWithDefaultOrDialog(file, fileName))
+                .show();
     }
 
     private File stageZipEntry(ZipEntryInfo zipEntry) throws IOException {
