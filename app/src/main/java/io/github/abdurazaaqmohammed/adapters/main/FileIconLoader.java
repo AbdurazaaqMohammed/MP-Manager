@@ -115,7 +115,7 @@ public class FileIconLoader {
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
-            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon;
+            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
 
@@ -971,6 +971,8 @@ public class FileIconLoader {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             resolved = cachedTextIcon;
+        } else if (".img".equals(ext) || ".iso".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
+            resolved = cachedImgIcon;
         } else if (FileUtils.isElf(path)) {
             resolved = cachedElfIcon;
         } else if (!isInZip) {
@@ -1099,6 +1101,7 @@ public class FileIconLoader {
         cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
         cachedElfIcon     = badge(res, density, R.drawable.terminal_24px, 0xFF37474F, true);
+        cachedImgIcon     = badge(res, density, R.drawable.ic_disk_drive_24px, 0xFF455A64, true);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
                 theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
     }

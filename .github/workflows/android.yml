@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - split-archives-flutter
+      - payload-dumper
 
 jobs:
   build:

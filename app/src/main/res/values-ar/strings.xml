@@ -2021,4 +2021,16 @@
     <string name="flutter_search_hint">بحث في الروابط والنصوص…</string>
     <string name="flutter_copied">تم النسخ إلى الحافظة</string>
     <string name="flutter_strings_count">تم العثور على %1$d نص/رابط</string>
+
+    <!-- Android OTA Payload Dumper & Inspector -->
+    <string name="payload_tools_title">مستعرض ملفات OTA Payload</string>
+    <string name="payload_search_hint">بحث في الأقسام (boot, vendor, system…)…</string>
+    <string name="payload_partitions_count">تم العثور على %1$d قسم (%2$s غير مضغوط)</string>
+    <string name="payload_extract_partition">استخراج القسم (.img)</string>
+    <string name="payload_extract_all">استخراج كافة الأقسام</string>
+    <string name="payload_open_boot_inspector">استخراج وفتح في فاحص البوت</string>
+    <string name="payload_extracting">جاري استخراج %1$s…</string>
+    <string name="payload_extract_success">تم استخراج القسم: %1$s</string>
+    <string name="payload_extract_all_success">تم استخراج %1$d قسم بنجاح</string>
+    <string name="payload_copy_hash">نسخ تجزئة SHA-256</string>
 </resources>

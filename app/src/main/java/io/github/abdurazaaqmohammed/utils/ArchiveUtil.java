@@ -63,6 +63,7 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
                 || lower.endsWith(".zst") || lower.endsWith(".zstd")
+                || lower.endsWith(".win") || lower.matches(".*\\.win\\d+$")
                 || SplitArchiveUtil.isSplitArchiveName(fileName);
     }
 
@@ -390,7 +391,7 @@ public class ArchiveUtil {
 
     private static void extractTar(InputStream tarInput, File archive, File destDir, boolean preserveTime,
                                    FileUtils.TransferListener listener) throws IOException {
-        try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
+        try (ArchiveBrowseUtil.MpTarArchiveInputStream tais = new ArchiveBrowseUtil.MpTarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
                 if (listener != null) listener.checkpoint();

@@ -328,8 +328,32 @@ public final class ArchiveBrowseUtil {
         }
     }
 
+    /**
+     * Workaround for Apache Commons Compress upstream bug:
+     * When a GNU long-name entry ('L') or long-link entry ('K') happens to have
+     * a name in its tar header ending with '/', Commons Compress's isDirectory()
+     * returns true, which causes read() to return -1 without reading the long name
+     * data. The unread data is then parsed as the next header, causing
+     * "IOException: Corrupted TAR archive".
+     * Overriding getLongNameData() to normalize the header name prevents this.
+     */
+    public static class MpTarArchiveInputStream extends TarArchiveInputStream {
+        public MpTarArchiveInputStream(InputStream is) {
+            super(is);
+        }
+
+        @Override
+        protected byte[] getLongNameData() throws IOException {
+            TarArchiveEntry cur = getCurrentEntry();
+            if (cur != null && cur.getName() != null && cur.getName().endsWith("/")) {
+                cur.setName("././@LongLink");
+            }
+            return super.getLongNameData();
+        }
+    }
+
     private static List<RawEntry> listTar(File archive, ArchiveType wrapper) throws IOException {
-        try (TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper))) {
+        try (MpTarArchiveInputStream tar = new MpTarArchiveInputStream(openTar(archive, wrapper))) {
             List<RawEntry> out = new ArrayList<>();
             TarArchiveEntry e;
             while ((e = tar.getNextTarEntry()) != null) {
@@ -348,7 +372,7 @@ public final class ArchiveBrowseUtil {
 
     /** Scans a (possibly compressed) tar for one entry and copies it out. */
     private static boolean extractTarEntry(File archive, ArchiveType wrapper, String want, File outFile) throws IOException {
-        try (TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper))) {
+        try (MpTarArchiveInputStream tar = new MpTarArchiveInputStream(openTar(archive, wrapper))) {
             TarArchiveEntry e;
             while ((e = tar.getNextTarEntry()) != null) {
                 if (!stripSlash(normalize(e.getName())).equals(want)) continue;
@@ -369,7 +393,7 @@ public final class ArchiveBrowseUtil {
 
     /** Positions a (possibly compressed) tar on one entry and returns it open. */
     private static InputStream openTarEntry(File archive, ArchiveType wrapper, String want, String originalPath) throws IOException {
-        TarArchiveInputStream tar = new TarArchiveInputStream(openTar(archive, wrapper));
+        MpTarArchiveInputStream tar = new MpTarArchiveInputStream(openTar(archive, wrapper));
         try {
             TarArchiveEntry e;
             while ((e = tar.getNextTarEntry()) != null) {

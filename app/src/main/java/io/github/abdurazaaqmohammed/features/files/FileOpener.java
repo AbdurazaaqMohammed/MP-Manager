@@ -60,6 +60,8 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.features.payload.PayloadDialog;
+import io.github.abdurazaaqmohammed.features.payload.PayloadParser;
 
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
@@ -1296,6 +1298,8 @@ public class FileOpener {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") && io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
             io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+        } else if (("payload.bin".equalsIgnoreCase(fileName) || fileName.endsWith(".bin") || fileName.endsWith(".payload")) && PayloadParser.isPayload(file)) {
+            PayloadDialog.showForPayload(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, readable -> {
                 if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);

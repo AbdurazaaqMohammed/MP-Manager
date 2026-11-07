@@ -2260,4 +2260,16 @@ Patched code:</string>
     <string name="flutter_search_hint">Search strings / URLs / endpoints…</string>
     <string name="flutter_copied">Copied to clipboard</string>
     <string name="flutter_strings_count">%1$d strings found</string>
+
+    <!-- Android OTA Payload Dumper & Inspector -->
+    <string name="payload_tools_title">OTA Payload Inspector</string>
+    <string name="payload_search_hint">Search partitions (boot, vendor, system…)…</string>
+    <string name="payload_partitions_count">%1$d partitions found (%2$s uncompressed)</string>
+    <string name="payload_extract_partition">Extract partition (.img)</string>
+    <string name="payload_extract_all">Extract All Partitions</string>
+    <string name="payload_open_boot_inspector">Extract &amp; Open in Boot Inspector</string>
+    <string name="payload_extracting">Extracting %1$s…</string>
+    <string name="payload_extract_success">Partition extracted: %1$s</string>
+    <string name="payload_extract_all_success">Extracted %1$d partitions</string>
+    <string name="payload_copy_hash">Copy SHA-256 Hash</string>
 </resources>
