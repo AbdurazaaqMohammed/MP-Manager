@@ -5,6 +5,7 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +27,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,6 +45,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
+import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.FileMenuAction;
@@ -230,9 +233,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
         File current = pane1 ? context.pane1Folder : context.pane2Folder;
         File target = upFile;
-        if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(current)) {
-            io.github.abdurazaaqmohammed.boot.BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
-            File resolved = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(current);
+        if (BootInspectManager.isBootInspectFolder(current)) {
+            BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
+            File resolved = BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
         }
         if (target == null) return false;
@@ -321,8 +324,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (f instanceof ShizukuFile sf) return sf.isLink();
         if (f instanceof io.github.abdurazaaqmohammed.utils.RootFile rf) return rf.isLink();
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                return java.nio.file.Files.isSymbolicLink(f.toPath());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                return Files.isSymbolicLink(f.toPath());
             }
             File parent = f.getParentFile();
             String parentCanonical = parent != null ? parent.getCanonicalPath() : "";

@@ -2,7 +2,9 @@ package io.github.abdurazaaqmohammed.features.apk;
 
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
@@ -15,7 +17,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -35,10 +39,20 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Re-injects editor-modified files back into the open APK/ZIP.
@@ -69,7 +83,7 @@ public class ApkResultHandler {
         if (resolvedZip == null) resolvedZip = pane1 ? activity.pane1Folder : activity.pane2Folder;
         final File zipFile = resolvedZip;
         if (path == null) {
-            android.util.Log.w(TAG, "modified file result without a path; nothing to offer");
+            Log.w(TAG, "modified file result without a path; nothing to offer");
             return;
         }
         boolean inAppPrivateDir = path.startsWith(activity.getCacheDir().getPath());
@@ -79,11 +93,11 @@ public class ApkResultHandler {
         }
         if (!inAppPrivateDir) {
             // A real file edited in place: the archive never owned it.
-            android.util.Log.d(TAG, "not a staged file, no archive prompt: " + path);
+            Log.d(TAG, "not a staged file, no archive prompt: " + path);
             return;
         }
         if (zipFile == null || !zipFile.isFile()) {
-            android.util.Log.w(TAG, "no archive to write back to for " + path
+            Log.w(TAG, "no archive to write back to for " + path
                     + " (zip=" + (zipFile == null ? "null" : zipFile.getAbsolutePath()) + ")");
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
             return;
@@ -91,11 +105,11 @@ public class ApkResultHandler {
         // Save-back rewrites the archive in place, which only zip-family
         // containers support; browsing a 7z/rar/tar is read-only.
         if (!ArchiveBrowseUtil.isZipLike(zipFile)) {
-            android.util.Log.w(TAG, "archive is not writable in place: " + zipFile.getAbsolutePath());
+            Log.w(TAG, "archive is not writable in place: " + zipFile.getAbsolutePath());
             Extensions.showMessage(activity, R.string.archive_not_editable);
             return;
         }
-        android.util.Log.d(TAG, "offering archive update: " + path + " -> " + zipFile.getName()
+        Log.d(TAG, "offering archive update: " + path + " -> " + zipFile.getName()
                 + " entry=" + entryPath);
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
                     String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
@@ -159,8 +173,8 @@ public class ApkResultHandler {
                                             for (File dexFile : dexFiles) {
                                                 addedNames.add(dexFile.getName());
                                             }
-                                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
-                                                java.util.Map<String, File> additions = new java.util.LinkedHashMap<>();
+                                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                                                Map<String, File> additions = new LinkedHashMap<>();
                                                 for (File dexFile : dexFiles) additions.put(dexFile.getName(), dexFile);
                                                 updateArchiveLegacy(zipFile, additions);
                                             } else {
@@ -176,14 +190,14 @@ public class ApkResultHandler {
                                             }
                                             if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                             addedNames.add(modifiedFileName);
-                                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+                                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                                                 String target = entryName != null ? entryName : modifiedFileName;
-                                                java.util.Map<String, File> additions = new java.util.LinkedHashMap<>();
+                                                Map<String, File> additions = new LinkedHashMap<>();
                                                 additions.put(target, new File(path));
                                                 updateArchiveLegacy(zipFile, additions);
                                             } else {
                                                 ZipParameters zp = new ZipParameters();
-                                                net.lingala.zip4j.model.FileHeader origHeader = zf.getFileHeader(targetEntry);
+                                                FileHeader origHeader = zf.getFileHeader(targetEntry);
                                                 boolean store;
                                                 if (origHeader != null) {
                                                     store = origHeader.getCompressionMethod() == CompressionMethod.STORE;
@@ -192,7 +206,7 @@ public class ApkResultHandler {
                                                 }
                                                 zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
                                                 if (!store) {
-                                                    zp.setCompressionLevel(net.lingala.zip4j.model.enums.CompressionLevel.ULTRA);
+                                                    zp.setCompressionLevel(CompressionLevel.ULTRA);
                                                 }
                                                 if (entryName != null) zp.setFileNameInZip(entryName);
                                                 zf.addFile(path, zp);
@@ -320,28 +334,28 @@ public class ApkResultHandler {
      */
     private static void updateArchiveLegacy(File zipFile, Map<String, File> additions) throws IOException {
         File temp = new File(zipFile.getParentFile(), zipFile.getName() + ".legacy.tmp");
-        java.util.Map<String, java.util.zip.ZipEntry> storedMeta = new java.util.HashMap<>();
-        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(
+        Map<String, ZipEntry> storedMeta = new HashMap<>();
+        try (ZipInputStream in = new ZipInputStream(
                 new FileInputStream(zipFile))) {
-            java.util.zip.ZipEntry entry;
+            ZipEntry entry;
             while ((entry = in.getNextEntry()) != null) {
-                if (entry.getMethod() == java.util.zip.ZipEntry.STORED) {
+                if (entry.getMethod() == ZipEntry.STORED) {
                     storedMeta.put(entry.getName(), entry);
                 }
             }
         }
-        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(
+        try (ZipOutputStream out = new ZipOutputStream(
                 new FileOutputStream(temp))) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+            out.setLevel(Deflater.BEST_SPEED);
             byte[] buffer = new byte[16384];
-            java.util.Set<String> replaced = new java.util.HashSet<>();
-            try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(
+            Set<String> replaced = new HashSet<>();
+            try (ZipInputStream in = new ZipInputStream(
                     new FileInputStream(zipFile))) {
-                java.util.zip.ZipEntry entry;
+                ZipEntry entry;
                 while ((entry = in.getNextEntry()) != null) {
                     String name = entry.getName();
                     File replacement = additions.get(name);
-                    java.util.zip.ZipEntry outEntry = new java.util.zip.ZipEntry(name);
+                    ZipEntry outEntry = new ZipEntry(name);
                     if (entry.isDirectory()) {
                         out.putNextEntry(outEntry);
                         continue;
@@ -350,9 +364,9 @@ public class ApkResultHandler {
                         replaced.add(name);
                         writeEntry(out, outEntry, name, replacement, storedMeta);
                     } else {
-                        java.util.zip.ZipEntry meta = storedMeta.get(name);
+                        ZipEntry meta = storedMeta.get(name);
                         if (meta != null) {
-                            outEntry.setMethod(java.util.zip.ZipEntry.STORED);
+                            outEntry.setMethod(ZipEntry.STORED);
                             outEntry.setSize(meta.getSize());
                             outEntry.setCompressedSize(meta.getCompressedSize());
                             outEntry.setCrc(meta.getCrc());
@@ -366,7 +380,7 @@ public class ApkResultHandler {
             }
             for (Map.Entry<String, File> add : additions.entrySet()) {
                 if (replaced.contains(add.getKey())) continue;
-                java.util.zip.ZipEntry outEntry = new java.util.zip.ZipEntry(add.getKey());
+                ZipEntry outEntry = new ZipEntry(add.getKey());
                 writeEntry(out, outEntry, add.getKey(), add.getValue(), storedMeta);
                 out.closeEntry();
             }
@@ -377,27 +391,27 @@ public class ApkResultHandler {
         }
     }
 
-    private static void writeEntry(java.util.zip.ZipOutputStream out, java.util.zip.ZipEntry outEntry,
+    private static void writeEntry(ZipOutputStream out, ZipEntry outEntry,
                                    String name, File replacement,
-                                   java.util.Map<String, java.util.zip.ZipEntry> storedMeta) throws IOException {
+                                   Map<String, ZipEntry> storedMeta) throws IOException {
         boolean store = name.equals("AndroidManifest.xml") || name.equals("resources.arsc");
         if (store) {
-            outEntry.setMethod(java.util.zip.ZipEntry.STORED);
+            outEntry.setMethod(ZipEntry.STORED);
             long size = replacement.length();
             outEntry.setSize(size);
             outEntry.setCompressedSize(size);
-            java.util.zip.CRC32 crc = new java.util.zip.CRC32();
-            try (java.io.InputStream is = new FileInputStream(replacement)) {
+            CRC32 crc = new CRC32();
+            try (InputStream is = new FileInputStream(replacement)) {
                 byte[] b = new byte[16384];
                 int n;
                 while ((n = is.read(b)) != -1) crc.update(b, 0, n);
             }
             outEntry.setCrc(crc.getValue());
         } else {
-            outEntry.setMethod(java.util.zip.ZipEntry.DEFLATED);
+            outEntry.setMethod(ZipEntry.DEFLATED);
         }
         out.putNextEntry(outEntry);
-        try (java.io.InputStream is = new FileInputStream(replacement)) {
+        try (InputStream is = new FileInputStream(replacement)) {
             byte[] b = new byte[16384];
             int n;
             while ((n = is.read(b)) != -1) out.write(b, 0, n);

@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.mcp;
 import android.content.Context;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 import java.io.File;
 
@@ -24,7 +25,7 @@ public class McpToolContext {
     }
 
     public JsonElement policyRulesJson() {
-        return com.google.gson.JsonParser.parseString(
+        return JsonParser.parseString(
                 McpPathPolicy.rulesToJson(policy.getRules()));
     }
 }

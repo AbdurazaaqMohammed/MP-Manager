@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -81,7 +82,7 @@ public class CompareArscDialog {
     }
 
     private TableBlock loadTableBlock(String path) throws Exception {
-        String lower = path.toLowerCase(java.util.Locale.ROOT);
+        String lower = path.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".apk") || lower.endsWith(".zip") || lower.endsWith(".jar")) {
             try (ZipFile zf = new ZipFile(path)) {
                 ZipEntry ze = zf.getEntry("resources.arsc");

@@ -19,11 +19,13 @@ import androidx.preference.PreferenceManager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
+import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 
 public class PlayerManager {
@@ -630,11 +632,11 @@ public class PlayerManager {
             } catch (Exception ignored) {}
         }
         try {
-            io.github.abdurazaaqmohammed.data.prefs.ListPrefs lp = new io.github.abdurazaaqmohammed.data.prefs.ListPrefs(appContext);
+            ListPrefs lp = new ListPrefs(appContext);
             String dirPath = dir.getAbsolutePath();
             File[] arr = out.toArray(new File[0]);
             FileSorting.sortFiles(arr, lp.sortBy(dirPath), lp.sortReverse(dirPath));
-            out = new ArrayList<>(java.util.Arrays.asList(arr));
+            out = new ArrayList<>(Arrays.asList(arr));
         } catch (Exception ignored) {
             try {
                 Collections.sort(out, (a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));

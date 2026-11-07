@@ -5,11 +5,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.smali.dexlib2.AccessFlags;
+import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
-import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction21c;
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
@@ -19,10 +21,15 @@ import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x;
 import com.android.tools.smali.smali.Smali;
+import com.android.tools.smali.smali.SmaliOptions;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -85,7 +92,7 @@ public class Il2CppInjectTest {
     }
 
     private static void assertLoadsLibrary(Method clinit, String wrappedName) {
-        List<Instruction> ins = new java.util.ArrayList<>();
+        List<Instruction> ins = new ArrayList<>();
         for (Instruction i : clinit.getImplementation().getInstructions()) ins.add(i);
         assertEquals(Opcode.CONST_STRING, ins.get(0).getOpcode());
         assertEquals("il2cppdumper", ((StringReference) ((Instruction21c) ins.get(0)).getReference()).getString());
@@ -138,30 +145,30 @@ public class Il2CppInjectTest {
                     .end method
                     """;
 
-    private static com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile assemble(String... smali)
+    private static DexBackedDexFile assemble(String... smali)
             throws Exception {
-        File dir = java.nio.file.Files.createTempDirectory("il2cppinject").toFile();
+        File dir = Files.createTempDirectory("il2cppinject").toFile();
         for (int i = 0; i < smali.length; i++) {
-            try (java.io.FileWriter w = new java.io.FileWriter(new File(dir, "C" + i + ".smali"))) {
+            try (FileWriter w = new FileWriter(new File(dir, "C" + i + ".smali"))) {
                 w.write(smali[i]);
             }
         }
-        com.android.tools.smali.smali.SmaliOptions options = new com.android.tools.smali.smali.SmaliOptions();
+        SmaliOptions options = new SmaliOptions();
         options.outputDexFile = new File(dir, "out.dex").getPath();
         options.apiLevel = 28;
-        org.junit.Assert.assertTrue(Smali.assemble(options, dir.getPath()));
-        return com.android.tools.smali.dexlib2.DexFileFactory.loadDexFile(
-                new File(dir, "out.dex"), com.android.tools.smali.dexlib2.Opcodes.getDefault());
+        Assert.assertTrue(Smali.assemble(options, dir.getPath()));
+        return DexFileFactory.loadDexFile(
+                new File(dir, "out.dex"), Opcodes.getDefault());
     }
 
     @Test
     public void fullDexRewriteKeepsOtherClassesAndPatchesTarget() throws Exception {
-        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex = assemble(APP_SMALI, OTHER_SMALI);
+        DexBackedDexFile dex = assemble(APP_SMALI, OTHER_SMALI);
         byte[] rewritten = Il2CppDumperUtil.rewriteDexWithLoadLibrary(dex, "Lcom/example/GameApp;", null);
 
-        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile patched =
-                new com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile(
-                        com.android.tools.smali.dexlib2.Opcodes.getDefault(), rewritten);
+        DexBackedDexFile patched =
+                new DexBackedDexFile(
+                        Opcodes.getDefault(), rewritten);
         ClassDef app = null;
         ClassDef other = null;
         for (ClassDef c : patched.getClasses()) {

@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -10,9 +11,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.zip.CRC32;
 
 /**
  * Roundtrip coverage for the zstd (.zst) codec: detection, browsing and
@@ -24,7 +27,7 @@ public class ZstdArchiveTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     private static void assumeNativeZstd() {
-        org.junit.Assume.assumeTrue("native zstd not available on this host",
+        Assume.assumeTrue("native zstd not available on this host",
                 ZstdBridge.isLoaded());
     }
 
@@ -69,7 +72,7 @@ public class ZstdArchiveTest {
         assertTrue(ArchiveUtil.isSupportedArchive(out.getName()));
 
         List<ArchiveBrowseUtil.RawEntry> entries = ArchiveBrowseUtil.listEntries(out);
-        List<String> names = new java.util.ArrayList<>();
+        List<String> names = new ArrayList<>();
         for (ArchiveBrowseUtil.RawEntry e : entries) names.add(e.path());
         assertTrue(names.contains("a.txt"));
         assertTrue(names.contains("sub/"));
@@ -93,7 +96,7 @@ public class ZstdArchiveTest {
         File out = new File(folder.getRoot(), "crc.bin.zst");
         ArchiveUtil.create(out, Collections.singletonList(src));
 
-        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        CRC32 crc = new CRC32();
         crc.update(payload);
         assertEquals(crc.getValue(), ArchiveBrowseUtil.entryCrc32(out, "crc.bin"));
     }

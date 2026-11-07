@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import android.os.Build;
+import android.util.Base64;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,14 +16,24 @@ import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 import net.lingala.zip4j.model.enums.EncryptionMethod;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * MCP ZIP tools modeled on MT Manager's mt_zip_* set: browse entries, read
@@ -152,7 +165,7 @@ public final class McpZipTools {
             result.addProperty("zip", zipPath.getPath());
             result.addProperty("entry", header.getFileName());
             result.addProperty("size", bytes.length);
-            result.addProperty("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP));
+            result.addProperty("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
             return result;
         } catch (ZipException e) {
             throw new McpJson.McpToolException("ZIP error (wrong password?): " + e.getMessage());
@@ -161,7 +174,7 @@ public final class McpZipTools {
 
     private static byte[] readEntry(ZipFile zf, FileHeader header) throws ZipException, McpJson.McpToolException {
         try (InputStream in = zf.getInputStream(header)) {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) != -1) {
@@ -223,7 +236,7 @@ public final class McpZipTools {
      *  builds throw PosixFileAttributeView NPEs, so those fall back to
      *  java.util.zip (no encryption support). Reading works everywhere. */
     private static boolean legacyZip() {
-        return android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O;
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O;
     }
 
     private void writeNewZip(File zipPath, List<File> files, char[] password,
@@ -232,21 +245,21 @@ public final class McpZipTools {
         if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
             throw new IOException("Cannot create parent directory " + parent);
         }
-        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(zipPath))) {
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipPath))) {
             out.setLevel(level);
             for (File root : files) {
                 String baseName = root.getName();
-                addTreeToZip(root, baseName, out, new java.util.HashSet<>());
+                addTreeToZip(root, baseName, out, new HashSet<>());
             }
         }
     }
 
-    private void addTreeToZip(File file, String entryName, java.util.zip.ZipOutputStream out,
-                              java.util.Set<String> seen) throws IOException {
+    private void addTreeToZip(File file, String entryName, ZipOutputStream out,
+                              Set<String> seen) throws IOException {
         if (!seen.add(entryName)) return;
         if (file.isDirectory()) {
             if (!entryName.endsWith("/")) entryName += "/";
-            out.putNextEntry(new java.util.zip.ZipEntry(entryName));
+            out.putNextEntry(new ZipEntry(entryName));
             out.closeEntry();
             File[] children = file.listFiles();
             if (children != null) {
@@ -256,7 +269,7 @@ public final class McpZipTools {
             }
             return;
         }
-        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
+        ZipEntry entry = new ZipEntry(entryName);
         entry.setTime(file.lastModified());
         out.putNextEntry(entry);
         try (InputStream in = new FileInputStream(file)) {
@@ -319,16 +332,16 @@ public final class McpZipTools {
      *  replacing) the given files. Used where zip4j cannot run (API<26). */
     private void rewriteZipAdding(File zipPath, List<File> filesToAdd, String baseDir) throws IOException {
         File temp = new File(zipPath.getParentFile(), zipPath.getName() + ".mcp.tmp");
-        java.util.Map<String, String> additions = new java.util.LinkedHashMap<>();
+        Map<String, String> additions = new LinkedHashMap<>();
         for (File f : filesToAdd) {
             String name = (baseDir == null || baseDir.isEmpty() ? ""
                     : baseDir.endsWith("/") ? baseDir : baseDir + "/") + f.getName();
             additions.put(name, f.getPath());
         }
-        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp));
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(temp));
              ZipFile existing = zip(zipPath, null)) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
-            java.util.Set<String> replaced = new java.util.HashSet<>();
+            out.setLevel(Deflater.BEST_SPEED);
+            Set<String> replaced = new HashSet<>();
             if (zipPath.exists()) {
                 for (FileHeader header : existing.getFileHeaders()) {
                     String name = header.getFileName();
@@ -341,7 +354,7 @@ public final class McpZipTools {
                     putStreamEntry(out, name, existing.getInputStream(header));
                 }
             }
-            for (java.util.Map.Entry<String, String> add : additions.entrySet()) {
+            for (Map.Entry<String, String> add : additions.entrySet()) {
                 if (!replaced.contains(add.getKey())) {
                     putFileEntry(out, add.getKey(), new File(add.getValue()));
                 }
@@ -355,9 +368,9 @@ public final class McpZipTools {
         }
     }
 
-    private static void putFileEntry(java.util.zip.ZipOutputStream out, String name, File file)
+    private static void putFileEntry(ZipOutputStream out, String name, File file)
             throws IOException {
-        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(name);
+        ZipEntry entry = new ZipEntry(name);
         entry.setTime(file.lastModified());
         out.putNextEntry(entry);
         try (InputStream in = new FileInputStream(file)) {
@@ -370,10 +383,10 @@ public final class McpZipTools {
         out.closeEntry();
     }
 
-    private static void putStreamEntry(java.util.zip.ZipOutputStream out, String name, InputStream in)
+    private static void putStreamEntry(ZipOutputStream out, String name, InputStream in)
             throws IOException {
         try {
-            out.putNextEntry(new java.util.zip.ZipEntry(name));
+            out.putNextEntry(new ZipEntry(name));
             byte[] buffer = new byte[16384];
             int read;
             while ((read = in.read(buffer)) != -1) {
@@ -395,7 +408,7 @@ public final class McpZipTools {
             throw new McpJson.McpToolException("Provide content (text) or base64");
         }
         byte[] bytes = base64 != null
-                ? android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                ? Base64.decode(base64, Base64.DEFAULT)
                 : text.getBytes(StandardCharsets.UTF_8);
         int level = Math.max(0, Math.min(9, McpJson.intVal(args, "level", 5)));
         char[] password = passwordOf(args);
@@ -410,7 +423,7 @@ public final class McpZipTools {
                 try (FileOutputStream fos = new FileOutputStream(stage)) {
                     fos.write(bytes);
                 }
-                java.util.Map<String, File> single = new java.util.LinkedHashMap<>();
+                Map<String, File> single = new LinkedHashMap<>();
                 single.put(entry, stage);
                 rewriteZipAddFiles(zipPath, single);
                 ZipFile zf = zip(zipPath, null);
@@ -431,7 +444,7 @@ public final class McpZipTools {
             ZipFile zf = zip(zipPath, password);
             // zip4j streams files, not bytes, so stage the payload in a temp file.
             temp = File.createTempFile("mcp_entry_", ".tmp", ctx.context.getCacheDir());
-            java.nio.file.Files.write(temp.toPath(), bytes);
+            Files.write(temp.toPath(), bytes);
             ZipParameters params = baseParams(level, password != null);
             params.setFileNameInZip(entry);
             zf.addFile(temp, params);
@@ -450,13 +463,13 @@ public final class McpZipTools {
 
     /** Rewrites the archive copying every existing entry and adding/replacing
      *  the entries in {@code additions} (entry name -> file). */
-    private static void rewriteZipAddFiles(File zipPath, java.util.Map<String, File> additions)
+    private static void rewriteZipAddFiles(File zipPath, Map<String, File> additions)
             throws IOException {
         File temp = new File(zipPath.getParentFile(), zipPath.getName() + ".mcp.tmp");
-        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(temp));
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(temp));
              ZipFile existing = zip(zipPath, null)) {
-            out.setLevel(java.util.zip.Deflater.BEST_SPEED);
-            java.util.Set<String> replaced = new java.util.HashSet<>();
+            out.setLevel(Deflater.BEST_SPEED);
+            Set<String> replaced = new HashSet<>();
             if (zipPath.exists()) {
                 for (FileHeader header : existing.getFileHeaders()) {
                     String name = header.getFileName();
@@ -469,7 +482,7 @@ public final class McpZipTools {
                     putStreamEntry(out, name, existing.getInputStream(header));
                 }
             }
-            for (java.util.Map.Entry<String, File> add : additions.entrySet()) {
+            for (Map.Entry<String, File> add : additions.entrySet()) {
                 if (!replaced.contains(add.getKey())) {
                     putFileEntry(out, add.getKey(), add.getValue());
                 }
@@ -575,7 +588,7 @@ public final class McpZipTools {
     /** Streaming extract for devices where zip4j cannot extract (API<26).
      *  Supports unencrypted archives only. */
     private static int streamExtract(File zipPath, File dest, JsonArray entries) throws McpJson.McpToolException {
-        java.util.Set<String> wanted = new java.util.HashSet<>();
+        Set<String> wanted = new HashSet<>();
         for (JsonElement el : entries) {
             String name = el.getAsString();
             wanted.add(name);
@@ -585,9 +598,9 @@ public final class McpZipTools {
             throw new McpJson.McpToolException("Cannot create destination directory " + dest);
         }
         int count = 0;
-        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new FileInputStream(zipPath))) {
+        try (ZipInputStream in = new ZipInputStream(new FileInputStream(zipPath))) {
             byte[] buffer = new byte[16384];
-            java.util.zip.ZipEntry entry;
+            ZipEntry entry;
             while ((entry = in.getNextEntry()) != null) {
                 String name = entry.getName();
                 if (wanted.size() > 0 && !wanted.contains(name)) continue;

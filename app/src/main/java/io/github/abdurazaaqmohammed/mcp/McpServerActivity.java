@@ -12,8 +12,6 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -21,7 +19,6 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -98,9 +95,10 @@ public class McpServerActivity extends BaseActivity {
         apply.setOnClickListener(v -> {
             applySettings();
             if (McpServerService.isRunning()) {
-                // Restart so the new port/home/token/policy take effect.
-                stopService(new Intent(this, McpServerService.class));
-                startService(new Intent(this, McpServerService.class));
+                // Restart in place so the new port/home/token/policy take effect.
+                Intent restart = new Intent(this, McpServerService.class);
+                restart.putExtra(McpServerService.EXTRA_RESTART, true);
+                ContextCompat.startForegroundService(this, restart);
             }
             Extensions.showMessage(this, getString(R.string.mcp_settings_applied));
             refreshStatus();

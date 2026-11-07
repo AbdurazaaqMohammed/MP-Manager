@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -44,7 +45,8 @@ import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.features.files.FileOpener;
+import io.github.abdurazaaqmohammed.boot.BootImageEngine;
+import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.features.system.SystemImageEngine;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
@@ -61,7 +63,7 @@ public final class PartitionDumperDialog {
     private PartitionDumperDialog() {
     }
 
-    public static void show(Activity activity) {
+    public static void show(AppCompatActivity activity) {
         if (activity == null || activity.isFinishing()) return;
 
         ProgressManager pm = new ProgressManager(activity, false).show();
@@ -89,7 +91,7 @@ public final class PartitionDumperDialog {
         }).start();
     }
 
-    private static void displayMainDialog(Activity activity, List<PartitionItem> allPartitions,
+    private static void displayMainDialog(AppCompatActivity activity, List<PartitionItem> allPartitions,
                                           String activeSlot, List<String> slotDiffs) {
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         LinearLayout root = new LinearLayout(activity);
@@ -216,13 +218,13 @@ public final class PartitionDumperDialog {
             final TextView badgeSlot;
             final MaterialButton btnDump;
 
-            PartitionViewHolder(@NonNull View itemView) {
+            PartitionViewHolder(@NonNull View itemView, ImageView icon, TextView title, TextView subtitle, TextView badgeSlot, MaterialButton btnDump) {
                 super(itemView);
-                icon = itemView.findViewById(R.id.item_icon);
-                title = itemView.findViewById(R.id.item_title);
-                subtitle = itemView.findViewById(R.id.item_subtitle);
-                badgeSlot = itemView.findViewById(R.id.item_badge);
-                btnDump = itemView.findViewById(R.id.item_action_btn);
+                this.icon = icon;
+                this.title = title;
+                this.subtitle = subtitle;
+                this.badgeSlot = badgeSlot;
+                this.btnDump = btnDump;
             }
         }
 
@@ -241,7 +243,6 @@ public final class PartitionDumperDialog {
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
                 ImageView iv = new ImageView(parent.getContext());
-                iv.setId(R.id.item_icon);
                 int iconSize = Extensions.dp2px(parent.getContext(), 36);
                 LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
                 iconParams.setMarginEnd(Extensions.dp2px(parent.getContext(), 10));
@@ -260,13 +261,11 @@ public final class PartitionDumperDialog {
                 titleLine.setGravity(Gravity.CENTER_VERTICAL);
 
                 TextView tvTitle = new TextView(parent.getContext());
-                tvTitle.setId(R.id.item_title);
                 tvTitle.setTextSize(14f);
                 tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
                 titleLine.addView(tvTitle);
 
                 TextView tvBadge = new TextView(parent.getContext());
-                tvBadge.setId(R.id.item_badge);
                 tvBadge.setTextSize(10f);
                 tvBadge.setTextColor(0xFF2E7D32);
                 tvBadge.setPadding(Extensions.dp2px(parent.getContext(), 6), 0, 0, 0);
@@ -274,7 +273,6 @@ public final class PartitionDumperDialog {
                 col.addView(titleLine);
 
                 TextView tvSub = new TextView(parent.getContext());
-                tvSub.setId(R.id.item_subtitle);
                 tvSub.setTextSize(12f);
                 tvSub.setTextColor(0xFF757575);
                 col.addView(tvSub);
@@ -282,7 +280,6 @@ public final class PartitionDumperDialog {
 
                 MaterialButton action = new MaterialButton(parent.getContext(), null,
                         com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                action.setId(R.id.item_action_btn);
                 action.setText(isAr ? "إجراءات" : "Actions");
                 action.setTextSize(11f);
                 action.setInsetTop(0);
@@ -293,7 +290,7 @@ public final class PartitionDumperDialog {
                 action.setPadding(bPad, bPad, bPad, bPad);
                 row.addView(action);
 
-                return new PartitionViewHolder(row);
+                return new PartitionViewHolder(row, iv, tvTitle, tvSub, tvBadge, action);
             }
 
             @Override
@@ -426,10 +423,10 @@ public final class PartitionDumperDialog {
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-        DialogUtil.dialogShow(dialogRef[0]);
+        DialogUtil.keepButtonsHorizontal(dialogRef[0]);
     }
 
-    private static void showDiffDetailsDialog(Activity activity, List<PartitionItem> allPartitions,
+    private static void showDiffDetailsDialog(AppCompatActivity activity, List<PartitionItem> allPartitions,
                                               List<String> slotDiffs, Runnable onFilterDifferences) {
         StringBuilder sb = new StringBuilder();
         int count = 0;
@@ -455,7 +452,7 @@ public final class PartitionDumperDialog {
         }
 
         AlertDialog ad = builder.show();
-        DialogUtil.dialogShow(ad);
+        DialogUtil.keepButtonsHorizontal(ad);
     }
 
     private static MaterialButton createHeaderTabButton(Context context, String text, boolean selected) {
@@ -502,7 +499,7 @@ public final class PartitionDumperDialog {
         return btn;
     }
 
-    public static void showPartitionActionDialog(Activity activity, PartitionItem item, AlertDialog parentDialogToDismiss) {
+    public static void showPartitionActionDialog(AppCompatActivity activity, PartitionItem item, AlertDialog parentDialogToDismiss) {
         if (activity == null || activity.isFinishing() || item == null) return;
 
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
@@ -572,10 +569,10 @@ public final class PartitionDumperDialog {
                 .setView(sv)
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-        DialogUtil.dialogShow(dialogHolder[0]);
+        DialogUtil.keepButtonsHorizontal(dialogHolder[0]);
     }
 
-    private static MaterialCardView createActionCard(Activity activity, int iconRes, String title,
+    private static MaterialCardView createActionCard(AppCompatActivity activity, int iconRes, String title,
                                                      String description, int accentColor, View.OnClickListener onClick) {
         MaterialCardView card = new MaterialCardView(activity);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -627,7 +624,7 @@ public final class PartitionDumperDialog {
         return card;
     }
 
-    public static void showDumpConfirmDialog(Activity activity, PartitionItem item) {
+    public static void showDumpConfirmDialog(AppCompatActivity activity, PartitionItem item) {
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -709,10 +706,10 @@ public final class PartitionDumperDialog {
                     executePartitionDump(activity, item, outFile);
                 })
                 .show();
-        DialogUtil.dialogShow(dialog);
+        DialogUtil.keepButtonsHorizontal(dialog);
     }
 
-    private static void executePartitionDump(Activity activity, PartitionItem item, File outFile) {
+    private static void executePartitionDump(AppCompatActivity activity, PartitionItem item, File outFile) {
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.getString(R.string.partition_dumping_progress, item.rawName, "0 MB",
                 item.sizeBytes > 0 ? FileSize.getHumanReadableFileSize(item.sizeBytes) : "?", "0 MB/s"));
@@ -788,7 +785,7 @@ public final class PartitionDumperDialog {
         }).start();
     }
 
-    private static void showDumpSuccessDialog(Activity activity, File outFile) {
+    private static void showDumpSuccessDialog(AppCompatActivity activity, File outFile) {
         MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.title_success)
                 .setMessage(activity.getString(R.string.partition_dump_success, outFile.getAbsolutePath()))
@@ -796,21 +793,25 @@ public final class PartitionDumperDialog {
 
         if (activity instanceof MainActivity ma) {
             b.setPositiveButton(R.string.partition_open_img, (d, w) -> {
-                FileOpener.openFile(outFile, ma, true);
+                if (BootImageEngine.isBootImage(outFile)) {
+                    BootInspectManager.openBootImage(ma, outFile, true);
+                } else {
+                    ma.loadFolderInPane(outFile.getParentFile(), true);
+                }
             });
             b.setNeutralButton(R.string.partition_show_in_folder, (d, w) -> {
                 File parent = outFile.getParentFile();
                 if (parent != null) {
-                    ma.loadFolderInPane(parent.getAbsolutePath(), true);
+                    ma.loadFolderInPane(parent, true);
                 }
             });
         }
 
         AlertDialog ad = b.show();
-        DialogUtil.dialogShow(ad);
+        DialogUtil.keepButtonsHorizontal(ad);
     }
 
-    public static void showFlashDialog(Activity activity, PartitionItem item) {
+    public static void showFlashDialog(AppCompatActivity activity, PartitionItem item) {
         if (activity == null || activity.isFinishing() || item == null) return;
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
 
@@ -1277,13 +1278,13 @@ public final class PartitionDumperDialog {
                 })
                 .show();
 
-        DialogUtil.dialogShow(dialogRef[0]);
+        DialogUtil.keepButtonsHorizontal(dialogRef[0]);
 
         // Initial validation
         validate.run();
     }
 
-    private static void executePartitionFlash(Activity activity, PartitionItem item, File sourceFile, boolean isSparse) {
+    private static void executePartitionFlash(AppCompatActivity activity, PartitionItem item, File sourceFile, boolean isSparse) {
         ProgressManager pm = new ProgressManager(activity, false).show();
         pm.setText(activity.getString(R.string.partition_flashing_progress, item.rawName, "0 MB",
                 FileSize.getHumanReadableFileSize(sourceFile.length()), "0 MB/s"));
@@ -1388,7 +1389,7 @@ public final class PartitionDumperDialog {
         }).start();
     }
 
-    private static void showImgFilePicker(Activity activity, File initialDir, Consumer<File> onFileSelected) {
+    private static void showImgFilePicker(AppCompatActivity activity, File initialDir, Consumer<File> onFileSelected) {
         final File[] currentDir = {initialDir != null && initialDir.isDirectory() ? initialDir : Environment.getExternalStorageDirectory()};
         AlertDialog[] pickerDialog = new AlertDialog[1];
 
@@ -1442,7 +1443,7 @@ public final class PartitionDumperDialog {
 
                 if (pickerDialog[0] != null) pickerDialog[0].dismiss();
                 pickerDialog[0] = b.show();
-                DialogUtil.dialogShow(pickerDialog[0]);
+                DialogUtil.keepButtonsHorizontal(pickerDialog[0]);
             }
         };
 

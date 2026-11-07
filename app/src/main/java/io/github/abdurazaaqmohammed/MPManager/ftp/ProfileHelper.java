@@ -13,6 +13,7 @@ import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -160,9 +161,9 @@ public class ProfileHelper {
                 menu.setOnMenuItemClickListener(item -> {
                     if (pinnedNow) SidebarPins.remove(context, pin);
                     else SidebarPins.add(context, pin);
-                    android.widget.Toast.makeText(context, item.getTitle(), android.widget.Toast.LENGTH_SHORT).show();
-                    io.github.abdurazaaqmohammed.MPManager.MainActivity main =
-                            io.github.abdurazaaqmohammed.MPManager.MainActivity.current();
+                    Toast.makeText(context, item.getTitle(), Toast.LENGTH_SHORT).show();
+                    MainActivity main =
+                            MainActivity.current();
                     if (main != null && !main.isFinishing()) main.refreshSidebar(main.getSidebarSectionOrder());
                     return true;
                 });

@@ -13,6 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -28,7 +29,7 @@ public final class SslUnpinningLauncher {
     }
 
     /** APK info dialog "More" entry (signature matches the other launchers). */
-    public static void open(io.github.abdurazaaqmohammed.MPManager.MainActivity context, DialogUtil dialogUtil,
+    public static void open(MainActivity context, DialogUtil dialogUtil,
                             boolean pane1, File file, String fileName) {
         if (file == null || !file.isFile()) {
             Extensions.showMessage(context, R.string.ssl_unpin_no_apk);

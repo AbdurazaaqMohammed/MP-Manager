@@ -1,7 +1,10 @@
 package io.github.abdurazaaqmohammed.mcp;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -46,8 +49,8 @@ public class McpApkSessions {
             throw new McpJson.McpToolException("Cannot create workspace dir " + workDir);
         }
         File workApk = new File(workDir, "apk.apk");
-        try (java.io.InputStream in = new java.io.FileInputStream(source);
-             java.io.FileOutputStream out = new java.io.FileOutputStream(workApk)) {
+        try (InputStream in = new FileInputStream(source);
+             FileOutputStream out = new FileOutputStream(workApk)) {
             byte[] buffer = new byte[16384];
             int read;
             while ((read = in.read(buffer)) != -1) {

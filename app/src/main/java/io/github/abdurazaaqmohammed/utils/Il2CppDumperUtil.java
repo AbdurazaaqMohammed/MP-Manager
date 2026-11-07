@@ -2,7 +2,6 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.text.TextUtils;
 import android.util.Xml;
 
@@ -14,6 +13,7 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
 import com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
@@ -460,7 +460,7 @@ public final class Il2CppDumperUtil {
         ImmutableMethodReference originalRef = originalName == null ? null :
                 new ImmutableMethodReference(classType, originalName,
                         Collections.emptyList(), "V");
-        List<com.android.tools.smali.dexlib2.iface.instruction.Instruction> instructions = new ArrayList<>();
+        List<Instruction> instructions = new ArrayList<>();
         instructions.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 0,
                 new ImmutableStringReference(LIB_NAME)));
         instructions.add(new ImmutableInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0, loadLibrary));

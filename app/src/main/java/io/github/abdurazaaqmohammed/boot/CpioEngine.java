@@ -1,10 +1,14 @@
 package io.github.abdurazaaqmohammed.boot;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +29,7 @@ public class CpioEngine {
     }
 
     public static List<RamdiskManifest.Entry> extract(byte[] cpioData, File outDir, ProgressCallback cb) throws IOException {
-        return extractStream(new java.io.ByteArrayInputStream(cpioData), cpioData.length, outDir, cb);
+        return extractStream(new ByteArrayInputStream(cpioData), cpioData.length, outDir, cb);
     }
 
     public static List<RamdiskManifest.Entry> extractFile(File cpioFile, File outDir, ProgressCallback cb) throws IOException {
@@ -34,7 +38,7 @@ public class CpioEngine {
         }
     }
 
-    public static List<RamdiskManifest.Entry> extractStream(java.io.InputStream in, long totalLen, File outDir, ProgressCallback cb) throws IOException {
+    public static List<RamdiskManifest.Entry> extractStream(InputStream in, long totalLen, File outDir, ProgressCallback cb) throws IOException {
         if (!outDir.exists()) outDir.mkdirs();
 
         List<RamdiskManifest.Entry> manifestEntries = new ArrayList<>();
@@ -117,7 +121,7 @@ public class CpioEngine {
                 if (parent != null && !parent.exists()) parent.mkdirs();
 
                 try (FileOutputStream fos = new FileOutputStream(target);
-                     java.io.BufferedOutputStream bos = new java.io.BufferedOutputStream(fos, 65536)) {
+                     BufferedOutputStream bos = new BufferedOutputStream(fos, 65536)) {
                     long remaining = filesize;
                     while (remaining > 0) {
                         int toRead = (int) Math.min(buf.length, remaining);
@@ -157,13 +161,13 @@ public class CpioEngine {
 
     public static void packFolderToFile(File rootDir, File outCpioFile, List<RamdiskManifest.Entry> originalManifest) throws IOException {
         try (FileOutputStream fos = new FileOutputStream(outCpioFile);
-             java.io.BufferedOutputStream bos = new java.io.BufferedOutputStream(fos, 65536)) {
+             BufferedOutputStream bos = new BufferedOutputStream(fos, 65536)) {
             packFolderToStream(rootDir, bos, originalManifest);
             bos.flush();
         }
     }
 
-    public static void packFolderToStream(File rootDir, java.io.OutputStream out, List<RamdiskManifest.Entry> originalManifest) throws IOException {
+    public static void packFolderToStream(File rootDir, OutputStream out, List<RamdiskManifest.Entry> originalManifest) throws IOException {
         Map<String, RamdiskManifest.Entry> manifestMap = new HashMap<>();
         if (originalManifest != null) {
             for (RamdiskManifest.Entry e : originalManifest) {
@@ -298,7 +302,7 @@ public class CpioEngine {
         }
     }
 
-    private static void writeEntry(java.io.OutputStream out, int ino, int mode, int uid, int gid, int nlink, int mtime,
+    private static void writeEntry(OutputStream out, int ino, int mode, int uid, int gid, int nlink, int mtime,
                                    long size, String name, File file, byte[] symlinkData) throws IOException {
         byte[] nameBytes = (name + "\0").getBytes(StandardCharsets.UTF_8);
         int namesize = nameBytes.length;
@@ -349,7 +353,7 @@ public class CpioEngine {
         }
     }
 
-    private static void writeTrailer(java.io.OutputStream out, int ino) throws IOException {
+    private static void writeTrailer(OutputStream out, int ino) throws IOException {
         writeEntry(out, ino, 0, 0, 0, 1, 0, 0, "TRAILER!!!", null, null);
     }
 
@@ -380,7 +384,7 @@ public class CpioEngine {
         }
     }
 
-    private static int readFully(java.io.InputStream in, byte[] b, int off, int len) throws IOException {
+    private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {
         int total = 0;
         while (total < len) {
             int r = in.read(b, off + total, len - total);
@@ -390,7 +394,7 @@ public class CpioEngine {
         return total;
     }
 
-    private static void skipBytes(java.io.InputStream in, long count) throws IOException {
+    private static void skipBytes(InputStream in, long count) throws IOException {
         long rem = count;
         while (rem > 0) {
             long s = in.skip(rem);

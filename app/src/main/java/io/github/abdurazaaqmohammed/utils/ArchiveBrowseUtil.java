@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.zip.CRC32;
+import java.util.zip.InflaterInputStream;
 
 /**
  * Format-generic read access to every archive type the panes can browse.
@@ -451,7 +452,7 @@ public final class ArchiveBrowseUtil {
                 boolean isCompressed = compressionStr != null &&
                         !"0".equals(compressionStr.trim()) &&
                         !"none".equalsIgnoreCase(compressionStr.trim());
-                return isCompressed ? new java.util.zip.InflaterInputStream(raw) : raw;
+                return isCompressed ? new InflaterInputStream(raw) : raw;
             } catch (IOException e) {
                 closeQuietly(raw);
                 throw e;

@@ -1,11 +1,8 @@
 package io.github.abdurazaaqmohammed.features.editor;
 
-import android.graphics.Color;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;

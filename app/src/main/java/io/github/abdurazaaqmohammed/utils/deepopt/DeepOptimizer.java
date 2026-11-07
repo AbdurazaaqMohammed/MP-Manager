@@ -13,6 +13,7 @@ import com.reandroid.arsc.chunk.xml.ResXmlElement;
 
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -400,7 +401,7 @@ public class DeepOptimizer {
             try {
                 byte[] bytes = readAll(source.openStream());
                 if (!isBinaryXml(bytes)) continue; // plain-text XML (res/raw) holds no compiled refs
-                ResXmlDocument doc = AndroidManifestBlock.load(new java.io.ByteArrayInputStream(bytes));
+                ResXmlDocument doc = AndroidManifestBlock.load(new ByteArrayInputStream(bytes));
                 for (Iterator<ResXmlElement> it = doc.getElements(); it.hasNext(); ) {
                     ResXmlElement element = it.next();
                     walkXml(element, componentClasses, resourceRoots, nameRefKeys,

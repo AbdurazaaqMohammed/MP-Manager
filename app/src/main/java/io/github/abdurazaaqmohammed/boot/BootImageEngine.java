@@ -2,13 +2,16 @@ package io.github.abdurazaaqmohammed.boot;
 
 import org.json.JSONObject;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -312,7 +315,7 @@ public class BootImageEngine {
         if (parentOut != null) parentOut.mkdirs();
 
         try (FileOutputStream fos = new FileOutputStream(outputImageFile);
-             java.io.BufferedOutputStream bos = new java.io.BufferedOutputStream(fos, 65536)) {
+             BufferedOutputStream bos = new BufferedOutputStream(fos, 65536)) {
             bos.write(headerBuf);
 
             // Write Kernel if exists
@@ -395,7 +398,7 @@ public class BootImageEngine {
         return res;
     }
 
-    private static void writePadding(java.io.OutputStream out, long size, int pageSize) throws IOException {
+    private static void writePadding(OutputStream out, long size, int pageSize) throws IOException {
         long padded = align(size, pageSize);
         long padLen = padded - size;
         if (padLen > 0) {
@@ -477,7 +480,7 @@ public class BootImageEngine {
                         System.arraycopy(vbmeta, saltOffset, salt, 0, saltLen);
 
                         // Calculate SHA-256 of salt + body (first newImageSize bytes of imageFile)
-                        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+                        MessageDigest md = MessageDigest.getInstance("SHA-256");
                         md.update(salt);
 
                         try (FileInputStream fis = new FileInputStream(imageFile)) {

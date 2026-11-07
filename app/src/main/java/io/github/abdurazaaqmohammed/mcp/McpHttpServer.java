@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.mcp;
 
 import com.google.gson.JsonElement;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,7 +14,7 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -336,7 +337,7 @@ public class McpHttpServer {
     /** Reads one CRLF-terminated header line straight from the raw stream, so the
      *  body that follows is never swallowed by a read-ahead buffer. */
     private static String readRawLine(InputStream in) throws IOException {
-        java.io.ByteArrayOutputStream line = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream line = new ByteArrayOutputStream();
         int b;
         while ((b = in.read()) != -1) {
             if (b == '\n') break;
@@ -353,7 +354,7 @@ public class McpHttpServer {
         Request request = new Request();
         request.method = parts[0].toUpperCase(Locale.ROOT);
         request.path = parts[1];
-        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        Map<String, String> headers = new HashMap<>();
         while ((line = readRawLine(in)) != null && !line.isEmpty()) {
             int colon = line.indexOf(':');
             if (colon > 0) {

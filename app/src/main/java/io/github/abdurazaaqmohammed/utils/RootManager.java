@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -785,8 +786,8 @@ public class RootManager {
      * @return null when the path is gone, otherwise the failure detail
      */
     private String rmProbe(String rmKind, String target, int timeoutSeconds) {
-        java.util.concurrent.atomic.AtomicBoolean probeFailed =
-                new java.util.concurrent.atomic.AtomicBoolean(false);
+        AtomicBoolean probeFailed =
+                new AtomicBoolean(false);
         String arg = escapeShellArg(target);
         ShellResult result = executeFs(rmKind + " -- " + arg
                 + " ; [ ! -e " + arg + " ] || echo @@MPFAIL", timeoutSeconds,
@@ -1007,8 +1008,8 @@ public class RootManager {
         if (targets.isEmpty()) return targets;
 
         final int chunk = 32;
-        final java.util.concurrent.atomic.AtomicBoolean failed =
-                new java.util.concurrent.atomic.AtomicBoolean(false);
+        final AtomicBoolean failed =
+                new AtomicBoolean(false);
         ShellProgress.Listener relay = new ShellProgress.Listener() {
             @Override
             public void onProgress(int filesDone, long bytesDone) {
@@ -1074,8 +1075,8 @@ public class RootManager {
         if (targets.isEmpty()) return targets;
 
         final int[] done = {0};
-        final java.util.concurrent.atomic.AtomicBoolean failed =
-                new java.util.concurrent.atomic.AtomicBoolean(false);
+        final AtomicBoolean failed =
+                new AtomicBoolean(false);
         ShellProgress.Listener relay = new ShellProgress.Listener() {
             @Override
             public void onProgress(int delta, long bytesDone) {

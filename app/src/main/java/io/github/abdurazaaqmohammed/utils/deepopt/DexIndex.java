@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.utils.deepopt;
 
+import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.Annotation;
@@ -10,7 +11,6 @@ import com.android.tools.smali.dexlib2.iface.MethodImplementation;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.Reference;
-import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
@@ -164,7 +164,7 @@ public class DexIndex {
         boolean dynamicResource = false;
         boolean reflect = false;
         for (Method method : classDef.getMethods()) {
-            if ((method.getAccessFlags() & com.android.tools.smali.dexlib2.AccessFlags.NATIVE.getValue()) != 0)
+            if ((method.getAccessFlags() & AccessFlags.NATIVE.getValue()) != 0)
                 nativeDeclaringClasses.add(classDef.getType());
             MethodImplementation impl = method.getImplementation();
             if (impl == null) continue;

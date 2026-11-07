@@ -55,6 +55,7 @@ import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingAction;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingToggle;
@@ -70,6 +71,7 @@ import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SectionCollapse;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
+import io.github.abdurazaaqmohammed.utils.SettingsBackupHelper;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -155,25 +157,25 @@ public class SettingsController {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
         // Accent color (follow material color / presets / custom picker).
-        android.view.View accentRow = settingsDialog.findViewById(R.id.accentColorRow);
-        android.widget.TextView accentValue = settingsDialog.findViewById(R.id.accentColorValue);
-        android.view.View.OnClickListener accentClick = v ->
-                io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs.showAccentChooser(activity);
+        View accentRow = settingsDialog.findViewById(R.id.accentColorRow);
+        TextView accentValue = settingsDialog.findViewById(R.id.accentColorValue);
+        View.OnClickListener accentClick = v ->
+                ThemeDialogs.showAccentChooser(activity);
         if (accentRow != null) accentRow.setOnClickListener(accentClick);
         if (accentValue != null) {
             Runnable refreshAccent = () -> {
                 String mode = null;
                 try {
-                    mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
-                            .getString(io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.ACCENT_PREF_KEY, null);
+                    mode = PreferenceManager.getDefaultSharedPreferences(activity)
+                            .getString(ThemeRegistry.ACCENT_PREF_KEY, null);
                 } catch (Exception ignored) {
                 }
                 String text;
                 if (mode == null || mode.isEmpty()) {
                     text = activity.getString(R.string.accent_follow_material);
                 } else if ("custom".equals(mode)) {
-                    int color = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
-                            .getInt(io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, 0);
+                    int color = PreferenceManager.getDefaultSharedPreferences(activity)
+                            .getInt(ThemeRegistry.ACCENT_CUSTOM_PREF_KEY, 0);
                     text = activity.getString(R.string.accent_custom_value,
                             String.format("#%06X", color & 0xFFFFFF));
                 } else if (mode.startsWith("preset:")) {
@@ -1398,7 +1400,7 @@ public class SettingsController {
                 File dir = new File(files[0]);
                 File target = new File(dir, "MPManager_Settings_Backup.json");
                 try {
-                    io.github.abdurazaaqmohammed.utils.SettingsBackupHelper.exportToFile(activity, target);
+                    SettingsBackupHelper.exportToFile(activity, target);
                     Extensions.showMessage(activity, activity.getString(R.string.settings_exported) + ": " + target.getName());
                 } catch (Exception e) {
                     Extensions.showMessage(activity, activity.getString(R.string.export_settings_failed) + ": " + e.getMessage());
@@ -1420,7 +1422,7 @@ public class SettingsController {
             if (files != null && files.length > 0 && files[0] != null) {
                 File source = new File(files[0]);
                 try {
-                    io.github.abdurazaaqmohammed.utils.SettingsBackupHelper.importFromFile(activity, source);
+                    SettingsBackupHelper.importFromFile(activity, source);
                     Extensions.showMessage(activity, activity.getString(R.string.settings_imported));
                     refreshFileLists();
                     refreshSidebar();

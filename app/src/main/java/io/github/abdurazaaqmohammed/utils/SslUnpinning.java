@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
@@ -22,6 +21,7 @@ import com.reandroid.apk.ApkModule;
 import com.reandroid.archive.ByteInputSource;
 import com.reandroid.archive.InputSource;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import io.github.abdurazaaqmohammed.utils.deepopt.DexIndex;
 import java.io.IOException;
@@ -266,7 +266,7 @@ public final class SslUnpinning {
 
     private static byte[] readAll(InputStream in) throws IOException {
         try {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) != -1) {

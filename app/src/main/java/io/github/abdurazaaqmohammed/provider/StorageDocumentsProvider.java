@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -266,7 +267,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         }
         boolean elevated = AccessManager.needsShellAccess(context, file.getAbsolutePath());
         try {
-            AccessManager.deleteTree(context, java.util.Collections.singletonList(documentId),
+            AccessManager.deleteTree(context, Collections.singletonList(documentId),
                     elevated, null);
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to delete " + documentId + ": " + e.getMessage());

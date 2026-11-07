@@ -4,18 +4,20 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.StickerUtil;
 
@@ -53,12 +55,12 @@ public class StickerPreviewDialog {
 
         rootLayout.addView(webView);
 
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.sticker_preview))
                 .setView(rootLayout)
                 .setPositiveButton(android.R.string.ok, null)
                 .setNeutralButton(R.string.open_as_archive, (d, which) -> {
-                    if (activity instanceof io.github.abdurazaaqmohammed.MPManager.MainActivity main) {
+                    if (activity instanceof MainActivity main) {
                         main.loadZipFolderInPane(stickerFile, "", main.lastPaneSelected == 1, true);
                     }
                 })
@@ -77,7 +79,7 @@ public class StickerPreviewDialog {
             String json = StickerUtil.extractLottieJson(stickerFile);
             activity.runOnUiThread(() -> {
                 if (json == null || dialog.isShowing() == false) return;
-                progressBar.setVisibility(android.view.View.GONE);
+                progressBar.setVisibility(View.GONE);
 
                 String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
                         + "<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>"

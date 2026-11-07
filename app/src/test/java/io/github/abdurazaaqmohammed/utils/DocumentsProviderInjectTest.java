@@ -20,9 +20,13 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -47,7 +51,7 @@ public class DocumentsProviderInjectTest {
         File source = new File("src/main/res/raw/android_28.apk");
         assumeTrue("android_28.apk fixture is missing", source.isFile());
         File apk = tmp.newFile("framework.apk");
-        try (InputStream in = new java.io.FileInputStream(source);
+        try (InputStream in = new FileInputStream(source);
              OutputStream out = new FileOutputStream(apk)) {
             byte[] buffer = new byte[16384];
             int n;
@@ -124,12 +128,12 @@ public class DocumentsProviderInjectTest {
         File repacked = new File(tmp.getRoot(), "repacked.apk");
         try (ZipFile source = new ZipFile(apk);
              ZipOutputStream out = new ZipOutputStream(new FileOutputStream(repacked))) {
-            java.util.Enumeration<? extends ZipEntry> entries = source.entries();
+            Enumeration<? extends ZipEntry> entries = source.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 out.putNextEntry(new ZipEntry(entry.getName()));
                 if ("AndroidManifest.xml".equals(entry.getName())) {
-                    java.nio.file.Files.copy(first.toPath(), out);
+                    Files.copy(first.toPath(), out);
                 } else {
                     try (InputStream in = source.getInputStream(entry)) {
                         byte[] buffer = new byte[16384];
@@ -183,7 +187,7 @@ public class DocumentsProviderInjectTest {
         File dex;
         try {
             dex = DocumentsProviderInjector.buildProviderDex(apk, workDir);
-        } catch (java.io.IOException e) {
+        } catch (IOException e) {
             // An APK built before the provider class existed: nothing to lift.
             assumeTrue("APK predates the provider class: " + e.getMessage(), false);
             return;
