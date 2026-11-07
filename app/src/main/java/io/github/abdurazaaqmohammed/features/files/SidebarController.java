@@ -259,6 +259,12 @@ public class SidebarController {
             return false;
         });
         organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
+        View.OnClickListener onClickListener = v -> {
+            activity.showSettingsDialog();
+            activity.closeSidebarDrawer();
+        };
+        // Fixed Settings entry at the very bottom of the drawer (footer row).
+        activity.findViewById(R.id.sidebarSettingsFooter).setOnClickListener(onClickListener);
         registerStorageRefreshReceiver();
     }
 
