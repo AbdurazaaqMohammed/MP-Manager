@@ -2068,6 +2068,7 @@
     <string name="partition_deselect_all">إلغاء التحديد</string>
     <string name="partition_copy_details">نسخ التفاصيل</string>
     <string name="partition_refresh">تحديث</string>
+    <string name="all">الكل</string>
     <string name="partition_search_hint">ابحث في الأقسام (ريكفري، بوت، فيندور، سيستم…)…</string>
     <string name="partition_slot_a">السلوت A</string>
     <string name="partition_slot_b">السلوت B</string>

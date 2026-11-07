@@ -2307,6 +2307,7 @@ Patched code:</string>
     <string name="partition_deselect_all">Deselect All</string>
     <string name="partition_copy_details">Copy Details</string>
     <string name="partition_refresh">Refresh</string>
+    <string name="all">All</string>
     <string name="partition_search_hint">Search partitions (recovery, boot, vendor, system…)…</string>
     <string name="partition_slot_a">Slot A</string>
     <string name="partition_slot_b">Slot B</string>
