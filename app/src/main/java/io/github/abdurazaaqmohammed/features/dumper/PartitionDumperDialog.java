@@ -210,10 +210,20 @@ public final class PartitionDumperDialog {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Top Toolbar
+        int statusBarHeight = 0;
+        int resId = activity.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resId > 0) {
+            statusBarHeight = activity.getResources().getDimensionPixelSize(resId);
+        }
+        if (statusBarHeight <= 0) {
+            statusBarHeight = Extensions.dp2px(activity, 32);
+        }
+        int topBarPaddingTop = statusBarHeight + Extensions.dp2px(activity, 10);
+
         LinearLayout topBar = new LinearLayout(activity);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(Extensions.dp2px(activity, 16), Extensions.dp2px(activity, 16),
+        topBar.setPadding(Extensions.dp2px(activity, 16), topBarPaddingTop,
                 Extensions.dp2px(activity, 16), Extensions.dp2px(activity, 10));
 
         ImageView btnClose = new ImageView(activity);
@@ -346,9 +356,89 @@ public final class PartitionDumperDialog {
             moreContainer.setOrientation(LinearLayout.VERTICAL);
             moreContainer.setVisibility(View.GONE);
 
+            // First row: Search Bar for More
+            LinearLayout searchCard = new LinearLayout(activity);
+            searchCard.setOrientation(LinearLayout.HORIZONTAL);
+            searchCard.setGravity(Gravity.CENTER_VERTICAL);
+            GradientDrawable searchBg = new GradientDrawable();
+            searchBg.setColor(0xFF1E2533);
+            searchBg.setCornerRadius(Extensions.dp2px(activity, 14));
+            searchBg.setStroke(Extensions.dp2px(activity, 1), 0xFF2D3748);
+            searchCard.setBackground(searchBg);
+            searchCard.setPadding(Extensions.dp2px(activity, 14), 0, Extensions.dp2px(activity, 12), 0);
+            LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(activity, 46));
+            searchLp.setMargins(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 10));
+            searchCard.setLayoutParams(searchLp);
+
+            TextView tvSearchIcon = new TextView(activity);
+            tvSearchIcon.setText("🔍");
+            tvSearchIcon.setTextSize(14f);
+            searchCard.addView(tvSearchIcon);
+
+            EditText etMoreSearch = new EditText(activity);
+            etMoreSearch.setHint(isAr ? "بحث في باقي الأقسام..." : "Search partitions...");
+            etMoreSearch.setHintTextColor(0xFF718096);
+            etMoreSearch.setTextColor(0xFFFFFFFF);
+            etMoreSearch.setTextSize(13.5f);
+            etMoreSearch.setBackground(null);
+            etMoreSearch.setSingleLine(true);
+            etMoreSearch.setPadding(Extensions.dp2px(activity, 10), 0, Extensions.dp2px(activity, 6), 0);
+            etMoreSearch.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            searchCard.addView(etMoreSearch);
+
+            TextView btnClearSearch = new TextView(activity);
+            btnClearSearch.setText("✕");
+            btnClearSearch.setTextColor(0xFFA0AEC0);
+            btnClearSearch.setTextSize(14f);
+            btnClearSearch.setPadding(Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6),
+                    Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6));
+            btnClearSearch.setVisibility(View.GONE);
+            btnClearSearch.setOnClickListener(v -> etMoreSearch.setText(""));
+            searchCard.addView(btnClearSearch);
+
+            moreContainer.addView(searchCard);
+
             for (GroupedPartition gp : moreGrouped) {
-                moreContainer.addView(createPartitionCard(activity, gp, activeSlot, isAr, dialog));
+                View card = createPartitionCard(activity, gp, activeSlot, isAr, dialog);
+                card.setTag(gp.baseName.toLowerCase(Locale.ROOT));
+                moreContainer.addView(card);
             }
+
+            TextView tvMoreEmpty = new TextView(activity);
+            tvMoreEmpty.setText(isAr ? "لا توجد أقسام مطابقة للبحث" : "No matching partitions found");
+            tvMoreEmpty.setTextColor(0xFF718096);
+            tvMoreEmpty.setTextSize(13f);
+            tvMoreEmpty.setGravity(Gravity.CENTER);
+            tvMoreEmpty.setPadding(0, Extensions.dp2px(activity, 18), 0, Extensions.dp2px(activity, 18));
+            tvMoreEmpty.setVisibility(View.GONE);
+            moreContainer.addView(tvMoreEmpty);
+
+            etMoreSearch.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    String q = (s != null) ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
+                    btnClearSearch.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
+                    int visibleCount = 0;
+                    for (int i = 0; i < moreContainer.getChildCount(); i++) {
+                        View child = moreContainer.getChildAt(i);
+                        Object tag = child.getTag();
+                        if (tag instanceof String name) {
+                            boolean match = q.isEmpty() || name.contains(q);
+                            child.setVisibility(match ? View.VISIBLE : View.GONE);
+                            if (match) visibleCount++;
+                        }
+                    }
+                    tvMoreEmpty.setVisibility(visibleCount == 0 ? View.VISIBLE : View.GONE);
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+
             content.addView(moreContainer);
 
             // Toggle Expand / Collapse
@@ -1179,29 +1269,11 @@ public final class PartitionDumperDialog {
     }
 
     private static void showDumpSuccessDialog(AppCompatActivity activity, File outFile) {
-        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.title_success)
                 .setMessage(activity.getString(R.string.partition_dump_success, outFile.getAbsolutePath()))
-                .setNegativeButton(android.R.string.ok, null);
-
-        if (activity instanceof MainActivity ma) {
-            b.setPositiveButton(R.string.partition_open_img, (d, w) -> {
-                if (BootImageEngine.isBootImage(outFile)) {
-                    BootInspectManager.openBootImage(ma, outFile, true);
-                } else {
-                    ma.loadFolderInPane(outFile.getParentFile(), true);
-                }
-            });
-            b.setNeutralButton(R.string.partition_show_in_folder, (d, w) -> {
-                File parent = outFile.getParentFile();
-                if (parent != null) {
-                    ma.loadFolderInPane(parent, true);
-                }
-            });
-        }
-
-        AlertDialog ad = b.show();
-        DialogUtil.keepButtonsHorizontal(ad);
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     public static void showFlashDialog(AppCompatActivity activity, PartitionItem item) {

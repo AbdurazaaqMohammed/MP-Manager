@@ -3,10 +3,13 @@ package io.github.abdurazaaqmohammed.tools;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -211,19 +214,35 @@ public class SetEditActivity extends BaseActivity {
             List<SettingEntry> propList = new ArrayList<>();
             queryProperties(propList);
             Collections.sort(propList, (a, b) -> a.key.compareToIgnoreCase(b.key));
-            final int pCount = propList.size();
             runOnUiThread(() -> {
                 propsLoaded = true;
                 isLoadingProps = false;
                 progressBar.setVisibility(View.GONE);
                 allEntries.addAll(propList);
+                Collections.sort(allEntries, (a, b) -> a.key.compareToIgnoreCase(b.key));
                 entriesByType.put(SettingType.PROP, propList);
-                tvCountProps.setText(getString(R.string.entries_count, pCount));
-                chipProps.setText("Props " + pCount);
-                chipAll.setText(getString(R.string.all) + " " + allEntries.size());
+                updateCounts();
                 applyFilter();
             });
         }).start();
+    }
+
+    private void updateCounts() {
+        int gCount = entriesByType.containsKey(SettingType.GLOBAL) ? entriesByType.get(SettingType.GLOBAL).size() : 0;
+        int sCount = entriesByType.containsKey(SettingType.SECURE) ? entriesByType.get(SettingType.SECURE).size() : 0;
+        int sysCount = entriesByType.containsKey(SettingType.SYSTEM) ? entriesByType.get(SettingType.SYSTEM).size() : 0;
+        int pCount = entriesByType.containsKey(SettingType.PROP) ? entriesByType.get(SettingType.PROP).size() : 0;
+
+        tvCountGlobal.setText(getString(R.string.entries_count, gCount));
+        tvCountSecure.setText(getString(R.string.entries_count, sCount));
+        tvCountSystem.setText(getString(R.string.entries_count, sysCount));
+        tvCountProps.setText(getString(R.string.entries_count, pCount));
+
+        chipAll.setText(getString(R.string.all) + " " + allEntries.size());
+        chipGlobal.setText("Global " + gCount);
+        chipSecure.setText("Secure " + sCount);
+        chipSystem.setText("System " + sysCount);
+        chipProps.setText(propsLoaded ? ("Props " + pCount) : "Props");
     }
 
     private void loadAllSettings() {
@@ -236,22 +255,9 @@ public class SetEditActivity extends BaseActivity {
             List<SettingEntry> sList = new ArrayList<>();
             List<SettingEntry> sysList = new ArrayList<>();
 
-            // Single fast root execution combining all 3 main tables
-            String cmd = "settings list global; echo '===SECURE==='; settings list secure; echo '===SYSTEM==='; settings list system";
-            String output = executeSu(cmd);
-
-            if (output != null && output.contains("===SECURE===") && output.contains("===SYSTEM===")) {
-                String[] parts = output.split("===SECURE===|===SYSTEM===");
-                if (parts.length >= 3) {
-                    parseSettingsOutput(SettingType.GLOBAL, parts[0], gList);
-                    parseSettingsOutput(SettingType.SECURE, parts[1], sList);
-                    parseSettingsOutput(SettingType.SYSTEM, parts[2], sysList);
-                }
-            } else {
-                querySettingsList(SettingType.GLOBAL, gList);
-                querySettingsList(SettingType.SECURE, sList);
-                querySettingsList(SettingType.SYSTEM, sysList);
-            }
+            querySettingsList(SettingType.GLOBAL, gList);
+            querySettingsList(SettingType.SECURE, sList);
+            querySettingsList(SettingType.SYSTEM, sysList);
 
             Collections.sort(gList, (a, b) -> a.key.compareToIgnoreCase(b.key));
             Collections.sort(sList, (a, b) -> a.key.compareToIgnoreCase(b.key));
@@ -262,10 +268,6 @@ public class SetEditActivity extends BaseActivity {
             loaded.addAll(sysList);
             Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
-            final int gCount = gList.size();
-            final int sCount = sList.size();
-            final int sysCount = sysList.size();
-
             runOnUiThread(() -> {
                 allEntries.clear();
                 allEntries.addAll(loaded);
@@ -273,39 +275,22 @@ public class SetEditActivity extends BaseActivity {
                 entriesByType.put(SettingType.SECURE, sList);
                 entriesByType.put(SettingType.SYSTEM, sysList);
 
-                tvCountGlobal.setText(getString(R.string.entries_count, gCount));
-                tvCountSecure.setText(getString(R.string.entries_count, sCount));
-                tvCountSystem.setText(getString(R.string.entries_count, sysCount));
-                tvCountProps.setText(getString(R.string.entries_count, 0));
-
-                chipAll.setText(getString(R.string.all) + " " + loaded.size());
-                chipGlobal.setText("Global " + gCount);
-                chipSecure.setText("Secure " + sCount);
-                chipSystem.setText("System " + sysCount);
-                chipProps.setText("Props");
-
+                updateCounts();
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
             });
         }).start();
     }
 
-    private static String executeSu(String cmd) {
+    public static String executeSu(String cmd) {
         try {
             Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+            p.getOutputStream().close();
             String output = readStream(p.getInputStream());
             p.waitFor();
-            if (output != null && !output.trim().isEmpty()) {
-                return output;
-            }
-        } catch (Exception ignored) {}
-        try {
-            Process p = Runtime.getRuntime().exec(cmd.split(" "));
-            String output = readStream(p.getInputStream());
-            p.waitFor();
-            return output;
+            return output != null ? output : "";
         } catch (Exception ignored) {
-            return null;
+            return "";
         }
     }
 
@@ -392,48 +377,83 @@ public class SetEditActivity extends BaseActivity {
 
     private void showEditDialog(SettingEntry entry) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
-        builder.setTitle(entry.type.displayName + ": " + entry.key);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (18 * getResources().getDisplayMetrics().density);
-        layout.setPadding(pad, pad / 2, pad, pad / 2);
+        layout.setPadding(pad, pad, pad, pad / 2);
 
-        // Action row: Copy Key, Copy Value
+        // Header: Type Badge + Key
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(0, 0, 0, pad / 2);
+
+        TextView tvBadge = new TextView(this);
+        tvBadge.setText(entry.type.displayName);
+        tvBadge.setTextSize(11);
+        tvBadge.setTypeface(null, Typeface.BOLD);
+        tvBadge.setPadding((int)(8 * getResources().getDisplayMetrics().density), (int)(3 * getResources().getDisplayMetrics().density),
+                (int)(8 * getResources().getDisplayMetrics().density), (int)(3 * getResources().getDisplayMetrics().density));
+        SettingAdapter.setBadgeStyle(tvBadge, entry.type);
+        header.addView(tvBadge);
+
+        TextView tvKey = new TextView(this);
+        tvKey.setText(" " + entry.key);
+        tvKey.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        tvKey.setTextSize(14f);
+        tvKey.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF));
+        tvKey.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        tvKey.setPadding((int)(8 * getResources().getDisplayMetrics().density), 0, 0, 0);
+        header.addView(tvKey);
+
+        layout.addView(header);
+
+        // Quick action pills: Copy Key, Copy Value
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.setPadding(0, 0, 0, pad / 2);
+        actions.setPadding(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
 
-        int primaryColor = MaterialColors.getColor(this, android.R.attr.colorPrimary, 0xFF00796B);
+        int primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, 0xFF64B5F6);
 
-        TextView btnCopyKey = new TextView(this);
-        btnCopyKey.setText("📋 Copy Key");
-        btnCopyKey.setTextColor(primaryColor);
-        btnCopyKey.setPadding(0, 0, pad, 0);
-        btnCopyKey.setOnClickListener(v -> {
+        TextView btnCopyKey = createActionPill("📋 " + (isAr() ? "نسخ المفتاح" : "Copy Key"), primaryColor, () -> {
             copyToClipboard(entry.key);
-            Toast.makeText(this, "Key copied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show();
         });
-
-        TextView btnCopyVal = new TextView(this);
-        btnCopyVal.setText("📋 Copy Value");
-        btnCopyVal.setTextColor(primaryColor);
-        btnCopyVal.setOnClickListener(v -> {
+        TextView btnCopyVal = createActionPill("📋 " + (isAr() ? "نسخ القيمة" : "Copy Value"), primaryColor, () -> {
             copyToClipboard(entry.value);
-            Toast.makeText(this, "Value copied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show();
         });
 
         actions.addView(btnCopyKey);
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams((int)(8 * getResources().getDisplayMetrics().density), 1));
+        actions.addView(spacer);
         actions.addView(btnCopyVal);
         layout.addView(actions);
 
-        // Value Input
+        // Value Input inside a rounded bordered box
         EditText etValue = new EditText(this);
         etValue.setText(entry.value);
-        etValue.setSelection(entry.value.length());
+        if (entry.value != null && !entry.value.isEmpty()) {
+            etValue.setSelection(entry.value.length());
+        }
         etValue.setHint(R.string.setting_value);
-        etValue.setTypeface(android.graphics.Typeface.MONOSPACE);
+        etValue.setTypeface(Typeface.MONOSPACE);
         etValue.setTextSize(13);
+        etValue.setMinLines(3);
+        etValue.setMaxLines(8);
+        etValue.setVerticalScrollBarEnabled(true);
+        etValue.setGravity(Gravity.TOP | Gravity.START);
+
+        GradientDrawable inputBg = new GradientDrawable();
+        inputBg.setCornerRadius(10 * getResources().getDisplayMetrics().density);
+        inputBg.setColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFF222734));
+        inputBg.setStroke((int)(1 * getResources().getDisplayMetrics().density),
+                MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutlineVariant, 0x44888888));
+        etValue.setBackground(inputBg);
+        int inputPad = (int) (12 * getResources().getDisplayMetrics().density);
+        etValue.setPadding(inputPad, inputPad, inputPad, inputPad);
         layout.addView(etValue);
 
         builder.setView(layout);
@@ -454,6 +474,30 @@ public class SetEditActivity extends BaseActivity {
 
         builder.setNeutralButton(android.R.string.cancel, null);
         builder.show();
+    }
+
+    private TextView createActionPill(String text, int textColor, Runnable onClick) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(12);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setTextColor(textColor);
+
+        GradientDrawable gd = new GradientDrawable();
+        gd.setCornerRadius(8 * getResources().getDisplayMetrics().density);
+        gd.setColor(0x22888888);
+        gd.setStroke((int)(1 * getResources().getDisplayMetrics().density), 0x33888888);
+        tv.setBackground(gd);
+
+        int px = (int)(10 * getResources().getDisplayMetrics().density);
+        int py = (int)(5 * getResources().getDisplayMetrics().density);
+        tv.setPadding(px, py, px, py);
+        tv.setOnClickListener(v -> onClick.run());
+        return tv;
+    }
+
+    private boolean isAr() {
+        return "ar".equals(Locale.getDefault().getLanguage());
     }
 
     private void showAddDialog() {
@@ -478,14 +522,14 @@ public class SetEditActivity extends BaseActivity {
         // Key Input
         EditText etKey = new EditText(this);
         etKey.setHint(R.string.setting_key);
-        etKey.setTypeface(android.graphics.Typeface.MONOSPACE);
+        etKey.setTypeface(Typeface.MONOSPACE);
         etKey.setTextSize(14);
         layout.addView(etKey);
 
         // Value Input
         EditText etVal = new EditText(this);
         etVal.setHint(R.string.setting_value);
-        etVal.setTypeface(android.graphics.Typeface.MONOSPACE);
+        etVal.setTypeface(Typeface.MONOSPACE);
         etVal.setTextSize(13);
         layout.addView(etVal);
 
@@ -522,12 +566,26 @@ public class SetEditActivity extends BaseActivity {
                 }
                 executeSu(cmd);
 
+                // Verify real value from system
+                String verifyCmd = (entry.type == SettingType.PROP)
+                        ? ("getprop " + escape(entry.key))
+                        : ("settings get " + entry.type.alias + " " + escape(entry.key));
+                String verified = executeSu(verifyCmd);
+                final String finalVal = (verified != null && !verified.trim().isEmpty() && !verified.trim().equals("null"))
+                        ? verified.trim() : newValue;
+
                 runOnUiThread(() -> {
-                    entry.value = newValue;
+                    entry.value = finalVal;
+                    List<SettingEntry> typeList = entriesByType.computeIfAbsent(entry.type, k -> new ArrayList<>());
+                    if (!typeList.contains(entry)) {
+                        typeList.add(entry);
+                        Collections.sort(typeList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+                    }
                     if (!allEntries.contains(entry)) {
                         allEntries.add(entry);
                         Collections.sort(allEntries, (a, b) -> a.key.compareToIgnoreCase(b.key));
                     }
+                    updateCounts();
                     applyFilter();
                     Toast.makeText(this, R.string.setting_saved, Toast.LENGTH_SHORT).show();
                 });
@@ -550,7 +608,10 @@ public class SetEditActivity extends BaseActivity {
 
                 runOnUiThread(() -> {
                     allEntries.remove(entry);
+                    List<SettingEntry> typeList = entriesByType.get(entry.type);
+                    if (typeList != null) typeList.remove(entry);
                     displayedEntries.remove(entry);
+                    updateCounts();
                     applyFilter();
                     Toast.makeText(this, R.string.setting_deleted, Toast.LENGTH_SHORT).show();
                 });
@@ -598,9 +659,51 @@ public class SetEditActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull VH holder, int position) {
             SettingEntry item = items.get(position);
             holder.tvKey.setText(item.key);
-            holder.tvValue.setText(item.value.isEmpty() ? "(empty)" : item.value);
+            if (item.value.isEmpty()) {
+                holder.tvValue.setText("(empty)");
+                holder.tvValue.setTypeface(Typeface.MONOSPACE, Typeface.ITALIC);
+                holder.tvValue.setAlpha(0.5f);
+            } else {
+                holder.tvValue.setText(item.value);
+                holder.tvValue.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
+                holder.tvValue.setAlpha(1.0f);
+            }
             holder.tvBadge.setText(item.type.displayName);
+            setBadgeStyle(holder.tvBadge, item.type);
             holder.itemView.setOnClickListener(v -> listener.onClick(item));
+        }
+
+        static void setBadgeStyle(TextView tvBadge, SettingType type) {
+            GradientDrawable gd = new GradientDrawable();
+            float r = tvBadge.getContext().getResources().getDisplayMetrics().density * 6;
+            gd.setCornerRadius(r);
+            int bgColor;
+            int textColor;
+            switch (type) {
+                case GLOBAL -> {
+                    bgColor = 0x332196F3;
+                    textColor = 0xFF64B5F6;
+                }
+                case SECURE -> {
+                    bgColor = 0x33FF9800;
+                    textColor = 0xFFFFB74D;
+                }
+                case SYSTEM -> {
+                    bgColor = 0x334CAF50;
+                    textColor = 0xFF81C784;
+                }
+                case PROP -> {
+                    bgColor = 0x339C27B0;
+                    textColor = 0xFFCE93D8;
+                }
+                default -> {
+                    bgColor = 0x33888888;
+                    textColor = 0xFFD0D7DE;
+                }
+            }
+            gd.setColor(bgColor);
+            tvBadge.setBackground(gd);
+            tvBadge.setTextColor(textColor);
         }
 
         @Override

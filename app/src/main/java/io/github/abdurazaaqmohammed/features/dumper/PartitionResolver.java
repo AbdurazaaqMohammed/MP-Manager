@@ -147,7 +147,10 @@ public final class PartitionResolver {
                 long sectors = sec != null ? sec : 0;
                 long sizeBytes = sectors * 512L;
 
-                // Keep all partitions including zero-sized or dummy ones (categorized as other/more)
+                // Skip zero-sized partitions, APEX loop packages, and dummy placeholders
+                if (sectors <= 0 || sizeBytes <= 0 || isDummyOrEmptyPartition(rawName)) {
+                    continue;
+                }
 
                 // Prefer MAPPER & BYNAME over SYSFS raw block devices
                 if (itemMap.containsKey(rawName) && "SYSFS".equals(source)) {
@@ -377,7 +380,13 @@ public final class PartitionResolver {
     public static boolean isDummyOrEmptyPartition(String rawName) {
         if (rawName == null || rawName.isEmpty()) return true;
         String lower = rawName.toLowerCase(Locale.ROOT);
-        return lower.startsWith("align_to_")
+        return lower.startsWith("com.android.")
+                || lower.startsWith("com.google.android.")
+                || lower.startsWith("align_to_")
+                || lower.matches("^loop\\d+.*")
+                || lower.equals("by-uuid")
+                || lower.equals("userdata-verity")
+                || lower.endsWith("-verity")
                 || lower.matches("^bk\\d+.*")
                 || lower.equals("cdt")
                 || lower.equals("connsec")
