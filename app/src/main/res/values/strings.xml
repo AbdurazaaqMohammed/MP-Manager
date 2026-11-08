@@ -2480,4 +2480,21 @@ Strings are sent to the external service you configured.</string>
     <string name="drawable_bg_white">White</string>
     <string name="drawable_bg_black">Black</string>
     <string name="drawable_bg_theme">Theme</string>
+
+    <!-- Folder Diff & Compare -->
+    <string name="compare_folders">Compare Folders</string>
+    <string name="comparing_folders">Comparing folders…</string>
+    <string name="compare_folders_err">Both panes must show valid folders to compare</string>
+    <string name="compare_folders_result">Comparison complete: %1$d Added (Green), %2$d Modified (Yellow), %3$d Identical</string>
+
+    <!-- Process Memory DEX Dumper -->
+    <string name="dex_dumper">DEX Memory Dumper</string>
+    <string name="dex_dumper_subtitle">Dump live unpacked DEX files from running processes</string>
+    <string name="dex_dumper_select_app">Select a running process to dump DEX</string>
+    <string name="dex_dumper_dumping">Scanning process memory for DEX files…</string>
+    <string name="dex_dumper_success">Successfully dumped %1$d DEX files to:\n%2$s</string>
+    <string name="dex_dumper_no_dex">No valid DEX files found in the process memory</string>
+    <string name="dex_dumper_root_required">Root access is required to read process memory</string>
+    <string name="search_processes">Search process name or PID…</string>
+    <string name="dump_dex">Dump DEX</string>
 </resources>

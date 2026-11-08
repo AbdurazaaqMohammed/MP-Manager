@@ -508,6 +508,8 @@ public class ToolsHubActivity extends BaseActivity {
             io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(this);
         } else if ("setedit".equals(item.id())) {
             startActivity(new Intent(this, SetEditActivity.class));
+        } else if ("dex_dumper".equals(item.id())) {
+            io.github.abdurazaaqmohammed.features.dumper.DexMemoryDumperDialog.show(this);
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());
