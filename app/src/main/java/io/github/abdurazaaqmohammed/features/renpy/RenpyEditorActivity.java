@@ -38,7 +38,6 @@ import java.util.Map;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
  * Clean, fast editor activity for Ren'Py save files and persistent data.
@@ -365,7 +364,10 @@ public class RenpyEditorActivity extends BaseActivity {
             int padH = dp(16);
             int padV = dp(12);
             row.setPadding(padH, padV, padH, padV);
-            row.setBackgroundResource(Extensions.getSelectableItemBackgroundBorderless(parent.getContext()));
+            android.util.TypedValue outValue = new android.util.TypedValue();
+            if (parent.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)) {
+                row.setBackgroundResource(outValue.resourceId);
+            }
 
             LinearLayout col = new LinearLayout(parent.getContext());
             col.setOrientation(LinearLayout.VERTICAL);
