@@ -2428,13 +2428,4 @@
     <string name="compare_folders_result">اكتملت المقارنة: %1$d جديد (أخضر)، %2$d معدل (أصفر)، %3$d متطابق</string>
 
     <!-- Process Memory DEX Dumper -->
-    <string name="dex_dumper">مفرغ الديكس من الذاكرة</string>
-    <string name="dex_dumper_subtitle">تفريغ واستخراج ملفات DEX الحية المفكوكة من ذاكرة العمليات النشطة</string>
-    <string name="dex_dumper_select_app">اختر عملية نشطة لتفريغ ملفات DEX منها</string>
-    <string name="dex_dumper_dumping">جاري فحص ذاكرة العملية واستخراج ملفات الـ DEX…</string>
-    <string name="dex_dumper_success">تم تفريغ %1$d ملف DEX بنجاح في:\n%2$s</string>
-    <string name="dex_dumper_no_dex">لم يتم العثور على أي ملفات DEX صالحة في ذاكرة هذه العملية</string>
-    <string name="dex_dumper_root_required">يلزم توفر صلاحيات الروت لقراءة ذاكرة العمليات</string>
-    <string name="search_processes">ابحث عن اسم العملية أو الـ PID…</string>
-    <string name="dump_dex">تفريغ الـ DEX</string>
 </resources>
