@@ -2490,4 +2490,5 @@ Strings are sent to the external service you configured.</string>
 
     <!-- SQLite Database Viewer & Editor -->
     <string name="sqlite_viewer">SQLite Viewer</string>
+    <string name="renpy_save_editor">Ren\'Py Save Editor</string>
 </resources>

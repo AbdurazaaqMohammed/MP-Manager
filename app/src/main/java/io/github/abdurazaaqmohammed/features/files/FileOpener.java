@@ -173,6 +173,13 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName) {
+        if (fileName != null) {
+            String lower = fileName.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".save") || "persistent".equals(lower)) {
+                openRenpyEditor(file);
+                return;
+            }
+        }
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
                 if (StickerUtil.isLottieSticker(readable)) {
@@ -197,6 +204,13 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
+        if (fileName != null) {
+            String lower = fileName.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".save") || "persistent".equals(lower)) {
+                openRenpyEditor(file);
+                return;
+            }
+        }
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
                 if (StickerUtil.isLottieSticker(readable)) {
@@ -556,6 +570,15 @@ public class FileOpener {
             Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.class)
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
+            context.startActivity(intent);
+        });
+    }
+
+    private void openRenpyEditor(File file) {
+        if (file == null) return;
+        withReadableCopy(file, readable -> {
+            Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.renpy.RenpyEditorActivity.class)
+                    .putExtra(io.github.abdurazaaqmohammed.features.renpy.RenpyEditorActivity.EXTRA_FILE_PATH, readable.getAbsolutePath());
             context.startActivity(intent);
         });
     }

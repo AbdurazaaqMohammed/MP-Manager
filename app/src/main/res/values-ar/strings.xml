@@ -2430,4 +2430,5 @@
 
     <!-- SQLite Database Viewer & Editor -->
     <string name="sqlite_viewer">عارض قواعد بيانات SQLite</string>
+    <string name="renpy_save_editor">محرر سيف Ren\'Py</string>
 </resources>
