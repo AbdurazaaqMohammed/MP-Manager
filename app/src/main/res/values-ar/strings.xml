@@ -2434,4 +2434,6 @@
     <string name="renpy_unlock_gallery">فتح الجاليري / CGs</string>
     <string name="renpy_unlock_gallery_confirm">هل تريد فتح جميع صور الجاليري والنهايات في هذا الملف تلقائياً؟ سيتم إنشاء نسخة احتياطية (.bak) تلقائياً.</string>
     <string name="renpy_unlock_success">تم فتح الجاليري والصور بنجاح!</string>
+    <string name="renpy_edit_raw_json">تعديل كود JSON الخام (البيانات كاملة)</string>
+    <string name="renpy_json_saved">تم تطبيق بيانات JSON على ملف الحفظ بنجاح!</string>
 </resources>

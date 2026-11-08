@@ -107,8 +107,13 @@ public class RenpyEditorActivity extends BaseActivity {
         unlockItem.setIcon(R.drawable.lock_open_24px);
         unlockItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
+        // Raw JSON Edit Action: Edit raw JSON (full data) like saveeditonline
+        MenuItem jsonItem = toolbar.getMenu().add(0, R.id.renpy_menu_raw_json, 1, R.string.renpy_edit_raw_json);
+        jsonItem.setIcon(R.drawable.code_24px);
+        jsonItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
         // Save Action Button in Toolbar
-        MenuItem saveItem = toolbar.getMenu().add(0, R.id.renpy_menu_save, 1, R.string.save);
+        MenuItem saveItem = toolbar.getMenu().add(0, R.id.renpy_menu_save, 2, R.string.save);
         saveItem.setIcon(R.drawable.save_24px);
         saveItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
@@ -119,6 +124,9 @@ public class RenpyEditorActivity extends BaseActivity {
                 return true;
             } else if (id == R.id.renpy_menu_unlock_gallery) {
                 confirmUnlockGallery();
+                return true;
+            } else if (id == R.id.renpy_menu_raw_json) {
+                openRawJsonEditor();
                 return true;
             }
             return false;
@@ -392,6 +400,68 @@ public class RenpyEditorActivity extends BaseActivity {
                 .show();
     }
 
+    private void openRawJsonEditor() {
+        progressBar.setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            try {
+                String jsonContent = RenpySaveEngine.exportToJson(allVariables);
+                File jsonTmp = new File(getCacheDir(), targetFile.getName() + ".json");
+                try (FileOutputStream fos = new FileOutputStream(jsonTmp)) {
+                    fos.write(jsonContent.getBytes(StandardCharsets.UTF_8));
+                }
+
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Intent intent = new Intent(RenpyEditorActivity.this, io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity.class);
+                    intent.putExtra("filePath", jsonTmp.getAbsolutePath());
+                    startActivityForResult(intent, 2002);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(RenpyEditorActivity.this, "Export JSON failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 2002) {
+            File jsonTmp = new File(getCacheDir(), targetFile.getName() + ".json");
+            if (jsonTmp.exists()) {
+                progressBar.setVisibility(View.VISIBLE);
+                tvStatusCount.setText(isAr() ? "جارٍ تطبيق بيانات JSON وتحديث السيف..." : "Applying JSON modifications...");
+                new Thread(() -> {
+                    try {
+                        byte[] bytes = new byte[(int) jsonTmp.length()];
+                        try (FileInputStream fis = new FileInputStream(jsonTmp)) {
+                            fis.read(bytes);
+                        }
+                        String jsonStr = new String(bytes, StandardCharsets.UTF_8);
+                        Map<String, Object> mods = RenpySaveEngine.parseJsonModifications(jsonStr);
+                        File bak = RenpySaveEngine.saveWithBackup(RenpyEditorActivity.this, targetFile, mods);
+
+                        runOnUiThread(() -> {
+                            progressBar.setVisibility(View.GONE);
+                            loadData();
+                            String msg = isAr()
+                                    ? ("تم تطبيق بيانات JSON بنجاح! نسخة احتياطية: " + bak.getName())
+                                    : (getString(R.string.renpy_json_saved) + " Backup: " + bak.getName());
+                            Toast.makeText(RenpyEditorActivity.this, msg, Toast.LENGTH_LONG).show();
+                        });
+                    } catch (Exception e) {
+                        runOnUiThread(() -> {
+                            progressBar.setVisibility(View.GONE);
+                            Toast.makeText(RenpyEditorActivity.this, "Apply JSON failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                }).start();
+            }
+        }
+    }
+
     private class VariableAdapter extends RecyclerView.Adapter<VariableAdapter.ViewHolder> {
 
         @NonNull
@@ -403,7 +473,7 @@ public class RenpyEditorActivity extends BaseActivity {
             row.setLayoutParams(new RecyclerView.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             int padH = dp(16);
-            int padV = dp(12);
+            int padV = dp(11);
             row.setPadding(padH, padV, padH, padV);
             android.util.TypedValue outValue = new android.util.TypedValue();
             if (parent.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)) {
@@ -416,23 +486,30 @@ public class RenpyEditorActivity extends BaseActivity {
 
             TextView tvName = new TextView(parent.getContext());
             tvName.setId(R.id.renpy_var_name);
-            tvName.setTextSize(14.5f);
-            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            tvName.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF));
+            tvName.setTextSize(13.8f);
+            tvName.setTypeface(Typeface.MONOSPACE);
+            tvName.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurface, 0xFFE0E0E0));
             col.addView(tvName);
 
             TextView tvType = new TextView(parent.getContext());
             tvType.setId(R.id.renpy_var_type);
-            tvType.setTextSize(11.5f);
-            tvType.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888));
+            tvType.setTextSize(11f);
+            tvType.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF757575));
             col.addView(tvType);
 
             row.addView(col);
 
+            TextView tvChevron = new TextView(parent.getContext());
+            tvChevron.setText(">");
+            tvChevron.setTextSize(13f);
+            tvChevron.setTextColor(0xFF616161);
+            tvChevron.setPadding(dp(8), 0, dp(8), 0);
+            row.addView(tvChevron);
+
             TextView tvVal = new TextView(parent.getContext());
             tvVal.setId(R.id.renpy_var_value);
             tvVal.setTextSize(13.5f);
-            tvVal.setTypeface(Typeface.MONOSPACE);
+            tvVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             tvVal.setTextColor(0xFF4CAF50); // Bright Green
             tvVal.setGravity(Gravity.END);
             tvVal.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -448,7 +525,7 @@ public class RenpyEditorActivity extends BaseActivity {
             holder.tvType.setText(var.type);
             holder.tvValue.setText(var.getDisplayValue());
 
-            boolean isModified = modifiedMap.containsKey(var.rawKey);
+            boolean isModified = modifiedMap.containsKey(var.rawKey) || modifiedMap.containsKey(var.displayName);
             holder.tvValue.setTextColor(isModified ? 0xFFFF9800 : 0xFF4CAF50); // Orange if modified, Green if normal
 
             holder.itemView.setOnClickListener(v -> {
@@ -457,7 +534,7 @@ public class RenpyEditorActivity extends BaseActivity {
                     boolean current = (var.value instanceof Boolean) ? (Boolean) var.value : "true".equalsIgnoreCase(String.valueOf(var.value));
                     boolean next = !current;
                     var.value = next;
-                    modifiedMap.put(var.rawKey, next);
+                    modifiedMap.put(var.displayName, next);
                     notifyItemChanged(position);
                     applyFilter();
                     Toast.makeText(v.getContext(), var.displayName + " = " + next, Toast.LENGTH_SHORT).show();

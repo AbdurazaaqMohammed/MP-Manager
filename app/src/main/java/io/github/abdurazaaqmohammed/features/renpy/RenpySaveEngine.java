@@ -2,6 +2,8 @@ package io.github.abdurazaaqmohammed.features.renpy;
 
 import android.content.Context;
 
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,9 +17,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Stack;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import java.util.zip.ZipEntry;
@@ -26,8 +31,12 @@ import java.util.zip.ZipOutputStream;
 
 /**
  * 100% Pure Java Engine for Ren'Py save (.save) and persistent files.
- * Zero external python dependencies, zero process spawning, zero permission issues on Android.
- * Reads pickle protocol 2, patches variables in place, and unlocks galleries natively.
+ * Zero external Python dependencies, zero process spawning, zero permission issues on Android.
+ * Features:
+ * - Nested object tree traversal matching saveeditonline.com (e.g. "word > sPoint", "unsorted_pointlist > sayori").
+ * - Interactive raw JSON export & import.
+ * - In-place safe binary patching.
+ * - Automatic gallery & CG unlocker.
  */
 public final class RenpySaveEngine {
 
@@ -48,6 +57,11 @@ public final class RenpySaveEngine {
 
         public String getDisplayValue() {
             if (value == null) return "None";
+            if (value instanceof String) return "\"" + value + "\"";
+            if (value instanceof Double || value instanceof Float) {
+                double d = ((Number) value).doubleValue();
+                if (d == (long) d) return String.valueOf((long) d);
+            }
             return String.valueOf(value);
         }
     }
@@ -62,9 +76,6 @@ public final class RenpySaveEngine {
         }
     }
 
-    /**
-     * Checks if a file is a valid zip archive without throwing exceptions.
-     */
     public static boolean isZipFile(File file) {
         if (file == null || !file.exists() || file.length() < 22) return false;
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -76,9 +87,6 @@ public final class RenpySaveEngine {
         }
     }
 
-    /**
-     * Decompresses raw zlib-compressed data (RFC 1950) into uncompressed bytes.
-     */
     public static byte[] decompressZlib(byte[] input) throws Exception {
         Inflater inflater = new Inflater();
         try {
@@ -90,9 +98,7 @@ public final class RenpySaveEngine {
                 if (count > 0) {
                     baos.write(buf, 0, count);
                 } else {
-                    if (inflater.needsInput()) {
-                        break;
-                    }
+                    if (inflater.needsInput()) break;
                 }
             }
             return baos.toByteArray();
@@ -101,9 +107,6 @@ public final class RenpySaveEngine {
         }
     }
 
-    /**
-     * Compresses bytes using zlib compression (best compression, level 9).
-     */
     public static byte[] compressZlib(byte[] input) throws Exception {
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
         try {
@@ -121,9 +124,6 @@ public final class RenpySaveEngine {
         }
     }
 
-    /**
-     * Reads a file completely into a byte array.
-     */
     private static byte[] readFileBytes(File file) throws Exception {
         long len = file.length();
         if (len > 150 * 1024 * 1024) throw new IllegalStateException("File too large (" + len + " bytes)");
@@ -138,16 +138,11 @@ public final class RenpySaveEngine {
         return bytes;
     }
 
-    /**
-     * Reads the raw pickle bytes from either a .save file (from the 'log' entry) or a persistent file (zlib uncompressed).
-     */
     public static byte[] extractPickleBytes(File targetFile, boolean isSave) throws Exception {
         if (isSave) {
             try (ZipFile zf = new ZipFile(targetFile)) {
                 ZipEntry logEntry = zf.getEntry("log");
-                if (logEntry == null) {
-                    throw new IllegalStateException("Not a valid Ren'Py save: 'log' entry missing");
-                }
+                if (logEntry == null) throw new IllegalStateException("Not a valid Ren'Py save: 'log' entry missing");
                 try (InputStream is = zf.getInputStream(logEntry);
                      ByteArrayOutputStream baos = new ByteArrayOutputStream((int) logEntry.getSize())) {
                     byte[] buf = new byte[8192];
@@ -165,123 +160,306 @@ public final class RenpySaveEngine {
     }
 
     /**
-     * Parses variables from the pickle byte stream using pure Java scanning.
+     * Light dynamic representation of arbitrary Python Pickle object or dictionary.
+     */
+    public static class PObject extends HashMap<String, Object> {
+        public final String className;
+        public PObject(String className) {
+            this.className = className;
+        }
+    }
+
+    /**
+     * Pure Java implementation of Python Pickle Protocol 2 Stack Machine Unpickler.
+     */
+    public static Object unpickle(byte[] data) {
+        Stack<Object> stack = new Stack<>();
+        Map<Integer, Object> memo = new HashMap<>();
+        Stack<Integer> marks = new Stack<>();
+        int pos = 0;
+        int n = data.length;
+
+        while (pos < n) {
+            int code = data[pos++] & 0xFF;
+
+            if (code == 0x80) { // PROTO
+                pos++;
+            } else if (code == 'c') { // GLOBAL
+                int nl1 = findByte(data, (byte) '\n', pos);
+                int nl2 = findByte(data, (byte) '\n', nl1 + 1);
+                String module = new String(data, pos, nl1 - pos, StandardCharsets.ISO_8859_1);
+                String name = new String(data, nl1 + 1, nl2 - (nl1 + 1), StandardCharsets.ISO_8859_1);
+                pos = nl2 + 1;
+                stack.push(module + "." + name);
+            } else if (code == ')') { // EMPTY_TUPLE
+                stack.push(new ArrayList<>());
+            } else if (code == ']') { // EMPTY_LIST
+                stack.push(new ArrayList<>());
+            } else if (code == '}') { // EMPTY_DICT
+                stack.push(new PObject("dict"));
+            } else if (code == 0x81) { // NEWOBJ
+                Object args = stack.isEmpty() ? null : stack.pop();
+                Object cls = stack.isEmpty() ? "" : stack.pop();
+                stack.push(new PObject(String.valueOf(cls)));
+            } else if (code == '(') { // MARK
+                marks.push(stack.size());
+            } else if (code == 'q') { // BINPUT
+                if (pos < n) memo.put(data[pos++] & 0xFF, stack.isEmpty() ? null : stack.peek());
+            } else if (code == 'r') { // LONG_BINPUT
+                if (pos + 4 <= n) {
+                    int idx = ByteBuffer.wrap(data, pos, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+                    pos += 4;
+                    memo.put(idx, stack.isEmpty() ? null : stack.peek());
+                }
+            } else if (code == 'h') { // BINGET
+                if (pos < n) stack.push(memo.get(data[pos++] & 0xFF));
+            } else if (code == 'j') { // LONG_BINGET
+                if (pos + 4 <= n) {
+                    int idx = ByteBuffer.wrap(data, pos, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+                    pos += 4;
+                    stack.push(memo.get(idx));
+                }
+            } else if (code == 'N') { // NONE
+                stack.push(null);
+            } else if (code == 0x88) { // NEWTRUE
+                stack.push(Boolean.TRUE);
+            } else if (code == 0x89) { // NEWFALSE
+                stack.push(Boolean.FALSE);
+            } else if (code == 'K') { // BININT1
+                if (pos < n) stack.push((long) (data[pos++] & 0xFF));
+            } else if (code == 'M') { // BININT2
+                if (pos + 2 <= n) {
+                    stack.push((long) (ByteBuffer.wrap(data, pos, 2).order(ByteOrder.LITTLE_ENDIAN).getShort() & 0xFFFF));
+                    pos += 2;
+                }
+            } else if (code == 'J') { // BININT
+                if (pos + 4 <= n) {
+                    stack.push((long) ByteBuffer.wrap(data, pos, 4).order(ByteOrder.LITTLE_ENDIAN).getInt());
+                    pos += 4;
+                }
+            } else if (code == 'G') { // BINFLOAT
+                if (pos + 8 <= n) {
+                    stack.push(ByteBuffer.wrap(data, pos, 8).order(ByteOrder.BIG_ENDIAN).getDouble());
+                    pos += 8;
+                }
+            } else if (code == 'U') { // SHORT_BINSTRING
+                if (pos < n) {
+                    int l = data[pos++] & 0xFF;
+                    if (pos + l <= n) {
+                        stack.push(new String(data, pos, l, StandardCharsets.ISO_8859_1));
+                        pos += l;
+                    }
+                }
+            } else if (code == 'X') { // BINUNICODE
+                if (pos + 4 <= n) {
+                    int l = ByteBuffer.wrap(data, pos, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+                    pos += 4;
+                    if (l >= 0 && pos + l <= n) {
+                        stack.push(new String(data, pos, l, StandardCharsets.UTF_8));
+                        pos += l;
+                    }
+                }
+            } else if (code == 'T') { // BINSTRING
+                if (pos + 4 <= n) {
+                    int l = ByteBuffer.wrap(data, pos, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+                    pos += 4;
+                    if (l >= 0 && pos + l <= n) {
+                        stack.push(new String(data, pos, l, StandardCharsets.ISO_8859_1));
+                        pos += l;
+                    }
+                }
+            } else if (code == 't') { // TUPLE
+                int k = marks.isEmpty() ? 0 : marks.pop();
+                List<Object> tuple = new ArrayList<>();
+                while (stack.size() > k) {
+                    tuple.add(0, stack.pop());
+                }
+                stack.push(tuple);
+            } else if (code == 0x85) { // TUPLE1
+                Object top = stack.isEmpty() ? null : stack.pop();
+                List<Object> list = new ArrayList<>();
+                list.add(top);
+                stack.push(list);
+            } else if (code == 0x86) { // TUPLE2
+                Object b = stack.isEmpty() ? null : stack.pop();
+                Object a = stack.isEmpty() ? null : stack.pop();
+                List<Object> list = new ArrayList<>();
+                list.add(a);
+                list.add(b);
+                stack.push(list);
+            } else if (code == 0x87) { // TUPLE3
+                Object c = stack.isEmpty() ? null : stack.pop();
+                Object b = stack.isEmpty() ? null : stack.pop();
+                Object a = stack.isEmpty() ? null : stack.pop();
+                List<Object> list = new ArrayList<>();
+                list.add(a);
+                list.add(b);
+                list.add(c);
+                stack.push(list);
+            } else if (code == 's') { // SETITEM
+                Object val = stack.isEmpty() ? null : stack.pop();
+                Object key = stack.isEmpty() ? null : stack.pop();
+                if (!stack.isEmpty() && stack.peek() instanceof Map) {
+                    ((Map<String, Object>) stack.peek()).put(String.valueOf(key), val);
+                }
+            } else if (code == 'u') { // SETITEMS
+                int k = marks.isEmpty() ? 0 : marks.pop();
+                List<Object> items = new ArrayList<>();
+                while (stack.size() > k) {
+                    items.add(0, stack.pop());
+                }
+                if (!stack.isEmpty() && stack.peek() instanceof Map) {
+                    Map<String, Object> map = (Map<String, Object>) stack.peek();
+                    for (int m = 0; m < items.size() - 1; m += 2) {
+                        map.put(String.valueOf(items.get(m)), items.get(m + 1));
+                    }
+                }
+            } else if (code == 'a') { // APPEND
+                Object it = stack.isEmpty() ? null : stack.pop();
+                if (!stack.isEmpty() && stack.peek() instanceof List) {
+                    ((List<Object>) stack.peek()).add(it);
+                }
+            } else if (code == 'e') { // APPENDS
+                int k = marks.isEmpty() ? 0 : marks.pop();
+                List<Object> items = new ArrayList<>();
+                while (stack.size() > k) {
+                    items.add(0, stack.pop());
+                }
+                if (!stack.isEmpty()) {
+                    Object top = stack.peek();
+                    if (top instanceof List) {
+                        ((List<Object>) top).addAll(items);
+                    } else if (top instanceof Map) {
+                        Map<String, Object> map = (Map<String, Object>) top;
+                        for (Object o : items) map.put(String.valueOf(o), Boolean.TRUE);
+                    }
+                }
+            } else if (code == 'b') { // BUILD
+                Object state = stack.isEmpty() ? null : stack.pop();
+                if (!stack.isEmpty() && stack.peek() instanceof Map) {
+                    Map<String, Object> inst = (Map<String, Object>) stack.peek();
+                    if (state instanceof Map) {
+                        inst.putAll((Map<String, Object>) state);
+                    } else if (state instanceof List) {
+                        List<?> list = (List<?>) state;
+                        for (Object elem : list) {
+                            if (elem instanceof Map) inst.putAll((Map<String, Object>) elem);
+                        }
+                    }
+                }
+            } else if (code == 0x8F) { // EMPTY_SET
+                stack.push(new PObject("set"));
+            } else if (code == 0x90) { // ADDITEMS
+                int k = marks.isEmpty() ? 0 : marks.pop();
+                List<Object> items = new ArrayList<>();
+                while (stack.size() > k) {
+                    items.add(0, stack.pop());
+                }
+                if (!stack.isEmpty() && stack.peek() instanceof Map) {
+                    Map<String, Object> map = (Map<String, Object>) stack.peek();
+                    for (Object o : items) map.put(String.valueOf(o), Boolean.TRUE);
+                }
+            } else if (code == '.') { // STOP
+                break;
+            }
+        }
+
+        return stack.isEmpty() ? null : stack.peek();
+    }
+
+    private static int findByte(byte[] data, byte b, int from) {
+        for (int i = from; i < data.length; i++) {
+            if (data[i] == b) return i;
+        }
+        return data.length;
+    }
+
+    /**
+     * Parses variables from the pickle byte stream, matching the deep extraction of saveeditonline.com.
      */
     public static ParseResult parse(Context context, File targetFile) throws Exception {
         boolean isSave = isZipFile(targetFile);
         byte[] data = extractPickleBytes(targetFile, isSave);
 
-        List<RenpyVariable> list = new ArrayList<>();
-        int n = data.length;
-        int i = 0;
+        Object rootObj = unpickle(data);
+        Map<String, Object> roots;
+        if (rootObj instanceof List && !((List<?>) rootObj).isEmpty() && ((List<?>) rootObj).get(0) instanceof Map) {
+            roots = (Map<String, Object>) ((List<?>) rootObj).get(0);
+        } else if (rootObj instanceof Map) {
+            roots = (Map<String, Object>) rootObj;
+        } else {
+            roots = new HashMap<>();
+        }
 
-        while (i < n - 3) {
-            int tag = data[i] & 0xFF;
-            String key = null;
+        Map<String, RenpyVariable> extractedMap = new HashMap<>();
+        recursiveExtract(roots, "", isSave, extractedMap, 0);
 
-            if (tag == 'U') { // SHORT_BINSTRING
-                int slen = data[i + 1] & 0xFF;
-                if (i + 2 + slen <= n) {
-                    key = new String(data, i + 2, slen, StandardCharsets.ISO_8859_1);
-                }
-                i += 2 + slen;
-            } else if (tag == 'X') { // BINUNICODE
-                if (i + 5 <= n) {
-                    int slen = ByteBuffer.wrap(data, i + 1, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
-                    if (slen >= 0 && i + 5 + slen <= n) {
-                        key = new String(data, i + 5, slen, StandardCharsets.UTF_8);
-                    }
-                    i += 5 + slen;
-                } else {
-                    i++;
-                    continue;
-                }
-            } else {
-                i++;
+        List<RenpyVariable> list = new ArrayList<>(extractedMap.values());
+        Collections.sort(list, (a, b) -> a.displayName.compareToIgnoreCase(b.displayName));
+        return new ParseResult(isSave, list);
+    }
+
+    private static void recursiveExtract(Map<String, Object> current, String prefix, boolean isSave,
+                                         Map<String, RenpyVariable> out, int depth) {
+        if (current == null || depth > 3) return;
+
+        for (Map.Entry<String, Object> entry : current.entrySet()) {
+            String k = entry.getKey();
+            if (k == null || k.isEmpty() || k.startsWith("store._")) continue;
+
+            if (isSave && prefix.isEmpty()) {
+                if (!k.startsWith("store.")) continue;
+            }
+
+            String clean = (isSave && k.startsWith("store.")) ? k.substring(6) : k;
+            if (prefix.isEmpty() && clean.startsWith("_")
+                    && !clean.equals("_seen_images") && !clean.equals("_seen_ever") && !clean.equals("_seen_audio")) {
                 continue;
             }
 
-            if (key == null || key.length() < 2) continue;
+            String displayName = prefix.isEmpty() ? clean : (prefix + " > " + clean);
+            Object v = entry.getValue();
 
-            // Save files: only show game variables under 'store.' (ignoring internal store._*)
-            if (isSave) {
-                if (!key.startsWith("store.") || key.startsWith("store._")) {
-                    continue;
-                }
-            } else {
-                // Persistent files: skip internal Ren'Py engine keys except known gallery/audio
-                if (key.startsWith("_") && !key.equals("_seen_images") && !key.equals("_seen_ever") && !key.equals("_seen_audio")) {
-                    continue;
-                }
-            }
-
-            // Skip BINPUT (q + 1) or LONG_BINPUT (r + 4)
-            if (i < n && (data[i] & 0xFF) == 'q') {
-                i += 2;
-            } else if (i + 4 < n && (data[i] & 0xFF) == 'r') {
-                i += 5;
-            }
-
-            if (i >= n) break;
-
-            int vTag = data[i] & 0xFF;
-            String vtype = null;
-            Object val = null;
-
-            if (vTag == 0x88) { // NEWTRUE
-                vtype = "bool";
-                val = true;
-            } else if (vTag == 0x89) { // NEWFALSE
-                vtype = "bool";
-                val = false;
-            } else if (vTag == 'N') { // NONE
-                vtype = "None";
-                val = null;
-            } else if (vTag == 'K') { // BININT1
-                if (i + 1 < n) {
-                    vtype = "int";
-                    val = (long) (data[i + 1] & 0xFF);
-                }
-            } else if (vTag == 'M') { // BININT2
-                if (i + 2 < n) {
-                    vtype = "int";
-                    val = (long) (ByteBuffer.wrap(data, i + 1, 2).order(ByteOrder.LITTLE_ENDIAN).getShort() & 0xFFFF);
-                }
-            } else if (vTag == 'J') { // BININT
-                if (i + 4 < n) {
-                    vtype = "int";
-                    val = (long) ByteBuffer.wrap(data, i + 1, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
-                }
-            } else if (vTag == 'G') { // BINFLOAT
-                if (i + 8 < n) {
-                    vtype = "float";
-                    val = ByteBuffer.wrap(data, i + 1, 8).order(ByteOrder.BIG_ENDIAN).getDouble();
-                }
-            } else if (vTag == 'U') { // SHORT_BINSTRING
-                int vlen = data[i + 1] & 0xFF;
-                if (i + 2 + vlen <= n) {
-                    vtype = "str";
-                    val = new String(data, i + 2, vlen, StandardCharsets.ISO_8859_1);
-                }
-            } else if (vTag == 'X') { // BINUNICODE
-                if (i + 5 <= n) {
-                    int vlen = ByteBuffer.wrap(data, i + 1, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
-                    if (vlen >= 0 && i + 5 + vlen <= n) {
-                        vtype = "str";
-                        val = new String(data, i + 5, vlen, StandardCharsets.UTF_8);
-                    }
-                }
-            }
-
-            if (vtype != null) {
-                String displayName = key.startsWith("store.") ? key.substring(6) : key;
-                list.add(new RenpyVariable(key, displayName, vtype, val));
+            if (v instanceof Boolean) {
+                out.put(displayName, new RenpyVariable(k, displayName, "bool", v));
+            } else if (v instanceof Long || v instanceof Integer || v instanceof Short || v instanceof Byte) {
+                out.put(displayName, new RenpyVariable(k, displayName, "int", ((Number) v).longValue()));
+            } else if (v instanceof Double || v instanceof Float) {
+                out.put(displayName, new RenpyVariable(k, displayName, "float", ((Number) v).doubleValue()));
+            } else if (v instanceof String) {
+                out.put(displayName, new RenpyVariable(k, displayName, "str", v));
+            } else if (v == null) {
+                out.put(displayName, new RenpyVariable(k, displayName, "None", null));
+            } else if (v instanceof Map) {
+                recursiveExtract((Map<String, Object>) v, displayName, isSave, out, depth + 1);
             }
         }
+    }
 
-        // Sort alphabetically by display name
-        Collections.sort(list, (a, b) -> a.displayName.compareToIgnoreCase(b.displayName));
-        return new ParseResult(isSave, list);
+    /**
+     * Converts all extracted variables to clean, formatted JSON.
+     */
+    public static String exportToJson(List<RenpyVariable> variables) throws Exception {
+        JSONObject root = new JSONObject();
+        for (RenpyVariable v : variables) {
+            root.put(v.displayName, v.value);
+        }
+        return root.toString(2);
+    }
+
+    /**
+     * Applies edits from a raw JSON string into modifications map.
+     */
+    public static Map<String, Object> parseJsonModifications(String jsonStr) throws Exception {
+        JSONObject root = new JSONObject(jsonStr);
+        Map<String, Object> mods = new HashMap<>();
+        Iterator<String> keys = root.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object val = root.isNull(key) ? null : root.get(key);
+            mods.put(key, val);
+        }
+        return mods;
     }
 
     /**
@@ -341,11 +519,21 @@ public final class RenpySaveEngine {
         }
     }
 
-    /**
-     * Patches the pickle byte stream with user modifications in-place.
-     */
     public static byte[] patchPickleBytes(byte[] rawBytes, Map<String, Object> modifications) {
         if (modifications == null || modifications.isEmpty()) return rawBytes;
+
+        // Build target lookup set: support rawKey, displayName, or sub-key (after ' > ')
+        Map<String, Object> lookup = new HashMap<>();
+        for (Map.Entry<String, Object> e : modifications.entrySet()) {
+            lookup.put(e.getKey(), e.getValue());
+            if (e.getKey().contains(" > ")) {
+                String sub = e.getKey().substring(e.getKey().lastIndexOf(" > ") + 3);
+                lookup.put(sub, e.getValue());
+            }
+            if (e.getKey().startsWith("store.")) {
+                lookup.put(e.getKey().substring(6), e.getValue());
+            }
+        }
 
         List<Patch> patches = new ArrayList<>();
         int n = rawBytes.length;
@@ -377,9 +565,10 @@ public final class RenpySaveEngine {
                 continue;
             }
 
-            if (key == null || !modifications.containsKey(key)) continue;
+            if (key == null) continue;
+            Object newVal = lookup.get(key);
+            if (newVal == null && !lookup.containsKey(key)) continue;
 
-            // Skip BINPUT or LONG_BINPUT
             if (i < n && (rawBytes[i] & 0xFF) == 'q') {
                 i += 2;
             } else if (i + 4 < n && (rawBytes[i] & 0xFF) == 'r') {
@@ -411,21 +600,16 @@ public final class RenpySaveEngine {
             }
 
             if (valEnd > valStart && valEnd <= n) {
-                byte[] encoded = serializeValueProto2(modifications.get(key));
+                byte[] encoded = serializeValueProto2(newVal);
                 patches.add(new Patch(valStart, valEnd, encoded));
             }
         }
 
-        // Apply patches in reverse order to preserve offsets
-        Collections.sort(patches, (p1, p2) -> Integer.compare(p2.start, p1.start));
+        Collections.sort(patches, (p1, p2) -> Integer.compare(p1.start, p2.start));
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream(n + 1024);
         int currentPos = 0;
-        // Sort ascending for progressive copy
-        List<Patch> asc = new ArrayList<>(patches);
-        Collections.sort(asc, (p1, p2) -> Integer.compare(p1.start, p2.start));
-
-        for (Patch p : asc) {
+        for (Patch p : patches) {
             if (p.start > currentPos) {
                 baos.write(rawBytes, currentPos, p.start - currentPos);
             }
@@ -439,10 +623,6 @@ public final class RenpySaveEngine {
         return baos.toByteArray();
     }
 
-    /**
-     * Intelligent Gallery and CG unlocking algorithm.
-     * Searches and activates all gallery flags, unlocks CG lists, and flips completion bools.
-     */
     public static byte[] unlockGalleryBytes(byte[] rawBytes, boolean isSave) {
         byte[] copy = rawBytes.clone();
         int n = copy.length;
@@ -476,7 +656,6 @@ public final class RenpySaveEngine {
 
             if (key == null || key.length() < 2) continue;
 
-            // Skip BINPUT / LONG_BINPUT
             if (i < n && (copy[i] & 0xFF) == 'q') {
                 i += 2;
             } else if (i + 4 < n && (copy[i] & 0xFF) == 'r') {
@@ -492,22 +671,20 @@ public final class RenpySaveEngine {
 
             if (isGalleryKey) {
                 int vTag = copy[i] & 0xFF;
-                if (vTag == 0x89 || vTag == 'N') { // NEWFALSE or NONE -> NEWTRUE (0x88)
+                if (vTag == 0x89 || vTag == 'N') {
                     copy[i] = (byte) 0x88;
-                } else if (vTag == 'K' && i + 1 < n && copy[i + 1] == 0) { // 0 -> 1
+                } else if (vTag == 'K' && i + 1 < n && copy[i + 1] == 0) {
                     copy[i + 1] = 1;
                 }
             }
         }
 
-        // Unlock boolean lists (e.g. persistent.clear = [False, False, ...])
         for (int j = 1; j < n - 1; j++) {
-            if ((copy[j] & 0xFF) == 0x89) { // NEWFALSE
+            if ((copy[j] & 0xFF) == 0x89) {
                 int prev = copy[j - 1] & 0xFF;
                 int next = copy[j + 1] & 0xFF;
-                // Check if inside a list or tuple of bools
                 if ((prev == 0x88 || prev == 0x89 || prev == '(') || (next == 0x88 || next == 0x89 || next == ']' || next == 'e')) {
-                    copy[j] = (byte) 0x88; // Turn to NEWTRUE
+                    copy[j] = (byte) 0x88;
                 }
             }
         }
@@ -515,25 +692,17 @@ public final class RenpySaveEngine {
         return copy;
     }
 
-    /**
-     * Unlocks the gallery of the target file, creates a backup, and saves the file.
-     */
     public static File unlockGallery(Context context, File targetFile) throws Exception {
         boolean isSave = isZipFile(targetFile);
         byte[] pickleBytes = extractPickleBytes(targetFile, isSave);
         byte[] unlocked = unlockGalleryBytes(pickleBytes, isSave);
-
         return writeModifiedFile(targetFile, isSave, unlocked);
     }
 
-    /**
-     * Saves user modifications to the target file with an automatic .bak backup.
-     */
     public static File saveWithBackup(Context context, File targetFile, Map<String, Object> modifications) throws Exception {
         boolean isSave = isZipFile(targetFile);
         byte[] pickleBytes = extractPickleBytes(targetFile, isSave);
         byte[] patched = patchPickleBytes(pickleBytes, modifications);
-
         return writeModifiedFile(targetFile, isSave, patched);
     }
 
@@ -541,7 +710,6 @@ public final class RenpySaveEngine {
         File bak = new File(targetFile.getParentFile(), targetFile.getName() + ".bak");
         if (bak.exists()) bak.delete();
 
-        // Copy original to backup
         try (InputStream in = new FileInputStream(targetFile);
              OutputStream out = new FileOutputStream(bak)) {
             byte[] buf = new byte[8192];
@@ -552,7 +720,6 @@ public final class RenpySaveEngine {
         }
 
         if (isSave) {
-            // Rewrite zip with patched 'log' entry
             File tmpZip = new File(targetFile.getParentFile(), targetFile.getName() + ".tmp");
             try (ZipFile zin = new ZipFile(bak);
                  ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(tmpZip))) {
@@ -580,7 +747,6 @@ public final class RenpySaveEngine {
                 tmpZip.renameTo(targetFile);
             }
         } else {
-            // Re-compress persistent file with zlib
             byte[] compressed = compressZlib(newPickleData);
             try (FileOutputStream fos = new FileOutputStream(targetFile)) {
                 fos.write(compressed);
