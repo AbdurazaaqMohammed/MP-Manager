@@ -447,7 +447,7 @@ public class SetEditActivity extends BaseActivity {
         etValue.setTypeface(Typeface.MONOSPACE);
         etValue.setTextSize(13f);
         etValue.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF));
-        etValue.setHint(R.string.enter_value_hint);
+        etValue.setHint(isAr() ? "أدخل القيمة…" : "Enter value…");
         etValue.setHintTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888));
 
         GradientDrawable inputBg = new GradientDrawable();
@@ -478,7 +478,7 @@ public class SetEditActivity extends BaseActivity {
                         .setTitle(R.string.delete)
                         .setMessage(isAr() ? ("هل أنت متأكد من حذف الإعداد " + entry.key + "؟") : ("Delete setting " + entry.key + "?"))
                         .setPositiveButton(R.string.yes, (d2, w2) -> deleteSetting(entry))
-                        .setNegativeButton(R.string.no, null)
+                        .setNegativeButton(android.R.string.no, null)
                         .show();
             });
         }
@@ -557,7 +557,7 @@ public class SetEditActivity extends BaseActivity {
         layout.addView(tvVal);
 
         EditText etVal = new EditText(this);
-        etVal.setHint(R.string.enter_value_hint);
+        etVal.setHint(isAr() ? "أدخل القيمة…" : "Enter value…");
         etVal.setTypeface(Typeface.MONOSPACE);
         etVal.setTextSize(13f);
         layout.addView(etVal);
@@ -630,7 +630,7 @@ public class SetEditActivity extends BaseActivity {
                 updateCounts();
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
-                Toast.makeText(this, R.string.deleted, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, isAr() ? "تم الحذف بنجاح" : "Deleted successfully", Toast.LENGTH_SHORT).show();
             });
         }).start();
     }
