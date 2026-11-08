@@ -21,6 +21,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -50,7 +51,7 @@ public final class DexMemoryDumperDialog {
 
     public record ProcessItem(int pid, String processName, String label, Drawable icon, boolean isApp) {}
 
-    public static void show(Activity activity) {
+    public static void show(AppCompatActivity activity) {
         if (activity == null || activity.isFinishing()) return;
 
         RootManager rm = RootManager.getInstance(activity);
@@ -80,11 +81,11 @@ public final class DexMemoryDumperDialog {
 
         RootManager rm = RootManager.getInstance(context);
         RootManager.ShellResult result = rm.execute("ps -A -o PID,NAME,USER", 10);
-        if (result == null || !result.isSuccess() || result.output == null) {
+        if (result == null || !result.isSuccess() || result.output() == null) {
             return list;
         }
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(result.output))) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(result.output()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
@@ -125,7 +126,7 @@ public final class DexMemoryDumperDialog {
         return list;
     }
 
-    private static void showProcessListDialog(Activity activity, List<ProcessItem> allProcesses) {
+    private static void showProcessListDialog(AppCompatActivity activity, List<ProcessItem> allProcesses) {
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(32, 24, 32, 16);
@@ -172,7 +173,7 @@ public final class DexMemoryDumperDialog {
                 .show();
     }
 
-    private static void confirmAndDumpProcess(Activity activity, ProcessItem item) {
+    private static void confirmAndDumpProcess(AppCompatActivity activity, ProcessItem item) {
         new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.dump_dex) + ": " + item.label)
                 .setMessage("PID: " + item.pid + "\nPackage: " + item.processName + "\n\n" + activity.getString(R.string.dex_dumper_dumping))
@@ -181,7 +182,7 @@ public final class DexMemoryDumperDialog {
                 .show();
     }
 
-    private static void executeMemoryDump(Activity activity, ProcessItem item) {
+    private static void executeMemoryDump(AppCompatActivity activity, ProcessItem item) {
         ProgressManager pm = new ProgressManager(activity, true);
         pm.setText(activity.getString(R.string.dex_dumper_dumping));
         pm.show();
@@ -275,9 +276,9 @@ public final class DexMemoryDumperDialog {
 
         // Try execution via root with fallback to awk/dd if python3 is missing
         RootManager.ShellResult res = rm.execute("LD_LIBRARY_PATH=/data/user/0/com.agy/files/usr/lib " + script, 45);
-        if (res.isSuccess() && res.output != null && res.output.contains("DUMPED:")) {
+        if (res.isSuccess() && res.output() != null && res.output().contains("DUMPED:")) {
             try {
-                String numStr = res.output.substring(res.output.indexOf("DUMPED:") + 7).trim().split("\\s+")[0];
+                String numStr = res.output().substring(res.output().indexOf("DUMPED:") + 7).trim().split("\\s+")[0];
                 int cnt = Integer.parseInt(numStr);
                 if (cnt > 0) return cnt;
             } catch (Exception ignored) {}
@@ -293,7 +294,7 @@ public final class DexMemoryDumperDialog {
                 "fi; " +
                 "echo \"FALLBACK:$cnt\"";
         RootManager.ShellResult fRes = rm.execute(fallback, 20);
-        if (fRes.isSuccess() && fRes.output != null && fRes.output.contains("FALLBACK:1")) {
+        if (fRes.isSuccess() && fRes.output() != null && fRes.output().contains("FALLBACK:1")) {
             return 1;
         }
 
@@ -355,7 +356,7 @@ public final class DexMemoryDumperDialog {
             if (pi.icon != null) {
                 holder.iconView.setImageDrawable(pi.icon);
             } else {
-                holder.iconView.setImageResource(pi.isApp ? R.drawable.baseline_android_24 : R.drawable.terminal_24px);
+                holder.iconView.setImageResource(pi.isApp ? R.drawable.ic_android_24 : R.drawable.terminal_24px);
             }
             holder.itemView.setOnClickListener(v -> onClick.accept(pi));
         }
