@@ -139,6 +139,9 @@ public class RightMenuController {
                 case RightMenuOrder.SORT:
                     addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort), v -> activity.showSortDialog());
                     break;
+                case RightMenuOrder.COMPARE_FOLDERS:
+                    addRightDrawerItem(container, R.drawable.baseline_compare_24, activity.getString(R.string.compare_folders), v -> activity.performFolderCompare());
+                    break;
                 case RightMenuOrder.SHOW_SYSTEM_HIDDEN:
                     addRightDrawerCheckbox(container, R.drawable.visibility_off_24px,
                             activity.getString(R.string.menu_show_system_hidden),

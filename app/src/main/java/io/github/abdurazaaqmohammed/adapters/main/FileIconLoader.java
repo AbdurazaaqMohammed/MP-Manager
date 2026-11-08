@@ -497,40 +497,46 @@ public class FileIconLoader {
 
     private void showFolderDate(File file, TextView fileDateView, long[] meta) {
         long mtime = meta[2];
-        if (!"always".equals(folderSizeMode)) {
-            // "Only in archive" / "Never": no recursive walks for real folders,
-            // date-only row (zip listings keep their metadata sizes).
+        int sizeMode = UiPrefs.folderSizeMode(context);
+        if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
+            // "Never": date-only row
             fileDateView.setTag(null);
             if (mtime > 0) {
                 fileDateView.setVisibility(View.VISIBLE);
                 applyDateTextSize(fileDateView);
                 fileDateView.setText(UiPrefs.formatDate(datePattern, mtime));
-            } else {
-                fileDateView.setVisibility(View.INVISIBLE);
+                return;
             }
-            return;
-        }
-        if (mtime > 0) {
+        } else if (mtime > 0) {
             fileDateView.setTag(null);
             showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, mtime));
             return;
         }
-        if (!elevatedFileOps) {
+
+        String tag = file.getAbsolutePath();
+        Long cached = mtimeCache.get(tag);
+        if (cached != null && cached > 0) {
+            fileDateView.setTag(null);
+            if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
+                fileDateView.setVisibility(View.VISIBLE);
+                applyDateTextSize(fileDateView);
+                fileDateView.setText(UiPrefs.formatDate(datePattern, cached));
+            } else {
+                showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, cached));
+            }
+            return;
+        }
+
+        boolean canElevate = elevatedFileOps
+                || (context != null && RootManager.getInstance(context).isRootAvailable())
+                || io.github.abdurazaaqmohammed.utils.ShizukuManager.ready();
+
+        if (!canElevate) {
             fileDateView.setTag(null);
             fileDateView.setVisibility(View.INVISIBLE);
             return;
         }
-        String tag = file.getAbsolutePath();
-        Long cached = mtimeCache.get(tag);
-        if (cached != null) {
-            fileDateView.setTag(null);
-            if (cached > 0) {
-                showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, cached));
-            } else {
-                fileDateView.setVisibility(View.INVISIBLE);
-            }
-            return;
-        }
+
         fileDateView.setVisibility(View.INVISIBLE);
         fileDateView.setTag(tag);
         if (!claimBackendStatSlot(tag)) return;
@@ -554,7 +560,13 @@ public class FileIconLoader {
             final long finalM = m;
             context.runOnUiThread(() -> {
                 if (tag.equals(fileDateView.getTag())) {
-                    showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, finalM));
+                    if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
+                        fileDateView.setVisibility(View.VISIBLE);
+                        applyDateTextSize(fileDateView);
+                        fileDateView.setText(UiPrefs.formatDate(datePattern, finalM));
+                    } else {
+                        showFolderSizeAndDate(file, fileDateView, UiPrefs.formatDate(datePattern, finalM));
+                    }
                 }
             });
         });
@@ -637,10 +649,8 @@ public class FileIconLoader {
         }
         if (!isUserStorage(path)) {
             try {
-                if (AccessManager.fileOpsOn(ctx)) {
-                    long du = AccessManager.dirSize(ctx, path);
-                    if (du >= 0) return du;
-                }
+                long du = AccessManager.dirSize(ctx, path);
+                if (du >= 0) return du;
             } catch (Exception ignored) {}
         }
         long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;

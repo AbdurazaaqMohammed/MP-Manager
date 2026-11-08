@@ -966,8 +966,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 .getBoolean(LogcatService.PREF_AUTO_START, false)) {
             LogcatService.start(this);
         }
-        if ("always".equals(PreferenceManager.getDefaultSharedPreferences(this)
-                .getString("pref_folder_size_mode", "archive"))) {
+        if (UiPrefs.folderSizeMode(this) != UiPrefs.FOLDER_SIZE_NONE) {
             DirSizeCache.preload();
         }
         // Applies the custom app dir to REAndroid's framework loader before
@@ -1768,6 +1767,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
         if (!samePlainFolderShown(folder, pane1)) {
             clearGreen(pane1);
+            if (!pane1) clearDiffColors();
         }
         File[] files = listPlainFolder(folder, pane1);
         if (files == null) return;
@@ -2100,6 +2100,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = BootInspectManager.getParentOrImageOrigin(folder);
+        if (parent == null || parent.equals(folder.getParentFile())) {
+            File imgParent = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(folder);
+            if (imgParent != null) parent = imgParent;
+        }
         if (parent == null) parent = folder;
         MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
         pane.setAdapter(adapter);
@@ -2405,6 +2409,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         final int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
         if (!samePlainFolderShown(folder, pane1)) {
             clearGreen(pane1);
+            if (!pane1) clearDiffColors();
         }
         listingExecutor.execute(() -> {
             final File[] files;
@@ -2641,6 +2646,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void refreshPane(boolean pane1) {
         clearGreen(true);
         clearGreen(false);
+        clearDiffColors();
         try {
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane1)).setRefreshing(false);
             ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setRefreshing(false);
@@ -2867,6 +2873,73 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private final Set<String> greenNames1 = new HashSet<>();
     private final Set<String> greenNames2 = new HashSet<>();
+
+    public static final int COLOR_DIFF_ADDED = 0xFF4CAF50;    // Green
+    public static final int COLOR_DIFF_MODIFIED = 0xFFFFB300; // Amber / Yellow
+    public static final int COLOR_DIFF_MISSING = 0xFFF44336;  // Red
+
+    private final java.util.Map<String, Integer> diffColors2 = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void setDiffColorsPane2(java.util.Map<String, Integer> colors) {
+        diffColors2.clear();
+        if (colors != null) diffColors2.putAll(colors);
+        RecyclerView pane2 = findViewById(R.id.listViewPane2);
+        if (pane2 != null && pane2.getAdapter() != null) pane2.getAdapter().notifyDataSetChanged();
+    }
+
+    public Integer getDiffColor(boolean pane1, String name) {
+        if (pane1 || name == null) return null;
+        return diffColors2.get(name);
+    }
+
+    public void clearDiffColors() {
+        if (!diffColors2.isEmpty()) {
+            diffColors2.clear();
+            RecyclerView pane2 = findViewById(R.id.listViewPane2);
+            if (pane2 != null && pane2.getAdapter() != null) pane2.getAdapter().notifyDataSetChanged();
+        }
+    }
+
+    public void performFolderCompare() {
+        File baseDir = pane1Folder;
+        File targetDir = pane2Folder;
+        if (baseDir == null || targetDir == null) {
+            Extensions.showMessage(this, getString(R.string.compare_folders_err));
+            return;
+        }
+
+        io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(this, true);
+        pm.setText(getString(R.string.comparing_folders));
+        pm.show();
+
+        new Thread(() -> {
+            try {
+                io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffResult res =
+                        io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.compare(baseDir, targetDir);
+
+                java.util.Map<String, Integer> colorMap = new java.util.HashMap<>();
+                for (java.util.Map.Entry<String, io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus> entry : res.statusByName.entrySet()) {
+                    if (entry.getValue() == io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus.ADDED) {
+                        colorMap.put(entry.getKey(), COLOR_DIFF_ADDED);
+                    } else if (entry.getValue() == io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus.MODIFIED) {
+                        colorMap.put(entry.getKey(), COLOR_DIFF_MODIFIED);
+                    }
+                }
+
+                runOnUiThread(() -> {
+                    pm.dismiss();
+                    setDiffColorsPane2(colorMap);
+                    String summary = getString(R.string.compare_folders_result, res.countAdded, res.countModified, res.countIdentical);
+                    Extensions.showMessage(MainActivity.this, summary);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    pm.dismiss();
+                    new io.github.abdurazaaqmohammed.utils.ErrorUtil(MainActivity.this).showError(e);
+                });
+            }
+        }).start();
+    }
 
     public void markGreen(boolean pane1, String name) {
         if (name == null) return;

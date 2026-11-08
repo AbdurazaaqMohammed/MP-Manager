@@ -26,6 +26,7 @@ public final class RightMenuOrder {
     public static final String ADD_BOOKMARK = "add_bookmark";
     public static final String SET_AS_HOME = "set_as_home";
     public static final String SWAP_PANES = "swap_panes";
+    public static final String COMPARE_FOLDERS = "compare_folders";
     public static final String PREFERENCES = "preferences";
 
     public static final String[] DEFAULT_ORDER = {
@@ -36,6 +37,7 @@ public final class RightMenuOrder {
             CLEAR_SEARCH,
             SELECT_ALL,
             SORT,
+            COMPARE_FOLDERS,
             SHOW_SYSTEM_HIDDEN,
             SHOW_MANUAL_HIDDEN,
             SHOW_FOLDER_SIZE,
@@ -112,6 +114,7 @@ public final class RightMenuOrder {
             case ADD_BOOKMARK: return context.getString(R.string.menu_add_bookmark);
             case SET_AS_HOME: return context.getString(R.string.set_as_home);
             case SWAP_PANES: return context.getString(R.string.menu_swap_panes);
+            case COMPARE_FOLDERS: return context.getString(R.string.compare_folders);
             case PREFERENCES: return context.getString(R.string.preferences);
             default: return id;
         }
@@ -127,6 +130,7 @@ public final class RightMenuOrder {
             case CLEAR_SEARCH: return R.drawable.close_24px;
             case SELECT_ALL: return R.drawable.baseline_select_all_24;
             case SORT: return R.drawable.baseline_sort_24;
+            case COMPARE_FOLDERS: return R.drawable.baseline_compare_24;
             case SHOW_SYSTEM_HIDDEN:
             case SHOW_MANUAL_HIDDEN: return R.drawable.visibility_off_24px;
             case SHOW_FOLDER_SIZE: return R.drawable.folder_24px;

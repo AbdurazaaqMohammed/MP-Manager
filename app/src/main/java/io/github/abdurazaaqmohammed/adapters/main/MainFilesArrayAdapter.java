@@ -237,6 +237,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
             File resolved = BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
+        } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountedFolder(current)) {
+            File resolved = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(current);
+            if (resolved != null && !resolved.equals(current.getParentFile())) {
+                target = resolved;
+                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.checkUnmountOnExit(context, current);
+            }
         }
         if (target == null) return false;
         if (current != null && target.equals(current)) return false;
@@ -729,7 +735,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             holder.appliedBackgroundColor = background;
         }
         try {
-            holder.fileNameView.setTextColor(context.isGreen(pane1, fileName) ? GREEN_NAME : holder.defaultNameColor);
+            Integer diffColor = context.getDiffColor(pane1, fileName);
+            if (diffColor != null) {
+                holder.fileNameView.setTextColor(diffColor);
+            } else if (context.isGreen(pane1, fileName)) {
+                holder.fileNameView.setTextColor(GREEN_NAME);
+            } else {
+                holder.fileNameView.setTextColor(holder.defaultNameColor);
+            }
         } catch (Exception ignored) {}
         boolean isHidden = false;
         if (position > 0) {

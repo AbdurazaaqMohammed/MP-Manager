@@ -2420,4 +2420,12 @@
     <string name="frida_console_sort_name">الاسم</string>
     <string name="frida_console_sort_updated">تاريخ التحديث</string>
     <string name="frida_console_sort_installed">تاريخ التثبيت</string>
+
+    <!-- Folder Diff & Compare -->
+    <string name="compare_folders">مقارنة الفولدرات</string>
+    <string name="comparing_folders">جاري مقارنة الفولدرين…</string>
+    <string name="compare_folders_err">يجب فتح مجلدين صالحين في اللوحتين للمقارنة</string>
+    <string name="compare_folders_result">اكتملت المقارنة: %1$d جديد (أخضر)، %2$d معدل (أصفر)، %3$d متطابق</string>
+
+    <!-- Process Memory DEX Dumper -->
 </resources>
