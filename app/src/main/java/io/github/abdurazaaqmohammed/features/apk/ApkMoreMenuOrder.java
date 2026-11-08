@@ -32,14 +32,14 @@ public final class ApkMoreMenuOrder {
     public static final String MULTIPLEX = "multiplex";
     public static final String IL2CPP = "il2cpp";
     public static final String PATCH_LIBS = "patch_libs";
-    public static final String SSL_UNPIN = "ssl_unpin";
     public static final String FLUTTER = "flutter";
+    public static final String FRIDA = "frida";
 
     public static final String[] DEFAULT_ORDER = {
             SIGN, OPT, DECOMPILE, REFACTOR, PROTECT, CLONE,
             ADD_TOAST, REMOVE_TOASTS, REMOVE_SIG, SIG_HEALTH,
             MANIFEST_TOGGLES, PERMISSIONS, XPOSED_PATCH, MULTIPLEX,
-            IL2CPP, PATCH_LIBS, SSL_UNPIN, FLUTTER
+            IL2CPP, PATCH_LIBS, FLUTTER, FRIDA
     };
 
     public record MenuItem(String id, String label) {}
@@ -128,8 +128,8 @@ public final class ApkMoreMenuOrder {
             case MULTIPLEX: return context.getString(R.string.multiplex_apk);
             case IL2CPP: return context.getString(R.string.il2cpp_dump_native);
             case PATCH_LIBS: return context.getString(R.string.patch_native_libs);
-            case SSL_UNPIN: return context.getString(R.string.ssl_unpin_title);
             case FLUTTER: return context.getString(R.string.flutter_tools);
+            case FRIDA: return context.getString(R.string.frida_gadget);
             default: {
                 for (ApkMoreAction ext : ExtensionRegistry.apkActions()) {
                     if (ext != null && id.equals(ext.id())) {
@@ -165,8 +165,8 @@ public final class ApkMoreMenuOrder {
             case MULTIPLEX: return R.drawable.stacks_24px;
             case IL2CPP: return R.drawable.terminal_24px;
             case PATCH_LIBS: return R.drawable.tools_24px;
-            case SSL_UNPIN: return R.drawable.lock_open_24px;
             case FLUTTER: return R.drawable.tools_24px;
+            case FRIDA: return R.drawable.terminal_24px;
             default: return R.drawable.baseline_info_24;
         }
     }

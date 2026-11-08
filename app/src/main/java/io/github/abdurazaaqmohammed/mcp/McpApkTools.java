@@ -66,7 +66,6 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.SslUnpinning;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
@@ -1068,51 +1067,6 @@ public final class McpApkTools {
         result.addProperty("total", total);
         result.addProperty("returned", refs.size());
         result.add("references", refs);
-        return result;
-    }
-
-    // ------------------------------------------------------------------
-    // SSL unpinning hook (delegates to the patch engine)
-    // ------------------------------------------------------------------
-
-    public JsonObject sslUnpin(JsonObject args) throws McpJson.McpToolException {
-        String pathArg = McpJson.str(args, "path", null);
-        File input;
-        if (pathArg == null && args != null && args.has("session")) {
-            input = session(args).workApk;
-        } else {
-            input = resolvePath(pathArg, false);
-        }
-        if (!input.isFile()) throw new McpJson.McpToolException("APK not found: " + input);
-        String outputArg = McpJson.str(args, "output", null);
-        File output = outputArg == null || outputArg.isEmpty()
-                ? new File(input.getParentFile(), stripExt(input.getName()) + "-unpinned.apk")
-                : resolvePath(outputArg, true);
-        boolean sign = McpJson.bool(args, "sign", true);
-        SslUnpinning.Report report;
-        try {
-            report = SslUnpinning.unpinApk(
-                    input, output, sign ? defaultSignWrapper() : null);
-        } catch (McpJson.McpToolException e) {
-            throw e;
-        } catch (Throwable e) {
-            throw new McpJson.McpToolException("SSL unpinning failed: " + e.getMessage());
-        }
-        JsonObject result = new JsonObject();
-        result.addProperty("input", input.getPath());
-        result.addProperty("output", output.getPath());
-        result.addProperty("size", output.length());
-        result.addProperty("signed", sign);
-        result.addProperty("classes_patched", report.classesPatched);
-        result.addProperty("methods_patched", report.methodsPatched);
-        JsonArray patches = new JsonArray();
-        for (String patch : report.patches) {
-            patches.add(patch);
-        }
-        result.add("patches", patches);
-        result.addProperty("note", report.patches.isEmpty()
-                ? "No recognizable pinning code found; output is a rebuilt copy of the input."
-                : "Patched code listed in 'patches'.");
         return result;
     }
 

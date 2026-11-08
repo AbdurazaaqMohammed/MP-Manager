@@ -128,6 +128,13 @@
             android:taskAffinity="io.github.abdurazaaqmohammed.MPManager.logcat"
             android:exported="false">
         </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.FridaConsoleActivity"
+            android:label="@string/frida_console"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:exported="false">
+        </activity>
         <service
             android:name="io.github.abdurazaaqmohammed.tools.LogcatService"
             android:foregroundServiceType="specialUse"
@@ -137,11 +144,6 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.SslUnpinningActivity"
-            android:exported="false">
-        </activity>
         <activity
             android:name="io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"

@@ -510,6 +510,7 @@ public class FileOperationsHelper {
         // source or destination the app uid cannot touch).
         int renamedFiles = 0;
         for (Map.Entry<Object, File> planned : plan.entrySet()) {
+            checkpointTransfer();
             Object item = planned.getKey();
             if (!(item instanceof File f)) continue;
             File dest = planned.getValue();
@@ -588,6 +589,7 @@ public class FileOperationsHelper {
         }
 
         for (Map.Entry<Object, File> planned : plan.entrySet()) {
+            checkpointTransfer();
             Object item = planned.getKey();
             if (batchDone.contains(item)) continue;
             File dest = planned.getValue();
@@ -596,6 +598,23 @@ public class FileOperationsHelper {
                 FileUtils.Measure im = info.of(f);
                 int itemTotal = im.files;
                 long itemBytes = im.bytes;
+                // A failed batch can still have moved some items (mv exits
+                // non-zero after the data landed). For those the source is
+                // gone and the destination is the moved data — the replace
+                // logic below must not run, it would recycle the good copy
+                // and then fail to re-copy from the vanished source.
+                boolean srcGone = useElevated
+                        ? !AccessManager.exists(context, f.getAbsolutePath())
+                        : !f.exists();
+                boolean destThere = useElevated
+                        ? AccessManager.exists(context, dest.getAbsolutePath())
+                        : dest.exists();
+                if (srcGone && destThere) {
+                    done += itemTotal;
+                    advanceActiveProgress(done, totalFiles);
+                    if (listener != null) listener.onBytes(itemBytes);
+                    continue;
+                }
                 clearReplacedDestination(dest, useElevated);
                 if (useElevated) {
                     try {
@@ -603,7 +622,7 @@ public class FileOperationsHelper {
                         // rename on the same filesystem; it only streams bytes
                         // across filesystems, which is exactly move semantics.
                         if (listener != null) listener.onFile(f, dest);
-                        AccessManager.move(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                        AccessManager.move(context, f.getAbsolutePath(), dest.getAbsolutePath(), true, transferControl());
                         done += itemTotal;
                         advanceActiveProgress(done, totalFiles);
                         if (listener != null) listener.onBytes(itemBytes);
@@ -1077,6 +1096,7 @@ public class FileOperationsHelper {
         }
 
         for (Map.Entry<Object, File> entry : plan.entrySet()) {
+            checkpointTransfer();
             Object item = entry.getKey();
             if (batchDone.contains(item)) continue;
             if (!(item instanceof File f)) continue;
@@ -1172,6 +1192,16 @@ public class FileOperationsHelper {
     private TransferControl transferControl() {
         ProgressManager pm = activeProgress;
         return pm == null ? null : pm.control();
+    }
+
+    /**
+     * Safe point between two items of the plain (non-batch) loops. Without it a
+     * cancel or pause is only noticed when the copy helpers happen to run,
+     * which is never on a pure-rename path.
+     */
+    private void checkpointTransfer() throws TransferCancelledException {
+        TransferControl control = transferControl();
+        if (control != null) control.checkpoint();
     }
 
     private static long sizeOf(File f) {

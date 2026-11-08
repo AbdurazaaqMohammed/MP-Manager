@@ -58,6 +58,8 @@ import java.util.zip.ZipOutputStream;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.drawable.ApkDrawableRenderer;
+import io.github.abdurazaaqmohammed.ui.dialogs.DrawablePreviewDialog;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
@@ -680,34 +682,16 @@ public class DexTools {
                     preExtractAllDex(context, zipFile, false);
                 context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
             } else if (name.endsWith(".xml")) {
-                boolean isAxml;
-                try (InputStream is = new FileInputStream(tempFile)) {
-                    isAxml = FileUtils.isAxml(is);
+                if (ApkDrawableRenderer.isDrawableXmlEntry(zipFile, fullPath)) {
+                    // res/drawable* / res/mipmap* / res/color* XMLs are
+                    // pictures, not documents: show the rendered preview and
+                    // keep the AXML editor one button away.
+                    context.handler.post(() -> DrawablePreviewDialog.show(
+                            context, zipFile, fullPath,
+                            () -> openXmlInEditor(tempFile, zipFile, fullPath)));
+                } else {
+                    openXmlInEditor(tempFile, zipFile, fullPath);
                 }
-                File tmpRss = null;
-                if(isAxml) {
-                    try {
-                        tmpRss = File.createTempFile("rss_", ".arsc", context.getCacheDir());
-                        ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
-                    } catch (Exception rssFailure) {
-                        // No resources.arsc alongside the binary xml: fall back
-                        // to the plain text editor instead of failing the click.
-                        if (tmpRss != null) //noinspection ResultOfMethodCallIgnored
-                            tmpRss.delete();
-                        tmpRss = null;
-                    }
-                }
-                if(tmpRss != null) {
-                    context.startActivityForResult(new Intent(context, TextEditorActivity.class)
-                        .putExtra("rssPath", tmpRss.getPath())
-                        .putExtra("zf", zipFile.getPath())
-                        .putExtra("zipEntryPath", fullPath)
-                        .putExtra("axml", true)
-                        .putExtra("path", tempFile.getPath()), 757);
-                } else context.startActivityForResult(new Intent(context, TextEditorActivity.class)
-                        .putExtra("zf", zipFile.getPath())
-                        .putExtra("zipEntryPath", fullPath)
-                        .putExtra("path", tempFile.getPath()), 757);
             } else if (name.endsWith(".smali")) {
                 context.startActivityForResult(new Intent(context, TextEditorActivity.class)
                         .putExtra("zf", zipFile.getPath())
@@ -722,6 +706,47 @@ public class DexTools {
             new ErrorUtil(context).showError(e);
         }
         }).start();
+    }
+
+    /**
+     * Opens an XML entry in the text editor, staging resources.arsc next to it
+     * when it is binary AXML so the editor can resolve/decompile it and save
+     * edits back into the archive. Shared by the normal click path and the
+     * "XML source" button of the drawable preview.
+     */
+    private void openXmlInEditor(File tempFile, File zipFile, String fullPath) {
+        new Thread(() -> {
+            boolean isAxml;
+            try (InputStream is = new FileInputStream(tempFile)) {
+                isAxml = FileUtils.isAxml(is);
+            } catch (Exception e) {
+                isAxml = false;
+            }
+            File tmpRss = null;
+            if (isAxml) {
+                try {
+                    tmpRss = File.createTempFile("rss_", ".arsc", context.getCacheDir());
+                    ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
+                } catch (Exception rssFailure) {
+                    // No resources.arsc alongside the binary xml: fall back
+                    // to the plain text editor instead of failing the click.
+                    if (tmpRss != null) //noinspection ResultOfMethodCallIgnored
+                        tmpRss.delete();
+                    tmpRss = null;
+                }
+            }
+            final String rssPath = tmpRss == null ? null : tmpRss.getPath();
+            context.handler.post(() -> {
+                Intent intent = new Intent(context, TextEditorActivity.class)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("path", tempFile.getPath());
+                if (rssPath != null) {
+                    intent.putExtra("rssPath", rssPath).putExtra("axml", true);
+                }
+                context.startActivityForResult(intent, 757);
+            });
+        }, "xml-editor-stage").start();
     }
 
     private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {

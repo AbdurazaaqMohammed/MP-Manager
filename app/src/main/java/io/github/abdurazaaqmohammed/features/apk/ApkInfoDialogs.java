@@ -110,7 +110,6 @@ import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.SslUnpinningLauncher;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FastDexPatch;
@@ -901,10 +900,10 @@ public class ApkInfoDialogs {
             showIl2CppDumpDialog(file, fileName);
         } else if (ApkMoreMenuOrder.FLUTTER.equals(actionId)) {
             io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForApk(context, file, fileName);
+        } else if (ApkMoreMenuOrder.FRIDA.equals(actionId)) {
+            io.github.abdurazaaqmohammed.features.apk.frida.FridaGadgetDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) {
             showLibPatcherDialog(file, fileName);
-        } else if (ApkMoreMenuOrder.SSL_UNPIN.equals(actionId)) {
-            SslUnpinningLauncher.open(context, dialogUtil, pane1, file, fileName);
         } else {
             // Check plugin APK actions
             for (ApkMoreAction ext : ExtensionRegistry.apkActions()) {

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -27,23 +26,17 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.LruCache;
 import android.util.TypedValue;
-import android.util.Xml;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.apk.axml.aXMLDecoder;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.preference.PreferenceManager;
 
 import org.apache.commons.io.FilenameUtils;
-import org.xmlpull.v1.XmlPullParser;
 
 import java.io.File;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Locale;
@@ -61,6 +54,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.drawable.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.RootFile;
@@ -241,8 +235,11 @@ public class FileIconLoader {
         String ext = FilenameUtils.getExtension(lower);
         String dot = ext == null || ext.isEmpty() ? "" : "." + ext;
         if (FileUtils.matchExt(dot, FileUtils.IMAGE_EXTS)) return true;
-        return ".xml".equals(dot) && (lower.contains("/drawable") || lower.contains("/mipmap"));
+        return ApkDrawableRenderer.isDrawableXmlPath(fullPath);
     }
+
+    /** Row icons are small; rendering at 3x keeps them crisp without wasting memory. */
+    private static final int THUMB_RENDER_PX = 96;
 
     /**
      * Loads a real thumbnail for an archive entry: images are decoded straight
@@ -291,29 +288,17 @@ public class FileIconLoader {
                 Bitmap bm = decodeZipBitmap(zip, fullPath);
                 return bm != null ? new BitmapDrawable(context.getResources(), bm) : null;
             }
-            // drawable / mipmap xml: inflate and render
-            byte[] data = readZipEntry(zip, fullPath);
-            if (data == null || data.length == 0) return null;
-            String xml;
-            if (data.length >= 2 && data[0] == 0x03 && data[1] == 0x00) {
-                // Binary AXML (compiled resource inside an APK)
-                xml = new aXMLDecoder(new ByteArrayInputStream(data)).decodeAsString();
-            } else {
-                xml = new String(data, StandardCharsets.UTF_8);
-                if (!xml.contains("<")) return null;
-            }
-            XmlPullParser parser = Xml.newPullParser();
-            parser.setInput(new StringReader(xml));
-            int type = parser.next();
-            while (type != XmlPullParser.START_TAG
-                    && type != XmlPullParser.END_DOCUMENT) {
-                type = parser.next();
-            }
-            if (type != XmlPullParser.START_TAG) return null;
-            // Vectors/shapes inflate with the app resources + theme so ?attr
-            // references resolve; entries referencing APK-internal @color/@dimen
-            // values still fail here and keep the fallback icon.
-            return Drawable.createFromXml(context.getResources(), parser, context.getTheme());
+            // Compiled (binary AXML) drawables must be inflated through the APK's
+            // own resource table - see ApkDrawableRenderer for why the old
+            // "decode to text + Drawable.createFromXml" approach never worked.
+            ApkDrawableRenderer.Result result =
+                    ApkDrawableRenderer.render(context, zip, fullPath, THUMB_RENDER_PX);
+            Bitmap rendered = ApkDrawableRenderer.rasterize(result, null, 0, THUMB_RENDER_PX);
+            if (rendered == null) return null;
+            // A checkerboard keeps white/black artwork visible in every theme.
+            Bitmap composited = ApkDrawableRenderer.onCheckerboard(rendered,
+                    Math.max(6, rendered.getWidth() / 8));
+            return new BitmapDrawable(context.getResources(), composited);
         } catch (Throwable t) {
             return null;
         }

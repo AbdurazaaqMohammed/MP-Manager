@@ -33,16 +33,42 @@ public final class ShellProcess {
     }
 
     /**
+     * Shell helpers that walk a process tree with {@code pgrep -P}.
+     *
+     * <h3>Why not {@code pkill -P}</h3>
+     * Toybox {@code pkill -P} is broken on several Android releases — it exits
+     * with "no processes matched" while {@code pgrep -P} on the same parent
+     * finds the child (verified on an Android 12 emulator, where a cancelled
+     * {@code mv} kept streaming because of exactly this). Enumerating with
+     * {@code pgrep -P} and signalling each pid works everywhere.
+     *
+     * <p>The walk is recursive ({@code killTree}/{@code stopTree} call
+     * themselves for every child first, then signal the pid itself), because
+     * the batch is a shell whose real work ({@code cp}, {@code mv}, {@code rm})
+     * runs one level down, and those children may spawn their own. Signalling
+     * the pid last means it cannot spawn anything new once the walk reaches it.
+     *
+     * <p>Everything runs inside one shell invocation per signal, so the steps
+     * cannot race each other the way separate {@code su} spawns did.
+     */
+    private static final String TREEFN =
+            "killTree(){ for c in $(pgrep -P $1 2>/dev/null); do killTree $c; done; "
+                    + "kill -KILL $1 2>/dev/null; }; "
+            + "stopTree(){ kill -STOP $1 2>/dev/null; "
+                    + "for c in $(pgrep -P $1 2>/dev/null); do stopTree $c; done; }; "
+            + "contTree(){ for c in $(pgrep -P $1 2>/dev/null); do contTree $c; done; "
+                    + "kill -CONT $1 2>/dev/null; }; ";
+
+    /**
      * Suspends the batch: the work stops where it is and stays there.
      *
      * @param pid the process id the batch reported
      */
     public static void suspend(long pid, Runner runner) {
         if (pid <= 0 || runner == null) return;
-        // The children go first: a stopped shell cannot start new work, but a
-        // running shell could spawn another command while it is being signalled.
-        dispatch(runner, "pkill -STOP -P " + pid + " 2>/dev/null");
-        dispatch(runner, "kill -STOP " + pid + " 2>/dev/null");
+        // The shell goes first: a stopped shell cannot spawn more work while
+        // the rest of the tree is being walked, and the children follow.
+        dispatch(runner, TREEFN + "stopTree " + pid);
     }
 
     /**
@@ -52,8 +78,7 @@ public final class ShellProcess {
         if (pid <= 0 || runner == null) return;
         // The shell goes first: it has to be able to hand the next command to
         // its children.
-        dispatch(runner, "kill -CONT " + pid + " 2>/dev/null");
-        dispatch(runner, "pkill -CONT -P " + pid + " 2>/dev/null");
+        dispatch(runner, TREEFN + "contTree " + pid);
     }
 
     /**
@@ -66,9 +91,7 @@ public final class ShellProcess {
         if (pid <= 0 || runner == null) return;
         // A suspended process never handles a kill until it is continued, so
         // it has to be woken up first or it would linger forever.
-        dispatch(runner, "kill -CONT " + pid + " 2>/dev/null");
-        dispatch(runner, "pkill -KILL -P " + pid + " 2>/dev/null");
-        dispatch(runner, "kill -KILL " + pid + " 2>/dev/null");
+        dispatch(runner, "kill -CONT " + pid + " 2>/dev/null; " + TREEFN + "killTree " + pid);
     }
 
     /**

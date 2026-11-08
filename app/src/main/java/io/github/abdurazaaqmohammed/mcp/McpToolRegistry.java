@@ -113,7 +113,6 @@ public class McpToolRegistry {
             case "mp_apk_decompile_class": return apkTools.decompileClass(args);
             case "mp_apk_build": return apkTools.build(args);
             case "mp_apk_sign": return apkTools.sign(args);
-            case "mp_apk_ssl_unpin": return apkTools.sslUnpin(args);
             case "mp_apk_copy_entry": return apkTools.copyEntry(args);
             case "mp_apk_search_entries": return apkTools.searchEntries(args);
             case "mp_apk_read_signature": return apkTools.readSignature(args);
@@ -563,16 +562,6 @@ public class McpToolRegistry {
                         "session", "string", "APK session id",
                         "lib", "string", "Library name or entry path",
                         "path", "string", "Or a direct path to a .so file"));
-        put("mp_apk_ssl_unpin",
-                "Patch an APK to bypass SSL certificate pinning: neutralizes X509TrustManager checks,"
-                        + " OkHttp CertificatePinner, OkHostnameVerifier, custom HostnameVerifiers and WebView"
-                        + " SSL errors at the dex level, then rebuilds and (optionally) signs. Use only on apps you own"
-                        + " or are authorized to test.",
-                schemaProps(new String[0],
-                        "path", "string", "APK file to patch",
-                        "session", "string", "Or patch a session's working copy (session keeps the patched result)",
-                        "output", "string", "Output path (default next to input, -unpinned.apk)",
-                        "sign", "boolean", "Sign the output (default true)"));
         return toolMap;
     }
 
