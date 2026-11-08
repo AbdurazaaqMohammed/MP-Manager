@@ -2344,4 +2344,30 @@ Strings are sent to the external service you configured.</string>
     <string name="frida_console_sort_name">Name</string>
     <string name="frida_console_sort_updated">Date updated</string>
     <string name="frida_console_sort_installed">Date installed</string>
+
+    <!-- Drawable XML preview (resources inside APK/ZIP archives) -->
+    <string name="drawable_preview">Drawable preview</string>
+    <string name="drawable_preview_rendered_with">Rendering: %1$s</string>
+    <string name="drawable_preview_error">Could not render this drawable.\n%1$s</string>
+    <string name="drawable_preview_info">%1$s · &lt;%2$s&gt; · %3$d × %4$d px</string>
+    <string name="drawable_preview_default">Default</string>
+    <string name="drawable_preview_pressed">Pressed</string>
+    <string name="drawable_preview_focused">Focused</string>
+    <string name="drawable_preview_selected">Selected</string>
+    <string name="drawable_preview_checked">Checked</string>
+    <string name="drawable_preview_disabled">Disabled</string>
+    <string name="drawable_preview_activated">Activated</string>
+    <string name="drawable_preview_background">Background</string>
+    <string name="drawable_preview_xml_source">XML source</string>
+    <string name="drawable_preview_share_png">Share PNG</string>
+    <string name="drawable_preview_copy_xml">Copy XML</string>
+    <string name="drawable_preview_level">Level</string>
+    <string name="drawable_preview_xml_title">XML source: %1$s</string>
+    <string name="drawable_preview_share_failed">Could not export the PNG</string>
+    <string name="drawable_preview_renderer_apk">APK resources (framework)</string>
+    <string name="drawable_preview_renderer_xml">built-in XML renderer</string>
+    <string name="drawable_bg_checkerboard">Checkerboard</string>
+    <string name="drawable_bg_white">White</string>
+    <string name="drawable_bg_black">Black</string>
+    <string name="drawable_bg_theme">Theme</string>
 </resources>

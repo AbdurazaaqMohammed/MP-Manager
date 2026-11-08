@@ -55,6 +55,8 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import io.github.abdurazaaqmohammed.boot.BootImageEngine;
 import io.github.abdurazaaqmohammed.boot.BootInspectManager;
+import io.github.abdurazaaqmohammed.drawable.ApkDrawableRenderer;
+import io.github.abdurazaaqmohammed.ui.dialogs.DrawablePreviewDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.FileSize;
@@ -287,6 +289,16 @@ public class FileOpener {
             actionIcons.add(R.drawable.code_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_XML, file, fileName, zipFile, zipEntryPath));
         }
+        // A drawable XML is a picture, not a document. Offer the rendered
+        // preview wherever an XML file can be opened (archive entries keep
+        // their full res/ path, loose files are sniffed by root tag).
+        if (lower.endsWith(".xml") && isDrawableXml(file, zipFile, zipEntryPath)) {
+            actionIds.add(BUILTIN_DRAWABLE);
+            actionNames.add(context.getString(R.string.drawable_preview));
+            actionIcons.add(R.drawable.image_24px);
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_DRAWABLE, file, fileName,
+                    zipFile, zipEntryPath));
+        }
         String keyExt = FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT);
         if (keyExt.equals("jks") || keyExt.equals("keystore") || keyExt.equals("p12")
                 || keyExt.equals("pfx") || keyExt.equals("pk8") || keyExt.equals("pem")) {
@@ -414,6 +426,18 @@ public class FileOpener {
     private static final String BUILTIN_ARSC = "arsc";
     private static final String BUILTIN_XML = "xml";
     private static final String BUILTIN_SIG = "sig";
+    private static final String BUILTIN_DRAWABLE = "drawable_preview";
+
+    private static boolean isDrawableXml(File file, File zipFile, String zipEntryPath) {
+        if (zipEntryPath != null) {
+            return zipFile != null
+                    ? ApkDrawableRenderer.isDrawableXmlEntry(zipFile, zipEntryPath)
+                    : ApkDrawableRenderer.isDrawableXmlPath(zipEntryPath);
+        }
+        if (file == null) return false;
+        if (ApkDrawableRenderer.isDrawableXmlPath(file.getAbsolutePath())) return true;
+        return ApkDrawableRenderer.isDrawableXmlFile(null, file.getAbsolutePath());
+    }
 
     private static String builtinDefaultKey(String fileName) {
         String ext = FilenameUtils.getExtension(fileName);
@@ -492,6 +516,14 @@ public class FileOpener {
                 if (file == null) return;
                 importSignature(file, fileName);
                 return;
+            case BUILTIN_DRAWABLE:
+                if (file == null) return;
+                if (zipFile != null && zipEntryPath != null) {
+                    DrawablePreviewDialog.show(context, zipFile, zipEntryPath);
+                } else {
+                    DrawablePreviewDialog.showFile(context, file);
+                }
+                return;
             default:
                 return;
         }
@@ -515,6 +547,7 @@ public class FileOpener {
             case BUILTIN_ARSC:
             case BUILTIN_XML:
             case BUILTIN_SIG:
+            case BUILTIN_DRAWABLE:
                 runBuiltinTool(def, file, fileName, null, null);
                 return true;
             default:
