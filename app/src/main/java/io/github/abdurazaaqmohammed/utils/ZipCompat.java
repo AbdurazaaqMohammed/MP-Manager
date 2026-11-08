@@ -74,7 +74,7 @@ public final class ZipCompat {
      */
     public static List<FileHeader> listHeaders(File zip) throws IOException {
         if (zip == null || !zip.isFile()) throw new IOException("Not a file: " + zip);
-        File target = SplitArchiveUtil.findFirstPart(zip);
+        File target = SplitArchiveUtil.isZipSplit(zip) ? SplitArchiveUtil.findFirstPart(zip) : zip;
         if (target == null || !target.exists()) target = zip;
         try (ZipFile zf = new ZipFile(target)) {
             return zf.getFileHeaders();
@@ -103,7 +103,7 @@ public final class ZipCompat {
      */
     public static InputStream openEntry(File zip, String entryName) throws IOException {
         if (zip == null || entryName == null) throw new IOException("Missing archive or entry name");
-        File target = SplitArchiveUtil.findFirstPart(zip);
+        File target = SplitArchiveUtil.isZipSplit(zip) ? SplitArchiveUtil.findFirstPart(zip) : zip;
         if (target == null || !target.exists()) target = zip;
         ZipFile zf = null;
         try {

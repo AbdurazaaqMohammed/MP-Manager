@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.features.files;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -28,6 +31,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.Toast;
 import android.widget.ScrollView;
 import android.widget.HorizontalScrollView;
 import android.widget.TextView;
@@ -38,6 +42,8 @@ import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+
+import java.nio.charset.StandardCharsets;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -61,13 +67,18 @@ import io.github.abdurazaaqmohammed.ui.dialogs.StickerPreviewDialog;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.features.payload.PayloadDialog;
+import io.github.abdurazaaqmohammed.features.payload.PayloadParser;
 
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -664,8 +675,16 @@ public class FileOpener {
             openWithDefaultOrDialog(file, file.getName());
             return;
         }
-        File firstPart = SplitArchiveUtil.findFirstPart(file);
-        File target = (firstPart != null && firstPart.exists()) ? firstPart : file;
+        File target = file;
+        if (SplitArchiveUtil.isRarSplit(file) || SplitArchiveUtil.isSevenZSplit(file) || SplitArchiveUtil.isZipSplit(file)) {
+            File firstPart = SplitArchiveUtil.findFirstPart(file);
+            if (firstPart != null && firstPart.exists()) target = firstPart;
+        } else if (ArchiveBrowseUtil.detectArchiveType(file) == ArchiveBrowseUtil.ArchiveType.NONE) {
+            File firstPart = SplitArchiveUtil.findFirstPart(file);
+            if (firstPart != null && firstPart.exists() && ArchiveBrowseUtil.detectArchiveType(firstPart) != ArchiveBrowseUtil.ArchiveType.NONE) {
+                target = firstPart;
+            }
+        }
         withReadableCopy(target, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
     }
 
@@ -975,7 +994,376 @@ public class FileOpener {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
+        dialog.setOnShowListener(d -> {
+            android.widget.ListView lv = dialog.getListView();
+            if (lv != null) {
+                lv.setOnItemLongClickListener((parent, view, position, id) -> {
+                    if (position == 1) { // Long press on "ELF Inspector"
+                        dialog.dismiss();
+                        exportElfReadableCodeToDownload(file, fileName);
+                        return true;
+                    }
+                    return false;
+                });
+            }
+        });
         dialogUtil.styleAlertDialog(dialog);
+    }
+
+    public static boolean isKernelFile(File file, String fileName) {
+        if (file == null || fileName == null) return false;
+        String name = fileName.toLowerCase(Locale.ROOT);
+        if (name.equals("kernel") || name.equals("zimage") || name.equals("image")
+                || name.startsWith("kernel_") || name.startsWith("vmlinuz")
+                || (name.startsWith("image.") && !name.endsWith(".png") && !name.endsWith(".jpg"))) {
+            return true;
+        }
+        if (file.isFile() && file.length() >= 64) {
+            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                if (raf.length() > 64) {
+                    raf.seek(0x38);
+                    byte[] m = new byte[4];
+                    raf.readFully(m);
+                    if (m[0] == 'A' && m[1] == 'R' && m[2] == 'M' && m[3] == 0x64) return true;
+                }
+                if (raf.length() > 40) {
+                    raf.seek(0x24);
+                    int zMagic = Integer.reverseBytes(raf.readInt());
+                    if (zMagic == 0x016f2818) return true;
+                }
+            } catch (Exception ignored) {}
+        }
+        return false;
+    }
+
+    private void showKernelOptionsDialog(File file, String fileName, File originalFile) {
+        String[] options = {
+                context.getString(R.string.hex_editor),
+                "Kernel Info & Version",
+                context.getString(R.string.text_editor),
+                context.getString(R.string.open_with)
+        };
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle("Kernel: " + fileName)
+                .setItems(options, (d, which) -> {
+                    switch (which) {
+                        case 0 -> openHexEditorWithOriginal(file, originalFile);
+                        case 1 -> showKernelInfoDialog(file, fileName);
+                        case 2 -> openTextEditorWithOriginal(file, originalFile);
+                        case 3 -> showOpenWithDialog(file, fileName, null, null, originalFile);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void showKernelInfoDialog(File file, String fileName) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.loading));
+
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("File: ").append(fileName).append("\n");
+            sb.append("Size: ").append(FileSize.getHumanReadableFileSize(file.length()))
+                    .append(" (").append(file.length()).append(" bytes)\n\n");
+
+            String arch = "Unknown / Compressed";
+            String banner = null;
+
+            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                long len = raf.length();
+                if (len > 64) {
+                    raf.seek(0x38);
+                    byte[] m = new byte[4];
+                    raf.readFully(m);
+                    if (m[0] == 'A' && m[1] == 'R' && m[2] == 'M' && m[3] == 0x64) {
+                        arch = "ARM64 (AArch64 Linux Kernel Image)";
+                    }
+                }
+                if (len > 40 && arch.startsWith("Unknown")) {
+                    raf.seek(0x24);
+                    int zMagic = Integer.reverseBytes(raf.readInt());
+                    if (zMagic == 0x016f2818) {
+                        arch = "ARM 32-bit (zImage Linux Kernel)";
+                    }
+                }
+
+                // Scan for "Linux version "
+                raf.seek(0);
+                byte[] buffer = new byte[65536];
+                byte[] pattern = "Linux version ".getBytes(StandardCharsets.US_ASCII);
+                long bytesScanned = 0;
+                long maxScan = Math.min(len, 32L * 1024 * 1024);
+
+                outer:
+                while (bytesScanned < maxScan) {
+                    int read = raf.read(buffer);
+                    if (read <= 0) break;
+                    for (int i = 0; i < read - pattern.length; i++) {
+                        boolean match = true;
+                        for (int j = 0; j < pattern.length; j++) {
+                            if (buffer[i + j] != pattern[j]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) {
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            int p = i;
+                            while (p < read && buffer[p] != 0 && buffer[p] != '\n' && baos.size() < 1024) {
+                                baos.write(buffer[p]);
+                                p++;
+                            }
+                            banner = new String(baos.toByteArray(), StandardCharsets.UTF_8).trim();
+                            break outer;
+                        }
+                    }
+                    bytesScanned += read;
+                    if (read == buffer.length) {
+                        raf.seek(Math.max(0, bytesScanned - pattern.length));
+                    }
+                }
+            } catch (Exception e) {
+                sb.append("Error inspecting: ").append(e.getMessage()).append("\n");
+            }
+
+            sb.append("Architecture: ").append(arch).append("\n\n");
+            if (banner != null && !banner.isEmpty()) {
+                sb.append("Kernel Version Banner:\n").append(banner).append("\n");
+            } else {
+                sb.append("Kernel Version Banner: (Embedded banner not found; kernel may be compressed or stripped)\n");
+            }
+
+            final String infoText = sb.toString();
+            context.runOnUiThread(() -> {
+                pm.dismiss();
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                        .setTitle("Kernel Info: " + fileName)
+                        .setMessage(infoText)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .setNeutralButton("📋 Copy", (d, w) -> {
+                            android.content.ClipboardManager cm = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null) {
+                                cm.setPrimaryClip(ClipData.newPlainText("Kernel Info", infoText));
+                                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .show();
+            });
+        }).start();
+    }
+
+    private void exportElfReadableCodeToDownload(File file, String fileName) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.exporting));
+
+        new Thread(() -> {
+            try {
+                String content = generateElfReadableCode(file, fileName);
+                File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadDir.exists()) downloadDir.mkdirs();
+
+                File exportFile = new File(downloadDir, fileName + "_decompiled.txt");
+                int counter = 1;
+                while (exportFile.exists()) {
+                    exportFile = new File(downloadDir, fileName + "_decompiled_" + counter + ".txt");
+                    counter++;
+                }
+
+                try (FileOutputStream fos = new FileOutputStream(exportFile)) {
+                    fos.write(content.getBytes(StandardCharsets.UTF_8));
+                }
+
+                final File finalExportFile = exportFile;
+                context.runOnUiThread(() -> {
+                    pm.dismiss();
+                    context.refreshPane(true);
+                    android.widget.Toast.makeText(context, "Exported: " + finalExportFile.getName() + " to Download", android.widget.Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                context.runOnUiThread(() -> {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                });
+            }
+        }).start();
+    }
+
+    private String generateElfReadableCode(File file, String fileName) throws Exception {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r");
+             ElfParser elf = new ElfParser(raf)) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("// =====================================================================\n");
+            sb.append("// DECOMPILED ELF SUMMARY & READABLE CODE\n");
+            sb.append("// File: ").append(fileName).append(" (").append(file.length()).append(" bytes)\n");
+            sb.append("// Format: ELF ").append(elf.is64 ? "64-bit" : "32-bit").append(" (Little-Endian)\n");
+            sb.append("// Architecture: ").append(ElfParser.machineName(elf.machine))
+                    .append(" (0x").append(Integer.toHexString(elf.machine)).append(")\n");
+            sb.append("// Entry Point: 0x").append(Long.toHexString(elf.entry)).append("\n");
+            sb.append("// =====================================================================\n\n");
+
+            // 1. Dependencies & Dynamic Info
+            Map<String, String> dyn = elf.dynamicInfo();
+            if (!dyn.isEmpty()) {
+                sb.append("// =================== [1] SHARED LIBRARIES & METADATA ===================\n");
+                if (dyn.containsKey("soname")) {
+                    sb.append("// Internal Library Name (SONAME): ").append(dyn.get("soname")).append("\n");
+                }
+                if (dyn.containsKey("needed")) {
+                    sb.append("// Imported Dependencies (DT_NEEDED):\n");
+                    for (String lib : dyn.get("needed").split(",\\s*")) {
+                        sb.append("#include <").append(lib.trim()).append(">\n");
+                    }
+                }
+                sb.append("\n");
+            }
+
+            // 2. Symbols & Functions
+            List<ElfParser.Symbol> allSymbols = new ArrayList<>();
+            try {
+                allSymbols.addAll(elf.symbols(".dynsym"));
+            } catch (Exception ignored) {}
+            try {
+                List<ElfParser.Symbol> symtab = elf.symbols(".symtab");
+                if (symtab != null && !symtab.isEmpty()) allSymbols.addAll(symtab);
+            } catch (Exception ignored) {}
+
+            List<ElfParser.Symbol> exports = new ArrayList<>();
+            List<ElfParser.Symbol> jniFuncs = new ArrayList<>();
+            List<ElfParser.Symbol> imports = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
+
+            for (ElfParser.Symbol s : allSymbols) {
+                if (s.name == null || s.name.isEmpty() || !seen.add(s.name)) continue;
+                if (s.name.startsWith("Java_") || s.name.contains("JNI_OnLoad") || s.name.contains("JNI_OnUnload")) {
+                    jniFuncs.add(s);
+                } else if (s.shndx == 0) {
+                    imports.add(s);
+                } else if (s.type == 2 /* FUNC */ || s.type == 10 /* IFUNC */) {
+                    exports.add(s);
+                }
+            }
+
+            if (!jniFuncs.isEmpty()) {
+                sb.append("// =================== [2] JNI EXPORTED METHODS (JAVA BINDINGS) ===================\n");
+                sb.append("extern \"C\" {\n");
+                for (ElfParser.Symbol jni : jniFuncs) {
+                    sb.append("    // Addr: 0x").append(Long.toHexString(jni.value))
+                            .append(" | Size: ").append(jni.size).append("\n");
+                    sb.append("    JNIEXPORT void JNICALL ").append(jni.name).append("(JNIEnv* env, jobject thiz);\n\n");
+                }
+                sb.append("}\n\n");
+            }
+
+            if (!exports.isEmpty()) {
+                sb.append("// =================== [3] DEFINED FUNCTIONS (CODE LOGIC) ===================\n");
+                for (ElfParser.Symbol exp : exports) {
+                    sb.append("// [FUNC] 0x").append(Long.toHexString(exp.value))
+                            .append(" (size: ").append(exp.size).append(" bytes) [")
+                            .append(exp.bindName()).append("]\n");
+                    sb.append("int ").append(exp.name).append("();\n");
+                }
+                sb.append("\n");
+            }
+
+            if (!imports.isEmpty()) {
+                sb.append("// =================== [4] IMPORTED SYSTEM CALLS & API FUNCTIONS ===================\n");
+                sb.append("// External functions invoked by this binary (reveals capabilities):\n");
+                for (ElfParser.Symbol imp : imports) {
+                    sb.append("extern int ").append(imp.name).append("();\n");
+                }
+                sb.append("\n");
+            }
+
+            // 3. Sections Overview
+            sb.append("// =================== [5] ELF SECTIONS ===================\n");
+            for (ElfParser.Section sec : elf.sections()) {
+                sb.append(String.format(Locale.ROOT, "// %-20s  offset: 0x%08x  size: %-8d  addr: 0x%08x\n",
+                        sec.name, sec.offset, sec.size, sec.addr));
+            }
+            sb.append("\n");
+
+            // 4. Embedded Strings, URLs, Paths, and Commands
+            sb.append("// =================== [6] EMBEDDED STRINGS, COMMANDS & URLS ===================\n");
+            List<String[]> rodataStrings = new ArrayList<>();
+            try {
+                rodataStrings.addAll(elf.strings(".rodata", 4, 1500));
+            } catch (Exception ignored) {}
+            try {
+                rodataStrings.addAll(elf.strings(".data", 4, 500));
+            } catch (Exception ignored) {}
+
+            if (rodataStrings.size() < 10) {
+                extractGenericStrings(file, 4, 2000, rodataStrings);
+            }
+
+            Set<String> seenStrings = new HashSet<>();
+            List<String> pathsAndCommands = new ArrayList<>();
+            List<String> urlsAndWeb = new ArrayList<>();
+            List<String> otherStrings = new ArrayList<>();
+
+            for (String[] entry : rodataStrings) {
+                String str = entry[1].trim();
+                if (str.length() < 3 || !seenStrings.add(str)) continue;
+                if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("ftp://")) {
+                    urlsAndWeb.add(entry[0] + ": " + str);
+                } else if (str.startsWith("/") || str.contains("/bin/") || str.contains("/system/") || str.startsWith("su ") || str.startsWith("sh ")) {
+                    pathsAndCommands.add(entry[0] + ": " + str);
+                } else {
+                    otherStrings.add(entry[0] + ": " + str);
+                }
+            }
+
+            if (!urlsAndWeb.isEmpty()) {
+                sb.append("// --- Network Endpoints & URLs ---\n");
+                for (String s : urlsAndWeb) sb.append(s).append("\n");
+                sb.append("\n");
+            }
+
+            if (!pathsAndCommands.isEmpty()) {
+                sb.append("// --- System Paths & Shell Commands ---\n");
+                for (String s : pathsAndCommands) sb.append(s).append("\n");
+                sb.append("\n");
+            }
+
+            if (!otherStrings.isEmpty()) {
+                sb.append("// --- Error Messages, Format Strings & Identifiers ---\n");
+                for (String s : otherStrings) sb.append(s).append("\n");
+                sb.append("\n");
+            }
+
+            return sb.toString();
+        }
+    }
+
+    private static void extractGenericStrings(File file, int minLen, int maxResults, List<String[]> out) {
+        try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] buf = new byte[64 * 1024];
+            ByteArrayOutputStream cur = new ByteArrayOutputStream();
+            long offset = 0;
+            long strStart = 0;
+            int n;
+            while ((n = in.read(buf)) != -1 && out.size() < maxResults) {
+                for (int i = 0; i < n && out.size() < maxResults; i++) {
+                    byte b = buf[i];
+                    if (b >= 0x20 && b <= 0x7E) {
+                        if (cur.size() == 0) strStart = offset + i;
+                        cur.write(b);
+                    } else {
+                        if (cur.size() >= minLen) {
+                            out.add(new String[]{"0x" + Long.toHexString(strStart), cur.toString("UTF-8")});
+                        }
+                        cur.reset();
+                    }
+                }
+                offset += n;
+            }
+            if (cur.size() >= minLen && out.size() < maxResults) {
+                out.add(new String[]{"0x" + Long.toHexString(strStart), cur.toString("UTF-8")});
+            }
+        } catch (Exception ignored) {}
     }
 
     private void showElfInspectorDialog(File file, String fileName, File originalFile) {
@@ -1330,8 +1718,18 @@ public class FileOpener {
             openTextEditorRootAware(file);
         } else if (FileUtils.isElfFile(file)) {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
-        } else if (fileName.endsWith(".img") && BootImageEngine.isBootImage(file)) {
-            BootInspectManager.openBootImage(context, file, pane1);
+        } else if (isKernelFile(file, fileName)) {
+            withReadableCopy(file, readable -> showKernelOptionsDialog(readable, fileName, file));
+        } else if (fileName.endsWith(".img")) {
+            if (io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
+                io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+            } else if (io.github.abdurazaaqmohammed.features.system.SystemImageEngine.isSparseImage(file)) {
+                promptUnsparseImage(file, fileName);
+            } else {
+                openWithDefaultOrDialog(file, fileName);
+            }
+        } else if (("payload.bin".equalsIgnoreCase(fileName) || fileName.endsWith(".bin") || fileName.endsWith(".payload")) && PayloadParser.isPayload(file)) {
+            PayloadDialog.showForPayload(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, readable -> {
                 if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);
@@ -1413,6 +1811,74 @@ public class FileOpener {
                 openWithDefaultOrDialog(file, fileName);
             }
         }
+    }
+
+    private void promptUnsparseImage(File file, String fileName) {
+        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+        io.github.abdurazaaqmohammed.features.system.SystemImageEngine.SparseInfo sInfo =
+                io.github.abdurazaaqmohammed.features.system.SystemImageEngine.readSparseInfo(file);
+        long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
+        String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
+                io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
+
+        String msg = (isAr
+                ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"
+                : "This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?") + sizeStr;
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                .setTitle(isAr ? "فك ضغط Sparse Image" : "Unsparse Image")
+                .setMessage(msg)
+                .setPositiveButton(isAr ? "📂 فك الضغط" : "📂 Unsparse", (d, w) -> {
+                    String baseName = fileName;
+                    int dotIdx = baseName.lastIndexOf('.');
+                    if (dotIdx > 0) baseName = baseName.substring(0, dotIdx);
+                    File outRaw = new File(file.getParentFile(), baseName + "_raw.img");
+
+                    ProgressManager pm = new ProgressManager(context, false).show();
+                    pm.setText(isAr ? ("جاري فك ضغط " + fileName + "...") : ("Unsparsing " + fileName + "..."));
+
+                    new Thread(() -> {
+                        try {
+                            io.github.abdurazaaqmohammed.features.system.SystemImageEngine.unsparseToFile(file, outRaw,
+                                    new io.github.abdurazaaqmohammed.features.system.SystemImageEngine.ProgressCallback() {
+                                @Override
+                                public void onProgress(String message, int percent) {
+                                    context.runOnUiThread(() -> {
+                                        pm.setText(message);
+                                        pm.setProgress(percent, 100);
+                                    });
+                                }
+
+                                @Override
+                                public void onError(String error) {
+                                    context.runOnUiThread(() -> {
+                                        pm.dismiss();
+                                        Extensions.showMessage(context, "Error: " + error);
+                                    });
+                                }
+
+                                @Override
+                                public void onSuccess(File result) {
+                                    context.runOnUiThread(() -> {
+                                        pm.dismiss();
+                                        android.widget.Toast.makeText(context,
+                                                (isAr ? "تم فك الضغط بنجاح: " : "Unsparsed successfully: ") + result.getName(),
+                                                android.widget.Toast.LENGTH_LONG).show();
+                                        context.reloadCurrentFolder();
+                                    });
+                                }
+                            });
+                        } catch (Exception e) {
+                            context.runOnUiThread(() -> {
+                                pm.dismiss();
+                                Extensions.showMessage(context, "Unsparse failed: " + e.getMessage());
+                            });
+                        }
+                    }).start();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.open_with, (d, w) -> openWithDefaultOrDialog(file, fileName))
+                .show();
     }
 
     private File stageZipEntry(ZipEntryInfo zipEntry) throws IOException {

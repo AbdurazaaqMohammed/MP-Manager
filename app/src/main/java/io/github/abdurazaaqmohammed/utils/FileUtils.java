@@ -121,6 +121,7 @@ public class FileUtils {
 
     public static boolean matchExt(String ext, String[] extensions) {
         for (String e : extensions) if (e.equals(ext)) return true;
+        if (extensions == ARCHIVE_EXTS && ext != null && (ext.equals(".win") || ext.matches("\\.win\\d+$"))) return true;
         return false;
     }
 

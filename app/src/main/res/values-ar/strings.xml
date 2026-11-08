@@ -230,6 +230,7 @@
     <string name="fix_mime_type">إصلاح نوع MIME قبل المشاركة/الفتح (اكتشاف من البايتات)</string>
     <string name="reported_mime">MIME المُبلغ عنه</string>
     <string name="real_mime">MIME الحقيقي</string>
+    <string name="elf_extract_strings">تحويل إلى كود واستخراج النصوص المقروءة</string>
     <string name="saved">تم الحفظ</string>
     <string name="goto_offset">الانتقال إلى الإزاحة (Offset)</string>
     <string name="revert_changes">التراجع عن التغييرات</string>
@@ -1823,6 +1824,28 @@
     <string name="save_read_only_reason">فُتح الملف من تطبيق آخر منح صلاحية القراءة فقط، لذلك لا يسمح أندرويد بالكتابة مرة أخرى إلى الأصل.</string>
     <string name="save_denied_reason">رفض موقع التخزين صلاحية الكتابة. بطاقات SD القابلة للإزالة على أندرويد 10+ تقبل الكتابة عبر SAF أو root أو Shizuku فقط.</string>
     <string name="save_copy">حفظ نسخة</string>
+    <string name="confirm_save_exported_or_original">هل تريد تطبيق هذه التعديلات على الملف الأصلي أيضاً، أم الاكتفاء بالنسخة المصدرة؟</string>
+    <string name="save_to_original">تطبيق على الملف الأصلي</string>
+    <string name="keep_exported_copy_only">الاكتفاء بالنسخة المصدرة</string>
+    <string name="set_edit">SetEdit</string>
+    <string name="settings_editor_title">محرر إعدادات النظام</string>
+    <string name="global_settings">إعدادات عامة (Global)</string>
+    <string name="secure_settings">إعدادات آمنة (Secure)</string>
+    <string name="system_settings">إعدادات النظام (System)</string>
+    <string name="android_properties">خصائص أندرويد (Properties)</string>
+    <string name="entries_count">%1$d إدخال</string>
+    <string name="search_key_or_value">بحث بالاسم أو القيمة</string>
+    <string name="overview">نظرة عامة</string>
+    <string name="overview_subtitle">الإدخالات لكل مصدر. اضغط على أي منها لفتحه.</string>
+    <string name="add_setting">إضافة إعداد جديد</string>
+    <string name="edit_setting">تعديل الإعداد</string>
+    <string name="delete_setting">حذف الإعداد</string>
+    <string name="setting_key">المفتاح (Key)</string>
+    <string name="setting_value">القيمة (Value)</string>
+    <string name="setting_table">الجدول / النطاق</string>
+    <string name="confirm_delete_setting">هل أنت متأكد من حذف \"%1$s\"؟</string>
+    <string name="setting_saved">تم حفظ الإعداد بنجاح</string>
+    <string name="setting_deleted">تم حذف الإعداد</string>
     <string name="saved_to_x">حُفظت نسخة إلى %1$s</string>
     <string name="saved_elevated">حُفظ باستخدام صلاحية موسَّعة</string>
     <string name="save_elevated">الحفظ بصلاحية موسَّعة</string>
@@ -1987,7 +2010,7 @@
 
     <!-- أدوات تقسيم ودمج الأرشيفات والملفات -->
     <string name="split_file">تقسيم</string>
-    <string name="merge_split_files">دمج الأجزاء المتقسمة</string>
+    <string name="merge_split_files">دمج الأجزاء</string>
     <string name="split_dialog_title">تقسيم الملف</string>
     <string name="split_by_size">حسب حجم كل جزء</string>
     <string name="split_by_count">حسب عدد الأجزاء</string>
@@ -2002,8 +2025,10 @@
     <string name="merge_in_progress">جاري دمج الأجزاء…</string>
     <string name="merge_success">تم الدمج بنجاح: %1$s</string>
     <string name="delete_original_after_split">حذف الملف الأصلي بعد التقسيم</string>
+    <string name="delete_parts_after_merge">حذف الأجزاء بعد الدمج</string>
     <string name="split_open_archive">فتح الأرشيف</string>
-    <string name="split_missing_parts">بعض الأجزاء مفقودة</string>
+    <string name="split_missing_parts">لم يتم العثور على أجزاء أخرى لهذا الملف داخل هذا المجلد.</string>
+    <string name="output_filename">اسم الملف الناتج:</string>
 
     <!-- أدوات فحص وتعديل تطبيقات فلاتر -->
     <string name="flutter_tools">أدوات فلاتر</string>
@@ -2021,6 +2046,92 @@
     <string name="flutter_search_hint">بحث في الروابط والنصوص…</string>
     <string name="flutter_copied">تم النسخ إلى الحافظة</string>
     <string name="flutter_strings_count">تم العثور على %1$d نص/رابط</string>
+
+    <!-- Android OTA Payload Dumper & Inspector -->
+    <string name="payload_tools_title">مستعرض ملفات OTA Payload</string>
+    <string name="payload_search_hint">بحث في الأقسام (boot, vendor, system…)…</string>
+    <string name="payload_partitions_count">تم العثور على %1$d قسم (%2$s غير مضغوط)</string>
+    <string name="payload_extract_partition">استخراج القسم (.img)</string>
+    <string name="payload_extract_all">استخراج كافة الأقسام</string>
+    <string name="payload_open_boot_inspector">استخراج وفتح في فاحص البوت</string>
+    <string name="payload_extracting">جاري استخراج %1$s…</string>
+    <string name="payload_extract_success">تم استخراج القسم: %1$s</string>
+    <string name="payload_extract_all_success">تم استخراج %1$d قسم بنجاح</string>
+    <string name="payload_copy_hash">نسخ تجزئة SHA-256</string>
+
+    <!-- Partition Dumper -->
+    <string name="tool_partition_dumper">ساحب الأقسام (Partition Dumper)</string>
+    <string name="tool_partition_dumper_subtitle">استخراج وتفريغ أقسام الهاردوير والأقسام الديناميكية بصيغة .img</string>
+    <string name="set_edit_subtitle">تعديل إعدادات النظام العامة والآمنة وخصائص أندرويد</string>
+    <string name="partition_dumper_title">ساحب الأقسام (Root)</string>
+    <string name="partition_info_title">معلومات البارتيشن</string>
+    <string name="partition_batch_dump">تفريغ المحدد (%d)</string>
+    <string name="partition_select_all">تحديد الكل</string>
+    <string name="partition_deselect_all">إلغاء التحديد</string>
+    <string name="partition_copy_details">نسخ التفاصيل</string>
+    <string name="partition_refresh">تحديث</string>
+    <string name="all">الكل</string>
+    <string name="partition_search_hint">ابحث في الأقسام (ريكفري، بوت، فيندور، سيستم…)…</string>
+    <string name="partition_slot_a">السلوت A</string>
+    <string name="partition_slot_b">السلوت B</string>
+    <string name="partition_slot_active_tag"> النشط</string>
+    <string name="partition_dump_btn">سحب (.img)</string>
+    <string name="partition_dump_dialog_title">سحب وتفريغ %1$s</string>
+    <string name="partition_dump_dest_label">مجلد الحفظ:</string>
+    <string name="partition_dump_filename_label">اسم الملف الناتج (.img):</string>
+    <string name="partition_dumping_progress">جاري سحب %1$s: %2$s / %3$s (%4$s)</string>
+    <string name="title_success">تمت العملية بنجاح</string>
+    <string name="partition_dump_success">تم سحب وتفريغ القسم بنجاح:\n%1$s</string>
+    <string name="partition_open_img">فتح كملف .img</string>
+    <string name="partition_show_in_folder">عرض في المجلد</string>
+    <string name="partition_root_required">عملية سحب الأقسام تتطلب صلاحيات الروت (Root / su).</string>
+    <string name="partition_count_summary">%1$d قسم متاح للسحب</string>
+    <string name="partition_diff_banner">⚠️ تم اكتشاف اختلافات بين السلوت A و B (%1$d أقسام مختلفة — اضغط للتفاصيل)</string>
+    <string name="partition_diff_dialog_title">اختلافات السلوت (%1$d أقسام مختلفة)</string>
+    <string name="partition_diff_dialog_msg">الأقسام التالية تحتوي على بيانات مختلفة بين السلوت A والسلوت B:\n\n%1$s</string>
+    <string name="partition_diff_filter_btn">عرض الأقسام المختلفة فقط</string>
+
+    <!-- Partition Action Dialog: Copy vs Flash -->
+    <string name="partition_action_dialog_title">خيارات القسم: %1$s</string>
+    <string name="partition_opt_copy">أخذ نسخة احتياطية (Copy / Backup)</string>
+    <string name="partition_opt_copy_desc">سحب وتفريغ نسخة طبق الأصل وحفظها كملف .img على الذاكرة.</string>
+    <string name="partition_opt_flash">تفليش صورة على هذا القسم (Flash to Partition)</string>
+    <string name="partition_opt_flash_desc">كتابة وحرق ملف .img خارجي على هذا القسم مع التحقق الذكي من التوافق والأمان.</string>
+    <string name="partition_copy_title">أخذ نسخة من %1$s</string>
+    <string name="partition_copy_btn">حفظ النسخة (.img)</string>
+    <string name="partition_flash_dialog_title">تفليش على: %1$s</string>
+    <string name="partition_flash_src_label">اختر ملف الصورة المراد تفليشها (.img):</string>
+    <string name="partition_flash_select_available">ملفات .img المتوفرة في المجلد الحالي:</string>
+    <string name="partition_flash_path_hint">أدخل أو الصق مسار ملف .img…</string>
+    <string name="partition_flash_btn">⚡ بدء التفليش</string>
+    <string name="partition_flash_confirm_title">تأكيد التفليش النهائي</string>
+    <string name="partition_flash_confirm_msg">أنت على وشك كتابة الملف:\n%1$s\n\nعلى القسم:\n%2$s (%3$s)\n\n⚠️ هذا الإجراء سيستبدل البيانات الحالية على القسم بالكامل. هل تريد المتابعة؟</string>
+    <string name="partition_flash_success">تم تفليش القسم %1$s بنجاح!</string>
+    <string name="partition_flashing_progress">جاري تفليش %1$s: %2$s / %3$s (%4$s)</string>
+    <string name="partition_flash_ack_risk">أنا أفهم المخاطر ومسؤول بالكامل عن تفليش هذا الملف على هذا القسم.</string>
+    <string name="partition_flash_file_not_found">الملف المختار غير موجود على الذاكرة.</string>
+    <string name="partition_flash_match_ok">الملف جاهز للتفليش (%1$s)</string>
+    <string name="partition_flash_size_exceeded">حجم الملف (%1$s) أكبر من السعة القصوى للقسم (%2$s)! تم حظر التفليش لمنع تلف البيانات.</string>
+    <string name="partition_flash_sparse_warning">⚠️ تنبيه: الملف يبدو بصيغة Android Sparse Image مضغوطة. الكتابة المباشرة عبر dd تتطلب صورة خام (Raw Image).</string>
+    <string name="partition_flash_empty_file">الملف المختار فارغ (0 بايت).</string>
+    <string name="partition_browse_file">استعراض…</string>
+    <string name="property_image_type">نوع الصورة</string>
+    <string name="partition_detected_type">نوع الصورة المكتشف: %1$s</string>
+    <string name="partition_flash_size_too_small">⚠️ تحذير: حجم الملف (%1$s) أصغر من سعة البارتيشن (%2$s). هل أنت متأكد أن هذا هو الملف الصحيح لهذا القسم؟</string>
+    <string name="partition_flash_force_small_ack">أنا متأكد أن هذا هو الملف الصحيح لهذا البارتيشن وأتحمل كامل المسؤولية.</string>
+    <string name="partition_flash_sparse_prompt">الصورة بصيغة Android Sparse Image مضغوطة. الحجم الفعلي بعد فك الضغط: %1$s.\nاختر الإجراء المطلوب:</string>
+    <string name="partition_flash_unsparse_to_file">📂 فك الضغط إلى ملف Raw (.img)</string>
+    <string name="partition_flash_unsparse_and_flash">⚡ فك وتفليش مباشر للبارتيشن (بدون استهلاك مساحة إضافية)</string>
+    <string name="partition_unsparse_progress">جاري فك ضغط %1$s: %2$s (%3$d%%)</string>
+    <string name="partition_unsparse_success">تم فك ضغط الصورة بنجاح إلى ملف Raw:\n%1$s\n(الحجم: %2$s)</string>
+    <string name="partition_flash_exact_match">✅ حجم الملف متطابق تماماً مع سعة البارتيشن (100%% 1:1 Match: %1$s)</string>
+    <string name="partition_flash_danger_title">🛑 تحذير شديد الخطورة: احتمال تلف الجهاز أو فقدان الإقلاع</string>
+    <string name="partition_flash_danger_confirm_msg">🛑 تحذير حرج للغاية: حجم الملف (%1$s) أصغر بكثير من سعة البارتيشن (%2$s) بفارق %3$s!\n\nتفليش ملف أصغر حجماً يعني غالباً أن هذا الملف مخصص لقسم آخر تماماً (مثلاً تفليش Boot أو Recovery على قسم System أو Vendor، أو تفليش ملف تالف/مبتور). هذا الإجراء قد يتسبب فوراً في موت الجهاز (Hard Brick) أو الدخول في حلقة إقلاع لا نهائية (Bootloop)!\n\nهل أنت متأكد تماماً أنك تريد إجبار تفليش هذا الملف على %4$s (%5$s)؟</string>
+    <string name="partition_flash_force_btn">⚠️ إجبار التفليش على مسؤوليتي الكاملة</string>
+    <string name="partition_flash_type_mismatch_banner">🛑 تحذير حرج: نوع الصورة المشخص لا يتطابق مع البارتيشن المستهدف!\n• نوع الملف المشخص: %1$s\n• البارتيشن المستهدف: %2$s (%3$s)\n\n⚠️ تفليش صورة من نوع غير متوافق (مثل تفليش Recovery على Boot أو VBMeta على System) قد يتسبب فوراً في موت الجهاز (Hard Brick) أو فقدان الإقلاع (Bootloop)!</string>
+    <string name="partition_flash_type_mismatch_ack">أنا أعي أن نوع الملف المشخص يختلف عن هذا البارتيشن، وأريد إجبار التفليش على مسؤوليتي.</string>
+    <string name="partition_flash_type_mismatch_confirm">🛑 تحذير شديد الخطورة: نوع الملف المشخص هو "%1$s"، بينما البارتيشن المستهدف هو "%2$s"!\n\nكتابة صورة غير مطابقة على هذا القسم قد تؤدي إلى تدمير نظام الإقلاع ولن تتمكن من إنعاش الهاتف إلا عبر وضع الطوارئ EDL أو نقطة الاختبار.\n\nهل أنت متأكد تماماً أنك تريد إجبار تفليش هذا الملف على %3$s (%4$s)؟</string>
+
     <string name="compress_single_file_only">%1$s يضغط ملفًا واحدًا في كل مرة — حدد ملفًا واحدًا، أو استخدم صيغة .tar (مثل .tar.zst) لعدة ملفات.</string>
     <string name="deep_optimize_safe_mode">الوضع الآمن (عندما يحل التطبيق الموارد بالاسم، احتفظ بالمدخلات المطابقة لأي سلسلة)</string>
     <string name="end">النهاية</string>

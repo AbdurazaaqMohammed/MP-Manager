@@ -63,6 +63,7 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
                 || lower.endsWith(".zst") || lower.endsWith(".zstd")
+                || lower.endsWith(".win") || lower.matches(".*\\.win\\d+$")
                 || SplitArchiveUtil.isSplitArchiveName(fileName);
     }
 
@@ -261,7 +262,7 @@ public class ArchiveUtil {
      */
     private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
-        File target = SplitArchiveUtil.findFirstPart(archive);
+        File target = SplitArchiveUtil.isZipSplit(archive) ? SplitArchiveUtil.findFirstPart(archive) : archive;
         if (target == null || !target.exists()) target = archive;
         TransferControl token = listener == null ? null : listener.control();
         try (ZipFile zf = new ZipFile(target)) {
@@ -360,7 +361,7 @@ public class ArchiveUtil {
     private static void extractRar(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
         String passStr = password == null ? null : new String(password);
-        File first = SplitArchiveUtil.findFirstPart(archive);
+        File first = SplitArchiveUtil.isRarSplit(archive) ? SplitArchiveUtil.findFirstPart(archive) : archive;
         try (Archive rar = (first != null && SplitArchiveUtil.isRarSplit(first))
                 ? new Archive(new com.github.junrar.volume.FileVolumeManager(first), null, passStr)
                 : (passStr == null ? new Archive(archive) : new Archive(archive, passStr))) {
@@ -390,7 +391,7 @@ public class ArchiveUtil {
 
     private static void extractTar(InputStream tarInput, File archive, File destDir, boolean preserveTime,
                                    FileUtils.TransferListener listener) throws IOException {
-        try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
+        try (ArchiveBrowseUtil.MpTarArchiveInputStream tais = new ArchiveBrowseUtil.MpTarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
                 if (listener != null) listener.checkpoint();

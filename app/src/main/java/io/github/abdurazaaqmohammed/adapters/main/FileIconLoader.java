@@ -117,7 +117,7 @@ public class FileIconLoader {
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
-            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon;
+            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
 
@@ -625,6 +625,16 @@ public class FileIconLoader {
     private static long calculateFolderSize(File dir, Context ctx) {
         if (dir == null || !dir.isDirectory()) return 0;
         String path = dir.getAbsolutePath();
+        if (path.equals("/proc") || path.startsWith("/proc/")
+                || path.equals("/sys") || path.startsWith("/sys/")
+                || path.equals("/dev") || path.startsWith("/dev/")
+                || path.equals("/acct") || path.startsWith("/acct/")
+                || path.equals("/config") || path.startsWith("/config/")
+                || path.equals("/d") || path.startsWith("/d/")
+                || path.equals("/linkerconfig") || path.startsWith("/linkerconfig/")
+                || path.equals("/data_mirror") || path.startsWith("/data_mirror/")) {
+            return 0;
+        }
         if (!isUserStorage(path)) {
             try {
                 if (AccessManager.fileOpsOn(ctx)) {
@@ -964,6 +974,8 @@ public class FileIconLoader {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             resolved = cachedTextIcon;
+        } else if (".img".equals(ext) || ".iso".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
+            resolved = cachedImgIcon;
         } else if (FileUtils.isElf(path)) {
             resolved = cachedElfIcon;
         } else if (!isInZip) {
@@ -1092,6 +1104,7 @@ public class FileIconLoader {
         cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
         cachedElfIcon     = badge(res, density, R.drawable.terminal_24px, 0xFF37474F, true);
+        cachedImgIcon     = badge(res, density, R.drawable.ic_disk_drive_24px, 0xFF455A64, true);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
                 theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
     }

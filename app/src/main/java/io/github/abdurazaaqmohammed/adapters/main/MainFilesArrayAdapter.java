@@ -975,9 +975,33 @@ final View.OnClickListener originalClickListener;
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)) {
+                if (!multi && !isInZip && !file.isDirectory() && !ApkIconHelper.isApkLikeFile(fileName)
+                        && (ArchiveUtil.isSupportedArchive(fileName)
+                            || ArchiveBrowseUtil.isBrowsable(file)
+                            || ArchiveUtil.isMiuiOrAndroidBackup(file)
+                            || SplitArchiveUtil.isSplitArchive(file)
+                            || SplitArchiveUtil.detectMergedExtension(file) != null)) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.SPLIT, direction)));
-                    if (SplitArchiveUtil.isSplitArchive(file)) {
+                }
+
+                if (multi && !isInZip && selectedPositions.size() >= 2) {
+                    List<File> selectedFiles = new ArrayList<>();
+                    boolean allValidFiles = true;
+                    for (int pos : selectedPositions) {
+                        if (pos >= 0 && pos < values.length && values[pos] instanceof File) {
+                            File f = (File) values[pos];
+                            if (f.isFile() && !ApkIconHelper.isApkLikeFile(f.getName())) {
+                                selectedFiles.add(f);
+                            } else {
+                                allValidFiles = false;
+                                break;
+                            }
+                        } else {
+                            allValidFiles = false;
+                            break;
+                        }
+                    }
+                    if (allValidFiles && selectedFiles.size() >= 2 && SplitArchiveUtil.areMergeableParts(selectedFiles)) {
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MERGE_SPLIT, FileMenuOrder.labelFor(context, FileMenuOrder.MERGE_SPLIT, direction)));
                     }
                 }
@@ -1283,8 +1307,19 @@ final View.OnClickListener originalClickListener;
                                 SplitDialog.showSplit(context, file);
                                 return;
                             case FileMenuOrder.MERGE_SPLIT:
-                                if (isInZip || multi) return;
-                                SplitDialog.showMerge(context, file);
+                                if (isInZip) return;
+                                if (multi) {
+                                    List<File> partsToMerge = new ArrayList<>();
+                                    for (int pos : selectedPositions) {
+                                        if (pos >= 0 && pos < values.length && values[pos] instanceof File) {
+                                            File f = (File) values[pos];
+                                            if (f.isFile()) partsToMerge.add(f);
+                                        }
+                                    }
+                                    SplitDialog.showMerge(context, partsToMerge);
+                                } else {
+                                    SplitDialog.showMerge(context, file);
+                                }
                                 return;
                             default:
                                 switch (actionId) {

@@ -374,6 +374,15 @@ public class FilePropertiesDialog {
                     permView.setText(permText);
                     ownerView.setText(finalOwner);
                 });
+
+                io.github.abdurazaaqmohammed.features.system.SystemImageEngine.ImageIdentity identity =
+                        io.github.abdurazaaqmohammed.features.system.SystemImageEngine.identifyImage(file);
+                if (identity != null && !"unknown".equals(identity.typeKey)) {
+                    context.handler.post(() -> {
+                        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+                        addPropertyRow(propRows, context.getString(R.string.property_image_type), identity.getDisplayName(isAr));
+                    });
+                }
             }).start();
         }
 
@@ -383,10 +392,18 @@ public class FilePropertiesDialog {
                 .setPositiveButton(R.string.close, null);
 
         if (!isInZip && !multi && file != null && file.isFile()) {
-            dialogBuilder.setNeutralButton(R.string.mime, (d, w) -> showMimeDialog(file));
+            dialogBuilder.setNeutralButton(R.string.mime, null);
         }
 
         selfDialog[0] = dialogBuilder.create();
+        if (!isInZip && !multi && file != null && file.isFile()) {
+            selfDialog[0].setOnShowListener(di -> {
+                android.widget.Button neutral = selfDialog[0].getButton(AlertDialog.BUTTON_NEUTRAL);
+                if (neutral != null) {
+                    neutral.setOnClickListener(v -> showMimeDialog(file));
+                }
+            });
+        }
         dialogUtil.styleAlertDialog(selfDialog[0]);
     }
 

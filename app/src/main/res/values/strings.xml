@@ -260,6 +260,7 @@
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>
+    <string name="elf_extract_strings">Decompile &amp; Extract Readable Code</string>
     <string name="saved">Saved</string>
     <string name="goto_offset">Go to offset</string>
     <string name="revert_changes">Revert changes</string>
@@ -1959,6 +1960,28 @@ Strings are sent to the external service you configured.</string>
     <string name="save_read_only_reason">The file was opened from another app that only granted read access, so writing back to the original is not permitted by Android.</string>
     <string name="save_denied_reason">The storage location denied write access. Removable SD cards on Android 10+ only accept writes through SAF, root or Shizuku.</string>
     <string name="save_copy">Save a copy</string>
+    <string name="confirm_save_exported_or_original">Do you want to apply these changes to the original file as well, or keep only the exported copy?</string>
+    <string name="save_to_original">Apply to original</string>
+    <string name="keep_exported_copy_only">Keep exported copy only</string>
+    <string name="set_edit">SetEdit</string>
+    <string name="settings_editor_title">Settings Editor</string>
+    <string name="global_settings">Global Settings</string>
+    <string name="secure_settings">Secure Settings</string>
+    <string name="system_settings">System Settings</string>
+    <string name="android_properties">Android Properties</string>
+    <string name="entries_count">%1$d entries</string>
+    <string name="search_key_or_value">Search key or value</string>
+    <string name="overview">Overview</string>
+    <string name="overview_subtitle">Entries per source. Tap one to open it.</string>
+    <string name="add_setting">New Setting</string>
+    <string name="edit_setting">Edit Setting</string>
+    <string name="delete_setting">Delete Setting</string>
+    <string name="setting_key">Key</string>
+    <string name="setting_value">Value</string>
+    <string name="setting_table">Table / Namespace</string>
+    <string name="confirm_delete_setting">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="setting_saved">Setting saved successfully</string>
+    <string name="setting_deleted">Setting deleted</string>
     <string name="saved_to_x">Saved copy to %1$s</string>
     <string name="saved_elevated">Saved using elevated access</string>
     <string name="save_elevated">Save with elevated access</string>
@@ -2211,7 +2234,7 @@ Strings are sent to the external service you configured.</string>
 
     <!-- Split & Merge Archive / File Tools -->
     <string name="split_file">Split</string>
-    <string name="merge_split_files">Merge split files</string>
+    <string name="merge_split_files">Merge</string>
     <string name="split_dialog_title">Split file</string>
     <string name="split_by_size">By part size</string>
     <string name="split_by_count">By number of parts</string>
@@ -2226,8 +2249,10 @@ Strings are sent to the external service you configured.</string>
     <string name="merge_in_progress">Merging parts…</string>
     <string name="merge_success">Merged successfully: %1$s</string>
     <string name="delete_original_after_split">Delete original file after splitting</string>
+    <string name="delete_parts_after_merge">Delete split parts after merging</string>
     <string name="split_open_archive">Open archive</string>
-    <string name="split_missing_parts">Some parts are missing</string>
+    <string name="split_missing_parts">No other split parts found for this file in this folder.</string>
+    <string name="output_filename">Output filename:</string>
 
     <!-- Flutter Tools & Inspection -->
     <string name="flutter_tools">Flutter Tools</string>
@@ -2245,6 +2270,91 @@ Strings are sent to the external service you configured.</string>
     <string name="flutter_search_hint">Search strings / URLs / endpoints…</string>
     <string name="flutter_copied">Copied to clipboard</string>
     <string name="flutter_strings_count">%1$d strings found</string>
+
+    <!-- Android OTA Payload Dumper & Inspector -->
+    <string name="payload_tools_title">OTA Payload Inspector</string>
+    <string name="payload_search_hint">Search partitions (boot, vendor, system…)…</string>
+    <string name="payload_partitions_count">%1$d partitions found (%2$s uncompressed)</string>
+    <string name="payload_extract_partition">Extract partition (.img)</string>
+    <string name="payload_extract_all">Extract All Partitions</string>
+    <string name="payload_open_boot_inspector">Extract &amp; Open in Boot Inspector</string>
+    <string name="payload_extracting">Extracting %1$s…</string>
+    <string name="payload_extract_success">Partition extracted: %1$s</string>
+    <string name="payload_extract_all_success">Extracted %1$d partitions</string>
+    <string name="payload_copy_hash">Copy SHA-256 Hash</string>
+
+    <!-- Partition Dumper -->
+    <string name="tool_partition_dumper">Partition Dumper</string>
+    <string name="tool_partition_dumper_subtitle">Dump device hardware &amp; dynamic partitions to .img</string>
+    <string name="set_edit_subtitle">Edit Android system, global, and secure settings</string>
+    <string name="partition_dumper_title">Partition Dumper (Root)</string>
+    <string name="partition_info_title">Partition Details</string>
+    <string name="partition_batch_dump">Dump Selected (%d)</string>
+    <string name="partition_select_all">Select All</string>
+    <string name="partition_deselect_all">Deselect All</string>
+    <string name="partition_copy_details">Copy Details</string>
+    <string name="partition_refresh">Refresh</string>
+    <string name="all">All</string>
+    <string name="partition_search_hint">Search partitions (recovery, boot, vendor, system…)…</string>
+    <string name="partition_slot_a">Slot A</string>
+    <string name="partition_slot_b">Slot B</string>
+    <string name="partition_slot_active_tag"> Active</string>
+    <string name="partition_dump_btn">Dump (.img)</string>
+    <string name="partition_dump_dialog_title">Dump %1$s</string>
+    <string name="partition_dump_dest_label">Destination directory:</string>
+    <string name="partition_dump_filename_label">Output file name (.img):</string>
+    <string name="partition_dumping_progress">Dumping %1$s: %2$s / %3$s (%4$s)</string>
+    <string name="title_success">Success</string>
+    <string name="partition_dump_success">Partition dumped successfully:\n%1$s</string>
+    <string name="partition_open_img">Open as .img</string>
+    <string name="partition_show_in_folder">Show in folder</string>
+    <string name="partition_root_required">Partition dumping requires Root privileges (su).</string>
+    <string name="partition_count_summary">%1$d partitions available</string>
+    <string name="partition_diff_banner">⚠️ Differences detected between Slot A and Slot B (%1$d partitions differ — tap for details)</string>
+    <string name="partition_diff_dialog_title">Slot Differences (%1$d partitions)</string>
+    <string name="partition_diff_dialog_msg">The following partitions have different contents between Slot A and Slot B:\n\n%1$s</string>
+    <string name="partition_diff_filter_btn">Show Only Differences</string>
+
+    <!-- Partition Action Dialog: Copy vs Flash -->
+    <string name="partition_action_dialog_title">Partition: %1$s</string>
+    <string name="partition_opt_copy">Backup Partition (Copy / Dump)</string>
+    <string name="partition_opt_copy_desc">Dump a 1:1 raw copy (.img) to your chosen destination.</string>
+    <string name="partition_opt_flash">Flash Image to Partition</string>
+    <string name="partition_opt_flash_desc">Write an external .img file with smart compatibility &amp; safety validation.</string>
+    <string name="partition_copy_title">Backup %1$s</string>
+    <string name="partition_copy_btn">Save Copy (.img)</string>
+    <string name="partition_flash_dialog_title">Flash to: %1$s</string>
+    <string name="partition_flash_src_label">Select image file to flash (.img):</string>
+    <string name="partition_flash_select_available">Available .img files in current folder:</string>
+    <string name="partition_flash_path_hint">Enter or paste .img path…</string>
+    <string name="partition_flash_btn">⚡ Flash Partition</string>
+    <string name="partition_flash_confirm_title">Confirm Flashing</string>
+    <string name="partition_flash_confirm_msg">You are about to write:\n%1$s\n\nTo partition:\n%2$s (%3$s)\n\n⚠️ This will overwrite all existing data on this partition. Proceed?</string>
+    <string name="partition_flash_success">Partition %1$s flashed successfully!</string>
+    <string name="partition_flashing_progress">Flashing %1$s: %2$s / %3$s (%4$s)</string>
+    <string name="partition_flash_ack_risk">I understand the risks and take full responsibility for flashing this file.</string>
+    <string name="partition_flash_file_not_found">Selected file does not exist on storage.</string>
+    <string name="partition_flash_match_ok">File ready for flashing (%1$s)</string>
+    <string name="partition_flash_size_exceeded">File size (%1$s) exceeds partition capacity (%2$s)! Flashing blocked to prevent corruption.</string>
+    <string name="partition_flash_sparse_warning">⚠️ Warning: File appears to be an Android Sparse Image. Direct flashing via dd requires an uncompressed Raw Image.</string>
+    <string name="partition_flash_empty_file">Selected file is empty (0 bytes).</string>
+    <string name="partition_browse_file">Browse…</string>
+    <string name="property_image_type">Image Type</string>
+    <string name="partition_detected_type">Detected Type: %1$s</string>
+    <string name="partition_flash_size_too_small">⚠️ Warning: File size (%1$s) is smaller than partition capacity (%2$s). Are you sure this is the correct file for this partition?</string>
+    <string name="partition_flash_force_small_ack">I am sure this file is intended for this partition and I take full responsibility.</string>
+    <string name="partition_flash_sparse_prompt">Image is compressed (Android Sparse Image). Real uncompressed size: %1$s.\nChoose an action:</string>
+    <string name="partition_flash_unsparse_to_file">📂 Unsparse to Raw File (.img)</string>
+    <string name="partition_flash_unsparse_and_flash">⚡ Direct Unsparse &amp; Flash (No extra storage needed)</string>
+    <string name="partition_unsparse_progress">Unsparsing %1$s: %2$s (%3$d%%)</string>
+    <string name="partition_unsparse_success">Image unsparsed successfully:\n%1$s\n(Size: %2$s)</string>
+    <string name="partition_flash_exact_match">✅ File size exactly matches partition capacity (100%% 1:1 Match: %1$s)</string>
+    <string name="partition_flash_danger_title">🛑 CRITICAL DANGER: Risk of Brick / Bootloop</string>
+    <string name="partition_flash_danger_confirm_msg">🛑 CRITICAL WARNING: File size (%1$s) is significantly smaller than partition capacity (%2$s) by %3$s!\n\nFlashing a smaller file usually means this image belongs to a completely different partition (e.g. Boot/Recovery on System/Vendor, or a truncated file). This action can immediately cause a permanent Hard Brick or Bootloop.\n\nAre you ABSOLUTELY sure you want to force flashing this file onto %4$s (%5$s)?</string>
+    <string name="partition_flash_force_btn">⚠️ Force Flash At My Own Risk</string>
+    <string name="partition_flash_type_mismatch_banner">🛑 CRITICAL WARNING: The detected image type does not match the target partition!\n• Detected File Type: %1$s\n• Target Partition: %2$s (%3$s)\n\n⚠️ Flashing an incompatible image type (such as flashing Recovery to Boot, or VBMeta to System) will likely cause an immediate Hard Brick or Bootloop!</string>
+    <string name="partition_flash_type_mismatch_ack">I am aware the detected image type differs from this partition, but I want to force flash it anyway.</string>
+    <string name="partition_flash_type_mismatch_confirm">🛑 CRITICAL DANGER: Detected file type is "%1$s", but the target partition is "%2$s"!\n\nWriting an incompatible image to this partition will likely destroy device bootability, leaving it bricked or bootlooping.\n\nAre you ABSOLUTELY sure you want to force flashing this file onto %3$s (%4$s)?</string>
 
     <string name="frida_gadget">Frida Gadget</string>
     <string name="frida_console">Frida Console</string>
