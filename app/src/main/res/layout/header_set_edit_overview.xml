@@ -26,287 +26,226 @@
         android:textSize="12sp"
         android:layout_marginBottom="10dp" />
 
-    <!-- Container holding the 2x2 grid on the left and the tall Favorites card on the right -->
+    <!-- 2x2 Grid (Global, Secure, System, Properties) filling full width -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
-        <!-- 2x2 Grid Column (Global, Secure, System, Properties) -->
+        <!-- Row 1: Global & Secure -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:orientation="vertical"
-            android:layout_marginEnd="6dp">
+            android:orientation="horizontal">
 
-            <!-- Row 1: Global & Secure -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Global Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardGlobal"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:cardBackgroundColor="?attr/colorSurface">
 
-                <!-- Global Card -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardGlobal"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:cardBackgroundColor="?attr/colorSurface">
+                    android:orientation="vertical"
+                    android:padding="14dp">
 
-                    <LinearLayout
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_globe_24"
+                        app:tint="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
+                        android:layout_marginTop="8dp"
+                        android:text="@string/global_settings"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:src="@drawable/ic_globe_24"
-                            app:tint="?attr/colorPrimary"
-                            android:importantForAccessibility="no" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/global_settings"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvCountGlobal"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="0 entries"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="11.5sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Secure Card -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardSecure"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:cardBackgroundColor="?attr/colorSurface">
-
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tvCountGlobal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
+                        android:layout_marginTop="2dp"
+                        android:text="0 entries"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:src="@drawable/ic_shield_24"
-                            app:tint="?attr/colorPrimary"
-                            android:importantForAccessibility="no" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/secure_settings"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvCountSecure"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="0 entries"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="11.5sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- Row 2: System & Properties -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Secure Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSecure"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:cardBackgroundColor="?attr/colorSurface">
 
-                <!-- System Card -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardSystem"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:cardBackgroundColor="?attr/colorSurface">
+                    android:orientation="vertical"
+                    android:padding="14dp">
 
-                    <LinearLayout
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_shield_24"
+                        app:tint="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
+                        android:layout_marginTop="8dp"
+                        android:text="@string/secure_settings"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:src="@drawable/ic_android_24"
-                            app:tint="?attr/colorPrimary"
-                            android:importantForAccessibility="no" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/system_settings"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvCountSystem"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="0 entries"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="11.5sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Props Card -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardProps"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:cardBackgroundColor="?attr/colorSurface">
-
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tvCountSecure"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:src="@drawable/terminal_24px"
-                            app:tint="?attr/colorPrimary"
-                            android:importantForAccessibility="no" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/android_properties"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvCountProps"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Tap to load"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="11.5sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
+                        android:layout_marginTop="2dp"
+                        android:text="0 entries"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Right Side: Tall Favorites Card (fills the height of the 2x2 grid) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardFavorites"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorOutline"
-            app:cardBackgroundColor="?attr/colorSurface">
+        <!-- Row 2: System & Properties -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="12dp">
+            <!-- System Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSystem"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:cardBackgroundColor="?attr/colorSurface">
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/ic_favorite_24"
-                    app:tint="#E91E63"
-                    android:importantForAccessibility="no" />
-
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/favorites"
-                    android:singleLine="true"
-                    android:ellipsize="end"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="14dp">
 
-                <TextView
-                    android:id="@+id/tvCountFavorites"
-                    android:layout_width="wrap_content"
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_android_24"
+                        app:tint="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/system_settings"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCountSystem"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="0 entries"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Props Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardProps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:cardBackgroundColor="?attr/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="0 entries"
-                    android:singleLine="true"
-                    android:ellipsize="end"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/terminal_24px"
+                        app:tint="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/android_properties"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCountProps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Tap to load"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
     </LinearLayout>
 

@@ -86,13 +86,15 @@ public class SetEditActivity extends BaseActivity {
     }
 
     private Toolbar toolbar;
+    private View btnToolbarFavorites;
+    private TextView tvToolbarFavoritesCount;
     private EditText etSearch;
     private ImageView btnClearSearch;
     private ChipGroup chipGroupSources;
     private Chip chipAll, chipGlobal, chipSecure, chipSystem, chipProps, chipFavorites;
     private View layoutOverview;
-    private MaterialCardView cardGlobal, cardSecure, cardSystem, cardProps, cardFavorites;
-    private TextView tvCountGlobal, tvCountSecure, tvCountSystem, tvCountProps, tvCountFavorites;
+    private MaterialCardView cardGlobal, cardSecure, cardSystem, cardProps;
+    private TextView tvCountGlobal, tvCountSecure, tvCountSystem, tvCountProps;
     private ProgressBar progressBar;
     private TextView tvEmpty;
     private RecyclerView rvEntries;
@@ -170,6 +172,9 @@ public class SetEditActivity extends BaseActivity {
         toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.settings_editor_title);
         toolbar.setNavigationOnClickListener(v -> finish());
+        btnToolbarFavorites = toolbar.findViewById(R.id.btnToolbarFavorites);
+        tvToolbarFavoritesCount = toolbar.findViewById(R.id.tvToolbarFavoritesCount);
+
         MenuItem refresh = toolbar.getMenu().add(0, 1001, 0, R.string.menu_refresh);
         refresh.setIcon(R.drawable.baseline_refresh_24);
         refresh.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -197,13 +202,11 @@ public class SetEditActivity extends BaseActivity {
         cardSecure = layoutOverview.findViewById(R.id.cardSecure);
         cardSystem = layoutOverview.findViewById(R.id.cardSystem);
         cardProps = layoutOverview.findViewById(R.id.cardProps);
-        cardFavorites = layoutOverview.findViewById(R.id.cardFavorites);
 
         tvCountGlobal = layoutOverview.findViewById(R.id.tvCountGlobal);
         tvCountSecure = layoutOverview.findViewById(R.id.tvCountSecure);
         tvCountSystem = layoutOverview.findViewById(R.id.tvCountSystem);
         tvCountProps = layoutOverview.findViewById(R.id.tvCountProps);
-        tvCountFavorites = layoutOverview.findViewById(R.id.tvCountFavorites);
 
         progressBar = findViewById(R.id.progressBar);
         tvEmpty = findViewById(R.id.tvEmpty);
@@ -269,7 +272,9 @@ public class SetEditActivity extends BaseActivity {
             chipProps.setChecked(true);
             ensurePropsLoaded();
         });
-        cardFavorites.setOnClickListener(v -> chipFavorites.setChecked(true));
+        if (btnToolbarFavorites != null) {
+            btnToolbarFavorites.setOnClickListener(v -> chipFavorites.setChecked(true));
+        }
 
         fabAdd.setOnClickListener(v -> showAddDialog());
     }
@@ -309,7 +314,9 @@ public class SetEditActivity extends BaseActivity {
         tvCountSecure.setText(getString(R.string.entries_count, sCount));
         tvCountSystem.setText(getString(R.string.entries_count, sysCount));
         tvCountProps.setText(propsLoaded ? getString(R.string.entries_count, pCount) : "Tap to load");
-        tvCountFavorites.setText(getString(R.string.entries_count, favCount));
+        if (tvToolbarFavoritesCount != null) {
+            tvToolbarFavoritesCount.setText(String.valueOf(favCount));
+        }
 
         chipAll.setText(getString(R.string.all) + " " + allEntries.size());
         chipGlobal.setText("Global " + gCount);
