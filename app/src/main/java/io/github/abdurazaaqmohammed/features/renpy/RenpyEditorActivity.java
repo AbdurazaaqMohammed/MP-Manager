@@ -102,13 +102,23 @@ public class RenpyEditorActivity extends BaseActivity {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        // Magic Action: Unlock Gallery / CGs
+        MenuItem unlockItem = toolbar.getMenu().add(0, R.id.renpy_menu_unlock_gallery, 0, R.string.renpy_unlock_gallery);
+        unlockItem.setIcon(R.drawable.lock_open_24px);
+        unlockItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
         // Save Action Button in Toolbar
-        MenuItem saveItem = toolbar.getMenu().add(0, 1001, 0, R.string.save);
+        MenuItem saveItem = toolbar.getMenu().add(0, R.id.renpy_menu_save, 1, R.string.save);
         saveItem.setIcon(R.drawable.save_24px);
         saveItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
         toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1001) {
+            int id = item.getItemId();
+            if (id == R.id.renpy_menu_save) {
                 saveModifications();
+                return true;
+            } else if (id == R.id.renpy_menu_unlock_gallery) {
+                confirmUnlockGallery();
                 return true;
             }
             return false;
@@ -349,6 +359,37 @@ public class RenpyEditorActivity extends BaseActivity {
                 });
             }
         }).start();
+    }
+
+    private void confirmUnlockGallery() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.renpy_unlock_gallery)
+                .setMessage(R.string.renpy_unlock_gallery_confirm)
+                .setPositiveButton(R.string.renpy_unlock_gallery, (dialog, which) -> {
+                    progressBar.setVisibility(View.VISIBLE);
+                    tvStatusCount.setText(isAr() ? "جارٍ فتح جميع الصور والجاليري..." : "Unlocking all gallery items & CGs...");
+                    new Thread(() -> {
+                        try {
+                            File backup = RenpySaveEngine.unlockGallery(RenpyEditorActivity.this, targetFile);
+                            runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                modifiedMap.clear();
+                                loadData();
+                                String msg = isAr()
+                                        ? ("تم فتح الجاليري بنجاح! نسخة احتياطية: " + backup.getName())
+                                        : (getString(R.string.renpy_unlock_success) + " Backup: " + backup.getName());
+                                Toast.makeText(RenpyEditorActivity.this, msg, Toast.LENGTH_LONG).show();
+                            });
+                        } catch (Exception e) {
+                            runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                Toast.makeText(RenpyEditorActivity.this, "Unlock failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    }).start();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private class VariableAdapter extends RecyclerView.Adapter<VariableAdapter.ViewHolder> {

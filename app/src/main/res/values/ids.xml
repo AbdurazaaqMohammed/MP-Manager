@@ -12,4 +12,6 @@
     <item name="renpy_var_name" type="id" />
     <item name="renpy_var_type" type="id" />
     <item name="renpy_var_value" type="id" />
+    <item name="renpy_menu_unlock_gallery" type="id" />
+    <item name="renpy_menu_save" type="id" />
 </resources>
