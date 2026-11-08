@@ -36,8 +36,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import io.github.abdurazaaqmohammed.MPManager.BaseActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -372,14 +372,14 @@ public class RenpyEditorActivity extends BaseActivity {
             col.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
             TextView tvName = new TextView(parent.getContext());
-            tvName.setId(R.id.name);
+            tvName.setId(R.id.renpy_var_name);
             tvName.setTextSize(14.5f);
             tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             tvName.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF));
             col.addView(tvName);
 
             TextView tvType = new TextView(parent.getContext());
-            tvType.setId(R.id.type);
+            tvType.setId(R.id.renpy_var_type);
             tvType.setTextSize(11.5f);
             tvType.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888));
             col.addView(tvType);
@@ -387,7 +387,7 @@ public class RenpyEditorActivity extends BaseActivity {
             row.addView(col);
 
             TextView tvVal = new TextView(parent.getContext());
-            tvVal.setId(R.id.value);
+            tvVal.setId(R.id.renpy_var_value);
             tvVal.setTextSize(13.5f);
             tvVal.setTypeface(Typeface.MONOSPACE);
             tvVal.setTextColor(0xFF4CAF50); // Bright Green
@@ -436,9 +436,9 @@ public class RenpyEditorActivity extends BaseActivity {
 
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
-                tvName = itemView.findViewById(R.id.name);
-                tvType = itemView.findViewById(R.id.type);
-                tvValue = itemView.findViewById(R.id.value);
+                tvName = itemView.findViewById(R.id.renpy_var_name);
+                tvType = itemView.findViewById(R.id.renpy_var_type);
+                tvValue = itemView.findViewById(R.id.renpy_var_value);
             }
         }
     }

@@ -26,13 +26,13 @@
         android:textSize="12sp"
         android:layout_marginBottom="10dp" />
 
-    <!-- 2 rows x 3 columns Grid (3 columns in width) -->
+    <!-- 2x2 Grid (Global, Secure, System, Properties) with generous spacious cards -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Row 1: Global, Secure, System (3 columns in width) -->
+        <!-- Row 1: Global & Secure -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -44,8 +44,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                app:cardCornerRadius="14dp"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline"
@@ -55,11 +55,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp">
 
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_globe_24"
                         app:tint="?attr/colorPrimary"
                         android:importantForAccessibility="no" />
@@ -67,24 +68,24 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/global_settings"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="13sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvCountGlobal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="3dp"
                         android:text="0 entries"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="11sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -94,8 +95,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginHorizontal="3dp"
-                app:cardCornerRadius="14dp"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline"
@@ -105,11 +106,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp">
 
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_shield_24"
                         app:tint="?attr/colorPrimary"
                         android:importantForAccessibility="no" />
@@ -117,26 +119,34 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/secure_settings"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="13sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvCountSecure"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="3dp"
                         android:text="0 entries"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="11sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Row 2: System & Properties -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
 
             <!-- System Card -->
             <com.google.android.material.card.MaterialCardView
@@ -144,8 +154,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                app:cardCornerRadius="14dp"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline"
@@ -155,11 +165,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp">
 
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_android_24"
                         app:tint="?attr/colorPrimary"
                         android:importantForAccessibility="no" />
@@ -167,34 +178,26 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/system_settings"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="13sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvCountSystem"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="3dp"
                         android:text="0 entries"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="11sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
-        <!-- Row 2: Properties Card (matching 3-column width grid) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
 
             <!-- Props Card -->
             <com.google.android.material.card.MaterialCardView
@@ -202,8 +205,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                app:cardCornerRadius="14dp"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline"
@@ -213,11 +216,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp">
 
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/terminal_24px"
                         app:tint="?attr/colorPrimary"
                         android:importantForAccessibility="no" />
@@ -225,40 +229,26 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/android_properties"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="13sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvCountProps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="3dp"
                         android:text="0 entries"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="11sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <!-- Spacer column 2 -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="3dp" />
-
-            <!-- Spacer column 3 -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp" />
         </LinearLayout>
 
     </LinearLayout>
