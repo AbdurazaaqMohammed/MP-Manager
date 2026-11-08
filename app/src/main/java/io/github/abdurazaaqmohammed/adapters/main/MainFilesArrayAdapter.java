@@ -237,6 +237,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
             File resolved = BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
+        } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountedFolder(current)) {
+            File resolved = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(current);
+            if (resolved != null && !resolved.equals(current.getParentFile())) {
+                target = resolved;
+                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.checkUnmountOnExit(context, current);
+            }
         }
         if (target == null) return false;
         if (current != null && target.equals(current)) return false;

@@ -1720,11 +1720,13 @@ public class FileOpener {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (isKernelFile(file, fileName)) {
             withReadableCopy(file, readable -> showKernelOptionsDialog(readable, fileName, file));
-        } else if (fileName.endsWith(".img")) {
+        } else if (fileName.endsWith(".img") || fileName.endsWith(".iso") || file.getAbsolutePath().startsWith("/dev/block/")) {
             if (io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
                 io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
             } else if (io.github.abdurazaaqmohammed.features.system.SystemImageEngine.isSparseImage(file)) {
                 promptUnsparseImage(file, fileName);
+            } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountableImage(file)) {
+                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.showImageOptionsDialog(context, file, fileName, pane1);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
