@@ -529,7 +529,7 @@ public class FileIconLoader {
 
         boolean canElevate = elevatedFileOps
                 || (context != null && RootManager.getInstance(context).isRootAvailable())
-                || io.github.abdurazaaqmohammed/MPManager/shizuku/ShizukuManager.ready();
+                || io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuManager.ready();
 
         if (!canElevate) {
             fileDateView.setTag(null);
