@@ -625,6 +625,16 @@ public class FileIconLoader {
     private static long calculateFolderSize(File dir, Context ctx) {
         if (dir == null || !dir.isDirectory()) return 0;
         String path = dir.getAbsolutePath();
+        if (path.equals("/proc") || path.startsWith("/proc/")
+                || path.equals("/sys") || path.startsWith("/sys/")
+                || path.equals("/dev") || path.startsWith("/dev/")
+                || path.equals("/acct") || path.startsWith("/acct/")
+                || path.equals("/config") || path.startsWith("/config/")
+                || path.equals("/d") || path.startsWith("/d/")
+                || path.equals("/linkerconfig") || path.startsWith("/linkerconfig/")
+                || path.equals("/data_mirror") || path.startsWith("/data_mirror/")) {
+            return 0;
+        }
         if (!isUserStorage(path)) {
             try {
                 if (AccessManager.fileOpsOn(ctx)) {
