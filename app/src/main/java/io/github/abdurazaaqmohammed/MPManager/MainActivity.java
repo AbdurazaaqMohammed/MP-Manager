@@ -2648,6 +2648,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         try {
             File currentFolder = pane1 ? pane1Folder : pane2Folder;
             if (currentFolder != null) DirSizeCache.invalidatePrefix(currentFolder);
+            RootManager.getInstance(this).invalidateListCache();
         } catch (Exception ignored) { }
         reloadOnePane(pane1, false);
         reloadOnePane(!pane1, false);
@@ -2694,13 +2695,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RecyclerView.Adapter<?> adapter = pane.getAdapter();
             if (adapter instanceof MainFilesArrayAdapter filesAdapter) {
                 if (filesAdapter.isInZip) loadZipFolderInPane(pane1 ? pane1Folder : pane2Folder, filesAdapter.currentZipPath, pane1, false);
-                else loadFolderInPane(pane1 ? pane1Folder : pane2Folder, pane1, false);
+                else loadFolderInPaneAsync(pane1 ? pane1Folder : pane2Folder, pane1, false, saved != null ? () -> restorePaneScroll(pane1, saved) : null);
             } else if (adapter instanceof FtpFilesArrayAdapter ftpAdapter && ftpAdapter.getItemCount() > 0)
                 fetchFtpDirAndLoad(ftpAdapter.getItem(0).getParent(), pane1);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
         }
-        if (saved != null) restorePaneScroll(pane1, saved);
+        if (saved != null && !(pane.getAdapter() instanceof MainFilesArrayAdapter)) restorePaneScroll(pane1, saved);
     }
 
     /** Captures first-visible position + offset so a refresh can restore it. */

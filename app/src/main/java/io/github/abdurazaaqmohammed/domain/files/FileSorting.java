@@ -188,11 +188,21 @@ public final class FileSorting {
 
     private static final ConcurrentHashMap<String, Long> DIR_SIZE_CACHE =
             new ConcurrentHashMap<>();
-    // Storage-bound work: a handful of concurrent walkers saturates flash I/O
-    // without flooding the system with hundreds of stat calls at once.
     private static final ExecutorService SIZE_POOL =
             Executors.newFixedThreadPool(
                     Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors())));
+
+    private static boolean isVirtualOrSpecialFs(String path) {
+        if (path == null || path.isEmpty()) return false;
+        return path.equals("/proc") || path.startsWith("/proc/")
+                || path.equals("/sys") || path.startsWith("/sys/")
+                || path.equals("/dev") || path.startsWith("/dev/")
+                || path.equals("/acct") || path.startsWith("/acct/")
+                || path.equals("/config") || path.startsWith("/config/")
+                || path.equals("/d") || path.startsWith("/d/")
+                || path.equals("/linkerconfig") || path.startsWith("/linkerconfig/")
+                || path.equals("/data_mirror") || path.startsWith("/data_mirror/");
+    }
 
     /** Walks every uncached sibling folder in parallel so a size sort stays responsive. */
     private static void computeSizesParallel(List<File> dirs) {
@@ -200,6 +210,8 @@ public final class FileSorting {
         List<Future<?>> futures = new ArrayList<>();
         for (File d : dirs) {
             if (d == null) continue;
+            String p = pathOf(d);
+            if (isVirtualOrSpecialFs(p)) continue;
             futures.add(SIZE_POOL.submit(() -> recursiveSize(d)));
         }
         for (Future<?> f : futures) {
@@ -216,6 +228,7 @@ public final class FileSorting {
         if (dir == null) return 0;
         String key = pathOf(dir);
         if (key == null) return 0;
+        if (isVirtualOrSpecialFs(key)) return 0;
         Long cached = DIR_SIZE_CACHE.get(key);
         if (cached != null) return cached;
         Long persisted = DirSizeCache.peek(dir);
