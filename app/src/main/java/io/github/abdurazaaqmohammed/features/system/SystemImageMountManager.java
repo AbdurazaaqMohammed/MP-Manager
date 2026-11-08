@@ -12,10 +12,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.Extensions;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
  * Manages mounting, browsing, and unmounting disk images (EROFS, EXT4, F2FS, ISO, NTFS, FAT)
@@ -155,7 +156,7 @@ public final class SystemImageMountManager {
     /**
      * Shows options dialog when an image file or partition is clicked.
      */
-    public static void showImageOptionsDialog(MainActivity context, File file, String fileName, boolean pane1) {
+    public static void showImageOptionsDialog(MainActivity context, FileOpener opener, File file, String fileName, boolean pane1) {
         boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.ImageIdentity id = SystemImageEngine.identifyImage(file);
         String desc = id != null ? id.getDisplayName(isAr) : fileName;
@@ -172,7 +173,7 @@ public final class SystemImageMountManager {
                     openFilesystemImage(context, file, pane1);
                 })
                 .setNeutralButton(R.string.open_with, (dialog, which) -> {
-                    context.openWithDefaultOrDialog(file, fileName);
+                    if (opener != null) opener.openWithDefaultOrDialog(file, fileName);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();

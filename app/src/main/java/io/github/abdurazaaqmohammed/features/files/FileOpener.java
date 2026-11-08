@@ -648,7 +648,7 @@ public class FileOpener {
         });
     }
 
-    private void openWithDefaultOrDialog(File file, String fileName) {
+    public void openWithDefaultOrDialog(File file, String fileName) {
         if (tryRunBuiltinDefault(file, fileName)) return;
         withReadableCopy(file, readable -> {
             Uri uri;
@@ -1726,7 +1726,7 @@ public class FileOpener {
             } else if (io.github.abdurazaaqmohammed.features.system.SystemImageEngine.isSparseImage(file)) {
                 promptUnsparseImage(file, fileName);
             } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountableImage(file)) {
-                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.showImageOptionsDialog(context, file, fileName, pane1);
+                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.showImageOptionsDialog(context, this, file, fileName, pane1);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
