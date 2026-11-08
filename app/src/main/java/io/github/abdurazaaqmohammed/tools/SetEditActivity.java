@@ -313,7 +313,7 @@ public class SetEditActivity extends BaseActivity {
         tvCountGlobal.setText(getString(R.string.entries_count, gCount));
         tvCountSecure.setText(getString(R.string.entries_count, sCount));
         tvCountSystem.setText(getString(R.string.entries_count, sysCount));
-        tvCountProps.setText(propsLoaded ? getString(R.string.entries_count, pCount) : "Tap to load");
+        tvCountProps.setText(getString(R.string.entries_count, pCount));
         if (tvToolbarFavoritesCount != null) {
             tvToolbarFavoritesCount.setText(String.valueOf(favCount));
         }
@@ -322,7 +322,7 @@ public class SetEditActivity extends BaseActivity {
         chipGlobal.setText("Global " + gCount);
         chipSecure.setText("Secure " + sCount);
         chipSystem.setText("System " + sysCount);
-        chipProps.setText(propsLoaded ? ("Props " + pCount) : "Properties");
+        chipProps.setText("Props " + pCount);
         chipFavorites.setText(getString(R.string.favorites) + " " + favCount);
     }
 
@@ -334,6 +334,7 @@ public class SetEditActivity extends BaseActivity {
             List<SettingEntry> gList = new ArrayList<>(600);
             List<SettingEntry> sList = new ArrayList<>(500);
             List<SettingEntry> sysList = new ArrayList<>(400);
+            List<SettingEntry> propList = new ArrayList<>(3500);
 
             // Fetch all three tables in a single lightning-fast su shell invocation (<100ms)
             String cmd = "echo '===GLOBAL==='; settings list global; echo '===SECURE==='; settings list secure; echo '===SYSTEM==='; settings list system";
@@ -347,22 +348,30 @@ public class SetEditActivity extends BaseActivity {
                 if (sections.length > 3) parseSettingsOutput(SettingType.SYSTEM, sections[3], sysList);
             }
 
+            // Auto-load android system properties alongside settings
+            queryProperties(propList);
+
             Collections.sort(gList, (a, b) -> a.key.compareToIgnoreCase(b.key));
             Collections.sort(sList, (a, b) -> a.key.compareToIgnoreCase(b.key));
             Collections.sort(sysList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+            Collections.sort(propList, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
-            List<SettingEntry> loaded = new ArrayList<>(gList.size() + sList.size() + sysList.size());
+            List<SettingEntry> loaded = new ArrayList<>(gList.size() + sList.size() + sysList.size() + propList.size());
             loaded.addAll(gList);
             loaded.addAll(sList);
             loaded.addAll(sysList);
+            loaded.addAll(propList);
             Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
             runOnUiThread(() -> {
+                propsLoaded = true;
+                isLoadingProps = false;
                 allEntries.clear();
                 allEntries.addAll(loaded);
                 entriesByType.put(SettingType.GLOBAL, gList);
                 entriesByType.put(SettingType.SECURE, sList);
                 entriesByType.put(SettingType.SYSTEM, sysList);
+                entriesByType.put(SettingType.PROP, propList);
 
                 updateCounts();
                 progressBar.setVisibility(View.GONE);
