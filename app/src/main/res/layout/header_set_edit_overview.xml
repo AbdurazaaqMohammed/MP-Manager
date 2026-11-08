@@ -200,7 +200,7 @@
                 <ImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/baseline_terminal_24"
+                    android:src="@drawable/terminal_24px"
                     app:tint="?attr/colorPrimary"
                     android:importantForAccessibility="no" />
 
