@@ -966,8 +966,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 .getBoolean(LogcatService.PREF_AUTO_START, false)) {
             LogcatService.start(this);
         }
-        if ("always".equals(PreferenceManager.getDefaultSharedPreferences(this)
-                .getString("pref_folder_size_mode", "archive"))) {
+        if (UiPrefs.folderSizeMode(this) != UiPrefs.FOLDER_SIZE_NONE) {
             DirSizeCache.preload();
         }
         // Applies the custom app dir to REAndroid's framework loader before

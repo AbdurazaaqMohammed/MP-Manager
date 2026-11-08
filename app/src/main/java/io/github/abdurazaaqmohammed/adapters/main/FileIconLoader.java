@@ -497,9 +497,9 @@ public class FileIconLoader {
 
     private void showFolderDate(File file, TextView fileDateView, long[] meta) {
         long mtime = meta[2];
-        if (!"always".equals(folderSizeMode)) {
-            // "Only in archive" / "Never": no recursive walks for real folders,
-            // date-only row (zip listings keep their metadata sizes).
+        int sizeMode = UiPrefs.folderSizeMode(context);
+        if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
+            // "Never": date-only row
             fileDateView.setTag(null);
             if (mtime > 0) {
                 fileDateView.setVisibility(View.VISIBLE);
@@ -637,10 +637,8 @@ public class FileIconLoader {
         }
         if (!isUserStorage(path)) {
             try {
-                if (AccessManager.fileOpsOn(ctx)) {
-                    long du = AccessManager.dirSize(ctx, path);
-                    if (du >= 0) return du;
-                }
+                long du = AccessManager.dirSize(ctx, path);
+                if (du >= 0) return du;
             } catch (Exception ignored) {}
         }
         long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;
