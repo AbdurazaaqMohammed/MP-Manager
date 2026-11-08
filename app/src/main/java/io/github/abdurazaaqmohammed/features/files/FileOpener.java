@@ -318,6 +318,12 @@ public class FileOpener {
             actionIcons.add(R.drawable.lock_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_SIG, file, fileName, zipFile, zipEntryPath));
         }
+        if (keyExt.equals("db") || keyExt.equals("sqlite") || keyExt.equals("sqlite3") || keyExt.equals("db3")) {
+            actionIds.add(BUILTIN_SQLITE);
+            actionNames.add(context.getString(R.string.sqlite_viewer));
+            actionIcons.add(R.drawable.ic_disk_drive_24px);
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_SQLITE, file, fileName, zipFile, zipEntryPath));
+        }
 
         GridView gridView = new GridView(context);
         gridView.setNumColumns(3);
@@ -438,6 +444,7 @@ public class FileOpener {
     private static final String BUILTIN_XML = "xml";
     private static final String BUILTIN_SIG = "sig";
     private static final String BUILTIN_DRAWABLE = "drawable_preview";
+    private static final String BUILTIN_SQLITE = "sqlite";
 
     private static boolean isDrawableXml(File file, File zipFile, String zipEntryPath) {
         if (zipEntryPath != null) {
@@ -535,9 +542,22 @@ public class FileOpener {
                     DrawablePreviewDialog.showFile(context, file);
                 }
                 return;
+            case BUILTIN_SQLITE:
+                if (file == null) return;
+                openSqliteViewer(file);
+                return;
             default:
                 return;
         }
+    }
+
+    private void openSqliteViewer(File file) {
+        withReadableCopy(file, readable -> {
+            Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.class)
+                    .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
+                    .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
+            context.startActivity(intent);
+        });
     }
 
     private boolean tryRunBuiltinDefault(File file, String fileName) {
@@ -559,6 +579,7 @@ public class FileOpener {
             case BUILTIN_XML:
             case BUILTIN_SIG:
             case BUILTIN_DRAWABLE:
+            case BUILTIN_SQLITE:
                 runBuiltinTool(def, file, fileName, null, null);
                 return true;
             default:
@@ -1804,6 +1825,8 @@ public class FileOpener {
                 });
             } else if (fileName.equals("libapp.so") || fileName.equals("libflutter.so")) {
                 withReadableCopy(file, readable -> io.github.abdurazaaqmohammed.features.apk.flutter.FlutterToolsDialog.showForLibrary(context, readable, fileName));
+            } else if (ext.equals(".db") || ext.equals(".sqlite") || ext.equals(".sqlite3") || ext.equals(".db3")) {
+                openSqliteViewer(file);
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/
                 // tar/gz/...): an .epub lands here. The user's default app wins

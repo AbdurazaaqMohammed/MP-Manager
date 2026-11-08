@@ -86,6 +86,12 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity"
+            android:exported="false"
+            android:label="SQLite Viewer">
+        </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolsHubActivity"
             android:exported="false"
             android:label="Plugins">

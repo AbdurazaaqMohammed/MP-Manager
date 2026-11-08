@@ -2487,5 +2487,6 @@ Strings are sent to the external service you configured.</string>
     <string name="compare_folders_err">Both panes must show valid folders to compare</string>
     <string name="compare_folders_result">Comparison complete: %1$d Added (Green), %2$d Modified (Yellow), %3$d Identical</string>
 
-    <!-- Process Memory DEX Dumper -->
+    <!-- SQLite Database Viewer & Editor -->
+    <string name="sqlite_viewer">SQLite Viewer</string>
 </resources>

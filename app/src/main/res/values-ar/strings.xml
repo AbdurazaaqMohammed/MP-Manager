@@ -2427,5 +2427,6 @@
     <string name="compare_folders_err">يجب فتح مجلدين صالحين في اللوحتين للمقارنة</string>
     <string name="compare_folders_result">اكتملت المقارنة: %1$d جديد (أخضر)، %2$d معدل (أصفر)، %3$d متطابق</string>
 
-    <!-- Process Memory DEX Dumper -->
+    <!-- SQLite Database Viewer & Editor -->
+    <string name="sqlite_viewer">عارض قواعد بيانات SQLite</string>
 </resources>
