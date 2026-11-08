@@ -1965,10 +1965,11 @@ Strings are sent to the external service you configured.</string>
     <string name="keep_exported_copy_only">Keep exported copy only</string>
     <string name="set_edit">SetEdit</string>
     <string name="settings_editor_title">Settings Editor</string>
-    <string name="global_settings">Global Settings</string>
-    <string name="secure_settings">Secure Settings</string>
-    <string name="system_settings">System Settings</string>
-    <string name="android_properties">Android Properties</string>
+    <string name="global_settings">Global</string>
+    <string name="secure_settings">Secure</string>
+    <string name="system_settings">System</string>
+    <string name="android_properties">Properties</string>
+    <string name="favorites">Favorites</string>
     <string name="entries_count">%1$d entries</string>
     <string name="search_key_or_value">Search key or value</string>
     <string name="overview">Overview</string>

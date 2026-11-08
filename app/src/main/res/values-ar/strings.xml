@@ -1829,10 +1829,11 @@
     <string name="keep_exported_copy_only">الاكتفاء بالنسخة المصدرة</string>
     <string name="set_edit">SetEdit</string>
     <string name="settings_editor_title">محرر إعدادات النظام</string>
-    <string name="global_settings">إعدادات عامة (Global)</string>
-    <string name="secure_settings">إعدادات آمنة (Secure)</string>
-    <string name="system_settings">إعدادات النظام (System)</string>
-    <string name="android_properties">خصائص أندرويد (Properties)</string>
+    <string name="global_settings">Global</string>
+    <string name="secure_settings">Secure</string>
+    <string name="system_settings">System</string>
+    <string name="android_properties">Properties</string>
+    <string name="favorites">المفضلة</string>
     <string name="entries_count">%1$d إدخال</string>
     <string name="search_key_or_value">بحث بالاسم أو القيمة</string>
     <string name="overview">نظرة عامة</string>

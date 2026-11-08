@@ -37,11 +37,22 @@
                 android:maxLines="3"
                 android:ellipsize="end" />
 
+            <ImageView
+                android:id="@+id/ivFavorite"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="8dp"
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/ic_favorite_24"
+                android:visibility="gone"
+                app:tint="#E91E63"
+                android:importantForAccessibility="no" />
+
             <TextView
                 android:id="@+id/tvBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:paddingHorizontal="7dp"
                 android:paddingVertical="2dp"
                 android:textSize="10.5sp"
