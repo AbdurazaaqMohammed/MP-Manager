@@ -126,11 +126,18 @@ public final class SystemImageMountManager {
                                 : ("mount -o ro,loop " + mountTypeOpt + "'" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'"));
 
                 RootManager rm = RootManager.getInstance(context);
-                RootManager.ShellResult res = rm.execute(mntCmd, 15);
+                // Execute mount via executeFs (which uses global ns if preferred) and try executeGlobalNs explicitly
+                RootManager.ShellResult res = rm.executeFs(mntCmd, 15);
+                if (!res.isSuccess()) {
+                    res = rm.executeGlobalNs(mntCmd, 15);
+                }
                 if (!res.isSuccess()) {
                     // Try generic loop mount without explicit -t if specific fs failed
                     String fallbackCmd = "mount -o ro,loop '" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'";
-                    res = rm.execute(fallbackCmd, 15);
+                    res = rm.executeFs(fallbackCmd, 15);
+                    if (!res.isSuccess()) {
+                        res = rm.executeGlobalNs(fallbackCmd, 15);
+                    }
                 }
 
                 if (!res.isSuccess()) {
@@ -142,7 +149,7 @@ public final class SystemImageMountManager {
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     pm.dismiss();
-                    context.loadFolderInPane(mountPoint, pane1, true);
+                    context.loadFolderInPaneAsync(mountPoint, pane1, true);
                 });
             } catch (Exception e) {
                 new Handler(Looper.getMainLooper()).post(() -> {
@@ -188,7 +195,10 @@ public final class SystemImageMountManager {
         // If navigating strictly outside the mount point, unmount in background
         new Thread(() -> {
             try {
-                RootManager.getInstance(context).execute("umount -l '" + session.mountPoint.getAbsolutePath() + "' && rmdir '" + session.mountPoint.getAbsolutePath() + "' 2>/dev/null", 10);
+                String ucmd = "umount -l '" + session.mountPoint.getAbsolutePath() + "' && rmdir '" + session.mountPoint.getAbsolutePath() + "' 2>/dev/null";
+                RootManager rm = RootManager.getInstance(context);
+                rm.executeFs(ucmd, 10);
+                rm.executeGlobalNs(ucmd, 10);
                 activeSessions.remove(session.mountPoint.getAbsolutePath());
             } catch (Exception ignored) {
             }

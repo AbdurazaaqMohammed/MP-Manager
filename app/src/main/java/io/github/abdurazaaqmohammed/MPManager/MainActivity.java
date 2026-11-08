@@ -2100,6 +2100,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = BootInspectManager.getParentOrImageOrigin(folder);
+        if (parent == null || parent.equals(folder.getParentFile())) {
+            File imgParent = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(folder);
+            if (imgParent != null) parent = imgParent;
+        }
         if (parent == null) parent = folder;
         MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
         pane.setAdapter(adapter);
