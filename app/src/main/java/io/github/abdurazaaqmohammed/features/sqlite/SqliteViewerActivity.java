@@ -110,7 +110,7 @@ public class SqliteViewerActivity extends BaseActivity {
         String name = new File(originalPath).getName();
         toolbar.setTitle(name);
         toolbar.setSubtitle("SQLite Viewer");
-        toolbar.setNavigationIcon(R.drawable.baseline_arrow_back_24);
+        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar);
 
@@ -161,7 +161,7 @@ public class SqliteViewerActivity extends BaseActivity {
         tableLayout = new TableLayout(this);
         tableLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        tableLayout.setStretchColumns(false);
+        tableLayout.setStretchAllColumns(false);
 
         vScroll.addView(tableLayout);
         hScroll.addView(vScroll);
@@ -173,7 +173,7 @@ public class SqliteViewerActivity extends BaseActivity {
         paginationBar.setGravity(Gravity.CENTER);
         paginationBar.setPadding(dp(12), dp(6), dp(12), dp(8));
 
-        btnPrevPage = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+        btnPrevPage = new MaterialButton(this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
         btnPrevPage.setText("◀ Prev");
         btnPrevPage.setOnClickListener(v -> {
             if (currentPage > 0) {
@@ -188,7 +188,7 @@ public class SqliteViewerActivity extends BaseActivity {
         tvPageInfo.setText("0 / 0");
         paginationBar.addView(tvPageInfo);
 
-        btnNextPage = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+        btnNextPage = new MaterialButton(this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
         btnNextPage.setText("Next ▶");
         btnNextPage.setOnClickListener(v -> {
             if ((currentPage + 1) * PAGE_SIZE < totalRows) {
