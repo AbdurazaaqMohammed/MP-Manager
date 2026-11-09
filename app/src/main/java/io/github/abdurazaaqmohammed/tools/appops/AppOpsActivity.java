@@ -196,7 +196,7 @@ public class AppOpsActivity extends BaseActivity {
             if (cached != null) {
                 holder.iconView.setImageDrawable(cached);
             } else {
-                holder.iconView.setImageResource(R.drawable.android_24px);
+                holder.iconView.setImageResource(R.drawable.ic_android_24);
                 executor.execute(() -> {
                     try {
                         PackageManager pm = getPackageManager();
