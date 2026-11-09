@@ -198,7 +198,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     // assets/syntaxes and registered from assets/languages.json. They are loaded lazily on
     // a worker thread the first time highlighting is requested and then cached per scope.
     private static boolean syntaxGrammarsLoaded = false;
-    private static final Map<String, TextMateLanguage> syntaxLanguageCache = new HashMap<>();
+    private int syntaxGeneration;
     private static final String[] SYNTAX_LABELS = {
             "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
             "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell", "Prop"
@@ -478,8 +478,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                String smaliCode = DexEditorActivity.classTree.getSmaliByType(
-                        Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
+                String smaliCode = dexActivity.classTree.getSmaliByType(
+                        Objects.requireNonNull(dexActivity.classTree.classMap.get(className)));
                 activity.runOnUiThread(() -> {
                     if (!isAdded()) return;
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
@@ -540,7 +540,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         boolean pendingInFlight = false;
         if (isSmali && activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = null;
-            for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
+            for (DexEditorActivity.EditorTab t : ((DexEditorActivity) activity).tabs) {
                 if (t.className.equals(className) && t.type == 0) {
                     tab = t;
                     break;
@@ -595,7 +595,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         Activity activity = getActivity();
         if (!(activity instanceof DexEditorActivity)) return true;
         DexEditorActivity.EditorTab tab = null;
-        for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
+        for (DexEditorActivity.EditorTab t : ((DexEditorActivity) activity).tabs) {
             if (t.className.equals(className) && t.type == 0) {
                 tab = t;
                 break;
@@ -621,7 +621,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         editor.setLineNumberEnabled(SettingsFragment.showLineNumbers(requireContext()));
         editor.setLineSpacing(2.0f, 1.1f);
         editor.setLineNumberMarginLeft(2f);
-        editor.setWordwrap(editorPrefs.getBoolean("wrap_text", false));
+        editor.setWordwrap(!largeFileMode && editorPrefs.getBoolean("wrap_text", false));
         if (loadTypeface) {
             Typeface typeface = savedFont.equals("normal") ? Typeface.DEFAULT : Typeface.MONOSPACE;
             editor.setTypefaceText(typeface);
@@ -668,7 +668,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (isSmali) {
             try {
                 ensureLanguageInitialized(requireContext().getApplicationContext());
-                editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, cachedSmaliLanguage), editor));
+                Language language = TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true);
+                editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, language), editor));
                 editor.setColorScheme(cachedColorScheme);
             } catch (Exception e) {
                 Log.e("UnifiedEditor", "Error setting smali language", e);
@@ -731,7 +732,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         // The options-menu toggle stores "wrap_text"; fall back to the legacy
         // "pref_word_wrap" key so either one sticks across onResume/minimize.
         boolean wordWrap = editorPrefs.getBoolean("wrap_text", editorPrefs.getBoolean("pref_word_wrap", false));
-        editor.setWordwrap(wordWrap);
+        editor.setWordwrap(!largeFileMode && wordWrap);
     }
 
     public CodeEditor getEditor() { return editor; }
@@ -751,11 +752,32 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void setText(CharSequence text) {
         if (editor != null) {
-            editor.setText(text);
-            isInitializing = false;
+            isInitializing = true;
+            try {
+                // The vendored Sora overload's boolean means reuse Content, not copy.
+                editor.setText(text, text instanceof Content, null);
+            } finally {
+                isInitializing = false;
+            }
         } else {
             initialContentText = text != null ? text.toString() : null;
         }
+    }
+
+    private boolean largeFileMode;
+
+    /** Keep expensive grammars, whole-document wrapping and IME extraction off large buffers. */
+    public void setLargeFileMode(boolean large) {
+        if (editor == null) { largeFileMode = large; return; }
+        boolean changed = largeFileMode != large;
+        largeFileMode = large;
+        editor.getProps().disableTextExtracting = large;
+        editor.getProps().maxIPCTextLength = large ? 4096 : 32768;
+        editor.getProps().maxAccessibilityTextLength = large ? 4096 : 100000;
+        editor.getProps().cacheRenderNodeForLongLines = true;
+        editor.getText().setMaxUndoStackSize(large ? 50 : Content.DEFAULT_MAX_UNDO_STACK_SIZE);
+        if (large) editor.setWordwrap(false);
+        if (changed) applyAutoSyntax();
     }
 
     public void setAxml(boolean axml) { this.axml = axml; }
@@ -1185,7 +1207,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         optionsList.add(getString(R.string.start_of_line)); iconsList.add(R.drawable.text_select_jump_to_beginning_24px);
         optionsList.add(getString(R.string.end_of_line)); iconsList.add(R.drawable.text_select_jump_to_end_24px);
         optionsList.add(getString(R.string.word_wrap)); iconsList.add(R.drawable.wrap_text_24px);
-        optionsList.add(getString(R.string.read_only)); iconsList.add(R.drawable.edit_off_24px);
+        optionsList.add(getString(largeFileMode && !editor.isEditable()
+                ? R.string.editor_enable_editing : R.string.read_only)); iconsList.add(R.drawable.edit_off_24px);
         if (isSmali) {
             optionsList.add(getString(R.string.smali_to_java)); iconsList.add(R.drawable.ic_java_mt);
             optionsList.add(getString(R.string.instructions_query)); iconsList.add(R.drawable.ic_instruction_query_mt);
@@ -1198,7 +1221,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             item.setIcon(iconsList.get(i));
             if (i == 3) item.setEnabled(canGoBack());
             else if (i == 4) item.setEnabled(canGoForward());
-            else if (i == 8) { item.setCheckable(true); item.setChecked(editor.isWordwrap()); }
+            else if (i == 8) { item.setCheckable(true); item.setChecked(editor.isWordwrap()); item.setEnabled(!largeFileMode); }
             else if (i == 9) { item.setCheckable(true); item.setChecked(!editor.isEditable()); }
         }
         int smaliOffset = isSmali ? 3 : 0;
@@ -1228,7 +1251,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         .putBoolean("pref_word_wrap", ww)
                         .apply();
             } else if (id == 9) {
-                editor.setEditable(!editor.isEditable());
+                if (largeFileMode && !editor.isEditable()) {
+                    new MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.editor_enable_editing)
+                            .setMessage(R.string.editor_enable_large_editing_warning)
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .setPositiveButton(android.R.string.ok, (d, w) -> editor.setEditable(true)).show();
+                } else editor.setEditable(!editor.isEditable());
             } else if (isSmali && id == 10) {
                 smali2java();
             } else if (isSmali && id == 11) {
@@ -1317,6 +1346,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     /** Re-detects and applies highlighting from the current file name / axml flag. */
     public void applyAutoSyntax() {
         if (isSmali) return;
+        if (largeFileMode) { applySyntax(null); return; }
         applySyntax(axml ? "text.xml" : detectScope(fileName != null ? fileName : title));
     }
 
@@ -1375,15 +1405,16 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     /** Applies a TextMate scope (null = plain text), loading the grammar lazily off-thread. */
     public void applySyntax(String scope) {
         if (editor == null) return;
+        if (largeFileMode) scope = null;
+        if (Objects.equals(scope, currentSyntaxScope)) {
+            if (scope == null) applySchemePreference();
+            return;
+        }
         currentSyntaxScope = scope;
+        final int generation = ++syntaxGeneration;
         if (scope == null) {
             editor.setEditorLanguage(new EmptyLanguage());
             applySchemePreference();
-            return;
-        }
-        TextMateLanguage cached = syntaxLanguageCache.get(scope);
-        if (cached != null) {
-            setTextMateLanguage(cached);
             return;
         }
         final Context appContext = requireContext().getApplicationContext();
@@ -1394,7 +1425,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             if (activity == null) return;
             activity.runOnUiThread(() -> {
                 if (!isAdded() || editor == null) return;
-                if (finalScope.equals(currentSyntaxScope)) {
+                if (generation == syntaxGeneration && finalScope.equals(currentSyntaxScope) && !largeFileMode) {
                     if (language != null) {
                         setTextMateLanguage(language);
                     } else {
@@ -1409,17 +1440,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private static synchronized TextMateLanguage loadSyntaxLanguage(Context context, String scope) {
-        TextMateLanguage cached = syntaxLanguageCache.get(scope);
-        if (cached != null) return cached;
         try {
             ensureLanguageInitialized(context);
             if (!syntaxGrammarsLoaded) {
                 GrammarRegistry.getInstance().loadGrammars("languages.json");
                 syntaxGrammarsLoaded = true;
             }
-            TextMateLanguage language = TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false);
-            if (language != null) syntaxLanguageCache.put(scope, language);
-            return language;
+            // Grammars are cached by GrammarRegistry; languages own mutable analyzers
+            // and must never be shared between editor instances.
+            return TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false);
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Syntax load error: " + scope, e);
             return null;
@@ -1810,7 +1839,6 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         cachedColorScheme = null;
         cachedInstructions = null;
         cachedThemeName = null;
-        syntaxLanguageCache.clear();
     }
 
     public static synchronized void ensureLanguageInitialized(Context context) {

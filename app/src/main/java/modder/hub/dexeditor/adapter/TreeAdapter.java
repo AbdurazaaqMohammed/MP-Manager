@@ -287,7 +287,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                 toggleNode(node, pos);
             } else if (node.isSnippet()) {
                 if (isSearchList) {
-                    boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+                    boolean isDeleted = ((DexEditorActivity) context).classTree != null && !((DexEditorActivity) context).classTree.classMap.containsKey(node.getFullName());
                     if (isDeleted) {
                         showDeletedPrompt(node, pos);
                         return;
@@ -298,7 +298,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             } else {
                 if (!isSelectionMode) {
                     if ((isHistory || isSearchList) && !node.isDirectory()) {
-                        boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+                        boolean isDeleted = ((DexEditorActivity) context).classTree != null && !((DexEditorActivity) context).classTree.classMap.containsKey(node.getFullName());
                         if (isDeleted) {
                             showDeletedPrompt(node, pos);
                             return;
@@ -680,14 +680,14 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     }
 
     private boolean isNodeDeleted(TreeNode node) {
-        return DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+        return ((DexEditorActivity) context).classTree != null && !((DexEditorActivity) context).classTree.classMap.containsKey(node.getFullName());
     }
 
     private boolean isNodeDeletedCached(TreeNode node) {
         String fullName = node.getFullName();
         Boolean deleted = deletedStateCache.get(fullName);
         if (deleted == null) {
-            deleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(fullName);
+            deleted = ((DexEditorActivity) context).classTree != null && !((DexEditorActivity) context).classTree.classMap.containsKey(fullName);
             deletedStateCache.put(fullName, deleted);
         }
         return deleted;

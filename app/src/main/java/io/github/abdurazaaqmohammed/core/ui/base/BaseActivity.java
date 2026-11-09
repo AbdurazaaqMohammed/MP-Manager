@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.utils.EditorTasks;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
 /**
@@ -24,6 +25,7 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 public abstract class BaseActivity extends AppCompatActivity {
 
     private int appliedFontEpoch = -1;
+    private String editorOwnerId;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -35,6 +37,8 @@ public abstract class BaseActivity extends AppCompatActivity {
         AppFont.installFactory(this);
         appliedFontEpoch = AppFont.currentEpoch();
         super.onCreate(savedInstanceState);
+        editorOwnerId = EditorTasks.bind(this, savedInstanceState);
+        MinimizedEditors.rebind(this);
         View content = getWindow().getDecorView().findViewById(R.id.content);
         if (content != null){
             ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
@@ -70,7 +74,40 @@ public abstract class BaseActivity extends AppCompatActivity {
         // A minimized editor keeps its registry entry until it really exits;
         // configuration recreations (isFinishing == false) don't count.
         if (isFinishing()) MinimizedEditors.unregister(this);
+        EditorTasks.unbind(editorOwnerId, this);
         super.onDestroy();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        EditorTasks.saveOwner(state, editorOwnerId);
+    }
+
+    @Override
+    public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
+        if (EditorTasks.isEditor(intent)) {
+            super.startActivityForResult(EditorTasks.prepare(intent, editorOwnerId, requestCode), -1, options);
+        } else {
+            super.startActivityForResult(intent, requestCode, options);
+        }
+    }
+
+    public final void dispatchEditorResult(int request, int result, Intent data) {
+        onActivityResult(request, result, data);
+    }
+
+    public final void setEditorResult(int code, Intent data) {
+        setResult(code, data);
+        EditorTasks.setResult(this, code, data);
+    }
+
+    public final void setEditorResult(int code) { setEditorResult(code, null); }
+
+    @Override
+    public void finish() {
+        EditorTasks.finished(this);
+        super.finish();
     }
 
     /**

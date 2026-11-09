@@ -414,11 +414,16 @@ public final class SystemImageEngine {
             raf.readFully(h);
             int magic = ((h[3] & 0xFF) << 24) | ((h[2] & 0xFF) << 16) | ((h[1] & 0xFF) << 8) | (h[0] & 0xFF);
             if (magic != 0xED26FF3A) return null;
+            int major = (h[4] & 255) | ((h[5] & 255) << 8);
+            int fileHeader = (h[8] & 255) | ((h[9] & 255) << 8);
+            int chunkHeader = (h[10] & 255) | ((h[11] & 255) << 8);
+            if (major != 1 || fileHeader < 28 || chunkHeader < 12) return null;
 
             int blkSz = ((h[15] & 0xFF) << 24) | ((h[14] & 0xFF) << 16) | ((h[13] & 0xFF) << 8) | (h[12] & 0xFF);
             long totalBlks = ((long) (h[19] & 0xFF) << 24) | ((h[18] & 0xFF) << 16) | ((h[17] & 0xFF) << 8) | (h[16] & 0xFF);
             int totalChunks = ((h[23] & 0xFF) << 24) | ((h[22] & 0xFF) << 16) | ((h[21] & 0xFF) << 8) | (h[20] & 0xFF);
-            long uncompressedBytes = totalBlks * (long) blkSz;
+            if (blkSz <= 0 || blkSz % 4 != 0 || totalChunks < 0 || totalBlks == 0) return null;
+            long uncompressedBytes = Math.multiplyExact(totalBlks, (long) blkSz);
 
             return new SparseInfo(blkSz, totalBlks, totalChunks, uncompressedBytes);
         } catch (Exception e) {
@@ -426,7 +431,47 @@ public final class SystemImageEngine {
         }
     }
 
+    /** Validate all chunk boundaries before any bytes can reach a block device. */
+    public static void validateSparseImage(File file) throws IOException {
+        SparseInfo info = readSparseInfo(file);
+        if (info == null) throw new IOException("Invalid sparse header");
+        try (RandomAccessFile source = new RandomAccessFile(file, "r")) {
+            byte[] header = new byte[28];
+            source.readFully(header);
+            int fileHeader = (header[8] & 255) | ((header[9] & 255) << 8);
+            int chunkHeader = (header[10] & 255) | ((header[11] & 255) << 8);
+            source.seek(fileHeader);
+            long blocks = 0;
+            for (int index = 0; index < info.totalChunks; index++) {
+                long start = source.getFilePointer();
+                byte[] chunk = new byte[12];
+                source.readFully(chunk);
+                int type = (chunk[0] & 255) | ((chunk[1] & 255) << 8);
+                long count = 0, total = 0;
+                for (int i = 0; i < 4; i++) {
+                    count |= (long) (chunk[4 + i] & 255) << (8 * i);
+                    total |= (long) (chunk[8 + i] & 255) << (8 * i);
+                }
+                long bytes = count * info.blockSize;
+                long payload = switch (type) {
+                    case 0xCAC1 -> bytes;
+                    case 0xCAC2, 0xCAC4 -> 4;
+                    case 0xCAC3 -> 0;
+                    default -> throw new IOException("Unknown sparse chunk type");
+                };
+                if (count > Integer.MAX_VALUE || total != chunkHeader + payload
+                        || total > source.length() - start || (type == 0xCAC4 && count != 0))
+                    throw new IOException("Invalid or truncated sparse chunk");
+                if (type != 0xCAC4) blocks += count;
+                if (blocks > info.totalBlocks) throw new IOException("Sparse chunk exceeds image size");
+                source.seek(start + total);
+            }
+            if (blocks != info.totalBlocks) throw new IOException("Sparse block count mismatch");
+        }
+    }
+
     public static void unsparseToStream(File sparseFile, OutputStream os, ProgressCallback cb) throws IOException {
+        validateSparseImage(sparseFile);
         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(sparseFile), 1024 * 1024)) {
             byte[] h = new byte[28];
             int readH = bis.read(h);
@@ -435,8 +480,8 @@ public final class SystemImageEngine {
             int magic = ((h[3] & 0xFF) << 24) | ((h[2] & 0xFF) << 16) | ((h[1] & 0xFF) << 8) | (h[0] & 0xFF);
             if (magic != 0xED26FF3A) throw new IOException("Not a sparse image");
 
-            int fileHdrSz = ((h[7] & 0xFF) << 8) | (h[6] & 0xFF);
-            int chunkHdrSz = ((h[9] & 0xFF) << 8) | (h[8] & 0xFF);
+            int fileHdrSz = ((h[9] & 0xFF) << 8) | (h[8] & 0xFF);
+            int chunkHdrSz = ((h[11] & 0xFF) << 8) | (h[10] & 0xFF);
             int blkSz = ((h[15] & 0xFF) << 24) | ((h[14] & 0xFF) << 16) | ((h[13] & 0xFF) << 8) | (h[12] & 0xFF);
             long totalBlks = ((long) (h[19] & 0xFF) << 24) | ((h[18] & 0xFF) << 16) | ((h[17] & 0xFF) << 8) | (h[16] & 0xFF);
             int totalChunks = ((h[23] & 0xFF) << 24) | ((h[22] & 0xFF) << 16) | ((h[21] & 0xFF) << 8) | (h[20] & 0xFF);
@@ -458,7 +503,7 @@ public final class SystemImageEngine {
 
             for (int chunk = 0; chunk < totalChunks; chunk++) {
                 int rHdr = bis.read(chunkHdr);
-                if (rHdr < 12) break;
+                if (rHdr < 12) throw new IOException("Unexpected EOF reading sparse chunk header");
 
                 int chunkType = ((chunkHdr[1] & 0xFF) << 8) | (chunkHdr[0] & 0xFF);
                 int chunkSz = ((chunkHdr[7] & 0xFF) << 24) | ((chunkHdr[6] & 0xFF) << 16) | ((chunkHdr[5] & 0xFF) << 8) | (chunkHdr[4] & 0xFF);
@@ -511,7 +556,9 @@ public final class SystemImageEngine {
                     }
                 } else if (chunkType == 0xCAC4) { // CHUNK_TYPE_CRC32
                     byte[] crc = new byte[4];
-                    bis.read(crc);
+                    if (bis.read(crc) != 4) throw new IOException("Unexpected EOF reading sparse checksum");
+                } else {
+                    throw new IOException("Unknown sparse chunk type");
                 }
 
                 if (cb != null && totalBytes > 0 && chunk % 10 == 0) {
@@ -519,6 +566,7 @@ public final class SystemImageEngine {
                     cb.onProgress("Unsparsing: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(writtenBytes) + " / " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(totalBytes), percent);
                 }
             }
+            if (writtenBytes != totalBytes) throw new IOException("Sparse output size mismatch");
             os.flush();
         }
     }

@@ -296,12 +296,12 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private void saveCurrentState() {
         // Save RecyclerView scroll states
         if (methodRecyclerView.getLayoutManager() != null) {
-            DexEditorActivity.methodRecyclerViewState = methodRecyclerView.getLayoutManager().onSaveInstanceState();
+            ((DexEditorActivity) requireActivity()).methodRecyclerViewState = methodRecyclerView.getLayoutManager().onSaveInstanceState();
         }
         if (stringsRecyclerView.getLayoutManager() != null) {
-            DexEditorActivity.stringsRecyclerViewState = stringsRecyclerView.getLayoutManager().onSaveInstanceState();
+            ((DexEditorActivity) requireActivity()).stringsRecyclerViewState = stringsRecyclerView.getLayoutManager().onSaveInstanceState();
         }
-        DexEditorActivity.wasStringsVisible = stringsRecyclerView.getVisibility() == View.VISIBLE;
+        ((DexEditorActivity) requireActivity()).wasStringsVisible = stringsRecyclerView.getVisibility() == View.VISIBLE;
     }
 
     public void restorePreviousState(Parcelable methodState, Parcelable stringsState, boolean wasStringsVisible) {
@@ -331,7 +331,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private void restoreRecyclerViewState() {
-        restorePreviousState(DexEditorActivity.methodRecyclerViewState, DexEditorActivity.stringsRecyclerViewState, DexEditorActivity.wasStringsVisible);
+        DexEditorActivity activity = (DexEditorActivity) requireActivity();
+        restorePreviousState(activity.methodRecyclerViewState, activity.stringsRecyclerViewState, activity.wasStringsVisible);
     }
 
     @Override
@@ -457,8 +458,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             String subtitle = "(" + _getTextAfter(methodName, "(");
 
             // Check if tab already exists to avoid redundant generation
-            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+            for (int i = 0; i < dexActivity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = dexActivity.tabs.get(i);
                 if (tab.className.equals(cleanedClassName) && tab.title.equals(title) &&
                     tab.subtitle != null && tab.subtitle.equals(subtitle) && tab.type == 2) {
                     dexActivity.showEditor(i);
@@ -497,8 +498,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
 
             // Check if tab already exists to avoid redundant decompilation
-            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+            for (int i = 0; i < dexActivity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = dexActivity.tabs.get(i);
                 if (tab.className.equals(cleanedClassName) && tab.title.equals(title) && tab.type == 1) {
                     dexActivity.showEditor(i);
                     dismiss();
@@ -567,12 +568,12 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         String declaring = DexUsageHelper.toType(slashClass);
         int overrideCount = 0;
         try {
-            if (DexEditorActivity.classTree != null) {
+            if (activity.classTree != null) {
                 List<ClassDef> all;
-                synchronized (DexEditorActivity.classTree) {
-                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                synchronized (activity.classTree) {
+                    all = new ArrayList<>(activity.classTree.classMap.values());
                 }
-                overrideCount = DexUsageHelper.findOverrides(declaring, parsed[0], parsed[1], all, DexEditorActivity.classTree.classMap).size();
+                overrideCount = DexUsageHelper.findOverrides(declaring, parsed[0], parsed[1], all, activity.classTree.classMap).size();
             }
         } catch (Exception ignored) {
         }
@@ -612,7 +613,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
     private void clearMethod(HashMap<String, Object> item) {
         Activity act = getActivity();
-        if (act == null || DexEditorActivity.classTree == null || item == null) return;
+        if (!(act instanceof DexEditorActivity) || ((DexEditorActivity) act).classTree == null || item == null) return;
         String methodOrFieldName = Objects.requireNonNull(item.get("MethodOrFieldName")).toString();
         String[] parsed = splitMethodTarget(methodOrFieldName);
         if (parsed == null) return;
@@ -629,8 +630,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         new Thread(() -> {
             try {
                 ClassDef def;
-                synchronized (DexEditorActivity.classTree) {
-                    def = DexEditorActivity.classTree.classMap.get(slashClass);
+                synchronized (activity.classTree) {
+                    def = activity.classTree.classMap.get(slashClass);
                 }
                 if (def == null) throw new Exception("Class not found");
                 com.android.tools.smali.dexlib2.iface.Method target = DexUsageHelper.findMethod(def, mName, proto);
@@ -663,9 +664,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                     body.add("    return-object v0");
                 }
                 String current;
-                synchronized (DexEditorActivity.classTree) {
-                    String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(slashClass);
-                    current = pending != null ? pending : DexEditorActivity.classTree.getSmaliByType(def);
+                synchronized (activity.classTree) {
+                    String pending = activity.classTree.getPendingSmaliMap().get(slashClass);
+                    current = pending != null ? pending : activity.classTree.getSmaliByType(def);
                 }
                 if (current == null) throw new Exception("Cannot read class");
                 String[] lines = current.split("\n", -1);
@@ -697,9 +698,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 String newSmali = sb.toString();
                 try {
                     ClassDef newDef = Smali.assemble(newSmali, SharedSmaliUtils.ASSEMBLE_OPTIONS, activity.dexVersion);
-                    DexEditorActivity.classTree.saveClassDef(newDef);
+                    activity.classTree.saveClassDef(newDef);
                 } catch (Throwable e) {
-                    DexEditorActivity.classTree.saveSmali(slashClass, newSmali);
+                    activity.classTree.saveSmali(slashClass, newSmali);
                 }
                 try {
                     String pure = SmaliHelper.stripSmaliHeaderUnchecked(newSmali);
@@ -719,8 +720,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         dismiss();
                     } catch (Exception ignored) {
                     }
-                    for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                        DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+                    for (int i = 0; i < activity.tabs.size(); i++) {
+                        DexEditorActivity.EditorTab tab = activity.tabs.get(i);
                         if (tab.className.equals(slashClass) && tab.type == 0) {
                             tab.content = doneSmali;
                             tab.isModified = false;
@@ -731,7 +732,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                             }
                         }
                     }
-                    DexEditorActivity.isChanged = true;
+                    activity.isChanged = true;
                     activity.refreshExplorerPage(1);
                     new LoadDataRunnable().run();
                     Extensions.showMessage(activity, "Method cleared");

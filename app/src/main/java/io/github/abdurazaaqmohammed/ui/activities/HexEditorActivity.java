@@ -60,6 +60,9 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.utils.BytePatternSearch;
+import io.github.abdurazaaqmohammed.utils.HexPageCache;
+import io.github.abdurazaaqmohammed.utils.HexViewport;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
@@ -76,6 +79,15 @@ public class HexEditorActivity extends BaseActivity {
     private RandomAccessFile raf;
     private long size;
     private boolean readOnly;
+    private boolean writable;
+    private volatile boolean busy;
+    private boolean pendingRootWrite;
+    private HexPageCache pageCache;
+    private final HexViewport viewport = new HexViewport();
+    private static final String[] HEX_BYTES = new String[256];
+    static {
+        for (int i = 0; i < HEX_BYTES.length; i++) HEX_BYTES[i] = HexPageCache.hex(new byte[]{(byte) i});
+    }
     private String rootOriginalPath;
 
     /**
@@ -116,6 +128,7 @@ public class HexEditorActivity extends BaseActivity {
         long origOffset;   // file chunk: offset in the original file
         long length;
         byte[] data;       // memory chunk
+        int dataOffset;
 
         Chunk(long origOffset, long length) {
             this.memory = false;
@@ -281,6 +294,10 @@ public class HexEditorActivity extends BaseActivity {
             }
             size = raf.length();
             originalSize = size;
+            writable = !readOnly;
+            readOnly |= size > 32L * 1024 * 1024;
+            pageCache = new HexPageCache(raf.getChannel());
+            viewport.resize(size);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
             finish();
@@ -335,13 +352,35 @@ public class HexEditorActivity extends BaseActivity {
         recycler.addOnItemTouchListener(dragInterceptor);
         adapter = new HexRowAdapter();
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
+        recycler.setItemAnimator(null);
+        recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView view, int dx, int dy) {
+                if (dy == 0 || busy) return;
+                int first = layoutManager.findFirstVisibleItemPosition();
+                int last = layoutManager.findLastVisibleItemPosition();
+                if (first < 0) return;
+                boolean previous = dy < 0 && first < 16 && viewport.firstRow() > 0;
+                boolean next = dy > 0 && last >= viewport.rowCount() - 16 && viewport.hasNextWindow();
+                if (!previous && !next) return;
+                long offset = viewport.offset(first);
+                View row = layoutManager.findViewByPosition(first);
+                int top = row != null ? row.getTop() : 0;
+                if (viewport.shift((previous ? -1 : 1) * HexViewport.MAX_ROWS / 2)) {
+                    adapter.notifyDataSetChanged();
+                    layoutManager.scrollToPositionWithOffset(viewport.position(offset), top);
+                }
+            }
+        });
 
         setupKeypad();
 
         View keypad = findViewById(R.id.hexKeypad);
         keypad.setVisibility(readOnly ? View.GONE : View.VISIBLE);
-        findViewById(R.id.btnToggleKeypad).setOnClickListener(v ->
-                keypad.setVisibility(keypad.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        findViewById(R.id.btnToggleKeypad).setOnClickListener(v -> {
+            if (readOnly) enableEditing();
+            else keypad.setVisibility(keypad.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        });
 
         searchPanel = findViewById(R.id.searchPanel);
         inspectorPanel = findViewById(R.id.inspectorPanel);
@@ -351,6 +390,7 @@ public class HexEditorActivity extends BaseActivity {
         updateStatus();
 
         long initialOffset = getIntent().getLongExtra("offset", -1);
+        if (readOnly && writable) Extensions.showMessage(this, R.string.editor_large_read_only);
         if (initialOffset >= 0) {
             recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
         }
@@ -386,6 +426,17 @@ public class HexEditorActivity extends BaseActivity {
             replaceArea.setVisibility(expanding ? View.VISIBLE : View.GONE);
             arrow.setText(expanding ? "▾" : "▸");
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Keep overlays, but discard pages that another tool may have changed.
+        if (pageCache != null && adapter != null && statusText != null && !busy) {
+            pageCache.clear();
+            adapter.notifyDataSetChanged();
+            updateStatus();
+        }
     }
 
     private interface TypeSelectedListener {
@@ -441,6 +492,7 @@ public class HexEditorActivity extends BaseActivity {
             acc += chunks.get(i).length;
         }
         size = acc;
+        viewport.resize(size);
     }
 
     /** Resets the content view to the original file (open / after save / revert). */
@@ -470,9 +522,10 @@ public class HexEditorActivity extends BaseActivity {
 
     private Chunk sliceChunk(Chunk c, long from, long len) {
         if (c.memory) {
-            byte[] part = new byte[(int) len];
-            System.arraycopy(c.data, (int) from, part, 0, (int) len);
-            return new Chunk(part);
+            Chunk slice = new Chunk(c.data);
+            slice.dataOffset = c.dataOffset + (int) from;
+            slice.length = len;
+            return slice;
         }
         return new Chunk(c.origOffset + from, len);
     }
@@ -487,7 +540,6 @@ public class HexEditorActivity extends BaseActivity {
         if (off <= 0 || off >= c.length) return;
         Chunk right = sliceChunk(c, off, c.length - off);
         c.length = off;
-        if (c.memory) c.data = Arrays.copyOf(c.data, (int) off);
         chunks.add(idx + 1, right);
         rebuildIndex();
     }
@@ -541,8 +593,14 @@ public class HexEditorActivity extends BaseActivity {
         long end = Math.min(pos + oldLen, size);
         oldLen = end - pos;
         if (!structural) {
-            if (data.length == oldLen && oldLen > 0) {
-                for (int i = 0; i < data.length; i++) mods.put(pos + i, data[i] & 0xFF);
+            if (data.length == oldLen && oldLen > 0 && data.length <= 64 * 1024) {
+                for (int i = 0; i < data.length; i++) {
+                    int value = data[i] & 0xFF;
+                    try {
+                        if (pageCache.read(pos + i) == value) mods.remove(pos + i);
+                        else mods.put(pos + i, value);
+                    } catch (IOException error) { mods.put(pos + i, value); }
+                }
                 return;
             }
             bakeStructural();
@@ -554,7 +612,7 @@ public class HexEditorActivity extends BaseActivity {
                 Chunk c = chunks.get(idx);
                 long off = pos - chunkStarts[idx];
                 if (c.memory && off + oldLen <= c.length) {
-                    System.arraycopy(data, 0, c.data, (int) off, data.length);
+                    System.arraycopy(data, 0, c.data, c.dataOffset + (int) off, data.length);
                     return;
                 }
             }
@@ -568,11 +626,18 @@ public class HexEditorActivity extends BaseActivity {
         if (structural) return;
         structural = true;
         chunks.clear();
-        if (size > 0) chunks.add(new Chunk(0, size));
+        long position = 0;
+        java.io.ByteArrayOutputStream run = new java.io.ByteArrayOutputStream();
         for (Map.Entry<Long, Integer> e : mods.entrySet()) {
-            applyDeleteChunks(e.getKey(), e.getKey() + 1);
-            applyInsertChunks(e.getKey(), new byte[]{e.getValue().byteValue()});
+            if (e.getKey() != position) {
+                if (run.size() > 0) { chunks.add(new Chunk(run.toByteArray())); run.reset(); }
+                if (e.getKey() > position) chunks.add(new Chunk(position, e.getKey() - position));
+            }
+            run.write(e.getValue());
+            position = e.getKey() + 1;
         }
+        if (run.size() > 0) chunks.add(new Chunk(run.toByteArray()));
+        if (position < size) chunks.add(new Chunk(position, size - position));
         mods.clear();
         rebuildIndex();
     }
@@ -583,10 +648,7 @@ public class HexEditorActivity extends BaseActivity {
             Integer modded = mods.get(pos);
             if (modded != null) return modded;
             try {
-                synchronized (raf) {
-                    raf.seek(pos);
-                    return raf.read();
-                }
+                return pageCache.read(pos);
             } catch (IOException e) {
                 return -1;
             }
@@ -596,12 +658,9 @@ public class HexEditorActivity extends BaseActivity {
         if (idx >= chunks.size()) return -1;
         Chunk c = chunks.get(idx);
         long off = pos - chunkStarts[idx];
-        if (c.memory) return c.data[(int) off] & 0xFF;
+        if (c.memory) return c.data[c.dataOffset + (int) off] & 0xFF;
         try {
-            synchronized (raf) {
-                raf.seek(c.origOffset + off);
-                return raf.read();
-            }
+            return pageCache.read(c.origOffset + off);
         } catch (IOException e) {
             return -1;
         }
@@ -629,7 +688,7 @@ public class HexEditorActivity extends BaseActivity {
                         int done = 0;
                         while (done < take) {
                             int r = raf.read(out, filled + done, (int) (take - done));
-                            if (r <= 0) return Arrays.copyOf(out, filled);
+                            if (r <= 0) return Arrays.copyOf(out, filled + done);
                             done += r;
                         }
                     }
@@ -643,7 +702,7 @@ public class HexEditorActivity extends BaseActivity {
             } else if (c.memory) {
                 long inOff = vpos - chunkStarts[idx];
                 take = Math.min(c.length - inOff, end - vpos);
-                System.arraycopy(c.data, (int) inOff, out, filled, (int) take);
+                System.arraycopy(c.data, c.dataOffset + (int) inOff, out, filled, (int) take);
             } else {
                 long inOff = vpos - chunkStarts[idx];
                 take = Math.min(c.length - inOff, end - vpos);
@@ -653,7 +712,7 @@ public class HexEditorActivity extends BaseActivity {
                         int done = 0;
                         while (done < take) {
                             int r = raf.read(out, filled + done, (int) (take - done));
-                            if (r <= 0) return Arrays.copyOf(out, filled);
+                            if (r <= 0) return Arrays.copyOf(out, filled + done);
                             done += r;
                         }
                     }
@@ -668,7 +727,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void inputNibble(int digit) {
-        if (readOnly || cursorPos >= size) return;
+        if (readOnly || busy || cursorPos >= size) return;
         int oldVal = readByte(cursorPos);
         if (oldVal == -1) return;
         boolean wasHigh = nibbleHigh;
@@ -694,17 +753,18 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void undo() {
-        if (undoStack.isEmpty()) return;
+        if (readOnly || busy || undoStack.isEmpty()) return;
         EditOp e = undoStack.pop();
         splice(e.pos, e.after.length, e.before);
         redoStack.push(e);
+        if (undoStack.isEmpty() && !pendingRootWrite) resetChunks();
         nibbleHigh = true;
         if (adapter != null) adapter.notifyDataSetChanged();
         setCursor(e.pos, true);
     }
 
     private void redo() {
-        if (redoStack.isEmpty()) return;
+        if (readOnly || busy || redoStack.isEmpty()) return;
         EditOp e = redoStack.pop();
         splice(e.pos, e.before.length, e.after);
         undoStack.push(e);
@@ -717,14 +777,18 @@ public class HexEditorActivity extends BaseActivity {
         long old = cursorPos;
         cursorPos = Math.max(0, Math.min(pos, Math.max(0, size - 1)));
         nibbleHigh = true;
+        boolean windowChanged = viewport.ensureVisible(cursorPos);
+        if (windowChanged) adapter.notifyDataSetChanged();
         refreshRows(old, cursorPos);
-        if (scroll) layoutManager.scrollToPositionWithOffset((int) (cursorPos / 8), (int) (getResources().getDisplayMetrics().density * 80));
+        if (scroll || windowChanged) layoutManager.scrollToPositionWithOffset(viewport.position(cursorPos), (int) (getResources().getDisplayMetrics().density * 80));
         updateStatus();
     }
 
     private void refreshRows(long... positions) {
         for (long p : positions) {
-            int row = (int) Math.min(p / 8, Math.max(0, adapter.getItemCount() - 1));
+            long index = p / 8 - viewport.firstRow();
+            if (index < 0 || index >= adapter.getItemCount()) continue;
+            int row = (int) index;
             if (row >= 0 && row < adapter.getItemCount()) adapter.notifyItemChanged(row);
         }
         updateStatus();
@@ -773,9 +837,11 @@ public class HexEditorActivity extends BaseActivity {
             hi = hi < 0 ? Math.max(bStart, bEnd) : Math.max(hi, Math.max(bStart, bEnd));
         }
         if (hi < 0 || adapter == null) return;
-        int firstRow = (int) Math.max(0, lo / 8);
-        int lastRow = (int) Math.min(adapter.getItemCount() - 1, hi / 8);
-        for (int r = firstRow; r <= lastRow; r++) adapter.notifyItemChanged(r);
+        // Off-screen rows bind the current selection when scrolled into view.
+        long firstRow = Math.max(layoutManager.findFirstVisibleItemPosition(), lo / 8 - viewport.firstRow());
+        long lastRow = Math.min(layoutManager.findLastVisibleItemPosition(), hi / 8 - viewport.firstRow());
+        if (firstRow >= 0 && lastRow >= firstRow && firstRow < adapter.getItemCount())
+            adapter.notifyItemRangeChanged((int) firstRow, (int) (lastRow - firstRow + 1));
     }
 
     private void endSelectionDrag(boolean menuIfNoDrag) {
@@ -813,7 +879,7 @@ public class HexEditorActivity extends BaseActivity {
         if (row == null) return -1;
         int pos = rv.getChildAdapterPosition(row);
         if (pos == RecyclerView.NO_POSITION) return -1;
-        long rowStart = pos * 8L;
+        long rowStart = viewport.offset(pos);
         int[] rvLoc = new int[2];
         rv.getLocationOnScreen(rvLoc);
         int[] rowLoc = new int[2];
@@ -897,10 +963,7 @@ public class HexEditorActivity extends BaseActivity {
     private void copySelectionOrByte() {
         byte[] data = readMenuRangeBytes();
         if (data == null || data.length == 0) return;
-        StringBuilder hex = new StringBuilder(data.length * 2);
-        for (byte b : data) hex.append(String.format(Locale.US, "%02X", b));
-        copyToClipboard(hex.toString());
-        Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+        copyFormatted(data, 0);
     }
 
     private void showCopyAsDialog() {
@@ -919,9 +982,7 @@ public class HexEditorActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_copy_as))
                 .setItems(formats, (d, w) -> {
-                    String value = formatBytesAs(data, w);
-                    copyToClipboard(value);
-                    Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+                    copyFormatted(data, w);
                 })
                 .show();
     }
@@ -929,9 +990,7 @@ public class HexEditorActivity extends BaseActivity {
     private static String formatBytesAs(byte[] data, int format) {
         switch (format) {
             case 0: { // Hex text
-                StringBuilder sb = new StringBuilder(data.length * 2);
-                for (byte b : data) sb.append(String.format(Locale.US, "%02X", b));
-                return sb.toString();
+                return HexPageCache.hex(data);
             }
             case 1: { // Decimal text
                 StringBuilder sb = new StringBuilder(data.length * 4);
@@ -945,7 +1004,7 @@ public class HexEditorActivity extends BaseActivity {
                 StringBuilder sb = new StringBuilder(data.length * 9);
                 for (int i = 0; i < data.length; i++) {
                     if (i > 0) sb.append(' ');
-                    sb.append(String.format(Locale.US, "%8s", Integer.toBinaryString(data[i] & 0xFF)).replace(' ', '0'));
+                    for (int bit = 7; bit >= 0; bit--) sb.append((data[i] >>> bit) & 1);
                 }
                 return sb.toString();
             }
@@ -977,16 +1036,14 @@ public class HexEditorActivity extends BaseActivity {
         try {
             MessageDigest md = MessageDigest.getInstance(algorithm);
             byte[] digest = md.digest(data);
-            StringBuilder sb = new StringBuilder(digest.length * 2);
-            for (byte b : digest) sb.append(String.format(Locale.US, "%02X", b));
-            return sb.toString();
+            return HexPageCache.hex(digest);
         } catch (Exception e) {
             return "";
         }
     }
 
     private void pasteClipboardHex() {
-        if (readOnly) {
+        if (readOnly || busy) {
             Extensions.showMessage(this, getString(R.string.hex_read_only));
             return;
         }
@@ -1011,7 +1068,7 @@ public class HexEditorActivity extends BaseActivity {
      * deleted byte count and everything after shifts forward. Undoable.
      */
     private void deleteSelectionOrByte() {
-        if (readOnly) {
+        if (readOnly || busy) {
             Extensions.showMessage(this, getString(R.string.hex_read_only));
             return;
         }
@@ -1152,6 +1209,7 @@ public class HexEditorActivity extends BaseActivity {
             text += String.format(Locale.US, "  Sel: %Xh-%Xh (%d)", selStart, selEnd, selEnd - selStart + 1);
         }
         statusText.setText(text);
+        if (readOnly) statusText.append("  " + getString(R.string.read_only));
         updateInspector();
     }
 
@@ -1289,23 +1347,21 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void scan(long start, boolean forward) {
+        if (busy) return;
+        busy = true;
         final byte[] pattern = lastPattern;
         final long startPos = start < 0 ? (forward ? 0 : Math.max(0, size - pattern.length)) : start;
         final ProgressManager pm = new ProgressManager(this, true);
         pm.setText(getString(R.string.search) + "…");
         pm.show();
         new Thread(() -> {
-            long found = -1;
-            if (forward) {
-                for (long p = startPos; p + pattern.length <= size; p++)
-                    if (matchesAt(p, pattern)) {found = p; break;}
-            } else {
-                for (long p = Math.min(startPos, size - pattern.length); p >= 0; p--)
-                    if (matchesAt(p, pattern)) {found = p; break;}
-            }
+            long found = BytePatternSearch.find(this::readRange, size, pattern, startPos,
+                    forward, () -> pm.isCancelling() || isDestroyed());
             final long f = found;
             runOnUiThread(() -> {
                 pm.dismiss();
+                busy = false;
+                if (pm.isCancelling() || isFinishing() || isDestroyed()) return;
                 if (f >= 0) {
                     lastMatchPos = f;
                     setCursor(f, true);
@@ -1316,13 +1372,8 @@ public class HexEditorActivity extends BaseActivity {
         }).start();
     }
 
-    private boolean matchesAt(long pos, byte[] pattern) {
-        for (int i = 0; i < pattern.length; i++)
-            if (readByte(pos + i) != (pattern[i] & 0xFF)) return false;
-        return true;
-    }
-
     private void replaceCurrentMatch() {
+        if (readOnly || busy) { Extensions.showMessage(this, R.string.hex_read_only); return; }
         if (!ensureSearchPattern()) return;
         long target = lastMatchPos >= 0 ? lastMatchPos : cursorPos;
         if (target + lastPattern.length > size) {
@@ -1336,7 +1387,9 @@ public class HexEditorActivity extends BaseActivity {
             Extensions.showMessage(this, getString(R.string.hex_invalid_replace, DATA_TYPES.get(replaceTypeIndex)));
             return;
         }
-        writeBytesAt(target, repl, null);
+        byte[] before = readRange(target, target + lastPattern.length);
+        if (!Arrays.equals(before, lastPattern)) { Extensions.showMessage(this, R.string.hex_not_found); return; }
+        replaceBytesAt(target, lastPattern.length, repl);
         lastMatchPos = target;
         findNext();
     }
@@ -1347,9 +1400,18 @@ public class HexEditorActivity extends BaseActivity {
      * as a single operation.
      */
     private void writeBytesAt(long pos, byte[] data, Runnable extraUndoAction) {
-        if (data.length == 0) return;
+        replaceBytesAt(pos, Math.min(data.length, Math.max(0, size - pos)), data);
+    }
+
+    private void replaceBytesAt(long pos, long oldLength, byte[] data) {
+        if (readOnly || busy) { Extensions.showMessage(this, R.string.hex_read_only); return; }
+        if (data.length > MAX_MENU_BYTES || oldLength > MAX_MENU_BYTES) {
+            Extensions.showMessage(this, getString(R.string.hex_selection_too_large, MAX_MENU_BYTES / (1024 * 1024)));
+            return;
+        }
+        if (data.length == 0 && oldLength == 0) return;
         pos = Math.max(0, Math.min(pos, size));
-        byte[] before = readRange(pos, pos + data.length);
+        byte[] before = readRange(pos, pos + oldLength);
         splice(pos, before.length, data);
         undoStack.push(new EditOp(pos, before, data.clone()));
         redoStack.clear();
@@ -1358,9 +1420,7 @@ public class HexEditorActivity extends BaseActivity {
             if (before.length != data.length) {
                 adapter.notifyDataSetChanged();
             } else {
-                int firstRow = (int) (pos / 8);
-                int lastRow = (int) ((pos + Math.max(1, data.length) - 1) / 8);
-                for (int r = firstRow; r <= lastRow && r < adapter.getItemCount(); r++) adapter.notifyItemChanged(r);
+                refreshRange(pos, pos + data.length - 1, -1, -1);
             }
         }
         setCursor(Math.min(pos + data.length, Math.max(0, size - 1)), false);
@@ -1460,6 +1520,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void saveChanges(Runnable onSaved) {
+        if (busy) return;
         if (!hasUnsavedChanges()) {
             if (onSaved != null) onSaved.run();
             return;
@@ -1482,12 +1543,18 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private boolean hasUnsavedChanges() {
-        return !mods.isEmpty() || structural;
+        return !mods.isEmpty() || structural || pendingRootWrite;
     }
 
     private void saveChangesRoot(Runnable onSaved) {
-        backupForSave();
-        try {
+        if (busy) return;
+        busy = true;
+        ProgressManager pm = new ProgressManager(this, false).show();
+        pm.setText(getString(R.string.saving));
+        new Thread(() -> {
+          boolean localCommitted = false;
+          try {
+            backupForSave();
             if (structural) {
                 rebuildFileFromChunks();
             } else {
@@ -1498,29 +1565,40 @@ public class HexEditorActivity extends BaseActivity {
                     }
                 }
             }
-            originalSize = structural ? size : originalSize;
-            resetChunks();
-            undoStack.clear();
-            redoStack.clear();
-            if (adapter != null) adapter.notifyDataSetChanged();
-            updateStatus();
-            Extensions.showMessage(this, R.string.saved);
-        } catch (Exception e) {
-            new ErrorUtil(this).showError(e);
-            return;
-        }
-        if (rootOriginalPath != null) {
-            Extensions.showMessage(this, getString(R.string.editor_writing_root));
-            new Thread(() -> {
-                try {
-                    RootStaging.writeBack(this, file, rootOriginalPath);
-                    runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.editor_saved_root)));
-                } catch (Exception e) {
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+            localCommitted = true;
+            if (rootOriginalPath != null) RootStaging.writeBack(this, file, rootOriginalPath);
+            pageCache.clear();
+            runOnUiThread(() -> {
+                busy = false;
+                pm.dismiss();
+                if (isDestroyed()) return;
+                originalSize = size;
+                resetChunks();
+                pendingRootWrite = false;
+                undoStack.clear();
+                redoStack.clear();
+                if (adapter != null) adapter.notifyDataSetChanged();
+                updateStatus();
+                Extensions.showMessage(this, R.string.saved);
+                if (onSaved != null) onSaved.run();
+            });
+          } catch (Exception error) {
+            boolean committed = localCommitted;
+            runOnUiThread(() -> {
+                busy = false;
+                pm.dismiss();
+                if (committed && rootOriginalPath != null) {
+                    // The staged file now holds the full virtual document. Rebase
+                    // chunks so a failed root push cannot read old offsets from it.
+                    originalSize = size;
+                    resetChunks();
+                    pendingRootWrite = true;
+                    pageCache.clear();
                 }
-            }).start();
-        }
-        if (onSaved != null) onSaved.run();
+                if (!isDestroyed()) new ErrorUtil(this).showError(error);
+            });
+          }
+        }, "hex-save").start();
     }
 
     /**
@@ -1529,13 +1607,13 @@ public class HexEditorActivity extends BaseActivity {
      * edit happened; plain byte edits keep the fast in-place save path.
      */
     private void rebuildFileFromChunks() throws IOException {
-        File temp = new File(file.getParentFile(), file.getName() + ".tmp_hex");
+        File temp = File.createTempFile("mp-hex-", ".tmp", file.getParentFile());
         try (RandomAccessFile out = new RandomAccessFile(temp, "rw")) {
             out.setLength(0);
             byte[] buf = new byte[64 * 1024];
             for (Chunk c : chunks) {
                 if (c.memory) {
-                    out.write(c.data);
+                    out.write(c.data, c.dataOffset, (int) c.length);
                     continue;
                 }
                 long remaining = c.length;
@@ -1554,20 +1632,15 @@ public class HexEditorActivity extends BaseActivity {
             }
         }
         if (!temp.renameTo(file)) {
-            try (InputStream in = new FileInputStream(temp);
-                 RandomAccessFile out = new RandomAccessFile(file, "rw")) {
-                out.setLength(0);
-                byte[] buf = new byte[64 * 1024];
-                int n;
-                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-            }
             temp.delete();
+            throw new IOException(getString(R.string.hex_atomic_save_failed));
         }
         try {
             raf.close();
         } catch (IOException ignored) {
         }
         raf = new RandomAccessFile(file, "rw");
+        pageCache = new HexPageCache(raf.getChannel());
         size = raf.length();
         originalSize = size;
     }
@@ -1590,6 +1663,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void revertChanges() {
+        if (busy) return;
         if (!hasUnsavedChanges()) return;
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_revert))
@@ -1626,6 +1700,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private void confirmDiscardAndFinish() {
+        if (busy) return;
         if (!hasUnsavedChanges()) {
             finish();
             return;
@@ -1665,13 +1740,15 @@ public class HexEditorActivity extends BaseActivity {
         menu.findItem(R.id.action_undo).setEnabled(!readOnly);
         menu.findItem(R.id.action_redo).setEnabled(!readOnly);
         menu.findItem(R.id.action_save).setVisible(!readOnly);
+        menu.add(Menu.NONE, 0x4d5045, Menu.NONE, R.string.editor_enable_editing).setVisible(readOnly && writable);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_undo) undo();
+        if (id == 0x4d5045) enableEditing();
+        else if (id == R.id.action_undo) undo();
         else if (id == R.id.action_redo) redo();
         else if (id == R.id.action_save) saveChanges();
         else if (id == R.id.action_goto) showGotoDialog();
@@ -1687,6 +1764,41 @@ public class HexEditorActivity extends BaseActivity {
         else if (id == R.id.action_exit) confirmDiscardAndFinish();
         else return super.onOptionsItemSelected(item);
         return true;
+    }
+
+    private void enableEditing() {
+        if (busy) return;
+        if (!writable) { Extensions.showMessage(this, R.string.hex_read_only); return; }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.editor_enable_editing)
+                .setMessage(R.string.editor_enable_large_editing_warning)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    readOnly = false;
+                    setupKeypad();
+                    findViewById(R.id.hexKeypad).setVisibility(View.VISIBLE);
+                    invalidateOptionsMenu();
+                    updateStatus();
+                }).show();
+    }
+
+    private void copyFormatted(byte[] data, int format) {
+        if (data.length < 64 * 1024) {
+            copyToClipboard(formatBytesAs(data, format));
+            Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+            return;
+        }
+        ProgressManager pm = new ProgressManager(this, false).show();
+        pm.setText(getString(R.string.hex_copy));
+        new Thread(() -> {
+            String value = formatBytesAs(data, format);
+            runOnUiThread(() -> {
+                pm.dismiss();
+                if (isFinishing() || isDestroyed()) return;
+                copyToClipboard(value);
+                Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
+            });
+        }, "hex-copy").start();
     }
 
     @Override
@@ -1719,7 +1831,7 @@ public class HexEditorActivity extends BaseActivity {
 
         @Override
         public long getItemId(int position) {
-            return position;
+            return viewport.offset(position) / 8;
         }
 
         @NonNull
@@ -1730,11 +1842,11 @@ public class HexEditorActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            long rowStart = position * 8L;
+            long rowStart = viewport.offset(position);
             int[] values = new int[8];
             for (int i = 0; i < 8; i++) values[i] = readByte(rowStart + i);
 
-            holder.offsetCell.setText(String.format(Locale.US, "%04X", rowStart & 0xFFFF));
+            holder.offsetCell.setText(String.format(Locale.US, "%04X", rowStart));
 
             long selCol = cursorPos - rowStart;
             for (int i = 0; i < 8; i++) {
@@ -1748,7 +1860,7 @@ public class HexEditorActivity extends BaseActivity {
                     cell.setBackground(null);
                     continue;
                 }
-                cell.setText(String.format(Locale.US, "%02X", values[i]));
+                cell.setText(HEX_BYTES[values[i]]);
                 if (i == selCol) {
                     cell.setBackgroundColor(getPrimaryContainerColor());
                 } else if (isByteSelected(rowStart + i)) {
@@ -1781,7 +1893,7 @@ public class HexEditorActivity extends BaseActivity {
 
         @Override
         public int getItemCount() {
-            return (int) ((size + 7) / 8);
+            return viewport.rowCount();
         }
 
         static class ViewHolder extends RecyclerView.ViewHolder {

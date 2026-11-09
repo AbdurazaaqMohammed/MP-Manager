@@ -309,14 +309,14 @@
                 android:configChanges="orientation|screenSize" />
             <provider
                 android:name="rikka.shizuku.ShizukuProvider"
-                android:authorities="io.github.abdurazaaqmohammed.MPManager.shizuku"
+                android:authorities="${applicationId}.shizuku"
                 android:multiprocess="false"
                 android:enabled="true"
                 android:exported="true"
                 android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
             <provider
                 android:name="androidx.startup.InitializationProvider"
-               android:authorities="io.github.abdurazaaqmohammed.MPManager.androidx-startup"
+               android:authorities="${applicationId}.androidx-startup"
                android:exported="false"
                tools:ignore="MissingClass"
                tools:node="merge">
@@ -337,7 +337,7 @@
                 android:windowSoftInputMode="adjustResize" />
            <provider
                android:name="androidx.core.content.FileProvider"
-               android:authorities="io.github.abdurazaaqmohammed.MPManager.provider"
+               android:authorities="${applicationId}.provider"
                android:exported="false"
                android:grantUriPermissions="true">
                <meta-data
@@ -350,7 +350,7 @@
                 bound to the system document UI only. -->
            <provider
                android:name="io.github.abdurazaaqmohammed.provider.StorageDocumentsProvider"
-               android:authorities="io.github.abdurazaaqmohammed.MPManager.documents"
+               android:authorities="${applicationId}.documents"
                android:exported="true"
                android:grantUriPermissions="true"
                android:permission="android.permission.MANAGE_DOCUMENTS">

@@ -43,10 +43,15 @@ import modder.hub.dexeditor.views.TextActionWindow;
 
 public class ArscTextActivity extends BaseActivity {
 
-    static ArscData sessionData;
-    static TypeBlock sessionBlock;
-    static String sessionTitle;
-    static String sessionHighlight;
+    private record Session(ArscData data, TypeBlock block, String title, String highlight) {}
+    private static final java.util.Map<String, Session> sessions = new java.util.HashMap<>();
+
+    static android.content.Intent createIntent(android.content.Context context, ArscData data,
+                                               TypeBlock block, String title, String highlight) {
+        String key = java.util.UUID.randomUUID().toString();
+        sessions.put(key, new Session(data, block, title, highlight));
+        return new android.content.Intent(context, ArscTextActivity.class).putExtra("arscTextSession", key);
+    }
 
     private ArscData data;
     private TypeBlock block;
@@ -91,10 +96,12 @@ public class ArscTextActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        data = sessionData;
-        block = sessionBlock;
-        final String title = sessionTitle;
-        final String highlight = sessionHighlight;
+        Session session = sessions.get(getIntent().getStringExtra("arscTextSession"));
+        if (session == null) { finish(); return; }
+        data = session.data;
+        block = session.block;
+        final String title = session.title;
+        final String highlight = session.highlight;
         if (data == null || block == null) {
             finish();
             return;
@@ -286,11 +293,8 @@ public class ArscTextActivity extends BaseActivity {
     }
 
     private void finishWithResult() {
-        setResult(applied ? RESULT_OK : RESULT_CANCELED);
-        sessionData = null;
-        sessionBlock = null;
-        sessionTitle = null;
-        sessionHighlight = null;
+        setEditorResult(applied ? RESULT_OK : RESULT_CANCELED);
+        sessions.remove(getIntent().getStringExtra("arscTextSession"));
         finish();
     }
 
@@ -305,8 +309,8 @@ public class ArscTextActivity extends BaseActivity {
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
                 .setNeutralButton(R.string.minimize, (d, w) ->
-                        MinimizedEditors.minimize(this, sessionTitle != null
-                                ? sessionTitle : getString(R.string.arsc_editor)))
+                        MinimizedEditors.minimize(this, toolbar.getTitle() != null
+                                ? toolbar.getTitle().toString() : getString(R.string.arsc_editor)))
                 .show();
     }
 
@@ -674,6 +678,7 @@ public class ArscTextActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         dismissIdPopup();
+        if (isFinishing()) sessions.remove(getIntent().getStringExtra("arscTextSession"));
         try {
             if (fragment != null && fragment.getEditor() != null) fragment.getEditor().release();
         } catch (Exception ignored) {

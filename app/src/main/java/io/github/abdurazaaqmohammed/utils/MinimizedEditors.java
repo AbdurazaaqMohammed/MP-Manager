@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
@@ -20,12 +21,8 @@ import java.util.List;
 /**
  * Registry of editors parked with "Minimize" from their unsaved-changes dialog.
  *
- * Minimizing never finishes the editor: it is merely pushed below MainActivity
- * (FLAG_ACTIVITY_REORDER_TO_FRONT), so every in-memory field that holds the
- * user's progress (HexEditor's mods map, the ArscEditor's parsed ArscData,
- * DexEditor's static tabs, ...) stays alive in the exact Activity instance.
- * Selecting an entry in "Minimized Processes" reorders that same instance back
- * to the front and it resumes where it left off.
+ * Editors live in separate tasks (see EditorTasks). Restore uses the task ID,
+ * never a class-only intent, so two editors of the same type remain distinct.
  *
  * Entries are removed automatically: {@code BaseActivity.onDestroy()} unregisters
  * any activity that is destroyed while finishing, so Save / Discard / exit paths
@@ -35,7 +32,8 @@ public final class MinimizedEditors {
 
     /** One parked editor session. */
     public static class Item {
-        public final WeakReference<Activity> ref;
+        public WeakReference<Activity> ref;
+        public final int taskId;
         public final String title;
         /** Fallback launch intent, used only if the live instance is gone. */
         public final Intent reopenIntent;
@@ -43,6 +41,7 @@ public final class MinimizedEditors {
 
         Item(Activity activity, String title) {
             this.ref = new WeakReference<>(activity);
+            this.taskId = activity.getTaskId();
             this.title = title;
             Intent intent = activity.getIntent();
             this.reopenIntent = intent != null ? new Intent(intent) : null;
@@ -75,7 +74,8 @@ public final class MinimizedEditors {
         ITEMS.add(0, new Item(activity, !TextUtils.isEmpty(title)
                 ? title : activity.getTitle().toString()));
         Intent main = new Intent(activity, MainActivity.class);
-        main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        main.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         try {
             activity.startActivity(main);
         } catch (Exception e) {
@@ -94,13 +94,23 @@ public final class MinimizedEditors {
         }
     }
 
+    /** Keep the selected task associated with its replacement after recreation. */
+    public static void rebind(Activity activity) {
+        for (Item item : ITEMS) {
+            if (item.taskId == activity.getTaskId() && item.reopenIntent != null
+                    && item.reopenIntent.getComponent().equals(activity.getComponentName())) {
+                item.ref = new WeakReference<>(activity);
+            }
+        }
+    }
+
     /** Live entries, oldest pruned first. */
     public static List<Item> getItems() {
         Iterator<Item> it = ITEMS.iterator();
         while (it.hasNext()) {
             if (!it.next().isAlive()) it.remove();
         }
-        return ITEMS;
+        return new ArrayList<>(ITEMS);
     }
 
     public static boolean isEmpty() {
@@ -113,13 +123,22 @@ public final class MinimizedEditors {
         try {
             Activity live = item.ref.get();
             if (live != null && !live.isDestroyed() && !live.isFinishing()) {
-                Intent intent = new Intent(context, live.getClass());
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                context.startActivity(intent);
+                ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+                if (manager == null) return;
+                for (ActivityManager.AppTask task : manager.getAppTasks()) {
+                    ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                    int taskId = android.os.Build.VERSION.SDK_INT >= 29 ? info.taskId : info.id;
+                    if (taskId == item.taskId) {
+                        task.moveToFront();
+                        unregister(live);
+                        return;
+                    }
+                }
             } else if (item.reopenIntent != null) {
                 context.startActivity(item.reopenIntent);
             }
-        } catch (Exception ignored) {
+        } catch (Exception error) {
+            android.widget.Toast.makeText(context, error.toString(), android.widget.Toast.LENGTH_LONG).show();
         }
     }
 
