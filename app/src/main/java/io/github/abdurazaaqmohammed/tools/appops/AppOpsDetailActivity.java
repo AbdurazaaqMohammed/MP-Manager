@@ -332,11 +332,11 @@ public class AppOpsDetailActivity extends BaseActivity {
             p.isGranted = isChecked;
             executor.execute(() -> {
                 if (isSpecialSystem) {
-                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore");
+                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore", true);
                 } else {
                     AppOpsEngine.setPermissionGranted(packageName, p.name, isChecked);
-                    // Also sync Op mode
-                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore");
+                    // Standard toggle synchronizes visible system state and AppOps
+                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore", true);
                 }
                 mainHandler.post(() -> {
                     p.isFakeGranted = false; // re-evaluated
@@ -344,9 +344,52 @@ public class AppOpsDetailActivity extends BaseActivity {
                 });
             });
         });
+
+        // HIDDEN KERNEL CONTROL: Long press switch or row to open full kernel AppOp mode dialog!
+        View.OnLongClickListener longClickListener = v -> {
+            showKernelOpModeDialog(p);
+            return true;
+        };
+        sw.setOnLongClickListener(longClickListener);
+        row.setOnLongClickListener(longClickListener);
+
         row.addView(sw);
 
         return row;
+    }
+
+    private void showKernelOpModeDialog(AppOpsDetailData.PermissionEntry p) {
+        String[] modes = {"Allow (Normal)", "Ignore (Fake Granted: Silent drop)", "Deny (Hard block)", "Default"};
+        String[] cmdModes = {"allow", "ignore", "deny", "default"};
+
+        String currentEffective = !TextUtils.isEmpty(p.uidMode) && !"default".equalsIgnoreCase(p.uidMode) ? p.uidMode : p.opMode;
+        int checked = 0;
+        for (int i = 0; i < cmdModes.length; i++) {
+            if (cmdModes[i].equalsIgnoreCase(currentEffective)) {
+                checked = i;
+                break;
+            }
+        }
+
+        final int[] selected = {checked};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Kernel AppOp: " + p.label)
+                .setSingleChoiceItems(modes, checked, (dialog, which) -> selected[0] = which)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String newMode = cmdModes[selected[0]];
+                    p.uidMode = newMode;
+                    p.opMode = newMode;
+                    executor.execute(() -> {
+                        // Apply to UID kernel layer and package layer
+                        AppOpsEngine.setAppOpMode(packageName, p.opName, newMode, true);
+                        mainHandler.post(() -> {
+                            Toast.makeText(this, p.label + " mode set to " + newMode, Toast.LENGTH_SHORT).show();
+                            loadData();
+                        });
+                    });
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private View createAppOpRow(AppOpsDetailData.AppOpEntry op) {
