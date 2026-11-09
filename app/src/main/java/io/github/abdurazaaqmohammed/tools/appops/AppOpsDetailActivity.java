@@ -302,7 +302,9 @@ public class AppOpsDetailActivity extends BaseActivity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setPadding(28, 20, 28, 20);
-        row.setBackgroundResource(com.google.android.material.R.drawable.abc_item_background_holo_dark);
+        android.util.TypedValue outValue = new android.util.TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        row.setBackgroundResource(outValue.resourceId);
 
         LinearLayout textCol = new LinearLayout(this);
         textCol.setOrientation(LinearLayout.VERTICAL);
@@ -372,7 +374,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(op.label)
                 .setSingleChoiceItems(modes, checked, (dialog, which) -> selected[0] = which)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newMode = cmdModes[selected[0]];
                     op.mode = newMode;
                     executor.execute(() -> {
@@ -380,7 +382,7 @@ public class AppOpsDetailActivity extends BaseActivity {
                         mainHandler.post(this::bindData);
                     });
                 })
-                .setNegativeButton(R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -402,14 +404,14 @@ public class AppOpsDetailActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.app_ops_standby_bucket)
                 .setSingleChoiceItems(buckets, checked, (dialog, which) -> selected[0] = which)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String chosen = bucketCmds[selected[0]];
                     executor.execute(() -> {
                         AppOpsEngine.setStandbyBucket(packageName, chosen);
                         mainHandler.post(this::loadData);
                     });
                 })
-                .setNegativeButton(R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
