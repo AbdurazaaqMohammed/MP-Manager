@@ -748,9 +748,12 @@ public final class AccessManager {
             Backend backend = active(context);
             if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
                 RootManager rm = RootManager.getInstance(context);
-                RootManager.ShellResult r = rm.execute(
+                RootManager.ShellResult r = rm.executeFs(
                         "du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
-                if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                if (r == null || !r.isSuccess() || r.output == null || r.output.trim().isEmpty()) {
+                    r = rm.execute("du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
+                }
+                if (r != null && r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
                     String firstToken = r.output().trim().split("\\s+")[0].trim();
                     try {
                         long kb = Long.parseLong(firstToken);

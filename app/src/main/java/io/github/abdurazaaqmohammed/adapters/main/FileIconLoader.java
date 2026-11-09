@@ -635,7 +635,7 @@ public class FileIconLoader {
      * not readable by the app user at all.
      */
     private static long calculateFolderSize(File dir, Context ctx) {
-        if (dir == null || !dir.isDirectory()) return 0;
+        if (dir == null || !treatAsFolder(dir)) return 0;
         String path = dir.getAbsolutePath();
         if (path.equals("/proc") || path.startsWith("/proc/")
                 || path.equals("/sys") || path.startsWith("/sys/")
