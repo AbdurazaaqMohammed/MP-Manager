@@ -97,6 +97,30 @@ public class AppOpsDetailActivity extends BaseActivity {
             } catch (Exception ignored) {}
         });
 
+        ImageView btnRefresh = findViewById(R.id.detail_btn_refresh);
+        if (btnRefresh != null) {
+            btnRefresh.setOnClickListener(v -> {
+                Toast.makeText(this, "Refreshing...", Toast.LENGTH_SHORT).show();
+                loadData();
+            });
+        }
+
+        com.google.android.material.textfield.TextInputEditText searchEdit = findViewById(R.id.detail_search_edit);
+        if (searchEdit != null) {
+            searchEdit.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterDetailViews(s != null ? s.toString().trim().toLowerCase() : "");
+                }
+
+                @Override
+                public void afterTextChanged(android.text.Editable s) {}
+            });
+        }
+
         progressBar = findViewById(R.id.detail_progress);
         scrollView = findViewById(R.id.detail_scroll);
         fabScrollTop = findViewById(R.id.fab_scroll_top);
@@ -119,6 +143,33 @@ public class AppOpsDetailActivity extends BaseActivity {
         btnUninstall = findViewById(R.id.btn_action_uninstall);
 
         setupActionListeners();
+    }
+
+    private void filterDetailViews(String query) {
+        filterContainerChildren(containerSystemPerms, query);
+        filterContainerChildren(containerRuntimePerms, query);
+        filterContainerChildren(containerAppOps, query);
+        filterContainerChildren(containerInfo, query);
+    }
+
+    private void filterContainerChildren(LinearLayout container, String query) {
+        if (container == null) return;
+        boolean emptyQuery = TextUtils.isEmpty(query);
+        int count = container.getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = container.getChildAt(i);
+            if (emptyQuery) {
+                child.setVisibility(View.VISIBLE);
+                continue;
+            }
+            Object tag = child.getTag();
+            String searchable = tag instanceof String ? (String) tag : "";
+            if (searchable.toLowerCase().contains(query)) {
+                child.setVisibility(View.VISIBLE);
+            } else {
+                child.setVisibility(View.GONE);
+            }
+        }
     }
 
     private void setupActionListeners() {
@@ -249,6 +300,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setPadding(28, 22, 28, 22);
+        row.setTag(p.label + " " + p.name + " " + p.opName);
 
         LinearLayout textCol = new LinearLayout(this);
         textCol.setOrientation(LinearLayout.VERTICAL);
@@ -302,6 +354,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setPadding(28, 20, 28, 20);
+        row.setTag(op.label + " " + op.opName + " " + op.description);
         android.util.TypedValue outValue = new android.util.TypedValue();
         getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
         row.setBackgroundResource(outValue.resourceId);
@@ -436,6 +489,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
         row.setPadding(0, 8, 0, 8);
+        row.setTag(title + " " + value);
 
         TextView t = new TextView(this);
         t.setText(title);
