@@ -68,13 +68,11 @@ public final class PartitionDumperDialog {
 
     private static List<PartitionItem> sCachedPartitions;
     private static String sCachedActiveSlot;
-    private static List<String> sCachedSlotDiffs;
     private static final String PREF_WARNED_DUMPER = "pref_warned_dumper_danger";
 
     public static void clearCache() {
         sCachedPartitions = null;
         sCachedActiveSlot = null;
-        sCachedSlotDiffs = null;
     }
 
     public static void show(AppCompatActivity activity) {
@@ -105,7 +103,7 @@ public final class PartitionDumperDialog {
     private static void loadAndDisplay(AppCompatActivity activity) {
 
         if (sCachedPartitions != null && !sCachedPartitions.isEmpty()) {
-            displayMainDialog(activity, sCachedPartitions, sCachedActiveSlot, sCachedSlotDiffs);
+            displayMainDialog(activity, sCachedPartitions, sCachedActiveSlot);
             return;
         }
 
@@ -115,18 +113,27 @@ public final class PartitionDumperDialog {
         new Thread(() -> {
             try {
                 List<PartitionItem> partitions = PartitionResolver.queryPartitions(activity);
-                String activeSlot = PartitionResolver.getActiveSlot();
-                List<String> slotDiffs = PartitionResolver.findSlotDifferences();
+                String activeSlot = "";
+                for (PartitionItem p : partitions) {
+                    if (p.isActiveSlot) {
+                        if (p.slot == PartitionItem.Slot.A) activeSlot = "a";
+                        else if (p.slot == PartitionItem.Slot.B) activeSlot = "b";
+                        break;
+                    }
+                }
+                if (activeSlot.isEmpty()) {
+                    activeSlot = PartitionResolver.getActiveSlot();
+                }
                 sCachedPartitions = partitions;
                 sCachedActiveSlot = activeSlot;
-                sCachedSlotDiffs = slotDiffs;
+                final String finalActiveSlot = activeSlot;
                 activity.runOnUiThread(() -> {
                     pm.dismiss();
                     if (partitions.isEmpty()) {
                         Extensions.showMessage(activity, activity.getString(R.string.partition_root_required));
                         return;
                     }
-                    displayMainDialog(activity, partitions, activeSlot, slotDiffs);
+                    displayMainDialog(activity, partitions, finalActiveSlot);
                 });
             } catch (Exception e) {
                 activity.runOnUiThread(() -> {
@@ -188,7 +195,7 @@ public final class PartitionDumperDialog {
     }
 
     private static void displayMainDialog(AppCompatActivity activity, List<PartitionItem> allPartitions,
-                                          String activeSlot, List<String> slotDiffs) {
+                                          String activeSlot) {
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
 
         // Group partitions by base name
@@ -329,12 +336,12 @@ public final class PartitionDumperDialog {
         secTitle.setPadding(0, Extensions.dp2px(activity, 8), 0, Extensions.dp2px(activity, 12));
         content.addView(secTitle);
 
-        // Primary Cards
+        // Primary Cards (Rendered immediately: usually ~5 cards)
         for (GroupedPartition gp : primaryGrouped) {
             content.addView(createPartitionCard(activity, gp, activeSlot, isAr, dialog));
         }
 
-        // More Expandable Section
+        // More Expandable Section (Lazy loaded on click)
         if (!moreGrouped.isEmpty()) {
             LinearLayout moreCard = new LinearLayout(activity);
             moreCard.setOrientation(LinearLayout.HORIZONTAL);
@@ -384,94 +391,99 @@ public final class PartitionDumperDialog {
             moreContainer.setOrientation(LinearLayout.VERTICAL);
             moreContainer.setVisibility(View.GONE);
 
-            // First row: Search Bar for More
-            LinearLayout searchCard = new LinearLayout(activity);
-            searchCard.setOrientation(LinearLayout.HORIZONTAL);
-            searchCard.setGravity(Gravity.CENTER_VERTICAL);
-            GradientDrawable searchBg = new GradientDrawable();
-            searchBg.setColor(0xFF1E2533);
-            searchBg.setCornerRadius(Extensions.dp2px(activity, 14));
-            searchBg.setStroke(Extensions.dp2px(activity, 1), 0xFF2D3748);
-            searchCard.setBackground(searchBg);
-            searchCard.setPadding(Extensions.dp2px(activity, 14), 0, Extensions.dp2px(activity, 12), 0);
-            LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(activity, 46));
-            searchLp.setMargins(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 10));
-            searchCard.setLayoutParams(searchLp);
+            // State tracking for lazy population
+            final boolean[] isMoreInflated = new boolean[]{false};
 
-            TextView tvSearchIcon = new TextView(activity);
-            tvSearchIcon.setText("🔍");
-            tvSearchIcon.setTextSize(14f);
-            searchCard.addView(tvSearchIcon);
-
-            EditText etMoreSearch = new EditText(activity);
-            etMoreSearch.setHint(isAr ? "بحث في باقي الأقسام..." : "Search partitions...");
-            etMoreSearch.setHintTextColor(0xFF718096);
-            etMoreSearch.setTextColor(0xFFFFFFFF);
-            etMoreSearch.setTextSize(13.5f);
-            etMoreSearch.setBackground(null);
-            etMoreSearch.setSingleLine(true);
-            etMoreSearch.setPadding(Extensions.dp2px(activity, 10), 0, Extensions.dp2px(activity, 6), 0);
-            etMoreSearch.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            searchCard.addView(etMoreSearch);
-
-            TextView btnClearSearch = new TextView(activity);
-            btnClearSearch.setText("✕");
-            btnClearSearch.setTextColor(0xFFA0AEC0);
-            btnClearSearch.setTextSize(14f);
-            btnClearSearch.setPadding(Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6),
-                    Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6));
-            btnClearSearch.setVisibility(View.GONE);
-            btnClearSearch.setOnClickListener(v -> etMoreSearch.setText(""));
-            searchCard.addView(btnClearSearch);
-
-            moreContainer.addView(searchCard);
-
-            for (GroupedPartition gp : moreGrouped) {
-                View card = createPartitionCard(activity, gp, activeSlot, isAr, dialog);
-                card.setTag(gp.baseName.toLowerCase(Locale.ROOT));
-                moreContainer.addView(card);
-            }
-
-            TextView tvMoreEmpty = new TextView(activity);
-            tvMoreEmpty.setText(isAr ? "لا توجد أقسام مطابقة للبحث" : "No matching partitions found");
-            tvMoreEmpty.setTextColor(0xFF718096);
-            tvMoreEmpty.setTextSize(13f);
-            tvMoreEmpty.setGravity(Gravity.CENTER);
-            tvMoreEmpty.setPadding(0, Extensions.dp2px(activity, 18), 0, Extensions.dp2px(activity, 18));
-            tvMoreEmpty.setVisibility(View.GONE);
-            moreContainer.addView(tvMoreEmpty);
-
-            etMoreSearch.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    String q = (s != null) ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
-                    btnClearSearch.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
-                    int visibleCount = 0;
-                    for (int i = 0; i < moreContainer.getChildCount(); i++) {
-                        View child = moreContainer.getChildAt(i);
-                        Object tag = child.getTag();
-                        if (tag instanceof String name) {
-                            boolean match = q.isEmpty() || name.contains(q);
-                            child.setVisibility(match ? View.VISIBLE : View.GONE);
-                            if (match) visibleCount++;
-                        }
-                    }
-                    tvMoreEmpty.setVisibility(visibleCount == 0 ? View.VISIBLE : View.GONE);
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {}
-            });
-
-            content.addView(moreContainer);
-
-            // Toggle Expand / Collapse
+            // Toggle Expand / Collapse with Lazy Loading
             moreCard.setOnClickListener(v -> {
                 if (moreContainer.getVisibility() == View.GONE) {
+                    if (!isMoreInflated[0]) {
+                        isMoreInflated[0] = true;
+
+                        // First row: Search Bar for More
+                        LinearLayout searchCard = new LinearLayout(activity);
+                        searchCard.setOrientation(LinearLayout.HORIZONTAL);
+                        searchCard.setGravity(Gravity.CENTER_VERTICAL);
+                        GradientDrawable searchBg = new GradientDrawable();
+                        searchBg.setColor(0xFF1E2533);
+                        searchBg.setCornerRadius(Extensions.dp2px(activity, 14));
+                        searchBg.setStroke(Extensions.dp2px(activity, 1), 0xFF2D3748);
+                        searchCard.setBackground(searchBg);
+                        searchCard.setPadding(Extensions.dp2px(activity, 14), 0, Extensions.dp2px(activity, 12), 0);
+                        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(activity, 46));
+                        searchLp.setMargins(0, Extensions.dp2px(activity, 4), 0, Extensions.dp2px(activity, 10));
+                        searchCard.setLayoutParams(searchLp);
+
+                        TextView tvSearchIcon = new TextView(activity);
+                        tvSearchIcon.setText("🔍");
+                        tvSearchIcon.setTextSize(14f);
+                        searchCard.addView(tvSearchIcon);
+
+                        EditText etMoreSearch = new EditText(activity);
+                        etMoreSearch.setHint(isAr ? "بحث في باقي الأقسام..." : "Search partitions...");
+                        etMoreSearch.setHintTextColor(0xFF718096);
+                        etMoreSearch.setTextColor(0xFFFFFFFF);
+                        etMoreSearch.setTextSize(13.5f);
+                        etMoreSearch.setBackground(null);
+                        etMoreSearch.setSingleLine(true);
+                        etMoreSearch.setPadding(Extensions.dp2px(activity, 10), 0, Extensions.dp2px(activity, 6), 0);
+                        etMoreSearch.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                        searchCard.addView(etMoreSearch);
+
+                        TextView btnClearSearch = new TextView(activity);
+                        btnClearSearch.setText("✕");
+                        btnClearSearch.setTextColor(0xFFA0AEC0);
+                        btnClearSearch.setTextSize(14f);
+                        btnClearSearch.setPadding(Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6),
+                                Extensions.dp2px(activity, 6), Extensions.dp2px(activity, 6));
+                        btnClearSearch.setVisibility(View.GONE);
+                        btnClearSearch.setOnClickListener(v2 -> etMoreSearch.setText(""));
+                        searchCard.addView(btnClearSearch);
+
+                        moreContainer.addView(searchCard);
+
+                        for (GroupedPartition gp : moreGrouped) {
+                            View card = createPartitionCard(activity, gp, activeSlot, isAr, dialog);
+                            card.setTag(gp.baseName.toLowerCase(Locale.ROOT));
+                            moreContainer.addView(card);
+                        }
+
+                        TextView tvMoreEmpty = new TextView(activity);
+                        tvMoreEmpty.setText(isAr ? "لا توجد أقسام مطابقة للبحث" : "No matching partitions found");
+                        tvMoreEmpty.setTextColor(0xFF718096);
+                        tvMoreEmpty.setTextSize(13f);
+                        tvMoreEmpty.setGravity(Gravity.CENTER);
+                        tvMoreEmpty.setPadding(0, Extensions.dp2px(activity, 18), 0, Extensions.dp2px(activity, 18));
+                        tvMoreEmpty.setVisibility(View.GONE);
+                        moreContainer.addView(tvMoreEmpty);
+
+                        etMoreSearch.addTextChangedListener(new TextWatcher() {
+                            @Override
+                            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                            @Override
+                            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                                String q = (s != null) ? s.toString().trim().toLowerCase(Locale.ROOT) : "";
+                                btnClearSearch.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
+                                int visibleCount = 0;
+                                for (int i = 0; i < moreContainer.getChildCount(); i++) {
+                                    View child = moreContainer.getChildAt(i);
+                                    Object tag = child.getTag();
+                                    if (tag instanceof String name) {
+                                        boolean match = q.isEmpty() || name.contains(q);
+                                        child.setVisibility(match ? View.VISIBLE : View.GONE);
+                                        if (match) visibleCount++;
+                                    }
+                                }
+                                tvMoreEmpty.setVisibility(visibleCount == 0 ? View.VISIBLE : View.GONE);
+                            }
+
+                            @Override
+                            public void afterTextChanged(Editable s) {}
+                        });
+                    }
+
                     moreContainer.setVisibility(View.VISIBLE);
                     tvChevron.setText("▲");
                     tvMoreSub.setText(isAr ? "اضغط لإخفاء الأقسام الإضافية" : "Tap to collapse remaining partitions");
@@ -481,6 +493,8 @@ public final class PartitionDumperDialog {
                     tvMoreSub.setText(isAr ? "اضغط لعرض أو إخفاء باقي أقسام النظام والفيرموير" : "Tap to expand/collapse remaining partitions");
                 }
             });
+
+            content.addView(moreContainer);
         }
 
         scrollView.addView(content);

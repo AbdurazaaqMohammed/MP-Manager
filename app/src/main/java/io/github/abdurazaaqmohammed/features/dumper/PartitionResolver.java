@@ -94,7 +94,7 @@ public final class PartitionResolver {
      * Queries all partitions available on the device using elevated root commands.
      */
     public static List<PartitionItem> queryPartitions(Context context) throws Exception {
-        String activeSlot = getActiveSlot();
+        String activeSlot = "";
         boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
 
         String cmd = "sh -c '"

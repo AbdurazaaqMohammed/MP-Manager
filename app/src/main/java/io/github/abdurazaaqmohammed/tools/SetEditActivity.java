@@ -89,10 +89,12 @@ public class SetEditActivity extends BaseActivity {
     }
 
     private Toolbar toolbar;
+    private View btnToolbarFavorites;
+    private TextView tvToolbarFavoritesCount;
     private EditText etSearch;
     private ImageView btnClearSearch;
     private ChipGroup chipGroupSources;
-    private Chip chipAll, chipGlobal, chipSecure, chipSystem, chipProps;
+    private Chip chipAll, chipGlobal, chipSecure, chipSystem, chipProps, chipFavorites;
     private View layoutOverview;
     private MaterialCardView cardGlobal, cardSecure, cardSystem, cardProps;
     private TextView tvCountGlobal, tvCountSecure, tvCountSystem, tvCountProps;
@@ -104,11 +106,14 @@ public class SetEditActivity extends BaseActivity {
     private final List<SettingEntry> allEntries = new ArrayList<>();
     private final java.util.Map<SettingType, List<SettingEntry>> entriesByType = new java.util.EnumMap<>(SettingType.class);
     private final List<SettingEntry> displayedEntries = new ArrayList<>();
+    private final java.util.Set<String> favoriteKeys = new java.util.HashSet<>();
     private SettingAdapter adapter;
 
     private SettingType currentFilter = null; // null = All
+    private boolean isFavoritesFilter = false;
     private String currentQuery = "";
     private static final Pattern PROP_LINE = Pattern.compile("^\\[(.+?)\\]: \\[(.*?)\\]$");
+    private static final String PREF_SETEDIT_FAVS = "setedit_favorites";
     private static final String PREF_WARNED_SETEDIT = "pref_warned_setedit_danger";
 
     @Override
@@ -116,6 +121,7 @@ public class SetEditActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_set_edit);
 
+        loadFavorites();
         initViews();
         setupListeners();
 
@@ -151,10 +157,58 @@ public class SetEditActivity extends BaseActivity {
                 .show();
     }
 
+    private void loadFavorites() {
+        android.content.SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
+        java.util.Set<String> set = sp.getStringSet(PREF_SETEDIT_FAVS, null);
+        favoriteKeys.clear();
+        if (set != null) {
+            favoriteKeys.addAll(set);
+        }
+    }
+
+    private void saveFavorites() {
+        android.content.SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
+        sp.edit().putStringSet(PREF_SETEDIT_FAVS, new java.util.HashSet<>(favoriteKeys)).apply();
+    }
+
+    private static String favKey(SettingEntry entry) {
+        return entry.type.alias + ":" + entry.key;
+    }
+
+    private boolean isFavorite(SettingEntry entry) {
+        return favoriteKeys.contains(favKey(entry));
+    }
+
+    private void toggleFavorite(SettingEntry entry) {
+        String key = favKey(entry);
+        boolean added;
+        if (favoriteKeys.contains(key)) {
+            favoriteKeys.remove(key);
+            added = false;
+        } else {
+            favoriteKeys.add(key);
+            added = true;
+        }
+        saveFavorites();
+        updateCounts();
+        if (isFavoritesFilter) {
+            applyFilter();
+        } else {
+            adapter.notifyDataSetChanged();
+        }
+        String msg = added
+                ? (isAr() ? "تمت الإضافة للمفضلة ❤️" : "Added to favorites ❤️")
+                : (isAr() ? "تمت الإزالة من المفضلة" : "Removed from favorites");
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
     private void initViews() {
         toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.settings_editor_title);
         toolbar.setNavigationOnClickListener(v -> finish());
+        btnToolbarFavorites = toolbar.findViewById(R.id.btnToolbarFavorites);
+        tvToolbarFavoritesCount = toolbar.findViewById(R.id.tvToolbarFavoritesCount);
+
         MenuItem refresh = toolbar.getMenu().add(0, 1001, 0, R.string.menu_refresh);
         refresh.setIcon(R.drawable.baseline_refresh_24);
         refresh.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -174,6 +228,7 @@ public class SetEditActivity extends BaseActivity {
         chipSecure = findViewById(R.id.chipSecure);
         chipSystem = findViewById(R.id.chipSystem);
         chipProps = findViewById(R.id.chipProps);
+        chipFavorites = findViewById(R.id.chipFavorites);
 
         // Header view layout for overview cards
         layoutOverview = LayoutInflater.from(this).inflate(R.layout.header_set_edit_overview, null, false);
@@ -196,7 +251,7 @@ public class SetEditActivity extends BaseActivity {
         rvEntries.setHasFixedSize(true);
         rvEntries.setItemViewCacheSize(20);
 
-        adapter = new SettingAdapter(displayedEntries, layoutOverview, this::showEditDialog);
+        adapter = new SettingAdapter(displayedEntries, layoutOverview, this::showEditDialog, this::toggleFavorite, this::isFavorite);
         rvEntries.setAdapter(adapter);
     }
 
@@ -221,13 +276,26 @@ public class SetEditActivity extends BaseActivity {
         chipGroupSources.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) return;
             int id = checkedIds.get(0);
-            if (id == R.id.chipGlobal) currentFilter = SettingType.GLOBAL;
-            else if (id == R.id.chipSecure) currentFilter = SettingType.SECURE;
-            else if (id == R.id.chipSystem) currentFilter = SettingType.SYSTEM;
-            else if (id == R.id.chipProps) {
+            if (id == R.id.chipGlobal) {
+                currentFilter = SettingType.GLOBAL;
+                isFavoritesFilter = false;
+            } else if (id == R.id.chipSecure) {
+                currentFilter = SettingType.SECURE;
+                isFavoritesFilter = false;
+            } else if (id == R.id.chipSystem) {
+                currentFilter = SettingType.SYSTEM;
+                isFavoritesFilter = false;
+            } else if (id == R.id.chipProps) {
                 currentFilter = SettingType.PROP;
+                isFavoritesFilter = false;
                 ensurePropsLoaded();
-            } else currentFilter = null; // All
+            } else if (id == R.id.chipFavorites) {
+                currentFilter = null;
+                isFavoritesFilter = true;
+            } else {
+                currentFilter = null; // All
+                isFavoritesFilter = false;
+            }
             applyFilter();
         });
 
@@ -238,6 +306,9 @@ public class SetEditActivity extends BaseActivity {
             chipProps.setChecked(true);
             ensurePropsLoaded();
         });
+        if (btnToolbarFavorites != null) {
+            btnToolbarFavorites.setOnClickListener(v -> chipFavorites.setChecked(true));
+        }
 
         fabAdd.setOnClickListener(v -> showAddDialog());
     }
@@ -271,17 +342,22 @@ public class SetEditActivity extends BaseActivity {
         int sCount = entriesByType.containsKey(SettingType.SECURE) ? entriesByType.get(SettingType.SECURE).size() : 0;
         int sysCount = entriesByType.containsKey(SettingType.SYSTEM) ? entriesByType.get(SettingType.SYSTEM).size() : 0;
         int pCount = entriesByType.containsKey(SettingType.PROP) ? entriesByType.get(SettingType.PROP).size() : 0;
+        int favCount = favoriteKeys.size();
 
         tvCountGlobal.setText(getString(R.string.entries_count, gCount));
         tvCountSecure.setText(getString(R.string.entries_count, sCount));
         tvCountSystem.setText(getString(R.string.entries_count, sysCount));
-        tvCountProps.setText(propsLoaded ? getString(R.string.entries_count, pCount) : "Tap to load");
+        tvCountProps.setText(getString(R.string.entries_count, pCount));
+        if (tvToolbarFavoritesCount != null) {
+            tvToolbarFavoritesCount.setText(String.valueOf(favCount));
+        }
 
         chipAll.setText(getString(R.string.all) + " " + allEntries.size());
         chipGlobal.setText("Global " + gCount);
         chipSecure.setText("Secure " + sCount);
         chipSystem.setText("System " + sysCount);
-        chipProps.setText(propsLoaded ? ("Props " + pCount) : "Properties");
+        chipProps.setText("Props " + pCount);
+        chipFavorites.setText(getString(R.string.favorites) + " " + favCount);
     }
 
     private void loadAllSettings() {
@@ -292,6 +368,7 @@ public class SetEditActivity extends BaseActivity {
             List<SettingEntry> gList = new ArrayList<>(600);
             List<SettingEntry> sList = new ArrayList<>(500);
             List<SettingEntry> sysList = new ArrayList<>(400);
+            List<SettingEntry> propList = new ArrayList<>(3500);
 
             // Fetch all three tables in a single lightning-fast su shell invocation (<100ms)
             String cmd = "echo '===GLOBAL==='; settings list global; echo '===SECURE==='; settings list secure; echo '===SYSTEM==='; settings list system";
@@ -305,22 +382,30 @@ public class SetEditActivity extends BaseActivity {
                 if (sections.length > 3) parseSettingsOutput(SettingType.SYSTEM, sections[3], sysList);
             }
 
+            // Auto-load android system properties alongside settings
+            queryProperties(propList);
+
             Collections.sort(gList, (a, b) -> a.key.compareToIgnoreCase(b.key));
             Collections.sort(sList, (a, b) -> a.key.compareToIgnoreCase(b.key));
             Collections.sort(sysList, (a, b) -> a.key.compareToIgnoreCase(b.key));
+            Collections.sort(propList, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
-            List<SettingEntry> loaded = new ArrayList<>(gList.size() + sList.size() + sysList.size());
+            List<SettingEntry> loaded = new ArrayList<>(gList.size() + sList.size() + sysList.size() + propList.size());
             loaded.addAll(gList);
             loaded.addAll(sList);
             loaded.addAll(sysList);
+            loaded.addAll(propList);
             Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
             runOnUiThread(() -> {
+                propsLoaded = true;
+                isLoadingProps = false;
                 allEntries.clear();
                 allEntries.addAll(loaded);
                 entriesByType.put(SettingType.GLOBAL, gList);
                 entriesByType.put(SettingType.SECURE, sList);
                 entriesByType.put(SettingType.SYSTEM, sysList);
+                entriesByType.put(SettingType.PROP, propList);
 
                 updateCounts();
                 progressBar.setVisibility(View.GONE);
@@ -393,16 +478,22 @@ public class SetEditActivity extends BaseActivity {
         displayedEntries.clear();
         boolean hasQuery = !TextUtils.isEmpty(currentQuery);
 
-        if (!hasQuery) {
-            if (currentFilter == null) {
-                displayedEntries.addAll(allEntries);
-            } else {
-                List<SettingEntry> list = entriesByType.get(currentFilter);
-                if (list != null) displayedEntries.addAll(list);
+        List<SettingEntry> source;
+        if (isFavoritesFilter) {
+            source = new ArrayList<>();
+            for (SettingEntry e : allEntries) {
+                if (isFavorite(e)) source.add(e);
             }
+        } else if (currentFilter == null) {
+            source = allEntries;
+        } else {
+            source = entriesByType.getOrDefault(currentFilter, Collections.emptyList());
+        }
+
+        if (!hasQuery) {
+            displayedEntries.addAll(source);
         } else {
             String q = currentQuery.toLowerCase(Locale.ROOT);
-            List<SettingEntry> source = (currentFilter == null) ? allEntries : entriesByType.getOrDefault(currentFilter, Collections.emptyList());
             for (SettingEntry e : source) {
                 if (e.key.toLowerCase(Locale.ROOT).contains(q)
                         || e.value.toLowerCase(Locale.ROOT).contains(q)) {
@@ -411,7 +502,7 @@ public class SetEditActivity extends BaseActivity {
             }
         }
 
-        boolean showHeader = (!hasQuery && currentFilter == null);
+        boolean showHeader = (!hasQuery && currentFilter == null && !isFavoritesFilter);
         adapter.setShowHeader(showHeader);
 
         tvEmpty.setVisibility(displayedEntries.isEmpty() ? View.VISIBLE : View.GONE);
@@ -704,15 +795,28 @@ public class SetEditActivity extends BaseActivity {
             void onClick(SettingEntry entry);
         }
 
+        interface OnItemLongClick {
+            void onLongClick(SettingEntry entry);
+        }
+
+        interface FavoriteChecker {
+            boolean isFavorite(SettingEntry entry);
+        }
+
         private final List<SettingEntry> items;
         private final View headerView;
         private final OnItemClick listener;
+        private final OnItemLongClick longClickListener;
+        private final FavoriteChecker favoriteChecker;
         private boolean showHeader = true;
 
-        SettingAdapter(List<SettingEntry> items, View headerView, OnItemClick listener) {
+        SettingAdapter(List<SettingEntry> items, View headerView, OnItemClick listener,
+                       OnItemLongClick longClickListener, FavoriteChecker favoriteChecker) {
             this.items = items;
             this.headerView = headerView;
             this.listener = listener;
+            this.longClickListener = longClickListener;
+            this.favoriteChecker = favoriteChecker;
         }
 
         void setShowHeader(boolean show) {
@@ -758,7 +862,18 @@ public class SetEditActivity extends BaseActivity {
             }
             vh.tvBadge.setText(item.type.displayName);
             setBadgeStyle(vh.tvBadge, item.type);
+
+            boolean isFav = favoriteChecker != null && favoriteChecker.isFavorite(item);
+            vh.ivFavorite.setVisibility(isFav ? View.VISIBLE : View.GONE);
+
             vh.itemView.setOnClickListener(v -> listener.onClick(item));
+            vh.itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    longClickListener.onLongClick(item);
+                    return true;
+                }
+                return false;
+            });
         }
 
         static void setBadgeStyle(TextView tvBadge, SettingType type) {
@@ -809,12 +924,14 @@ public class SetEditActivity extends BaseActivity {
             final TextView tvKey;
             final TextView tvValue;
             final TextView tvBadge;
+            final ImageView ivFavorite;
 
             ItemVH(@NonNull View itemView) {
                 super(itemView);
                 tvKey = itemView.findViewById(R.id.tvKey);
                 tvValue = itemView.findViewById(R.id.tvValue);
                 tvBadge = itemView.findViewById(R.id.tvBadge);
+                ivFavorite = itemView.findViewById(R.id.ivFavorite);
             }
         }
     }

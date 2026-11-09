@@ -43,6 +43,9 @@ public class ToolRegistry {
         tools.add(new ToolItem("partitiondumper", context.getString(R.string.tool_partition_dumper),
                 context.getString(R.string.tool_partition_dumper_subtitle),
                 resId(context, "ic_disk_drive_24px", pkg), context.getString(R.string.cat_device)));
+        tools.add(new ToolItem("app_ops", context.getString(R.string.app_ops),
+                context.getString(R.string.app_ops_subtitle),
+                resId(context, "ic_shield_24", pkg), context.getString(R.string.cat_device)));
         tools.add(new ToolItem("setedit", context.getString(R.string.set_edit),
                 context.getString(R.string.set_edit_subtitle),
                 resId(context, "baseline_settings_24", pkg), context.getString(R.string.cat_device)));
