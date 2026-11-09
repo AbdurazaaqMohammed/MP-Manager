@@ -54,6 +54,7 @@ import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -1374,7 +1375,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                             manualFinish = true;
                             finish();
                         })
-                        .setNeutralButton(android.R.string.cancel, null)
+                        .setNeutralButton(R.string.minimize, (dialog, which) ->
+                                MinimizedEditors.minimize(this, R.string.text_editor, t.title))
                         .show();
                 return;
             }
@@ -1396,7 +1398,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         manualFinish = true;
                         finish();
                     })
-                    .setNeutralButton(android.R.string.cancel, null)
+                    .setNeutralButton(R.string.minimize, (dialog, which) ->
+                            MinimizedEditors.minimize(this, R.string.text_editor, t.title))
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
         } else if (!consumePendingArchiveUpdate(t)) {
@@ -1470,7 +1473,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                             manualFinish = true;
                             finish();
                         })
-                        .setNeutralButton(android.R.string.cancel, null)
+                        .setNeutralButton(R.string.minimize, (dialog, which) ->
+                                MinimizedEditors.minimize(this, R.string.text_editor, t.title))
                         .show();
                 return;
             }
@@ -1492,7 +1496,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         manualFinish = true;
                         finish();
                     })
-                    .setNeutralButton(android.R.string.cancel, null)
+                    .setNeutralButton(R.string.minimize, (dialog, which) ->
+                            MinimizedEditors.minimize(this, R.string.text_editor, t.title))
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
         } else if (!consumePendingArchiveUpdate(t)) super.onBackPressed();

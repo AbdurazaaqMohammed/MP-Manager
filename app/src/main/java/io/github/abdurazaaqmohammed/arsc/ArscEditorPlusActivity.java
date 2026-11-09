@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.features.translation.TranslationExportDialog
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
@@ -880,8 +881,22 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> saveNow(this::finishWithApkResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finish())
-                .setNeutralButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.minimize, (d, w) -> minimizeThis())
                 .show();
+    }
+
+    private void minimizeThis() {
+        String name = null;
+        Intent intent = getIntent();
+        if (intent != null) {
+            name = intent.getStringExtra("zipEntryPath");
+            if (name == null) {
+                String path = intent.getStringExtra("path");
+                if (path == null) path = intent.getStringExtra("apkPath");
+                if (path != null) name = new File(path).getName();
+            }
+        }
+        MinimizedEditors.minimize(this, R.string.arsc_editor_plus, name);
     }
 
     @Override

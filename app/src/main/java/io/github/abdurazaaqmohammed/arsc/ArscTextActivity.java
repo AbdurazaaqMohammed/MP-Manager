@@ -31,6 +31,7 @@ import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
@@ -303,7 +304,9 @@ public class ArscTextActivity extends BaseActivity {
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
-                .setNeutralButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.minimize, (d, w) ->
+                        MinimizedEditors.minimize(this, sessionTitle != null
+                                ? sessionTitle : getString(R.string.arsc_editor)))
                 .show();
     }
 

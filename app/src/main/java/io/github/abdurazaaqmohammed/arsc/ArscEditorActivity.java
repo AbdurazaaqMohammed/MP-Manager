@@ -55,6 +55,7 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -785,8 +786,22 @@ public class ArscEditorActivity extends BaseActivity {
                 .setMessage(getString(R.string.save_before_exit))
                 .setPositiveButton(getString(R.string.save), (d, w) -> saveNow(this::finishWithApkResult))
                 .setNegativeButton(getString(R.string.discard), (d, w) -> finish())
-                .setNeutralButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.minimize, (d, w) -> minimizeThis())
                 .show();
+    }
+
+    private void minimizeThis() {
+        String name = null;
+        Intent intent = getIntent();
+        if (intent != null) {
+            name = intent.getStringExtra("zipEntryPath");
+            if (name == null) {
+                String path = intent.getStringExtra("path");
+                if (path == null) path = intent.getStringExtra("apkPath");
+                if (path != null) name = new File(path).getName();
+            }
+        }
+        MinimizedEditors.minimize(this, R.string.arsc_editor, name);
     }
 
     private int dp(int v) {

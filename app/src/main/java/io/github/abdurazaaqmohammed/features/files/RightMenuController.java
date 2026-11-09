@@ -27,6 +27,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -128,6 +129,11 @@ public class RightMenuController {
                 case RightMenuOrder.CLEAR_SEARCH:
                     if (inSearchMode) {
                         addRightDrawerItem(container, R.drawable.close_24px, activity.getString(R.string.clear_search_results), v -> activity.clearSearchResults(activity.lastPaneSelected == 1));
+                    }
+                    break;
+                case RightMenuOrder.MINIMIZED_PROCESSES:
+                    if (!MinimizedEditors.isEmpty()) {
+                        addRightDrawerItem(container, R.drawable.ic_arrow_up_mt, activity.getString(R.string.minimized_processes), v -> MinimizedEditors.showListDialog(activity));
                     }
                     break;
                 case RightMenuOrder.SELECT_ALL:

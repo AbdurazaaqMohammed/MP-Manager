@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
 /**
@@ -62,6 +63,14 @@ public abstract class BaseActivity extends AppCompatActivity {
         if (intent != null && intent.getBooleanExtra("restore_progress", false)) {
             ProgressManager.restoreHidden();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        // A minimized editor keeps its registry entry until it really exits;
+        // configuration recreations (isFinishing == false) don't count.
+        if (isFinishing()) MinimizedEditors.unregister(this);
+        super.onDestroy();
     }
 
     /**

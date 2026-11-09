@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.tools;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -26,6 +28,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -111,6 +114,7 @@ public class SetEditActivity extends BaseActivity {
     private String currentQuery = "";
     private static final Pattern PROP_LINE = Pattern.compile("^\\[(.+?)\\]: \\[(.*?)\\]$");
     private static final String PREF_SETEDIT_FAVS = "setedit_favorites";
+    private static final String PREF_WARNED_SETEDIT = "pref_warned_setedit_danger";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -120,7 +124,37 @@ public class SetEditActivity extends BaseActivity {
         loadFavorites();
         initViews();
         setupListeners();
-        loadAllSettings();
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (prefs.getBoolean(PREF_WARNED_SETEDIT, false)) {
+            loadAllSettings();
+        } else {
+            showOpeningWarning(prefs);
+        }
+    }
+
+    /**
+     * Warns once (unless suppressed) that editing system/secure settings with
+     * root can break the device. Settings are loaded regardless; the warning
+     * only gates the initial load so users read it before touching anything.
+     */
+    private void showOpeningWarning(SharedPreferences prefs) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_safety_warning, null, false);
+        TextView tvMsg = view.findViewById(R.id.tvWarningMessage);
+        CheckBox cbDontShow = view.findViewById(R.id.cbDontShowAgain);
+        tvMsg.setText(R.string.setedit_open_warning);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.safety_warning_title)
+                .setView(view)
+                .setCancelable(false)
+                .setPositiveButton(R.string.warning_proceed, (d, w) -> {
+                    if (cbDontShow.isChecked()) {
+                        prefs.edit().putBoolean(PREF_WARNED_SETEDIT, true).apply();
+                    }
+                    loadAllSettings();
+                })
+                .show();
     }
 
     private void loadFavorites() {
@@ -559,7 +593,7 @@ public class SetEditActivity extends BaseActivity {
         // Save
         builder.setPositiveButton(R.string.save, (d, w) -> {
             String newVal = etValue.getText().toString();
-            saveSetting(entry, newVal);
+            confirmAndSave(entry, newVal);
         });
 
         // Delete (for non-prop)
@@ -669,10 +703,24 @@ public class SetEditActivity extends BaseActivity {
             else type = SettingType.PROP;
 
             SettingEntry newEntry = new SettingEntry(type, key, val);
-            saveSetting(newEntry, val);
+            confirmAndSave(newEntry, val);
         });
         builder.setNegativeButton(R.string.cancel, null);
         builder.show();
+    }
+
+    /**
+     * Confirms every root write (settings put / setprop) with the user before
+     * it is executed, naming the table and the exact key/value pair.
+     */
+    private void confirmAndSave(SettingEntry entry, String newValue) {
+        String typeLabel = entry.type == SettingType.PROP ? "Prop (setprop)" : entry.type.displayName;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.setedit_write_confirm_title)
+                .setMessage(getString(R.string.setedit_write_confirm_msg, typeLabel, entry.key, newValue))
+                .setPositiveButton(R.string.yes, (d, w) -> saveSetting(entry, newValue))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void saveSetting(SettingEntry entry, String newValue) {
