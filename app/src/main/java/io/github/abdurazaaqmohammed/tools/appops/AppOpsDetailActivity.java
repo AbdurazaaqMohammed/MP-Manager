@@ -48,6 +48,7 @@ public class AppOpsDetailActivity extends BaseActivity {
     private ProgressBar progressBar;
     private NestedScrollView scrollView;
     private FloatingActionButton fabScrollTop;
+    private com.google.android.material.textfield.TextInputEditText searchEdit;
 
     // Battery & Network
     private TextView tvStandbyBucketValue;
@@ -105,7 +106,7 @@ public class AppOpsDetailActivity extends BaseActivity {
             });
         }
 
-        com.google.android.material.textfield.TextInputEditText searchEdit = findViewById(R.id.detail_search_edit);
+        searchEdit = findViewById(R.id.detail_search_edit);
         if (searchEdit != null) {
             searchEdit.addTextChangedListener(new android.text.TextWatcher() {
                 @Override
@@ -293,6 +294,14 @@ public class AppOpsDetailActivity extends BaseActivity {
         // Populate App Metadata Info
         containerInfo.removeAllViews();
         populateInfoSection();
+
+        // Re-apply active search filter so filtered results don't get reset when toggling switches
+        if (searchEdit != null && searchEdit.getText() != null) {
+            String q = searchEdit.getText().toString().trim().toLowerCase();
+            if (!TextUtils.isEmpty(q)) {
+                filterDetailViews(q);
+            }
+        }
     }
 
     private View createPermissionRow(AppOpsDetailData.PermissionEntry p, boolean isSpecialSystem) {
