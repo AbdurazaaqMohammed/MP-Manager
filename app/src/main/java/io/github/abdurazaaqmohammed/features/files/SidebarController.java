@@ -589,6 +589,9 @@ public class SidebarController {
             case "documents":
                 activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
                 break;
+            case "app_ops":
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity.class));
+                break;
             case "set_edit":
                 activity.startActivity(new Intent(activity, SetEditActivity.class));
                 break;

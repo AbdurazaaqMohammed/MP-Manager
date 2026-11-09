@@ -205,6 +205,18 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:exported="false">
+        </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.appops.AppOpsDetailActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:exported="false">
+        </activity>
         <service
             android:name="io.github.abdurazaaqmohammed.tools.PrivateDnsTileService"
             android:icon="@drawable/wifi_24px"

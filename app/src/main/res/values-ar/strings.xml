@@ -2430,4 +2430,42 @@
 
     <!-- SQLite Database Viewer & Editor -->
     <string name="sqlite_viewer">عارض قواعد بيانات SQLite</string>
+
+    <!-- App Ops & Permission Inspector -->
+    <string name="app_ops">App Ops</string>
+    <string name="app_ops_subtitle">صلاحيات التشغيل الفعلية، عمليات النظام الدقيقة والقيود</string>
+    <string name="app_ops_banner_hint">تعتمد منصة النظام على App Ops للتحقق الفعلي، وتستطيع أوامر الروت والمستوى المرتفع تغييرها. بعض الوظائف عبارة عن وصول خاص في إعدادات النظام وليست مجرد ops مثل: الوصول لجميع الملفات، الوصول للاستخدام، المنبهات الدقيقة، وتعديل إعدادات النظام.</string>
+    <string name="app_ops_sec_battery">البطارية</string>
+    <string name="app_ops_sec_network">الشبكة</string>
+    <string name="app_ops_sec_info">معلومات الحزمة</string>
+    <string name="app_ops_sec_system_perms">أذونات النظام الخاصة</string>
+    <string name="app_ops_sec_runtime_perms">أذونات وقت التشغيل</string>
+    <string name="app_ops_sec_app_ops">عمليات التطبيق (App Ops)</string>
+    <string name="app_ops_sec_actions">إجراءات سريعة</string>
+    <string name="app_ops_standby_bucket">مستوى السكون (Standby bucket)</string>
+    <string name="app_ops_ignore_battery_opt">تجاهل تحسين استهلاك البطارية</string>
+    <string name="app_ops_block_network">حظر الوصول إلى الشبكة</string>
+    <string name="app_ops_block_network_desc">يقوم النظام بإسقاط وحظر حركة بيانات التطبيق</string>
+    <string name="app_ops_mode_default">افتراضي</string>
+    <string name="app_ops_mode_allow">سماح</string>
+    <string name="app_ops_mode_ignore">تجاهل صامت</string>
+    <string name="app_ops_mode_deny">حظر ورفض</string>
+    <string name="app_ops_mode_foreground">في الواجهة فقط</string>
+    <string name="app_ops_mode_ask">سؤال المستخدم</string>
+    <string name="app_ops_chip_all">الكل</string>
+    <string name="app_ops_chip_user">المستخدم</string>
+    <string name="app_ops_chip_system">النظام</string>
+    <string name="app_ops_chip_disabled">معطل</string>
+    <string name="app_ops_chip_hidden">مخفي</string>
+    <string name="app_ops_action_force_stop">إيقاف إجباري</string>
+    <string name="app_ops_action_suspend">تعليق التطبيق</string>
+    <string name="app_ops_action_unsuspend">إلغاء التعليق</string>
+    <string name="app_ops_action_disable">تعطيل</string>
+    <string name="app_ops_action_enable">تمكين</string>
+    <string name="app_ops_action_clear_data">مسح البيانات</string>
+    <string name="app_ops_action_uninstall">إلغاء التثبيت</string>
+    <string name="app_ops_tag_fake_granted">ممنوح ظاهرياً (مقيد بالخفاء)</string>
+    <string name="app_ops_tag_fake_granted_desc">النظام يُظهر الإذن كممنوح، لكن AppOps تسقط وتتجاهل الوصول فعلياً!</string>
+    <string name="app_ops_search_hint">بحث في التطبيقات</string>
+    <string name="app_ops_no_apps">لم يتم العثور على تطبيقات</string>
 </resources>
