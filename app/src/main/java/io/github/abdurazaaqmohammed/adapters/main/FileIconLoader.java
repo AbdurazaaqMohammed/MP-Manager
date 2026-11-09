@@ -649,6 +649,12 @@ public class FileIconLoader {
         }
         if (!isUserStorage(path)) {
             try {
+                java.util.Map<String, Long> tree = AccessManager.dirSizeTree(ctx, path);
+                if (tree != null && !tree.isEmpty()) {
+                    DirSizeCache.recordBatch(tree);
+                    Long selfSize = tree.get(path);
+                    if (selfSize != null && selfSize >= 0) return selfSize;
+                }
                 long du = AccessManager.dirSize(ctx, path);
                 if (du >= 0) return du;
             } catch (Exception ignored) {}

@@ -143,7 +143,17 @@ public class RightMenuController {
                     });
                     break;
                 case RightMenuOrder.SORT:
-                    addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort), v -> activity.showSortDialog());
+                    addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort),
+                            v -> activity.showSortDialog(),
+                            v -> {
+                                File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
+                                if (currentFolder != null) {
+                                    io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.invalidatePrefix(currentFolder);
+                                    io.github.abdurazaaqmohammed.utils.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
+                                    activity.reloadCurrentFolder();
+                                }
+                                return true;
+                            });
                     break;
                 case RightMenuOrder.COMPARE_FOLDERS:
                     addRightDrawerItem(container, R.drawable.baseline_compare_24, activity.getString(R.string.compare_folders), v -> activity.performFolderCompare());
@@ -274,6 +284,10 @@ public class RightMenuController {
     }
 
     private void addRightDrawerItem(LinearLayout container, int iconRes, String title, View.OnClickListener onClick) {
+        addRightDrawerItem(container, iconRes, title, onClick, null);
+    }
+
+    private void addRightDrawerItem(LinearLayout container, int iconRes, String title, View.OnClickListener onClick, View.OnLongClickListener onLongClick) {
         LinearLayout itemLayout = new LinearLayout(activity);
         itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -316,6 +330,23 @@ public class RightMenuController {
                 onClick.onClick(v);
             }
         });
+
+        if (onLongClick != null) {
+            itemLayout.setOnLongClickListener(v -> {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                if (activity.drawerLayout != null && activity.drawerLayout.isDrawerOpen(GravityCompat.END)) {
+                    activity.drawerLayout.closeDrawer(GravityCompat.END);
+                    activity.drawerLayout.postDelayed(() -> {
+                        if (!activity.isFinishing() && !activity.isDestroyed()) {
+                            onLongClick.onLongClick(v);
+                        }
+                    }, 220);
+                } else {
+                    onLongClick.onLongClick(v);
+                }
+                return true;
+            });
+        }
 
         container.addView(itemLayout);
     }

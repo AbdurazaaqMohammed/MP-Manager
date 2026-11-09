@@ -2540,4 +2540,5 @@ Strings are sent to the external service you configured.</string>
     <string name="app_ops_tag_fake_granted_desc">System reports permission granted, but AppOps silently ignores/drops access!</string>
     <string name="app_ops_search_hint">Search apps</string>
     <string name="app_ops_no_apps">No applications found</string>
+    <string name="folder_sizes_cache_reset">Folder sizes cache has been reset. Recalculating…</string>
 </resources>

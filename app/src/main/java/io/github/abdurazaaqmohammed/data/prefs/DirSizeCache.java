@@ -127,6 +127,31 @@ public final class DirSizeCache {
         }
     }
 
+    public static void recordBatch(Map<String, Long> batch) {
+        if (batch == null || batch.isEmpty()) return;
+        if (!loaded.get() && !isMainThread()) ensureLoaded();
+        long now = System.currentTimeMillis();
+        synchronized (LOCK) {
+            for (Map.Entry<String, Long> e : batch.entrySet()) {
+                if (e.getKey() != null && e.getValue() != null && e.getValue() >= 0) {
+                    sizes.put(e.getKey(), e.getValue());
+                    measuredAt.put(e.getKey(), now);
+                }
+            }
+        }
+        dirty.set(true);
+        scheduleSave();
+    }
+
+    public static void resetAll() {
+        synchronized (LOCK) {
+            sizes.clear();
+            measuredAt.clear();
+        }
+        dirty.set(true);
+        scheduleSave();
+    }
+
     public static void invalidate(File dir) {
         if (dir == null) return;
         try {

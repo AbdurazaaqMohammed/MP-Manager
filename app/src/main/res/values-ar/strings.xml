@@ -2477,4 +2477,5 @@
     <string name="app_ops_tag_fake_granted_desc">النظام يُظهر الإذن كممنوح، لكن AppOps تسقط وتتجاهل الوصول فعلياً!</string>
     <string name="app_ops_search_hint">بحث في التطبيقات</string>
     <string name="app_ops_no_apps">لم يتم العثور على تطبيقات</string>
+    <string name="folder_sizes_cache_reset">تمت إعادة تعيين كاش مساحات المجلدات. جاري إعادة الحساب…</string>
 </resources>
