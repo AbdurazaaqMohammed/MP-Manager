@@ -8,11 +8,4 @@
     <item name="arsc_text_editor_container" type="id" />
     <!-- Settings: dynamically added Plugins section card (made collapsible) -->
     <item name="sectionPluginsCard" type="id" />
-    <!-- Ren'Py Save Editor view ids -->
-    <item name="renpy_var_name" type="id" />
-    <item name="renpy_var_type" type="id" />
-    <item name="renpy_var_value" type="id" />
-    <item name="renpy_menu_unlock_gallery" type="id" />
-    <item name="renpy_menu_raw_json" type="id" />
-    <item name="renpy_menu_save" type="id" />
 </resources>

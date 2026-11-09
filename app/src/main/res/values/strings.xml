@@ -2490,10 +2490,4 @@ Strings are sent to the external service you configured.</string>
 
     <!-- SQLite Database Viewer & Editor -->
     <string name="sqlite_viewer">SQLite Viewer</string>
-    <string name="renpy_save_editor">Ren\'Py Save Editor</string>
-    <string name="renpy_unlock_gallery">Unlock Gallery / CGs</string>
-    <string name="renpy_unlock_gallery_confirm">Do you want to unlock all CGs, gallery items, and endings in this file? A backup (.bak) will be created automatically.</string>
-    <string name="renpy_unlock_success">Gallery &amp; CGs unlocked successfully!</string>
-    <string name="renpy_edit_raw_json">Edit raw JSON (full data)</string>
-    <string name="renpy_json_saved">JSON applied to save successfully!</string>
 </resources>

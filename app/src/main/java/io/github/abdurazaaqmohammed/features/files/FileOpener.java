@@ -173,13 +173,6 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName) {
-        if (fileName != null) {
-            String lower = fileName.toLowerCase(Locale.ROOT);
-            if (lower.endsWith(".save") || "persistent".equals(lower)) {
-                openRenpyEditor(file);
-                return;
-            }
-        }
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
                 if (StickerUtil.isLottieSticker(readable)) {
@@ -204,13 +197,6 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
-        if (fileName != null) {
-            String lower = fileName.toLowerCase(Locale.ROOT);
-            if (lower.endsWith(".save") || "persistent".equals(lower)) {
-                openRenpyEditor(file);
-                return;
-            }
-        }
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
                 if (StickerUtil.isLottieSticker(readable)) {
@@ -338,12 +324,6 @@ public class FileOpener {
             actionIcons.add(R.drawable.ic_disk_drive_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_SQLITE, file, fileName, zipFile, zipEntryPath));
         }
-        if (lower.endsWith(".save") || "persistent".equals(lower)) {
-            actionIds.add(BUILTIN_RENPY);
-            actionNames.add(context.getString(R.string.renpy_save_editor));
-            actionIcons.add(R.drawable.terminal_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_RENPY, file, fileName, zipFile, zipEntryPath));
-        }
 
         GridView gridView = new GridView(context);
         gridView.setNumColumns(3);
@@ -465,7 +445,6 @@ public class FileOpener {
     private static final String BUILTIN_SIG = "sig";
     private static final String BUILTIN_DRAWABLE = "drawable_preview";
     private static final String BUILTIN_SQLITE = "sqlite";
-    private static final String BUILTIN_RENPY = "renpy";
 
     private static boolean isDrawableXml(File file, File zipFile, String zipEntryPath) {
         if (zipEntryPath != null) {
@@ -567,10 +546,6 @@ public class FileOpener {
                 if (file == null) return;
                 openSqliteViewer(file);
                 return;
-            case BUILTIN_RENPY:
-                if (file == null) return;
-                openRenpyEditor(file);
-                return;
             default:
                 return;
         }
@@ -581,15 +556,6 @@ public class FileOpener {
             Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.class)
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
-            context.startActivity(intent);
-        });
-    }
-
-    private void openRenpyEditor(File file) {
-        if (file == null) return;
-        withReadableCopy(file, readable -> {
-            Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.renpy.RenpyEditorActivity.class)
-                    .putExtra(io.github.abdurazaaqmohammed.features.renpy.RenpyEditorActivity.EXTRA_FILE_PATH, readable.getAbsolutePath());
             context.startActivity(intent);
         });
     }
@@ -614,7 +580,6 @@ public class FileOpener {
             case BUILTIN_SIG:
             case BUILTIN_DRAWABLE:
             case BUILTIN_SQLITE:
-            case BUILTIN_RENPY:
                 runBuiltinTool(def, file, fileName, null, null);
                 return true;
             default:
@@ -1762,13 +1727,6 @@ public class FileOpener {
         try {
             context.clearGreen(pane1);
         } catch (Exception ignored) {}
-        if (fileName != null) {
-            String lower = fileName.toLowerCase(Locale.ROOT);
-            if (lower.endsWith(".save") || "persistent".equals(lower)) {
-                openRenpyEditor(file);
-                return;
-            }
-        }
         if (tryRunBuiltinDefault(file, fileName)) return;
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
         if (fileName.endsWith(".txt") || fileName.endsWith(".json")
