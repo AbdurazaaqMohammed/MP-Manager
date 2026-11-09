@@ -149,7 +149,7 @@ public class RightMenuController {
                                 File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
                                 if (currentFolder != null) {
                                     io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.invalidatePrefix(currentFolder);
-                                    io.github.abdurazaaqmohammed.utils.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
+                                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
                                     activity.reloadCurrentFolder();
                                 }
                                 return true;

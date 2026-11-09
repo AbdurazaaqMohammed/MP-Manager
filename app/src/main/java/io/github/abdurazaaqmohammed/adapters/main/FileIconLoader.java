@@ -117,7 +117,8 @@ public class FileIconLoader {
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
-            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon;
+            cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon,
+            cachedDbIcon, cachedFontIcon, cachedBinaryIcon, cachedProtoIcon, cachedDocIcon, cachedSheetIcon, cachedSlideIcon, cachedScriptIcon, cachedBackupIcon, cachedCertIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
 
@@ -999,20 +1000,33 @@ public class FileIconLoader {
             resolved = cachedArscIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             resolved = cachedTextIcon;
+        } else if (isDatabaseExt(ext)) {
+            resolved = cachedDbIcon;
+        } else if (isFontExt(ext)) {
+            resolved = cachedFontIcon;
+        } else if (isBinaryExt(ext)) {
+            resolved = cachedBinaryIcon;
+        } else if (isProtoExt(ext)) {
+            resolved = cachedProtoIcon;
+        } else if (isWordExt(ext)) {
+            resolved = cachedDocIcon;
+        } else if (isSheetExt(ext)) {
+            resolved = cachedSheetIcon;
+        } else if (isSlideExt(ext)) {
+            resolved = cachedSlideIcon;
+        } else if (isScriptExt(ext)) {
+            resolved = cachedScriptIcon;
+        } else if (isBackupExt(ext)) {
+            resolved = cachedBackupIcon;
+        } else if (isCertExt(ext)) {
+            resolved = cachedCertIcon;
         } else if (".img".equals(ext) || ".iso".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
             resolved = cachedImgIcon;
         } else if (FileUtils.isElf(path)) {
             resolved = cachedElfIcon;
         } else if (!isInZip) {
-            Boolean isElf = elfStatusCache.get(path);
-            if (Boolean.TRUE.equals(isElf)) {
-                resolved = cachedElfIcon;
-            } else if (Boolean.FALSE.equals(isElf)) {
-                resolved = cachedFileIcon;
-            } else {
-                resolved = cachedFileIcon;
-                loadElfIconAsync(path, fileIconView);
-            }
+            resolved = cachedFileIcon;
+            loadMagicOrElfIconAsync(path, fileIconView);
         } else {
             resolved = cachedFileIcon;
         }
@@ -1020,21 +1034,142 @@ public class FileIconLoader {
         return resolved;
     }
 
-    private void loadElfIconAsync(String path, ImageView fileIconView) {
+    private static boolean isDatabaseExt(String ext) {
+        return ".db".equals(ext) || ".sqlite".equals(ext) || ".sqlite3".equals(ext)
+                || ".db-wal".equals(ext) || ".db-shm".equals(ext) || ".db-journal".equals(ext)
+                || ".workdb".equals(ext) || ".workdb-wal".equals(ext) || ".workdb-shm".equals(ext)
+                || ".ldb".equals(ext);
+    }
+
+    private static boolean isFontExt(String ext) {
+        return ".ttf".equals(ext) || ".otf".equals(ext) || ".woff".equals(ext) || ".woff2".equals(ext) || ".ttc".equals(ext);
+    }
+
+    private static boolean isBinaryExt(String ext) {
+        return ".so".equals(ext) || ".bin".equals(ext) || ".dat".equals(ext) || ".vdex".equals(ext)
+                || ".odex".equals(ext) || ".art".equals(ext) || ".o".equals(ext) || ".dylib".equals(ext) || ".dll".equals(ext);
+    }
+
+    private static boolean isProtoExt(String ext) {
+        return ".pb".equals(ext) || ".proto".equals(ext) || ".preferences_pb".equals(ext) || ".pma".equals(ext) || ".bson".equals(ext);
+    }
+
+    private static boolean isWordExt(String ext) {
+        return ".doc".equals(ext) || ".docx".equals(ext) || ".odt".equals(ext) || ".rtf".equals(ext);
+    }
+
+    private static boolean isSheetExt(String ext) {
+        return ".xls".equals(ext) || ".xlsx".equals(ext) || ".csv".equals(ext) || ".ods".equals(ext) || ".tsv".equals(ext);
+    }
+
+    private static boolean isSlideExt(String ext) {
+        return ".ppt".equals(ext) || ".pptx".equals(ext) || ".odp".equals(ext);
+    }
+
+    private static boolean isScriptExt(String ext) {
+        return ".sh".equals(ext) || ".bash".equals(ext) || ".py".equals(ext) || ".c".equals(ext)
+                || ".cpp".equals(ext) || ".h".equals(ext) || ".hpp".equals(ext) || ".cs".equals(ext)
+                || ".rs".equals(ext) || ".go".equals(ext) || ".lua".equals(ext);
+    }
+
+    private static boolean isBackupExt(String ext) {
+        return ".bak".equals(ext) || ".backup".equals(ext) || ".old".equals(ext) || ".orig".equals(ext) || ".save".equals(ext);
+    }
+
+    private static boolean isCertExt(String ext) {
+        return ".pem".equals(ext) || ".crt".equals(ext) || ".cer".equals(ext) || ".key".equals(ext)
+                || ".keystore".equals(ext) || ".jks".equals(ext) || ".bks".equals(ext) || ".der".equals(ext) || ".p12".equals(ext) || ".pfx".equals(ext);
+    }
+
+    private void loadMagicOrElfIconAsync(String path, ImageView fileIconView) {
         fileIconView.setTag(path);
         iconLoaderService.execute(() -> {
             try {
-                boolean elf = FileUtils.isElfFile(new File(path));
-                elfStatusCache.put(path, elf);
-                if (elf) {
-                    iconMemo.put(path, cachedElfIcon);
-                    iconCache.put(path, cachedElfIcon);
+                Drawable magicIcon = probeMagicBytes(path);
+                if (magicIcon != null) {
+                    iconMemo.put(path, magicIcon);
+                    iconCache.put(path, magicIcon);
                     context.runOnUiThread(() -> {
-                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedElfIcon);
+                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(magicIcon);
                     });
                 }
             } catch (Exception ignored) {}
         });
+    }
+
+    private Drawable probeMagicBytes(String path) {
+        try {
+            String resolved = resolveAccessiblePath(path);
+            File f = new File(resolved);
+            if (!f.canRead()) return null;
+            byte[] header = new byte[16];
+            try (FileInputStream fis = new FileInputStream(f)) {
+                int read = fis.read(header);
+                if (read < 4) return null;
+            }
+
+            // 1. ELF (Executable and Linkable Format)
+            if (header[0] == 0x7F && header[1] == 'E' && header[2] == 'L' && header[3] == 'F') {
+                return cachedElfIcon;
+            }
+
+            // 2. SQLite 3 Database: "SQLite format 3\000"
+            if (header[0] == 'S' && header[1] == 'Q' && header[2] == 'L' && header[3] == 'i') {
+                return cachedDbIcon;
+            }
+
+            // 3. DEX (Dalvik Executable): "dex\n"
+            if (header[0] == 'd' && header[1] == 'e' && header[2] == 'x' && header[3] == 0x0A) {
+                return cachedDexIcon;
+            }
+
+            // 4. ZIP / APK / JAR: "PK\003\004"
+            if (header[0] == 0x50 && header[1] == 0x4B && header[2] == 0x03 && header[3] == 0x04) {
+                return cachedArchiveIcon;
+            }
+
+            // 5. PDF: "%PDF"
+            if (header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F') {
+                return cachedPdfIcon;
+            }
+
+            // 6. PNG Image: 0x89 'P' 'N' 'G'
+            if ((header[0] & 0xFF) == 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G') {
+                return cachedImageIcon;
+            }
+
+            // 7. JPEG Image: 0xFF 0xD8 0xFF
+            if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) {
+                return cachedImageIcon;
+            }
+
+            // 8. GIF Image: "GIF8"
+            if (header[0] == 'G' && header[1] == 'I' && header[2] == 'F' && header[3] == '8') {
+                return cachedImageIcon;
+            }
+
+            // 9. WebP: "RIFF....WEBP"
+            if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F') {
+                return cachedImageIcon;
+            }
+
+            // 10. Shell script: "#!"
+            if (header[0] == '#' && header[1] == '!') {
+                return cachedScriptIcon;
+            }
+
+            // 11. TTF / OTF Font: 0x00 0x01 0x00 0x00 or "OTTO"
+            if ((header[0] == 0x00 && header[1] == 0x01 && header[2] == 0x00 && header[3] == 0x00)
+                    || (header[0] == 'O' && header[1] == 'T' && header[2] == 'T' && header[3] == 'O')) {
+                return cachedFontIcon;
+            }
+
+            // 12. GZIP Archive: 0x1F 0x8B
+            if ((header[0] & 0xFF) == 0x1F && (header[1] & 0xFF) == 0x8B) {
+                return cachedArchiveIcon;
+            }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     private static boolean isSplitApkExt(String extWithDot) {
@@ -1130,6 +1265,16 @@ public class FileIconLoader {
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
         cachedElfIcon     = badge(res, density, R.drawable.terminal_24px, 0xFF37474F, true);
         cachedImgIcon     = badge(res, density, R.drawable.ic_disk_drive_24px, 0xFF455A64, true);
+        cachedDbIcon      = badge(res, density, R.drawable.ic_database_24px, 0xFF00695C, true);
+        cachedFontIcon    = badge(res, density, R.drawable.ic_font_aa_24px, 0xFFD84315, true);
+        cachedBinaryIcon  = badge(res, density, R.drawable.baseline_settings_24, 0xFF455A64, true);
+        cachedProtoIcon   = badge(res, density, R.drawable.ic_data_proto_24px, 0xFF4527A0, true);
+        cachedDocIcon     = badge(res, density, R.drawable.ic_office_doc_24px, 0xFF1565C0, true);
+        cachedSheetIcon   = badge(res, density, R.drawable.ic_office_sheet_24px, 0xFF2E7D32, true);
+        cachedSlideIcon   = badge(res, density, R.drawable.ic_office_slide_24px, 0xFFE65100, true);
+        cachedScriptIcon  = badge(res, density, R.drawable.terminal_24px, 0xFF283593, true);
+        cachedBackupIcon  = badge(res, density, R.drawable.ic_history, 0xFF5D4037, true);
+        cachedCertIcon    = badge(res, density, R.drawable.ic_certificate_seal_24px, 0xFFF57F17, true);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
                 theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
     }
