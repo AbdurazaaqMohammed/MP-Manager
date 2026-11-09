@@ -64,9 +64,24 @@ public class AppOpsEngine {
         }
 
         PackageManager pm = context.getPackageManager();
+
+        // Batch query all launchable packages in a single IPC call instead of 400+ calls
+        Set<String> launchablePackages = new HashSet<>();
+        try {
+            android.content.Intent launchIntent = new android.content.Intent(android.content.Intent.ACTION_MAIN);
+            launchIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+            List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(launchIntent, 0);
+            for (android.content.pm.ResolveInfo ri : resolveInfos) {
+                if (ri.activityInfo != null && ri.activityInfo.packageName != null) {
+                    launchablePackages.add(ri.activityInfo.packageName);
+                }
+            }
+        } catch (Exception ignored) {}
+
         List<PackageInfo> installedPackages;
         try {
-            installedPackages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+            // Using 0 flags instead of GET_PERMISSIONS avoids parsing all permissions for hundreds of apps
+            installedPackages = pm.getInstalledPackages(0);
         } catch (Exception e) {
             installedPackages = new ArrayList<>();
         }
@@ -76,9 +91,9 @@ public class AppOpsEngine {
             if (pi.applicationInfo == null) continue;
             boolean isSystem = (pi.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
             boolean isEnabled = pi.applicationInfo.enabled;
-            boolean hasLaunch = pm.getLaunchIntentForPackage(pi.packageName) != null;
-            boolean isHidden = !hasLaunch;
-            String label = pi.applicationInfo.loadLabel(pm).toString();
+            boolean isHidden = !launchablePackages.contains(pi.packageName);
+            CharSequence labelSeq = pi.applicationInfo.loadLabel(pm);
+            String label = labelSeq != null ? labelSeq.toString() : pi.packageName;
             if (TextUtils.isEmpty(label)) label = pi.packageName;
 
             AppItem item = new AppItem(pi.packageName, label, isSystem, isEnabled, isHidden, pi.lastUpdateTime);

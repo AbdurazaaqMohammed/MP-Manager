@@ -67,6 +67,8 @@ public class AppOpsActivity extends BaseActivity {
         recyclerView = findViewById(R.id.app_ops_recycler);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setItemViewCacheSize(25);
         adapter = new AppAdapter();
         recyclerView.setAdapter(adapter);
 
@@ -98,6 +100,16 @@ public class AppOpsActivity extends BaseActivity {
     }
 
     private void loadApps() {
+        List<AppItem> cached = AppOpsCache.getCachedAppList();
+        if (cached != null && !cached.isEmpty()) {
+            masterList.clear();
+            masterList.addAll(cached);
+            progressBar.setVisibility(View.GONE);
+            updateChipCounts();
+            filterList();
+            return;
+        }
+
         progressBar.setVisibility(View.VISIBLE);
         executor.execute(() -> {
             List<AppItem> apps = AppOpsEngine.loadInstalledApps(this);
