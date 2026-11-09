@@ -36,13 +36,17 @@ public class AppOpsDetailData {
         public boolean isGranted;
         public boolean isFakeGranted; // True if runtime says granted, but AppOp ignores/rejects!
         public String opName;
+        public String opMode;
+        public String uidMode;
 
-        public PermissionEntry(String name, String label, boolean isGranted, boolean isFakeGranted, String opName) {
+        public PermissionEntry(String name, String label, boolean isGranted, boolean isFakeGranted, String opName, String opMode, String uidMode) {
             this.name = name;
             this.label = label;
             this.isGranted = isGranted;
             this.isFakeGranted = isFakeGranted;
             this.opName = opName;
+            this.opMode = opMode != null ? opMode : "default";
+            this.uidMode = uidMode != null ? uidMode : "default";
         }
     }
 

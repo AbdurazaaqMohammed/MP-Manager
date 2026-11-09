@@ -64,9 +64,24 @@ public class AppOpsEngine {
         }
 
         PackageManager pm = context.getPackageManager();
+
+        // Batch query all launchable packages in a single IPC call instead of 400+ calls
+        Set<String> launchablePackages = new HashSet<>();
+        try {
+            android.content.Intent launchIntent = new android.content.Intent(android.content.Intent.ACTION_MAIN);
+            launchIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+            List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(launchIntent, 0);
+            for (android.content.pm.ResolveInfo ri : resolveInfos) {
+                if (ri.activityInfo != null && ri.activityInfo.packageName != null) {
+                    launchablePackages.add(ri.activityInfo.packageName);
+                }
+            }
+        } catch (Exception ignored) {}
+
         List<PackageInfo> installedPackages;
         try {
-            installedPackages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+            // Using 0 flags instead of GET_PERMISSIONS avoids parsing all permissions for hundreds of apps
+            installedPackages = pm.getInstalledPackages(0);
         } catch (Exception e) {
             installedPackages = new ArrayList<>();
         }
@@ -76,9 +91,9 @@ public class AppOpsEngine {
             if (pi.applicationInfo == null) continue;
             boolean isSystem = (pi.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
             boolean isEnabled = pi.applicationInfo.enabled;
-            boolean hasLaunch = pm.getLaunchIntentForPackage(pi.packageName) != null;
-            boolean isHidden = !hasLaunch;
-            String label = pi.applicationInfo.loadLabel(pm).toString();
+            boolean isHidden = !launchablePackages.contains(pi.packageName);
+            CharSequence labelSeq = pi.applicationInfo.loadLabel(pm);
+            String label = labelSeq != null ? labelSeq.toString() : pi.packageName;
             if (TextUtils.isEmpty(label)) label = pi.packageName;
 
             AppItem item = new AppItem(pi.packageName, label, isSystem, isEnabled, isHidden, pi.lastUpdateTime);
@@ -156,14 +171,20 @@ public class AppOpsEngine {
         // Query Real AppOps via shell (cmd appops get)
         Map<String, String[]> opsMap = parseAppOpsOutput(executeElevated("cmd appops get " + packageName));
 
+        // Query Kernel/Uid AppOps via dumpsys appops (The Real Hidden Layer!)
+        Map<String, String> uidOpsMap = parseUidOpsFromDumpsys(executeElevated("dumpsys appops"), data.uid);
+
+        // Query Exact Runtime Permissions via dumpsys package
+        Map<String, Boolean> dumpsysPerms = parseDumpsysPermissions(executeElevated("dumpsys package " + packageName));
+
         // System Permissions (Special access)
-        addSystemSpecialPermissions(data, packageName, opsMap);
+        addSystemSpecialPermissions(data, packageName, opsMap, uidOpsMap);
 
-        // Runtime Permissions with Dual Verification (Fake Granted Detection!)
-        addRuntimePermissions(data, pi, opsMap);
+        // Runtime Permissions with Dual Verification (Accurate Dumpsys + AppOps Detection)
+        addRuntimePermissions(data, pi, opsMap, uidOpsMap, dumpsysPerms);
 
-        // Remaining Granular AppOps
-        addGranularAppOps(data, opsMap);
+        // Granular AppOps (Filtered and Alphabetically Sorted)
+        addGranularAppOps(data, opsMap, uidOpsMap);
 
         return data;
     }
@@ -176,6 +197,59 @@ public class AppOpsEngine {
         if ("45".equals(code) || "restricted".equalsIgnoreCase(code)) return "Restricted (45)";
         if ("50".equals(code) || "never".equalsIgnoreCase(code)) return "Never (50)";
         return TextUtils.isEmpty(code) ? "Active (10)" : "Bucket (" + code + ")";
+    }
+
+    private static Map<String, String> parseUidOpsFromDumpsys(String output, int uid) {
+        Map<String, String> map = new HashMap<>();
+        if (TextUtils.isEmpty(output) || uid <= 0) return map;
+
+        String targetUidStr = String.valueOf(uid);
+        boolean inTargetUid = false;
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(output))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith("Uid ") && (trimmed.contains(targetUidStr))) {
+                    inTargetUid = true;
+                    continue;
+                } else if (inTargetUid && (trimmed.startsWith("Uid ") || trimmed.startsWith("Package "))) {
+                    break;
+                }
+
+                if (inTargetUid && trimmed.contains(": mode=")) {
+                    int idx = trimmed.indexOf(": mode=");
+                    if (idx > 0) {
+                        String op = trimmed.substring(0, idx).trim();
+                        String mode = trimmed.substring(idx + 7).trim().toLowerCase();
+                        map.put(op, mode);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return map;
+    }
+
+    private static Map<String, Boolean> parseDumpsysPermissions(String output) {
+        Map<String, Boolean> map = new HashMap<>();
+        if (TextUtils.isEmpty(output)) return map;
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(output))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.contains("granted=")) {
+                    int colon = line.indexOf(':');
+                    if (colon > 0) {
+                        String perm = line.substring(0, colon).trim();
+                        String rest = line.substring(colon + 1);
+                        boolean granted = rest.contains("granted=true");
+                        map.put(perm, granted);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return map;
     }
 
     private static Map<String, String[]> parseAppOpsOutput(String output) {
@@ -200,70 +274,80 @@ public class AppOpsEngine {
                 for (int i = 1; i < parts.length; i++) {
                     String p = parts[i].trim();
                     if (p.startsWith("time=")) {
-                        time = p.substring(5).trim();
+                        time = formatRelativeTimeToDate(p.substring(5).trim());
                     } else if (p.startsWith("rejectTime=")) {
-                        rejectTime = p.substring(11).trim();
+                        rejectTime = formatRelativeTimeToDate(p.substring(11).trim());
                     }
                 }
-                // Later entries override earlier uid defaults, giving the exact package mode
+                // Later entries override earlier defaults, giving the exact package mode
                 map.put(op, new String[]{mode, time, rejectTime});
             }
         } catch (Exception ignored) {}
         return map;
     }
 
-    private static void addSystemSpecialPermissions(AppOpsDetailData data, String pkg, Map<String, String[]> opsMap) {
-        // 1. CHANGE_COMPONENT_ENABLED_STATE
-        boolean ccesGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "CHANGE_COMPONENT_ENABLED_STATE"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.CHANGE_COMPONENT_ENABLED_STATE",
-                "CHANGE_COMPONENT_ENABLED_STATE",
-                ccesGranted, false, "CHANGE_COMPONENT_ENABLED_STATE"));
+    public static String formatRelativeTimeToDate(String raw) {
+        if (TextUtils.isEmpty(raw)) return "";
+        raw = raw.trim();
+        try {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\+)?(?:(\\d+)d)?(?:(\\d+)h)?(?:(\\d+)m(?!s))?(?:(\\d+)s)?(?:(\\d+)ms)?\\s*ago");
+            java.util.regex.Matcher m = p.matcher(raw);
+            if (m.find()) {
+                long days = m.group(2) != null ? Long.parseLong(m.group(2)) : 0;
+                long hours = m.group(3) != null ? Long.parseLong(m.group(3)) : 0;
+                long minutes = m.group(4) != null ? Long.parseLong(m.group(4)) : 0;
+                long seconds = m.group(5) != null ? Long.parseLong(m.group(5)) : 0;
+                long millis = m.group(6) != null ? Long.parseLong(m.group(6)) : 0;
 
-        // 2. PACKAGE_USAGE_STATS
-        boolean usageGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "GET_USAGE_STATS"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.PACKAGE_USAGE_STATS",
-                "PACKAGE_USAGE_STATS",
-                usageGranted, false, "GET_USAGE_STATS"));
-
-        // 3. REQUEST_INSTALL_PACKAGES
-        boolean installGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "REQUEST_INSTALL_PACKAGES"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.REQUEST_INSTALL_PACKAGES",
-                "REQUEST_INSTALL_PACKAGES",
-                installGranted, false, "REQUEST_INSTALL_PACKAGES"));
-
-        // 4. SCHEDULE_EXACT_ALARM
-        boolean alarmGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "SCHEDULE_EXACT_ALARM"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.SCHEDULE_EXACT_ALARM",
-                "SCHEDULE_EXACT_ALARM",
-                alarmGranted, false, "SCHEDULE_EXACT_ALARM"));
-
-        // 5. SYSTEM_ALERT_WINDOW (Draw over other apps)
-        boolean alertGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "SYSTEM_ALERT_WINDOW"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.SYSTEM_ALERT_WINDOW",
-                "SYSTEM_ALERT_WINDOW",
-                alertGranted, false, "SYSTEM_ALERT_WINDOW"));
-
-        // 6. MANAGE_EXTERNAL_STORAGE (All files access)
-        boolean allFilesGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "MANAGE_EXTERNAL_STORAGE"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.MANAGE_EXTERNAL_STORAGE",
-                "MANAGE_EXTERNAL_STORAGE",
-                allFilesGranted, false, "MANAGE_EXTERNAL_STORAGE"));
-
-        // 7. WRITE_SETTINGS
-        boolean writeSettingsGranted = "allow".equalsIgnoreCase(getOpMode(opsMap, "WRITE_SETTINGS"));
-        data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
-                "android.permission.WRITE_SETTINGS",
-                "WRITE_SETTINGS",
-                writeSettingsGranted, false, "WRITE_SETTINGS"));
+                long totalMs = ((days * 86400L + hours * 3600L + minutes * 60L + seconds) * 1000L) + millis;
+                if (totalMs > 0) {
+                    long targetTime = System.currentTimeMillis() - totalMs;
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
+                    return sdf.format(new java.util.Date(targetTime));
+                }
+            }
+        } catch (Exception ignored) {}
+        return raw;
     }
 
-    private static void addRuntimePermissions(AppOpsDetailData data, PackageInfo pi, Map<String, String[]> opsMap) {
+    private static void addSystemSpecialPermissions(AppOpsDetailData data, String pkg, Map<String, String[]> opsMap, Map<String, String> uidOpsMap) {
+        String[] specialList = {
+                "android.permission.CHANGE_COMPONENT_ENABLED_STATE",
+                "android.permission.PACKAGE_USAGE_STATS",
+                "android.permission.REQUEST_INSTALL_PACKAGES",
+                "android.permission.SCHEDULE_EXACT_ALARM",
+                "android.permission.SYSTEM_ALERT_WINDOW",
+                "android.permission.MANAGE_EXTERNAL_STORAGE",
+                "android.permission.WRITE_SETTINGS"
+        };
+
+        String[] opList = {
+                "CHANGE_COMPONENT_ENABLED_STATE",
+                "GET_USAGE_STATS",
+                "REQUEST_INSTALL_PACKAGES",
+                "SCHEDULE_EXACT_ALARM",
+                "SYSTEM_ALERT_WINDOW",
+                "MANAGE_EXTERNAL_STORAGE",
+                "WRITE_SETTINGS"
+        };
+
+        for (int i = 0; i < specialList.length; i++) {
+            String perm = specialList[i];
+            String op = opList[i];
+            String simpleName = perm.substring(perm.lastIndexOf('.') + 1);
+
+            String opMode = getOpMode(opsMap, op);
+            String uidMode = uidOpsMap.containsKey(op) ? uidOpsMap.get(op) : "default";
+
+            boolean isGranted = "allow".equalsIgnoreCase(opMode);
+            boolean isFakeGranted = isGranted && ("ignore".equalsIgnoreCase(uidMode) || "deny".equalsIgnoreCase(uidMode));
+
+            data.systemPermissions.add(new AppOpsDetailData.PermissionEntry(
+                    perm, simpleName, isGranted, isFakeGranted, op, opMode, uidMode));
+        }
+    }
+
+    private static void addRuntimePermissions(AppOpsDetailData data, PackageInfo pi, Map<String, String[]> opsMap, Map<String, String> uidOpsMap, Map<String, Boolean> dumpsysPerms) {
         String[] runtimeList = {
                 "android.permission.ACCESS_COARSE_LOCATION",
                 "android.permission.ACCESS_FINE_LOCATION",
@@ -280,8 +364,16 @@ public class AppOpsEngine {
                 "android.permission.WRITE_CONTACTS",
                 "android.permission.READ_CALENDAR",
                 "android.permission.WRITE_CALENDAR",
+                "android.permission.READ_CALL_LOG",
+                "android.permission.WRITE_CALL_LOG",
+                "android.permission.READ_SMS",
+                "android.permission.RECEIVE_SMS",
+                "android.permission.SEND_SMS",
+                "android.permission.RECEIVE_MMS",
                 "android.permission.BODY_SENSORS",
-                "android.permission.ACTIVITY_RECOGNITION"
+                "android.permission.ACTIVITY_RECOGNITION",
+                "android.permission.BLUETOOTH_SCAN",
+                "android.permission.BLUETOOTH_CONNECT"
         };
 
         Set<String> declared = new HashSet<>();
@@ -295,69 +387,107 @@ public class AppOpsEngine {
             String simpleName = perm.substring(perm.lastIndexOf('.') + 1);
             String matchedOp = mapPermToOp(simpleName);
             String opMode = getOpMode(opsMap, matchedOp);
+            String uidMode = uidOpsMap.containsKey(matchedOp) ? uidOpsMap.get(matchedOp) : "default";
 
-            // Check manifest grant
-            boolean isGranted = isPermissionGranted(pi, perm);
+            // Visible status to user/app: dumpsys package has the visible permission status
+            boolean isGranted;
+            if (dumpsysPerms.containsKey(perm)) {
+                isGranted = Boolean.TRUE.equals(dumpsysPerms.get(perm));
+            } else {
+                isGranted = isPermissionGranted(pi, perm);
+            }
 
-            // SMART DETECTION: If runtime is granted, but AppOps silently ignores or denies it!
-            boolean isFakeGranted = isGranted && ("ignore".equalsIgnoreCase(opMode) || "deny".equalsIgnoreCase(opMode));
+            // SMART DETECTION: Granted in Package/System, but UID mode in kernel silently drops/ignores it!
+            boolean isFakeGranted = isGranted && ("ignore".equalsIgnoreCase(uidMode) || "deny".equalsIgnoreCase(uidMode) || "ignore".equalsIgnoreCase(opMode) || "deny".equalsIgnoreCase(opMode));
 
             data.runtimePermissions.add(new AppOpsDetailData.PermissionEntry(
-                    perm, simpleName, isGranted, isFakeGranted, matchedOp));
+                    perm, simpleName, isGranted, isFakeGranted, matchedOp, opMode, uidMode));
         }
+
+        // Sort runtime permissions alphabetically by simple name
+        Collections.sort(data.runtimePermissions, (a, b) -> a.label.compareToIgnoreCase(b.label));
     }
 
-    private static void addGranularAppOps(AppOpsDetailData data, Map<String, String[]> opsMap) {
-        String[][] standardOps = {
-                {"RUN_ANY_IN_BACKGROUND", "Run in background", "Deny stops it from running in the background."},
-                {"WAKE_LOCK", "Keep awake", "Deny stops the app from holding wake locks."},
-                {"READ_CLIPBOARD", "Read clipboard", "Deny stops it from reading your clipboard."},
-                {"WRITE_CLIPBOARD", "Write clipboard", "Deny stops it from writing to clipboard."},
-                {"SYSTEM_ALERT_WINDOW", "Draw over other apps", "Deny stops it showing over other apps."},
-                {"START_FOREGROUND", "Start foreground service", "Allows launching foreground services."},
-                {"TAKE_AUDIO_FOCUS", "Take audio focus", "Controls whether the app can steal audio focus."},
-                {"ACCESS_NOTIFICATIONS", "Access notifications", "Deny stops access to notification listener service."},
-                {"LEGACY_STORAGE", "Legacy storage", "Compatibility mode for non-scoped storage access."},
-                {"ACCESS_RESTRICTED_SETTINGS", "Access restricted settings", "Access accessibility, notification listeners, etc."},
-                {"COARSE_LOCATION", "Access coarse location", "Approximate location access."},
-                {"FINE_LOCATION", "Access fine location", "Precise GPS location access."},
-                {"CAMERA", "Camera", "Camera video/photo capture op."},
-                {"RECORD_AUDIO", "Record audio", "Microphone audio recording op."},
-                {"POST_NOTIFICATION", "Post notification", "Platform level notification posting op."},
-                {"READ_PHONE_STATE", "Read phone state", "Cellular info and phone state op."},
-                {"GET_USAGE_STATS", "Usage stats", "Access device usage statistics."}
-        };
+    private static void addGranularAppOps(AppOpsDetailData data, Map<String, String[]> opsMap, Map<String, String> uidOpsMap) {
+        // AppOps labels and descriptions dictionary
+        Map<String, String[]> knownOps = new HashMap<>();
+        knownOps.put("RUN_ANY_IN_BACKGROUND", new String[]{"Run in background", "Allow or prevent app from running in the background."});
+        knownOps.put("WAKE_LOCK", new String[]{"Keep awake", "Allow app to keep device or CPU awake."});
+        knownOps.put("READ_CLIPBOARD", new String[]{"Read clipboard", "Allow app to read clipboard contents."});
+        knownOps.put("WRITE_CLIPBOARD", new String[]{"Write clipboard", "Allow app to write to clipboard."});
+        knownOps.put("SYSTEM_ALERT_WINDOW", new String[]{"Draw over other apps", "Display floating windows or overlays over other applications."});
+        knownOps.put("START_FOREGROUND", new String[]{"Start foreground service", "Allow starting foreground services."});
+        knownOps.put("TAKE_AUDIO_FOCUS", new String[]{"Take audio focus", "Allow stealing audio focus from other applications."});
+        knownOps.put("ACCESS_NOTIFICATIONS", new String[]{"Access notifications", "Read or listen to active notifications."});
+        knownOps.put("LEGACY_STORAGE", new String[]{"Legacy storage", "Compatibility access for non-scoped storage."});
+        knownOps.put("ACCESS_RESTRICTED_SETTINGS", new String[]{"Access restricted settings", "Access accessibility, notification listeners, etc."});
+        knownOps.put("READ_DEVICE_IDENTIFIERS", new String[]{"Read device identifiers", "Access IMEI, MEID, ESN and hardware serial numbers."});
+        knownOps.put("MANAGE_ONGOING_CALLS", new String[]{"Manage ongoing calls", "Manage or monitor active phone calls."});
+        knownOps.put("FOREGROUND_SERVICE_SPECIAL_USE", new String[]{"Foreground service (Special use)", "Run special use foreground services."});
+        knownOps.put("USE_ICC_AUTH_WITH_DEVICE_IDENTIFIER", new String[]{"ICC auth with device identifier", "SIM/ICC authentication."});
+        knownOps.put("SCHEDULE_EXACT_ALARM", new String[]{"Schedule exact alarm", "Set exact alarms and wake alarms."});
+        knownOps.put("GET_USAGE_STATS", new String[]{"Usage stats", "Access device app usage statistics."});
+        knownOps.put("VIBRATE", new String[]{"Vibrate", "Control device vibration hardware."});
 
-        for (String[] def : standardOps) {
-            String op = def[0];
-            String label = def[1];
-            String desc = def[2];
+        // MIUI OEM specific ops
+        knownOps.put("MIUIOP(10008)", new String[]{"Auto-start (MIUI)", "OP_AUTO_START: Allow app to start automatically on boot or in background."});
+        knownOps.put("MIUIOP(10017)", new String[]{"Create desktop shortcuts (MIUI)", "OP_INSTALL_SHORTCUT: Allow creating home screen shortcuts."});
+        knownOps.put("MIUIOP(10020)", new String[]{"Show on lock screen (MIUI)", "OP_SHOW_WHEN_LOCKED: Display windows or alerts when device is locked."});
+        knownOps.put("MIUIOP(10032)", new String[]{"Read phone state (MIUI Private)", "OP_READ_PHONE_STATE_REAL: Xiaomi proprietary phone state check."});
+        knownOps.put("MIUIOP(10033)", new String[]{"Post local notifications (MIUI)", "OP_POST_LOCAL_NOTIFICATION: Xiaomi local notification channel control."});
+        knownOps.put("MIUIOP(10037)", new String[]{"Get anonymous ID - OAID (MIUI)", "OP_GET_OAID: Access Xiaomi Open Anonymous Device Identifier."});
+        knownOps.put("MIUIOP(10053)", new String[]{"Chain start / Service link (MIUI)", "OP_SERVICE_LINK: Allow wake up by other background services."});
 
-            String[] val = opsMap.get(op);
-            String mode = (val != null && !TextUtils.isEmpty(val[0])) ? val[0] : "default";
+        // Iterate through all ops found for the package in opsMap or uidOpsMap
+        Set<String> allOps = new HashSet<>();
+        allOps.addAll(opsMap.keySet());
+        allOps.addAll(uidOpsMap.keySet());
+
+        for (String opKey : allOps) {
+            String[] val = opsMap.get(opKey);
+            String pkgMode = (val != null && !TextUtils.isEmpty(val[0])) ? val[0] : "default";
+            String uidMode = uidOpsMap.containsKey(opKey) ? uidOpsMap.get(opKey) : "";
+            // Effective mode: if uidMode is set and restrictive (ignore/deny), prioritize it
+            String effectiveMode = !TextUtils.isEmpty(uidMode) ? uidMode : pkgMode;
+
             String time = (val != null) ? val[1] : "";
-            String rejTime = (val != null) ? val[2] : "";
+            String rej = (val != null) ? val[2] : "";
 
-            data.appOps.add(new AppOpsDetailData.AppOpEntry(op, label, desc, mode, time, rejTime));
+            String label = opKey;
+            String desc = "Platform Op: " + opKey;
+
+            if (knownOps.containsKey(opKey)) {
+                String[] info = knownOps.get(opKey);
+                label = info[0];
+                desc = info[1];
+            } else if (opKey.startsWith("MIUIOP(")) {
+                label = "MIUI Op " + opKey.substring(7, opKey.length() - 1);
+                desc = "Xiaomi HyperOS/MIUI proprietary permission op: " + opKey;
+            }
+
+            data.appOps.add(new AppOpsDetailData.AppOpEntry(opKey, label, desc, effectiveMode, time, rej));
         }
 
-        // Add any OEM or extra detected ops not in the default list
-        for (Map.Entry<String, String[]> entry : opsMap.entrySet()) {
+        // Also add standard non-runtime ops that may not have been reported in opsMap yet
+        for (Map.Entry<String, String[]> entry : knownOps.entrySet()) {
             String opKey = entry.getKey();
-            boolean exists = false;
+            if (opKey.startsWith("MIUIOP(")) continue;
+            boolean alreadyAdded = false;
             for (AppOpsDetailData.AppOpEntry existing : data.appOps) {
                 if (existing.opName.equalsIgnoreCase(opKey)) {
-                    exists = true;
+                    alreadyAdded = true;
                     break;
                 }
             }
-            if (!exists) {
-                String mode = entry.getValue()[0];
-                String time = entry.getValue()[1];
-                String rej = entry.getValue()[2];
-                data.appOps.add(new AppOpsDetailData.AppOpEntry(opKey, opKey, "Custom / Platform Op: " + opKey, mode, time, rej));
+            if (!alreadyAdded) {
+                String label = entry.getValue()[0];
+                String desc = entry.getValue()[1];
+                data.appOps.add(new AppOpsDetailData.AppOpEntry(opKey, label, desc, "default", "", ""));
             }
         }
+
+        // Sort AppOps alphabetically A-Z by label
+        Collections.sort(data.appOps, (a, b) -> a.label.compareToIgnoreCase(b.label));
     }
 
     private static String mapPermToOp(String simplePermName) {
@@ -406,7 +536,15 @@ public class AppOpsEngine {
 
     // Mutator actions via root / elevated commands
     public static void setAppOpMode(String packageName, String opName, String mode) {
-        executeElevated("cmd appops set " + packageName + " " + opName + " " + mode.toLowerCase());
+        setAppOpMode(packageName, opName, mode, true);
+    }
+
+    public static void setAppOpMode(String packageName, String opName, String mode, boolean applyUidMode) {
+        String m = mode.toLowerCase();
+        executeElevated("cmd appops set " + packageName + " " + opName + " " + m);
+        if (applyUidMode) {
+            executeElevated("cmd appops set --uid " + packageName + " " + opName + " " + m);
+        }
     }
 
     public static void setPermissionGranted(String packageName, String permName, boolean grant) {

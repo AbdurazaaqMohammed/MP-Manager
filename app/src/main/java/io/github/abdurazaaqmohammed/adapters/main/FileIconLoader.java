@@ -635,7 +635,7 @@ public class FileIconLoader {
      * not readable by the app user at all.
      */
     private static long calculateFolderSize(File dir, Context ctx) {
-        if (dir == null || !dir.isDirectory()) return 0;
+        if (dir == null || !treatAsFolder(dir)) return 0;
         String path = dir.getAbsolutePath();
         if (path.equals("/proc") || path.startsWith("/proc/")
                 || path.equals("/sys") || path.startsWith("/sys/")
@@ -652,12 +652,17 @@ public class FileIconLoader {
                 long du = AccessManager.dirSize(ctx, path);
                 if (du >= 0) return du;
             } catch (Exception ignored) {}
+            // Outside user storage, if directory is not readable by normal Java IO,
+            // never run stack.push(dir) which would result in listFiles() returning null
+            // and wrongly returning 0 (cached as 0B).
+            if (!dir.canRead()) return -1;
         }
         long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;
         ArrayDeque<File> stack = new ArrayDeque<>();
         stack.push(dir);
         long total = 0;
         int visited = 0;
+        boolean rootChecked = false;
         while (!stack.isEmpty()) {
             if (++visited > SIZE_WALK_MAX_ENTRIES || System.currentTimeMillis() > deadline) return -1;
             File f = stack.pop();
@@ -666,6 +671,10 @@ public class FileIconLoader {
                 children = f.listFiles();
             } catch (Exception e) {
                 children = null;
+            }
+            if (!rootChecked) {
+                rootChecked = true;
+                if (children == null) return -1; // Unreadable root directory should never be treated as 0B
             }
             if (children == null) continue;
             for (File c : children) {
