@@ -797,7 +797,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             result.setData(Uri.fromFile(data.arscFile));
             if (data.apkFile != null) result.putExtra("zipFilePath", data.apkFile.getAbsolutePath());
             if (data.zipEntryPath != null) result.putExtra("zipEntryPath", data.zipEntryPath);
-            setResult(757, result);
+            setEditorResult(757, result);
         }
         finish();
     }
@@ -1187,11 +1187,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
             if (tb.getPackageBlock() != null) pkgName = tb.getPackageBlock().getName();
         } catch (Exception ignored) {
         }
-        ArscTextActivity.sessionData = data;
-        ArscTextActivity.sessionBlock = tb;
-        ArscTextActivity.sessionTitle = pkgName.isEmpty() ? label : pkgName + "/" + label;
-        ArscTextActivity.sessionHighlight = highlightName;
-        startActivityForResult(new Intent(this, ArscTextActivity.class), REQ_TEXT);
+        startActivityForResult(ArscTextActivity.createIntent(this, data, tb,
+                pkgName.isEmpty() ? label : pkgName + "/" + label, highlightName), REQ_TEXT);
     }
 
     @Override

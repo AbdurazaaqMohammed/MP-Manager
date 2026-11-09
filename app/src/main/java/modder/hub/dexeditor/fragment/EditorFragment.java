@@ -352,7 +352,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             try {
                 Activity activity = getActivity();
                 if (activity instanceof DexEditorActivity dexActivity) {
-                    final String smaliCode = DexEditorActivity.classTree.getSmaliByType(Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
+                    final String smaliCode = dexActivity.classTree.getSmaliByType(Objects.requireNonNull(dexActivity.classTree.classMap.get(className)));
 
                     runOnUiThread(() -> {
                         if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);

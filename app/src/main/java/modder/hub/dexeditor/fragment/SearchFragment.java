@@ -284,7 +284,7 @@ public class SearchFragment extends Fragment {
         List<DexEditorActivity.EditorTab> modifiedTabs = new ArrayList<>();
         DexEditorActivity activity = (DexEditorActivity) getActivity();
         if (activity != null) {
-            for (DexEditorActivity.EditorTab tab : DexEditorActivity.tabs) {
+            for (DexEditorActivity.EditorTab tab : activity.tabs) {
                 if (tab.isModified) {
                     modifiedTabs.add(tab);
                 }
@@ -760,17 +760,17 @@ public class SearchFragment extends Fragment {
 
     public void runMethodUsageSearch(String slashClass, String methodName, String proto, boolean includeOverrides) {
         DexEditorActivity activity = (DexEditorActivity) getActivity();
-        if (activity == null || DexEditorActivity.classTree == null || methodName == null || proto == null) return;
+        if (activity == null || activity.classTree == null || methodName == null || proto == null) return;
         String declaring = DexUsageHelper.toType(slashClass);
         Set<String> defining = new HashSet<>();
         defining.add(declaring);
         if (includeOverrides) {
             try {
                 List<ClassDef> all;
-                synchronized (DexEditorActivity.classTree) {
-                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                synchronized (activity.classTree) {
+                    all = new ArrayList<>(activity.classTree.classMap.values());
                 }
-                for (DexUsageHelper.OverrideEntry e : DexUsageHelper.findOverrides(declaring, methodName, proto, all, DexEditorActivity.classTree.classMap)) {
+                for (DexUsageHelper.OverrideEntry e : DexUsageHelper.findOverrides(declaring, methodName, proto, all, activity.classTree.classMap)) {
                     try {
                         defining.add(e.holder.getType());
                     } catch (Exception ignored) {
@@ -800,7 +800,7 @@ public class SearchFragment extends Fragment {
 
     public void runOverrideSearch(String slashClass, String methodName, String proto) {
         DexEditorActivity activity = (DexEditorActivity) getActivity();
-        if (activity == null || DexEditorActivity.classTree == null || methodName == null || proto == null) return;
+        if (activity == null || activity.classTree == null || methodName == null || proto == null) return;
         String display = "overrides of " + methodName + proto;
         lastSearchQuery = display;
         lastSearchType = "Smali";
@@ -816,7 +816,7 @@ public class SearchFragment extends Fragment {
 
     public void runFieldUsageSearch(String slashClass, String fieldName, String fieldType, int mode) {
         DexEditorActivity activity = (DexEditorActivity) getActivity();
-        if (activity == null || DexEditorActivity.classTree == null || fieldName == null) return;
+        if (activity == null || activity.classTree == null || fieldName == null) return;
         String declaring = DexUsageHelper.toType(slashClass);
         List<String> needles = new ArrayList<>();
         needles.add(declaring + "->" + fieldName + ":");
@@ -841,7 +841,7 @@ public class SearchFragment extends Fragment {
 
     public void runClassUsageSearch(String slashClass) {
         DexEditorActivity activity = (DexEditorActivity) getActivity();
-        if (activity == null || DexEditorActivity.classTree == null || slashClass == null) return;
+        if (activity == null || activity.classTree == null || slashClass == null) return;
         List<String> needles = new ArrayList<>();
         needles.add(DexUsageHelper.toType(slashClass));
         String display = "usages of " + slashClass.replace('/', '.');
@@ -863,7 +863,7 @@ public class SearchFragment extends Fragment {
 
     public void runSubclassSearch(String slashClass) {
         DexEditorActivity activity = (DexEditorActivity) getActivity();
-        if (activity == null || DexEditorActivity.classTree == null || slashClass == null) return;
+        if (activity == null || activity.classTree == null || slashClass == null) return;
         String display = "subclasses of " + slashClass.replace('/', '.');
         lastSearchQuery = display;
         lastSearchType = "Class name";
@@ -878,6 +878,7 @@ public class SearchFragment extends Fragment {
     }
 
     private static class UsageSearchTask {
+        private DexEditorActivity editorActivity;
         static final int KIND_METHOD = 0;
         static final int KIND_FIELD = 1;
         static final int KIND_CLASS = 2;
@@ -937,8 +938,9 @@ public class SearchFragment extends Fragment {
                 }
             });
             progressDialog.show();
-            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+            editorActivity = activity;
+            for (int i = 0; i < activity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = activity.tabs.get(i);
                 if (tab.type == 0) {
                     UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
@@ -949,7 +951,7 @@ public class SearchFragment extends Fragment {
                 }
             }
             new Thread(() -> {
-                if (DexEditorActivity.classTree == null) {
+                if (editorActivity.classTree == null) {
                     mainHandler.post(() -> onPostExecute(new ArrayList<>()));
                     return;
                 }
@@ -960,10 +962,10 @@ public class SearchFragment extends Fragment {
                 }
                 List<ClassDef> classesToSearch;
                 Set<String> pendingKeys = new HashSet<>();
-                synchronized (DexEditorActivity.classTree) {
-                    classesToSearch = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                synchronized (editorActivity.classTree) {
+                    classesToSearch = new ArrayList<>(editorActivity.classTree.classMap.values());
                     try {
-                        pendingKeys.addAll(DexEditorActivity.classTree.getPendingSmaliMap().keySet());
+                        pendingKeys.addAll(editorActivity.classTree.getPendingSmaliMap().keySet());
                     } catch (Exception ignored) {
                     }
                 }
@@ -1023,14 +1025,14 @@ public class SearchFragment extends Fragment {
         private void runHierarchy(List<TreeNode> results, DexEditorActivity activity) {
             try {
                 List<ClassDef> all;
-                synchronized (DexEditorActivity.classTree) {
-                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                synchronized (activity.classTree) {
+                    all = new ArrayList<>(activity.classTree.classMap.values());
                 }
                 if (kind == KIND_SUBCLASS) {
                     String target = DexUsageHelper.toType(targetSlash);
                     List<ClassDef> subs;
-                    synchronized (DexEditorActivity.classTree) {
-                        subs = DexUsageHelper.findSubclasses(target, all, DexEditorActivity.classTree.classMap);
+                    synchronized (activity.classTree) {
+                        subs = DexUsageHelper.findSubclasses(target, all, activity.classTree.classMap);
                     }
                     for (ClassDef c : subs) {
                         if (isStopped) break;
@@ -1046,8 +1048,8 @@ public class SearchFragment extends Fragment {
                 } else {
                     String declaring = DexUsageHelper.toType(targetSlash);
                     List<DexUsageHelper.OverrideEntry> overrides;
-                    synchronized (DexEditorActivity.classTree) {
-                        overrides = DexUsageHelper.findOverrides(declaring, targetName, targetProto, all, DexEditorActivity.classTree.classMap);
+                    synchronized (activity.classTree) {
+                        overrides = DexUsageHelper.findOverrides(declaring, targetName, targetProto, all, activity.classTree.classMap);
                     }
                     for (DexUsageHelper.OverrideEntry e : overrides) {
                         if (isStopped) break;
@@ -1295,7 +1297,7 @@ public class SearchFragment extends Fragment {
 
         private String generateSmaliSafe(ClassDef classDef) {
             try {
-                if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
+                if (editorActivity.classTree != null) return editorActivity.classTree.getSmaliByType(classDef);
             } catch (Exception ignored) {
             }
             return "";
@@ -1406,6 +1408,7 @@ public class SearchFragment extends Fragment {
         }
     }
     private static class ReplaceTask {
+        private DexEditorActivity editorActivity;
         private static final Pattern STRING_LITERAL = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"");
         private final WeakReference<SearchFragment> fragmentRef;
         private final String findQuery;
@@ -1472,8 +1475,9 @@ public class SearchFragment extends Fragment {
             progressDialog.show();
 
             // Collect open tabs content (must be on UI thread)
-            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+            editorActivity = activity;
+            for (int i = 0; i < activity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = activity.tabs.get(i);
                 if (tab.type == 0) { // Smali
                     UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
@@ -1488,7 +1492,7 @@ public class SearchFragment extends Fragment {
             ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
             new Thread(() -> {
-                if (DexEditorActivity.classTree == null) {
+                if (editorActivity.classTree == null) {
                     mainHandler.post(() -> progressDialog.dismiss());
                     return;
                 }
@@ -1497,7 +1501,7 @@ public class SearchFragment extends Fragment {
                 if (scopeClasses != null) {
                     classesToProcess.addAll(scopeClasses);
                 } else {
-                    for (ClassDef classDef : DexEditorActivity.classTree.classDefList) {
+                    for (ClassDef classDef : editorActivity.classTree.classDefList) {
                         String fullName = classDef.getType();
                         classesToProcess.add(fullName.substring(1, fullName.length() - 1));
                     }
@@ -1516,7 +1520,7 @@ public class SearchFragment extends Fragment {
                             if (openTabsContent.containsKey(className)) {
                                 originalText = openTabsContent.get(className);
                             } else {
-                                ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
+                                ClassDef classDef = editorActivity.classTree.classMap.get(className);
                                 if (classDef != null) {
                                     originalText = generateSmali(classDef);
                                 }
@@ -1601,9 +1605,9 @@ public class SearchFragment extends Fragment {
                                 if (countInClass > 0) {
                                     try {
                                         ClassDef newDef = Smali.assemble(modifiedText, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
-                                        DexEditorActivity.classTree.saveClassDefIfChanged(newDef, modifiedText);
+                                        editorActivity.classTree.saveClassDefIfChanged(newDef, modifiedText);
                                     } catch (Exception e) {
-                                        DexEditorActivity.classTree.saveSmali(className, modifiedText);
+                                        editorActivity.classTree.saveSmali(className, modifiedText);
                                         String errorMsg = e.getMessage();
                                         errorClasses.add(className + " (Saved as raw): " + errorMsg);
                                         synchronized (ReplaceTask.this) {
@@ -1679,7 +1683,7 @@ public class SearchFragment extends Fragment {
         }
 
         private String generateSmali(ClassDef classDef) throws Exception {
-            if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
+            if (editorActivity.classTree != null) return editorActivity.classTree.getSmaliByType(classDef);
             StringWriter sw = new StringWriter(16 * 1024);
             BaksmaliWriter bw = new BaksmaliWriter(sw);
             new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(bw);
@@ -1700,8 +1704,8 @@ public class SearchFragment extends Fragment {
                     String className = entry.getKey();
                     String newText = entry.getValue();
 
-                    for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                        DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+                    for (int i = 0; i < activity.tabs.size(); i++) {
+                        DexEditorActivity.EditorTab tab = activity.tabs.get(i);
                         if (tab.className.equals(className) && tab.type == 0) {
                             tab.content = newText;
                             tab.isModified = false;
@@ -1716,7 +1720,7 @@ public class SearchFragment extends Fragment {
             }
 
             activity.refreshExplorerPage(1);
-            DexEditorActivity.isChanged = true;
+            activity.isChanged = true;
         }
 
         // there is some problem with replacement , i have to review this part next time but serach metod you should try
@@ -1757,6 +1761,7 @@ public class SearchFragment extends Fragment {
      * 3. Efficient Matching: Case-insensitive search without new string allocations.
      */
     private static class SearchTask {
+        private DexEditorActivity editorActivity;
         private static final Object POOL_MATCH_CACHE_LOCK = new Object();
         /** Lazily materialised pool text: only built when the cheap fingerprint says "maybe". */
         private static final Map<DexBackedDexFile, char[]> POOL_TEXT_CACHE = new ConcurrentHashMap<>();
@@ -1887,8 +1892,9 @@ public class SearchFragment extends Fragment {
             progressDialog.show();
 
             // Cache the content of open editors only if they have unsaved/modified changes
-            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
-                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+            editorActivity = activity;
+            for (int i = 0; i < activity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = activity.tabs.get(i);
                 if (tab.type == 0 && tab.isModified) {
                     UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
@@ -1903,16 +1909,16 @@ public class SearchFragment extends Fragment {
             }
 
             new Thread(() -> {
-                if (DexEditorActivity.classTree == null) {
+                if (editorActivity.classTree == null) {
                     mainHandler.post(() -> onPostExecute(new ArrayList<>()));
                     return;
                 }
 
                 try {
-                    POOL_TEXT_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
-                    POOL_FILTER_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
+                    POOL_TEXT_CACHE.keySet().retainAll(editorActivity.classTree.dexFiles);
+                    POOL_FILTER_CACHE.keySet().retainAll(editorActivity.classTree.dexFiles);
                     synchronized (POOL_MATCH_CACHE_LOCK) {
-                        POOL_MATCH_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
+                        POOL_MATCH_CACHE.keySet().retainAll(editorActivity.classTree.dexFiles);
                     }
                 } catch (Exception ignored) {
                 }
@@ -1921,14 +1927,14 @@ public class SearchFragment extends Fragment {
                 List<ClassDef> classesToSearch = new ArrayList<>();
                 if (scopeClasses != null) {
                     for (String className : scopeClasses) {
-                        synchronized (DexEditorActivity.classTree) {
-                            ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
+                        synchronized (editorActivity.classTree) {
+                            ClassDef classDef = editorActivity.classTree.classMap.get(className);
                             if (classDef != null) classesToSearch.add(classDef);
                         }
                     }
                 } else {
-                    synchronized (DexEditorActivity.classTree) {
-                        classesToSearch.addAll(DexEditorActivity.classTree.classMap.values());
+                    synchronized (editorActivity.classTree) {
+                        classesToSearch.addAll(editorActivity.classTree.classMap.values());
                     }
                 }
 
@@ -2165,10 +2171,10 @@ public class SearchFragment extends Fragment {
                                 break;
                             case "String":
                                 String openContentStr = openEditorsContent.get(className);
-                                boolean hasPendingStr = DexEditorActivity.classTree.getPendingSmaliMap().containsKey(className);
+                                boolean hasPendingStr = editorActivity.classTree.getPendingSmaliMap().containsKey(className);
                                 if (openContentStr != null || hasPendingStr) {
                                     try {
-                                        smali = openContentStr != null ? openContentStr : DexEditorActivity.classTree.getSmaliByType(classDef);
+                                        smali = openContentStr != null ? openContentStr : editorActivity.classTree.getSmaliByType(classDef);
                                         int start = 0, lineIdx = 0, end;
                                         while ((end = smali.indexOf('\n', start)) != -1) {
                                             String lineText = smali.substring(start, end);
@@ -2726,8 +2732,8 @@ public class SearchFragment extends Fragment {
             String body = sw.toString();
 
             String dexFileName = "unknown.dex";
-            if (DexEditorActivity.classTree != null) {
-                dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
+            if (editorActivity.classTree != null) {
+                dexFileName = editorActivity.classTree.findDexFileNameForClass(classDef);
             }
             StringBuilder sb = new StringBuilder(body.length() + 32);
             sb.append("# ").append(dexFileName).append("\n\n").append(body);
@@ -2735,16 +2741,16 @@ public class SearchFragment extends Fragment {
         }
 
         private String generateSmali(ClassDef classDef) throws Exception {
-            if (DexEditorActivity.classTree != null) {
+            if (editorActivity.classTree != null) {
                 String type = classDef.getType();
                 String typeKey = type.substring(1, type.length() - 1);
-                String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(typeKey);
+                String pending = editorActivity.classTree.getPendingSmaliMap().get(typeKey);
                 if (pending != null) {
                     pending = SmaliHelper.stripSmaliHeader(pending);
-                    String dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
+                    String dexFileName = editorActivity.classTree.findDexFileNameForClass(classDef);
                     return "# " + dexFileName + "\n\n" + pending;
                 }
-                return DexEditorActivity.classTree.getSmaliByType(classDef);
+                return editorActivity.classTree.getSmaliByType(classDef);
             }
             return generateSmaliOptimized(classDef);
         }

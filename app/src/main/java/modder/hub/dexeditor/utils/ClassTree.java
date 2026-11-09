@@ -118,6 +118,7 @@ import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.smali.SmaliHelper;
 
 public class ClassTree {
+    public java.util.function.BiConsumer<Boolean, Boolean> saveStateListener = (changed, saved) -> {};
 	
 	/*
 	Author @developer-krushna
@@ -692,8 +693,7 @@ public class ClassTree {
             pureSmaliCache.remove(type);
             recordEditedClass(type);
         }
-        DexEditorActivity.isChanged = true;
-        DexEditorActivity.isSaved = false;
+        saveStateListener.accept(true, false);
     }
 
     // save class def to the main node o the dex and record the changes classes
@@ -734,8 +734,7 @@ public class ClassTree {
 
             recordEditedClass(type);
         }
-        DexEditorActivity.isChanged = true;
-        DexEditorActivity.isSaved = false;
+        saveStateListener.accept(true, false);
     }
 
     // save class def without invalidating caches when the code text did not change
@@ -1054,8 +1053,7 @@ public class ClassTree {
             // recompile each dex all over again even when nothing changed since the last save.
             editedClassMap.clear();
 
-            DexEditorActivity.isChanged = false;
-            DexEditorActivity.isSaved = true;
+            saveStateListener.accept(false, true);
         }
 
         dexSaveProgress.onFinished((System.nanoTime() - saveStart) / 1_000_000L,

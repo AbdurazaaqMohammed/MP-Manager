@@ -742,7 +742,7 @@ public class ArscEditorActivity extends BaseActivity {
         if (data != null && data.apkFile != null && savedThisSession && data.arscFile != null) {
             Intent result = new Intent();
             result.setData(Uri.fromFile(data.arscFile));
-            setResult(757, result);
+            setEditorResult(757, result);
         }
         finish();
     }

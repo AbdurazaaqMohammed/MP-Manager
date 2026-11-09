@@ -162,17 +162,17 @@ public class DexEditorActivity extends BaseActivity {
 
     // --- Constants and Static State ---
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
-    public static ClassTree classTree;
-    public static boolean isChanged;
-    public static boolean isSaved;
-    public static final List<EditorTab> tabs = new ArrayList<>();
+    public volatile ClassTree classTree;
+    public boolean isChanged;
+    public boolean isSaved;
+    public final List<EditorTab> tabs = new ArrayList<>();
     // Legacy static fields for SmaliMethodFieldListFragment state
-    public static SmaliMethodFieldListFragment smaliMethodsFieldsStringsFragment = null;
-    public static Parcelable methodRecyclerViewState = null;
-    public static Parcelable stringsRecyclerViewState = null;
-    public static boolean wasStringsVisible = false;
-    public static String lastSmaliFilePath = "";
-    private static int currentTabIndex = -1;
+    public SmaliMethodFieldListFragment smaliMethodsFieldsStringsFragment = null;
+    public Parcelable methodRecyclerViewState = null;
+    public Parcelable stringsRecyclerViewState = null;
+    public boolean wasStringsVisible = false;
+    public String lastSmaliFilePath = "";
+    private int currentTabIndex = -1;
     private final List<TreeNode> historyNodes = new ArrayList<>();
     private final List<String> stringList = new ArrayList<>();
     /** True while the toolbar subtitle shows the translation "x/y" counter. */
@@ -2140,8 +2140,8 @@ public class DexEditorActivity extends BaseActivity {
                         public void onNodeDeleted(TreeNode node) {
                             activity.clearPositionSaving(node.getFullName());
                             activity.removeTabsForClass(node.getFullName(), node.isDirectory());
-                            classTree.removeClass(node.getFullName());
-                            DexEditorActivity.isChanged = true;
+                            activity.classTree.removeClass(node.getFullName());
+                            activity.isChanged = true;
                             activity.needsModifiedTreeRebuild = true;
                             activity.needsExplorerRefresh = true;
                             activity.refreshExplorerPage(1);
@@ -2566,7 +2566,7 @@ public class DexEditorActivity extends BaseActivity {
 
         void start() {
             final DexEditorActivity activity = activityRef.get();
-            if (activity == null || classTree == null) return;
+            if (activity == null || activity.classTree == null) return;
 
             progressDialog = new AlertProgress(activity);
             progressDialog.setTitle(activity.getString(R.string.applying_changes));
@@ -2575,8 +2575,8 @@ public class DexEditorActivity extends BaseActivity {
             progressDialog.show();
 
             final Map<String, String> openTabsContent = new HashMap<>();
-            for (int i = 0; i < tabs.size(); i++) {
-                EditorTab tab = tabs.get(i);
+            for (int i = 0; i < activity.tabs.size(); i++) {
+                EditorTab tab = activity.tabs.get(i);
                 if (tab.type == 0) {
                     UnifiedEditorFragment ef = activity.getFragmentAtIndex(i);
                     if (ef != null && ef.getEditor() != null) {
@@ -2589,8 +2589,8 @@ public class DexEditorActivity extends BaseActivity {
 
             new Thread(() -> {
                 List<ClassDef> classes;
-                synchronized (classTree.classMap) {
-                    classes = new ArrayList<>(classTree.classMap.values());
+                synchronized (activity.classTree.classMap) {
+                    classes = new ArrayList<>(activity.classTree.classMap.values());
                 }
                 int total = classes.size();
                 int processed = 0, replacedCount = 0, affectedClasses = 0;
@@ -2604,7 +2604,7 @@ public class DexEditorActivity extends BaseActivity {
                     try {
                         String original = openTabsContent.containsKey(className)
                                 ? openTabsContent.get(className)
-                                : classTree.getSmaliByType(classDef);
+                                : activity.classTree.getSmaliByType(classDef);
 
                         Matcher m = literalPattern.matcher(original);
                         StringBuffer sb = new StringBuffer();
@@ -2621,9 +2621,9 @@ public class DexEditorActivity extends BaseActivity {
                             String modified = sb.toString();
                             try {
                                 ClassDef newDef = Smali.assemble(modified, SharedSmaliUtils.ASSEMBLE_OPTIONS, activity.dexVersion);
-                                classTree.saveClassDefIfChanged(newDef, modified);
+                                activity.classTree.saveClassDefIfChanged(newDef, modified);
                             } catch (Exception e) {
-                                classTree.saveSmali(className, modified);
+                                activity.classTree.saveSmali(className, modified);
                             }
                             replacedCount += countInClass;
                             affectedClasses++;
@@ -2644,8 +2644,8 @@ public class DexEditorActivity extends BaseActivity {
                     if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
                     if (!updatedTabs.isEmpty()) {
                         for (Map.Entry<String, String> e : updatedTabs.entrySet()) {
-                            for (int i = 0; i < tabs.size(); i++) {
-                                EditorTab tab = tabs.get(i);
+                            for (int i = 0; i < activity.tabs.size(); i++) {
+                                EditorTab tab = activity.tabs.get(i);
                                 if (tab.className.equals(e.getKey()) && tab.type == 0) {
                                     tab.content = e.getValue();
                                     UnifiedEditorFragment ef = activity.getFragmentAtIndex(i);
@@ -2655,7 +2655,7 @@ public class DexEditorActivity extends BaseActivity {
                         }
                     }
                     Notify_MT.Notify(activity, "Info", "Replaced " + finalReplaced + " occurrence(s) in " + finalAffected + " class(es).", "Close");
-                    isChanged = true;
+                    activity.isChanged = true;
                     activity.needsModifiedTreeRebuild = true;
                     activity.refreshExplorerPage(1);
                     if (onDone != null) onDone.run();
@@ -2695,6 +2695,7 @@ public class DexEditorActivity extends BaseActivity {
             ClassTree.claimWorkDir(cachePath);
             try {
                 classTree = new ClassTree(paths, cachePath);
+                classTree.saveStateListener = (changed, saved) -> { isChanged = changed; isSaved = saved; };
                 applyPersistedCompilationOptions();
                 // Pre-build trees in background to avoid UI lag
                 final List<TreeNode> roots = classTree.buildFullTree();
@@ -2819,7 +2820,7 @@ public class DexEditorActivity extends BaseActivity {
                                 if (zf != null) resultIntent.putExtra("zipFilePath", zf);
                                 if (ze != null) resultIntent.putExtra("zipEntryPath", ze);
                             }
-                            setResult(757, resultIntent);
+                            setEditorResult(757, resultIntent);
                             finish();
                         });
                     } catch (final Throwable e) {
@@ -3308,7 +3309,7 @@ public class DexEditorActivity extends BaseActivity {
         }).start();
     }
 
-    private static class TabAdapter extends FragmentStateAdapter {
+    private class TabAdapter extends FragmentStateAdapter {
         public TabAdapter(@NonNull BaseActivity activity) {
             super(activity);
         }
