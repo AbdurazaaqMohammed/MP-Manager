@@ -743,17 +743,24 @@ public final class AccessManager {
     }
 
     public static long dirSize(Context context, String path) {
+        if (path == null || path.isEmpty()) return -1;
         try {
             Backend backend = active(context);
-            if (backend == Backend.ROOT) {
-                RootManager.ShellResult r = RootManager.getInstance(context).execute(
+            if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                RootManager rm = RootManager.getInstance(context);
+                RootManager.ShellResult r = rm.execute(
                         "du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
-                if (r.isSuccess() && r.output() != null) {
-                    return Long.parseLong(r.output().trim().split("\\s+")[0]) * 1024L;
+                if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                    String firstToken = r.output().trim().split("\\s+")[0].trim();
+                    try {
+                        long kb = Long.parseLong(firstToken);
+                        if (kb >= 0) return kb * 1024L;
+                    } catch (NumberFormatException ignored) {}
                 }
-                return -1;
             }
-            if (backend == Backend.SHIZUKU) return ShizukuManager.dirSize(context, path);
+            if (backend == Backend.SHIZUKU || ShizukuManager.ready()) {
+                return ShizukuManager.dirSize(context, path);
+            }
         } catch (Exception ignored) {
         }
         return -1;

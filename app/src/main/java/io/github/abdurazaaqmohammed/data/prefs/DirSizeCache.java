@@ -100,6 +100,13 @@ public final class DirSizeCache {
             Long size = sizes.get(key);
             Long at = measuredAt.get(key);
             if (size == null || at == null) return null;
+            // Purge false 0B entries for root/unreadable directories so they get accurately recalculated
+            if (size == 0L && !dir.canRead()) {
+                sizes.remove(key);
+                measuredAt.remove(key);
+                dirty.set(true);
+                return null;
+            }
             if (at + MAX_AGE_MS < System.currentTimeMillis()) return null;
             if (mtime > at) return null;
             return size;
