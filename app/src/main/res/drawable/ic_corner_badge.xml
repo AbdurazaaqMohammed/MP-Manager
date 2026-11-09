@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Bottom-right quarter-circle pie wedge: from (24, 0) curving to (0, 24) and straight to (24, 24) -->
+    <path
+        android:fillColor="#FF4CAF50"
+        android:pathData="M 24,0 A 24,24 0 0,0 0,24 L 24,24 Z" />
+</vector>

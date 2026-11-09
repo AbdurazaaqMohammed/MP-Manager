@@ -71,5 +71,17 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="4dp" />
 
+        <ImageView
+            android:id="@+id/corner_status_badge"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="-12dp"
+            android:layout_marginBottom="-12dp"
+            android:src="@drawable/ic_corner_badge"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
     </RelativeLayout>
 </com.google.android.material.card.MaterialCardView>

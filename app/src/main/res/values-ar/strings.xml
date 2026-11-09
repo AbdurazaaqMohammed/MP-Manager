@@ -1112,6 +1112,9 @@
     <string name="discard">تجاهل</string>
     <string name="img_standard_crop">اقتصاص قياسي</string>
     <string name="dex_replace_strings">استبدال النصوص (strings)</string>
+    <string name="dex_decrypt_strings">فك تشفير النصوص</string>
+    <string name="dex_decrypted_n">تم فك تشفير %1$d نص في %2$s</string>
+    <string name="dex_no_strings_decrypted">لم يتم العثور على نصوص مشفرة لفكها</string>
     <string name="dex_merge">دمج ملفات dex</string>
     <string name="arsc_plus">محرر ARSC بلس</string>
     <string name="arsc_editor">محرر ARSC</string>
@@ -1813,6 +1816,7 @@
     <string name="recycle_bin_purged_x">سلة المحذوفات: أُزيل %1$d عنصرًا منتهي الصلاحية</string>
     <string name="moved_to_recycle_bin">نُقل إلى سلة المحذوفات</string>
     <string name="delete_forever">حذف نهائي</string>
+    <string name="action_jump">انتقال</string>
     <string name="restore_to_x">استُعيد إلى %1$s</string>
     <string name="restore_failed">فشلت الاستعادة</string>
     <string name="deleted_from_x">من: %1$s</string>

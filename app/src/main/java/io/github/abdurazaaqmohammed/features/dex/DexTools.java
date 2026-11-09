@@ -143,6 +143,7 @@ public class DexTools {
                 context.rss.getString(R.string.dex_to_smali),
                 context.rss.getString(R.string.translation_mode),
                 context.rss.getString(R.string.dex_replace_strings),
+                context.rss.getString(R.string.dex_decrypt_strings),
                 context.rss.getString(R.string.dex_merge)};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(displayName)
@@ -157,6 +158,8 @@ public class DexTools {
                     } else if (which == 5) {
                         showDexStringReplaceDialog(dexFile, zipFile);
                     } else if (which == 6) {
+                        showDexStringDecryptDialog(dexFile, zipFile);
+                    } else if (which == 7) {
                         mergeDexOption(dexFile, zipFile);
                     } else if (which == 4) {
                         // MT-style standalone translation mode (multidex dialog
@@ -495,6 +498,8 @@ public class DexTools {
                 if (zipFile == null) {
                     if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
                 }
+                // Pre-repair corrupted/zeroed headers and recalculate checksums if needed
+                DexRepairEngine.repairHeader(dexFile);
                 DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
                 DexFileFactory.writeDexFile(dexFile.getAbsolutePath(), dex);
                 pm.dismiss();
@@ -830,6 +835,56 @@ public class DexTools {
         }).start();
     }
 
+    private void showDexStringDecryptDialog(File dexFile, File zipFileOrNull) {
+        EditText methodInput = new EditText(context);
+        methodInput.setHint("Custom method or signature (optional)");
+        methodInput.setSingleLine(true);
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        TextView desc = new TextView(context);
+        desc.setText("Scans and decrypts static encrypted strings (Base64, XOR, Caesar, or custom decryptor) and replaces them with plaintext const-strings.");
+        desc.setPadding(0, 0, 0, pad / 2);
+        layout.addView(desc);
+        layout.addView(methodInput);
+
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.dex_decrypt_strings))
+                .setView(layout)
+                .setPositiveButton("Decrypt", (d, w) -> {
+                    String custom = methodInput.getText().toString().trim();
+                    runDexStringDecrypt(dexFile, zipFileOrNull, custom);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
+    private void runDexStringDecrypt(File dexFile, File zipFileOrNull, String customSig) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                File tmpOut = File.createTempFile("dexdec", ".dex", context.getCacheDir());
+                int count = DexStringDecryptor.decryptDexStrings(dexFile, tmpOut, customSig);
+                pm.dismiss();
+                if (count == 0) {
+                    tmpOut.delete();
+                    context.handler.post(() -> Extensions.showMessage(context, context.rss.getString(R.string.dex_no_strings_decrypted)));
+                    return;
+                }
+                context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setMessage(context.rss.getString(R.string.dex_decrypted_n, count, dexFile.getName()))
+                        .setPositiveButton(context.rss.getString(R.string.apply), (d2, w2) -> applyDexStringReplace(dexFile, zipFileOrNull, tmpOut))
+                        .setNegativeButton(android.R.string.cancel, (d2, w2) -> tmpOut.delete())
+                        .create()));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
     private void mergeDexOption(File dexFile, File zipFile) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
@@ -868,9 +923,9 @@ public class DexTools {
                     File outDir = new File(context.getCacheDir(), "dexmergeout" + UUID.randomUUID());
                     outDir.mkdirs();
                     File merged = new File(outDir, "classes_merged.dex");
-                    DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    List<File> generated = DexMergeUtil.mergeDexFiles(inputs, merged, api);
                     pm.dismiss();
-                    context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(merged)));
+                    context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(generated.get(0))));
                 } else {
                     File dir = dexFile.getParentFile();
                     File[] found = dir.listFiles((d, name) -> name.matches("classes(\\d*)\\.dex"));
@@ -888,10 +943,13 @@ public class DexTools {
                     }
                     int api = detectDexApi(inputs.get(0));
                     File merged = FileUtils.getUnusedFile(new File(dir, "classes_merged.dex"));
-                    DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    List<File> generated = DexMergeUtil.mergeDexFiles(inputs, merged, api);
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, context.rss.getString(R.string.fo_merged_n, inputs.size()));
+                        String msg = generated.size() > 1
+                                ? context.rss.getString(R.string.fo_merged_n, inputs.size()) + " (" + generated.size() + " DEX)"
+                                : context.rss.getString(R.string.fo_merged_n, inputs.size());
+                        Extensions.showMessage(context, msg);
                         context.loadFolderInPane(dir, pane1);
                     });
                 }

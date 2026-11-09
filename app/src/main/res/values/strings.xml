@@ -1347,6 +1347,9 @@ Strings are sent to the external service you configured.</string>
     <string name="discard">Discard</string>
     <string name="img_standard_crop">Standard crop</string>
     <string name="dex_replace_strings">Replace strings</string>
+    <string name="dex_decrypt_strings">Decrypt strings</string>
+    <string name="dex_decrypted_n">%1$d strings decrypted in %2$s</string>
+    <string name="dex_no_strings_decrypted">No encrypted strings found to decrypt</string>
     <string name="dex_merge">Merge dex files</string>
     <string name="arsc_plus">ARSC Editor Plus</string>
     <string name="arsc_editor">ARSC Editor</string>
@@ -1952,6 +1955,7 @@ Strings are sent to the external service you configured.</string>
     <string name="recycle_bin_purged_x">Recycle bin: removed %1$d expired item(s)</string>
     <string name="moved_to_recycle_bin">Moved to recycle bin</string>
     <string name="delete_forever">Delete permanently</string>
+    <string name="action_jump">Jump</string>
     <string name="restore_to_x">Restored to %1$s</string>
     <string name="restore_failed">Restore failed</string>
     <string name="deleted_from_x">From: %1$s</string>

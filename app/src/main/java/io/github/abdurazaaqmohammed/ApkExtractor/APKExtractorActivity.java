@@ -1411,6 +1411,15 @@ public class APKExtractorActivity extends BaseActivity {
     public final ExtractorIconCache iconCache = new ExtractorIconCache();
 
     private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
+        // Also scan Extracted APKs folder to populate corner status badges
+        try {
+            java.util.Map<String, ExtractedApksIndex.Entry> extractedIndex = ExtractedApksIndex.scanExtractedFolder(this);
+            handler.post(() -> {
+                if (appAdapter[0] != null) appAdapter[0].setExtractedIndex(extractedIndex);
+                if (appAdapter[1] != null) appAdapter[1].setExtractedIndex(extractedIndex);
+            });
+        } catch (Exception ignored) {}
+
         PackageManager pm = getPackageManager();
         for (int i = 0; i < apps.size(); i++) {
             AppInfo app = apps.get(i);

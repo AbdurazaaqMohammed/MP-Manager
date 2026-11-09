@@ -222,6 +222,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private volatile long paneLoadGen1;
     private volatile long paneLoadGen2;
     private String pendingDirToLoad;
+    private String pendingHighlightName;
 
     public ActivityResultLauncher<String> permissionLauncher() {
         return requestPermissionLauncher;
@@ -481,6 +482,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 if (dirToLoad != null) {
                     pendingDirToLoad = dirToLoad;
+                }
+                String highlight = data.getStringExtra("highlightName");
+                if (highlight != null) {
+                    pendingHighlightName = highlight;
                 }
             } else if(requestCode == 757 || resultCode == 757) {
                 if (data == null || data.getData() == null) return;
@@ -3330,10 +3335,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         try {
             if (pendingDirToLoad != null) {
                 String toLoad = pendingDirToLoad;
+                String toHighlight = pendingHighlightName;
                 pendingDirToLoad = null;
+                pendingHighlightName = null;
                 boolean p1 = lastPaneSelected == 1;
                 setSelectedPane(p1 ? 1 : 2);
-                loadFolderInPaneAsync(new File(toLoad), p1, true);
+                loadFolderInPaneAsync(new File(toLoad), p1, true, toHighlight != null ? () -> {
+                    handler.postDelayed(() -> highlightAndFocusItem(p1, toHighlight), 150);
+                } : null);
             }
         } catch (Exception ignored) {
         }
