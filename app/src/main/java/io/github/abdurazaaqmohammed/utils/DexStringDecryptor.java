@@ -5,6 +5,7 @@ import android.util.Base64;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.VersionMap;
+import com.android.tools.smali.dexlib2.builder.BuilderInstruction;
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21c;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
@@ -130,7 +131,7 @@ public final class DexStringDecryptor {
         }
 
         MutableMethodImplementation mutable = new MutableMethodImplementation(impl);
-        List<Instruction> instructions = mutable.getInstructions();
+        List<BuilderInstruction> instructions = mutable.getInstructions();
         int count = 0;
 
         // Track constants held in registers (register index -> string value or integer key)

@@ -9,8 +9,12 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+
+import io.github.abdurazaaqmohammed.utils.DexRepairEngine;
+import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;

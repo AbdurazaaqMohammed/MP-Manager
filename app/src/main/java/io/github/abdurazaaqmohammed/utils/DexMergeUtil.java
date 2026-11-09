@@ -68,9 +68,9 @@ public final class DexMergeUtil {
         for (ClassDef c : allClasses) {
             currentPool.internClass(c);
 
-            int methodCount = currentPool.getMethodSection().getItemCount();
-            int fieldCount = currentPool.getFieldSection().getItemCount();
-            int typeCount = currentPool.getTypeSection().getItemCount();
+            int methodCount = currentPool.methodSection.getItemCount();
+            int fieldCount = currentPool.fieldSection.getItemCount();
+            int typeCount = currentPool.typeSection.getItemCount();
 
             if (methodCount >= MAX_SECTION_LIMIT || fieldCount >= MAX_SECTION_LIMIT || typeCount >= MAX_SECTION_LIMIT) {
                 File currentOut = getOutputFile(parentDir, prefix, dexIndex);
@@ -82,7 +82,7 @@ public final class DexMergeUtil {
             }
         }
 
-        if (currentPool.getClassSection().getItemCount() > 0 || generatedFiles.isEmpty()) {
+        if (currentPool.classSection.getItemCount() > 0 || generatedFiles.isEmpty()) {
             File currentOut = getOutputFile(parentDir, prefix, dexIndex);
             writePoolToFile(currentPool, currentOut);
             generatedFiles.add(currentOut);
