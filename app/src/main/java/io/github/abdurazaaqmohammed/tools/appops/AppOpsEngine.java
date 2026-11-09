@@ -478,6 +478,19 @@ public class AppOpsEngine {
         Collections.sort(data.appOps, (a, b) -> a.label.compareToIgnoreCase(b.label));
     }
 
+    private static String mapPermToOp(String simplePermName) {
+        if ("POST_NOTIFICATIONS".equals(simplePermName)) return "POST_NOTIFICATION";
+        if ("ACCESS_COARSE_LOCATION".equals(simplePermName)) return "COARSE_LOCATION";
+        if ("ACCESS_FINE_LOCATION".equals(simplePermName)) return "FINE_LOCATION";
+        return simplePermName;
+    }
+
+    private static String getOpMode(Map<String, String[]> opsMap, String op) {
+        if (opsMap == null || op == null) return "default";
+        String[] val = opsMap.get(op);
+        return (val != null && !TextUtils.isEmpty(val[0])) ? val[0] : "default";
+    }
+
     private static boolean isPermissionGranted(PackageInfo pi, String permission) {
         if (pi.requestedPermissions == null || pi.requestedPermissionsFlags == null) return false;
         for (int i = 0; i < pi.requestedPermissions.length; i++) {
