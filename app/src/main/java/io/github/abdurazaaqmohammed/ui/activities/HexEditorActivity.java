@@ -59,6 +59,7 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
@@ -1632,7 +1633,9 @@ public class HexEditorActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_unsaved))
                 .setMessage(getString(R.string.hex_discard_unsaved))
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(R.string.minimize, (d, w) ->
+                        MinimizedEditors.minimize(this, R.string.hex_editor,
+                                file != null ? file.getName() : null))
                 .setPositiveButton(R.string.save, (d, w) -> saveChanges(this::finish))
                 .setNeutralButton(R.string.delete, (d, w) -> finish())
                 .show();

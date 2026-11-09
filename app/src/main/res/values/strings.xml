@@ -825,6 +825,9 @@ Layout Inspector
     <string name="search_curr">Search in current results</string>
     <string name="rep_curr">Replace in current results</string>
     <string name="clear_search_results">Clear search results</string>
+    <string name="minimize">Minimize</string>
+    <string name="minimized_processes">Minimized Processes</string>
+    <string name="minimized_close_all">Close all</string>
     <string name="installed_successfully">%1$s installed successfully</string>
     <string name="paste_from">Paste from</string>
     <string name="inspector">Inspector</string>

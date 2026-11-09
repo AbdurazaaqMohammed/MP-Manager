@@ -112,6 +112,7 @@ import java.util.Objects;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.rosemoe.sora.text.Content;
@@ -1617,7 +1618,22 @@ public class DexEditorActivity extends BaseActivity {
             builder.setPositiveButton(R.string.save_and_exit, (dialog, which) -> new SaveAndExitClickListener().onClick(null, 0));
         }
 
-        builder.setNegativeButton(android.R.string.cancel, null);
+        builder.setNegativeButton(R.string.minimize, (dialog, which) -> {
+            String source = null;
+            Intent launch = getIntent();
+            if (launch != null) {
+                String zip = launch.getStringExtra("zipFilePath");
+                if (zip != null) {
+                    source = new File(zip).getName();
+                } else {
+                    List<String> dexPaths = launch.getStringArrayListExtra("SelectedDexFiles");
+                    if (dexPaths != null && !dexPaths.isEmpty()) {
+                        source = new File(dexPaths.get(0)).getName();
+                    }
+                }
+            }
+            MinimizedEditors.minimize(this, R.string.dex_editor_plus, source);
+        });
         builder.setNeutralButton(R.string.exit_directly, (dialog, which) -> exitActivity());
         builder.show();
     }
