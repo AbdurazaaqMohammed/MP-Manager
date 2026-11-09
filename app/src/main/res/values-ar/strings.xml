@@ -2059,6 +2059,15 @@
     <string name="payload_extract_all_success">تم استخراج %1$d قسم بنجاح</string>
     <string name="payload_copy_hash">نسخ تجزئة SHA-256</string>
 
+    <!-- Safety warnings for sensitive tools -->
+    <string name="safety_warning_title">⚠️ تحذير للأمان</string>
+    <string name="warning_dont_show_again">لا تُظهر هذا التحذير مرة أخرى</string>
+    <string name="warning_proceed">فهمت، متابعة</string>
+    <string name="setedit_open_warning">يقوم هذا المحرر بتعديل إعدادات النظام والإعدادات الآمنة والعامة وخصائص النظام بامتيازات الروت.\n\nتغيير أو حذف الإعداد الخاطئ قد يتسبب في تعطل التطبيقات أو تلف ميزات الجهاز (الكاميرا، المستشعرات، الشبكة) أو اضطرارك لمسح الجهاز بالكامل لاستعادة عمله.\n\nلا تقم بتعديل القيم إلا إذا كنت تفهمها تماماً، ويُفضل تدوين القيمة الأصلية قبل تغييرها.</string>
+    <string name="setedit_write_confirm_title">تأكيد الكتابة</string>
+    <string name="setedit_write_confirm_msg">أنت على وشك الكتابة في جدول %1$s بامتيازات الروت:\n\n%2$s = %3$s\n\nالكتابة إلى إعدادات النظام أو الخصائص قد تسبب عدم استقرار جهازك. هل تريد المتابعة؟</string>
+    <string name="dumper_open_warning">تقوم هذه الأداة بقراءة الأقسام الخام ويمكنها تفليش الصور إليها مباشرة (dd إلى أجهزة الكتل).\n\nتفليش صورة غير متوافقة أو تالفة أو خاطئة قد يتسبب في تعطيل جهازك بشكل دائم — بما في ذلك الأقسام الحرجة مثل boot أو المودم أو الفيرموير.\n\nالصور المسحوبة قد تحتوي أيضاً على بيانات حساسة (IMEI، المفاتيح، البيانات الشخصية)، لذا احتفظ بها وشاركها بحذر.\n\nاستخدم الأداة على مسؤوليتك الخاصة.</string>
+
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">ساحب الأقسام (Partition Dumper)</string>
     <string name="tool_partition_dumper_subtitle">استخراج وتفريغ أقسام الهاردوير والأقسام الديناميكية بصيغة .img</string>

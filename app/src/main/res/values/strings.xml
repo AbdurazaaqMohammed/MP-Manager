@@ -2283,6 +2283,15 @@ Strings are sent to the external service you configured.</string>
     <string name="payload_extract_all_success">Extracted %1$d partitions</string>
     <string name="payload_copy_hash">Copy SHA-256 Hash</string>
 
+    <!-- Safety warnings for sensitive tools -->
+    <string name="safety_warning_title">⚠️ Safety Warning</string>
+    <string name="warning_dont_show_again">Don\'t show this warning again</string>
+    <string name="warning_proceed">I understand, proceed</string>
+    <string name="setedit_open_warning">This editor modifies Android system, secure, and global settings and system properties with root privileges.\n\nChanging or deleting the wrong setting can cause app crashes, break device features (camera, sensors, network), or force you to wipe your device to restore functionality.\n\nOnly modify values you fully understand. Prefer noting down the original value before changing it.</string>
+    <string name="setedit_write_confirm_title">Confirm write</string>
+    <string name="setedit_write_confirm_msg">You are about to write to the %1$s table with root privileges:\n\n%2$s = %3$s\n\nWriting system settings or properties can destabilize your device. Continue?</string>
+    <string name="dumper_open_warning">This tool reads raw partitions and can flash images directly to them (dd to block devices).\n\nFlashing an incompatible, corrupt, or wrong image can permanently brick your device — including critical partitions such as boot, modem, or firmware.\n\nDumped images may also contain sensitive data (IMEI, keys, personal data). Store and share them carefully.\n\nUse at your own risk.</string>
+
     <!-- Partition Dumper -->
     <string name="tool_partition_dumper">Partition Dumper</string>
     <string name="tool_partition_dumper_subtitle">Dump device hardware &amp; dynamic partitions to .img</string>

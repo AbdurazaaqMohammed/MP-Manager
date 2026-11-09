@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.features.dumper;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -12,6 +13,7 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -26,6 +28,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -66,6 +69,7 @@ public final class PartitionDumperDialog {
     private static List<PartitionItem> sCachedPartitions;
     private static String sCachedActiveSlot;
     private static List<String> sCachedSlotDiffs;
+    private static final String PREF_WARNED_DUMPER = "pref_warned_dumper_danger";
 
     public static void clearCache() {
         sCachedPartitions = null;
@@ -75,6 +79,30 @@ public final class PartitionDumperDialog {
 
     public static void show(AppCompatActivity activity) {
         if (activity == null || activity.isFinishing()) return;
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        if (!prefs.getBoolean(PREF_WARNED_DUMPER, false)) {
+            View view = LayoutInflater.from(activity).inflate(R.layout.dialog_safety_warning, null, false);
+            TextView tvMsg = view.findViewById(R.id.tvWarningMessage);
+            CheckBox cbDontShow = view.findViewById(R.id.cbDontShowAgain);
+            tvMsg.setText(R.string.dumper_open_warning);
+            new MaterialAlertDialogBuilder(activity)
+                    .setTitle(R.string.safety_warning_title)
+                    .setView(view)
+                    .setCancelable(false)
+                    .setPositiveButton(R.string.warning_proceed, (d, w) -> {
+                        if (cbDontShow.isChecked()) {
+                            prefs.edit().putBoolean(PREF_WARNED_DUMPER, true).apply();
+                        }
+                        loadAndDisplay(activity);
+                    })
+                    .show();
+            return;
+        }
+        loadAndDisplay(activity);
+    }
+
+    private static void loadAndDisplay(AppCompatActivity activity) {
 
         if (sCachedPartitions != null && !sCachedPartitions.isEmpty()) {
             displayMainDialog(activity, sCachedPartitions, sCachedActiveSlot, sCachedSlotDiffs);
