@@ -837,6 +837,8 @@
     <string name="org_unit">واحد سازمانی</string>
     <string name="organize_sidebar">سازماندهی نوار کناری</string>
     <string name="other">دیگر</string>
+    <string name="general">عمومی</string>
+    <string name="files">فایل‌ها</string>
     <string name="output_exists_msg">‏«%1$s» از قبل وجود دارد.</string>
     <string name="output_exists_title">پرونده از قبل وجود دارد</string>
     <string name="overriding_methods_found">%1$d روش بازنویسی پیدا شد. آیا می‌خواهید موارد استفاده روش‌های بازنویسی را جستجو کنید؟</string>

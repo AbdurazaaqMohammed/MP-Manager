@@ -4,6 +4,8 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -387,6 +389,140 @@ public class SignatureKeyDialog {
                 }
             });
             ksmd.show(activity.getSupportFragmentManager(), "KeyStoreMakerDialog");
+        });
+    }
+
+    /**
+     * Wires the signature fields embedded in a settings screen (see
+     * view_signature_fields.xml, included by the Signing settings card) so
+     * every change is persisted immediately — unlike {@link #show}, which
+     * only saves on the dialog's OK button.
+     */
+    public static void bindLive(AppCompatActivity activity, View view) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+
+        CompoundButton view1 = view.findViewById(R.id.v1);
+        CompoundButton view2 = view.findViewById(R.id.v2);
+        CompoundButton view3 = view.findViewById(R.id.v3);
+        CompoundButton view4 = view.findViewById(R.id.v4);
+        view1.setChecked(prefs.getBoolean("v1", true));
+        view2.setChecked(prefs.getBoolean("v2", true));
+        view3.setChecked(prefs.getBoolean("v3", true));
+        view4.setChecked(prefs.getBoolean("v4", false));
+        view1.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("v1", c).apply());
+        view2.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("v2", c).apply());
+        view3.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("v3", c).apply());
+        view4.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("v4", c).apply());
+
+        CompoundButton cbZipalign = view.findViewById(R.id.cb_zipalign);
+        cbZipalign.setChecked(prefs.getBoolean("zipalign", true));
+        cbZipalign.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("zipalign", c).apply());
+
+        TextView passwordEt = view.findViewById(R.id.et_password);
+        CompoundButton cbSavePassword = view.findViewById(R.id.cb_save_password);
+        boolean savePassword = prefs.getBoolean("save_password", false);
+        cbSavePassword.setChecked(savePassword);
+        if (savePassword) {
+            String savedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", ""));
+            if (!TextUtils.isEmpty(savedPass)) passwordEt.setText(savedPass);
+        }
+        cbSavePassword.setOnCheckedChangeListener((b, checked) -> {
+            prefs.edit().putBoolean("save_password", checked).apply();
+            String pass = passwordEt.getText() != null ? passwordEt.getText().toString() : "";
+            if (checked && !TextUtils.isEmpty(pass)) {
+                prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(pass)).apply();
+            } else prefs.edit().remove("keyPass").apply();
+        });
+        passwordEt.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                String pass = s == null ? "" : s.toString();
+                if (prefs.getBoolean("save_password", false) && !TextUtils.isEmpty(pass)) {
+                    prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(pass)).apply();
+                } else prefs.edit().remove("keyPass").apply();
+            }
+        });
+
+        CompoundButton cbBiometric = view.findViewById(R.id.cb_biometric);
+        cbBiometric.setVisibility(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? View.VISIBLE : View.GONE);
+        cbBiometric.setChecked(prefs.getBoolean("useBiometrics", false));
+        cbBiometric.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("useBiometrics", c).apply());
+
+        File keysDir = new File(
+                Environment.getExternalStorageDirectory().getPath() + File.separatorChar + "MT2"
+                        + File.separatorChar + "keys"
+        );
+        String PREF_SIGNATURE_PATHS = "signature_key_paths";
+        List<String> signaturePaths = new ArrayList<>();
+        signaturePaths.addAll(getKeystoreFiles(keysDir));
+        signaturePaths.addAll(getSavedPaths(prefs, PREF_SIGNATURE_PATHS));
+        try {
+            String debugKeyPath = FileUtils.getDebugKeystore(activity).getPath();
+            if (!signaturePaths.contains(debugKeyPath)) signaturePaths.add(debugKeyPath);
+        } catch (Exception ignored) {
+        }
+        signaturePaths = new ArrayList<>(dedupe(signaturePaths));
+        Collections.sort(signaturePaths);
+        final List<String> finalPaths = signaturePaths;
+
+        AutoCompleteTextView actv = view.findViewById(R.id.actv_signature_key);
+        ArrayAdapter<String> ddAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_dropdown_item_1line, signaturePaths);
+        String savedKeyPath = prefs.getString("keyPath", null);
+        if (!TextUtils.isEmpty(savedKeyPath) && signaturePaths.contains(savedKeyPath)) {
+            actv.setText(savedKeyPath, false);
+        }
+        actv.setAdapter(ddAdapter);
+        actv.setOnItemClickListener((p, v, position, id) ->
+                prefs.edit().putString("keyPath", finalPaths.get(position)).apply());
+
+        MaterialButton btnPick = view.findViewById(R.id.btn_pick_file);
+        btnPick.setOnClickListener(v -> {
+            FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
+            properties.selection_mode = FilePickerDialog.SINGLE_MODE;
+            properties.selection_type = FilePickerDialog.FILE_SELECT;
+            properties.root = new File(keysDir.getPath());
+            properties.offset = new File(keysDir.getPath());
+            properties.preferenceKey = "signature";
+            properties.extensions = new String[]{"jks", "keystore", "p12", "pfx", "pk8", "pem"};
+
+            FilePickerDialog fpd = new FilePickerDialog(activity, properties);
+            fpd.setDialogSelectionListener(files -> {
+                if (files == null || files.length == 0 || files[0] == null) return;
+                String path = files[0];
+                actv.setText(path, false);
+                prefs.edit()
+                        .putStringSet(PREF_SIGNATURE_PATHS, new HashSet<>(finalPaths))
+                        .putString("keyPath", path).apply();
+                if (!finalPaths.contains(path)) {
+                    finalPaths.add(path);
+                    Collections.sort(finalPaths);
+                    ddAdapter.clear();
+                    ddAdapter.addAll(finalPaths);
+                    ddAdapter.notifyDataSetChanged();
+                }
+                Extensions.showMessage(activity, R.string.signature_file_set);
+            });
+            fpd.show();
+        });
+
+        view.findViewById(R.id.btn_reset_key).setOnClickListener(v -> {
+            prefs.edit().remove("keyPath").remove("keyPass").remove("useBiometrics").putBoolean("save_password", false).apply();
+            actv.setText("", false);
+            passwordEt.setText("");
+            cbSavePassword.setChecked(false);
+            cbBiometric.setChecked(false);
+            Extensions.showMessage(activity, R.string.signature_key_reset);
+        });
+
+        TextView signedBy = view.findViewById(R.id.signerInput);
+        signedBy.setText(prefs.getString("signedBy", "Android Gradle 8.0.2"));
+        signedBy.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                prefs.edit().putString("signedBy", s == null ? "" : s.toString()).apply();
+            }
         });
     }
 

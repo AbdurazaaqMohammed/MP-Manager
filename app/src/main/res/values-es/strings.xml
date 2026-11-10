@@ -293,6 +293,8 @@
     <string name="owner">Propietario</string>
     <string name="group">Grupo</string>
     <string name="other">Otros</string>
+    <string name="general">General</string>
+    <string name="files">Archivos</string>
     <string name="refactored">Refactorizado %1$s</string>
     <string name="no_root_info_available">No hay información de root disponible</string>
     <string name="fs_entries">%1$s · %2$d entradas</string>

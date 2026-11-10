@@ -292,6 +292,8 @@
     <string name="owner">Владелец</string>
     <string name="group">Группа</string>
     <string name="other">Остальные</string>
+    <string name="general">Общие</string>
+    <string name="files">Файлы</string>
     <string name="refactored">Рефакторинг %1$s</string>
     <string name="no_root_info_available">Нет информации о root</string>
     <string name="fs_entries">%1$s · %2$d записей</string>

@@ -342,6 +342,8 @@
     <string name="owner">المالك</string>
     <string name="group">المجموعة</string>
     <string name="other">الآخرين</string>
+    <string name="general">عام</string>
+    <string name="files">الملفات</string>
     <string name="refactored">تمت إعادة الهيكلة %1$s</string>
     <string name="no_root_info_available">لا تتوفر معلومات الروت</string>
     <string name="fs_entries">%1$s · %2$d إدخالات</string>

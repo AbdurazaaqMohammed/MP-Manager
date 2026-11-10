@@ -29,7 +29,6 @@ import android.widget.EditText;
 import android.widget.Filter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -69,7 +68,6 @@ import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.SectionCollapse;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.SettingsBackupHelper;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
@@ -98,6 +96,15 @@ public class SettingsController {
 
     public interface ExternalSettingLauncher {
         void launch(Intent intent, Consumer<ActivityResult> callback);
+    }
+
+    /**
+     * Minimal lookup surface for the settings UI. The sections live on
+     * separate ViewPager2 pages, so the controller looks views up through
+     * this instead of a single inflated layout.
+     */
+    public interface ViewFinder {
+        <T extends View> T findViewById(int id);
     }
 
     private final AppCompatActivity activity;
@@ -153,7 +160,7 @@ public class SettingsController {
         System.exit(0);
     }
 
-    public void attach(ScrollView settingsDialog) {
+    public void attach(ViewFinder settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
         // Accent color (follow material color / presets / custom picker).
@@ -295,7 +302,10 @@ public class SettingsController {
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
-        settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(v -> SignatureKeyDialog.show(activity));
+        // Signature options are embedded in the Signing card instead of the old
+        // "Sign Settings" dialog button; every change persists immediately.
+        View signingCard = settingsDialog.findViewById(R.id.sectionSigningCard);
+        if (signingCard != null) SignatureKeyDialog.bindLive(activity, signingCard);
         setupAppearanceSettings(settingsDialog, settings);
         setupPaneHighlightSettings(settingsDialog, settings);
         setupFontSettings(settingsDialog, settings);
@@ -322,10 +332,9 @@ public class SettingsController {
 
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> new UIHelper(activity).showAboutDialog());
         setupPluginSettings(settingsDialog, settings);
-        setupCollapsibleSections(settingsDialog);
     }
 
-    public void persist(ScrollView root) {
+    public void persist(ViewFinder root) {
         saveSuCommand(root);
         saveDateFormat(root);
         saveSearchHistoryLimit(root);
@@ -338,7 +347,7 @@ public class SettingsController {
      * key the plugin declares) and one button per {@link SettingAction}.
      * No section is added when no plugin contributes settings.
      */
-    private void setupPluginSettings(ScrollView root, SharedPreferences settings) {
+    private void setupPluginSettings(ViewFinder root, SharedPreferences settings) {
         List<SettingToggle> toggles = ExtensionRegistry.settingToggles();
         List<SettingAction> actions = ExtensionRegistry.settingActions();
         List<ExternalActions.Entry> external = new ArrayList<>();
@@ -350,7 +359,8 @@ public class SettingsController {
                 && (actions == null || actions.isEmpty())
                 && (external == null || external.isEmpty())) return;
         View rootView = root.findViewById(R.id.settingsRoot);
-        ViewGroup container = rootView instanceof ViewGroup ? (ViewGroup) rootView : root;
+        ViewGroup container = rootView instanceof ViewGroup
+                ? (ViewGroup) rootView : new LinearLayout(activity);
         float density = activity.getResources().getDisplayMetrics().density;
         int pad = (int) (16 * density);
 
@@ -490,22 +500,6 @@ public class SettingsController {
         card.setId(R.id.sectionPluginsCard);
     }
 
-    /**
-     * Makes every titled settings card collapsible, restoring the persisted
-     * collapsed state for each. Runs after all sections (including the dynamic
-     * Plugins card) are attached.
-     */
-    private void setupCollapsibleSections(ScrollView root) {
-        SectionCollapse.applyToSection(root, R.id.sectionAppearanceCard, "appearance");
-        SectionCollapse.applyToSection(root, R.id.sectionFoldersCard, "folders");
-        SectionCollapse.applyToSection(root, R.id.sectionFileOpsCard, "fileops");
-        SectionCollapse.applyToSection(root, R.id.sectionElevatedCard, "elevated");
-        SectionCollapse.applyToSection(root, R.id.sectionBehaviorCard, "behavior");
-        SectionCollapse.applyToSection(root, R.id.sectionSigningCard, "signing");
-        SectionCollapse.applyToSection(root, R.id.sectionUpdateCard, "update");
-        SectionCollapse.applyToSection(root, R.id.sectionPluginsCard, "plugins");
-    }
-
     /** Opens an external setting config screen after consent; persists booleans. */
     private void openExternalSetting(ExternalActions.Entry e, String key,
                                      boolean isAction, SharedPreferences settings) {
@@ -537,7 +531,7 @@ public class SettingsController {
         }
     }
 
-    private void setupLanguageSettings(ScrollView root) {
+    private void setupLanguageSettings(ViewFinder root) {
         AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
         String[] langTags = {"", "ar", "en", "es", "fa", "id", "ru", "th", "zh-CN"};
         String[] langLabels = {activity.getString(R.string.language_system), "العربية", "English", "Español", "فارسی", "Bahasa Indonesia", "Русский", "ภาษาไทย", "中文 (简体)"};
@@ -597,7 +591,7 @@ public class SettingsController {
         };
     }
 
-    private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
+    private void setupAppearanceSettings(ViewFinder root, SharedPreferences settings) {
         TextView sizeLabel = root.findViewById(R.id.fileSizeLabel);
         SeekBar sizeSeek = root.findViewById(R.id.fileSizeSeek);
         TextView linesLabel = root.findViewById(R.id.fileLinesLabel);
@@ -719,7 +713,7 @@ public class SettingsController {
         updatePreview.run();
     }
 
-    private void setupPaneHighlightSettings(ScrollView root, SharedPreferences settings) {
+    private void setupPaneHighlightSettings(ViewFinder root, SharedPreferences settings) {
         AutoCompleteTextView highlightTv = root.findViewById(R.id.paneHighlightTv);
         String[] values = {"none", "background", "underline", "border", "background_underline"};
         String[] labels = {
@@ -751,7 +745,7 @@ public class SettingsController {
 
     private final Map<String, Typeface> fontPreviewCache = new HashMap<>();
 
-    private void setupFontSettings(ScrollView root, SharedPreferences settings) {
+    private void setupFontSettings(ViewFinder root, SharedPreferences settings) {
         AutoCompleteTextView fontTv = root.findViewById(R.id.fontTv);
         List<File> systemFonts = AppFont.systemFonts();
         List<String> values = new ArrayList<>();
@@ -857,7 +851,7 @@ public class SettingsController {
         picker.show();
     }
 
-    private void saveDateFormat(ScrollView root) {
+    private void saveDateFormat(ViewFinder root) {
         try {
             AutoCompleteTextView dateTv = root.findViewById(R.id.dateFormatTv);
             String pattern = dateTv.getText() != null ? dateTv.getText().toString().trim() : "";
@@ -869,7 +863,7 @@ public class SettingsController {
         }
     }
 
-    private void saveSearchHistoryLimit(ScrollView root) {
+    private void saveSearchHistoryLimit(ViewFinder root) {
         try {
             EditText et = root.findViewById(R.id.searchHistoryLimitEt);
             if (et == null || et.getText() == null) return;
@@ -883,7 +877,7 @@ public class SettingsController {
         }
     }
 
-    private void setupFolderSettings(ScrollView root, SharedPreferences settings) {
+    private void setupFolderSettings(ViewFinder root, SharedPreferences settings) {
         AutoCompleteTextView startup1 = root.findViewById(R.id.startupTv1);
         AutoCompleteTextView startup2 = root.findViewById(R.id.startupTv2);
         String[] labels = {activity.getString(R.string.opt_home_folder), activity.getString(R.string.opt_last_opened)};
@@ -942,7 +936,7 @@ public class SettingsController {
         picker.show();
     }
 
-    private void setupFileOpsSettings(ScrollView root, SharedPreferences settings) {
+    private void setupFileOpsSettings(ViewFinder root, SharedPreferences settings) {
         CompoundButton backupSwitch = root.findViewById(R.id.backupSwitch);
         backupSwitch.setChecked(settings.getBoolean("gen_backup", true));
         backupSwitch.setOnCheckedChangeListener((v, checked) ->
@@ -1012,13 +1006,14 @@ public class SettingsController {
                 settings.edit().putString("compressLevel", levels.get(pos)).apply());
     }
 
-    private void setupAccessSettings(ScrollView root, SharedPreferences settings) {
+    private void setupAccessSettings(ViewFinder root, SharedPreferences settings) {
         RootManager rootManager = RootManager.getInstance(activity);
         AutoCompleteTextView workingModeTv = root.findViewById(R.id.workingModeTv);
         View groupRoot = root.findViewById(R.id.groupRoot);
         View groupShizuku = root.findViewById(R.id.groupShizuku);
         View groupShizukuOptions = root.findViewById(R.id.groupShizukuOptions);
         View groupFileOps = root.findViewById(R.id.groupFileOps);
+        View groupInstall = root.findViewById(R.id.groupInstall);
         MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
         MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
         MaterialSwitch shizukuSilentToggle = root.findViewById(R.id.shizukuSilentToggle);
@@ -1088,6 +1083,9 @@ public class SettingsController {
             groupRoot.setVisibility(rootOk ? View.VISIBLE : View.GONE);
             groupShizuku.setVisibility(isSh && ShizukuManager.isRunning() ? View.VISIBLE : View.GONE);
             groupShizukuOptions.setVisibility(shizukuReady ? View.VISIBLE : View.GONE);
+            // Silent installing and the install flags need root or Shizuku;
+            // hide the whole install section in non-root mode.
+            groupInstall.setVisibility(rootOk || shizukuReady ? View.VISIBLE : View.GONE);
             groupFileOps.setVisibility(rootOk || shizukuReady ? View.VISIBLE : View.GONE);
 
             silentInstallToggle.setEnabled(rootOk);
@@ -1265,7 +1263,7 @@ public class SettingsController {
         ShizukuManager.requestPermission(activity, holder[0]);
     }
 
-    private void saveSuCommand(ScrollView root) {
+    private void saveSuCommand(ViewFinder root) {
         try {
             TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
             String cmd = suCommandEt.getText() != null ? suCommandEt.getText().toString().trim() : "";

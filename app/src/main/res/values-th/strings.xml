@@ -789,6 +789,8 @@
     <string name="org_unit">หน่วยงานในองค์กร</string>
     <string name="organize_sidebar">จัดระเบียบแถบด้านข้าง</string>
     <string name="other">อื่นๆ</string>
+    <string name="general">ทั่วไป</string>
+    <string name="files">ไฟล์</string>
     <string name="output_exists_msg">"%1$s" มีอยู่แล้ว</string>
     <string name="output_exists_title">ไฟล์มีอยู่แล้ว</string>
     <string name="overriding_methods_found">พบ %1$d method ที่ override คุณต้องการค้นหาการใช้งานของ method ที่ override หรือไม่?</string>

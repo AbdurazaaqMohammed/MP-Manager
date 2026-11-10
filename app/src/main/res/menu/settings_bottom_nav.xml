@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_files"
+        android:icon="@drawable/ic_folder_mt"
+        android:title="@string/files" />
+
+    <item
+        android:id="@+id/nav_root"
+        android:icon="@drawable/terminal_24px"
+        android:title="@string/root" />
+
+    <item
+        android:id="@+id/nav_general"
+        android:icon="@drawable/baseline_settings_24"
+        android:title="@string/general" />
+
+    <item
+        android:id="@+id/nav_behavior"
+        android:icon="@drawable/ic_tune_24"
+        android:title="@string/behavior" />
+
+    <item
+        android:id="@+id/nav_other"
+        android:icon="@drawable/baseline_more_vert_24"
+        android:title="@string/other" />
+</menu>
