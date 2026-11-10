@@ -110,11 +110,25 @@ public class FileUtils {
         }
     }
 
-    public static final String[] IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif"};
+    public static final String[] IMAGE_EXTS = {
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif",
+            ".svg", ".ai", ".psd", ".dng", ".raw", ".eps", ".indd", ".blend", ".fbx", ".obj", ".dae",
+            ".gltf", ".glb", ".stl", ".stp", ".step", ".iges", ".dwg", ".dxf"
+    };
     public static final String[] FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"};
-    public static final String[] VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv"};
-    public static final String[] AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"};
-    public static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".zst", ".zstd", ".tar.zst", ".tzst", ".apex", ".capex"};
+    public static final String[] VIDEO_EXTS = {
+            ".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv",
+            ".m2ts", ".ogv"
+    };
+    public static final String[] AUDIO_EXTS = {
+            ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus",
+            ".aif", ".aiff", ".amr", ".caf", ".mid", ".midi", ".mod", ".s3m", ".xm", ".it", ".oga", ".sf2"
+    };
+    public static final String[] ARCHIVE_EXTS = {
+            ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".zst", ".zstd", ".tar.zst", ".tzst",
+            ".apex", ".capex", ".aar", ".jar", ".deb", ".rpm", ".cpio", ".cbr", ".cbz", ".epub",
+            ".fb2", ".mtz", ".obb", ".pak", ".unitypackage", ".squashfs"
+    };
     public static final String[] TEXT_EXTS = {
             ".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".mjs", ".ts", ".jsx", ".tsx",
             ".java", ".kt", ".kts", ".md", ".smali", ".pro", ".gradle", ".properties", ".prop",
@@ -125,7 +139,9 @@ public class FileUtils {
             ".env", ".diff", ".patch", ".service", ".graphql", ".proto", ".pbtxt", ".lock",
             ".dts", ".fstab", ".te", ".cil", ".kl", ".kcm", ".idc", ".asm", ".s", ".zig",
             ".nim", ".scala", ".clj", ".erl", ".ex", ".exs", ".groovy", ".tex", ".har", ".asn",
-            ".mib", ".hex", ".sfz", ".fbs", ".apk_manifest", ".cue", ".m3u", ".m3u8", ".pls"
+            ".mib", ".hex", ".sfz", ".fbs", ".apk_manifest", ".cue", ".m3u", ".m3u8", ".pls",
+            ".djvu", ".ipynb", ".m", ".r", ".lsp", ".geojson", ".ndjson", ".gpx", ".kml", ".kmz",
+            ".ics", ".vcf", ".sha256", ".md5sum", ".srec", ".wat", ".ovpn", ".wireguard"
     };
     public static final String[] HTML_EXTS = {".html", ".htm", ".xhtml"};
 
