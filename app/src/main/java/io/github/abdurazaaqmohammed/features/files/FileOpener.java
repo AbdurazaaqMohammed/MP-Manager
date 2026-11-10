@@ -553,6 +553,20 @@ public class FileOpener {
 
     private void openSqliteViewer(File file) {
         withReadableCopy(file, readable -> {
+            if (readable == null || readable.length() < 16) {
+                Extensions.showMessage(context, R.string.cannot_open_item);
+                return;
+            }
+            try (FileInputStream fis = new FileInputStream(readable)) {
+                byte[] header = new byte[16];
+                if (fis.read(header) != 16 || !new String(header, StandardCharsets.US_ASCII).startsWith("SQLite format 3")) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+            } catch (Exception e) {
+                Extensions.showMessage(context, R.string.cannot_open_item);
+                return;
+            }
             Intent intent = new Intent(context, io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.class)
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
                     .putExtra(io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
@@ -825,7 +839,17 @@ public class FileOpener {
     private void showFontPreview(File file, String fileName) {
         withReadableCopy(file, readable -> {
             try {
-                Typeface tf = Typeface.createFromFile(readable);
+                Typeface tf;
+                try {
+                    tf = Typeface.createFromFile(readable);
+                } catch (RuntimeException e) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+                if (tf == null) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
                 LinearLayout root = new LinearLayout(context);
                 root.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
@@ -872,9 +896,25 @@ public class FileOpener {
 
     private void showPdfViewer(File file, String fileName) {
         withReadableCopy(file, readable -> {
+            if (readable == null || readable.length() < 4) {
+                Extensions.showMessage(context, R.string.cannot_open_item);
+                return;
+            }
+            try (FileInputStream fis = new FileInputStream(readable)) {
+                byte[] header = new byte[4];
+                if (fis.read(header) != 4 || header[0] != '%' || header[1] != 'P' || header[2] != 'D' || header[3] != 'F') {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+            } catch (Exception e) {
+                Extensions.showMessage(context, R.string.cannot_open_item);
+                return;
+            }
+            ParcelFileDescriptor pfd = null;
+            PdfRenderer renderer = null;
             try {
-                ParcelFileDescriptor pfd = ParcelFileDescriptor.open(readable, ParcelFileDescriptor.MODE_READ_ONLY);
-                PdfRenderer renderer = new PdfRenderer(pfd);
+                pfd = ParcelFileDescriptor.open(readable, ParcelFileDescriptor.MODE_READ_ONLY);
+                renderer = new PdfRenderer(pfd);
                 int pageCount = renderer.getPageCount();
                 if (pageCount <= 0) {
                     renderer.close();
@@ -983,6 +1023,10 @@ public class FileOpener {
 
                 dialogUtil.styleAlertDialog(dialog);
             } catch (Exception e) {
+                try {
+                    if (renderer != null) renderer.close();
+                    if (pfd != null) pfd.close();
+                } catch (Exception ignored) {}
                 new ErrorUtil(context).showError(e);
             }
         });
@@ -1729,7 +1773,8 @@ public class FileOpener {
         } catch (Exception ignored) {}
         if (tryRunBuiltinDefault(file, fileName)) return;
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
-        if (fileName.endsWith(".txt") || fileName.endsWith(".json")
+        if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)
+            || fileName.endsWith(".txt") || fileName.endsWith(".json")
             || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
             || fileName.endsWith(".gradle") || fileName.endsWith(".properties") || fileName.endsWith(".prop")
             || fileName.endsWith(".conf") || fileName.endsWith(".cfg") || fileName.endsWith(".ini")

@@ -63,6 +63,7 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
                 || lower.endsWith(".zst") || lower.endsWith(".zstd")
+                || lower.endsWith(".apex") || lower.endsWith(".capex")
                 || lower.endsWith(".win") || lower.matches(".*\\.win\\d+$")
                 || SplitArchiveUtil.isSplitArchiveName(fileName);
     }

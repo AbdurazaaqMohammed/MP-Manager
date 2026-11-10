@@ -114,8 +114,19 @@ public class FileUtils {
     public static final String[] FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"};
     public static final String[] VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv"};
     public static final String[] AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"};
-    public static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".zst", ".zstd", ".tar.zst", ".tzst"};
-    public static final String[] TEXT_EXTS = {".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".java", ".kt", ".md", ".smali", ".pro", ".gradle", ".properties"};
+    public static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".zst", ".zstd", ".tar.zst", ".tzst", ".apex", ".capex"};
+    public static final String[] TEXT_EXTS = {
+            ".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".mjs", ".ts", ".jsx", ".tsx",
+            ".java", ".kt", ".kts", ".md", ".smali", ".pro", ".gradle", ".properties", ".prop",
+            ".conf", ".cfg", ".ini", ".yaml", ".yml", ".toml", ".rc", ".csv", ".tsv",
+            ".py", ".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".hxx", ".rs", ".go",
+            ".swift", ".dart", ".lua", ".php", ".rb", ".pl", ".sql", ".scss", ".sass", ".less",
+            ".vue", ".svelte", ".twig", ".hbs", ".liquid", ".srt", ".vtt", ".ass", ".lrc",
+            ".env", ".diff", ".patch", ".service", ".graphql", ".proto", ".pbtxt", ".lock",
+            ".dts", ".fstab", ".te", ".cil", ".kl", ".kcm", ".idc", ".asm", ".s", ".zig",
+            ".nim", ".scala", ".clj", ".erl", ".ex", ".exs", ".groovy", ".tex", ".har", ".asn",
+            ".mib", ".hex", ".sfz", ".fbs", ".apk_manifest", ".cue", ".m3u", ".m3u8", ".pls"
+    };
     public static final String[] HTML_EXTS = {".html", ".htm", ".xhtml"};
 
 
