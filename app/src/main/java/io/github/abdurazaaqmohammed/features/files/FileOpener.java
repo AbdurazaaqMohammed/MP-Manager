@@ -923,6 +923,9 @@ public class FileOpener {
                     return;
                 }
 
+                final PdfRenderer finalRenderer = renderer;
+                final ParcelFileDescriptor finalPfd = pfd;
+
                 int[] currentPage = new int[]{0};
 
                 LinearLayout root = new LinearLayout(context);
@@ -961,7 +964,7 @@ public class FileOpener {
 
                 Runnable renderPage = () -> {
                     try {
-                        PdfRenderer.Page page = renderer.openPage(currentPage[0]);
+                        PdfRenderer.Page page = finalRenderer.openPage(currentPage[0]);
                         int screenWidth = context.getResources().getDisplayMetrics().widthPixels - (pad * 4);
                         if (screenWidth <= 0) screenWidth = 800;
                         int targetWidth = screenWidth;
@@ -1016,8 +1019,8 @@ public class FileOpener {
                         if (currentBitmap[0] != null && !currentBitmap[0].isRecycled()) {
                             currentBitmap[0].recycle();
                         }
-                        renderer.close();
-                        pfd.close();
+                        finalRenderer.close();
+                        finalPfd.close();
                     } catch (Exception ignored) {}
                 });
 
