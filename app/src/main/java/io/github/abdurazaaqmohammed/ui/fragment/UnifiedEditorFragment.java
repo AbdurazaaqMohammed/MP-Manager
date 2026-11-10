@@ -1363,11 +1363,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (q >= 0) n = n.substring(0, q);
         int dot = n.lastIndexOf('.');
         if (dot < 0 || dot == n.length() - 1) return null;
-        switch (n.substring(dot + 1)) {
             case "xml":
-            case "axml": return "text.xml";
+            case "axml":
+            case "apk_manifest": return "text.xml";
             case "java":
-            case "class": return "source.java";
+            case "class":
+            case "kt":
+            case "kts":
+            case "groovy":
+            case "scala": return "source.java";
             case "smali": return "source.smali";
             case "c":
             case "h": return "source.c";
@@ -1382,22 +1386,41 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             case "js":
             case "mjs":
             case "cjs":
-            case "jsx": return "source.js";
+            case "jsx":
+            case "ts":
+            case "tsx": return "source.js";
             case "html":
             case "htm":
-            case "xhtml": return "text.html.basic";
-            case "css": return "source.css";
+            case "xhtml":
+            case "vue":
+            case "svelte": return "text.html.basic";
+            case "css":
+            case "scss":
+            case "sass":
+            case "less": return "source.css";
             case "md":
             case "markdown": return "text.html.markdown";
-            case "json": return "source.json";
+            case "json":
+            case "har":
+            case "geojson": return "source.json";
             case "rs": return "source.rust";
             case "sh":
-            case "bash": return "source.shell";
+            case "bash":
+            case "zsh": return "source.shell";
             case "prop":
             case "properties":
             case "ini":
             case "conf":
-            case "cfg": return "source.prop";
+            case "cfg":
+            case "env":
+            case "toml":
+            case "service":
+            case "fstab":
+            case "kl":
+            case "kcm":
+            case "idc":
+            case "te":
+            case "rc": return "source.prop";
             default: return null;
         }
     }
