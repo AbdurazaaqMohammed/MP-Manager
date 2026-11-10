@@ -405,7 +405,6 @@ public class SidebarController {
         String msg = activity.getString(enabled ? R.string.organize_sidebar : R.string.done_organizing_sidebar);
         organizeButton.setContentDescription(msg);
         updateSettingsFooterVisibility(enabled);
-        Snackbar.make(activity.findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
     }
 
     public List<String> getSidebarSectionOrder() {
