@@ -92,9 +92,9 @@ public final class DexStringDecryptor {
                         directMethods,
                         virtualMethods
                 );
-                pool.internClass(updated);
+                pool.internClass(DexDebugStripper.strip(updated));
             } else {
-                pool.internClass(classDef);
+                pool.internClass(DexDebugStripper.strip(classDef));
             }
         }
 

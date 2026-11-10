@@ -491,7 +491,7 @@ public class FileOpener {
                     Extensions.showMessage(context, R.string.cannot_open_item);
                     return;
                 }
-                openHexEditorRootAware(file);
+                openHexEditorRootAware(file, zipFile, zipEntryPath);
                 return;
             case BUILTIN_MEDIA:
                 if (file == null) return;
@@ -2659,9 +2659,20 @@ public class FileOpener {
     }
 
     private void openHexEditorRootAware(File file) {
+        openHexEditorRootAware(file, null, null);
+    }
+
+    private void openHexEditorRootAware(File file, File zipFile, String zipEntryPath) {
         withReadableCopy(file, readable -> {
             Intent i = new Intent(context, HexEditorActivity.class)
                     .putExtra("path", readable.getAbsolutePath());
+            if (zipFile != null) {
+                i.putExtra("zf", zipFile.getAbsolutePath());
+                i.putExtra("zipFilePath", zipFile.getAbsolutePath());
+            }
+            if (zipEntryPath != null) {
+                i.putExtra("zipEntryPath", zipEntryPath);
+            }
             if (!readable.getAbsolutePath().equals(file.getAbsolutePath())) {
                 i.putExtra("rootOriginalPath", file.getAbsolutePath());
                 Extensions.showMessage(context, R.string.opened_with_root);

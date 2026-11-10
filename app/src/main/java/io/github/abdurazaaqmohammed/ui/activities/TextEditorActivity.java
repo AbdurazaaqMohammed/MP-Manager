@@ -377,9 +377,27 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
         btnFile.setOnLongClickListener(v -> {
             EditorTab t = getCurrentTab();
-            MinimizedEditors.minimize(this, R.string.text_editor, t != null ? t.title : null);
+            MinimizedEditors.minimize(this, R.string.text_editor, getTabMinimizeTitle(t));
             return true;
         });
+    }
+
+    private String getTabMinimizeTitle(EditorTab t) {
+        if (t == null) return null;
+        String baseName = t.title != null ? t.title : (t.file != null ? t.file.getName() : null);
+        String parentName = null;
+        if (t.zipFilePath != null && !t.zipFilePath.isEmpty()) {
+            parentName = new File(t.zipFilePath).getName();
+        } else if (t.rootOriginalPath != null && !t.rootOriginalPath.isEmpty()) {
+            File parent = new File(t.rootOriginalPath).getParentFile();
+            if (parent != null && !TextUtils.isEmpty(parent.getName())) {
+                parentName = parent.getName();
+            }
+        } else if (t.file != null && t.file.getParentFile() != null) {
+            String pName = t.file.getParentFile().getName();
+            if (!TextUtils.isEmpty(pName)) parentName = pName;
+        }
+        return MinimizedEditors.formatTitle(baseName, parentName);
     }
 
     private class TabRowAdapter extends RecyclerView.Adapter<TabRowAdapter.TabVH> {
@@ -1461,7 +1479,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                             finish();
                         })
                         .setNeutralButton(R.string.minimize, (dialog, which) ->
-                                MinimizedEditors.minimize(this, R.string.text_editor, t.title))
+                                MinimizedEditors.minimize(this, R.string.text_editor, getTabMinimizeTitle(t)))
                         .show();
                 return;
             }
@@ -1484,7 +1502,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         finish();
                     })
                     .setNeutralButton(R.string.minimize, (dialog, which) ->
-                            MinimizedEditors.minimize(this, R.string.text_editor, t.title))
+                            MinimizedEditors.minimize(this, R.string.text_editor, getTabMinimizeTitle(t)))
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
         } else if (!consumePendingArchiveUpdate(t)) {
@@ -1560,7 +1578,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                             finish();
                         })
                         .setNeutralButton(R.string.minimize, (dialog, which) ->
-                                MinimizedEditors.minimize(this, R.string.text_editor, t.title))
+                                MinimizedEditors.minimize(this, R.string.text_editor, getTabMinimizeTitle(t)))
                         .show();
                 return;
             }
@@ -1583,7 +1601,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         finish();
                     })
                     .setNeutralButton(R.string.minimize, (dialog, which) ->
-                            MinimizedEditors.minimize(this, R.string.text_editor, t.title))
+                            MinimizedEditors.minimize(this, R.string.text_editor, getTabMinimizeTitle(t)))
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
         } else if (!consumePendingArchiveUpdate(t)) super.onBackPressed();

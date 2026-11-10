@@ -58,10 +58,25 @@ public final class MinimizedEditors {
 
     private MinimizedEditors() {}
 
-    /** Convenience overload composing "Editor name – file name". */
+    /**
+     * Composes a descriptive label: "fileName - parentName", e.g.
+     * "AndroidManifest.xml - myApp.apk" or "classes.dex - Download".
+     */
+    public static String formatTitle(String fileName, String parentOrArchiveName) {
+        if (TextUtils.isEmpty(fileName)) return parentOrArchiveName != null ? parentOrArchiveName : "";
+        if (TextUtils.isEmpty(parentOrArchiveName)) return fileName;
+        return fileName + " - " + parentOrArchiveName;
+    }
+
+    /** Convenience overload composing "Editor name – file name [- parent/archive]". */
     public static void minimize(Activity activity, int editorLabelRes, String fileName) {
+        minimize(activity, editorLabelRes, fileName, null);
+    }
+
+    public static void minimize(Activity activity, int editorLabelRes, String fileName, String parentOrArchiveName) {
         String label = activity.getString(editorLabelRes);
-        minimize(activity, TextUtils.isEmpty(fileName) ? label : label + " – " + fileName);
+        String nameWithParent = formatTitle(fileName, parentOrArchiveName);
+        minimize(activity, TextUtils.isEmpty(nameWithParent) ? label : label + " – " + nameWithParent);
     }
 
     /**

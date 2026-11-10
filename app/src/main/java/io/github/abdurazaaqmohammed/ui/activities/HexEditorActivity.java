@@ -1709,11 +1709,32 @@ public class HexEditorActivity extends BaseActivity {
                 .setTitle(getString(R.string.hex_unsaved))
                 .setMessage(getString(R.string.hex_discard_unsaved))
                 .setNegativeButton(R.string.minimize, (d, w) ->
-                        MinimizedEditors.minimize(this, R.string.hex_editor,
-                                file != null ? file.getName() : null))
+                        MinimizedEditors.minimize(this, R.string.hex_editor, getHexMinimizeTitle()))
                 .setPositiveButton(R.string.save, (d, w) -> saveChanges(this::finish))
                 .setNeutralButton(R.string.delete, (d, w) -> finish())
                 .show();
+    }
+
+    private String getHexMinimizeTitle() {
+        if (file == null) return null;
+        String name = file.getName();
+        String parent = null;
+        Intent intent = getIntent();
+        if (intent != null) {
+            String zf = intent.getStringExtra("zf");
+            if (zf == null) zf = intent.getStringExtra("zipFilePath");
+            if (zf == null) zf = intent.getStringExtra("apkPath");
+            if (zf != null && !zf.isEmpty()) parent = new File(zf).getName();
+        }
+        if (parent == null) {
+            if (rootOriginalPath != null && !rootOriginalPath.isEmpty()) {
+                File rParent = new File(rootOriginalPath).getParentFile();
+                if (rParent != null && !TextUtils.isEmpty(rParent.getName())) parent = rParent.getName();
+            } else if (file.getParentFile() != null && !TextUtils.isEmpty(file.getParentFile().getName())) {
+                parent = file.getParentFile().getName();
+            }
+        }
+        return MinimizedEditors.formatTitle(name, parent);
     }
 
     /** Shared by the toolbar up-arrow and the system back gesture. */
@@ -1747,7 +1768,7 @@ public class HexEditorActivity extends BaseActivity {
                 View more = toolbar.findViewById(R.id.action_more);
                 if (more != null) {
                     more.setOnLongClickListener(v -> {
-                        MinimizedEditors.minimize(this, R.string.hex_editor, file != null ? file.getName() : null);
+                        MinimizedEditors.minimize(this, R.string.hex_editor, getHexMinimizeTitle());
                         return true;
                     });
                 }
