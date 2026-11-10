@@ -1741,6 +1741,18 @@ public class HexEditorActivity extends BaseActivity {
         menu.findItem(R.id.action_redo).setEnabled(!readOnly);
         menu.findItem(R.id.action_save).setVisible(!readOnly);
         menu.add(Menu.NONE, 0x4d5045, Menu.NONE, R.string.editor_enable_editing).setVisible(readOnly && writable);
+        MaterialToolbar toolbar = findViewById(R.id.hexToolbar);
+        if (toolbar != null) {
+            toolbar.post(() -> {
+                View more = toolbar.findViewById(R.id.action_more);
+                if (more != null) {
+                    more.setOnLongClickListener(v -> {
+                        MinimizedEditors.minimize(this, R.string.hex_editor, file != null ? file.getName() : null);
+                        return true;
+                    });
+                }
+            });
+        }
         return true;
     }
 

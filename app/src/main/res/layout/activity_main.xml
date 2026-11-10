@@ -378,6 +378,7 @@
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/sidebarSettingsCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
@@ -411,12 +412,24 @@
                     app:tint="?attr/colorPrimary" />
 
                 <TextView
+                    android:id="@+id/sidebarSettingsText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="16sp" />
+
+                <ImageButton
+                    android:id="@+id/sidebarSettingsHideButton"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/hide"
+                    android:padding="2dp"
+                    android:visibility="gone"
+                    android:src="@drawable/visibility_off_24px"
+                    app:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

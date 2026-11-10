@@ -769,6 +769,40 @@ public final class AccessManager {
         return -1;
     }
 
+    public static java.util.Map<String, Long> dirSizeTree(Context context, String path) {
+        java.util.Map<String, Long> map = new java.util.HashMap<>();
+        if (path == null || path.isEmpty()) return map;
+        try {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                RootManager rm = RootManager.getInstance(context);
+                RootManager.ShellResult r = rm.executeFs(
+                        "du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null", 20);
+                if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
+                    r = rm.execute("du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null", 20);
+                }
+                if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                    String[] lines = r.output().split("\n");
+                    for (String line : lines) {
+                        line = line.trim();
+                        if (line.isEmpty()) continue;
+                        String[] parts = line.split("\\s+", 2);
+                        if (parts.length == 2) {
+                            try {
+                                long kb = Long.parseLong(parts[0].trim());
+                                String p = parts[1].trim();
+                                if (kb >= 0 && !p.isEmpty()) {
+                                    map.put(p, kb * 1024L);
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return map;
+    }
+
     public static void warmUp(Context context) {
         try {
             if (active(context) == Backend.SHIZUKU) ShizukuManager.warmUp(context);

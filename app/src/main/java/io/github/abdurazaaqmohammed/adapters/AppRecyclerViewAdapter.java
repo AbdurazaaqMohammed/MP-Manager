@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -36,9 +37,15 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
     public final APKExtractorActivity apkExtractorActivity;
     public final List<AppInfo> appInfoList;
     public final List<AppInfo> filteredAppInfoList;
+    private java.util.Map<String, io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Entry> extractedIndex;
 
     private Comparator<AppInfo> currentComparator;
     private AppInfoFilter filter;
+
+    public void setExtractedIndex(java.util.Map<String, io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Entry> index) {
+        this.extractedIndex = index;
+        notifyDataSetChanged();
+    }
 
     public AppRecyclerViewAdapter(APKExtractorActivity activity, List<AppInfo> list) {
         this.apkExtractorActivity = activity;
@@ -201,6 +208,33 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             }
         }
 
+        // Corner status badge indicating extracted state
+        io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match match =
+                io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.findMatch(extractedIndex, appInfo);
+        if (match != null && match.file() != null && match.file().exists()) {
+            holder.cornerBadgeView.setVisibility(View.VISIBLE);
+            int color;
+            if (match.status() == io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match.STATUS_SAME) {
+                color = 0xFF4CAF50; // Green (identical version)
+            } else if (match.status() == io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match.STATUS_NEWER) {
+                color = 0xFFFFC107; // Yellow (extracted is newer)
+            } else {
+                color = 0xFFF44336; // Red (extracted is older)
+            }
+            holder.cornerBadgeView.setColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN);
+            final File targetFile = match.file();
+            holder.cornerBadgeView.setOnClickListener(v -> {
+                android.content.Intent result = new android.content.Intent();
+                result.putExtra("dirToLoad", targetFile.getParent());
+                result.putExtra("highlightName", targetFile.getName());
+                apkExtractorActivity.setResult(android.app.Activity.RESULT_OK, result);
+                apkExtractorActivity.finish();
+            });
+        } else {
+            holder.cornerBadgeView.setVisibility(View.GONE);
+            holder.cornerBadgeView.setOnClickListener(null);
+        }
+
         holder.itemView.setOnClickListener(v -> {
             int pos = holder.getBindingAdapterPosition();
             if (pos == RecyclerView.NO_POSITION) return;
@@ -269,6 +303,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         final TextView packageNameView;
         final ImageView appIconView;
         final View splitIconView;
+        final ImageView cornerBadgeView;
 
         ViewHolder(View v) {
             super(v);
@@ -277,6 +312,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             packageNameView = v.findViewById(R.id.package_name_view);
             appIconView = v.findViewById(R.id.icon_view);
             splitIconView = v.findViewById(R.id.badge_view);
+            cornerBadgeView = v.findViewById(R.id.corner_status_badge);
         }
     }
 }
