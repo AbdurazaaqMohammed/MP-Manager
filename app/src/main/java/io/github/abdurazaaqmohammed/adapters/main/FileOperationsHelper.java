@@ -381,6 +381,18 @@ public class FileOperationsHelper {
         runWithProgress(context.rss.getString(R.string.copying, summarizeItems(items)), items, R.string.op_copying, () -> copyMultiple(items));
     }
 
+    /** Copies the selection into an explicitly chosen folder (same-pane paste). */
+    public void copyItemsToFolder(List<Object> items, File destinationFolder) {
+        runWithProgress(context.rss.getString(R.string.copying, summarizeItems(items)), items, R.string.op_copying,
+                () -> copyToDestination(items, destinationFolder));
+    }
+
+    /** Moves the selection into an explicitly chosen folder (same-pane paste). */
+    public void moveItemsToFolder(List<Object> items, File destinationFolder) {
+        runWithProgress(context.rss.getString(R.string.moving_f, summarizeItems(items)), items, R.string.op_moving,
+                () -> moveToDestination(items, destinationFolder));
+    }
+
     public void copyAsync(Object item) {
         if (adapter.isMultiSelectMode() && !adapter.getSelectedFiles().isEmpty()) copyItemsAsync(adapter.getSelectedFiles());
         else copyItemsAsync(Collections.singletonList(item));
@@ -463,7 +475,10 @@ public class FileOperationsHelper {
     }
 
     private boolean moveToDestination(List<Object> items) throws IOException {
-        File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        return moveToDestination(items, adapter.pane1 ? context.pane2Folder : context.pane1Folder);
+    }
+
+    private boolean moveToDestination(List<Object> items, File destinationFolder) throws IOException {
         if (destinationFolder instanceof RemoteFile remote) {
             context.getNetwork().transferInto(items, remote, true, transferListener());
             return true;
@@ -695,13 +710,16 @@ public class FileOperationsHelper {
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
         }
+        // Highlight in the pane that actually holds the destination (the
+        // same-pane paste mode targets the source pane itself).
+        boolean destPane1 = destinationFolder.equals(adapter.pane1 ? context.pane1Folder : context.pane2Folder);
         context.handler.post(() -> {
             adapter.clearSelection();
             clearDirListingCache();
             if (!affectedNames.isEmpty()) {
-                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+                context.highlightAndFocusItems(destPane1, affectedNames);
             } else {
-                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+                context.loadFolderInPane(destinationFolder, destPane1);
             }
             // Source pane also changed after a move (files deleted) — reload it too.
             try {
@@ -841,7 +859,10 @@ public class FileOperationsHelper {
     }
 
     private boolean copyToDestination(List<Object> items) throws IOException {
-        File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        return copyToDestination(items, adapter.pane1 ? context.pane2Folder : context.pane1Folder);
+    }
+
+    private boolean copyToDestination(List<Object> items, File destinationFolder) throws IOException {
         if (destinationFolder instanceof RemoteFile remote) {
             context.getNetwork().transferInto(items, remote, false, transferListener());
             return true;
@@ -1175,12 +1196,14 @@ public class FileOperationsHelper {
         for (File destFile : plan.values()) {
             if (destFile != null) affectedNames.add(destFile.getName());
         }
+        // Highlight in the pane that actually holds the destination.
+        boolean destPane1 = destinationFolder.equals(adapter.pane1 ? context.pane1Folder : context.pane2Folder);
         context.handler.post(() -> {
             clearDirListingCache();
             if (!affectedNames.isEmpty()) {
-                context.highlightAndFocusItems(!adapter.pane1, affectedNames);
+                context.highlightAndFocusItems(destPane1, affectedNames);
             } else {
-                context.loadFolderInPane(destinationFolder, !adapter.pane1);
+                context.loadFolderInPane(destinationFolder, destPane1);
             }
             // Copy destination changed too — ensure the source pane reflects renames/copies.
             try { context.refreshAllPanes(); } catch (Exception ignored) { }

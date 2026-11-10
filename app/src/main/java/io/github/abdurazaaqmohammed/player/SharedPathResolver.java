@@ -108,15 +108,18 @@ public final class SharedPathResolver {
         // walk). Previously each step got its own full budget, so a miss could
         // burn two to three budgets before returning.
         long deadline = System.currentTimeMillis() + DISK_WALK_BUDGET_MS;
+        log("resolve start: " + uri + " sourcePackage=" + sourcePackage);
         try {
             fillMeta(ctx, uri, r);
         } catch (Exception ignored) {
         }
+        log("meta: name=" + r.displayName + " size=" + r.size);
 
         // 1. file:// — direct, no query at all. The exact path is known.
         try {
             if ("file".equalsIgnoreCase(uri.getScheme())) {
                 String p = uri.getPath();
+                log("step1 file:// path=" + p);
                 if (p != null && !p.isEmpty() && accept(ctx, p, r)) {
                     r.potential = false;
                     return r;
@@ -129,6 +132,7 @@ public final class SharedPathResolver {
         try {
             if (DocumentsContract.isDocumentUri(ctx, uri)) {
                 String p = resolveDocument(ctx, uri, r);
+                log("step2 document uri -> " + p);
                 if (p != null && accept(ctx, p, r)) {
                     r.potential = false;
                     return r;
@@ -137,9 +141,25 @@ public final class SharedPathResolver {
         } catch (Exception ignored) {
         }
 
-        // 2b. Standard Android FileProvider Uris (e.g. content://<pkg>.fileprovider/files/...)
+        // 2b. FileProvider Uris. The manifest of the sharing app is the source
+        // of truth: it declares which uri path prefix maps to which filesystem
+        // root, so arbitrary (also custom) names like /share/... resolve to
+        // e.g. /data/data/<pkg>/files instead of falling through to guessing.
+        try {
+            String p = resolveFileProviderFromManifest(ctx, uri, sourcePackage);
+            if (p != null && accept(ctx, p, r)) {
+                r.potential = false;
+                return r;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 2c. Standard Android FileProvider tag heuristics (e.g.
+        // content://<pkg>.fileprovider/files/...) for apps whose provider
+        // meta-data cannot be read for some reason.
         try {
             String p = resolveFileProvider(uri, sourcePackage);
+            log("step2c heuristic FileProvider -> " + p);
             if (p != null && accept(ctx, p, r)) {
                 r.potential = false;
                 return r;
@@ -150,6 +170,7 @@ public final class SharedPathResolver {
         // 3. Deprecated _data column — one indexed query, still instant where present.
         try {
             String p = queryDataColumn(ctx, uri);
+            log("step3 _data column -> " + p);
             if (p != null && accept(ctx, p, r)) {
                 r.potential = false;
                 return r;
@@ -194,8 +215,10 @@ public final class SharedPathResolver {
         // the source app is unknown or the time budget is already spent.
         try {
             if (RootManager.isPackageNameValid(sourcePackage) && !isCancelled(cancel)) {
+                log("step6 searching data dirs of " + sourcePackage);
                 Hit hit = searchPackageDataDirs(ctx, sourcePackage, nameForSearch(uri, r),
                         r.size, cancel, deadline);
+                log("step6 data dir search -> " + (hit == null ? null : hit.path));
                 if (hit != null && accept(ctx, hit.path, r)) {
                     r.potential = !hit.sizeMatched;
                     return r;
@@ -219,6 +242,7 @@ public final class SharedPathResolver {
             String name = nameForSearch(uri, r);
             if (name != null && !name.isEmpty() && !isCancelled(cancel)) {
                 Hit hit = boundedWalk(ctx, name, r.size, cancel, deadline);
+                log("step7 bounded walk -> " + (hit == null ? null : hit.path));
                 if (hit != null && accept(ctx, hit.path, r)) {
                     r.potential = !hit.sizeMatched;
                     return r;
@@ -226,6 +250,7 @@ public final class SharedPathResolver {
             }
         } catch (Exception ignored) {
         }
+        log("resolve done: path=" + r.path + " inaccessible=" + r.inaccessible);
         return r;
     }
 
@@ -354,6 +379,209 @@ public final class SharedPathResolver {
             return target.getAbsolutePath();
         }
         return null;
+    }
+
+    /**
+     * Resolves a {@code content://<authority>/<name>/<rel>} FileProvider uri by
+     * reading the sharing app's own {@code FILE_PROVIDER_PATHS} meta-data, the
+     * same xml the provider itself uses. This is what makes app-private
+     * locations ({@code /data/data/<pkg>/files/...}, custom cache roots, …)
+     * resolvable without guessing: every declared
+     * {@code <files-path name="share" path="out" />} style entry maps a uri
+     * prefix to a concrete filesystem root.
+     *
+     * @return absolute path candidate, or null when the authority is not a
+     *         FileProvider-style provider we can inspect
+     */
+    private static String resolveFileProviderFromManifest(Context ctx, Uri uri, String sourcePackage) {
+        if (uri == null || !"content".equalsIgnoreCase(uri.getScheme())) return null;
+        String auth = uri.getAuthority();
+        if (auth == null || auth.isEmpty()) return null;
+        String pkg = sourcePackage;
+        android.content.pm.ProviderInfo provider = null;
+        try {
+            android.content.pm.PackageManager pm = ctx.getPackageManager();
+            if (pkg != null && !pkg.isEmpty()) {
+                provider = findProviderForAuthority(pm, pkg, auth);
+            }
+            if (provider == null) {
+                // Unknown source: scan installed providers for the authority.
+                for (android.content.pm.ProviderInfo pi : pm.queryContentProviders(null, 0,
+                        android.content.pm.PackageManager.GET_META_DATA)) {
+                    if (pi != null && auth.equals(pi.authority)) {
+                        provider = pi;
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log("manifest provider lookup failed: " + e);
+            return null;
+        }
+        if (provider == null || provider.metaData == null) return null;
+
+        int xmlId = 0;
+        for (String key : FILE_PROVIDER_META_KEYS) {
+            try {
+                xmlId = provider.metaData.getInt(key, 0);
+            } catch (Exception ignored) {
+            }
+            if (xmlId != 0) break;
+        }
+        if (xmlId == 0) return null;
+
+        String path = uri.getPath();
+        if (path == null || path.isEmpty()) return null;
+        if (path.startsWith("/")) path = path.substring(1);
+        int slash = path.indexOf('/');
+        if (slash <= 0) return null;
+        String prefix = path.substring(0, slash);
+        String rest = path.substring(slash + 1);
+
+        try {
+            android.content.res.Resources res = ctx.getPackageManager()
+                    .getResourcesForApplication(provider.packageName);
+            List<PathEntry> entries = parseProviderPaths(res.getXml(xmlId));
+            for (PathEntry entry : entries) {
+                if (!prefix.equals(entry.name) && !prefix.equals(entry.tag)) continue;
+                String base = baseForTag(ctx, provider.packageName, entry);
+                if (base == null) continue;
+                StringBuilder rel = new StringBuilder();
+                if (entry.path != null && !entry.path.isEmpty() && !".".equals(entry.path)) {
+                    rel.append(entry.path);
+                    if (rel.charAt(rel.length() - 1) != '/') rel.append('/');
+                }
+                if (rest != null && !rest.isEmpty()) rel.append(rest);
+                String candidate = new File(base, rel.toString()).getAbsolutePath();
+                log("manifest provider hit: " + candidate);
+                return candidate;
+            }
+            log("manifest provider parsed, but no entry matches uri prefix '" + prefix + "'");
+        } catch (Exception e) {
+            log("manifest provider parse failed: " + e);
+        }
+        return null;
+    }
+
+    /** Keys apps use to declare their provider paths xml. */
+    private static final String[] FILE_PROVIDER_META_KEYS = {
+            "android.support.FILE_PROVIDER_PATHS",
+            "androidx.core.content.FileProvider.FILE_PROVIDER_PATHS",
+    };
+
+    private static android.content.pm.ProviderInfo findProviderForAuthority(
+            android.content.pm.PackageManager pm, String pkg, String authority) {
+        try {
+            android.content.pm.PackageInfo pi = pm.getPackageInfo(pkg,
+                    android.content.pm.PackageManager.GET_PROVIDERS
+                            | android.content.pm.PackageManager.GET_META_DATA);
+            if (pi != null && pi.providers != null) {
+                for (android.content.pm.ProviderInfo p : pi.providers) {
+                    if (p != null && authority.equals(p.authority)) return p;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    /** One parsed {@code <tag name=... root=... path=.../>} xml entry. */
+    private static final class PathEntry {
+        String tag;
+        String name;
+        String root;
+        String path;
+    }
+
+    private static List<PathEntry> parseProviderPaths(android.content.res.XmlResourceParser parser)
+            throws Exception {
+        List<PathEntry> entries = new ArrayList<>();
+        try {
+            int event = parser.getEventType();
+            while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                if (event == org.xmlpull.v1.XmlPullParser.START_TAG) {
+                    PathEntry entry = new PathEntry();
+                    entry.tag = parser.getName();
+                    for (int i = 0; i < parser.getAttributeCount(); i++) {
+                        String attr = parser.getAttributeName(i);
+                        String value = parser.getAttributeValue(i);
+                        if ("name".equals(attr)) entry.name = value;
+                        else if ("root".equals(attr)) entry.root = value;
+                        else if ("path".equals(attr)) entry.path = value;
+                    }
+                    if (entry.name == null || entry.name.isEmpty()) entry.name = entry.tag;
+                    entries.add(entry);
+                }
+                event = parser.next();
+            }
+        } finally {
+            try {
+                parser.close();
+            } catch (Exception ignored) {
+            }
+        }
+        return entries;
+    }
+
+    /** Filesystem root for a provider xml tag, mirroring androidx FileProvider. */
+    private static String baseForTag(Context ctx, String pkg, PathEntry entry) {
+        String root = entry.root == null ? "" : entry.root;
+        File base;
+        switch (entry.tag) {
+            case "root-path":
+                base = new File(root.isEmpty() ? "/" : root);
+                break;
+            case "files-path": {
+                String dataDir = dataDirOf(ctx, pkg);
+                if (dataDir == null) return null;
+                base = new File(dataDir, "files");
+                break;
+            }
+            case "cache-path": {
+                String dataDir = dataDirOf(ctx, pkg);
+                if (dataDir == null) return null;
+                base = new File(dataDir, "cache");
+                break;
+            }
+            case "external-path":
+                base = Environment.getExternalStorageDirectory();
+                break;
+            case "external-files-path":
+                base = new File(Environment.getExternalStorageDirectory(),
+                        "Android/data/" + pkg + "/files");
+                break;
+            case "external-cache-path":
+                base = new File(Environment.getExternalStorageDirectory(),
+                        "Android/data/" + pkg + "/cache");
+                break;
+            case "external-media-path":
+                base = new File(Environment.getExternalStorageDirectory(),
+                        "Android/data/" + pkg + "/media");
+                break;
+            default:
+                // Custom tags only make sense when they carry a root attribute.
+                if (!root.startsWith("/")) return null;
+                base = new File(root);
+                break;
+        }
+        if (base == null) return null;
+        return root.isEmpty() || "root-path".equals(entry.tag)
+                ? base.getAbsolutePath()
+                : new File(base, root).getAbsolutePath();
+    }
+
+    private static String dataDirOf(Context ctx, String pkg) {
+        try {
+            android.content.pm.ApplicationInfo info = ctx.getPackageManager()
+                    .getApplicationInfo(pkg, 0);
+            if (info != null && info.dataDir != null && !info.dataDir.isEmpty()) return info.dataDir;
+        } catch (Exception ignored) {
+        }
+        return "/data/user/0/" + pkg;
+    }
+
+    private static void log(String message) {
+        android.util.Log.d("SharedPathResolver", message);
     }
 
     private static String packageFromAuthority(String authority) {

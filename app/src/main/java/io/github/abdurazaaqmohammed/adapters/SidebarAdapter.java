@@ -346,29 +346,22 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         }
     }
 
-    /** Core file-manager tools; the main Tools section of the sidebar. */
+    /**
+     * Core file-manager tools; the main Tools section of the sidebar.
+     *
+     * <p>The advanced system tools (App Ops, SetEdit) sit at the bottom of the
+     * section with Tools Hub closing it; Partition Dumper is not offered here
+     * at all — it lives in the Tools Hub. A saved custom order still wins, but
+     * unknown ids (partition_dumper) simply render nothing.
+     */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "app_ops", "set_edit", "partition_dumper", "recycle_bin", "ftp_server", "network_client", "tools"};
+        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "network_client", "app_ops", "set_edit", "tools"};
         List<String> order = new ArrayList<>();
         for (String savedId : toolOrder) {
             String id = savedId.equals("ftp_client") || savedId.equals("webdav_client") || savedId.equals("smb_client")
                     ? "network_client" : savedId;
+            if (id.equals("partition_dumper")) continue; // Tools Hub only now.
             if (!order.contains(id)) order.add(id);
-        }
-        if (!order.contains("app_ops")) {
-            int idx = order.indexOf("documents");
-            if (idx >= 0) order.add(idx + 1, "app_ops");
-            else order.add(0, "app_ops");
-        }
-        if (!order.contains("set_edit")) {
-            int idx = order.indexOf("app_ops");
-            if (idx >= 0) order.add(idx + 1, "set_edit");
-            else order.add(0, "set_edit");
-        }
-        if (!order.contains("partition_dumper")) {
-            int idx = order.indexOf("set_edit");
-            if (idx >= 0) order.add(idx + 1, "partition_dumper");
-            else order.add(0, "partition_dumper");
         }
         for (String id : defaults) if (!order.contains(id)) order.add(id);
         for (String id : order) {
@@ -377,7 +370,6 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "documents": addTool(id, R.string.sidebar_documents, R.drawable.folder_24px); break;
                 case "app_ops": addTool(id, R.string.app_ops, R.drawable.ic_shield_24); break;
                 case "set_edit": addTool(id, R.string.set_edit, R.drawable.baseline_settings_24); break;
-                case "partition_dumper": addTool(id, R.string.tool_partition_dumper, R.drawable.ic_disk_drive_24px); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
                 case "network_client": addTool(id, R.string.network_connections, R.drawable.cloud_download_24px); break;

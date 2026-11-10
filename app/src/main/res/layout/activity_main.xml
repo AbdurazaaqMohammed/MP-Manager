@@ -113,6 +113,41 @@
                 android:layout_margin="24dp"
                 app:elevation="8dp" />
 
+            <!-- Same-pane paste mode: long-pressing Copy/Move in the file menu
+                 parks the selection here while the user navigates the SAME pane
+                 to a target folder. Shown over the active pane only. -->
+            <LinearLayout
+                android:id="@+id/samePanePasteBar"
+                android:visibility="gone"
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_above="@id/bottomBar"
+                android:layout_alignParentEnd="true"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_horizontal">
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/samePanePasteFab"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:contentDescription="@android:string/paste"
+                    android:src="@drawable/ic_paste_mt"
+                    app:elevation="8dp" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/samePaneCancelFab"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:contentDescription="@android:string/cancel"
+                    android:src="@drawable/ic_close"
+                    app:fabSize="mini"
+                    app:elevation="8dp" />
+            </LinearLayout>
+
                 <LinearLayout
                     android:id="@+id/bottomBar"
                     android:layout_width="match_parent"

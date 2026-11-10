@@ -830,6 +830,10 @@ Layout Inspector
     <string name="minimized_close_all">Close all</string>
     <string name="installed_successfully">%1$s installed successfully</string>
     <string name="paste_from">Paste from</string>
+    <string name="same_pane_copy_hint">Copy: navigate to the target folder in this pane, then tap Paste</string>
+    <string name="same_pane_move_hint">Move: navigate to the target folder in this pane, then tap Paste</string>
+    <string name="same_pane_invalid_target">Cannot move a folder into its own subfolder</string>
+    <string name="same_pane_target_gone">Target folder no longer available</string>
     <string name="inspector">Inspector</string>
     <string name="multi_select">Multi select</string>
     <string name="select_same_type">Select same type files</string>

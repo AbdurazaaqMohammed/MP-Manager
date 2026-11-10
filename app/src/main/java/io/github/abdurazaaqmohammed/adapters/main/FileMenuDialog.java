@@ -26,6 +26,17 @@ public final class FileMenuDialog {
 
     public static void show(MainActivity activity, String title, List<FileMenuOrder.MenuItem> visible,
                             boolean inArchive, Set<String> disabled, Consumer<String> action) {
+        show(activity, title, visible, inArchive, disabled, action, null);
+    }
+
+    /**
+     * @param longPressAction invoked instead of {@code action} when a row is
+     *                        long-pressed; the dialog is dismissed first. May
+     *                        be null — rows then only respond to taps.
+     */
+    public static void show(MainActivity activity, String title, List<FileMenuOrder.MenuItem> visible,
+                            boolean inArchive, Set<String> disabled, Consumer<String> action,
+                            Consumer<String> longPressAction) {
         List<FileMenuOrder.MenuItem> items = FileMenuOrder.sortItems(activity, visible);
         activity.runOnUiThread(() -> {
             if (activity.isFinishing() || activity.isDestroyed()) return;
@@ -44,10 +55,17 @@ public final class FileMenuDialog {
                 int edge = (int) (12 * activity.getResources().getDisplayMetrics().density + 0.5f);
                 list.setPadding(edge, list.getPaddingTop(), edge, list.getPaddingBottom());
             } else list.setLayoutManager(new LinearLayoutManager(activity));
-            list.setAdapter(new DialogAdapter(activity, items, inArchive, grid, disabled, position -> {
+            DialogAdapter adapter = new DialogAdapter(activity, items, inArchive, grid, disabled, position -> {
                 dismiss[0].run();
                 action.accept(items.get(position).id());
-            }));
+            });
+            if (longPressAction != null) {
+                adapter.setOnItemLongClickListener(position -> {
+                    dismiss[0].run();
+                    longPressAction.accept(items.get(position).id());
+                });
+            }
+            list.setAdapter(adapter);
             if (grid) {
                 AlertDialog dialog = new MaterialAlertDialogBuilder(activity).setView(view).create();
                 dismiss[0] = dialog::dismiss;

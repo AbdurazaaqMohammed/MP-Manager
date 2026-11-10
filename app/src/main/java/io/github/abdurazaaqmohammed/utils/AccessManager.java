@@ -266,8 +266,11 @@ public final class AccessManager {
             if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
                 throw new IOException("Root file access is disabled or unavailable");
             }
+            // No size cap on read staging: the staged copy is a temp file on
+            // disk, not an in-memory read, so a big file should simply be
+            // copied rather than failing with "File too large for preview".
             try (OutputStream os = new FileOutputStream(dst)) {
-                rm.streamFromRoot(srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                rm.streamFromRoot(srcAbsPath, os, Long.MAX_VALUE);
             } catch (IOException e) {
                 //noinspection ResultOfMethodCallIgnored
                 dst.delete();
@@ -279,9 +282,9 @@ public final class AccessManager {
             }
             try (OutputStream os = new FileOutputStream(dst)) {
                 if (ShizukuManager.isAllowed(srcAbsPath)) {
-                    ShizukuManager.streamFrom(context, srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                    ShizukuManager.streamFrom(context, srcAbsPath, os, Long.MAX_VALUE);
                 } else {
-                    ShizukuManager.streamFromShell(srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                    ShizukuManager.streamFromShell(srcAbsPath, os, Long.MAX_VALUE);
                 }
             } catch (IOException e) {
                 //noinspection ResultOfMethodCallIgnored
@@ -840,7 +843,7 @@ public final class AccessManager {
         }
         if (backend == Backend.SHIZUKU) {
             try (OutputStream os = new FileOutputStream(dst)) {
-                ShizukuManager.streamFrom(context, srcAbs, os, RootManager.MAX_STAGE_BYTES);
+                ShizukuManager.streamFrom(context, srcAbs, os, Long.MAX_VALUE);
             }
             long t = ShizukuManager.getMtime(context, srcAbs);
             if (t > 0) {
@@ -877,7 +880,7 @@ public final class AccessManager {
                 } else {
                     try (OutputStream os = new FileOutputStream(d)) {
                         ShizukuManager.streamFrom(context, srcAbs + "/" + k.getName(), os,
-                                RootManager.MAX_STAGE_BYTES);
+                                Long.MAX_VALUE);
                     }
                     long t = k.lastModified();
                     if (t > 0) {

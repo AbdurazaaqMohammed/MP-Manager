@@ -1130,6 +1130,26 @@ final View.OnClickListener originalClickListener;
                 final List<File> finalDexCompare1 = dexCompareFiles1;
                 final List<File> finalDexCompare2 = dexCompareFiles2;
 
+                // Long-press Copy/Move: copy or move the selection into the
+                // SAME pane — the user navigates folders there and pastes via
+                // the floating buttons. Tap keeps the classic opposite-pane flow.
+                java.util.function.Consumer<String> longPressAction = longPressId -> {
+                    if (isInZip || !(FileMenuOrder.COPY.equals(longPressId)
+                            || FileMenuOrder.MOVE.equals(longPressId))) return;
+                    List<Object> selection = new ArrayList<>();
+                    if (multi) {
+                        for (int sp : selectedPositions) {
+                            if (sp >= 0 && sp < values.length && values[sp] instanceof File) {
+                                selection.add(values[sp]);
+                            }
+                        }
+                    } else if (file != null) {
+                        selection.add(file);
+                    }
+                    if (!selection.isEmpty()) {
+                        context.startSamePanePaste(FileMenuOrder.MOVE.equals(longPressId), selection, pane1);
+                    }
+                };
                 FileMenuDialog.show(context, fileName, visibleMenu, isInZip, disabledIds, actionId -> {
                     try {
                         FileMenuAction pluginAction = ExtensionRegistry.findFileMenu(actionId);
@@ -1291,6 +1311,12 @@ final View.OnClickListener originalClickListener;
                                         break;
                                     case FileMenuOrder.MOVE:
                                         if (context.arePanesInSameFolder()) {
+                                            // Same folder in both panes: a tap has
+                                            // nowhere to go — the long-press starts
+                                            // the same-pane move instead.
+                                            Extensions.showMessage(context,
+                                                    context.getString(R.string.move) + ": "
+                                                            + context.getString(R.string.same_pane_move_hint));
                                             break;
                                         }
                                         entryDialogs.showMoveDialog(finalPosition, file, entry, multi);
@@ -1430,7 +1456,7 @@ final View.OnClickListener originalClickListener;
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
-                });
+                }, longPressAction);
             } catch (Exception e) {
                 try {
                     new ErrorUtil(context).showError(e);

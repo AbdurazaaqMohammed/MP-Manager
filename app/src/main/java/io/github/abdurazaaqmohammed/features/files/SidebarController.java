@@ -60,7 +60,6 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
-import io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -699,9 +698,6 @@ public class SidebarController {
                 break;
             case "set_edit":
                 activity.startActivity(new Intent(activity, SetEditActivity.class));
-                break;
-            case "partition_dumper":
-                PartitionDumperDialog.show(activity);
                 break;
             case "recycle_bin":
                 showRecycleBinDialog();

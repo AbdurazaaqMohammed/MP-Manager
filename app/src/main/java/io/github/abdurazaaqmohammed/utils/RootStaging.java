@@ -28,8 +28,8 @@ import java.io.InputStream;
  *   <li>Writes happen only via explicit {@link #writeBack} calls (Save
  *   buttons), go through {@link RootManager#streamToRoot} which blocks
  *   critical paths ({@code /, /system, /data, ...}).</li>
- *   <li>Staged files live in the app-private cache, mode-private, with a
- *   size cap ({@link RootManager#MAX_STAGE_BYTES}).</li>
+ *   <li>Staged files live in the app-private cache, mode-private. Reads are
+ *   uncapped: a large source is simply copied, never rejected.</li>
  *   <li>Stale staged copies are best-effort cleaned by {@link #cleanup}.</li>
  * </ul>
  */

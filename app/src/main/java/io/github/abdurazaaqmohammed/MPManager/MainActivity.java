@@ -70,6 +70,7 @@ import io.github.abdurazaaqmohammed.features.files.network.RemoteEntry;
 import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
+import io.github.abdurazaaqmohammed.features.files.SamePanePasteController;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
 import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
@@ -206,6 +207,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final RightMenuController rightMenu = new RightMenuController(this, fileSearch, sortFilter);
     private final BookmarkStore bookmarkStore = new BookmarkStore(this);
     private final SidebarController sidebar = new SidebarController(this);
+    /** Same-pane copy/move: long-press Copy/Move in the file menu, navigate, paste. */
+    private final SamePanePasteController samePanePaste = new SamePanePasteController(this);
     private final BookmarksController bookmarksUI = new BookmarksController(this);
     private final MultiSelectController multiSelect = new MultiSelectController(this);
     private final FtpController ftp = new FtpController(this);
@@ -1683,6 +1686,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     @Override
     public void onBackPressed() {
+        // Same-pane paste mode ends on back before any navigation happens.
+        if (samePanePaste.onBackPressed()) return;
         if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
             drawerLayout.closeDrawer(GravityCompat.END);
         } else if (isSidebarDrawerOpen) closeSidebarDrawer();
@@ -3174,6 +3179,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         if (pane != null && pane.getAdapter() instanceof MainFilesArrayAdapter adapter) return adapter;
         return null;
+    }
+
+    /** Enters the same-pane copy/move mode (long-press Copy/Move in the file menu). */
+    public void startSamePanePaste(boolean move, List<Object> items, boolean pane1) {
+        samePanePaste.start(move, items, pane1);
     }
 
     /** True when both panes list the same folder and the same location inside an archive. */

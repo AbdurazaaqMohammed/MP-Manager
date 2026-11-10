@@ -28,12 +28,18 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
         void onItemClick(int position);
     }
 
+    /** Optional: rows with a long-press action (e.g. same-pane copy/move). */
+    public interface OnItemLongClickListener {
+        void onItemLongClick(int position);
+    }
+
     private final MainActivity context;
     private final List<FileMenuOrder.MenuItem> items;
     private final boolean isInZip;
     private final boolean grid;
     private final Set<String> disabledIds;
     private final OnItemClickListener listener;
+    private OnItemLongClickListener longClickListener;
 
     public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, OnItemClickListener listener) {
         this(context, items, isInZip, false, Collections.emptySet(), listener);
@@ -73,8 +79,9 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
 
         // disabledIds is computed off the UI thread (canonical path checks do
         // filesystem I/O); the reference equality here is a free fallback.
+        // MOVE is never auto-disabled: when both panes show the same folder a
+        // plain tap does nothing, but a long-press starts the same-pane move.
         boolean disabled = disabledIds.contains(item.id())
-                || (FileMenuOrder.MOVE.equals(item.id()) && context.pane1Folder == context.pane2Folder)
                 || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id()) || FileMenuOrder.CMD.equals(item.id())) && isInZip);
         holder.itemView.setAlpha(disabled ? 0.38f : 1f);
         holder.itemView.setEnabled(!disabled);
@@ -83,6 +90,20 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
             int pos = holder.getBindingAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onItemClick(pos);
         });
+        if (longClickListener != null && !disabled) {
+            holder.itemView.setOnLongClickListener(v -> {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                int pos = holder.getBindingAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) longClickListener.onItemLongClick(pos);
+                return true;
+            });
+        } else {
+            holder.itemView.setLongClickable(false);
+        }
+    }
+
+    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
+        this.longClickListener = listener;
     }
 
     @Override
