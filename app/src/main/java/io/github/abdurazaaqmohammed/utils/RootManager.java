@@ -1790,7 +1790,7 @@ public class RootManager {
             return new RootEntry(path, false, false, false, 0L, 0L, null);
         }
         try {
-            ShellResult r = executeFs("stat -cL '%n\037%F\037%s\037%Y\037%a' "
+            ShellResult r = executeFs("stat -L -c '%n\037%F\037%s\037%Y\037%a' "
                     + escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
             if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
                 String line = r.output.split("\\r?\\n")[0];

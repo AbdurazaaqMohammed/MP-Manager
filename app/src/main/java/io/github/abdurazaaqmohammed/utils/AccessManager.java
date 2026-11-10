@@ -748,10 +748,10 @@ public final class AccessManager {
             Backend backend = active(context);
             if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
                 RootManager rm = RootManager.getInstance(context);
-                RootManager.ShellResult r = rm.executeFs(
-                        "du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
+                String safeCmd = "timeout 5 du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null";
+                RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
-                    r = rm.execute("du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
+                    r = rm.execute(safeCmd, 5);
                 }
                 if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                     String firstToken = r.output().trim().split("\\s+")[0].trim();
@@ -776,10 +776,10 @@ public final class AccessManager {
             Backend backend = active(context);
             if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
                 RootManager rm = RootManager.getInstance(context);
-                RootManager.ShellResult r = rm.executeFs(
-                        "du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null", 20);
+                String safeCmd = "timeout 5 du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null";
+                RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
-                    r = rm.execute("du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null", 20);
+                    r = rm.execute(safeCmd, 5);
                 }
                 if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                     String[] lines = r.output().split("\n");

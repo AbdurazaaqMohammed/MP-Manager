@@ -137,6 +137,16 @@ public final class SharedPathResolver {
         } catch (Exception ignored) {
         }
 
+        // 2b. Standard Android FileProvider Uris (e.g. content://<pkg>.fileprovider/files/...)
+        try {
+            String p = resolveFileProvider(uri, sourcePackage);
+            if (p != null && accept(ctx, p, r)) {
+                r.potential = false;
+                return r;
+            }
+        } catch (Exception ignored) {
+        }
+
         // 3. Deprecated _data column — one indexed query, still instant where present.
         try {
             String p = queryDataColumn(ctx, uri);
@@ -295,6 +305,67 @@ public final class SharedPathResolver {
             return MediaStore.Downloads.EXTERNAL_CONTENT_URI;
         }
         if (Build.VERSION.SDK_INT >= 29) return MediaStore.Files.getContentUri("external");
+        return null;
+    }
+
+    private static String resolveFileProvider(Uri uri, String sourcePackage) {
+        if (uri == null) return null;
+        String auth = uri.getAuthority();
+        if (auth == null || !auth.contains("provider")) return null;
+        String pkg = sourcePackage;
+        if (pkg == null || pkg.isEmpty()) {
+            pkg = packageFromAuthority(auth);
+        }
+        if (pkg == null || pkg.isEmpty()) return null;
+
+        String path = uri.getPath();
+        if (path == null || path.isEmpty()) return null;
+        if (path.startsWith("/")) path = path.substring(1);
+
+        int slash = path.indexOf('/');
+        if (slash < 0) return null;
+        String rootTag = path.substring(0, slash);
+        String relPath = path.substring(slash + 1);
+
+        // Standard Android FileProvider tag mappings:
+        // <files-path> -> /data/data/<pkg>/files or /data/user/0/<pkg>/files
+        // <cache-path> -> /data/data/<pkg>/cache
+        // <external-files-path> -> /storage/emulated/0/Android/data/<pkg>/files
+        // <external-cache-path> -> /storage/emulated/0/Android/data/<pkg>/cache
+        // <external-path> -> /storage/emulated/0
+        // <root-path> -> /
+        File baseDir = null;
+        if ("files".equals(rootTag) || "files_path".equals(rootTag) || "my_files".equals(rootTag)) {
+            baseDir = new File("/data/user/0/" + pkg + "/files");
+        } else if ("cache".equals(rootTag) || "cache_path".equals(rootTag) || "my_cache".equals(rootTag)) {
+            baseDir = new File("/data/user/0/" + pkg + "/cache");
+        } else if ("external_files".equals(rootTag) || "external-files-path".equals(rootTag) || "external_files_path".equals(rootTag)) {
+            baseDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + pkg + "/files");
+        } else if ("external_cache".equals(rootTag) || "external-cache-path".equals(rootTag) || "external_cache_path".equals(rootTag)) {
+            baseDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + pkg + "/cache");
+        } else if ("external".equals(rootTag) || "external-path".equals(rootTag) || "external_path".equals(rootTag)) {
+            baseDir = Environment.getExternalStorageDirectory();
+        } else if ("root".equals(rootTag) || "root-path".equals(rootTag) || "root_path".equals(rootTag)) {
+            baseDir = new File("/");
+        }
+
+        if (baseDir != null) {
+            File target = new File(baseDir, relPath);
+            return target.getAbsolutePath();
+        }
+        return null;
+    }
+
+    private static String packageFromAuthority(String authority) {
+        if (authority == null || authority.isEmpty()) return null;
+        if (authority.startsWith("com.android.") || authority.startsWith("android.")) return null;
+        String candidate = authority;
+        while (candidate != null && !candidate.isEmpty()) {
+            if (RootManager.isPackageNameValid(candidate)) return candidate;
+            int dot = candidate.lastIndexOf('.');
+            if (dot <= 0) break;
+            candidate = candidate.substring(0, dot);
+        }
         return null;
     }
 

@@ -244,10 +244,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.checkUnmountOnExit(context, current);
             }
         }
-        if (target == null) return false;
-        if (current != null && target.equals(current)) return false;
-        if (target.equals(context.pane1Folder) && pane1 && (current == null || target.equals(current))) return false;
-        if (target.equals(context.pane2Folder) && !pane1 && (current == null || target.equals(current))) return false;
+        if (target == null) return context.navigateBack(pane1);
+        if (current != null && target.equals(current)) {
+            return context.navigateBack(pane1);
+        }
+        if (target.equals(context.pane1Folder) && pane1 && (current == null || target.equals(current))) {
+            return context.navigateBack(pane1);
+        }
+        if (target.equals(context.pane2Folder) && !pane1 && (current == null || target.equals(current))) {
+            return context.navigateBack(pane1);
+        }
         final String exitedName = current != null ? current.getName() : null;
         context.loadFolderInPaneAsync(target, pane1, true, () -> {
             if (blink && exitedName != null) {
@@ -388,6 +394,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             fileOpener.handleFileClick(f, fileName);
             return;
         }
+        String path = f.getAbsolutePath();
+        if ("/".equals(path) || RootManager.isRootOnlyPath(path) || ShizukuFile.isAndroidDataPath(f)) {
+            context.clearGreen(pane1);
+            context.setSelectedPane(pane1 ? 1 : 2);
+            context.loadFolderInPaneAsync(f, pane1);
+            return;
+        }
         new Thread(() -> {
             final boolean dir = resolveDirViaBackend(f);
             context.handler.post(() -> {
@@ -396,9 +409,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     context.setSelectedPane(pane1 ? 1 : 2);
                     if (dir) {
                         context.loadFolderInPaneAsync(f, pane1);
-                    } else {
-                        context.setCurrentFolder(f.getParentFile(), getOldValues());
+                    } else if (f.isFile() || AccessManager.isFile(context, path)) {
+                        if (!isSearchResultsMode) {
+                            context.setCurrentFolder(f.getParentFile(), getOldValues());
+                        }
                         fileOpener.handleFileClick(f, fileName);
+                    } else {
+                        // Neither confirmed file nor confirmed dir; retry as folder navigation
+                        context.loadFolderInPaneAsync(f, pane1);
                     }
                 } catch (Exception ignored) {
                 }
