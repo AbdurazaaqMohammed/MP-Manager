@@ -21,6 +21,10 @@ import com.google.android.material.textfield.TextInputLayout;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.core.ui.util.PopupMenus;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
@@ -32,6 +36,8 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Listing sort/filter/hidden-files behaviour extracted from MainActivity.
@@ -101,6 +107,27 @@ public class SortFilterController {
         RecyclerView pane = activity.findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
 
         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
+        if (a instanceof RemoteFilesArrayAdapter remote) {
+            File[] all = activity.paneFiles(isPane1);
+            if (all == null) return;
+            RemoteFile[] shown = Arrays.stream(all)
+                    .filter(f -> f.getName().toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))
+                    .toArray(RemoteFile[]::new);
+            pane.setAdapter(new RemoteFilesArrayAdapter(activity, remote.folder, shown, isPane1));
+            return;
+        }
+        if (a instanceof FtpFilesArrayAdapter ftp) {
+            File[] all = activity.paneFiles(isPane1);
+            if (all == null || ftp.getItemCount() == 0) return;
+            FTPFileWrapper[] shown = Arrays.stream(all).filter(f -> f.getName().toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))
+                    .toArray(FTPFileWrapper[]::new);
+            FTPFileWrapper[] rows = new FTPFileWrapper[shown.length + 1];
+            rows[0] = ftp.getItem(0);
+            System.arraycopy(shown, 0, rows, 1, shown.length);
+            pane.setAdapter(new FtpFilesArrayAdapter(activity, rows, isPane1, rows[0].client));
+            activity.setCurrentFolder(isPane1 ? activity.pane1Folder : activity.pane2Folder, shown);
+            return;
+        }
         if (!(a instanceof MainFilesArrayAdapter)) return;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane.getAdapter();
 
@@ -142,10 +169,15 @@ public class SortFilterController {
     public void showSortDialog() {
         boolean isPane1 = activity.lastPaneSelected == 1;
         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
-        if (!(a instanceof MainFilesArrayAdapter)) return;
-        MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) activity.getCurrentPane().getAdapter();
-        String currentPath = adapter.isInZip ? adapter.currentZipPath
-                : (isPane1 ? activity.pane1Folder.getPath() : activity.pane2Folder.getPath());
+        String currentPath;
+        if (a instanceof RemoteFilesArrayAdapter remote) {
+            currentPath = remote.folder.displayPath();
+        } else if (a instanceof FtpFilesArrayAdapter && (isPane1 ? activity.pane1Folder : activity.pane2Folder) instanceof FTPFileWrapper ftp) {
+            currentPath = ftp.displayPath();
+        } else if (a instanceof MainFilesArrayAdapter adapter) {
+            currentPath = adapter.isInZip ? adapter.currentZipPath
+                    : (isPane1 ? activity.pane1Folder.getPath() : activity.pane2Folder.getPath());
+        } else return;
 
         int sortBy = prefs.sortBy(currentPath);
         boolean reverse = prefs.sortReverse(currentPath);

@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.adapters;
 
-import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
@@ -10,21 +9,18 @@ import android.widget.EditText;
 
 import androidx.recyclerview.widget.RecyclerView;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 
 import com.lilincpp.github.libezftp.IEZFtpClient;
 import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -33,8 +29,13 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor;
 import io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs;
+import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
+import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
+import io.github.abdurazaaqmohammed.adapters.main.FileRowStyle;
+import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.features.files.network.NetworkFileMenu;
+import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
-import io.github.abdurazaaqmohammed.utils.FileSize;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -62,7 +63,8 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
     private final FTPFileWrapper[] values;
     private final boolean pane1;
     private final IEZFtpClient ftpClient;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault());
+    private final FileRowStyle rowStyle;
+    private final FileIconLoader icons;
     private final DialogUtil dialogUtil;
 
     public FtpFilesArrayAdapter(MainActivity context, FTPFileWrapper[] values, boolean pane1, IEZFtpClient ftpClient) {
@@ -71,6 +73,8 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         this.pane1 = pane1;
         this.ftpClient = ftpClient;
         this.dialogUtil = new DialogUtil(context);
+        rowStyle = new FileRowStyle(context);
+        icons = new FileIconLoader(context, false, true);
     }
 
     public FTPFileWrapper getItem(int position) { return values[position]; }
@@ -92,12 +96,13 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView fileNameView, fileDateView;
-        final ImageView fileIconView;
+        final ImageView fileIconView, badge;
         ViewHolder(View v) {
             super(v);
             fileNameView = v.findViewById(R.id.fileName);
             fileIconView = v.findViewById(R.id.fileIcon);
             fileDateView = v.findViewById(R.id.fileDate);
+            badge = v.findViewById(R.id.appBadge);
         }
     }
 
@@ -110,26 +115,24 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         FTPFileWrapper file = values[position];
+        rowStyle.apply(holder.fileNameView, holder.fileIconView);
         holder.fileNameView.setText(file.getName());
-
-        Drawable ic = ResourcesCompat.getDrawable(context.rss, file.isDirectory() ? R.drawable.ic_folder_mt : R.drawable.baseline_insert_drive_file_24, context.getTheme());
-        holder.fileIconView.setImageDrawable(ic);
-
-        if (file.getName().equals("..")) {
-            holder.fileDateView.setText("");
-        } else {
-            String sizeStr = file.isDirectory() ? "" : FileSize.getHumanReadableFileSize(file.length());
-            Date date = file.getFtpFile().getModifiedDate();
-            String dateStr = date != null ? dateFormat.format(date) : "";
-            holder.fileDateView.setText(dateStr + " " + sizeStr);
-        }
+        holder.badge.setVisibility(View.GONE);
+        holder.badge.setImageDrawable(null);
+        holder.badge.setTag(null);
+        boolean up = "..".equals(file.getName());
+        icons.setupMetadataView(file.getName(), file.isDirectory(), file.length(), file.lastModified(),
+                up, holder.fileIconView, holder.fileDateView);
+        float alpha = !up && file.getName().startsWith(".") ? 0.55f : 1f;
+        holder.fileNameView.setAlpha(alpha);
+        holder.fileIconView.setAlpha(alpha);
 
         holder.itemView.setOnClickListener(v -> {
             context.setCurrentPane(pane1 ? 1 : 2);
             // A folder navigates like any other pane; a file is downloaded to
             // the app cache and opened through the regular dispatch (editors,
             // viewers, archive browser all work on the downloaded copy).
-            if (file.isDirectory()) context.loadFolderInPane(file, pane1, true);
+            if (up || file.isDirectory()) context.loadFolderInPane(file, pane1, true);
             else downloadAndOpen(file);
         });
 
@@ -143,36 +146,28 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
     }
 
     private void showContextMenu(View anchor, FTPFileWrapper file) {
-        PopupMenu popupMenu = new PopupMenu(context, anchor);
-        String cp = context.rss.getString(android.R.string.copy);
-        String mv = context.rss.getString(R.string.move);
-        String rn = context.rss.getString(R.string.rename);
-        String dl = context.rss.getString(R.string.delete);
-        String props = context.rss.getString(R.string.properties);
-        popupMenu.getMenu().add(cp);
-        popupMenu.getMenu().add(mv);
-        popupMenu.getMenu().add(rn);
-        popupMenu.getMenu().add(dl);
-        popupMenu.getMenu().add(props);
-
-        popupMenu.setOnMenuItemClickListener(item -> {
-            CharSequence title = item.getTitle();
-            if (TextUtils.isEmpty(title)) return true;
-            String string = title.toString();
-            if (string.equals(cp)) {
-                copyToLocal(file, false);
-            } else if (string.equals(mv)) {
-                copyToLocal(file, true);
-            } else if (string.equals(rn)) {
-                showRenameDialog(file);
-            } else if (string.equals(dl)) {
-                showDeleteDialog(file);
-            } else if (string.equals(props)) {
-                showPropertiesDialog(file);
+        Set<String> disabled = new HashSet<>();
+        if (file.isDirectory() || !hasLocalDestination()) {
+            disabled.add(FileMenuOrder.COPY);
+            disabled.add(FileMenuOrder.MOVE);
+        }
+        NetworkFileMenu.show(context, file.getName(), pane1, disabled, action -> {
+            switch (action) {
+                case FileMenuOrder.COPY -> copyToLocal(file, false);
+                case FileMenuOrder.MOVE -> copyToLocal(file, true);
+                case FileMenuOrder.RENAME -> showRenameDialog(file);
+                case FileMenuOrder.DELETE -> showDeleteDialog(file);
+                case FileMenuOrder.PROPERTIES -> showPropertiesDialog(file);
             }
-            return true;
         });
-        popupMenu.show();
+    }
+
+    private boolean hasLocalDestination() {
+        File folder = pane1 ? context.pane2Folder : context.pane1Folder;
+        MainFilesArrayAdapter adapter = context.paneFilesAdapter(!pane1);
+        return adapter != null && !adapter.isInZip && folder != null
+                && !(folder instanceof SafFile) && !(folder instanceof FTPFileWrapper)
+                && !(folder instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile);
     }
 
     private void showRenameDialog(FTPFileWrapper file) {
@@ -184,8 +179,10 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {
-                        String oldPath = file.getParent() + "/" + file.getName();
-                        String newPath = file.getParent() + "/" + newName;
+                        try { io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(newName); }
+                        catch (IllegalArgumentException e) { new io.github.abdurazaaqmohammed.utils.ErrorUtil(context).showError(e); return; }
+                        String oldPath = file.remotePath();
+                        String newPath = file.remoteParent() + (file.remoteParent().endsWith("/") ? "" : "/") + newName;
                         ftpClient.rename(oldPath, newPath, new OnEZFtpCallBack<>() {
                             @Override
                             public void onSuccess(Void response) {
@@ -210,7 +207,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.delete_confirm, file.getName()))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    String path = file.getParent() + "/" + file.getName();
+                    String path = file.remotePath();
                     OnEZFtpCallBack<Void> callback = new OnEZFtpCallBack<>() {
                         @Override
                         public void onSuccess(Void response) {
@@ -238,7 +235,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     private void showPropertiesDialog(FTPFileWrapper file) {
         String props = "Name: " + file.getName() + "\n" +
-                "Path: " + file.getParent() + "/" + file.getName() + "\n" +
+                "Path: " + file.displayPath() + "\n" +
                 "Size: " + Formatter.formatFileSize(context, file.length()) + "\n" +
                 "Type: " + (file.isDirectory() ? "Directory" : "File");
                 
@@ -251,95 +248,58 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     /** Downloads a file into the cache and opens it with the app's regular open dispatch. */
     private void downloadAndOpen(FTPFileWrapper file) {
-        new Thread(() -> {
-            Exception[] error = {null};
-            File dir = new File(context.getCacheDir(), "ftp_open");
-            //noinspection ResultOfMethodCallIgnored
-            dir.mkdirs();
-            File out = new File(dir, System.currentTimeMillis() + "_"
-                    + file.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
-            CountDownLatch latch = new CountDownLatch(1);
-            ftpClient.downloadFile(file.getFtpFile(), out.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
-                @Override
-                public void onStateChanged(int state) {
-                    if (state == COMPLETED || state == ERROR || state == ABORTED) latch.countDown();
-                }
-
-                @Override
-                public void onTransferred(long totalSize, int transferredSize) {
-                }
-
-                @Override
-                public void onErr(int code, String msg) {
-                    error[0] = new IOException(msg);
-                    latch.countDown();
-                }
-
-                public void onErr(int code, Exception e) {
-                    error[0] = e;
-                    latch.countDown();
-                }
-            });
-            try {
-                latch.await(60, TimeUnit.SECONDS);
-            } catch (InterruptedException ignored) {
-            }
-            Exception fError = error[0];
-            final File opened = out;
-            context.runOnUiThread(() -> {
-                if (fError != null) {
-                    Extensions.showMessage(context, context.getString(R.string.download_failed,
-                            fError.getMessage() == null ? fError.toString() : fError.getMessage()));
-                    return;
-                }
-                if (opened.isFile() && opened.length() > 0) {
-                    opener().handleFileClick(opened, file.getName());
-                } else {
-                    Extensions.showMessage(context, context.getString(R.string.download_failed, "empty file"));
-                }
-            });
-        }).start();
+        File[] opened = {null};
+        context.getNetwork().runOperation(context.getString(R.string.network_downloading), () -> {
+            io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(file.getName());
+            File dir = new File(context.getCacheDir(), "ftp_" + java.util.UUID.randomUUID());
+            if (!dir.mkdir()) throw new IOException("Cannot create download cache");
+            opened[0] = new File(dir, file.getName());
+            try { download(file, opened[0]); }
+            catch (Exception e) { io.github.abdurazaaqmohammed.utils.FileUtils.deleteTree(dir, null); throw e; }
+        }, () -> opener().handleFileClick(opened[0], file.getName()));
     }
 
     private void copyToLocal(FTPFileWrapper file, boolean isMove) {
-        if (file.isDirectory()) {
-            Extensions.showMessage(context, "Directory copy not fully supported yet");
-            return;
-        }
+        if (file.isDirectory() || !hasLocalDestination()) return;
         File destFolder = pane1 ? context.pane2Folder : context.pane1Folder;
-        String destPath = destFolder.getAbsolutePath() + "/" + file.getName();
-        Extensions.showMessage(context, (isMove ? "Moving " : "Copying ") + file.getName() + " to " + destFolder.getName());
+        context.getNetwork().runOperation(context.getString(isMove ? R.string.move : android.R.string.copy), () -> {
+            io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(file.getName());
+            File destination = new File(destFolder, file.getName());
+            if (destination.exists()) throw new IOException("Destination already exists");
+            File part = File.createTempFile(".ftp-", ".part", destFolder);
+            try {
+                download(file, part);
+                if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Transfer cancelled");
+                java.nio.file.Files.move(part.toPath(), destination.toPath());
+                if (isMove) {
+                    CountDownLatch deleted = new CountDownLatch(1);
+                    String[] failure = {null};
+                    ftpClient.deleteFile(file.remotePath(), new OnEZFtpCallBack<>() {
+                        @Override public void onSuccess(Void response) { deleted.countDown(); }
+                        @Override public void onFail(int code, String message) { failure[0] = message; deleted.countDown(); }
+                    });
+                    if (!deleted.await(60, TimeUnit.SECONDS)) throw new IOException("Source deletion timed out");
+                    if (failure[0] != null) throw new IOException(failure[0]);
+                }
+            } finally { if (part.exists()) part.delete(); }
+        }, context::refreshAllPanes);
+    }
 
-        ftpClient.downloadFile(file.getFtpFile(), destPath, new OnEZFtpDataTransferCallback() {
-            @Override
-            public void onStateChanged(int state) { }
-
-            @Override
-            public void onTransferred(long totalSize, int transferredSize) { }
-
-            @Override
-            public void onErr(int code, String msg) {
-                Extensions.showMessage(context, context.rss.getString(R.string.download_failed, msg));
+    private void download(FTPFileWrapper file, File output) throws Exception {
+        CountDownLatch finished = new CountDownLatch(1);
+        boolean[] completed = {false};
+        String[] failure = {null};
+        ftpClient.downloadFile(file.getFtpFile(), output.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
+            @Override public void onStateChanged(int state) {
+                if (state == COMPLETED) { completed[0] = true; finished.countDown(); }
+                else if (state == ERROR || state == ABORTED) finished.countDown();
             }
-
-            public void onErr(int code, Exception e) {
-                Extensions.showMessage(context, context.rss.getString(R.string.download_failed, e.getMessage()));
-            }
+            @Override public void onTransferred(long total, int bytes) {}
+            @Override public void onErr(int code, String message) { failure[0] = message; finished.countDown(); }
         });
-
-        if (isMove) {
-            String path = file.getParent() + "/" + file.getName();
-            ftpClient.deleteFile(path, new OnEZFtpCallBack<>() {
-                @Override
-                public void onSuccess(Void response) {
-                    context.runOnUiThread(context::reloadCurrentFolder);
-                }
-
-                @Override
-                public void onFail(int code, String msg) {
-                }
-            });
-        }
+        if (!finished.await(60, TimeUnit.SECONDS)) throw new IOException("FTP download timed out");
+        if (!completed[0]) throw new IOException(failure[0] == null ? "FTP download failed" : failure[0]);
+        if (!output.isFile() || output.length() != file.length()) throw new IOException("Incomplete FTP download");
     }
 
     public void uploadFiles(List<Object> items) {
@@ -347,12 +307,12 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
             if (item instanceof File localFile && !localFile.isDirectory()) {
 
                 Extensions.showMessage(context, context.getString(R.string.uploading, localFile.getName()));
-                ftpClient.uploadFile(localFile.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
+                String parent = values.length > 0 ? values[0].remoteParent() : "/";
+                ftpClient.uploadFile(localFile.getAbsolutePath(), parent + (parent.endsWith("/") ? "" : "/") + localFile.getName(), new OnEZFtpDataTransferCallback() {
                     @Override
                     public void onStateChanged(int state) { 
                         if (state == COMPLETED) {
                             context.runOnUiThread(() -> {
-                                String parent = values[1].getParent();
                                 context.fetchFtpDirAndLoad(TextUtils.isEmpty(parent) ? File.separator : parent, pane1);
                             });
                         }

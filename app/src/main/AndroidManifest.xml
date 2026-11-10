@@ -5,8 +5,10 @@
     package="io.github.abdurazaaqmohammed.MPManager">
     <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora.langs.java, androidx.window, androidx.window.core, rikka.shizuku.provider, rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -60,6 +62,9 @@
     </queries>
 
         <application
+            android:fullBackupContent="@xml/network_backup_rules"
+            android:dataExtractionRules="@xml/network_data_extraction_rules"
+            android:usesCleartextTraffic="true"
             android:localeConfig="@xml/locales_config"
             android:requestLegacyExternalStorage="true"
            android:enableOnBackInvokedCallback="false"

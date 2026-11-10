@@ -348,9 +348,13 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     /** Core file-manager tools; the main Tools section of the sidebar. */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "app_ops", "set_edit", "partition_dumper", "recycle_bin", "ftp_server", "ftp_client", "tools"};
+        String[] defaults = {"extract", "documents", "app_ops", "set_edit", "partition_dumper", "recycle_bin", "ftp_server", "network_client", "tools"};
         List<String> order = new ArrayList<>();
-        for (String id : toolOrder) if (!order.contains(id)) order.add(id);
+        for (String savedId : toolOrder) {
+            String id = savedId.equals("ftp_client") || savedId.equals("webdav_client") || savedId.equals("smb_client")
+                    ? "network_client" : savedId;
+            if (!order.contains(id)) order.add(id);
+        }
         if (!order.contains("app_ops")) {
             int idx = order.indexOf("documents");
             if (idx >= 0) order.add(idx + 1, "app_ops");
@@ -376,7 +380,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "partition_dumper": addTool(id, R.string.tool_partition_dumper, R.drawable.ic_disk_drive_24px); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
-                case "ftp_client": addTool(id, R.string.ftp_client, R.drawable.cloud_download_24px); break;
+                case "network_client": addTool(id, R.string.network_connections, R.drawable.cloud_download_24px); break;
                 case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
             }
         }
@@ -528,9 +532,10 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     @Override
     public int getItemViewType(int position) {
-        EntryType type = getEntry(position).type;
+        SidebarEntry entry = getEntry(position);
+        EntryType type = entry.type;
         if (type == EntryType.HEADER) return 0;
-        if (type == EntryType.STORAGE) return 1;
+        if (type == EntryType.STORAGE || (type == EntryType.PIN && entry.storage != null && !organizeMode)) return 1;
         return 2;
     }
 
@@ -582,14 +587,35 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             View view = convertView;
             if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_storage, parent, false);
             StorageUtil.StorageInfo info = entry.storage;
-            ((TextView) view.findViewById(R.id.tvStorageName)).setText(info.name);
+            TextView name = view.findViewById(R.id.tvStorageName);
+            name.setText(info.name);
+            Drawable glyph = entry.type == EntryType.PIN ? ResourcesCompat.getDrawable(context.getResources(), entry.icon, context.getTheme()) : null;
+            if (glyph != null) {
+                int size = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
+                glyph = glyph.mutate();
+                glyph.setBounds(0, 0, size, size);
+                androidx.core.graphics.drawable.DrawableCompat.setTint(glyph,
+                        MaterialColors.getColor(name, android.R.attr.colorPrimary));
+            }
+            name.setCompoundDrawablesRelative(glyph, null, null, null);
+            name.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density));
+            boolean known = info.totalBytes >= 0 && info.usedBytes >= 0 && info.freeBytes >= 0;
+            ((View) view.findViewById(R.id.pbUsed).getParent()).setVisibility(known ? View.VISIBLE : View.GONE);
             ((TextView) view.findViewById(R.id.tvUsedPercent)).setText(context.getString(R.string.usedpt, info.usedPercent()));
-            ((TextView) view.findViewById(R.id.tvUsedFree)).setText(context.getString(R.string.used,
-                    FileSize.getHumanReadableFileSize(info.usedBytes), FileSize.getHumanReadableFileSize(info.freeBytes)));
+            TextView freeSpace = view.findViewById(R.id.tvUsedFree);
+            if (known) {
+                freeSpace.setText(context.getString(R.string.used,
+                        FileSize.getHumanReadableFileSize(info.usedBytes), FileSize.getHumanReadableFileSize(info.freeBytes)));
+            } else {
+                if (info.freeBytes >= 0) freeSpace.setText(context.getString(R.string.network_storage_free, FileSize.getHumanReadableFileSize(info.freeBytes)));
+                else if(TextUtils.isEmpty(info.description)) freeSpace.setVisibility(View.GONE);
+                else freeSpace.setText(info.description);
+            }
             ((ProgressBar) view.findViewById(R.id.pbUsed)).setProgress(info.usedPercent());
             view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
             view.setOnLongClickListener(v -> {
-                callbacks.onEntryStorageLongPressed(entry, v);
+                if (entry.type == EntryType.PIN) callbacks.onEntryLongPressed(entry, v);
+                else callbacks.onEntryStorageLongPressed(entry, v);
                 return true;
             });
             return view;

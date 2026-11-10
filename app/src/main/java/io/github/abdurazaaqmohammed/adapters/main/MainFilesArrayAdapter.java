@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,15 +13,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -44,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
 import io.github.abdurazaaqmohammed.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -124,9 +117,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final ListPrefs listPrefs;
 
     /** Row metrics snapshotted once: bind previously re-read prefs per row. */
-    private final float nameTextSize;
-    private final int nameMaxLines;
-    private final int rowIconPx;
+    private final FileRowStyle rowStyle;
     /** Memoized isDir per listing (one adapter instance == one listing). */
     private final Map<String, Boolean> dirMemo = new HashMap<>();
 
@@ -428,10 +419,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             this.upZipPath = null;
             this.archiveMutable = false;
         }
-        int scale = UiPrefs.getScale(context);
-        this.nameTextSize = UiPrefs.nameSize(scale);
-        this.nameMaxLines = UiPrefs.getMaxLines(context);
-        this.rowIconPx = UiPrefs.iconDp(context, scale);
+        this.rowStyle = new FileRowStyle(context);
         dialogUtil = context.dialogUtil;
         uiHelper = context.uiHelper;
         iconLoader = new FileIconLoader(context, isInZip);
@@ -538,11 +526,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final TextView fileNameView, fileDateView;
         final ImageView fileIconView, appBadgeView;
         final int defaultNameColor;
-        // Last values actually pushed to the row. Re-applying the same text
-        // size or max lines invalidates the text layout on every bind, which is
-        // costly while scrolling a large folder.
-        int appliedTextSizePx = -1;
-        int appliedMaxLines = -1;
+        // Avoid invalidating the background on every bind.
         int appliedBackgroundColor = -2;
         View.OnClickListener boundClickListener;
         View.OnLongClickListener boundLongClickListener;
@@ -671,23 +655,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             holder.appBadgeView.setTag(null);
         }
 
-        if (holder.appliedTextSizePx != (int) (nameTextSize * holder.fileNameView.getResources().getDisplayMetrics().scaledDensity)) {
-            holder.fileNameView.setTextSize(nameTextSize);
-            holder.appliedTextSizePx = (int) (nameTextSize * holder.fileNameView.getResources().getDisplayMetrics().scaledDensity);
-        }
-        if (holder.appliedMaxLines != nameMaxLines) {
-            holder.fileNameView.setMaxLines(nameMaxLines);
-            holder.fileNameView.setEllipsize(TextUtils.TruncateAt.END);
-            holder.appliedMaxLines = nameMaxLines;
-        }
-        ViewGroup.LayoutParams iconParams = holder.fileIconView.getLayoutParams();
-        if (iconParams != null && (iconParams.width != rowIconPx || iconParams.height != rowIconPx)) {
-            // Unconditional setLayoutParams per bind forces a remeasure of
-            // every row on every bind; only touch it when the size changed.
-            iconParams.width = rowIconPx;
-            iconParams.height = rowIconPx;
-            holder.fileIconView.setLayoutParams(iconParams);
-        }
+        rowStyle.apply(holder.fileNameView, holder.fileIconView);
 
         if (isInZip) {
             entry = (ZipEntryInfo) item;
@@ -1139,53 +1107,13 @@ final View.OnClickListener originalClickListener;
                     externalFileUris = null;
                 }
 
-                List<FileMenuOrder.MenuItem> menuItems = FileMenuOrder.sortItems(context, visibleMenu);
-                String[] items = new String[menuItems.size()];
-                String[] itemIds = new String[menuItems.size()];
-                for (int mi = 0; mi < menuItems.size(); mi++) {
-                    items[mi] = menuItems.get(mi).label();
-                    itemIds[mi] = menuItems.get(mi).id();
-                }
-
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
                 final List<File> finalDexCompare1 = dexCompareFiles1;
                 final List<File> finalDexCompare2 = dexCompareFiles2;
 
-                final boolean twoColumnMenu = FileMenuOrder.isTwoColumn(context);
-                View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
-                ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
-                RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
-                final BottomSheetDialog[] menuSheet = {null};
-                final MaterialAlertDialogBuilder menuDialogBuilder;
-                final AlertDialog[] menuDialog = {null};
-                View editBtn = menuView.findViewById(R.id.fileMenuEditButton);
-                if (editBtn != null) {
-                    editBtn.setOnClickListener(v -> {
-                        if (menuSheet[0] != null) menuSheet[0].dismiss();
-                        if (menuDialog[0] != null) menuDialog[0].dismiss();
-                        FileMenuCustomizer.show(context);
-                    });
-                }
-                if (twoColumnMenu) {
-                    View handle = menuView.findViewById(R.id.fileMenuHandle);
-                    if (handle != null) handle.setVisibility(View.GONE);
-                    menuList.setLayoutManager(new GridLayoutManager(context, 2));
-                    float density = context.getResources().getDisplayMetrics().density;
-                    int edge = (int) (12 * density + 0.5f);
-                    menuList.setPadding(edge, menuList.getPaddingTop(), edge, menuList.getPaddingBottom());
-                    menuSheet[0] = null;
-                    menuDialogBuilder = new MaterialAlertDialogBuilder(context).setView(menuView);
-                } else {
-                    menuList.setLayoutManager(new LinearLayoutManager(context));
-                    menuSheet[0] = null;
-                    menuDialogBuilder = null;
-                }
-                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, disabledIds, position1 -> {
-                    if (menuSheet[0] != null) menuSheet[0].dismiss();
-                    if(menuDialog[0] != null) menuDialog[0].dismiss();
+                FileMenuDialog.show(context, fileName, visibleMenu, isInZip, disabledIds, actionId -> {
                     try {
-                        String actionId = itemIds[position1];
                         FileMenuAction pluginAction = ExtensionRegistry.findFileMenu(actionId);
                         if (pluginAction != null) {
                             pluginAction.run(context, pluginFiles);
@@ -1484,17 +1412,7 @@ final View.OnClickListener originalClickListener;
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
-                }));
-                if (!twoColumnMenu) {
-                    context.runOnUiThread(() -> {
-                        BottomSheetDialog bs = new BottomSheetDialog(context);
-                        bs.setContentView(menuView);
-                        bs.show();
-                        menuSheet[0] = bs;
-                    });
-                } else {
-                    context.runOnUiThread(() -> menuDialog[0] = menuDialogBuilder.show());
-                }
+                });
             } catch (Exception e) {
                 try {
                     new ErrorUtil(context).showError(e);

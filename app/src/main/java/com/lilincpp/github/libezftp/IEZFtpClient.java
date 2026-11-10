@@ -86,6 +86,13 @@ public interface IEZFtpClient {
      */
     void getCurDirFileList(@Nullable OnEZFtpCallBack<List<EZFtpFile>> callBack);
 
+    default void getDirectoryFileList(String path, OnEZFtpCallBack<List<EZFtpFile>> callback) {
+        changeDirectory(path, new OnEZFtpCallBack<>() {
+            @Override public void onSuccess(String response) { getCurDirFileList(callback); }
+            @Override public void onFail(int code, String message) { if (callback != null) callback.onFail(code, message); }
+        });
+    }
+
     /**
      * get remote cur dir path
      * @param callBack the async callback
@@ -120,6 +127,10 @@ public interface IEZFtpClient {
      */
     void uploadFile(@NonNull String localFilePath, @Nullable OnEZFtpDataTransferCallback callback);
 
+    default void uploadFile(String localFilePath, String remotePath, OnEZFtpDataTransferCallback callback) {
+        uploadFile(localFilePath, callback);
+    }
+
     ////////////////////////////////////////
 
     /**
@@ -149,6 +160,11 @@ public interface IEZFtpClient {
     void rename(@NonNull String oldPath, @NonNull String newPath, @Nullable OnEZFtpCallBack<Void> callBack);
     
     void createDirectory(@NonNull String path, @Nullable OnEZFtpCallBack<Void> callBack);
+
+    /** Optional AVBL extension. Null means the server does not report available space. */
+    default void getAvailableSpace(@Nullable OnEZFtpCallBack<Long> callback) {
+        if (callback != null) callback.onSuccess(null);
+    }
 
     ////////////////////////////////////////
 

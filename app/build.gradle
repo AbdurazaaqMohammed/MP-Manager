@@ -152,6 +152,8 @@ dependencies {
     implementation "androidx.window:window:1.5.1"
 
     implementation files('libs/commons-net-3.11.1.jar')
+    // SMB2/3 client; no legacy SMB1 or native binaries.
+    implementation 'com.hierynomus:smbj:0.14.0'
     // LSPatch (JingMatrix fork) integrated-mode patcher engine (vendored, see
     // docs/XPOSED_PATCHER.md) — full flavor only — plus the vendored classes it
     // links against: the aXML manifest editor (com.wind.meditor, pxb.android)
@@ -171,6 +173,8 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.5.0'
     implementation 'com.airbnb.android:lottie:6.6.6'
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:5.5.0'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:5.5.0'
 }
