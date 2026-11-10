@@ -7,6 +7,7 @@ import android.os.Environment;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
@@ -176,7 +177,11 @@ public class SignatureKeyDialog {
         });
 
         ScrollView scrollView = new ScrollView(activity);
-        scrollView.addView(view);
+        // Full width: a plain addView() would let the content wrap, and the
+        // dialog's first UNSPECIFIED-width measure pass then collapses weighted
+        // rows to zero width (text renders one character per line in Russian).
+        scrollView.addView(view, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         AlertDialog ad = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.signature_key)
                 .setView(scrollView)
