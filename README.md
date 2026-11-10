@@ -144,6 +144,18 @@ Browse app data folders through the Storage Access Framework without root. Docum
 <!-- TODO: Add screenshots/videos -->
 </details>
 
+<details><summary>WebDAV and SMB network storage</summary>
+
+Open **Network connections** from the sidebar: one Material-tabbed dialog contains **FTP**, **WebDAV**, and **SMB**. The SMB tab automatically discovers local servers using advertisements, Windows WS-Discovery, and a bounded SMB2/3 scan. WebDAV accepts HTTP(S) collection URLs; SMB accepts `smb://server/share` with an optional custom port and domain/workgroup. SMB1 is not supported.
+
+Create files/folders, rename, delete, and copy or move files and whole folders between a network location and the other pane. Saved connections are encrypted with Android Keystore. Existing destinations are not silently overwritten, and moves remove their source only after a successful transfer.
+
+Opening a network file downloads a local copy for the built-in viewers and editors; edits are not automatically synced back. See [Network storage](docs/NETWORK_STORAGE.md) for usage, limitations, and tests.
+
+FTP, WebDAV and SMB use the normal file-list icons, spacing and customizable Material long-press menu, without downloading thumbnails. Save configurations without connecting and pin any protocol in the sidebar **Storage** section. Server-reported quotas/volume space are shown when available; unknown totals are never guessed.
+
+</details>
+
 <details><summary>Customizable file menu</summary>
 
 Reorder the long press file menu by dragging items anywhere. The menu can be shown as a bottom sheet or in two columns, with Material colors.
@@ -382,7 +394,7 @@ Use FTP server with custom port, username and password, with optional FTPS expli
 
 <details><summary>FTP client</summary>
 
-Connect to an FTP server with optional FTPS and browse remote folders in either pane, with the same navigation controls as local files. Files can be uploaded from the device, and connection details can be saved as profiles (to connect to multiple devices easily).
+Use the **FTP** tab in **Network connections** to connect to an FTP server with optional FTPS and browse remote folders in either pane. Files can be uploaded from the device, and connection details can be saved as profiles and pinned under sidebar Storage. Existing FTP profiles remain compatible.
 
 <p align="center">
   <img src="./images/ftpc.png" width="200" alt="FTP client dialog">

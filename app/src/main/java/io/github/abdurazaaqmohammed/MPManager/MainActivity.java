@@ -64,6 +64,10 @@ import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
 import io.github.abdurazaaqmohammed.features.files.FtpController;
+import io.github.abdurazaaqmohammed.features.files.network.NetworkController;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteEntry;
+import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
@@ -205,6 +209,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final BookmarksController bookmarksUI = new BookmarksController(this);
     private final MultiSelectController multiSelect = new MultiSelectController(this);
     private final FtpController ftp = new FtpController(this);
+    private final NetworkController network = new NetworkController(this);
+
+    public NetworkController getNetwork() { return network; }
 
     public FtpController getFtp() {
         return ftp;
@@ -371,8 +378,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         try {
-            if (pane1Folder != null) outState.putString("pane1_path", pane1Folder.getAbsolutePath());
-            if (pane2Folder != null) outState.putString("pane2_path", pane2Folder.getAbsolutePath());
+            // Network sessions cannot survive process recreation; never restore their synthetic paths as local files.
+            if (pane1Folder != null && !(pane1Folder instanceof RemoteFile) && !(pane1Folder instanceof FTPFileWrapper))
+                outState.putString("pane1_path", pane1Folder.getAbsolutePath());
+            if (pane2Folder != null && !(pane2Folder instanceof RemoteFile) && !(pane2Folder instanceof FTPFileWrapper))
+                outState.putString("pane2_path", pane2Folder.getAbsolutePath());
             outState.putInt("last_pane", lastPaneSelected);
             try {
                 RecyclerView p1 = findViewById(R.id.listViewPane1);
@@ -1201,6 +1211,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 return false;
             });
             currentFolderView.setOnClickListener(v -> {
+                File shown = lastPaneSelected == 1 ? pane1Folder : pane2Folder;
+                if (shown instanceof RemoteFile || shown instanceof FTPFileWrapper) {
+                    Extensions.showMessage(this, R.string.network_browse_hint);
+                    return;
+                }
                 View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);//new TextInputLayout(this, null, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox);
                 EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
                 input.setText(((TextView) v).getText());
@@ -1248,6 +1263,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             View addButton = findViewById(R.id.addButton);
             addButton.setOnLongClickListener(this::showMsgOnLongPress);
             addButton.setOnClickListener(v -> {
+                if (getCurrentPane().getAdapter() instanceof FtpFilesArrayAdapter) {
+                    Extensions.showMessage(this, R.string.network_ftp_create_unsupported);
+                    return;
+                }
                 if (multiSelect.isActive()) {
                     multiSelect.exitAll();
                     return;
@@ -1262,8 +1281,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .setView(textInputLayout)
                         .setNegativeButton(rss.getString(R.string.folder), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
-                            File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                            String name = resolveNewEntryName(ogFolder, input.getText().toString(), true);
+                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                             if (ogFolder instanceof RemoteFile remote) {
+                                 network.create(remote, input.getText().toString(), true, isPane1);
+                                 return;
+                             }
+                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), true);
                             boolean success;
                             if (SafFs.isSaf(ogFolder)) {
                                 success = SafFs.createDirectory((SafFile) ogFolder, name);
@@ -1284,8 +1307,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
                         .setPositiveButton(rss.getString(R.string.file), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
-                            File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                            String name = resolveNewEntryName(ogFolder, input.getText().toString(), false);
+                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                             if (ogFolder instanceof RemoteFile remote) {
+                                 network.create(remote, input.getText().toString(), false, isPane1);
+                                 return;
+                             }
+                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), false);
                             boolean success;
                             if (SafFs.isSaf(ogFolder)) {
                                 success = SafFs.createFile((SafFile) ogFolder, name, null);
@@ -1331,6 +1358,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             syncPaneButton.setOnLongClickListener(this::showMsgOnLongPress);
             syncPaneButton.setOnClickListener(v -> {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                if (a instanceof RemoteFilesArrayAdapter remote) {
+                    loadFolderInPane(remote.folder, lastPaneSelected != 1, true);
+                    return;
+                }
                 if(a instanceof MainFilesArrayAdapter mainFilesArrayAdapter) {
                     if (lastPaneSelected == 1) {
                         int[] saved = capturePaneScroll(true);
@@ -1391,6 +1422,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if ((a instanceof MainFilesArrayAdapter adapter)) {
                     adapter.goUp();
+                } else if (a instanceof RemoteFilesArrayAdapter remote) {
+                    remote.goUp();
                 } else {
                     ftp.ftpParent(isPane1);
                 }
@@ -1684,7 +1717,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             }
                         }
                     }
-                } else ftp.ftpParent(lastPaneSelected == 1);
+                } else if (a instanceof RemoteFilesArrayAdapter remote) remote.goUp();
+                else ftp.ftpParent(lastPaneSelected == 1);
             }
         }
     }
@@ -1732,6 +1766,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void applyNavButtons(boolean canGoBack, boolean canGoForward) {
         findViewById(R.id.backButton).setEnabled(canGoBack);
         findViewById(R.id.forwardButton).setEnabled(canGoForward);
+        findViewById(R.id.addButton).setEnabled(!(getCurrentPane().getAdapter() instanceof FtpFilesArrayAdapter));
     }
 
     @Override
@@ -1756,8 +1791,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
         invalidatePaneLoad(pane1);
+        if (folder instanceof RemoteFile remote) {
+            loadRemoteFolder(remote, pane1, addToHistory);
+            return;
+        }
         if (folder instanceof FTPFileWrapper) {
-            loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
+            ftp.loadFtpFolderInPane((FTPFileWrapper) folder, pane1, addToHistory);
             return;
         }
         // A provider-backed location (a granted SAF tree): same pane, same
@@ -1873,6 +1912,66 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         pane.setAdapter(new MainFilesArrayAdapter(this, files, parent != null ? parent : folder, pane1, false, null));
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
+        updateNavigationButtons();
+    }
+
+    /** Network listing is generation-guarded just like SAF: a late response cannot replace a newer pane. */
+    private void loadRemoteFolder(RemoteFile folder, boolean pane1, boolean addToHistory) {
+        final long gen = pane1 ? paneLoadGen1 : paneLoadGen2;
+        saveCurrentPaneScroll(pane1);
+        final int[] saved = getSavedScrollForLocation(pane1, "file:" + folder.getAbsolutePath());
+        listingExecutor.execute(() -> {
+            try {
+                List<RemoteEntry> entries = folder.connection.client.list(folder.entry.path);
+                RemoteFile[] files = entries.stream().map(e -> new RemoteFile(folder.connection, e))
+                        .filter(this::isNotHidden).toArray(RemoteFile[]::new);
+                sortFiles(files, folder.displayPath());
+                handler.post(() -> {
+                    if (isFinishing() || isDestroyed() || gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
+                    if (pane1) { pane1Folder = folder; currentPane1Files = files; }
+                    else { pane2Folder = folder; currentPane2Files = files; }
+                    if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(folder, false, null));
+                    RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                    pane.setAdapter(new RemoteFilesArrayAdapter(this, folder, files, pane1));
+                    network.refreshSpace(folder.connection);
+                    UiPrefs.playFolderTransition(pane);
+                    if (pane1 == (lastPaneSelected == 1)) {
+                        setMultiSelectModeUI(false);
+                        setCurrentPane(lastPaneSelected);
+                    }
+                    updateNavigationButtons();
+                    if (saved != null) restorePaneScroll(pane1, saved);
+                });
+            } catch (Exception e) {
+                handler.post(() -> {
+                    if (!isDestroyed() && gen == (pane1 ? paneLoadGen1 : paneLoadGen2)) new ErrorUtil(this).showError(e);
+                });
+            }
+        });
+    }
+
+    public long beginNetworkPaneLoad(boolean pane1) {
+        saveCurrentPaneScroll(pane1);
+        invalidatePaneLoad(pane1);
+        return pane1 ? paneLoadGen1 : paneLoadGen2;
+    }
+
+    public boolean isNetworkPaneLoadCurrent(boolean pane1, long generation) {
+        return !isFinishing() && !isDestroyed() && generation == (pane1 ? paneLoadGen1 : paneLoadGen2);
+    }
+
+    public void bindFtpFolder(FTPFileWrapper folder, FTPFileWrapper[] files, boolean pane1, boolean addToHistory) {
+        if (pane1) { pane1Folder = folder; currentPane1Files = files; }
+        else { pane2Folder = folder; currentPane2Files = files; }
+        if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(folder, false, null));
+        FTPFileWrapper[] rows = new FTPFileWrapper[files.length + 1];
+        rows[0] = new FTPFileWrapper(folder.remotePath(), new com.lilincpp.github.libezftp.EZFtpFile("..",
+                folder.remotePath(), com.lilincpp.github.libezftp.EZFtpFile.TYPE_DIRECTORY, 0, null), folder.client, folder.connectionAddress());
+        System.arraycopy(files, 0, rows, 1, files.length);
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        pane.setAdapter(new FtpFilesArrayAdapter(this, rows, pane1, folder.client));
+        UiPrefs.playFolderTransition(pane);
+        if (pane1 == (lastPaneSelected == 1)) { setMultiSelectModeUI(false); setCurrentFolder(folder, files); }
         updateNavigationButtons();
     }
 
@@ -2399,7 +2498,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      *                  adapter is bound (e.g. scroll restore). Null to skip.
      */
     public void loadFolderInPaneAsync(File folder, boolean pane1, boolean addToHistory, Runnable afterBind) {
-        if (folder instanceof FTPFileWrapper || SafFs.isSaf(folder)
+        if (folder instanceof RemoteFile || folder instanceof FTPFileWrapper || SafFs.isSaf(folder)
                 || (!folder.isDirectory() && ArchiveUtil.isSupportedArchive(folder.getName()))) {
             loadFolderInPane(folder, pane1, addToHistory);
             if (afterBind != null) {
@@ -2714,7 +2813,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (filesAdapter.isInZip) loadZipFolderInPane(pane1 ? pane1Folder : pane2Folder, filesAdapter.currentZipPath, pane1, false);
                 else loadFolderInPaneAsync(pane1 ? pane1Folder : pane2Folder, pane1, false, saved != null ? () -> restorePaneScroll(pane1, saved) : null);
             } else if (adapter instanceof FtpFilesArrayAdapter ftpAdapter && ftpAdapter.getItemCount() > 0)
-                fetchFtpDirAndLoad(ftpAdapter.getItem(0).getParent(), pane1);
+                fetchFtpDirAndLoad(ftpAdapter.getItem(0).remoteParent(), pane1);
+            else if (adapter instanceof RemoteFilesArrayAdapter remote)
+                loadFolderInPane(remote.folder, pane1, false);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
         }
@@ -3123,6 +3224,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (folder == null) return;
                 loadFolderInPaneAsync(folder, pane1, false,
                         saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+            } else if (adapter instanceof RemoteFilesArrayAdapter remote) {
+                loadFolderInPane(remote.folder, pane1, false);
             } else if (adapter instanceof FtpFilesArrayAdapter) {
                 reloadPane(pane1, preserveScroll);
             }
@@ -3177,7 +3280,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         final int finalFoldersCount = foldersCount;
         final int finalTotalCount = totalCount;
         final String path = curr == null ? ""
-                : (curr instanceof SafFile ? ((SafFile) curr).getDisplayPath() : curr.getPath());
+                : (curr instanceof RemoteFile remote ? remote.displayPath()
+                : (curr instanceof FTPFileWrapper ftpFolder ? ftpFolder.displayPath()
+                : (curr instanceof SafFile ? ((SafFile) curr).getDisplayPath() : curr.getPath())));
         handler.post(() -> {
             currentFolderPath.setText(path);
             uiHelper.scrollTextView(currentFolderPath);
@@ -3191,7 +3296,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         paneHighlight.onPaneSelected(pane, true);
         RecyclerView.Adapter a = getCurrentPane().getAdapter();
         boolean b = a instanceof MainFilesArrayAdapter;
-        findViewById(R.id.syncPaneButton).setEnabled(b);
+        findViewById(R.id.syncPaneButton).setEnabled(b || a instanceof RemoteFilesArrayAdapter);
         if (b) {
             MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
             if (adapter.isInZip) {
@@ -3208,6 +3313,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 File[] shown = adapter.getShownFiles();
                 setCurrentFolder(curr, shown != null ? shown : curr.listFiles());
             }
+        } else if (a instanceof RemoteFilesArrayAdapter remote) {
+            setCurrentFolder(remote.folder, remote.files);
+        } else if (a instanceof FtpFilesArrayAdapter) {
+            setCurrentFolder(pane == 1 ? pane1Folder : pane2Folder, paneFiles(pane == 1));
         }
         updateNavigationButtons();
     }
@@ -3380,6 +3489,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // Drop any in-flight background listing so it never touches dead views.
         invalidatePaneLoad(true);
         invalidatePaneLoad(false);
+        network.close();
+        ftp.close();
         try {
             listingExecutor.shutdownNow();
         } catch (Exception ignored) {
@@ -3513,7 +3624,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
-    private boolean isNotHidden(File f) {
+    public boolean isNotHidden(File f) {
         return sortFilter.isNotHidden(f);
     }
 
@@ -3590,7 +3701,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         popup.show();
     }
 
-    private void sortFiles(File[] files, String folderPath) {
+    public void sortFiles(File[] files, String folderPath) {
         sortFilter.sortFiles(files, folderPath);
     }
 

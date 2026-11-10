@@ -45,12 +45,16 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteSpace;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 /**
  * FTP server/client dialogs + pane loading extracted from MainActivity.
@@ -61,6 +65,11 @@ public class FtpController {
     private IEZFtpClient ftpClient;
     private MaterialAutoCompleteTextView profileSpinner;
     private ImageButton profileManageButton;
+    private final ConcurrentHashMap<String, RemoteSpace.Report> spaceReports = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<IEZFtpClient, FtpProfile> sessionProfiles = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<IEZFtpClient, Long> spaceCheckTimes = new ConcurrentHashMap<>();
+    private final Set<IEZFtpClient> clients = ConcurrentHashMap.newKeySet();
+    private volatile boolean closed;
 
     public static IEZFtpServer ftpServer;
 
@@ -194,52 +203,65 @@ public class FtpController {
     }
 
     public void showFtpClientDialog() {
-        View view = LayoutInflater.from(activity).inflate(R.layout.dialog_ftp_client, null);
-        EditText ipInput = view.findViewById(R.id.ipInput);
-        EditText portInput = view.findViewById(R.id.portInput);
-        EditText userInput = view.findViewById(R.id.userInput);
-        EditText passInput = view.findViewById(R.id.passInput);
-        MaterialAutoCompleteTextView securityInput = view.findViewById(R.id.securityInput);
-        String[] securityOptions = activity.rss.getStringArray(R.array.ftp_security_options);
-        securityInput.setSimpleItems(securityOptions);
-        securityInput.setText(securityOptions[0], false);
-        FrameLayout container = view.findViewById(R.id.container);
-        View header = LayoutInflater.from(activity).inflate(R.layout.dialog_ftp_client_header, container, false);
-        container.addView(header, 0);
+        activity.getNetwork().showConnectionDialog("ftp");
+    }
 
-        profileSpinner = header.findViewById(R.id.profile_spinner);
-        profileManageButton = header.findViewById(R.id.manage_profiles);
+    public List<FtpProfile> clientProfiles() {
+        List<FtpProfile> clients = new ArrayList<>();
+        for (FtpProfile profile : new ProfileManager(activity).getProfiles())
+            if (!profile.isServerProfile()) clients.add(profile);
+        return clients;
+    }
 
-        new ProfileHelper(activity, ipInput, portInput, userInput, passInput, securityInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
-        activity.dialogUtil.getDialogBuilder()
-                .setTitle(activity.rss.getString(R.string.ftp_client))
-                .setView(view)
-                .setPositiveButton(activity.rss.getString(R.string.connect), (dialog, which) -> {
+    public void saveClientProfile(FtpProfile profile, String previousName, boolean pin) {
+        ProfileManager store = new ProfileManager(activity);
+        List<FtpProfile> profiles = store.getProfiles();
+        int index = -1;
+        for (int i = 0; i < profiles.size(); i++) {
+            FtpProfile p = profiles.get(i);
+            if (!p.isServerProfile() && (p.getName().equals(previousName) || p.getName().equals(profile.getName()))) {
+                index = i;
+                if (p.getName().equals(previousName)) break;
+            }
+        }
+        if (index >= 0) store.updateProfile(index, profile);
+        else store.addProfile(profile);
+        String id = SidebarPins.FTP_PREFIX + profile.getName();
+        spaceReports.remove(profile.getName());
+        if (previousName != null) spaceReports.remove(previousName);
+        if (pin) SidebarPins.add(activity, id);
+        else SidebarPins.remove(activity, id);
+        activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
+    }
 
-                    String ip = ipInput.getText().toString().trim();
-                    int port = Integer.parseInt(portInput.getText().toString());
-                    String user = userInput.getText().toString();
-                    String pass = passInput.getText().toString();
-                    int securityType = getSecurityTypeIndex(securityInput.getText().toString());
+    public void deleteClientProfile(String name) {
+        ProfileManager store = new ProfileManager(activity);
+        List<FtpProfile> profiles = store.getProfiles();
+        for (int i = 0; i < profiles.size(); i++) {
+            FtpProfile p = profiles.get(i);
+            if (!p.isServerProfile() && p.getName().equals(name)) { store.deleteProfile(i); break; }
+        }
+        spaceReports.remove(name);
+        activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
+    }
 
-                    ftpClient = new EZFtpClient();
-                    ftpClient.connect(ip, port, user, pass, securityType, new OnEZFtpCallBack<>() {
-                        @Override
-                        public void onSuccess(Void response) {
-                            activity.runOnUiThread(() -> {
-                                Extensions.showMessage(activity, activity.rss.getString(R.string.connected_to_ftp));
-                                fetchFtpDirAndLoad(File.separator, activity.lastPaneSelected == 1);
-                            });
-                        }
+    private static String storageIdentity(FtpProfile profile) {
+        return profile.getSecurityType() + "\u0000" + profile.getIp() + "\u0000" + profile.getPort() + "\u0000" + profile.getUsername();
+    }
+    public RemoteSpace spaceForProfile(FtpProfile profile) {
+        RemoteSpace.Report report = spaceReports.get(profile.getName());
+        return report != null && report.identity().equals(storageIdentity(profile)) ? report.space() : null;
+    }
+    public boolean hasCheckedSpace(FtpProfile profile) {
+        RemoteSpace.Report report = spaceReports.get(profile.getName());
+        return report != null && report.identity().equals(storageIdentity(profile));
+    }
 
-                        @Override
-                        public void onFail(int code, String msg) {
-                            activity.runOnUiThread(() -> Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, msg)));
-                        }
-                    });
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+    public void connect(FtpProfile profile, boolean pane1) {
+        String address;
+        try { address = new java.net.URI("ftp", null, profile.getIp(), profile.getPort(), "/", null, null).toString(); }
+        catch (Exception e) { new ErrorUtil(activity).showError(e); return; }
+        activity.getNetwork().withPermissionForAddress(address, () -> connectReady(profile, pane1));
     }
 
     /**
@@ -261,24 +283,60 @@ public class FtpController {
             Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, name));
             return;
         }
+        connect(profile, pane1);
+    }
+
+    private void connectReady(FtpProfile profile, boolean pane1) {
         Extensions.showMessage(activity, activity.rss.getString(R.string.connecting_to, profile.getName()));
-        ftpClient = new EZFtpClient();
-        ftpClient.connect(profile.getIp(), profile.getPort(), profile.getUsername(),
+        if (closed) return;
+        IEZFtpClient client = new EZFtpClient();
+        ftpClient = client;
+        clients.add(client);
+        sessionProfiles.put(client, profile);
+        client.connect(profile.getIp(), profile.getPort(), profile.getUsername(),
                 profile.getPassword(), profile.getSecurityType(), new OnEZFtpCallBack<>() {
                     @Override
                     public void onSuccess(Void response) {
                         activity.runOnUiThread(() -> {
+                            if (closed || activity.isDestroyed()) { client.release(); return; }
                             Extensions.showMessage(activity, activity.rss.getString(R.string.connected_to_ftp));
-                            fetchFtpDirAndLoad(File.separator, pane1);
+                            String scheme = profile.getSecurityType() == 0 ? "ftp" : "ftps";
+                            String address;
+                            try { address = new java.net.URI(scheme, null, profile.getIp(), profile.getPort(), null, null, null).toString(); }
+                            catch (Exception e) { address = scheme + "://" + profile.getIp(); }
+                            fetchFtpDirAndLoad(client, File.separator, address, pane1, true);
+                            refreshSpace(client);
                         });
                     }
 
                     @Override
                     public void onFail(int code, String msg) {
-                        activity.runOnUiThread(() ->
-                                Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, msg)));
+                        client.release();
+                        clients.remove(client);
+                        sessionProfiles.remove(client);
+                        activity.runOnUiThread(() -> {
+                            if (!closed && !activity.isDestroyed()) Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, msg));
+                        });
                     }
                 });
+    }
+
+    private void refreshSpace(IEZFtpClient client) {
+        FtpProfile profile = sessionProfiles.get(client);
+        if (closed || profile == null) return;
+        long now = android.os.SystemClock.elapsedRealtime();
+        Long previous = spaceCheckTimes.putIfAbsent(client, now);
+        if (previous != null && (now - previous < 60_000 || !spaceCheckTimes.replace(client, previous, now))) return;
+        String identity = storageIdentity(profile);
+        client.getAvailableSpace(new OnEZFtpCallBack<>() {
+            @Override public void onSuccess(Long free) {
+                if (closed) return;
+                spaceReports.put(profile.getName(), new RemoteSpace.Report(identity,
+                        free != null && free >= 0 ? RemoteSpace.available(free) : null));
+                if (!activity.isDestroyed()) activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
+            }
+            @Override public void onFail(int code, String message) { /* Optional server extension. */ }
+        });
     }
 
     private int getSecurityTypeIndex(String text) {
@@ -292,74 +350,67 @@ public class FtpController {
     }
 
     public void fetchFtpDirAndLoad(String path, boolean pane1) {
-        if (ftpClient == null || !ftpClient.isConnected()) return;
+        File folder = pane1 ? activity.pane1Folder : activity.pane2Folder;
+        FTPFileWrapper ftp = folder instanceof FTPFileWrapper ? (FTPFileWrapper) folder : null;
+        fetchFtpDirAndLoad(ftp != null && ftp.client != null ? ftp.client : ftpClient,
+                path, ftp != null ? ftp.connectionAddress() : "ftp://", pane1, false);
+    }
 
-        ftpClient.changeDirectory(path, new OnEZFtpCallBack<>() {
-            @Override
-            public void onSuccess(String newPath) {
-                ftpClient.getCurDirFileList(new OnEZFtpCallBack<>() {
-                    @Override
-                    public void onSuccess(List<EZFtpFile> response) {
-                        activity.runOnUiThread(() -> {
-                            List<FTPFileWrapper> files = new ArrayList<>();
-                            files.add(new FTPFileWrapper(newPath, new EZFtpFile("..", "", 0, 0, new Date())));
-                            int foldersCount = 0;
-                            //int filesCount = 0;
-                            if (response != null) {
-                                for (EZFtpFile f : response) {
-                                    if (f.getType() == EZFtpFile.TYPE_DIRECTORY) foldersCount++;
-                                    //else filesCount++;
-                                    files.add(new FTPFileWrapper(newPath, f));
-                                }
-                            }
-                            RecyclerView pane = activity.findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-                            pane.setAdapter(new FtpFilesArrayAdapter(activity, files.toArray(new FTPFileWrapper[0]), pane1, ftpClient));
-                            TextView currentFolderPath = activity.findViewById(R.id.currentFolderPath);
-                            currentFolderPath.setText(activity.rss.getString(R.string.ftp, path));
-                            activity.uiHelper.scrollTextView(currentFolderPath);
-
-                            activity.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(response.size() - foldersCount));
-                        });
+    private void fetchFtpDirAndLoad(IEZFtpClient client, String path, String address, boolean pane1, boolean history) {
+        if (closed || client == null || !client.isConnected()) return;
+        long generation = activity.beginNetworkPaneLoad(pane1);
+        client.getDirectoryFileList(path, new OnEZFtpCallBack<>() {
+            @Override public void onSuccess(List<EZFtpFile> response) {
+                activity.runOnUiThread(() -> {
+                    if (closed || !activity.isNetworkPaneLoadCurrent(pane1, generation)) return;
+                    List<FTPFileWrapper> children = new ArrayList<>();
+                    if (response != null) for (EZFtpFile f : response) {
+                        if (f.getName().equals(".") || f.getName().equals("..")) continue;
+                        FTPFileWrapper file = new FTPFileWrapper(path, f, client, address);
+                        if (activity.isNotHidden(file)) children.add(file);
                     }
-
-                    @Override
-                    public void onFail(int code, String msg) {
-                    }
+                    FTPFileWrapper[] files = children.toArray(new FTPFileWrapper[0]);
+                    FTPFileWrapper folder = FTPFileWrapper.folder(path, client, address);
+                    activity.sortFiles(files, folder.displayPath());
+                    activity.bindFtpFolder(folder, files, pane1, history);
+                    refreshSpace(client);
                 });
             }
-
-            @Override
-            public void onFail(int code, String msg) {
+            @Override public void onFail(int code, String message) {
+                if (!closed && activity.isNetworkPaneLoadCurrent(pane1, generation))
+                    Extensions.showMessage(activity, activity.getString(R.string.ftp_connect_failed, message));
             }
         });
     }
 
     /** Go to the parent of the current FTP directory (back-press / up flows). */
     public void ftpParent(boolean pane1) {
-        if (ftpClient == null) return;
-        ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {
-            @Override
-            public void onSuccess(String response) {
-                int startIndex = response.indexOf(File.separator);
-                int endIndex = response.lastIndexOf(File.separator);
-                fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), pane1);
-            }
-
-            @Override
-            public void onFail(int code, String msg) {
-            }
-        });
+        File current = pane1 ? activity.pane1Folder : activity.pane2Folder;
+        if (!(current instanceof FTPFileWrapper folder)) return;
+        File parent = folder.getParentFile();
+        if (parent instanceof FTPFileWrapper ftp) loadFtpFolderInPane(ftp, pane1);
+        else activity.loadFolderInPane(Environment.getExternalStorageDirectory(), pane1, true);
     }
 
     public void loadFtpFolderInPane(FTPFileWrapper folder, boolean pane1) {
+        loadFtpFolderInPane(folder, pane1, true);
+    }
+
+    public void loadFtpFolderInPane(FTPFileWrapper folder, boolean pane1, boolean history) {
         if (folder.getName().equals("..")) {
-            if (ftpClient != null) {
-                ftpParent(activity.lastPaneSelected == 1);
-            }
+            ftpParent(pane1);
         } else if (folder.isDirectory()) {
-            fetchFtpDirAndLoad(folder.getFtpFile().getName(), pane1);
+            fetchFtpDirAndLoad(folder.client != null ? folder.client : ftpClient, folder.remotePath(), folder.connectionAddress(), pane1, history);
         } else {
             Extensions.showMessage(activity, "FTP File Download coming soon");
         }
+    }
+
+    public void close() {
+        closed = true;
+        for (IEZFtpClient client : clients) client.release();
+        clients.clear();
+        sessionProfiles.clear();
+        spaceCheckTimes.clear();
     }
 }

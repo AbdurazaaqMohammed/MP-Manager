@@ -58,6 +58,10 @@ public final class EZFtpClient implements IEZFtpClient {
         ftpClientIml.getCurDirFileList(callBack);
     }
 
+    @Override public void getDirectoryFileList(String path, OnEZFtpCallBack<List<EZFtpFile>> callback) {
+        ftpClientIml.getDirectoryFileList(path, callback);
+    }
+
     @Override
     public void getCurDirPath(@Nullable OnEZFtpCallBack<String> callBack) {
         ftpClientIml.getCurDirPath(callBack);
@@ -81,6 +85,10 @@ public final class EZFtpClient implements IEZFtpClient {
     @Override
     public void uploadFile(@NonNull String localFilePath, @Nullable OnEZFtpDataTransferCallback callback) {
         ftpClientIml.uploadFile(localFilePath, callback);
+    }
+
+    @Override public void uploadFile(String localFilePath, String remotePath, OnEZFtpDataTransferCallback callback) {
+        ftpClientIml.uploadFile(localFilePath, remotePath, callback);
     }
 
     @Override
@@ -111,6 +119,10 @@ public final class EZFtpClient implements IEZFtpClient {
     @Override
     public void createDirectory(@NonNull String path, @Nullable OnEZFtpCallBack<Void> callBack) {
         ftpClientIml.createDirectory(path, callBack);
+    }
+
+    @Override public void getAvailableSpace(@Nullable OnEZFtpCallBack<Long> callback) {
+        ftpClientIml.getAvailableSpace(callback);
     }
 
     @Override

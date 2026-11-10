@@ -232,16 +232,33 @@ public class RootManager {
     }
 
     private boolean checkRoot() {
+        Process process = null;
         try {
-            Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "id"});
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line = reader.readLine();
-            boolean hasRoot = line != null && line.contains("uid=0");
-            process.waitFor(5, TimeUnit.SECONDS);
-            process.destroy();
-            return hasRoot;
+            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "id"});
+            // Process.waitFor(timeout, unit) is unavailable below Android 8.
+            // Wait before reading stdout so a pending su prompt cannot block
+            // the sidebar indefinitely either. The id response is very small.
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (true) {
+                try {
+                    if (process.exitValue() != 0) return false;
+                    break;
+                } catch (IllegalThreadStateException running) {
+                    if (System.nanoTime() >= deadline) return false;
+                    Thread.sleep(25);
+                }
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line = reader.readLine();
+                return line != null && line.contains("uid=0");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Exception e) {
             return false;
+        } finally {
+            if (process != null) process.destroy();
         }
     }
 

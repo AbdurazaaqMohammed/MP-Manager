@@ -33,10 +33,12 @@ public class StorageUtil {
         public long totalBytes;
         public long freeBytes;
         public long usedBytes;
+        /** Optional description for a pinned network volume with unknown capacity. */
+        public String description;
 
         public int usedPercent() {
             if (totalBytes <= 0) return 0;
-            return (int) ((usedBytes * 100L) / totalBytes);
+            return (int) Math.max(0, Math.min(100, usedBytes * 100.0 / totalBytes));
         }
     }
 

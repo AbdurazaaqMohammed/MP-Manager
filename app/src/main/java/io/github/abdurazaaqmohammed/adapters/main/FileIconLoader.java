@@ -165,6 +165,10 @@ public class FileIconLoader {
     }
 
     public FileIconLoader(MainActivity context, boolean isInZip) {
+        this(context, isInZip, false);
+    }
+
+    public FileIconLoader(MainActivity context, boolean isInZip, boolean metadataOnly) {
         this.context = context;
         this.isInZip = isInZip;
         this.dateTextSize = UiPrefs.dateSize(UiPrefs.getScale(context));
@@ -181,7 +185,7 @@ public class FileIconLoader {
         this.folderSizeMode = mode;
         boolean elevated = false;
         try {
-            elevated = AccessManager.fileOpsOn(context);
+            elevated = !metadataOnly && AccessManager.fileOpsOn(context);
         } catch (Exception ignored) {
         }
         this.elevatedFileOps = elevated;
@@ -190,6 +194,26 @@ public class FileIconLoader {
 
     public static Drawable getCachedApkIcon() {
         return cachedApkIcon;
+    }
+
+    /** Listing metadata only: no thumbnails, content sniffing, shell stats or folder walks. */
+    public void setupMetadataView(String name, boolean directory, long size, long modified,
+                                  boolean up, ImageView icon, TextView detail) {
+        icon.setTag(null);
+        detail.setTag(null);
+        icon.setImageDrawable(directory || up ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false));
+        applyDateTextSize(detail);
+        if (up) {
+            detail.setText("");
+            detail.setVisibility(View.GONE);
+        } else if (directory && modified <= 0) {
+            detail.setText("");
+            detail.setVisibility(View.INVISIBLE);
+        } else {
+            detail.setVisibility(View.VISIBLE);
+            String date = modified > 0 || !directory ? UiPrefs.formatDate(datePattern, modified) : "";
+            detail.setText(directory ? date : date + " " + FileSize.getHumanReadableFileSize(size));
+        }
     }
 
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
@@ -968,6 +992,10 @@ public class FileIconLoader {
      * re-ran the extension classification on every bind.
      */
     private Drawable resolveNonFolderIcon(String path, ImageView fileIconView) {
+        return resolveNonFolderIcon(path, fileIconView, !isInZip);
+    }
+
+    private Drawable resolveNonFolderIcon(String path, ImageView fileIconView, boolean loadContent) {
         Drawable memo = iconMemo.get(path);
         if (memo != null) return memo;
         String ext = FilenameUtils.getExtension(path);
@@ -980,14 +1008,14 @@ public class FileIconLoader {
                 resolved = cachedArchiveIcon;
             } else {
                 resolved = cachedApkIcon;
-                if (!isInZip) loadApkIconAsync(path, fileIconView);
+                if (loadContent) loadApkIconAsync(path, fileIconView);
             }
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             resolved = cachedImageIcon;
-            if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
+            if (loadContent) loadThumbnailAsync(path, fileIconView, false);
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             resolved = cachedVideoIcon;
-            if (!isInZip) loadThumbnailAsync(path, fileIconView, true);
+            if (loadContent) loadThumbnailAsync(path, fileIconView, true);
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) {
             resolved = cachedMusicIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) {

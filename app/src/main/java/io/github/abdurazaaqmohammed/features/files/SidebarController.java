@@ -77,6 +77,9 @@ import io.github.abdurazaaqmohammed.tools.FridaConsoleActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.abdurazaaqmohammed.features.files.network.NetworkProfile;
+import io.github.abdurazaaqmohammed.features.files.network.NetworkProfileStore;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteSpace;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -564,6 +567,15 @@ public class SidebarController {
         // Resolves names here: this runs on the sidebar-load background thread,
         // where the DocumentsContract lookup is allowed.
         data.pinned = new ArrayList<>();
+        Map<String, NetworkProfile> networkProfiles = new LinkedHashMap<>();
+        try {
+            for (NetworkProfile profile : new NetworkProfileStore(activity).load()) networkProfiles.put(profile.pinId(), profile);
+        } catch (Exception ignored) { /* Keystore failures must not hide local/provider storage. */ }
+        Map<String, io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile> ftpProfiles = new LinkedHashMap<>();
+        try {
+            for (io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile profile : activity.getFtp().clientProfiles())
+                ftpProfiles.put(profile.getName(), profile);
+        } catch (Exception ignored) {}
         try {
             for (String pin : SidebarPins.get(activity)) {
                 if (pin.startsWith(SidebarPins.SAF_PREFIX)) {
@@ -579,13 +591,32 @@ public class SidebarController {
                             "storage", pin, label, R.drawable.folder_24px, null, null));
                 } else if (pin.startsWith(SidebarPins.FTP_PREFIX)) {
                     String name = pin.substring(SidebarPins.FTP_PREFIX.length());
-                    data.pinned.add(new SidebarAdapter.SidebarEntry(SidebarAdapter.EntryType.PIN,
-                            "storage", pin, name, R.drawable.cloud_download_24px, null, null));
+                    io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile profile = ftpProfiles.get(name);
+                    if (profile != null) data.pinned.add(networkPin(pin, name, "FTP",
+                            activity.getFtp().spaceForProfile(profile), activity.getFtp().hasCheckedSpace(profile)));
+                } else if (pin.startsWith(SidebarPins.WEBDAV_PREFIX) || pin.startsWith(SidebarPins.SMB_PREFIX)) {
+                    NetworkProfile profile = networkProfiles.get(pin);
+                    if (profile != null) data.pinned.add(networkPin(pin, profile.name,
+                            profile.protocol.equals("smb") ? "SMB" : "WebDAV", activity.getNetwork().spaceForProfile(profile),
+                            activity.getNetwork().hasCheckedSpace(profile)));
                 }
             }
         } catch (Exception ignored) {
         }
         return data;
+    }
+
+    private SidebarAdapter.SidebarEntry networkPin(String id, String name, String protocol, RemoteSpace space, boolean checked) {
+        StorageUtil.StorageInfo info = new StorageUtil.StorageInfo();
+        info.name = name;
+        info.path = id; // An identifier, never a local filesystem path.
+        info.totalBytes = space == null ? -1 : space.totalBytes;
+        info.usedBytes = space == null ? -1 : space.usedBytes;
+        info.freeBytes = space == null ? -1 : space.freeBytes;
+        if (checked) info.description = activity.getString(R.string.network_storage_unavailable, protocol);
+        else info.description = "";
+        return new SidebarAdapter.SidebarEntry(SidebarAdapter.EntryType.PIN, "storage", id,
+                name, R.drawable.cloud_download_24px, null, info);
     }
 
     private static final class SidebarData {
@@ -615,6 +646,8 @@ public class SidebarController {
             } else if (id != null && id.startsWith(SidebarPins.FTP_PREFIX)) {
                 activity.getFtp().connectProfile(id.substring(SidebarPins.FTP_PREFIX.length()),
                         activity.lastPaneSelected == 1);
+            } else if (id != null && (id.startsWith(SidebarPins.WEBDAV_PREFIX) || id.startsWith(SidebarPins.SMB_PREFIX))) {
+                activity.getNetwork().connectProfile(id, activity.lastPaneSelected == 1);
             }
         } else {
             openSidebarTool(entry.id());
@@ -630,6 +663,8 @@ public class SidebarController {
         if (pinnedNow) menu.getMenu().add(0, 1, 0, R.string.unpin_from_sidebar);
         if (id != null && id.startsWith(SidebarPins.SAF_PREFIX)) {
             menu.getMenu().add(0, 2, 1, R.string.sidebar_documents);
+        } else if (id != null) {
+            menu.getMenu().add(0, 2, 1, R.string.edit);
         }
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
@@ -638,7 +673,11 @@ public class SidebarController {
                 return true;
             }
             if (item.getItemId() == 2) {
-                activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
+                if (id.startsWith(SidebarPins.SAF_PREFIX))
+                    activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
+                else if (id.startsWith(SidebarPins.FTP_PREFIX))
+                    activity.getNetwork().editFtpProfile(id.substring(SidebarPins.FTP_PREFIX.length()));
+                else activity.getNetwork().editProfile(id);
                 activity.closeSidebarDrawer();
                 return true;
             }
@@ -672,6 +711,15 @@ public class SidebarController {
                 break;
             case "ftp_client":
                 activity.showFtpClientDialog();
+                break;
+            case "network_client":
+                activity.getNetwork().showConnections();
+                break;
+            case "webdav_client":
+                activity.getNetwork().showConnectionDialog("webdav");
+                break;
+            case "smb_client":
+                activity.getNetwork().showConnectionDialog("smb");
                 break;
             case "mcp_server":
                 activity.startActivity(new Intent(activity, McpServerActivity.class));

@@ -53,6 +53,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
@@ -463,6 +464,10 @@ public class FileOperationsHelper {
 
     private boolean moveToDestination(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        if (destinationFolder instanceof RemoteFile remote) {
+            context.getNetwork().transferInto(items, remote, true, transferListener());
+            return true;
+        }
         if (transferFromSafPane(items, true)) return true;
         RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         if (rvAdapter instanceof FtpFilesArrayAdapter) {
@@ -837,6 +842,10 @@ public class FileOperationsHelper {
 
     private boolean copyToDestination(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        if (destinationFolder instanceof RemoteFile remote) {
+            context.getNetwork().transferInto(items, remote, false, transferListener());
+            return true;
+        }
         if (transferFromSafPane(items, false)) return true;
         RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         if (rvAdapter instanceof FtpFilesArrayAdapter) {
@@ -1720,6 +1729,11 @@ public class FileOperationsHelper {
 
     private boolean copyFromZip(List<Object> items) throws IOException {
         File destinationFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        if (destinationFolder instanceof RemoteFile) {
+            Extensions.showMessage(context, R.string.network_extract_first);
+            // Move callers delete archive sources only when this returns true.
+            return false;
+        }
         RecyclerView.Adapter destAdapter = ((RecyclerView) context
                 .findViewById(adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
         if (SafFs.isSaf(destinationFolder)) {

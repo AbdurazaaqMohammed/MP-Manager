@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_connections">Network connections</string>
+    <string name="network_ftp_tab">FTP</string>
+    <string name="network_smb_tab">SMB</string>
+    <string name="network_discover">Discover servers</string>
+    <string name="network_scan_smb">Scan again</string>
+    <string name="network_discovery_help">Automatically looking for local servers using service advertisements, Windows discovery and a bounded SMB2/3 scan. No login or passwords are tried. Select a server, then enter its share or collection and credentials.</string>
+    <string name="network_discovery_unavailable">Service discovery is unavailable. You can still scan for SMB or enter a server manually.</string>
+    <string name="network_discovery_no_lan">No supported IPv4 Wi-Fi/Ethernet subnet. Advertised services may still appear; otherwise enter the server manually.</string>
+    <string name="network_discovery_scanning">Scanning nearby addresses for SMB2/3 (up to 20 seconds)…</string>
+    <string name="network_discovery_finished">SMB scan finished. Select a result or enter a server manually. WebDAV servers appear only if they advertise their service.</string>
+    <string name="webdav_client">WebDAV</string>
+    <string name="smb_client">SMB (Windows shares)</string>
+    <string name="network_connection_name">Connection name (optional)</string>
+    <string name="network_webdav_address">https://server/dav/collection/</string>
+    <string name="network_smb_address">smb://server/share</string>
+    <string name="network_username">Username (blank for anonymous)</string>
+    <string name="network_password">Password</string>
+    <string name="network_domain">Domain / workgroup (optional)</string>
+    <string name="network_remember">Save connection (encrypted on this device)</string>
+    <string name="network_saved_connections">Saved connections</string>
+    <string name="network_no_saved_connections">No saved connections</string>
+    <string name="network_webdav_help">Use the full WebDAV collection URL. HTTPS is recommended; HTTP sends credentials without encryption. Files open as local copies. To save edits on the server, copy them back explicitly.</string>
+    <string name="network_smb_help">Connect to an SMB2/3 share, for example smb://192.168.1.10/Documents. A custom port can be added after the host. SMB1 is not supported.</string>
+    <string name="network_transfer_safety">Existing files are not overwritten. A move deletes its source only after a successful transfer. Cancellation or failure may leave a partial destination.</string>
+    <string name="network_recursive_delete">Deleting a folder also deletes everything inside it on the server.</string>
+    <string name="network_downloading">Downloading local copy</string>
+    <string name="network_browse_hint">Use the folder list to navigate this connection. Saved connections are available from its sidebar entry.</string>
+    <string name="network_permission_denied">Nearby devices permission is required for local servers on Android 17+. Allow it in app settings, then connect again.</string>
+    <string name="network_extract_first">Extract archive entries to a local folder before copying or moving them to a network connection.</string>
+    <string name="network_ftp_transfer_unsupported">Copy FTP files to a local folder before transferring them to WebDAV or SMB.</string>
+    <string name="network_new_connection">New connection</string>
+    <string name="network_remember_ftp">Save FTP connection</string>
+    <string name="network_ftp_help">Connect to an FTP or FTPS server. Saved FTP profiles remain available here. Files open as local copies; copy edits back explicitly.</string>
+    <string name="network_connection_saved">Connection saved</string>
+    <string name="network_delete_connection">Delete saved connection</string>
+    <string name="network_delete_connection_confirm">Delete “%1$s” and remove its sidebar pin? Server files are not affected.</string>
+    <string name="network_saved_connection_missing">Saved connection not found. Add it again in Network connections.</string>
+    <string name="network_invalid_port">Enter a port from 1 to 65535</string>
+    <string name="network_invalid_host">Enter a server hostname or IP address, without a URL path</string>
+    <string name="network_storage_connect_to_check">%1$s · Connect to check storage space</string>
+    <string name="network_storage_unavailable">%1$s · Server does not report storage space</string>
+    <string name="network_storage_free">%1$s free · Total space unavailable</string>
+    <string name="network_ftp_create_unsupported">Creating entries in FTP panes is not supported here.</string>
+</resources>
