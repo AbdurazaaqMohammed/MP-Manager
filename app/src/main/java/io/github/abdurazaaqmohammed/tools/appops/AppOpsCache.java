@@ -47,6 +47,16 @@ public class AppOpsCache {
         lastAppListFetch = System.currentTimeMillis();
     }
 
+    /**
+     * Drops only the app list (icons stay valid). Call after an action that
+     * changes install/enabled state — uninstall, disable, suspend — so the
+     * list does not keep showing the app for the next 30 s.
+     */
+    public static void invalidateAppList() {
+        cachedAppList = null;
+        lastAppListFetch = 0;
+    }
+
     public static void clear() {
         synchronized (iconCache) {
             iconCache.evictAll();

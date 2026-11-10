@@ -19,6 +19,10 @@ public class AppOpsDetailData {
     public boolean isDebuggable;
     public boolean isBackupAllowed;
     public boolean hasLauncherEntry;
+    public boolean isEnabled = true;
+    public boolean isSuspended = false;
+    /** False when no elevated backend (root/Shizuku) was available, so live op reads were skipped. */
+    public boolean elevatedAvailable = true;
 
     // Battery & Network
     public String standbyBucket = "Active"; // Active, Working, Frequent, Rare, Restricted

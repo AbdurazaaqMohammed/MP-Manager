@@ -8,10 +8,8 @@ import android.os.Build;
 import android.text.TextUtils;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Field;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,40 +19,78 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+
 public class AppOpsEngine {
 
-    public static String executeElevated(String cmd) {
-        try {
-            Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
-            p.getOutputStream().close();
-            String output = readStream(p.getInputStream());
-            p.waitFor();
-            if (!TextUtils.isEmpty(output)) return output;
-        } catch (Exception ignored) {}
+    /** Timeout for one elevated read command. */
+    private static final int READ_TIMEOUT_SECONDS = 30;
+    /** Timeout for one elevated mutating command. */
+    private static final int WRITE_TIMEOUT_SECONDS = 20;
 
-        // Fallback to rish if su was not granted or failed
-        try {
-            Process p = Runtime.getRuntime().exec(new String[]{"rish", "-c", cmd});
-            p.getOutputStream().close();
-            String output = readStream(p.getInputStream());
-            p.waitFor();
-            return output != null ? output : "";
-        } catch (Exception ignored) {}
-        return "";
+    /** stderr / failure reason of the most recent {@link #execElevated} call. */
+    private static volatile String lastError = "";
+
+    /** Why the last elevated command failed; empty after a success. */
+    public static String lastError() {
+        return lastError;
     }
 
-    private static String readStream(InputStream is) {
-        if (is == null) return "";
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append('\n');
+    /**
+     * Runs an elevated command through the app's existing backends and reports
+     * whether it actually succeeded, instead of spawning a private
+     * {@code su}/{@code rish} pipeline that discarded the exit code.
+     *
+     * <p>The working mode decides the backend: root mode goes through
+     * {@link RootManager#execute} (custom su binary, availability gate, timeout,
+     * stderr draining) and Shizuku mode through {@link ShizukuShell#exec}.
+     * With neither backend configured the command is never run and the failure
+     * is reported, so callers cannot mistake silence for success.
+     */
+    public static RootManager.ShellResult execElevated(Context context, String cmd) {
+        return execElevated(context, cmd, READ_TIMEOUT_SECONDS);
+    }
+
+    public static RootManager.ShellResult execElevated(Context context, String cmd, int timeoutSeconds) {
+        lastError = "";
+        RootManager.ShellResult result;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            RootManager.WorkingMode mode = rm.getWorkingMode();
+            if (mode == RootManager.WorkingMode.ROOT) {
+                if (!rm.isRootAvailable()) {
+                    result = new RootManager.ShellResult(-1, "", "Root is not available");
+                } else {
+                    result = rm.execute(cmd, timeoutSeconds);
+                }
+            } else if (mode == RootManager.WorkingMode.SHIZUKU) {
+                ShizukuShell.warmUp(context);
+                ShizukuShell.Result r = ShizukuShell.exec(cmd, timeoutSeconds);
+                result = new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr);
+            } else {
+                result = new RootManager.ShellResult(-1, "", "Requires root or Shizuku");
             }
-            return sb.toString();
         } catch (Exception e) {
-            return "";
+            result = new RootManager.ShellResult(-1, "", e.getMessage() == null ? "Command failed" : e.getMessage());
         }
+        if (!result.isSuccess()) {
+            lastError = result.error() == null || result.error().isEmpty() ? "Command failed (exit " + result.exitCode() + ")" : result.error();
+        }
+        return result;
+    }
+
+    /** True when the current working mode has an elevated backend ready to run commands. */
+    public static boolean hasElevatedBackend(Context context) {
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            RootManager.WorkingMode mode = rm.getWorkingMode();
+            if (mode == RootManager.WorkingMode.ROOT) return rm.isRootAvailable();
+            if (mode == RootManager.WorkingMode.SHIZUKU) return ShizukuManager.ready();
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     public static List<AppItem> loadInstalledApps(Context context) {
@@ -134,6 +170,9 @@ public class AppOpsEngine {
             data.isDebuggable = (pi.applicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             data.isBackupAllowed = (pi.applicationInfo.flags & ApplicationInfo.FLAG_ALLOW_BACKUP) != 0;
             data.hasLauncherEntry = pm.getLaunchIntentForPackage(packageName) != null;
+            boolean enabledState = pi.applicationInfo.enabled;
+            data.isEnabled = enabledState;
+            data.isSuspended = isAppSuspended(pi.applicationInfo);
         }
         if (TextUtils.isEmpty(data.label)) data.label = packageName;
         data.versionName = pi.versionName != null ? pi.versionName : "";
@@ -154,28 +193,46 @@ public class AppOpsEngine {
         // Signature SHA-256
         data.signaturesSha256 = getSignatureSha256(pi);
 
-        // Primary ABI via dumpsys or getprop
-        data.primaryAbi = (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0) ? Build.SUPPORTED_ABIS[0] : "unknown";
+        // Elevated reads below need root or Shizuku; without a backend the
+        // detail screen still shows the static package info, and the UI tells
+        // the user why the live state is missing instead of showing defaults
+        // that look like real values.
+        data.elevatedAvailable = hasElevatedBackend(context);
+        if (!data.elevatedAvailable || !isPackageNameValid(packageName)) {
+            data.primaryAbi = "unknown";
+            // Still list the declared runtime permissions with their grant
+            // state from PackageManager; only the op/kernel layers need a
+            // shell, so those sections stay empty rather than fake.
+            addRuntimePermissions(data, pi, new HashMap<>(), new HashMap<>(), new HashMap<>());
+            return data;
+        }
+
+        // Query Exact Runtime Permissions via dumpsys package (also carries the
+        // app's own primaryCpuAbi, which is what "Primary ABI" should show —
+        // Build.SUPPORTED_ABIS[0] is the device ABI, not the app's)
+        String dumpsysPkg = execElevated(context, "dumpsys package " + RootManager.escapeShellArg(packageName)).output();
+        Map<String, Boolean> dumpsysPerms = parseDumpsysPermissions(dumpsysPkg);
+        data.primaryAbi = parsePrimaryAbi(dumpsysPkg);
 
         // Query Battery & Standby bucket via shell
-        String bucketOut = executeElevated("am get-standby-bucket " + packageName).trim();
+        String bucketOut = execElevated(context, "am get-standby-bucket " + RootManager.escapeShellArg(packageName)).output().trim();
         data.standbyBucket = parseStandbyBucket(bucketOut);
 
-        String whiteListOut = executeElevated("dumpsys deviceidle whitelist");
+        String whiteListOut = execElevated(context, "dumpsys deviceidle whitelist").output();
         data.isIgnoringBatteryOptimizations = whiteListOut.contains("," + packageName + ",") || whiteListOut.contains("," + packageName + "\n");
 
         // Query Network blocked
-        String netPolicyOut = executeElevated("cmd netpolicy list restrict-background-blacklist");
-        data.isNetworkBlocked = netPolicyOut.contains("UID " + data.uid) || netPolicyOut.contains(String.valueOf(data.uid));
+        String netPolicyOut = execElevated(context, "cmd netpolicy list restrict-background-blacklist").output();
+        data.isNetworkBlocked = isUidInNetPolicyList(netPolicyOut, data.uid);
 
         // Query Real AppOps via shell (cmd appops get)
-        Map<String, String[]> opsMap = parseAppOpsOutput(executeElevated("cmd appops get " + packageName));
+        Map<String, String[]> opsMap = parseAppOpsOutput(execElevated(context, "cmd appops get " + RootManager.escapeShellArg(packageName)).output());
 
         // Query Kernel/Uid AppOps via dumpsys appops (The Real Hidden Layer!)
-        Map<String, String> uidOpsMap = parseUidOpsFromDumpsys(executeElevated("dumpsys appops"), data.uid);
-
-        // Query Exact Runtime Permissions via dumpsys package
-        Map<String, Boolean> dumpsysPerms = parseDumpsysPermissions(executeElevated("dumpsys package " + packageName));
+        // Scoped to this package: the unscoped dump is megabytes on real
+        // devices, and the scoped one lists only this app's ops.
+        Map<String, String> uidOpsMap = parseUidOpsFromDumpsys(
+                execElevated(context, "dumpsys appops " + RootManager.escapeShellArg(packageName)).output(), data.uid);
 
         // System Permissions (Special access)
         addSystemSpecialPermissions(data, packageName, opsMap, uidOpsMap);
@@ -210,10 +267,12 @@ public class AppOpsEngine {
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (trimmed.startsWith("Uid ") && (trimmed.contains(targetUidStr))) {
-                    inTargetUid = true;
+                if (trimmed.startsWith("Uid ")) {
+                    // Match the uid token exactly: a contains() check attributes
+                    // uid 10123's block to uid 123 as well.
+                    inTargetUid = uidTokenMatches(trimmed.substring(4).trim(), targetUidStr);
                     continue;
-                } else if (inTargetUid && (trimmed.startsWith("Uid ") || trimmed.startsWith("Package "))) {
+                } else if (inTargetUid && trimmed.startsWith("Package ")) {
                     break;
                 }
 
@@ -228,6 +287,69 @@ public class AppOpsEngine {
             }
         } catch (Exception ignored) {}
         return map;
+    }
+
+    /** True when a {@code Uid <n> ...} section header carries exactly the target uid. */
+    private static boolean uidTokenMatches(String headerRest, String targetUidStr) {
+        int end = 0;
+        while (end < headerRest.length() && Character.isDigit(headerRest.charAt(end))) end++;
+        return end > 0 && headerRest.substring(0, end).equals(targetUidStr);
+    }
+
+    /**
+     * Whole-token uid match for netpolicy lists: a bare substring test makes
+     * uid 123 look blacklisted whenever any uid containing "123" (10123,
+     * 12300, a range endpoint…) appears in the output.
+     */
+    private static boolean isUidInNetPolicyList(String output, int uid) {
+        if (TextUtils.isEmpty(output) || uid <= 0) return false;
+        String uidStr = String.valueOf(uid);
+        for (String raw : output.split("\n")) {
+            String line = raw.trim();
+            if (line.startsWith("UID ")) line = line.substring(4).trim();
+            for (String token : line.split("[^0-9]+")) {
+                if (token.isEmpty()) continue;
+                if (token.equals(uidStr)) return true;
+                // UID ranges ("10000-20000") cover the uid too.
+                int dash = token.indexOf('-');
+                if (dash > 0) {
+                    try {
+                        int lo = Integer.parseInt(token.substring(0, dash));
+                        int hi = Integer.parseInt(token.substring(dash + 1));
+                        if (uid >= lo && uid <= hi) return true;
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Extracts the app's own {@code primaryCpuAbi=} from dumpsys package output. */
+    private static String parsePrimaryAbi(String dumpsysPkg) {
+        if (TextUtils.isEmpty(dumpsysPkg)) return "unknown";
+        try (BufferedReader reader = new BufferedReader(new StringReader(dumpsysPkg))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.startsWith("primaryCpuAbi=")) {
+                    String abi = line.substring("primaryCpuAbi=".length()).trim();
+                    if (!abi.isEmpty() && !"null".equals(abi)) return abi;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "unknown";
+    }
+
+    /** FLAG_SUSPENDED is hidden from the SDK; read it reflectively (API 28+). */
+    private static boolean isAppSuspended(ApplicationInfo ai) {
+        try {
+            Field f = ApplicationInfo.class.getField("FLAG_SUSPENDED");
+            return (ai.flags & f.getInt(null)) != 0;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static Map<String, Boolean> parseDumpsysPermissions(String output) {
@@ -534,60 +656,121 @@ public class AppOpsEngine {
         return "Not available";
     }
 
-    // Mutator actions via root / elevated commands
-    public static void setAppOpMode(String packageName, String opName, String mode) {
-        setAppOpMode(packageName, opName, mode, true);
+    // Mutator actions via root / elevated commands. Every action returns
+    // whether the command actually succeeded so the UI can report failures
+    // instead of showing "done" for commands that never ran.
+
+    /**
+     * Sets one op mode. {@code applyUidMode} also sets the UID-wide mode, which
+     * affects every app sharing that uid — only use it when the user explicitly
+     * asked for kernel-level control, never as a side effect of a plain toggle.
+     */
+    public static boolean setAppOpMode(Context context, String packageName, String opName, String mode) {
+        return setAppOpMode(context, packageName, opName, mode, false);
     }
 
-    public static void setAppOpMode(String packageName, String opName, String mode, boolean applyUidMode) {
+    public static boolean setAppOpMode(Context context, String packageName, String opName, String mode, boolean applyUidMode) {
+        if (!isPackageNameValid(packageName) || TextUtils.isEmpty(opName) || TextUtils.isEmpty(mode)) return false;
+        String pkg = RootManager.escapeShellArg(packageName);
+        String op = RootManager.escapeShellArg(opName);
         String m = mode.toLowerCase();
-        executeElevated("cmd appops set " + packageName + " " + opName + " " + m);
+        RootManager.ShellResult r = execElevated(context,
+                "cmd appops set " + pkg + " " + op + " " + m, WRITE_TIMEOUT_SECONDS);
+        if (!r.isSuccess()) return false;
         if (applyUidMode) {
-            executeElevated("cmd appops set --uid " + packageName + " " + opName + " " + m);
+            r = execElevated(context,
+                    "cmd appops set --uid " + pkg + " " + op + " " + m, WRITE_TIMEOUT_SECONDS);
+            return r.isSuccess();
         }
+        return true;
     }
 
-    public static void setPermissionGranted(String packageName, String permName, boolean grant) {
+    public static boolean setPermissionGranted(Context context, String packageName, String permName, boolean grant) {
+        if (!isPackageNameValid(packageName) || TextUtils.isEmpty(permName)) return false;
         String action = grant ? "pm grant " : "pm revoke ";
-        executeElevated(action + packageName + " " + permName);
+        return execElevated(context,
+                action + RootManager.escapeShellArg(packageName) + " " + RootManager.escapeShellArg(permName),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
-    public static void setStandbyBucket(String packageName, String bucket) {
-        executeElevated("am set-standby-bucket " + packageName + " " + bucket.toLowerCase());
+    public static boolean setStandbyBucket(Context context, String packageName, String bucket) {
+        if (!isPackageNameValid(packageName) || TextUtils.isEmpty(bucket)) return false;
+        return execElevated(context,
+                "am set-standby-bucket " + RootManager.escapeShellArg(packageName) + " " + bucket.toLowerCase(),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
-    public static void setIgnoreBatteryOptimization(String packageName, boolean ignore) {
+    public static boolean setIgnoreBatteryOptimization(Context context, String packageName, boolean ignore) {
+        if (!isPackageNameValid(packageName)) return false;
         String sign = ignore ? "+" : "-";
-        executeElevated("dumpsys deviceidle whitelist " + sign + packageName);
+        return execElevated(context,
+                "dumpsys deviceidle whitelist " + sign + RootManager.escapeShellArg(packageName),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
-    public static void setNetworkBlocked(int uid, boolean block) {
-        if (block) {
-            executeElevated("cmd netpolicy add restrict-background-blacklist " + uid);
-        } else {
-            executeElevated("cmd netpolicy remove restrict-background-blacklist " + uid);
+    public static boolean setNetworkBlocked(Context context, int uid, boolean block) {
+        if (uid <= 0) return false;
+        String sub = block ? "add " : "remove ";
+        return execElevated(context,
+                "cmd netpolicy " + sub + "restrict-background-blacklist " + uid,
+                WRITE_TIMEOUT_SECONDS).isSuccess();
+    }
+
+    public static boolean forceStopApp(Context context, String packageName) {
+        if (!isPackageNameValid(packageName)) return false;
+        return execElevated(context,
+                "am force-stop " + RootManager.escapeShellArg(packageName),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
+    }
+
+    public static boolean suspendApp(Context context, String packageName, boolean suspend) {
+        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        String flag = suspend ? "--suspend " : "--unsuspend ";
+        return execElevated(context,
+                "pm suspend " + flag + RootManager.escapeShellArg(packageName),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
+    }
+
+    public static boolean enableDisableApp(Context context, String packageName, boolean enable) {
+        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        String action = enable ? "enable " : "disable-user --user 0 ";
+        return execElevated(context,
+                "pm " + action + RootManager.escapeShellArg(packageName),
+                WRITE_TIMEOUT_SECONDS).isSuccess();
+    }
+
+    public static boolean clearAppData(Context context, String packageName) {
+        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        RootManager.ShellResult r = execElevated(context,
+                "pm clear " + RootManager.escapeShellArg(packageName), 120);
+        return r.isSuccess() && r.output().toLowerCase().contains("success");
+    }
+
+    /**
+     * Uninstalls the package and verifies it actually happened: {@code pm} can
+     * print "Failure [...]" with a non-zero exit or leave the package present
+     * for other users, and reporting success then makes the button a placebo.
+     */
+    public static boolean uninstallApp(Context context, String packageName) {
+        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        RootManager.ShellResult r = execElevated(context,
+                "pm uninstall " + RootManager.escapeShellArg(packageName), 120);
+        if (!r.isSuccess()) return false;
+        String out = r.output().toLowerCase();
+        if (out.contains("failure")) return false;
+        if (out.contains("success")) return true;
+        // No clear verdict in the output: trust the package manager.
+        try {
+            context.getPackageManager().getPackageInfo(packageName, 0);
+            return false;
+        } catch (PackageManager.NameNotFoundException gone) {
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
-    public static void forceStopApp(String packageName) {
-        executeElevated("am force-stop " + packageName);
-    }
-
-    public static void suspendApp(String packageName, boolean suspend) {
-        String flag = suspend ? "--suspend " : "--unsuspend ";
-        executeElevated("pm suspend " + flag + packageName);
-    }
-
-    public static void enableDisableApp(String packageName, boolean enable) {
-        String action = enable ? "enable " : "disable-user --user 0 ";
-        executeElevated("pm " + action + packageName);
-    }
-
-    public static void clearAppData(String packageName) {
-        executeElevated("pm clear " + packageName);
-    }
-
-    public static void uninstallApp(String packageName) {
-        executeElevated("pm uninstall " + packageName);
+    private static boolean isPackageNameValid(String packageName) {
+        return RootManager.isPackageNameValid(packageName);
     }
 }

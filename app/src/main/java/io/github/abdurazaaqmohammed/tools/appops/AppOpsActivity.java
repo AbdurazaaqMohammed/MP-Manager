@@ -138,7 +138,6 @@ public class AppOpsActivity extends BaseActivity {
             if (item.isHidden) hiddenCount++;
         }
 
-        chipGroup.findViewById(R.id.chip_all);
         com.google.android.material.chip.Chip chipAll = findViewById(R.id.chip_all);
         if (chipAll != null) chipAll.setText(getString(R.string.app_ops_chip_all) + " (" + allCount + ")");
 

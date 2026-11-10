@@ -116,6 +116,29 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
+                <!-- Error banner: shown when no root/Shizuku backend is available -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/detail_banner_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="?attr/colorError"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+
+                    <TextView
+                        android:id="@+id/detail_banner_error_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="14dp"
+                        android:textSize="12.5sp"
+                        android:lineSpacingExtra="3dp"
+                        android:textColor="?attr/colorError" />
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- Header Banner Card (Explanation) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"

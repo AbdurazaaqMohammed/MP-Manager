@@ -56,6 +56,10 @@ public class AppOpsDetailActivity extends BaseActivity {
     private MaterialSwitch switchBatteryOpt;
     private MaterialSwitch switchBlockNet;
 
+    // Error banner shown when no elevated backend (root/Shizuku) is available
+    private View bannerError;
+    private TextView bannerErrorText;
+
     // Containers
     private LinearLayout containerSystemPerms;
     private LinearLayout containerRuntimePerms;
@@ -101,7 +105,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         ImageView btnRefresh = findViewById(R.id.detail_btn_refresh);
         if (btnRefresh != null) {
             btnRefresh.setOnClickListener(v -> {
-                Toast.makeText(this, "Refreshing...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.app_ops_refreshing, Toast.LENGTH_SHORT).show();
                 loadData();
             });
         }
@@ -131,6 +135,9 @@ public class AppOpsDetailActivity extends BaseActivity {
         tvStandbyBucketValue = findViewById(R.id.tv_standby_bucket_value);
         switchBatteryOpt = findViewById(R.id.switch_battery_optimization);
         switchBlockNet = findViewById(R.id.switch_block_network);
+
+        bannerError = findViewById(R.id.detail_banner_error);
+        bannerErrorText = findViewById(R.id.detail_banner_error_text);
 
         containerSystemPerms = findViewById(R.id.container_system_perms);
         containerRuntimePerms = findViewById(R.id.container_runtime_perms);
@@ -179,8 +186,16 @@ public class AppOpsDetailActivity extends BaseActivity {
         switchBatteryOpt.setOnCheckedChangeListener((btn, isChecked) -> {
             if (!btn.isPressed()) return;
             executor.execute(() -> {
-                AppOpsEngine.setIgnoreBatteryOptimization(packageName, isChecked);
-                mainHandler.post(() -> Toast.makeText(this, isChecked ? "Whitelisted from battery optimization" : "Optimized", Toast.LENGTH_SHORT).show());
+                boolean ok = AppOpsEngine.setIgnoreBatteryOptimization(this, packageName, isChecked);
+                mainHandler.post(() -> {
+                    if (ok) {
+                        Toast.makeText(this, getString(isChecked
+                                ? R.string.app_ops_toast_battery_whitelisted
+                                : R.string.app_ops_toast_battery_optimized), Toast.LENGTH_SHORT).show();
+                    } else {
+                        revertSwitch(btn, isChecked);
+                    }
+                });
             });
         });
 
@@ -188,54 +203,152 @@ public class AppOpsDetailActivity extends BaseActivity {
             if (!btn.isPressed()) return;
             if (data == null) return;
             executor.execute(() -> {
-                AppOpsEngine.setNetworkBlocked(data.uid, isChecked);
-                mainHandler.post(() -> Toast.makeText(this, isChecked ? "Network access blocked" : "Network unblocked", Toast.LENGTH_SHORT).show());
+                boolean ok = AppOpsEngine.setNetworkBlocked(this, data.uid, isChecked);
+                mainHandler.post(() -> {
+                    if (ok) {
+                        Toast.makeText(this, getString(isChecked
+                                ? R.string.app_ops_toast_net_blocked
+                                : R.string.app_ops_toast_net_unblocked), Toast.LENGTH_SHORT).show();
+                    } else {
+                        revertSwitch(btn, isChecked);
+                    }
+                });
             });
         });
 
-        btnForceStop.setOnClickListener(v -> {
-            executor.execute(() -> {
-                AppOpsEngine.forceStopApp(packageName);
-                mainHandler.post(() -> Toast.makeText(this, getString(R.string.app_ops_action_force_stop) + " done", Toast.LENGTH_SHORT).show());
+        btnForceStop.setOnClickListener(v -> executor.execute(() -> {
+            CommandOutcome ok = runChecked(() -> AppOpsEngine.forceStopApp(this, packageName));
+            mainHandler.post(() -> {
+                if (ok.success) {
+                    Toast.makeText(this, R.string.app_ops_toast_force_stopped, Toast.LENGTH_SHORT).show();
+                } else {
+                    toastFailure(ok);
+                }
             });
-        });
+        }));
 
+        // Suspend has an undo path: the button toggles between suspend and
+        // unsuspend based on the package's current state.
         btnSuspend.setOnClickListener(v -> {
+            boolean suspend = data == null || !data.isSuspended;
             executor.execute(() -> {
-                AppOpsEngine.suspendApp(packageName, true);
-                mainHandler.post(() -> Toast.makeText(this, getString(R.string.app_ops_action_suspend) + " done", Toast.LENGTH_SHORT).show());
+                CommandOutcome ok = runChecked(() -> AppOpsEngine.suspendApp(this, packageName, suspend));
+                if (ok.success) AppOpsCache.invalidateAppList();
+                mainHandler.post(() -> {
+                    if (ok.success) {
+                        Toast.makeText(this, getString(suspend
+                                ? R.string.app_ops_toast_suspended
+                                : R.string.app_ops_toast_unsuspended), Toast.LENGTH_SHORT).show();
+                        loadData();
+                    } else {
+                        toastFailure(ok);
+                    }
+                });
             });
         });
 
         btnDisable.setOnClickListener(v -> {
-            executor.execute(() -> {
-                AppOpsEngine.enableDisableApp(packageName, false);
-                mainHandler.post(() -> Toast.makeText(this, getString(R.string.app_ops_action_disable) + " done", Toast.LENGTH_SHORT).show());
-            });
+            boolean enable = data != null && !data.isEnabled;
+            if (!enable) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.app_ops_action_disable)
+                        .setMessage(getString(R.string.app_ops_disable_confirm, packageName))
+                        .setPositiveButton(android.R.string.ok, (d, w) -> runEnableDisable(false))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return;
+            }
+            runEnableDisable(true);
         });
 
         btnClearData.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.app_ops_action_clear_data)
-                .setMessage("Are you sure you want to clear all data for " + packageName + "?")
+                .setMessage(getString(R.string.app_ops_clear_data_confirm, packageName))
                 .setPositiveButton(android.R.string.ok, (d, w) -> executor.execute(() -> {
-                    AppOpsEngine.clearAppData(packageName);
-                    mainHandler.post(() -> Toast.makeText(this, "Data cleared", Toast.LENGTH_SHORT).show());
+                    CommandOutcome ok = runChecked(() -> AppOpsEngine.clearAppData(this, packageName));
+                    if (ok.success) AppOpsCache.invalidateAppList();
+                    mainHandler.post(() -> {
+                        if (ok.success) {
+                            Toast.makeText(this, R.string.app_ops_toast_data_cleared, Toast.LENGTH_SHORT).show();
+                            loadData();
+                        } else {
+                            toastFailure(ok);
+                        }
+                    });
                 }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show());
 
         btnUninstall.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.app_ops_action_uninstall)
-                .setMessage("Uninstall " + packageName + "?")
+                .setMessage(getString(R.string.app_ops_uninstall_confirm, packageName))
                 .setPositiveButton(android.R.string.ok, (d, w) -> executor.execute(() -> {
-                    AppOpsEngine.uninstallApp(packageName);
+                    CommandOutcome ok = runChecked(() -> AppOpsEngine.uninstallApp(this, packageName));
+                    if (ok.success) AppOpsCache.invalidateAppList();
                     mainHandler.post(() -> {
-                        Toast.makeText(this, "Uninstalled", Toast.LENGTH_SHORT).show();
-                        finish();
+                        if (ok.success) {
+                            Toast.makeText(this, R.string.app_ops_toast_uninstalled, Toast.LENGTH_SHORT).show();
+                            finish();
+                        } else {
+                            toastFailure(ok);
+                        }
                     });
                 }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show());
+    }
+
+    private void runEnableDisable(boolean enable) {
+        executor.execute(() -> {
+            CommandOutcome ok = runChecked(() -> AppOpsEngine.enableDisableApp(this, packageName, enable));
+            if (ok.success) AppOpsCache.invalidateAppList();
+            mainHandler.post(() -> {
+                if (ok.success) {
+                    Toast.makeText(this, getString(enable
+                            ? R.string.app_ops_toast_enabled
+                            : R.string.app_ops_toast_disabled), Toast.LENGTH_SHORT).show();
+                    loadData();
+                } else {
+                    toastFailure(ok);
+                }
+            });
+        });
+    }
+
+    private static final class CommandOutcome {
+        final boolean success;
+        final String error;
+
+        CommandOutcome(boolean success, String error) {
+            this.success = success;
+            this.error = error == null ? "" : error;
+        }
+    }
+
+    /**
+     * Wraps one engine action with the reason it failed, so the toast says
+     * something actionable ("Requires root or Shizuku", stderr detail) instead
+     * of the operation failing silently as success.
+     */
+    private CommandOutcome runChecked(java.util.concurrent.Callable<Boolean> action) {
+        try {
+            boolean ok = action.call();
+            if (ok) return new CommandOutcome(true, "");
+            return new CommandOutcome(false, AppOpsEngine.lastError());
+        } catch (Exception e) {
+            return new CommandOutcome(false, e.getMessage());
+        }
+    }
+
+    private void toastFailure(CommandOutcome outcome) {
+        String detail = TextUtils.isEmpty(outcome.error) ? getString(R.string.app_ops_unknown) : outcome.error;
+        Toast.makeText(this, getString(R.string.app_ops_action_failed, detail), Toast.LENGTH_LONG).show();
+    }
+
+    /** Puts a switch back where it was after its action failed. */
+    private void revertSwitch(android.widget.CompoundButton btn, boolean attempted) {
+        btn.setChecked(!attempted);
+        toastFailure(new CommandOutcome(false, AppOpsEngine.lastError()));
     }
 
     private void loadData() {
@@ -254,16 +367,39 @@ public class AppOpsDetailActivity extends BaseActivity {
         toolbar.setTitle(data.label);
         toolbar.setSubtitle(data.packageName);
 
-        // Load Cached or Async icon into toolbar navigation icon area
-        Drawable cachedIcon = AppOpsCache.getIcon(packageName);
-        if (cachedIcon != null) {
-            // Set title with icon or custom toolbar header
+        // No root/Shizuku backend: explain why the live state is empty and
+        // disable every mutating control instead of letting the user press
+        // placebo buttons that silently do nothing.
+        boolean elevated = data.elevatedAvailable;
+        if (bannerError != null) {
+            bannerError.setVisibility(elevated ? View.GONE : View.VISIBLE);
+            if (!elevated && bannerErrorText != null) {
+                bannerErrorText.setText(R.string.app_ops_requires_elevated);
+            }
         }
 
+        // Suspend / disable buttons carry their undo path: the label always
+        // reflects what the next tap will do.
+        btnSuspend.setText(getString(data.isSuspended
+                ? R.string.app_ops_action_unsuspend
+                : R.string.app_ops_action_suspend));
+        btnDisable.setText(getString(data.isEnabled
+                ? R.string.app_ops_action_disable
+                : R.string.app_ops_action_enable));
+
+        btnForceStop.setEnabled(elevated);
+        btnSuspend.setEnabled(elevated);
+        btnDisable.setEnabled(elevated);
+        btnClearData.setEnabled(elevated);
+        btnUninstall.setEnabled(elevated);
+
         // Standby & Network
-        tvStandbyBucketValue.setText(data.standbyBucket);
-        switchBatteryOpt.setChecked(data.isIgnoringBatteryOptimizations);
-        switchBlockNet.setChecked(data.isNetworkBlocked);
+        tvStandbyBucketValue.setText(elevated ? data.standbyBucket : getString(R.string.app_ops_unknown));
+        switchBatteryOpt.setEnabled(elevated);
+        switchBlockNet.setEnabled(elevated);
+        rowStandbyBucket.setEnabled(elevated);
+        switchBatteryOpt.setChecked(elevated && data.isIgnoringBatteryOptimizations);
+        switchBlockNet.setChecked(elevated && data.isNetworkBlocked);
 
         // Populate System Permissions
         containerSystemPerms.removeAllViews();
@@ -276,7 +412,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         if (data.runtimePermissions.isEmpty()) {
             TextView none = new TextView(this);
             none.setPadding(30, 24, 30, 24);
-            none.setText("No runtime permissions declared");
+            none.setText(R.string.app_ops_no_runtime_perms);
             none.setTextColor(Color.GRAY);
             containerRuntimePerms.addView(none);
         } else {
@@ -336,20 +472,36 @@ public class AppOpsDetailActivity extends BaseActivity {
 
         MaterialSwitch sw = new MaterialSwitch(this);
         sw.setChecked(p.isGranted);
+        sw.setEnabled(data.elevatedAvailable);
         sw.setOnCheckedChangeListener((btn, isChecked) -> {
             if (!btn.isPressed()) return;
-            p.isGranted = isChecked;
             executor.execute(() -> {
+                boolean ok;
                 if (isSpecialSystem) {
-                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore", true);
+                    // These are AppOps-controlled special access entries; the
+                    // package-level op mode is the real mechanism. Never touch
+                    // the UID mode here: it silently affects every app sharing
+                    // the uid and creates the "fake granted" state this screen
+                    // warns about.
+                    ok = AppOpsEngine.setAppOpMode(this, packageName, p.opName, isChecked ? "allow" : "ignore");
                 } else {
-                    AppOpsEngine.setPermissionGranted(packageName, p.name, isChecked);
-                    // Standard toggle synchronizes visible system state and AppOps
-                    AppOpsEngine.setAppOpMode(packageName, p.opName, isChecked ? "allow" : "ignore", true);
+                    // Runtime permissions are platform-managed: grant/revoke
+                    // through pm and reset the op to "default" so an earlier
+                    // forced ignore/deny does not keep silently dropping the
+                    // permission after re-granting. The kernel-level dialog
+                    // (long press) is the place for UID-wide modes.
+                    ok = AppOpsEngine.setPermissionGranted(this, packageName, p.name, isChecked)
+                            && AppOpsEngine.setAppOpMode(this, packageName, p.opName, "default");
                 }
                 mainHandler.post(() -> {
-                    p.isFakeGranted = false; // re-evaluated
-                    bindData();
+                    if (!ok) {
+                        btn.setChecked(!isChecked);
+                        toastFailure(new CommandOutcome(false, AppOpsEngine.lastError()));
+                        return;
+                    }
+                    // Re-read from the platform instead of trusting the toggle:
+                    // the command may have succeeded while the state differs.
+                    loadData();
                 });
             });
         });
@@ -368,7 +520,12 @@ public class AppOpsDetailActivity extends BaseActivity {
     }
 
     private void showKernelOpModeDialog(AppOpsDetailData.PermissionEntry p) {
-        String[] modes = {"Allow (Normal)", "Ignore (Fake Granted: Silent drop)", "Deny (Hard block)", "Default"};
+        String[] modes = {
+                getString(R.string.app_ops_mode_allow_normal),
+                getString(R.string.app_ops_mode_ignore_silent),
+                getString(R.string.app_ops_mode_deny_hard),
+                getString(R.string.app_ops_mode_default)
+        };
         String[] cmdModes = {"allow", "ignore", "deny", "default"};
 
         String currentEffective = !TextUtils.isEmpty(p.uidMode) && !"default".equalsIgnoreCase(p.uidMode) ? p.uidMode : p.opMode;
@@ -382,18 +539,22 @@ public class AppOpsDetailActivity extends BaseActivity {
 
         final int[] selected = {checked};
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Kernel AppOp: " + p.label)
+                .setTitle(getString(R.string.app_ops_kernel_op_title, p.label))
                 .setSingleChoiceItems(modes, checked, (dialog, which) -> selected[0] = which)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newMode = cmdModes[selected[0]];
-                    p.uidMode = newMode;
-                    p.opMode = newMode;
                     executor.execute(() -> {
-                        // Apply to UID kernel layer and package layer
-                        AppOpsEngine.setAppOpMode(packageName, p.opName, newMode, true);
+                        // Explicit kernel-level control chosen by the user: apply
+                        // to the UID layer and package layer, and verify.
+                        CommandOutcome ok = runChecked(() ->
+                                AppOpsEngine.setAppOpMode(this, packageName, p.opName, newMode, true));
                         mainHandler.post(() -> {
-                            Toast.makeText(this, p.label + " mode set to " + newMode, Toast.LENGTH_SHORT).show();
-                            loadData();
+                            if (ok.success) {
+                                Toast.makeText(this, getString(R.string.app_ops_toast_mode_set, p.label, newMode), Toast.LENGTH_SHORT).show();
+                                loadData();
+                            } else {
+                                toastFailure(ok);
+                            }
                         });
                     });
                 })
@@ -432,7 +593,9 @@ public class AppOpsDetailActivity extends BaseActivity {
 
         if (!TextUtils.isEmpty(op.lastAccessTime) || !TextUtils.isEmpty(op.rejectTime)) {
             TextView tvTime = new TextView(this);
-            String t = !TextUtils.isEmpty(op.lastAccessTime) ? "Last accessed: " + op.lastAccessTime : "Rejected: " + op.rejectTime;
+            String t = !TextUtils.isEmpty(op.lastAccessTime)
+                    ? getString(R.string.app_ops_last_accessed, op.lastAccessTime)
+                    : getString(R.string.app_ops_rejected, op.rejectTime);
             tvTime.setText(t);
             tvTime.setTextSize(11f);
             tvTime.setTextColor(Color.parseColor("#4CAF50"));
@@ -464,7 +627,12 @@ public class AppOpsDetailActivity extends BaseActivity {
     }
 
     private void showOpModeDialog(AppOpsDetailData.AppOpEntry op) {
-        String[] modes = {"Default", "Allow", "Ignore", "Deny"};
+        String[] modes = {
+                getString(R.string.app_ops_mode_default),
+                getString(R.string.app_ops_mode_allow),
+                getString(R.string.app_ops_mode_ignore),
+                getString(R.string.app_ops_mode_deny)
+        };
         String[] cmdModes = {"default", "allow", "ignore", "deny"};
 
         int checked = 0;
@@ -481,10 +649,16 @@ public class AppOpsDetailActivity extends BaseActivity {
                 .setSingleChoiceItems(modes, checked, (dialog, which) -> selected[0] = which)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newMode = cmdModes[selected[0]];
-                    op.mode = newMode;
                     executor.execute(() -> {
-                        AppOpsEngine.setAppOpMode(packageName, op.opName, newMode);
-                        mainHandler.post(this::bindData);
+                        CommandOutcome ok = runChecked(() ->
+                                AppOpsEngine.setAppOpMode(this, packageName, op.opName, newMode));
+                        mainHandler.post(() -> {
+                            if (ok.success) {
+                                loadData();
+                            } else {
+                                toastFailure(ok);
+                            }
+                        });
                     });
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -512,8 +686,15 @@ public class AppOpsDetailActivity extends BaseActivity {
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String chosen = bucketCmds[selected[0]];
                     executor.execute(() -> {
-                        AppOpsEngine.setStandbyBucket(packageName, chosen);
-                        mainHandler.post(this::loadData);
+                        CommandOutcome ok = runChecked(() ->
+                                AppOpsEngine.setStandbyBucket(this, packageName, chosen));
+                        mainHandler.post(() -> {
+                            if (ok.success) {
+                                loadData();
+                            } else {
+                                toastFailure(ok);
+                            }
+                        });
                     });
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -522,19 +703,24 @@ public class AppOpsDetailActivity extends BaseActivity {
 
     private void populateInfoSection() {
         DateFormat df = DateFormat.getDateTimeInstance();
-        addInfoRow("Version", data.versionName);
-        addInfoRow("UID", String.valueOf(data.uid));
-        addInfoRow("Target SDK", String.valueOf(data.targetSdk));
-        addInfoRow("Min SDK", String.valueOf(data.minSdk));
-        addInfoRow("Primary ABI", data.primaryAbi);
-        addInfoRow("Data Directory", data.dataDir);
-        addInfoRow("Signature SHA-256", data.signaturesSha256);
-        addInfoRow("Installed From", data.installer);
-        addInfoRow("Installed Date", data.firstInstallTime > 0 ? df.format(new Date(data.firstInstallTime)) : "Unknown");
-        addInfoRow("Updated Date", data.lastUpdateTime > 0 ? df.format(new Date(data.lastUpdateTime)) : "Unknown");
-        addInfoRow("Debuggable", data.isDebuggable ? "Yes" : "No");
-        addInfoRow("Backup Allowed", data.isBackupAllowed ? "Yes" : "No");
-        addInfoRow("Launcher Entry", data.hasLauncherEntry ? "Yes" : "No");
+        addInfoRow(getString(R.string.app_ops_info_version), data.versionName);
+        addInfoRow(getString(R.string.app_ops_info_uid), String.valueOf(data.uid));
+        addInfoRow(getString(R.string.app_ops_info_target_sdk), String.valueOf(data.targetSdk));
+        addInfoRow(getString(R.string.app_ops_info_min_sdk), String.valueOf(data.minSdk));
+        addInfoRow(getString(R.string.app_ops_info_primary_abi), data.primaryAbi);
+        addInfoRow(getString(R.string.app_ops_info_data_dir), data.dataDir);
+        addInfoRow(getString(R.string.app_ops_info_signature), data.signaturesSha256);
+        addInfoRow(getString(R.string.app_ops_info_installed_from), data.installer);
+        addInfoRow(getString(R.string.app_ops_info_installed_date),
+                data.firstInstallTime > 0 ? df.format(new Date(data.firstInstallTime)) : getString(R.string.app_ops_unknown));
+        addInfoRow(getString(R.string.app_ops_info_updated_date),
+                data.lastUpdateTime > 0 ? df.format(new Date(data.lastUpdateTime)) : getString(R.string.app_ops_unknown));
+        addInfoRow(getString(R.string.app_ops_info_debuggable),
+                data.isDebuggable ? getString(R.string.app_ops_yes) : getString(R.string.app_ops_no));
+        addInfoRow(getString(R.string.app_ops_info_backup_allowed),
+                data.isBackupAllowed ? getString(R.string.app_ops_yes) : getString(R.string.app_ops_no));
+        addInfoRow(getString(R.string.app_ops_info_launcher_entry),
+                data.hasLauncherEntry ? getString(R.string.app_ops_yes) : getString(R.string.app_ops_no));
     }
 
     private void addInfoRow(String title, String value) {
@@ -550,7 +736,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         row.addView(t);
 
         TextView v = new TextView(this);
-        v.setText(TextUtils.isEmpty(value) ? "None" : value);
+        v.setText(TextUtils.isEmpty(value) ? getString(R.string.app_ops_none) : value);
         v.setTextSize(13.5f);
         v.setTextIsSelectable(true);
         row.addView(v);
