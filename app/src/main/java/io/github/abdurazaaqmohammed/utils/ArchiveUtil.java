@@ -63,6 +63,13 @@ public class ArchiveUtil {
                 || lower.endsWith(".tar.zst") || lower.endsWith(".tzst")
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")
                 || lower.endsWith(".zst") || lower.endsWith(".zstd")
+                || lower.endsWith(".apex") || lower.endsWith(".capex")
+                || lower.endsWith(".epub") || lower.endsWith(".cbz") || lower.endsWith(".cbr")
+                || lower.endsWith(".docx") || lower.endsWith(".xlsx") || lower.endsWith(".pptx")
+                || lower.endsWith(".odt") || lower.endsWith(".ods") || lower.endsWith(".odp")
+                || lower.endsWith(".jar") || lower.endsWith(".aar") || lower.endsWith(".ipa")
+                || lower.endsWith(".pak") || lower.endsWith(".mtz") || lower.endsWith(".whl")
+                || lower.endsWith(".unitypackage")
                 || lower.endsWith(".win") || lower.matches(".*\\.win\\d+$")
                 || SplitArchiveUtil.isSplitArchiveName(fileName);
     }

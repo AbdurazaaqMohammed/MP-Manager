@@ -1048,7 +1048,9 @@ public class FileIconLoader {
             resolved = cachedBackupIcon;
         } else if (isCertExt(ext)) {
             resolved = cachedCertIcon;
-        } else if (".img".equals(ext) || ".iso".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
+        } else if (".img".equals(ext) || ".iso".equals(ext) || ".vdi".equals(ext) || ".vhd".equals(ext)
+                || ".vhdx".equals(ext) || ".vmdk".equals(ext) || ".qcow2".equals(ext) || ".ext4".equals(ext)
+                || ".wad".equals(ext) || ".payload".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
             resolved = cachedImgIcon;
         } else if (FileUtils.isElf(path)) {
             resolved = cachedElfIcon;
@@ -1066,7 +1068,9 @@ public class FileIconLoader {
         return ".db".equals(ext) || ".sqlite".equals(ext) || ".sqlite3".equals(ext)
                 || ".db-wal".equals(ext) || ".db-shm".equals(ext) || ".db-journal".equals(ext)
                 || ".workdb".equals(ext) || ".workdb-wal".equals(ext) || ".workdb-shm".equals(ext)
-                || ".ldb".equals(ext);
+                || ".ldb".equals(ext) || ".dbf".equals(ext) || ".mdb".equals(ext) || ".accdb".equals(ext)
+                || ".rdb".equals(ext) || ".realm".equals(ext) || ".kdbx".equals(ext)
+                || ".wallet".equals(ext) || ".keychain".equals(ext);
     }
 
     private static boolean isFontExt(String ext) {
@@ -1075,11 +1079,22 @@ public class FileIconLoader {
 
     private static boolean isBinaryExt(String ext) {
         return ".so".equals(ext) || ".bin".equals(ext) || ".dat".equals(ext) || ".vdex".equals(ext)
-                || ".odex".equals(ext) || ".art".equals(ext) || ".o".equals(ext) || ".dylib".equals(ext) || ".dll".equals(ext);
+                || ".odex".equals(ext) || ".art".equals(ext) || ".o".equals(ext) || ".dylib".equals(ext) || ".dll".equals(ext)
+                || ".binproto".equals(ext) || ".binwalk".equals(ext) || ".bios".equals(ext) || ".rom".equals(ext)
+                || ".dtbo".equals(ext) || ".vbmeta".equals(ext) || ".sparse".equals(ext) || ".chd".equals(ext)
+                || ".cso".equals(ext) || ".pbp".equals(ext) || ".gb".equals(ext) || ".gba".equals(ext)
+                || ".gbc".equals(ext) || ".nds".equals(ext) || ".nes".equals(ext) || ".n64".equals(ext)
+                || ".z64".equals(ext) || ".sfc".equals(ext) || ".smc".equals(ext) || ".oat".equals(ext)
+                || ".pyc".equals(ext) || ".wasm".equals(ext) || ".tflite".equals(ext) || ".onnx".equals(ext)
+                || ".h5".equals(ext) || ".mat".equals(ext) || ".msgpack".equals(ext) || ".pcap".equals(ext)
+                || ".pcapng".equals(ext) || ".cap".equals(ext) || ".snoop".equals(ext) || ".trace".equals(ext)
+                || ".hprof".equals(ext) || ".shm".equals(ext) || ".wal".equals(ext) || ".seed".equals(ext)
+                || ".xpo".equals(ext) || ".crypt14".equals(ext) || ".crypt15".equals(ext);
     }
 
     private static boolean isProtoExt(String ext) {
-        return ".pb".equals(ext) || ".proto".equals(ext) || ".preferences_pb".equals(ext) || ".pma".equals(ext) || ".bson".equals(ext);
+        return ".pb".equals(ext) || ".proto".equals(ext) || ".preferences_pb".equals(ext) || ".pma".equals(ext) || ".bson".equals(ext)
+                || ".parquet".equals(ext) || ".arrow".equals(ext) || ".avro".equals(ext);
     }
 
     private static boolean isWordExt(String ext) {
@@ -1106,7 +1121,9 @@ public class FileIconLoader {
 
     private static boolean isCertExt(String ext) {
         return ".pem".equals(ext) || ".crt".equals(ext) || ".cer".equals(ext) || ".key".equals(ext)
-                || ".keystore".equals(ext) || ".jks".equals(ext) || ".bks".equals(ext) || ".der".equals(ext) || ".p12".equals(ext) || ".pfx".equals(ext);
+                || ".keystore".equals(ext) || ".jks".equals(ext) || ".bks".equals(ext) || ".der".equals(ext) || ".p12".equals(ext) || ".pfx".equals(ext)
+                || ".asc".equals(ext) || ".gpg".equals(ext) || ".csr".equals(ext) || ".crl".equals(ext)
+                || ".sig".equals(ext) || ".idsig".equals(ext) || ".pub".equals(ext) || ".p8".equals(ext) || ".pk8".equals(ext);
     }
 
     private void loadMagicOrElfIconAsync(String path, ImageView fileIconView) {

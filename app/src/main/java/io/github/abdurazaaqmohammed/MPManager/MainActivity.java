@@ -1704,6 +1704,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } else {
                         boolean handled = adapter.goUpOnBack();
                         if (!handled) {
+                            handled = navigateBack(adapter.pane1);
+                        }
+                        if (!handled) {
                             if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
@@ -2062,15 +2065,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 });
             }
             if (files == null) {
-                if (folder != null && !folder.exists()) {
+                boolean folderExists = folder != null && (folder.exists() || AccessManager.exists(this, folder.getAbsolutePath()));
+                if (folder != null && !folderExists) {
                     File fallback = folder.getParentFile();
-                    while (fallback != null && !fallback.exists()) {
+                    while (fallback != null && !(fallback.exists() || AccessManager.exists(this, fallback.getAbsolutePath()))) {
                         fallback = fallback.getParentFile();
                     }
-                    if (fallback == null || !fallback.exists()) {
+                    if (fallback == null || !(fallback.exists() || AccessManager.exists(this, fallback.getAbsolutePath()))) {
                         fallback = Environment.getExternalStorageDirectory();
                     }
-                    if (fallback != null && fallback.exists() && !fallback.equals(folder)) {
+                    if (fallback != null && (fallback.exists() || AccessManager.exists(this, fallback.getAbsolutePath())) && !fallback.equals(folder)) {
                         final File validFallback = fallback;
                         runOnUiThread(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                         return null;

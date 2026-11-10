@@ -264,6 +264,9 @@ public class TranslationModeActivity extends BaseActivity {
             try {
                 if (classTree == null) {
                     classTree = new ClassTree(dexPaths, getCacheDir().getAbsolutePath());
+                    ClassTree.CompilationOptions opts = new ClassTree.CompilationOptions();
+                    opts.removeAllDebug = true;
+                    classTree.setCompilationOptions(opts);
                 }
                 List<String> strings = classTree.getAllStrings();
                 Collections.sort(strings);

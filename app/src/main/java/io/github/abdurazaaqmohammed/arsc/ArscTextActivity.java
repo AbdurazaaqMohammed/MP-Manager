@@ -308,9 +308,15 @@ public class ArscTextActivity extends BaseActivity {
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
-                .setNeutralButton(R.string.minimize, (d, w) ->
-                        MinimizedEditors.minimize(this, toolbar.getTitle() != null
-                                ? toolbar.getTitle().toString() : getString(R.string.arsc_editor)))
+                .setNeutralButton(R.string.minimize, (d, w) -> {
+                    String baseTitle = toolbar.getTitle() != null ? toolbar.getTitle().toString() : getString(R.string.arsc_editor);
+                    String parentName = null;
+                    if (data != null) {
+                        if (data.apkFile != null) parentName = data.apkFile.getName();
+                        else if (data.arscFile != null) parentName = data.arscFile.getName();
+                    }
+                    MinimizedEditors.minimize(this, MinimizedEditors.formatTitle(baseTitle, parentName));
+                })
                 .show();
     }
 

@@ -1646,12 +1646,15 @@ public class DexEditorActivity extends BaseActivity {
         Intent launch = getIntent();
         if (launch != null) {
             String zip = launch.getStringExtra("zipFilePath");
-            if (zip != null) {
+            if (zip != null && !zip.isEmpty()) {
                 source = new File(zip).getName();
             } else {
                 List<String> dexPaths = launch.getStringArrayListExtra("SelectedDexFiles");
                 if (dexPaths != null && !dexPaths.isEmpty()) {
-                    source = new File(dexPaths.get(0)).getName();
+                    File firstDex = new File(dexPaths.get(0));
+                    String dexName = firstDex.getName();
+                    String parentName = firstDex.getParentFile() != null ? firstDex.getParentFile().getName() : null;
+                    source = MinimizedEditors.formatTitle(dexName, parentName);
                 }
             }
         }

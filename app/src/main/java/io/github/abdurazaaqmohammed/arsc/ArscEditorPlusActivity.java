@@ -896,16 +896,26 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     private void minimizeThis() {
         String name = null;
+        String parent = null;
         Intent intent = getIntent();
         if (intent != null) {
+            String apk = intent.getStringExtra("apkPath");
+            if (apk == null) apk = intent.getStringExtra("zipFilePath");
+            if (apk != null && !apk.isEmpty()) parent = new File(apk).getName();
+
             name = intent.getStringExtra("zipEntryPath");
             if (name == null) {
                 String path = intent.getStringExtra("path");
-                if (path == null) path = intent.getStringExtra("apkPath");
-                if (path != null) name = new File(path).getName();
+                if (path != null) {
+                    File f = new File(path);
+                    name = f.getName();
+                    if (parent == null && f.getParentFile() != null) {
+                        parent = f.getParentFile().getName();
+                    }
+                }
             }
         }
-        MinimizedEditors.minimize(this, R.string.arsc_editor_plus, name);
+        MinimizedEditors.minimize(this, R.string.arsc_editor_plus, name, parent);
     }
 
     @Override

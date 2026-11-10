@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -505,7 +506,15 @@ public class DexTools {
                 // Pre-repair corrupted/zeroed headers and recalculate checksums if needed
                 DexRepairEngine.repairHeader(dexFile);
                 DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
-                DexFileFactory.writeDexFile(dexFile.getAbsolutePath(), dex);
+                com.android.tools.smali.dexlib2.writer.pool.DexPool pool = new com.android.tools.smali.dexlib2.writer.pool.DexPool(dex.getOpcodes());
+                for (ClassDef cd : dex.getClasses()) {
+                    pool.internClass(io.github.abdurazaaqmohammed.utils.DexDebugStripper.strip(cd));
+                }
+                com.android.tools.smali.dexlib2.writer.io.MemoryDataStore store = new com.android.tools.smali.dexlib2.writer.io.MemoryDataStore();
+                pool.writeTo(store);
+                try (OutputStream os = new FileOutputStream(dexFile)) {
+                    os.write(store.getData(), 0, store.getSize());
+                }
                 pm.dismiss();
                 if (zipFile != null) {
                     context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(dexFile)));

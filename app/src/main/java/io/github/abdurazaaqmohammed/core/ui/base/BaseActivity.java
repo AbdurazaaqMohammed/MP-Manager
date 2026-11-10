@@ -107,7 +107,13 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void finish() {
         EditorTasks.finished(this);
-        super.finish();
+        if (EditorTasks.isEditor(this)) {
+            EditorTasks.returnToMain(this);
+            finishAndRemoveTask();
+            overridePendingTransition(0, 0);
+        } else {
+            super.finish();
+        }
     }
 
     /**

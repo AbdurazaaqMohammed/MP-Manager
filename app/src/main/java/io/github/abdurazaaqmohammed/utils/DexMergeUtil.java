@@ -66,7 +66,7 @@ public final class DexMergeUtil {
         int dexIndex = 1;
 
         for (ClassDef c : allClasses) {
-            currentPool.internClass(c);
+            currentPool.internClass(DexDebugStripper.strip(c));
 
             int methodCount = currentPool.methodSection.getItemCount();
             int fieldCount = currentPool.fieldSection.getItemCount();
