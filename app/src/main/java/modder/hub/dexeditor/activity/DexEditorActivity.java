@@ -385,10 +385,16 @@ public class DexEditorActivity extends BaseActivity {
             UnifiedEditorFragment f = getCurrentFragment();
             if (f != null) f.showEditMenu(btnEdit);
         });
-        if (btnFile != null) btnFile.setOnClickListener(v -> {
-            UnifiedEditorFragment f = getCurrentFragment();
-            if (f != null) f.showFileMenu(btnFile);
-        });
+        if (btnFile != null) {
+            btnFile.setOnClickListener(v -> {
+                UnifiedEditorFragment f = getCurrentFragment();
+                if (f != null) f.showFileMenu(btnFile);
+            });
+            btnFile.setOnLongClickListener(v -> {
+                minimizeThis();
+                return true;
+            });
+        }
 
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawerLayout.addDrawerListener(drawerToggle);
@@ -676,6 +682,17 @@ public class DexEditorActivity extends BaseActivity {
         this.optionsMenu = menu;
         getMenuInflater().inflate(viewPager.getVisibility() == View.VISIBLE ? R.menu.editor_menu : R.menu.dex_editor_main_menu, menu);
         tintMenuIcons(menu);
+        if (toolbar != null) {
+            toolbar.post(() -> {
+                View more = toolbar.findViewById(R.id.action_more);
+                if (more != null) {
+                    more.setOnLongClickListener(v -> {
+                        minimizeThis();
+                        return true;
+                    });
+                }
+            });
+        }
         return true;
     }
 
@@ -1618,24 +1635,26 @@ public class DexEditorActivity extends BaseActivity {
             builder.setPositiveButton(R.string.save_and_exit, (dialog, which) -> new SaveAndExitClickListener().onClick(null, 0));
         }
 
-        builder.setNegativeButton(R.string.minimize, (dialog, which) -> {
-            String source = null;
-            Intent launch = getIntent();
-            if (launch != null) {
-                String zip = launch.getStringExtra("zipFilePath");
-                if (zip != null) {
-                    source = new File(zip).getName();
-                } else {
-                    List<String> dexPaths = launch.getStringArrayListExtra("SelectedDexFiles");
-                    if (dexPaths != null && !dexPaths.isEmpty()) {
-                        source = new File(dexPaths.get(0)).getName();
-                    }
-                }
-            }
-            MinimizedEditors.minimize(this, R.string.dex_editor_plus, source);
-        });
+        builder.setNegativeButton(R.string.minimize, (dialog, which) -> minimizeThis());
         builder.setNeutralButton(R.string.exit_directly, (dialog, which) -> exitActivity());
         builder.show();
+    }
+
+    public void minimizeThis() {
+        String source = null;
+        Intent launch = getIntent();
+        if (launch != null) {
+            String zip = launch.getStringExtra("zipFilePath");
+            if (zip != null) {
+                source = new File(zip).getName();
+            } else {
+                List<String> dexPaths = launch.getStringArrayListExtra("SelectedDexFiles");
+                if (dexPaths != null && !dexPaths.isEmpty()) {
+                    source = new File(dexPaths.get(0)).getName();
+                }
+            }
+        }
+        MinimizedEditors.minimize(this, R.string.dex_editor_plus, source);
     }
 
     // method for saviing multiple tabs

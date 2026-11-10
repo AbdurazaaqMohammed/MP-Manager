@@ -374,6 +374,12 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             UnifiedEditorFragment f = getFragment();
             if (f != null) f.showFileMenu(btnFile);
         });
+
+        btnFile.setOnLongClickListener(v -> {
+            EditorTab t = getCurrentTab();
+            MinimizedEditors.minimize(this, R.string.text_editor, t != null ? t.title : null);
+            return true;
+        });
     }
 
     private class TabRowAdapter extends RecyclerView.Adapter<TabRowAdapter.TabVH> {

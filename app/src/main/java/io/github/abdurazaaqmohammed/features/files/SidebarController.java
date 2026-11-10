@@ -266,8 +266,74 @@ public class SidebarController {
             activity.closeSidebarDrawer();
         };
         // Fixed Settings entry at the very bottom of the drawer (footer row).
-        activity.findViewById(R.id.sidebarSettingsFooter).setOnClickListener(onClickListener);
+        View settingsFooter = activity.findViewById(R.id.sidebarSettingsFooter);
+        if (settingsFooter != null) settingsFooter.setOnClickListener(onClickListener);
+
+        ImageButton settingsHideBtn = activity.findViewById(R.id.sidebarSettingsHideButton);
+        if (settingsHideBtn != null) {
+            settingsHideBtn.setOnClickListener(v -> {
+                SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(activity);
+                Set<String> hidden = new HashSet<>(p.getStringSet("sidebar_hidden_items", Collections.emptySet()));
+                boolean isHidden = hidden.contains("settings");
+                if (isHidden) hidden.remove("settings");
+                else hidden.add("settings");
+                p.edit().putStringSet("sidebar_hidden_items", hidden).apply();
+                updateSettingsFooterVisibility(sidebarOrganizeMode);
+            });
+        }
+        updateSettingsFooterVisibility(false);
         registerStorageRefreshReceiver();
+    }
+
+    private void updateSettingsFooterVisibility(boolean organizeMode) {
+        View card = activity.findViewById(R.id.sidebarSettingsCard);
+        if (card == null) return;
+        SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(activity);
+        Set<String> hidden = p.getStringSet("sidebar_hidden_items", Collections.emptySet());
+        boolean isHidden = hidden != null && hidden.contains("settings");
+
+        if (organizeMode) {
+            card.setVisibility(View.VISIBLE);
+            card.setAlpha(isHidden ? 0.7f : 1.0f);
+            ImageButton hideBtn = activity.findViewById(R.id.sidebarSettingsHideButton);
+            if (hideBtn != null) {
+                hideBtn.setVisibility(View.VISIBLE);
+                hideBtn.setContentDescription(activity.getString(isHidden ? R.string.restore_sidebar_item : R.string.hide));
+            }
+            TextView text = activity.findViewById(R.id.sidebarSettingsText);
+            if (text != null) {
+                text.setEnabled(!isHidden);
+                text.setAlpha(isHidden ? 0.55f : 1.0f);
+            }
+            View icon = activity.findViewById(R.id.sidebarSettingsFooter);
+            if (icon instanceof ViewGroup vg && vg.getChildCount() > 0) {
+                View iconView = vg.getChildAt(0);
+                if (iconView instanceof ImageView iv) {
+                    iv.setImageResource(isHidden ? R.drawable.visibility_off_24px : R.drawable.baseline_settings_24);
+                    iv.setEnabled(!isHidden);
+                    iv.setAlpha(isHidden ? 0.55f : 1.0f);
+                }
+            }
+        } else {
+            card.setVisibility(isHidden ? View.GONE : View.VISIBLE);
+            card.setAlpha(1.0f);
+            ImageButton hideBtn = activity.findViewById(R.id.sidebarSettingsHideButton);
+            if (hideBtn != null) hideBtn.setVisibility(View.GONE);
+            TextView text = activity.findViewById(R.id.sidebarSettingsText);
+            if (text != null) {
+                text.setEnabled(true);
+                text.setAlpha(1.0f);
+            }
+            View icon = activity.findViewById(R.id.sidebarSettingsFooter);
+            if (icon instanceof ViewGroup vg && vg.getChildCount() > 0) {
+                View iconView = vg.getChildAt(0);
+                if (iconView instanceof ImageView iv) {
+                    iv.setImageResource(R.drawable.baseline_settings_24);
+                    iv.setEnabled(true);
+                    iv.setAlpha(1.0f);
+                }
+            }
+        }
     }
 
     private boolean handleOrganizeTouch(MotionEvent event) {
@@ -338,6 +404,7 @@ public class SidebarController {
         organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.edit_24px);
         String msg = activity.getString(enabled ? R.string.organize_sidebar : R.string.done_organizing_sidebar);
         organizeButton.setContentDescription(msg);
+        updateSettingsFooterVisibility(enabled);
         Snackbar.make(activity.findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
     }
 

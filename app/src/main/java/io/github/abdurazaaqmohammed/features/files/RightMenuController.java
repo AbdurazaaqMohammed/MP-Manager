@@ -65,6 +65,15 @@ public class RightMenuController {
                 activity.reloadPane(true, true);
                 activity.reloadPane(false, true);
             });
+            refreshBtn.setOnLongClickListener(v -> {
+                File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
+                if (currentFolder != null) {
+                    io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.invalidatePrefix(currentFolder);
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
+                    activity.reloadCurrentFolder();
+                }
+                return true;
+            });
         }
 
         View editBtn = activity.findViewById(R.id.rightMenuEditButton);
@@ -143,17 +152,7 @@ public class RightMenuController {
                     });
                     break;
                 case RightMenuOrder.SORT:
-                    addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort),
-                            v -> activity.showSortDialog(),
-                            v -> {
-                                File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
-                                if (currentFolder != null) {
-                                    io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.invalidatePrefix(currentFolder);
-                                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
-                                    activity.reloadCurrentFolder();
-                                }
-                                return true;
-                            });
+                    addRightDrawerItem(container, R.drawable.baseline_sort_24, activity.getString(R.string.sort), v -> activity.showSortDialog());
                     break;
                 case RightMenuOrder.COMPARE_FOLDERS:
                     addRightDrawerItem(container, R.drawable.baseline_compare_24, activity.getString(R.string.compare_folders), v -> activity.performFolderCompare());

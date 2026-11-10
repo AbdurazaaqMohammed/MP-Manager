@@ -2658,7 +2658,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) { }
         try {
             File currentFolder = pane1 ? pane1Folder : pane2Folder;
-            if (currentFolder != null) DirSizeCache.invalidatePrefix(currentFolder);
+            if (currentFolder != null && io.github.abdurazaaqmohammed.adapters.main.FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
+                DirSizeCache.invalidatePrefix(currentFolder);
+            }
             RootManager.getInstance(this).invalidateListCache();
         } catch (Exception ignored) { }
         reloadOnePane(pane1, false);

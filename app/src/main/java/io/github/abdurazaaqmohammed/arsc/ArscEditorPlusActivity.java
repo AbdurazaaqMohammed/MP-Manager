@@ -172,6 +172,15 @@ public class ArscEditorPlusActivity extends BaseActivity {
             showMainMenu();
             return true;
         });
+        toolbar.post(() -> {
+            View more = toolbar.findViewById(R.id.arsc_menu_more);
+            if (more != null) {
+                more.setOnLongClickListener(v -> {
+                    minimizeThis();
+                    return true;
+                });
+            }
+        });
         main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         tabs = new TabLayout(this);
         main.addView(tabs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
