@@ -1363,6 +1363,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (q >= 0) n = n.substring(0, q);
         int dot = n.lastIndexOf('.');
         if (dot < 0 || dot == n.length() - 1) return null;
+        switch (n.substring(dot + 1)) {
             case "xml":
             case "axml":
             case "apk_manifest": return "text.xml";
