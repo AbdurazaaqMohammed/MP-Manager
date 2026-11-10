@@ -37,6 +37,17 @@ public final class EditorTasks {
 
     public static void saveOwner(Bundle state, String id) { state.putString(OWNER, id); }
 
+    public static boolean isEditor(Activity activity) {
+        if (activity == null) return false;
+        String name = activity.getClass().getName();
+        return name.equals("io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity")
+                || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity")
+                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscTextActivity");
+    }
+
     public static boolean isEditor(Intent intent) {
         if (intent.getComponent() == null) return false;
         String name = intent.getComponent().getClassName();
@@ -77,6 +88,33 @@ public final class EditorTasks {
         if (owner != null && !owner.isFinishing() && !owner.isDestroyed()) {
             owner.getWindow().getDecorView().post(() ->
                     owner.dispatchEditorResult(result.request, result.code, result.data));
+        }
+    }
+
+    public static void returnToMain(Activity activity) {
+        if (activity == null) return;
+        try {
+            android.app.ActivityManager am = (android.app.ActivityManager) activity.getSystemService(android.content.Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                for (android.app.ActivityManager.AppTask task : am.getAppTasks()) {
+                    android.app.ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                    if (info != null && info.baseIntent != null && info.baseIntent.getComponent() != null) {
+                        String cls = info.baseIntent.getComponent().getClassName();
+                        if (cls.contains("MainActivity")) {
+                            task.moveToFront();
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        // Fallback if AppTask not found
+        try {
+            Intent main = new Intent(activity, io.github.abdurazaaqmohammed.MPManager.MainActivity.class);
+            main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            activity.startActivity(main);
+        } catch (Exception ignored) {
         }
     }
 
