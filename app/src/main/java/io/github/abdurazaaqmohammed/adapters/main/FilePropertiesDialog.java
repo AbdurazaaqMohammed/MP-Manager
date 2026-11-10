@@ -148,6 +148,12 @@ public class FilePropertiesDialog {
                 final TextView[] symHolder = new TextView[1];
                 symHolder[0] = addPropertyRow(propRows, "Symlink", symTarget,
                         R.drawable.edit_24px,
+                        v -> {
+                            if (selfDialog[0] != null) {
+                                try { selfDialog[0].dismiss(); } catch (Exception ignored) {}
+                            }
+                            navigateToSymlinkTarget(symTarget, file);
+                        },
                         v -> showEditSymlinkDialog(file, symHolder[0]));
             }
         }
@@ -890,6 +896,11 @@ public class FilePropertiesDialog {
 
     private TextView addPropertyRow(LinearLayout container, String label, String value,
                                     int actionIcon, View.OnClickListener action) {
+        return addPropertyRow(container, label, value, actionIcon, action, action);
+    }
+
+    private TextView addPropertyRow(LinearLayout container, String label, String value,
+                                    int actionIcon, View.OnClickListener textAction, View.OnClickListener iconAction) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -917,7 +928,7 @@ public class FilePropertiesDialog {
             CopyUtil.copyToClipboard(context, toCopy);
             return true;
         });
-        valueView.setOnClickListener(action);
+        valueView.setOnClickListener(textAction);
         valueView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         inner.addView(valueView);
 
@@ -931,7 +942,7 @@ public class FilePropertiesDialog {
         icon.setLayoutParams(lp);
         icon.setClickable(true);
         icon.setFocusable(true);
-        icon.setOnClickListener(action);
+        icon.setOnClickListener(iconAction);
         inner.addView(icon);
 
         container.addView(row);
@@ -1109,6 +1120,42 @@ public class FilePropertiesDialog {
                 .create();
         KeyboardUtil.focusOnShow(editDialog, input, false);
         dialogUtil.styleAlertDialog(editDialog);
+    }
+
+    private void navigateToSymlinkTarget(String symTarget, File symlinkFile) {
+        if (symTarget == null || symTarget.trim().isEmpty()) return;
+        String targetPath = symTarget.trim();
+        File targetFile;
+        if (targetPath.startsWith("/")) {
+            targetFile = new File(targetPath);
+        } else {
+            File parent = symlinkFile != null ? symlinkFile.getParentFile() : null;
+            targetFile = parent != null ? new File(parent, targetPath) : new File(targetPath);
+        }
+
+        try {
+            String absPath = targetFile.getCanonicalPath();
+            targetFile = new File(absPath);
+        } catch (Exception ignored) {}
+
+        boolean isPane1 = context.lastPaneSelected == 1;
+        String fullPath = targetFile.getAbsolutePath();
+
+        boolean isDir = AccessManager.isDirectory(context, fullPath);
+        boolean isFile = !isDir && (AccessManager.isFile(context, fullPath) || targetFile.getParentFile() != null);
+        File folder = isFile ? targetFile.getParentFile() : targetFile;
+
+        if (folder != null && (folder.exists() || AccessManager.exists(context, folder.getAbsolutePath()))) {
+            context.loadFolderInPane(folder, isPane1);
+            if (isFile) {
+                final String itemName = targetFile.getName();
+                context.highlightAndFocusItem(isPane1, itemName);
+                context.handler.postDelayed(() -> context.highlightAndFocusItem(isPane1, itemName), 350);
+            }
+            Extensions.showMessage(context, context.rss.getString(R.string.loaded_X, fullPath));
+        } else {
+            Extensions.showMessage(context, context.rss.getString(R.string.cannot_open_item));
+        }
     }
 
     private View wrapInScroll(View content) {
