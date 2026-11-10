@@ -203,6 +203,7 @@ public class DexEditorActivity extends BaseActivity {
     private Menu optionsMenu;
     // --- UI Components ---
     private DrawerLayout drawerLayout;
+    private Toolbar toolbar;
     private Toolbar drawerToolbar;
     private ActionBarDrawerToggle drawerToggle;
     private ViewPager2 viewPager;
@@ -339,7 +340,7 @@ public class DexEditorActivity extends BaseActivity {
         classListContainer = findViewById(R.id.class_list_container);
         viewPager = findViewById(R.id.view_pager);
         tabsRecyclerView = findViewById(R.id.tabs_recycler_view);
-        Toolbar toolbar = findViewById(R.id._toolbar);
+        toolbar = findViewById(R.id._toolbar);
         setSupportActionBar(toolbar);
 
         drawerToolbar = findViewById(R.id.drawer_toolbar);
