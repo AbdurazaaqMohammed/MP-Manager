@@ -50,6 +50,22 @@ public class StorageUtil {
                 for (StorageVolume vol : volumes) {
                     File dir = vol.getDirectory();
 
+                    if (dir == null) {
+                        // OTG / HDD drives where getDirectory() returns null on Android 11+
+                        String uuid = vol.getUuid();
+                        if (uuid != null && !uuid.isEmpty()) {
+                            File candidate = new File("/storage/" + uuid);
+                            if (candidate.exists() || (AccessManager.fileOpsOn(ctx) && AccessManager.exists(ctx, candidate.getAbsolutePath()))) {
+                                dir = candidate;
+                            } else {
+                                File mediaRw = new File("/mnt/media_rw/" + uuid);
+                                if (mediaRw.exists() || (AccessManager.fileOpsOn(ctx) && AccessManager.exists(ctx, mediaRw.getAbsolutePath()))) {
+                                    dir = mediaRw;
+                                }
+                            }
+                        }
+                    }
+
                     if (dir == null) continue;
 
                     String state = null;
@@ -80,14 +96,17 @@ public class StorageUtil {
                         si.name = (TextUtils.isEmpty(desc)) ? ctx.getString(R.string.storage) : desc.toString();
                     }
 
-                    StatFs statFs = new StatFs(si.path);
-                    long blockSize = statFs.getBlockSizeLong();
-                    long totalBlocks = statFs.getBlockCountLong();
-                    long availableBlocks = statFs.getAvailableBlocksLong();
+                    try {
+                        StatFs statFs = new StatFs(si.path);
+                        long blockSize = statFs.getBlockSizeLong();
+                        long totalBlocks = statFs.getBlockCountLong();
+                        long availableBlocks = statFs.getAvailableBlocksLong();
 
-                    si.totalBytes = blockSize * totalBlocks;
-                    si.freeBytes = blockSize * availableBlocks;
-                    si.usedBytes = si.totalBytes - si.freeBytes;
+                        si.totalBytes = blockSize * totalBlocks;
+                        si.freeBytes = blockSize * availableBlocks;
+                        si.usedBytes = si.totalBytes - si.freeBytes;
+                    } catch (Exception ignored) {
+                    }
 
                     list.add(si);
                 }
@@ -118,6 +137,35 @@ public class StorageUtil {
 
         try {
             if (AccessManager.fileOpsOn(ctx)) {
+                // Discover additional OTG mounts under /mnt/media_rw directly via root
+                File[] mediaRwList = AccessManager.listWithStat(ctx, "/mnt/media_rw");
+                if (mediaRwList != null) {
+                    for (File m : mediaRwList) {
+                        String mPath = m.getAbsolutePath();
+                        boolean alreadyAdded = false;
+                        for (StorageInfo existing : list) {
+                            if (mPath.equals(existing.path) || (existing.path != null && existing.path.endsWith("/" + m.getName()))) {
+                                alreadyAdded = true;
+                                break;
+                            }
+                        }
+                        if (!alreadyAdded) {
+                            StorageInfo otg = new StorageInfo();
+                            otg.name = "USB Storage (" + m.getName() + ")";
+                            otg.path = mPath;
+                            try {
+                                StatFs sOtg = new StatFs(mPath);
+                                long bsOtg = sOtg.getBlockSizeLong();
+                                otg.totalBytes = bsOtg * sOtg.getBlockCountLong();
+                                otg.freeBytes = bsOtg * sOtg.getAvailableBlocksLong();
+                                otg.usedBytes = otg.totalBytes - otg.freeBytes;
+                            } catch (Exception ignored) {
+                            }
+                            list.add(otg);
+                        }
+                    }
+                }
+
                 StorageInfo root = new StorageInfo();
                 root.name = "Root (/)";
                 root.path = "/";
