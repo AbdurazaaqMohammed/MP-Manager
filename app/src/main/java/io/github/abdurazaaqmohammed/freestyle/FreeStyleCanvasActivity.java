@@ -72,7 +72,18 @@ public class FreeStyleCanvasActivity extends AppCompatActivity {
             btnSave.setVisibility(View.VISIBLE);
         });
 
-        btnSave.setOnClickListener(v -> saveCanvasCollage());
+        MaterialButton btnCropCanvas = findViewById(R.id.btnCropCanvas);
+        btnCropCanvas.setOnClickListener(v -> {
+            // Toggles auto-crop to content bounds or trims canvas
+            android.graphics.RectF bounds = canvasView.getLayersBoundingBox();
+            if (bounds == null) {
+                Toast.makeText(this, "No images on canvas", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            saveCanvasCollage(true);
+        });
+
+        btnSave.setOnClickListener(v -> saveCanvasCollage(false));
 
         // Load selected images passed from picker
         ArrayList<String> paths = getIntent().getStringArrayListExtra("selected_images");
@@ -134,8 +145,8 @@ public class FreeStyleCanvasActivity extends AppCompatActivity {
         }
     }
 
-    private void saveCanvasCollage() {
-        Bitmap output = canvasView.renderToBitmap();
+    private void saveCanvasCollage(boolean autoCropToBounds) {
+        Bitmap output = canvasView.renderToBitmap(autoCropToBounds);
         if (output == null) {
             Toast.makeText(this, "Failed to capture canvas", Toast.LENGTH_SHORT).show();
             return;

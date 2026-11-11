@@ -67,8 +67,8 @@ public class FreeStyleCanvasView extends View {
     // Smart alignment guides
     private final List<Float> verticalGuideLines = new ArrayList<>();
     private final List<Float> horizontalGuideLines = new ArrayList<>();
-    private static final float SNAP_THRESHOLD = 20f; // pixels
-    private static final float ROTATION_SNAP_THRESHOLD = 3.5f; // degrees
+    private static final float SNAP_THRESHOLD = 9f; // Soft, gentle snapping in px
+    private static final float ROTATION_SNAP_THRESHOLD = 2.0f; // degrees
 
     // Crop Mode State
     private boolean isCropMode = false;
@@ -95,7 +95,7 @@ public class FreeStyleCanvasView extends View {
         setBackgroundColor(Color.WHITE);
 
         float density = getResources().getDisplayMetrics().density;
-        handleRadius = 22f * density;
+        handleRadius = 24f * density;
         stretchDotRadius = 10f * density;
 
         borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -105,14 +105,14 @@ public class FreeStyleCanvasView extends View {
         borderPaint.setPathEffect(new DashPathEffect(new float[]{16f, 10f}, 0));
 
         handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        handlePaint.setColor(Color.WHITE);
+        handlePaint.setColor(Color.parseColor("#00897B")); // Filled teal background so white icons are crystal clear
         handlePaint.setStyle(Paint.Style.FILL);
-        handlePaint.setShadowLayer(4f * density, 0, 2f * density, 0x44000000);
+        handlePaint.setShadowLayer(5f * density, 0, 2f * density, 0x66000000);
 
         handleStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        handleStrokePaint.setColor(Color.parseColor("#009688"));
+        handleStrokePaint.setColor(Color.WHITE); // Crisp white border ring
         handleStrokePaint.setStyle(Paint.Style.STROKE);
-        handleStrokePaint.setStrokeWidth(2f * density);
+        handleStrokePaint.setStrokeWidth(2.5f * density);
 
         stretchDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         stretchDotPaint.setColor(Color.parseColor("#00BCD4"));
@@ -138,11 +138,15 @@ public class FreeStyleCanvasView extends View {
         cropBoxPaint.setStyle(Paint.Style.STROKE);
         cropBoxPaint.setStrokeWidth(3f * density);
 
-        // Load handle icons
+        // Load handle icons with explicit white tint so they pop clearly against the teal circle
         rotateDrawable = ContextCompat.getDrawable(getContext(), R.drawable.ic_rotate_cw_24);
+        if (rotateDrawable != null) rotateDrawable.setTint(Color.WHITE);
         scaleDrawable = ContextCompat.getDrawable(getContext(), R.drawable.ic_scale_handle_24);
+        if (scaleDrawable != null) scaleDrawable.setTint(Color.WHITE);
         flipDrawable = ContextCompat.getDrawable(getContext(), R.drawable.flip_24px);
+        if (flipDrawable != null) flipDrawable.setTint(Color.WHITE);
         cropDrawable = ContextCompat.getDrawable(getContext(), R.drawable.ic_crop_24px);
+        if (cropDrawable != null) cropDrawable.setTint(Color.WHITE);
 
         setLayerType(LAYER_TYPE_SOFTWARE, null); // For shadow layer rendering
     }
@@ -855,12 +859,57 @@ public class FreeStyleCanvasView extends View {
     }
 
     /**
-     * Render final canvas output to a clean full-res bitmap
+     * Calculates the tight bounding box enclosing all active layers on the canvas.
+     */
+    public RectF getLayersBoundingBox() {
+        if (layers.isEmpty()) return null;
+        RectF total = null;
+        for (StickerLayer layer : layers) {
+            RectF box = layer.getBoundingBox();
+            if (total == null) {
+                total = new RectF(box);
+            } else {
+                total.union(box);
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Render final canvas output to a clean full-res bitmap, optionally tightly cropped to layer contents.
      */
     public Bitmap renderToBitmap() {
+        return renderToBitmap(false);
+    }
+
+    public Bitmap renderToBitmap(boolean autoCropToBounds) {
         int w = getWidth();
         int h = getHeight();
         if (w <= 0 || h <= 0) return null;
+
+        RectF bounds = autoCropToBounds ? getLayersBoundingBox() : null;
+        if (bounds != null) {
+            // Add slight 12px margin around contents if space permits
+            float margin = 12f * getResources().getDisplayMetrics().density;
+            bounds.left = Math.max(0, bounds.left - margin);
+            bounds.top = Math.max(0, bounds.top - margin);
+            bounds.right = Math.min(w, bounds.right + margin);
+            bounds.bottom = Math.min(h, bounds.bottom + margin);
+
+            int outW = Math.max(1, Math.round(bounds.width()));
+            int outH = Math.max(1, Math.round(bounds.height()));
+
+            Bitmap output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(output);
+            canvas.drawColor(Color.WHITE);
+            canvas.translate(-bounds.left, -bounds.top);
+
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            for (StickerLayer layer : layers) {
+                layer.draw(canvas, paint);
+            }
+            return output;
+        }
 
         Bitmap output = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
