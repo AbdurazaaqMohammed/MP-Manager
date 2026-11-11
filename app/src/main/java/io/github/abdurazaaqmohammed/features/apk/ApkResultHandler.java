@@ -26,6 +26,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.ApkSignaturePreserver;
 import io.github.abdurazaaqmohammed.utils.ArchiveBackupUtil;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -152,6 +153,7 @@ public class ApkResultHandler {
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
                                     List<String> addedNames = new ArrayList<>();
+                                    byte[] preservedSigBlock = isApk ? ApkSignaturePreserver.extractSigningBlock(zipFile) : null;
                                     try (ZipFile zf = new ZipFile(zipFile)) {
                                         if (modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                             File modifiedFile = new File(path);
@@ -218,7 +220,11 @@ public class ApkResultHandler {
                                         return;
                                     }
                                     try {
-                                        if (sign[0]) wrapper[0].signApk(zipFile);
+                                        if (sign[0]) {
+                                            wrapper[0].signApk(zipFile);
+                                        } else if (preservedSigBlock != null) {
+                                            ApkSignaturePreserver.injectSigningBlock(zipFile, preservedSigBlock);
+                                        }
                                         pm.dismiss();
                                         activity.handler.post(() -> {
                                             try {
