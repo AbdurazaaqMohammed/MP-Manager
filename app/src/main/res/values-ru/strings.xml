@@ -307,7 +307,7 @@
     <string name="extract_ic">Извлечь значок приложения</string>
     <string name="root_permissions">Права root</string>
     <string name="permissions_updated">Разрешения обновлены</string>
-    <string name="invert_selection">Инвертировать выделение</string>
+    <string name="invert_selection">Инверсия</string>
     <string name="playback_error">Ошибка воспроизведения</string>
     <string name="buffering">Буферизация: %1$d\%</string>
     <string name="search_ex_paths">Укажите список путей, которые нужно исключить из области поиска, по одному на строку, например:\ncom/gms/\nandroidx/\nВнимание! Список исключений действует только когда путь поиска пуст или равен \"/\"!</string>
