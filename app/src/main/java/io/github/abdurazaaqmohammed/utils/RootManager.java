@@ -895,13 +895,15 @@ public class RootManager {
     }
 
     public void copyDir(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
+        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x -C " + escapeShellArg(dest) + ")) || cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        ShellResult result = executeFs(cmd, 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
 
     public void copyDirPreserving(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
+        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x -C " + escapeShellArg(dest) + ")) || cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        ShellResult result = executeFs(cmd, 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -972,7 +974,14 @@ public class RootManager {
             }
             String parent = new File(dest).getParent();
             if (parent != null) cmd.append(" && mkdir -p ").append(escapeShellArg(parent));
-            cmd.append(" && cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            if (op.directory) {
+                cmd.append(" && ((mkdir -p ").append(escapeShellArg(dest))
+                        .append(" && (tar -c -C ").append(escapeShellArg(src))
+                        .append(" . | tar -x -C ").append(escapeShellArg(dest))
+                        .append(")) || cp -rpf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest)).append(')');
+            } else {
+                cmd.append(" && cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            }
             filesDone += Math.max(0, op.files);
             bytesDone += Math.max(0L, op.bytes);
             cmd.append(ShellProgress.report(filesDone, bytesDone));
@@ -1765,12 +1774,13 @@ public class RootManager {
     }
 
 
-    public static final long MAX_STAGE_BYTES = 100L * 1024L * 1024L;
+    public static final long MAX_STAGE_BYTES = 1024L * 1024L * 1024L; // 1 GB for large APKs/archives
 
     private static final String[] ROOT_ONLY_PREFIXES = {
             "/data", "/metadata", "/linkerconfig", "/bootstrap-apex",
             "/apex", "/config", "/cust", "/acct", "/dev",
-            "/data_mirror", "/debug_ramdisk", "/mi_ext", "/root"
+            "/data_mirror", "/debug_ramdisk", "/mi_ext", "/root",
+            "/mnt", "/mnt/media_rw"
     };
 
     public record RootEntry(String path, boolean exists, boolean isDirectory, boolean isFile,
@@ -2311,7 +2321,7 @@ public class RootManager {
         try {
             process = Runtime.getRuntime().exec(suCommandForFs("cat " + escapeShellArg(srcPath)));
             InputStream stdout = process.getInputStream();
-            byte[] buf = new byte[65536];
+            byte[] buf = new byte[262144];
             long total = 0;
             int n;
             while ((n = stdout.read(buf)) != -1) {
@@ -2323,7 +2333,7 @@ public class RootManager {
                 out.write(buf, 0, n);
             }
             out.flush();
-            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(300, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
                 throw new IOException("Read timed out: " + srcPath);
@@ -2380,7 +2390,7 @@ public class RootManager {
             String cmd = "cat " + escapeShellArg(localSrc.getAbsolutePath())
                     + " > " + escapeShellArg(dstPath);
             process = Runtime.getRuntime().exec(suCommandForFs(cmd));
-            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(300, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
                 throw new IOException("Write timed out: " + dstPath);

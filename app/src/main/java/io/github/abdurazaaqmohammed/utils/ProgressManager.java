@@ -741,15 +741,24 @@ public class ProgressManager {
     private String buildSpeedLine() {
         StringBuilder sb = new StringBuilder();
         long eta = -1L;
+        long elapsed = elapsedSeconds();
 
         if (hasBytes() && speedBps >= 1d) {
             sb.append(activity.getString(R.string.progress_speed_bytes, formatSize((long) speedBps)));
             long left = bytesTotal - bytesDone;
-            if (left > 0) eta = (long) (left / speedBps);
+            // Only show ETA after a brief settling period (at least 1.5s elapsed and reasonable speed) to avoid wild initial spikes
+            if (left > 0 && elapsed >= 1 && speedBps >= 1024d) {
+                eta = (long) (left / speedBps);
+                // Cap unreasonable ETA (over 48 hours)
+                if (eta > 172800L) eta = -1L;
+            }
         } else if (!hasBytes() && maxVal > 0 && itemRate >= 0.2d) {
             sb.append(activity.getString(R.string.progress_speed_items, Math.round(itemRate)));
             int leftItems = maxVal - Math.min(progressVal, maxVal);
-            if (leftItems > 0) eta = (long) (leftItems / itemRate);
+            if (leftItems > 0 && elapsed >= 1) {
+                eta = (long) (leftItems / itemRate);
+                if (eta > 172800L) eta = -1L;
+            }
         }
 
         if (eta > 0) {
