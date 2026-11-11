@@ -761,6 +761,10 @@ Layout Inspector
     <string name="install_core_patch">How to install a differently signed APK (Core Patch)</string>
     <string name="install_save_data">Keep app data</string>
     <string name="install_save_data_failed">Could not back up this app\'s data, so it was not uninstalled. Grant root access if you want the data preserved.</string>
+    <string name="install_backup_failed">Could not back up this app\'s data, so it was not uninstalled.\n\nReason: %1$s</string>
+    <string name="install_restore_failed">App was installed, but restoring its data failed.\n\nReason: %1$s</string>
+    <string name="install_enable_root_mode_title">Enable Root Mode?</string>
+    <string name="install_enable_root_mode_msg">Root access is detected on this device, but Root Mode is currently not enabled in MP Manager. Backing up and restoring app data requires Root Mode to be enabled. Would you like to enable Root Mode now and proceed?</string>
     <string name="install_uninstall_note_root">“Uninstall and install” removes the existing app and installs this one. Its data is copied first and restored afterwards.</string>
     <string name="install_uninstall_note_no_data">“Uninstall and install” removes the existing app and installs this one. Its data cannot be read without root, so it will be lost.</string>
     <string name="install_dont_show_again">Don\'t show again</string>
@@ -2245,6 +2249,8 @@ Strings are sent to the external service you configured.</string>
     <string name="select_images">Select Images</string>
     <string name="collage_saved">Image collage saved to %1$s</string>
     <string name="apply_crop">Apply Crop</string>
+    <string name="crop_canvas">Crop Canvas</string>
+    <string name="trim_blank_canvas">Auto-Crop White Borders</string>
 
     <!-- Split & Merge Archive / File Tools -->
     <string name="split_file">Split</string>

@@ -11,6 +11,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -29,6 +30,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 
 /**
  * Pre-install comparison sheet.
@@ -85,11 +87,18 @@ public final class InstallInfoDialog {
         MaterialCheckBox dontShow = view.findViewWithTag("dontShow");
         MaterialCheckBox saveData = view.findViewWithTag("saveData");
 
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            applyDontShowAgain(activity, dontShow);
-            dialog.dismiss();
-            onInstall.run();
-        });
+        Button positiveBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (analysis.isDifferentSigner() && analysis.installed && !AppReinstaller.canSaveData(activity)) {
+            // Without root, direct install over conflicting signature is guaranteed to fail with INSTALL_FAILED_UPDATE_INCOMPATIBLE
+            positiveBtn.setEnabled(false);
+            positiveBtn.setAlpha(0.5f);
+        } else {
+            positiveBtn.setOnClickListener(v -> {
+                applyDontShowAgain(activity, dontShow);
+                dialog.dismiss();
+                onInstall.run();
+            });
+        }
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> {
             applyDontShowAgain(activity, dontShow);
             dialog.dismiss();
@@ -100,6 +109,24 @@ public final class InstallInfoDialog {
                 boolean keepData = canSave && saveData != null && saveData.isChecked();
                 applyDontShowAgain(activity, dontShow);
                 dialog.dismiss();
+                if (keepData) {
+                    RootManager rm = RootManager.getInstance(activity);
+                    if (!rm.isRootMode()) {
+                        new AlertDialog.Builder(activity)
+                                .setTitle(R.string.install_enable_root_mode_title)
+                                .setMessage(R.string.install_enable_root_mode_msg)
+                                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                                    rm.setWorkingMode(RootManager.WorkingMode.ROOT);
+                                    uninstallThenInstall(activity, analysis, true, onInstall);
+                                })
+                                .setNegativeButton(android.R.string.cancel, (d, which) -> {
+                                    // User declined enabling root mode; uninstall without data preservation
+                                    uninstallThenInstall(activity, analysis, false, onInstall);
+                                })
+                                .show();
+                        return;
+                    }
+                }
                 uninstallThenInstall(activity, analysis, keepData, onInstall);
             });
         }
@@ -445,13 +472,19 @@ public final class InstallInfoDialog {
             String dataOwner = null;
             if (keepData) {
                 dataOwner = AppReinstaller.readDataOwner(activity, pkg);
-                backup = AppReinstaller.backupData(activity, pkg);
-                if (backup == null) {
-                    // Saving is not possible; say so rather than destroying the
-                    // data silently.
-                    activity.runOnUiThread(() ->
-                            new ErrorUtil(activity).showError(
-                                    new Exception(activity.getString(R.string.install_save_data_failed))));
+                try {
+                    backup = AppReinstaller.backupDataOrThrow(activity, pkg);
+                } catch (Exception e) {
+                    // Check if root was available or if failure was due to technical error
+                    boolean rootAvail = AppReinstaller.canSaveData(activity);
+                    final String msg;
+                    if (!rootAvail) {
+                        msg = activity.getString(R.string.install_save_data_failed);
+                    } else {
+                        String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                        msg = activity.getString(R.string.install_backup_failed, reason);
+                    }
+                    activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(msg, e)));
                     return;
                 }
             }
@@ -468,8 +501,15 @@ public final class InstallInfoDialog {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
-                    AppReinstaller.restoreData(activity, pkg, archive, owner);
-                    AppReinstaller.deleteBackup(activity, archive);
+                    try {
+                        AppReinstaller.restoreDataOrThrow(activity, pkg, archive, owner);
+                    } catch (Exception e) {
+                        String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                        String restoreMsg = activity.getString(R.string.install_restore_failed, reason);
+                        activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(restoreMsg, e)));
+                    } finally {
+                        AppReinstaller.deleteBackup(activity, archive);
+                    }
                 }).start();
             }));
         }).start();

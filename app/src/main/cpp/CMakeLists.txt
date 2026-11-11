@@ -27,7 +27,8 @@ target_include_directories(mp_zstd PRIVATE
 target_compile_definitions(mp_zstd PRIVATE
         NDEBUG=1
         XXH_NAMESPACE=ZSTD_
-        ZSTD_DISABLE_ASM=1)
+        ZSTD_DISABLE_ASM=1
+        ZSTD_MULTITHREAD=1)
 
 target_compile_options(mp_zstd PRIVATE
         -Oz

@@ -1781,6 +1781,10 @@
     <string name="apk_compare_signature_warning">تحذير: هذا الملف موقَّع بمفتاح مختلف عن التطبيق المثبَّت مسبقًا بنفس اسم الحزمة. إنه ليس تحديثًا لذلك التطبيق. سيرفض أندرويد تثبيته فوقه (INSTALL_FAILED_UPDATE_INCOMPATIBLE) ما لم تزل النسخة الموجودة أولًا — لذا تأكد من ثقتك بهذا الملف قبل القيام بذلك.</string>
     <string name="install_core_patch">كيفية تثبيت APK موقَّع بشكل مختلف (Core Patch)</string>
     <string name="install_save_data_failed">تعذَّرت النسخ الاحتياطي لبيانات هذا التطبيق، لذلك لم يُلغَ تثبيته. امنح صلاحية root إذا أردت الحفاظ على البيانات.</string>
+    <string name="install_backup_failed">تعذَّر عمل نسخة احتياطية لبيانات هذا التطبيق، لذلك لم يتم إلغاء تثبيته.\n\nالسبب: %1$s</string>
+    <string name="install_restore_failed">تم تثبيت التطبيق، ولكن تعذَّرت استعادة بياناته.\n\nالسبب: %1$s</string>
+    <string name="install_enable_root_mode_title">تفعيل وضع الروت (Root Mode)؟</string>
+    <string name="install_enable_root_mode_msg">تم اكتشاف صلاحيات الروت في جهازك، ولكن وضع الروت غير مفعّل حالياً داخل إعدادات التطبيق. تتطلب عملية نسخ واستعادة البيانات تفعيل وضع الروت. هل ترغب في تفعيله الآن والمتابعة؟</string>
     <string name="install_uninstall_note_root">«إلغاء التثبيت والتثبيت» يزيل التطبيق الموجود ويثبِّت هذا. تُنسَخ بياناته أولًا وتُستعاد لاحقًا.</string>
     <string name="install_uninstall_note_no_data">«إلغاء التثبيت والتثبيت» يزيل التطبيق الموجود ويثبِّت هذا. لا يمكن قراءة بياناته بلا root، لذلك ستُفقَد.</string>
     <string name="uninstall_and_install">إلغاء التثبيت والتثبيت</string>
@@ -2014,6 +2018,8 @@
     <string name="select_images">اختر الصور</string>
     <string name="collage_saved">تم حفظ الصورة المجمعة في %1$s</string>
     <string name="apply_crop">تطبيق القص</string>
+    <string name="crop_canvas">قص اللوحة</string>
+    <string name="trim_blank_canvas">اقتصاص الحواف البيضاء تلقائياً</string>
 
     <!-- أدوات تقسيم ودمج الأرشيفات والملفات -->
     <string name="split_file">تقسيم</string>

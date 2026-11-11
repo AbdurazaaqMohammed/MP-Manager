@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.RectF;
 
 public class StickerLayer {
 
@@ -153,6 +154,21 @@ public class StickerLayer {
         if (dist(touchX, touchY, edges[3].x, edges[3].y) <= handleRadius * 1.3f) return HANDLE_STRETCH_LEFT;
 
         return HANDLE_NONE;
+    }
+
+    public RectF getBoundingBox() {
+        PointF[] corners = getTransformedCorners();
+        float minX = corners[0].x;
+        float maxX = corners[0].x;
+        float minY = corners[0].y;
+        float maxY = corners[0].y;
+        for (int i = 1; i < 4; i++) {
+            if (corners[i].x < minX) minX = corners[i].x;
+            if (corners[i].x > maxX) maxX = corners[i].x;
+            if (corners[i].y < minY) minY = corners[i].y;
+            if (corners[i].y > maxY) maxY = corners[i].y;
+        }
+        return new RectF(minX, minY, maxX, maxY);
     }
 
     private static float dist(float x1, float y1, float x2, float y2) {

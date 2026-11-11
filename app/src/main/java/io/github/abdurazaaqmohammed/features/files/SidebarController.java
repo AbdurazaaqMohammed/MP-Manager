@@ -699,6 +699,9 @@ public class SidebarController {
             case "set_edit":
                 activity.startActivity(new Intent(activity, SetEditActivity.class));
                 break;
+            case "partition_dumper":
+                io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(activity);
+                break;
             case "recycle_bin":
                 showRecycleBinDialog();
                 break;

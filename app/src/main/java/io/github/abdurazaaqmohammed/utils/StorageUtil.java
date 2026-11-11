@@ -98,17 +98,7 @@ public class StorageUtil {
                         si.name = (TextUtils.isEmpty(desc)) ? ctx.getString(R.string.storage) : desc.toString();
                     }
 
-                    try {
-                        StatFs statFs = new StatFs(si.path);
-                        long blockSize = statFs.getBlockSizeLong();
-                        long totalBlocks = statFs.getBlockCountLong();
-                        long availableBlocks = statFs.getAvailableBlocksLong();
-
-                        si.totalBytes = blockSize * totalBlocks;
-                        si.freeBytes = blockSize * availableBlocks;
-                        si.usedBytes = si.totalBytes - si.freeBytes;
-                    } catch (Exception ignored) {
-                    }
+                    fillStorageBytes(ctx, si);
 
                     list.add(si);
                 }
@@ -143,27 +133,35 @@ public class StorageUtil {
                 File[] mediaRwList = AccessManager.listWithStat(ctx, "/mnt/media_rw");
                 if (mediaRwList != null) {
                     for (File m : mediaRwList) {
+                        String mName = m.getName();
+                        // Ignore known non-OTG dummy mount directories
+                        if ("sdcard".equalsIgnoreCase(mName) || "usb1".equalsIgnoreCase(mName) || "usb2".equalsIgnoreCase(mName) || "emulated".equalsIgnoreCase(mName)) {
+                            continue;
+                        }
                         String mPath = m.getAbsolutePath();
                         boolean alreadyAdded = false;
                         for (StorageInfo existing : list) {
-                            if (mPath.equals(existing.path) || (existing.path != null && existing.path.endsWith("/" + m.getName()))) {
+                            if (mPath.equals(existing.path) || (existing.path != null && (existing.path.endsWith("/" + mName) || existing.path.contains(mName)))) {
                                 alreadyAdded = true;
                                 break;
                             }
                         }
                         if (!alreadyAdded) {
                             StorageInfo otg = new StorageInfo();
-                            otg.name = "USB Storage (" + m.getName() + ")";
-                            otg.path = mPath;
-                            try {
-                                StatFs sOtg = new StatFs(mPath);
-                                long bsOtg = sOtg.getBlockSizeLong();
-                                otg.totalBytes = bsOtg * sOtg.getBlockCountLong();
-                                otg.freeBytes = bsOtg * sOtg.getAvailableBlocksLong();
-                                otg.usedBytes = otg.totalBytes - otg.freeBytes;
-                            } catch (Exception ignored) {
+                            otg.name = "USB Storage (" + mName + ")";
+                            // Prefer standard /storage/[UUID] if it exists/can be resolved
+                            File storageCandidate = new File("/storage/" + mName);
+                            if (storageCandidate.exists() || AccessManager.exists(ctx, storageCandidate.getAbsolutePath())) {
+                                otg.path = storageCandidate.getAbsolutePath();
+                            } else {
+                                otg.path = mPath;
                             }
-                            list.add(otg);
+
+                            fillStorageBytes(ctx, otg);
+                            // Only include if it has actual capacity or contains files
+                            if (otg.totalBytes > 0) {
+                                list.add(otg);
+                            }
                         }
                     }
                 }
@@ -171,17 +169,48 @@ public class StorageUtil {
                 StorageInfo root = new StorageInfo();
                 root.name = "Root (/)";
                 root.path = "/";
-                StatFs s3 = new StatFs("/");
-                long bs3 = s3.getBlockSizeLong();
-                root.totalBytes = bs3 * s3.getBlockCountLong();
-                root.freeBytes = bs3 * s3.getAvailableBlocksLong();
-                root.usedBytes = root.totalBytes - root.freeBytes;
+                fillStorageBytes(ctx, root);
                 list.add(root);
             }
         } catch (Exception ignored) {
         }
 
         return list;
+    }
+
+    private static void fillStorageBytes(Context ctx, StorageInfo si) {
+        if (si == null || si.path == null) return;
+        try {
+            StatFs s = new StatFs(si.path);
+            long bs = s.getBlockSizeLong();
+            si.totalBytes = bs * s.getBlockCountLong();
+            si.freeBytes = bs * s.getAvailableBlocksLong();
+            si.usedBytes = si.totalBytes - si.freeBytes;
+            if (si.totalBytes > 0) return;
+        } catch (Exception ignored) {
+        }
+
+        // Fallback for root-protected paths like /mnt/media_rw/... or /
+        if (AccessManager.fileOpsOn(ctx)) {
+            try {
+                RootManager rm = RootManager.getInstance(ctx);
+                if (rm != null && rm.isRootMode()) {
+                    RootManager.ShellResult r = rm.execute("toybox stat -f -c '%b %a %s' " + RootManager.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + RootManager.escapeShellArg(si.path) + " 2>/dev/null", 5);
+                    if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                        String[] parts = r.output().trim().split("\\s+");
+                        if (parts.length >= 3) {
+                            long totalBlocks = Long.parseLong(parts[0]);
+                            long freeBlocks = Long.parseLong(parts[1]);
+                            long blockSize = Long.parseLong(parts[2]);
+                            si.totalBytes = blockSize * totalBlocks;
+                            si.freeBytes = blockSize * freeBlocks;
+                            si.usedBytes = Math.max(0, si.totalBytes - si.freeBytes);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     public static void populateStorageUI(@NonNull MainActivity ctx, @NonNull LinearLayout storageContainer) {

@@ -673,7 +673,10 @@ public final class ShizukuManager {
             File destParent = new File(dest).getParentFile();
             StringBuilder cmd = new StringBuilder();
             if (destParent != null) cmd.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
-            cmd.append("cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
+            cmd.append("((mkdir -p ").append(shellArg(dest))
+                    .append(" && (tar -c -C ").append(shellArg(src))
+                    .append(" . | tar -x -C ").append(shellArg(dest))
+                    .append(")) || cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest)).append(')');
             throwIfShellFails(cmd.toString(), "copy", 300);
             return;
         }
@@ -814,8 +817,14 @@ public final class ShizukuManager {
                 }
                 File destParent = new File(dest).getParentFile();
                 if (destParent != null) shell.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
-                shell.append("cp -p").append(op.directory ? " -r" : "").append(" -- ")
-                        .append(shellArg(src)).append(' ').append(shellArg(dest));
+                if (op.directory) {
+                    shell.append("((mkdir -p ").append(shellArg(dest))
+                            .append(" && (tar -c -C ").append(shellArg(src))
+                            .append(" . | tar -x -C ").append(shellArg(dest))
+                            .append(")) || cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest)).append(')');
+                } else {
+                    shell.append("cp -pf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
+                }
                 filesDone += Math.max(0, op.files);
                 bytesDone += Math.max(0L, op.bytes);
                 shell.append(ShellProgress.report(filesDone, bytesDone));

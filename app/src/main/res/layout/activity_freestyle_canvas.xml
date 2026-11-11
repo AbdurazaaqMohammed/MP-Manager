@@ -30,16 +30,36 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSave"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:layout_marginEnd="12dp"
-                android:text="@string/save"
-                android:textColor="@android:color/white"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCropCanvas"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/crop_canvas"
+                    app:icon="@drawable/ic_crop_24px"
+                    app:iconTint="@android:color/white"
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="#80FFFFFF"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSave"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/save"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </RelativeLayout>
     </com.google.android.material.appbar.MaterialToolbar>
 

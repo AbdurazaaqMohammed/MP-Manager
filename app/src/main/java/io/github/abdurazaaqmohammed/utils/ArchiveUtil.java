@@ -37,8 +37,8 @@ import java.util.zip.InflaterInputStream;
 
 public class ArchiveUtil {
 
-    /** 64 KB: sweet spot between FUSE page size overhead and JVM GC pressure. */
-    private static final int BUFFER_SIZE = 65536;
+    /** 256 KB: sweet spot between FUSE page size overhead, storage throughput and JVM GC pressure. */
+    private static final int BUFFER_SIZE = 256 * 1024;
 
     public static boolean isMiuiOrAndroidBackup(File file) {
         if (file == null || file.isDirectory()) return false;

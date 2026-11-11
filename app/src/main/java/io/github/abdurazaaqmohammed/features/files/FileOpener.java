@@ -2561,9 +2561,21 @@ public class FileOpener {
             return;
         }
         try {
-            if (file != null && file.exists() && file.canRead() && appReadable(file)) {
-                cb.onReady(file);
-                return;
+            if (file != null) {
+                // If path is under /mnt/media_rw/[UUID], check if equivalent /storage/[UUID] exists and is readable directly
+                String p = file.getAbsolutePath();
+                if (p.startsWith("/mnt/media_rw/")) {
+                    String sub = p.substring("/mnt/media_rw/".length());
+                    File alt = new File("/storage/" + sub);
+                    if (alt.exists() && alt.canRead() && appReadable(alt)) {
+                        cb.onReady(alt);
+                        return;
+                    }
+                }
+                if (file.exists() && file.canRead() && appReadable(file)) {
+                    cb.onReady(file);
+                    return;
+                }
             }
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);

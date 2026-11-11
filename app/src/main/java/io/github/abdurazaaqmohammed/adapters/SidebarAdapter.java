@@ -355,12 +355,11 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
      * unknown ids (partition_dumper) simply render nothing.
      */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "network_client", "app_ops", "set_edit", "tools"};
+        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "network_client", "partition_dumper", "app_ops", "set_edit", "tools"};
         List<String> order = new ArrayList<>();
         for (String savedId : toolOrder) {
             String id = savedId.equals("ftp_client") || savedId.equals("webdav_client") || savedId.equals("smb_client")
                     ? "network_client" : savedId;
-            if (id.equals("partition_dumper")) continue; // Tools Hub only now.
             if (!order.contains(id)) order.add(id);
         }
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -368,6 +367,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             switch (id) {
                 case "extract": addTool(id, R.string.sidebar_extract, R.drawable.apk_document_24px); break;
                 case "documents": addTool(id, R.string.sidebar_documents, R.drawable.folder_24px); break;
+                case "partition_dumper": addTool(id, R.string.tool_partition_dumper, R.drawable.ic_disk_drive_24px); break;
                 case "app_ops": addTool(id, R.string.app_ops, R.drawable.ic_shield_24); break;
                 case "set_edit": addTool(id, R.string.set_edit, R.drawable.baseline_settings_24); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
