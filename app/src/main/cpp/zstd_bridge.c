@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 
 static void throwIo(JNIEnv *env, const char *msg) {
     jclass cls = (*env)->FindClass(env, "java/io/IOException");
@@ -102,6 +103,12 @@ Java_io_github_abdurazaaqmohammed_utils_ZstdBridge_nativeCreateCCtx(JNIEnv *env,
         return 0;
     }
     ZSTD_CCtx_setParameter(ctx, ZSTD_c_compressionLevel, (int) level);
+    /* Enable multithreaded compression across available CPU cores if compiled with ZSTD_MULTITHREAD */
+#ifdef ZSTD_MULTITHREAD
+    int cores = (int) sysconf(_SC_NPROCESSORS_ONLN);
+    if (cores <= 0) cores = 4;
+    ZSTD_CCtx_setParameter(ctx, ZSTD_c_nbWorkers, cores);
+#endif
     /* Store the content checksum; the decompressor verifies it for us. */
     ZSTD_CCtx_setParameter(ctx, ZSTD_c_checksumFlag, 1);
     return (jlong) ctx;

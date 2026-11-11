@@ -13,9 +13,9 @@ import java.io.OutputStream;
  */
 public final class MpZstdOutputStream extends OutputStream {
 
-    /** Level 19: strong ratio at still-good speed; any decoder reads it. */
-    public static final int COMPRESSION_LEVEL = 19;
-    private static final int BUFFER_SIZE = 64 * 1024;
+    /** Level 3: default fast zstd compression with high throughput; matches modern backup utilities. */
+    public static final int COMPRESSION_LEVEL = 3;
+    private static final int BUFFER_SIZE = 256 * 1024;
 
     private final OutputStream out;
     private long ctx;
@@ -24,11 +24,15 @@ public final class MpZstdOutputStream extends OutputStream {
     private boolean closed;
 
     public MpZstdOutputStream(OutputStream out) throws IOException {
+        this(out, COMPRESSION_LEVEL);
+    }
+
+    public MpZstdOutputStream(OutputStream out, int level) throws IOException {
         if (!ZstdBridge.isLoaded()) {
             throw new IOException("Zstandard is not supported on this device (native library missing)");
         }
         this.out = out;
-        this.ctx = ZstdBridge.nativeCreateCCtx(COMPRESSION_LEVEL);
+        this.ctx = ZstdBridge.nativeCreateCCtx(level);
         if (this.ctx == 0) {
             throw new IOException("zstd: failed to create compression context");
         }
