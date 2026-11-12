@@ -77,10 +77,13 @@ public final class DestSizePoller implements Runnable {
             if (t == null) continue;
             long[] size = new long[1];
             if (!treeSize(t, size)) {
-                // Too large to sample cheaply: stop rather than fight the copy
-                // for I/O. Markers still report each finished item.
-                running = false;
-                return;
+                // Too large to sample cheaply: skip rather than fight the copy
+                // for I/O. Markers still report each finished item, and the
+                // thread stays alive so the next watched item is sampled again
+                // (killing the thread here used to freeze the bar and the ETA
+                // for every remaining item of the batch).
+                target = null;
+                continue;
             }
             if (sink != null) sink.accept(base + size[0]);
         }

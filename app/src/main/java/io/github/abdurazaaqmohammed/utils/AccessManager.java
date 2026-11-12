@@ -681,6 +681,12 @@ public final class AccessManager {
             if (kids != null) for (File k : kids) delete(context, k.getAbsolutePath(), false);
         }
         if (!f.delete() && f.exists()) throw new IOException("delete failed");
+        // A plain unlink leaves MediaProvider's row for the path in place; a
+        // scan makes it drop the stale entry so the name can be re-created.
+        try {
+            android.media.MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
+        } catch (Exception ignored) {
+        }
     }
 
     public static void rename(Context context, String oldPath, String newPath, boolean useElevated) throws IOException {
