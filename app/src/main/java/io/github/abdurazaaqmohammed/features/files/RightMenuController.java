@@ -231,6 +231,9 @@ public class RightMenuController {
                 case RightMenuOrder.PREFERENCES:
                     addRightDrawerItem(container, R.drawable.baseline_settings_24, activity.getString(R.string.preferences), v -> activity.showSettingsDialog());
                     break;
+                case RightMenuOrder.EXIT:
+                    addRightDrawerItem(container, R.drawable.baseline_exit_to_app_24, activity.getString(R.string.exit), v -> activity.confirmExitApp());
+                    break;
             }
         }
     }

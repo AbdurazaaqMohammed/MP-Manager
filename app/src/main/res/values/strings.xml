@@ -157,6 +157,7 @@
     <string name="customize">Customize</string>
     <string name="delete">Delete</string>
     <string name="exit">Exit</string>
+    <string name="exit_confirm_message">Exit MP Manager and stop everything it is running? All active work will be terminated.</string>
     <string name="compile">Compile</string>
     <string name="preferences">Preferences</string>
     <string name="compilation_options">Compilation options</string>

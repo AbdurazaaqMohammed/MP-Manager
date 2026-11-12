@@ -29,6 +29,7 @@ public final class RightMenuOrder {
     public static final String SWAP_PANES = "swap_panes";
     public static final String COMPARE_FOLDERS = "compare_folders";
     public static final String PREFERENCES = "preferences";
+    public static final String EXIT = "exit";
 
     public static final String[] DEFAULT_ORDER = {
             FILTER,
@@ -46,7 +47,8 @@ public final class RightMenuOrder {
             ADD_BOOKMARK,
             SET_AS_HOME,
             SWAP_PANES,
-            PREFERENCES
+            PREFERENCES,
+            EXIT
     };
 
     public record MenuItem(String id, String label) {}
@@ -119,6 +121,7 @@ public final class RightMenuOrder {
             case SWAP_PANES: return context.getString(R.string.menu_swap_panes);
             case COMPARE_FOLDERS: return context.getString(R.string.compare_folders);
             case PREFERENCES: return context.getString(R.string.preferences);
+            case EXIT: return context.getString(R.string.exit);
             default: return id;
         }
     }
@@ -142,6 +145,7 @@ public final class RightMenuOrder {
             case SET_AS_HOME: return R.drawable.baseline_home_24;
             case SWAP_PANES: return R.drawable.baseline_swap_horiz_24;
             case PREFERENCES: return R.drawable.baseline_settings_24;
+            case EXIT: return R.drawable.baseline_exit_to_app_24;
             default: return R.drawable.baseline_info_24;
         }
     }

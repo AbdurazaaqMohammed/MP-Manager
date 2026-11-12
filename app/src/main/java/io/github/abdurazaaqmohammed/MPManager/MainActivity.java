@@ -75,7 +75,12 @@ import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
 import io.github.abdurazaaqmohammed.features.files.RightMenuController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
+import io.github.abdurazaaqmohammed.mcp.McpServerService;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
+import io.github.abdurazaaqmohammed.player.MusicService;
+import io.github.abdurazaaqmohammed.tools.CacheCleaner;
 import io.github.abdurazaaqmohammed.tools.LogcatService;
+import io.github.abdurazaaqmohammed.tools.ScreenCaptureService;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.StartupPrivileges;
@@ -86,6 +91,7 @@ import androidx.core.view.GestureDetectorCompat;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -3452,6 +3458,130 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void showSearchDialog() {
         fileSearch.showSearchDialog();
+    }
+
+    /** Right-menu "Exit": confirm before killing in-flight work. */
+    public void confirmExitApp() {
+        try {
+            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                    .setTitle(R.string.exit)
+                    .setMessage(R.string.exit_confirm_message)
+                    .setPositiveButton(R.string.exit, (dialog, which) -> exitApp())
+                    .setNegativeButton(R.string.cancel, null)
+                    .create());
+        } catch (Exception ignored) {
+            exitApp();
+        }
+    }
+
+    /**
+     * Fully stops the app: aborts long-running work, stops every service it
+     * owns, clears its notifications, closes all of its activities and finally
+     * ends the process. Ending the process is what guarantees that no orphaned
+     * worker thread, root/Shizuku shell, socket or plugin component survives.
+     */
+    public void exitApp() {
+        if (isFinishing()) return;
+        // Cancel transfers and file operations first: this unwinds Java workers
+        // and signals elevated shells before the process goes away.
+        try {
+            ProgressManager.cancelAll();
+        } catch (Exception ignored) {
+        }
+        try {
+            CacheCleaner.stopQuiet();
+        } catch (Exception ignored) {
+        }
+        // Player: release the MediaPlayer, then drop the foreground service and
+        // its media notification.
+        try {
+            PlayerManager.getInstance(this).stop();
+        } catch (Exception ignored) {
+        }
+        try {
+            stopService(new Intent(this, MusicService.class));
+        } catch (Exception ignored) {
+        }
+        // FTP server: the service only owns the notification; the server socket
+        // lives in FtpController, so both must be torn down.
+        try {
+            stopService(new Intent(this, FtpForegroundService.class));
+        } catch (Exception ignored) {
+        }
+        try {
+            if (FtpController.ftpServer != null) {
+                FtpController.ftpServer.stop();
+                FtpController.ftpServer = null;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            ftp.close();
+        } catch (Exception ignored) {
+        }
+        // MCP HTTP server foreground service.
+        try {
+            stopService(new Intent(this, McpServerService.class));
+        } catch (Exception ignored) {
+        }
+        // Logcat capture service (its reader can keep root/Shizuku pipes open).
+        try {
+            LogcatService.stop(this);
+        } catch (Exception ignored) {
+        }
+        // Screen recording foreground service.
+        try {
+            startService(new Intent(this, ScreenCaptureService.class)
+                    .setAction(ScreenCaptureService.ACTION_STOP));
+        } catch (Exception ignored) {
+        }
+        // Color picker overlay + media projection.
+        try {
+            ServiceState.getInstance().stopColorPickerService(this);
+        } catch (Exception ignored) {
+        }
+        // Layout inspector: stop its UsageStats polling and hide its notification.
+        try {
+            DataRepository.getInstance().updateStatus(false);
+        } catch (Exception ignored) {
+        }
+        try {
+            if (isServiceBound) {
+                getApplicationContext().unbindService(serviceConnection);
+                isServiceBound = false;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            stopService(new Intent(this, PackageMonitoringService.class));
+        } catch (Exception ignored) {
+        }
+        // Remote/SMB/WebDAV sessions and their worker pool.
+        try {
+            network.close();
+        } catch (Exception ignored) {
+        }
+        try {
+            updates.unregister();
+        } catch (Exception ignored) {
+        }
+        // Remove every notification this app posted (progress, music, FTP, MCP,
+        // logcat, screen capture, color picker, inspector, ...).
+        try {
+            NotificationManagerCompat.from(this).cancelAll();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (drawerLayout != null) drawerLayout.closeDrawers();
+        } catch (Exception ignored) {
+        }
+        finishAffinity();
+        // Let onPause/onDestroy and service teardown run, then kill the process
+        // so nothing can keep running in the background after "Exit".
+        handler.postDelayed(() -> {
+            Process.killProcess(Process.myPid());
+            System.exit(0);
+        }, 500);
     }
 
     /** Recycle bin browser: restore / permanently delete binned items. */

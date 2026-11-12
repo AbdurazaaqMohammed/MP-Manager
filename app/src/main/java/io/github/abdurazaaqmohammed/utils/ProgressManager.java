@@ -26,6 +26,7 @@ import com.reandroid.apk.APKLogger;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -117,6 +118,8 @@ public class ProgressManager {
     private static final int NOTIFICATION_ID = 1001;
 
     private static final List<ProgressManager> activeInstances = new CopyOnWriteArrayList<>();
+    /** Every live operation, hidden or not, so an app exit can cancel them all. */
+    private static final List<ProgressManager> liveInstances = new CopyOnWriteArrayList<>();
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -166,6 +169,29 @@ public class ProgressManager {
         if (pm != null) pm.cancel();
     }
 
+    /**
+     * Cancels and dismisses every live operation. Used when the app exits so
+     * copy/move/delete/extract workers unwind instead of being killed mid-write.
+     */
+    public static void cancelAll() {
+        for (ProgressManager pm : new ArrayList<>(liveInstances)) {
+            try {
+                pm.cancelForExit();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /**
+     * Cancels this operation even when it does not expose user-facing controls
+     * (the exit button must still unwind every worker it can).
+     */
+    private void cancelForExit() {
+        cancelling = true;
+        control.cancel();
+        dismiss();
+    }
+
     /** The controllable operation that is still running, or null. */
     private static ProgressManager activeOperation() {
         for (ProgressManager pm : activeInstances) {
@@ -178,6 +204,7 @@ public class ProgressManager {
         this.activity = activity;
         this.handler = new Handler(Looper.getMainLooper());
         this.indeterminate = indeterminate;
+        liveInstances.add(this);
         initChannel();
     }
 
@@ -470,6 +497,7 @@ public class ProgressManager {
             if (control.isPaused()) control.resume();
             stopTicker();
             activeInstances.remove(this);
+            liveInstances.remove(this);
             if (dialog != null) dialog.dismiss();
             cancelNotification();
             contentView = null;
