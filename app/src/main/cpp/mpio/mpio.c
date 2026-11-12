@@ -107,6 +107,9 @@ typedef struct {
     uint64_t done_files;
     uint64_t done_bytes;
     uint64_t last_report_ms;
+    uid_t dst_uid;
+    gid_t dst_gid;
+    bool is_shared_storage;
 } CopyContext;
 
 static void report_copy_progress(CopyContext *ctx, const char *cur_name, bool force) {
@@ -165,7 +168,13 @@ static int copy_single_file(const char *src, const char *dst, struct stat *st, C
     times.actime = st->st_atime;
     times.modtime = st->st_mtime;
     utime(dst, &times);
-    chmod(dst, mode);
+
+    if (ctx->is_shared_storage) {
+        chown(dst, ctx->dst_uid, ctx->dst_gid);
+        chmod(dst, 0660);
+    } else {
+        chmod(dst, mode);
+    }
 
     ctx->done_files++;
     report_copy_progress(ctx, bname, false);
@@ -178,9 +187,15 @@ static int copy_recursive(const char *src, const char *dst, CopyContext *ctx) {
     if (lstat(src, &st) != 0) return -1;
 
     if (S_ISDIR(st.st_mode)) {
-        if (mkdir(dst, (st.st_mode & 07777) | 0755) != 0) {
+        mode_t dir_mode = ctx->is_shared_storage ? 02770 : ((st.st_mode & 07777) | 0755);
+        if (mkdir(dst, dir_mode) != 0) {
             if (errno != EEXIST) return -1;
         }
+        if (ctx->is_shared_storage) {
+            chown(dst, ctx->dst_uid, ctx->dst_gid);
+            chmod(dst, 02770);
+        }
+
         DIR *dir = opendir(src);
         if (!dir) return -1;
         struct dirent *entry;
@@ -199,7 +214,13 @@ static int copy_recursive(const char *src, const char *dst, CopyContext *ctx) {
         times.actime = st.st_atime;
         times.modtime = st.st_mtime;
         utime(dst, &times);
-        chmod(dst, st.st_mode & 07777);
+
+        if (ctx->is_shared_storage) {
+            chown(dst, ctx->dst_uid, ctx->dst_gid);
+            chmod(dst, 02770);
+        } else {
+            chmod(dst, st.st_mode & 07777);
+        }
     } else if (S_ISREG(st.st_mode)) {
         copy_single_file(src, dst, &st, ctx);
     } else if (S_ISLNK(st.st_mode)) {
@@ -209,13 +230,16 @@ static int copy_recursive(const char *src, const char *dst, CopyContext *ctx) {
             link_target[len] = '\0';
             unlink(dst);
             symlink(link_target, dst);
+            if (ctx->is_shared_storage) {
+                lchown(dst, ctx->dst_uid, ctx->dst_gid);
+            }
         }
         ctx->done_files++;
     }
     return 0;
 }
 
-static void mkdir_p(const char *dir_path) {
+static void mkdir_p(const char *dir_path, uid_t uid, gid_t gid, bool is_shared) {
     char tmp[4096];
     snprintf(tmp, sizeof(tmp), "%s", dir_path);
     size_t len = strlen(tmp);
@@ -224,11 +248,17 @@ static void mkdir_p(const char *dir_path) {
     for (char *p = tmp + 1; *p; p++) {
         if (*p == '/') {
             *p = '\0';
-            mkdir(tmp, 0755);
+            if (mkdir(tmp, is_shared ? 02770 : 0755) == 0 && is_shared) {
+                chown(tmp, uid, gid);
+                chmod(tmp, 02770);
+            }
             *p = '/';
         }
     }
-    mkdir(tmp, 0755);
+    if (mkdir(tmp, is_shared ? 02770 : 0755) == 0 && is_shared) {
+        chown(tmp, uid, gid);
+        chmod(tmp, 02770);
+    }
 }
 
 static int do_copy(const char *src, const char *dst) {
@@ -237,16 +267,31 @@ static int do_copy(const char *src, const char *dst) {
     resolve_fast_path(src, fast_src, sizeof(fast_src));
     resolve_fast_path(dst, fast_dst, sizeof(fast_dst));
 
-    // Ensure destination parent directory exists
+    CopyContext ctx = {0, 0, 0, 0, 0, false};
+
+    // Determine target location context (shared storage /data/media/ or /storage/emulated/)
+    if (strncmp(fast_dst, "/data/media/", 12) == 0 || strncmp(fast_dst, "/storage/emulated/", 18) == 0) {
+        ctx.is_shared_storage = true;
+    }
+
+    // Inspect parent directory of destination to inherit correct UID and GID (e.g. 10283:1023)
     char dst_parent[4096];
     snprintf(dst_parent, sizeof(dst_parent), "%s", fast_dst);
     char *slash = strrchr(dst_parent, '/');
     if (slash && slash != dst_parent) {
         *slash = '\0';
-        mkdir_p(dst_parent);
+        struct stat pst;
+        if (stat(dst_parent, &pst) == 0) {
+            ctx.dst_uid = pst.st_uid;
+            ctx.dst_gid = pst.st_gid;
+        } else {
+            // Default Android shared storage: media_rw gid = 1023
+            ctx.dst_uid = 10283;
+            ctx.dst_gid = 1023;
+        }
+        mkdir_p(dst_parent, ctx.dst_uid, ctx.dst_gid, ctx.is_shared_storage);
     }
 
-    CopyContext ctx = {0, 0, 0};
     uint64_t t0 = current_time_ms();
     report_copy_progress(&ctx, src, true);
     copy_recursive(fast_src, fast_dst, &ctx);
