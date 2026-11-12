@@ -1083,9 +1083,12 @@ public class SettingsController {
             groupRoot.setVisibility(rootOk ? View.VISIBLE : View.GONE);
             groupShizuku.setVisibility(isSh && ShizukuManager.isRunning() ? View.VISIBLE : View.GONE);
             groupShizukuOptions.setVisibility(shizukuReady ? View.VISIBLE : View.GONE);
-            // Silent installing and the install flags need root or Shizuku;
-            // hide the whole install section in non-root mode.
-            groupInstall.setVisibility(rootOk || shizukuReady ? View.VISIBLE : View.GONE);
+            // The installer source and install flags only matter while a silent
+            // install actually runs: hide them unless root or Shizuku silent
+            // install is switched on and ready.
+            boolean silentReady = (rootOk && silentInstallToggle.isChecked())
+                    || (shizukuReady && shizukuSilentToggle.isChecked());
+            groupInstall.setVisibility(silentReady ? View.VISIBLE : View.GONE);
             groupFileOps.setVisibility(rootOk || shizukuReady ? View.VISIBLE : View.GONE);
 
             silentInstallToggle.setEnabled(rootOk);
@@ -1096,7 +1099,6 @@ public class SettingsController {
             rebootMenuBtn.setVisibility(rootOk ? View.VISIBLE : View.GONE);
             refreshShizukuRow.run();
         };
-        applyModeUi.run();
 
         workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
             String picked = modeLabels.get(position);
@@ -1139,13 +1141,21 @@ public class SettingsController {
         grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(applyModeUi));
 
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
-        silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
+        silentInstallToggle.setOnCheckedChangeListener((v, checked) -> {
+            settings.edit().putBoolean("silent_install", checked).apply();
+            // The install flags and installer source depend on this toggle.
+            applyModeUi.run();
+        });
 
         shizukuSilentToggle.setChecked(settings.getBoolean("shizuku_silent_install", false));
         shizukuSilentToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_silent_install", checked).apply();
             if (checked) new Thread(() -> ShizukuManager.warmUp(activity)).start();
+            applyModeUi.run();
         });
+        // Runs after all controls are wired so the toggle states above are
+        // reflected in the initial visibility of the install section.
+        applyModeUi.run();
 
         String labelSelf = activity.getString(R.string.installer_source_self);
         String labelInitiator = activity.getString(R.string.installer_source_initiator);
