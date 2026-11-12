@@ -2326,19 +2326,4 @@ Layout Inspector
     <string name="frida_console_sort_name">名称</string>
     <string name="frida_console_sort_updated">更新日期</string>
     <string name="frida_console_sort_installed">安装日期</string>
-    <!-- Jiagu unpacker -->
-    <string name="jiagu_dumper_title">Jiagu Dumper</string>
-    <string name="jiagu_dumper_subtitle">从受保护应用转储脱壳后的 DEX（需要 root）</string>
-    <string name="jiagu_root_required">Jiagu Dumper 需要 root：它从运行中的进程内存读取脱壳后的 DEX。</string>
-    <string name="jiagu_package_hint">目标包名 (com.example.app)</string>
-    <string name="jiagu_wait_hint">启动后等待脱壳的时间（秒）</string>
-    <string name="jiagu_apk_path_hint">原始 APK 路径（可选，转储后重建）</string>
-    <string name="jiagu_invalid_package">请输入有效的包名</string>
-    <string name="jiagu_dump_start">开始转储</string>
-    <string name="jiagu_unpack">Jiagu 脱壳器</string>
-    <string name="jiagu_not_protected">此 APK 似乎未使用 Jiagu 保护（application 不是 com.stub.StubApp，也没有 libjiagu 文件）。</string>
-    <string name="jiagu_no_dump">未找到 %1$s 的 DEX 转储。\n\n请先运行 工具 → Jiagu Dumper：启动受保护的应用，等待脱壳完成，然后从内存转储真正的 DEX（需要 root）。</string>
-    <string name="jiagu_open_dumper">打开 Jiagu Dumper</string>
-    <string name="jiagu_pick_app">从已安装应用中选择</string>
-    <string name="jiagu_unpack_confirm">用 %1$d 个转储的 DEX 文件重建此 APK？\n\n转储：%2$s\n\n占位 Application 将替换为转储中找到的真实 Application，并移除所有注入的 hook 调用。结果需签名后才能安装。</string>
 </resources>

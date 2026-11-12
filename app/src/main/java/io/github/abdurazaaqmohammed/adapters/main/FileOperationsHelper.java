@@ -752,10 +752,6 @@ public class FileOperationsHelper {
             if (dest.isDirectory()) deleteRecursive(dest);
             else //noinspection ResultOfMethodCallIgnored
                 dest.delete();
-            // Free the name for re-creation: a plain unlink can leave a stale
-            // MediaProvider row that makes the next write to the same path
-            // fail with ENOENT.
-            if (!dest.exists()) FileUtils.purgeStaleMediaRow(context, dest.getAbsolutePath());
         } catch (Exception ignored) {
         }
     }
@@ -1094,9 +1090,7 @@ public class FileOperationsHelper {
                     batchDone.add(item);
                     continue;
                 }
-                // Fast native shell batching: runs for elevated mode, or when
-                // root/shizuku shell access is available to achieve native kernel cp speed.
-                if (!useElevated && !shellBatch) continue;
+                if (!useElevated && !AccessManager.needsShellCopy(context, f, dest)) continue;
                 FileUtils.Measure im = info.of(f);
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),
@@ -1138,7 +1132,10 @@ public class FileOperationsHelper {
             FileUtils.Measure im = info.of(f);
             int itemTotal = im.files;
             long itemBytes = im.bytes;
-            if (useElevated) {
+            boolean itemNeedsElevated = useElevated && (AccessManager.needsElevated(context, f.getAbsolutePath())
+                    || AccessManager.needsElevated(context, dest.getAbsolutePath())
+                    || AccessManager.needsShellCopy(context, f, dest));
+            if (itemNeedsElevated) {
                 try {
                     if (listener != null) listener.onFile(f, dest);
                     AccessManager.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
@@ -1165,6 +1162,7 @@ public class FileOperationsHelper {
             if (dest.exists()) {
                 RecycleBin.moveToBin(context, dest, "overwrite");
             }
+            if (listener != null) listener.onFile(f, dest);
             if (f.isDirectory()) {
                 if (useElevated) {
                     try {

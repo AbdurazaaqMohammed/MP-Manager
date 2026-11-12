@@ -56,12 +56,8 @@ public class SignatureKeyDialog {
     public static void show(AppCompatActivity activity) {
         show(activity, null, false);
     }
-
     public static void show(AppCompatActivity activity, File file, boolean isSplitApk) {
-        File keysDir = new File(
-                Environment.getExternalStorageDirectory().getPath() + File.separatorChar + "MT2"
-                        + File.separatorChar + "keys"
-        );
+        File keysDir = UiPrefs.keysDir(activity);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 
@@ -449,10 +445,7 @@ public class SignatureKeyDialog {
         cbBiometric.setChecked(prefs.getBoolean("useBiometrics", false));
         cbBiometric.setOnCheckedChangeListener((b, c) -> prefs.edit().putBoolean("useBiometrics", c).apply());
 
-        File keysDir = new File(
-                Environment.getExternalStorageDirectory().getPath() + File.separatorChar + "MT2"
-                        + File.separatorChar + "keys"
-        );
+        File keysDir = UiPrefs.keysDir(activity);
         String PREF_SIGNATURE_PATHS = "signature_key_paths";
         List<String> signaturePaths = new ArrayList<>();
         signaturePaths.addAll(getKeystoreFiles(keysDir));

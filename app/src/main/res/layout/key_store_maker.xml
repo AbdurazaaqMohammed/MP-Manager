@@ -61,7 +61,7 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:padding="8dp"
-				android:text="/MT2/keys/"
+				android:text="/MP Manager/keys/"
 				android:textSize="16sp"
 				android:hint="@string/destination_path"
 				android:textColorHint="?attr/colorSurface"

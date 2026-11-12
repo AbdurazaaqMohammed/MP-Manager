@@ -3,8 +3,6 @@ package io.github.abdurazaaqmohammed.utils;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.provider.MediaStore;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
@@ -21,8 +19,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
 import java.util.Collection;
@@ -33,29 +29,6 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 
 public class FileUtils {
-
-    private static volatile Context appContext;
-
-    /** Called once from MainActivity so recovery paths can reach MediaStore. */
-    public static void initContext(Context context) {
-        if (context != null) appContext = context.getApplicationContext();
-    }
-
-    /**
-     * Best-effort removal of the MediaProvider row for {@code path}. A plain
-     * unlink or rename does not always clear the index, and while a stale row
-     * still owns a path, Android 11+ can refuse to re-create a file with that
-     * name (ENOENT on open) even though the folder exists.
-     */
-    public static void purgeStaleMediaRow(Context context, String path) {
-        try {
-            if (Build.VERSION.SDK_INT < 29) return;
-            Uri collection = MediaStore.Files.getContentUri("external");
-            context.getContentResolver().delete(collection,
-                    MediaStore.MediaColumns.DATA + "=?", new String[]{path});
-        } catch (Exception ignored) {
-        }
-    }
 
     /**
      * Called from the copying thread as work advances, so a progress dialog can
@@ -456,80 +429,29 @@ public class FileUtils {
         // copies data without any user-space buffer, making this the fastest
         // possible file copy on Android internal and shared storage.
         if (LegacyUtils.supportsFileChannel) {
-            try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ)) {
-                try {
-                    transferTo(sourceFile.length(), destinationFile, src, listener);
-                    return;
-                } catch (NoSuchFileException e) {
-                    recoverCopy(sourceFile, destinationFile, src, listener, e);
-                    return;
+            try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ);
+                 FileChannel dst = FileChannel.open(destinationFile.toPath(),
+                         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+                         StandardOpenOption.TRUNCATE_EXISTING)) {
+                long size = src.size();
+                long transferred = 0;
+                while (transferred < size) {
+                    // The checkpoint sits between chunks, so a pause stops the
+                    // copy here and a resume continues from this exact offset.
+                    if (listener != null) listener.checkpoint();
+                    long want = listener == null ? size - transferred
+                            : Math.min(size - transferred, TRANSFER_CHUNK);
+                    long written = src.transferTo(transferred, want, dst);
+                    if (written <= 0) break;
+                    transferred += written;
+                    if (listener != null) listener.onBytes(written);
                 }
+                return;
             }
         }
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {
             copyFile(is, os, listener);
-        }
-    }
-
-    /**
-     * Second chance for a destination that refused to be created (ENOENT on
-     * open, typically right after this app deleted or moved a file of the same
-     * name and MediaProvider's index still owns the path). Escalating
-     * attempts: purge the stale media row and open again, then stage the copy
-     * under a fresh name and rename it over the destination. The last real
-     * failure is what surfaces, with the original attached as suppressed —
-     * rethrowing the original instead would mask where the recovery failed.
-     */
-    private static void recoverCopy(File sourceFile, File destinationFile, FileChannel src,
-                                    TransferListener listener, NoSuchFileException original) throws IOException {
-        Context app = appContext;
-        if (app != null) purgeStaleMediaRow(app, destinationFile.getAbsolutePath());
-        try {
-            transferTo(sourceFile.length(), destinationFile, src, listener);
-            return;
-        } catch (NoSuchFileException stillFailing) {
-            // Fall through to the staged copy below.
-        }
-        File staged = null;
-        try {
-            staged = File.createTempFile(destinationFile.getName() + "-mp", ".part",
-                    destinationFile.getParentFile());
-            transferTo(0L, staged, src, listener);
-            Files.move(staged.toPath(), destinationFile.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING);
-            staged = null;
-        } catch (IOException e2) {
-            if (staged != null) //noinspection ResultOfMethodCallIgnored
-                staged.delete();
-            e2.addSuppressed(original);
-            throw e2;
-        }
-    }
-
-    /**
-     * The chunked sendfile loop of {@link #copyFile(File, File, TransferListener)}.
-     * {@code knownSize} of {@code 0} means the source size must be read again
-     * (the recovery path re-reads it after a failed attempt).
-     */
-    private static void transferTo(long knownSize, File destinationFile,
-                                   FileChannel src, TransferListener listener) throws IOException {
-        try (FileChannel dst = FileChannel.open(destinationFile.toPath(),
-                StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                StandardOpenOption.TRUNCATE_EXISTING)) {
-            long size = knownSize > 0 ? knownSize : src.size();
-            long transferred = 0;
-            while (transferred < size) {
-                // The checkpoint sits between chunks, so a pause stops the
-                // copy here and a resume continues from this exact offset.
-                if (listener != null) listener.checkpoint();
-                long want = listener == null ? size - transferred
-                        : Math.min(size - transferred, TRANSFER_CHUNK);
-                long written = src.transferTo(transferred, want, dst);
-                if (written <= 0) break;
-                transferred += written;
-                if (listener != null) listener.onBytes(written);
-            }
         }
     }
 
