@@ -802,6 +802,12 @@ public final class AccessManager {
                     }
                 }
             }
+            if (map.isEmpty() && (backend == Backend.SHIZUKU || ShizukuManager.ready())) {
+                java.util.Map<String, Long> shizukuMap = ShizukuManager.dirSizeTree(context, path);
+                if (shizukuMap != null && !shizukuMap.isEmpty()) {
+                    map.putAll(shizukuMap);
+                }
+            }
         } catch (Exception ignored) {}
         return map;
     }
@@ -925,8 +931,13 @@ public final class AccessManager {
         if (context == null) return false;
         try {
             RootManager rm = RootManager.getInstance(context);
-            if (rm.getWorkingMode() != RootManager.WorkingMode.SHIZUKU) return false;
-            return ShizukuManager.ready() && ShizukuShell.isGranted();
+            if (rm.getWorkingMode() == RootManager.WorkingMode.ROOT) {
+                return rm.isRootAvailable();
+            }
+            if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU) {
+                return ShizukuManager.ready() && ShizukuShell.isGranted();
+            }
+            return false;
         } catch (Throwable e) {
             return false;
         }

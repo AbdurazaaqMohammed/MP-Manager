@@ -211,11 +211,38 @@ public final class FileSorting {
     /** Walks every uncached sibling folder in parallel so a size sort stays responsive. */
     private static void computeSizesParallel(List<File> dirs) {
         if (dirs == null || dirs.isEmpty()) return;
+        android.content.Context ctx = DirSizeCache.getContext();
+        // If folders are unreadable by regular app UID (e.g. /data/media/0 or system dirs),
+        // try fast batch du via root/Shizuku first so the entire directory tree is measured in one shot.
+        if (ctx != null) {
+            for (File d : dirs) {
+                if (d != null && !d.canRead()) {
+                    File parent = d.getParentFile();
+                    if (parent != null) {
+                        try {
+                            java.util.Map<String, Long> tree = io.github.abdurazaaqmohammed.utils.AccessManager.dirSizeTree(ctx, parent.getAbsolutePath());
+                            if (tree != null && !tree.isEmpty()) {
+                                DirSizeCache.recordBatch(tree);
+                                for (java.util.Map.Entry<String, Long> entry : tree.entrySet()) {
+                                    if (entry.getKey() != null && entry.getValue() != null) {
+                                        DIR_SIZE_CACHE.put(entry.getKey(), entry.getValue());
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         List<Future<?>> futures = new ArrayList<>();
         for (File d : dirs) {
             if (d == null) continue;
             String p = pathOf(d);
             if (isVirtualOrSpecialFs(p)) continue;
+            if (DIR_SIZE_CACHE.containsKey(p)) continue;
             futures.add(SIZE_POOL.submit(() -> recursiveSize(d)));
         }
         for (Future<?> f : futures) {
@@ -240,6 +267,23 @@ public final class FileSorting {
             DIR_SIZE_CACHE.put(key, persisted);
             return persisted;
         }
+
+        // Check if unreadable by standard Java IO and query elevated AccessManager
+        if (!dir.canRead()) {
+            android.content.Context ctx = DirSizeCache.getContext();
+            if (ctx != null) {
+                try {
+                    long du = io.github.abdurazaaqmohammed.utils.AccessManager.dirSize(ctx, key);
+                    if (du >= 0) {
+                        DIR_SIZE_CACHE.put(key, du);
+                        DirSizeCache.record(dir, du);
+                        return du;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
         long total = 0;
         File[] children = dir.listFiles();
         if (children != null) {

@@ -177,10 +177,11 @@ public class FilePropertiesDialog {
                 size = entry.getSize();
             } else if (file != null) {
                 Long cached = DirSizeCache.peek(file);
-                size = (cached != null) ? cached : file.length();
+                size = (cached != null) ? cached : (file.isDirectory() ? -1 : file.length());
             }
         }
-        TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), FileSize.getHumanReadableFileSize(size));
+        String initialSizeText = size >= 0 ? FileSize.getHumanReadableFileSize(size) : (context.getString(R.string.calculating) + "…");
+        TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), initialSizeText);
 
         final List<File> selectedFilesList = new ArrayList<>();
         if (!isInZip) {
@@ -295,7 +296,7 @@ public class FilePropertiesDialog {
                     long totalComputedSize = 0;
                     for (File f : selectedFilesList) {
                         if (f.isDirectory()) {
-                            totalComputedSize += getFolderSize(f, null);
+                            totalComputedSize += getFolderSize(f, sizeValue);
                         } else {
                             totalComputedSize += f.length();
                         }
@@ -537,11 +538,31 @@ public class FilePropertiesDialog {
     }
 
     private long getFolderSize(File file, TextView toUpdate) {
+        if (file == null) return 0;
+        Long cached = DirSizeCache.peek(file);
+        if (cached != null && cached >= 0) {
+            if (toUpdate != null) {
+                context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(cached)));
+            }
+            return cached;
+        }
+        String path = file.getAbsolutePath();
+        if (!FileIconLoader.isUserStorage(path)) {
+            try {
+                long fastSize = AccessManager.dirSize(context, path);
+                if (fastSize >= 0) {
+                    if (toUpdate != null) {
+                        context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(fastSize)));
+                    }
+                    return fastSize;
+                }
+            } catch (Exception ignored) {}
+        }
         File[] files = file.listFiles();
         if (files == null) {
             try {
                 if (AccessManager.fileOpsOn(context)) {
-                    long size = AccessManager.dirSize(context, file.getAbsolutePath());
+                    long size = AccessManager.dirSize(context, path);
                     if (size >= 0) {
                         if (toUpdate != null) {
                             context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(size)));

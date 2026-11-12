@@ -468,6 +468,35 @@ public final class ShizukuManager {
         }
     }
 
+    public static java.util.Map<String, Long> dirSizeTree(Context context, String path) {
+        java.util.Map<String, Long> map = new java.util.HashMap<>();
+        if (path == null || path.isEmpty()) return map;
+        try {
+            if (ShizukuShell.isAvailable()) {
+                String cmd = "timeout 5 du -d 1 -k -- " + shellArg(path) + " 2>/dev/null || du -d 1 -k -- " + shellArg(path) + " 2>/dev/null";
+                ShizukuShell.Result r = ShizukuShell.exec(cmd, 5);
+                if (r != null && r.success && r.stdout != null && !r.stdout.trim().isEmpty()) {
+                    String[] lines = r.stdout.split("\n");
+                    for (String line : lines) {
+                        line = line.trim();
+                        if (line.isEmpty()) continue;
+                        String[] parts = line.split("\\s+", 2);
+                        if (parts.length == 2) {
+                            try {
+                                long kb = Long.parseLong(parts[0].trim());
+                                String p = parts[1].trim();
+                                if (kb >= 0 && !p.isEmpty()) {
+                                    map.put(p, kb * 1024L);
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return map;
+    }
+
     public static File[] listWithStat(Context context, String dirPath) {
         if (useShell(dirPath)) return listWithShell(dirPath);
         try {
@@ -818,10 +847,7 @@ public final class ShizukuManager {
                 File destParent = new File(dest).getParentFile();
                 if (destParent != null) shell.append("mkdir -p ").append(shellArg(destParent.getAbsolutePath())).append(" && ");
                 if (op.directory) {
-                    shell.append("((mkdir -p ").append(shellArg(dest))
-                            .append(" && (tar -c -C ").append(shellArg(src))
-                            .append(" . | tar -x -C ").append(shellArg(dest))
-                            .append(")) || cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest)).append(')');
+                    shell.append("cp -rpf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
                 } else {
                     shell.append("cp -pf -- ").append(shellArg(src)).append(' ').append(shellArg(dest));
                 }
