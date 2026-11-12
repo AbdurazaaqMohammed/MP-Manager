@@ -2547,4 +2547,11 @@
     <string name="jiagu_open_dumper">فتح مُستخرِج Jiagu</string>
     <string name="jiagu_pick_app">اختيار من التطبيقات المثبتة</string>
     <string name="jiagu_unpack_confirm">إعادة بناء هذا APK من %1$d ملف DEX مُستخرج؟\n\nالاستخراج: %2$s\n\nسيتم استبدال تطبيق الستَب بالتطبيق الحقيقي الموجود في الاستخراج وإزالة كل استدعاءات الخطاف المُدمجة. يجب توقيع النتيجة قبل التثبيت.</string>
+    <string name="calculating">جاري الحساب</string>
+    <string name="clear_cache">مسح التخزين المؤقت (الكاش)</string>
+    <string name="clear_cache_desc">تحرير الملفات المؤقتة وبقايا الأرشيفات مع الحفاظ على كاش الأيقونات</string>
+    <string name="clear_cache_confirm_title">تنظيف كاش التطبيق الذكي؟</string>
+    <string name="clear_cache_confirm_msg">سيتم حذف كافة الملفات المؤقتة وبقايا الأرشيفات والـ Staging الضخمة (%s).\n\nسيتم الاحتفاظ بكاش أيقونات التطبيقات والمصغرات لضمان استمرار سرعة وسلاسة التصفح.</string>
+    <string name="clear_cache_success">تم تنظيف الكاش بنجاح (تم تحرير %s)</string>
+    <string name="clear_cache_empty">التخزين المؤقت نظيف بالفعل</string>
 </resources>

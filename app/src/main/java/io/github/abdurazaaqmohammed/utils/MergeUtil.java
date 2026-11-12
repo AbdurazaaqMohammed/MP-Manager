@@ -405,84 +405,100 @@ public class MergeUtil {
         new RunUtil(null, context, null).runInBackground(() -> {
             APKLogger logger = pm.getLogger();
             File dir = new File(context.getCacheDir(), UUID.randomUUID().toString());
-            try(ApkBundle bundle = new ApkBundle()) {
-                bundle.setAPKLogger(logger);
-                applyPreferredCompression(bundle, context);
-                if (options.splitNames != null && !options.splitNames.isEmpty()) {
-                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
-                        logger.logMessage(context.getString(R.string.logger_cannot_create_tmp));
-                        return false;
-                    }
-                    try (ZipFile zf = new ZipFile(file)) {
-                        for (String name : options.splitNames) {
-                            try {
-                                FileHeader fh = zf.getFileHeader(name);
-                                if (fh != null) zf.extractFile(fh, dir.getAbsolutePath());
-                            } catch (Exception e) {
-                                logger.logMessage(context.getString(R.string.logger_skip_entry, name, String.valueOf(e.getMessage())));
+            try {
+                System.gc();
+                try(ApkBundle bundle = new ApkBundle()) {
+                    bundle.setAPKLogger(logger);
+                    applyPreferredCompression(bundle, context);
+                    if (options.splitNames != null && !options.splitNames.isEmpty()) {
+                        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+                            logger.logMessage(context.getString(R.string.logger_cannot_create_tmp));
+                            return false;
+                        }
+                        try (ZipFile zf = new ZipFile(file)) {
+                            for (String name : options.splitNames) {
+                                try {
+                                    FileHeader fh = zf.getFileHeader(name);
+                                    if (fh != null) zf.extractFile(fh, dir.getAbsolutePath());
+                                } catch (Exception e) {
+                                    logger.logMessage(context.getString(R.string.logger_skip_entry, name, String.valueOf(e.getMessage())));
+                                }
                             }
                         }
-                    }
-                    bundle.loadApkDirectory(dir, false);
-                } else {
-                    try(ArchiveFile zf = new ArchiveFile(file)) {
-                        zf.extractAll(dir);
                         bundle.loadApkDirectory(dir, false);
-                    }
-                }
-                for (ApkModule apkModule : bundle.getApkModuleList()) {
-                    String protect = Util.isProtected(apkModule);
-                    if (protect != null) {
-                        logger.logMessage(file.getAbsolutePath());
-                               logger.logMessage(protect);
-                        return false;
-                    }
-                }
-                try(ApkModule mergedModule = bundle.mergeModules(false)) {
-                    sanitizeManifest(mergedModule);
-                    try {
-                        mergedModule.setExtractNativeLibs(options.extractNativeLibs);
-                    } catch (Exception e) {
-                        logger.logMessage(context.getString(R.string.logger_extract_native_libs, String.valueOf(e.getMessage())));
-                    }
-                    mergedModule.refreshTable();
-                    mergedModule.refreshManifest();
-                    logger.logMessage(context.getString(R.string.logger_writing_apk));
-                    String outName = file.getName().replaceFirst("(?i)\\.(xapk|aspk|apks|apkm)$", "_antisplit.apk");
-                    if (outName.equals(file.getName())) outName = file.getName() + "_antisplit.apk";
-                    File outputFile = FileUtils.getUnusedFile(new File(file.getParentFile(), outName));
-                    mergedModule.writeApk(outputFile);
-                    pm.dismiss();
-                    if (options.autosign) {
-                        context.handler.post(() -> SignWrapper.requireAuth(context, sw -> {
-                            ProgressManager signPm = new ProgressManager(context, true);
-                            signPm.setText(R.string.signing, outputFile.getName());
-                            signPm.show();
-                            new Thread(() -> {
-                                try {
-                                    sw.signApk(outputFile);
-                                    signPm.dismiss();
-                                    context.handler.post(() -> {
-                                        Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
-                                        context.reloadCurrentFolder();
-                                    });
-                                } catch (Exception e) {
-                                    signPm.dismiss();
-                                    new ErrorUtil(context).showError(e);
-                                }
-                            }).start();
-                        }));
                     } else {
-                        context.handler.post(() -> {
-                            Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
-                            context.reloadCurrentFolder();
-                        });
+                        try(ArchiveFile zf = new ArchiveFile(file)) {
+                            zf.extractAll(dir);
+                            bundle.loadApkDirectory(dir, false);
+                        }
+                    }
+                    for (ApkModule apkModule : bundle.getApkModuleList()) {
+                        String protect = Util.isProtected(apkModule);
+                        if (protect != null) {
+                            logger.logMessage(file.getAbsolutePath());
+                            logger.logMessage(protect);
+                            return false;
+                        }
+                    }
+                    System.gc();
+                    try(ApkModule mergedModule = bundle.mergeModules(false)) {
+                        sanitizeManifest(mergedModule);
+                        try {
+                            mergedModule.setExtractNativeLibs(options.extractNativeLibs);
+                        } catch (Exception e) {
+                            logger.logMessage(context.getString(R.string.logger_extract_native_libs, String.valueOf(e.getMessage())));
+                        }
+                        mergedModule.refreshTable();
+                        mergedModule.refreshManifest();
+                        logger.logMessage(context.getString(R.string.logger_writing_apk));
+                        String outName = file.getName().replaceFirst("(?i)\\.(xapk|aspk|apks|apkm)$", "_antisplit.apk");
+                        if (outName.equals(file.getName())) outName = file.getName() + "_antisplit.apk";
+                        File outputFile = FileUtils.getUnusedFile(new File(file.getParentFile(), outName));
+                        mergedModule.writeApk(outputFile);
+                        pm.dismiss();
+                        if (options.autosign) {
+                            context.handler.post(() -> SignWrapper.requireAuth(context, sw -> {
+                                ProgressManager signPm = new ProgressManager(context, true);
+                                signPm.setText(R.string.signing, outputFile.getName());
+                                signPm.show();
+                                new Thread(() -> {
+                                    try {
+                                        sw.signApk(outputFile);
+                                        signPm.dismiss();
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
+                                            context.reloadCurrentFolder();
+                                        });
+                                    } catch (Exception e) {
+                                        signPm.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            }));
+                        } else {
+                            context.handler.post(() -> {
+                                Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
+                                context.reloadCurrentFolder();
+                            });
+                        }
                     }
                 }
+                return true;
+            } catch (OutOfMemoryError oom) {
+                pm.dismiss();
+                System.gc();
+                context.handler.post(() -> {
+                    Extensions.showMessage(context, R.string.out_of_memory_operation);
+                    new ErrorUtil(context).showError(new OutOfMemoryError(context.getString(R.string.out_of_memory_operation) + "\n\n" + oom.getMessage()));
+                });
+                return false;
+            } catch (Throwable t) {
+                pm.dismiss();
+                throw t;
+            } finally {
+                Util.deleteDir(dir);
+                dir.deleteOnExit();
             }
-            Util.deleteDir(dir);
-            dir.deleteOnExit();
-            return true;
         });
     }
 
@@ -497,6 +513,7 @@ public class MergeUtil {
 
             }
         }
+        System.gc();
         try(ApkModule mergedModule = bundle.mergeModules(false)) {
             sanitizeManifest(mergedModule);
             if (context != null) {

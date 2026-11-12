@@ -58,6 +58,7 @@ import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingAction;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingToggle;
+import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
@@ -329,6 +330,8 @@ public class SettingsController {
         if (btnExport != null) btnExport.setOnClickListener(v -> performExportSettings());
         View btnImport = settingsDialog.findViewById(R.id.btn_import_settings);
         if (btnImport != null) btnImport.setOnClickListener(v -> performImportSettings());
+
+        setupClearCache(settingsDialog);
 
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> new UIHelper(activity).showAboutDialog());
         setupPluginSettings(settingsDialog, settings);
@@ -1440,5 +1443,125 @@ public class SettingsController {
             }
         });
         picker.show();
+    }
+
+    private void setupClearCache(ViewFinder root) {
+        View btnClear = root.findViewById(R.id.btnClearCache);
+        TextView cacheDesc = root.findViewById(R.id.cacheSizeText);
+        if (btnClear == null) return;
+
+        updateCacheSizeDisplay(cacheDesc);
+
+        btnClear.setOnClickListener(v -> {
+            new Thread(() -> {
+                long totalBytes = calculateTotalCacheBytes();
+                activity.runOnUiThread(() -> {
+                    if (totalBytes <= 0) {
+                        Extensions.showMessage(activity, activity.getString(R.string.clear_cache_empty));
+                        return;
+                    }
+                    String formatted = FileSize.getHumanReadableFileSize(totalBytes);
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+                            .setTitle(R.string.clear_cache_confirm_title)
+                            .setMessage(activity.getString(R.string.clear_cache_confirm_msg, formatted))
+                            .setPositiveButton(R.string.clear_cache, (dialog, which) -> performClearCache(cacheDesc))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                });
+            }).start();
+        });
+    }
+
+    private void updateCacheSizeDisplay(TextView cacheDesc) {
+        if (cacheDesc == null) return;
+        new Thread(() -> {
+            long totalBytes = calculateTotalCacheBytes();
+            activity.runOnUiThread(() -> {
+                if (totalBytes > 0) {
+                    cacheDesc.setText(activity.getString(R.string.clear_cache_desc) + " (" + FileSize.getHumanReadableFileSize(totalBytes) + ")");
+                } else {
+                    cacheDesc.setText(R.string.clear_cache_desc);
+                }
+            });
+        }).start();
+    }
+
+    private long calculateTotalCacheBytes() {
+        long total = 0L;
+        try {
+            File internal = activity.getCacheDir();
+            if (internal != null && internal.exists()) total += getCleanableDirectorySize(internal);
+            File external = activity.getExternalCacheDir();
+            if (external != null && external.exists()) total += getCleanableDirectorySize(external);
+        } catch (Exception ignored) {
+        }
+        return total;
+    }
+
+    /**
+     * Preserves high-value caches that are lightweight but expensive to regenerate:
+     * - apk_icon_cache / extractor_icons / apk_icon_tmp: App thumbnails & icons (prevents laggy reloads)
+     * - oat_primary / code_cache: Pre-compiled runtime JIT/AOT code
+     * - text_editor_session_*.json: Unsaved text editor drafts & sessions
+     * - xposed-user-key.jks: User signing keystores
+     */
+    private static boolean isProtectedCacheItem(File file) {
+        if (file == null) return false;
+        String name = file.getName();
+        if ("apk_icon_cache".equals(name) || "extractor_icons".equals(name) || "apk_icon_tmp".equals(name)) return true;
+        if ("oat_primary".equals(name) || "code_cache".equals(name)) return true;
+        if (name.startsWith("text_editor_session_") && name.endsWith(".json")) return true;
+        if (name.endsWith(".jks") || name.endsWith(".bks") || name.endsWith(".keystore")) return true;
+        return false;
+    }
+
+    private static long getCleanableDirectorySize(File dir) {
+        if (dir == null || !dir.exists()) return 0L;
+        long bytes = 0L;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                if (isProtectedCacheItem(child)) continue;
+                if (child.isDirectory()) bytes += getCleanableDirectorySize(child);
+                else bytes += child.length();
+            }
+        }
+        return bytes;
+    }
+
+    private static void deleteCleanableDirContents(File dir) {
+        if (dir == null || !dir.exists()) return;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                if (isProtectedCacheItem(child)) continue;
+                if (child.isDirectory()) {
+                    deleteCleanableDirContents(child);
+                    //noinspection ResultOfMethodCallIgnored
+                    child.delete();
+                } else {
+                    //noinspection ResultOfMethodCallIgnored
+                    child.delete();
+                }
+            }
+        }
+    }
+
+    private void performClearCache(TextView cacheDesc) {
+        new Thread(() -> {
+            long before = calculateTotalCacheBytes();
+            try {
+                deleteCleanableDirContents(activity.getCacheDir());
+                deleteCleanableDirContents(activity.getExternalCacheDir());
+            } catch (Exception ignored) {
+            }
+            long after = calculateTotalCacheBytes();
+            long freed = Math.max(0L, before - after);
+            activity.runOnUiThread(() -> {
+                String freedStr = FileSize.getHumanReadableFileSize(freed > 0 ? freed : before);
+                Extensions.showMessage(activity, activity.getString(R.string.clear_cache_success, freedStr));
+                updateCacheSizeDisplay(cacheDesc);
+            });
+        }).start();
     }
 }

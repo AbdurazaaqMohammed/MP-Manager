@@ -1825,10 +1825,6 @@ Lio/github/abdurazaaqmohammed/data/prefs/DirSizeCache$Dto;
 Lio/github/abdurazaaqmohammed/data/prefs/DirSizeCache-IA;
 Lio/github/abdurazaaqmohammed/data/prefs/DirSizeCache;
 Lio/github/abdurazaaqmohammed/data/prefs/ListPrefs;
-Lio/github/abdurazaaqmohammed/data/prefs/PaneCache$Dto;
-Lio/github/abdurazaaqmohammed/data/prefs/PaneCache$Snapshot;
-Lio/github/abdurazaaqmohammed/data/prefs/PaneCache-IA;
-Lio/github/abdurazaaqmohammed/data/prefs/PaneCache;
 Lio/github/abdurazaaqmohammed/domain/files/ContentHit$$ExternalSyntheticRecord1;
 Lio/github/abdurazaaqmohammed/domain/files/ContentHit;
 Lio/github/abdurazaaqmohammed/domain/files/FileSearch$Progress;
@@ -6559,7 +6555,6 @@ SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->bookmarkGroups()Ljava/ut
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->bookmarkLabels()Ljava/util/Map;
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->capturePaneScroll(Z)[I
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->checkStoragePerm()V
-SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->expectedStartupPath(ZLjava/io/File;)Ljava/lang/String;
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->getBookmarks()Ljava/util/ArrayList;
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->getSidebarSectionOrder()Ljava/util/List;
 SLio/github/abdurazaaqmohammed/MPManager/MainActivity;->invalidatePaneLoad(Z)V
@@ -6756,13 +6751,6 @@ SLio/github/abdurazaaqmohammed/data/prefs/ListPrefs;->showManualHidden()Z
 SLio/github/abdurazaaqmohammed/data/prefs/ListPrefs;->showSystemHidden()Z
 SLio/github/abdurazaaqmohammed/data/prefs/ListPrefs;->sortBy(Ljava/lang/String;)I
 SLio/github/abdurazaaqmohammed/data/prefs/ListPrefs;->sortReverse(Ljava/lang/String;)Z
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache$Dto;-><init>()V
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache$Dto;-><init>(Lio/github/abdurazaaqmohammed/data/prefs/PaneCache-IA;)V
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache$Snapshot;-><init>(Ljava/lang/String;)V
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache;-><clinit>()V
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache;->cacheFile(Landroid/content/Context;Z)Ljava/io/File;
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache;->load(Landroid/content/Context;Z)Lio/github/abdurazaaqmohammed/data/prefs/PaneCache$Snapshot;
-SLio/github/abdurazaaqmohammed/data/prefs/PaneCache;->save(Landroid/content/Context;ZLjava/lang/String;[Ljava/io/File;)V
 SLio/github/abdurazaaqmohammed/domain/files/FileSorting$$ExternalSyntheticLambda1;-><init>(I[J[J[Ljava/lang/String;[Ljava/lang/String;[ZZ)V
 SLio/github/abdurazaaqmohammed/domain/files/FileSorting$$ExternalSyntheticLambda1;->compare(Ljava/lang/Object;Ljava/lang/Object;)I
 SLio/github/abdurazaaqmohammed/domain/files/FileSorting;-><clinit>()V

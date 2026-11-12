@@ -2620,4 +2620,11 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="app_ops_mode_deny_hard">Deny (Hard block)</string>
     <string name="app_ops_toast_mode_set">%1$s mode set to %2$s</string>
     <string name="folder_sizes_cache_reset">Folder sizes cache has been reset. Recalculating…</string>
+    <string name="calculating">Calculating</string>
+    <string name="clear_cache">Clear cache</string>
+    <string name="clear_cache_desc">Free up temporary files and unpacked archives while keeping icon cache</string>
+    <string name="clear_cache_confirm_title">Clear app cache?</string>
+    <string name="clear_cache_confirm_msg">This will safely delete all temporary files, unpacked archives, and staging data (%s).\n\nApp icon caches, code caches, and editor sessions will be preserved so app performance stays fast.</string>
+    <string name="clear_cache_success">Cache cleared successfully (%s freed)</string>
+    <string name="clear_cache_empty">Cache is already clean</string>
 </resources>

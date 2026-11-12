@@ -686,7 +686,7 @@ public class FileOperationsHelper {
                         dest.mkdir();
                     }
                     FileUtils.copyFolder(f, dest, listener);
-                    syncDirTimes(f, dest);
+                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                 } else {
                     FileUtils.copyFile(f, dest, listener);
                     AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
@@ -712,7 +712,7 @@ public class FileOperationsHelper {
         }
         // Highlight in the pane that actually holds the destination (the
         // same-pane paste mode targets the source pane itself).
-        boolean destPane1 = destinationFolder.equals(adapter.pane1 ? context.pane1Folder : context.pane2Folder);
+        boolean destPane1 = destinationFolder.equals(context.pane1Folder) || (!destinationFolder.equals(context.pane2Folder) && adapter.pane1);
         context.handler.post(() -> {
             adapter.clearSelection();
             clearDirListingCache();
@@ -721,13 +721,10 @@ public class FileOperationsHelper {
             } else {
                 context.loadFolderInPane(destinationFolder, destPane1);
             }
-            // Source pane also changed after a move (files deleted) — reload it too.
+            // Source pane also changed after a move (files deleted) — reload only source without clearing dest highlights
             try {
-                File sourceFolder = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
-                if (sourceFolder != null && !sourceFolder.equals(destinationFolder)) {
-                    context.loadFolderInPane(sourceFolder, adapter.pane1);
-                } else {
-                    context.refreshAllPanes();
+                if (destPane1 != adapter.pane1) {
+                    context.loadFolderInPane(adapter.pane1 ? context.pane1Folder : context.pane2Folder, adapter.pane1);
                 }
             } catch (Exception ignored) { }
         });
@@ -1097,7 +1094,9 @@ public class FileOperationsHelper {
                     batchDone.add(item);
                     continue;
                 }
-                if (!useElevated && !AccessManager.needsShellCopy(context, f, dest)) continue;
+                // Fast native shell batching: runs for elevated mode, or when
+                // root/shizuku shell access is available to achieve native kernel cp speed.
+                if (!useElevated && !shellBatch) continue;
                 FileUtils.Measure im = info.of(f);
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),
@@ -1179,7 +1178,7 @@ public class FileOperationsHelper {
                     dest.mkdir();
                 }
                 FileUtils.copyFolder(f, dest, listener);
-                syncDirTimes(f, dest);
+                AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
             } else {
                 FileUtils.copyFile(f, dest, listener);
                 AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
@@ -1201,7 +1200,7 @@ public class FileOperationsHelper {
             if (destFile != null) affectedNames.add(destFile.getName());
         }
         // Highlight in the pane that actually holds the destination.
-        boolean destPane1 = destinationFolder.equals(adapter.pane1 ? context.pane1Folder : context.pane2Folder);
+        boolean destPane1 = destinationFolder.equals(context.pane1Folder) || (!destinationFolder.equals(context.pane2Folder) && adapter.pane1);
         context.handler.post(() -> {
             clearDirListingCache();
             if (!affectedNames.isEmpty()) {
@@ -1209,8 +1208,6 @@ public class FileOperationsHelper {
             } else {
                 context.loadFolderInPane(destinationFolder, destPane1);
             }
-            // Copy destination changed too — ensure the source pane reflects renames/copies.
-            try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
     }

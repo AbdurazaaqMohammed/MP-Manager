@@ -908,14 +908,14 @@ public class RootManager {
     }
 
     public void copyDir(String src, String dest) throws IOException {
-        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x -C " + escapeShellArg(dest) + ")) || cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x --no-same-owner --no-same-permissions -C " + escapeShellArg(dest) + ")) || cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest);
         ShellResult result = executeFs(cmd, 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
 
     public void copyDirPreserving(String src, String dest) throws IOException {
-        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x -C " + escapeShellArg(dest) + ")) || cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        String cmd = "(mkdir -p " + escapeShellArg(dest) + " && (tar -c -C " + escapeShellArg(src) + " . | tar -x --no-same-owner --no-same-permissions -C " + escapeShellArg(dest) + ")) || cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest);
         ShellResult result = executeFs(cmd, 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
@@ -988,10 +988,7 @@ public class RootManager {
             String parent = new File(dest).getParent();
             if (parent != null) cmd.append(" && mkdir -p ").append(escapeShellArg(parent));
             if (op.directory) {
-                cmd.append(" && ((mkdir -p ").append(escapeShellArg(dest))
-                        .append(" && (tar -c -C ").append(escapeShellArg(src))
-                        .append(" . | tar -x -C ").append(escapeShellArg(dest))
-                        .append(")) || cp -rpf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest)).append(')');
+                cmd.append(" && cp -rpf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
             } else {
                 cmd.append(" && cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
             }

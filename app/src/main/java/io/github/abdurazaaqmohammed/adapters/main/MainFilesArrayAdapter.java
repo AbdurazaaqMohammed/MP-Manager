@@ -235,14 +235,22 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.checkUnmountOnExit(context, current);
             }
         }
+        if (target == null && current != null) {
+            target = current.getParentFile();
+        }
         if (target == null) return context.navigateBack(pane1);
         if (current != null && target.equals(current)) {
+            File parentDir = current.getParentFile();
+            if (parentDir != null && !parentDir.equals(current)) {
+                target = parentDir;
+            } else {
+                return context.navigateBack(pane1);
+            }
+        }
+        if (pane1 && target.equals(context.pane1Folder) && (current == null || target.equals(current))) {
             return context.navigateBack(pane1);
         }
-        if (target.equals(context.pane1Folder) && pane1 && (current == null || target.equals(current))) {
-            return context.navigateBack(pane1);
-        }
-        if (target.equals(context.pane2Folder) && !pane1 && (current == null || target.equals(current))) {
+        if (!pane1 && target.equals(context.pane2Folder) && (current == null || target.equals(current))) {
             return context.navigateBack(pane1);
         }
         final String exitedName = current != null ? current.getName() : null;
