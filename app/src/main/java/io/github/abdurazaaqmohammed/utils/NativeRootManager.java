@@ -87,21 +87,58 @@ public final class NativeRootManager {
     }
 
     /**
-     * Executes native fast scan via root. Returns Measure (files, bytes).
+     * Executes native fast scan via root for a single path. Returns Measure (files, bytes).
      */
     public static FileUtils.Measure scan(Context context, String path) {
+        if (path == null) return null;
+        List<String> paths = new java.util.ArrayList<>();
+        paths.add(path);
+        FileUtils.MeasureSet set = scan(context, paths);
+        return set != null ? set.total : null;
+    }
+
+    /**
+     * Executes native fast scan via root for multiple paths. Returns MeasureSet.
+     */
+    public static FileUtils.MeasureSet scan(Context context, java.util.List<String> paths) {
+        if (paths == null || paths.isEmpty()) return null;
         try {
             String mpio = getMpioPath(context);
-            String su = RootManager.getInstance(context).suBinary();
-            Process process = Runtime.getRuntime().exec(new String[]{
-                    su, "-c", mpio + " scan " + RootManager.escapeShellArg(path)
-            });
+            StringBuilder sb = new StringBuilder(mpio).append(" scan");
+            for (String p : paths) {
+                sb.append(' ').append(RootManager.escapeShellArg(p));
+            }
+            String[] cmd = RootManager.suCommandForFs(context, sb.toString());
+            Process process = Runtime.getRuntime().exec(cmd);
+
+            java.util.List<FileUtils.Measure> items = new java.util.ArrayList<>();
+            for (int i = 0; i < paths.size(); i++) {
+                items.add(new FileUtils.Measure(1, 0L));
+            }
+            FileUtils.Measure total = null;
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     line = line.trim();
-                    if (line.startsWith("SCAN_RESULT")) {
+                    if (line.startsWith("ITEM_RESULT")) {
+                        // ITEM_RESULT idx=... files=... dirs=... bytes=...
+                        int idx = -1;
+                        int files = 0;
+                        long bytes = 0L;
+                        for (String part : line.split("\\s+")) {
+                            if (part.startsWith("idx=")) {
+                                idx = Integer.parseInt(part.substring(4));
+                            } else if (part.startsWith("files=")) {
+                                files = Integer.parseInt(part.substring(6));
+                            } else if (part.startsWith("bytes=")) {
+                                bytes = Long.parseLong(part.substring(6));
+                            }
+                        }
+                        if (idx >= 0 && idx < items.size()) {
+                            items.set(idx, new FileUtils.Measure(Math.max(1, files), bytes));
+                        }
+                    } else if (line.startsWith("SCAN_RESULT")) {
                         // SCAN_RESULT files=... dirs=... bytes=... ms=...
                         int files = 0;
                         long bytes = 0L;
@@ -112,12 +149,14 @@ public final class NativeRootManager {
                                 bytes = Long.parseLong(part.substring(6));
                             }
                         }
-                        process.waitFor(5, TimeUnit.SECONDS);
-                        return new FileUtils.Measure(Math.max(1, files), bytes);
+                        total = new FileUtils.Measure(Math.max(1, files), bytes);
                     }
                 }
             }
-            process.waitFor(5, TimeUnit.SECONDS);
+            process.waitFor(10, TimeUnit.SECONDS);
+            if (total != null) {
+                return new FileUtils.MeasureSet(total, items);
+            }
         } catch (Exception ignored) {
         }
         return null;
@@ -129,10 +168,10 @@ public final class NativeRootManager {
     public static boolean copy(Context context, String src, String dest,
                                ProgressCallback callback, TransferControl control) throws IOException {
         String mpio = getMpioPath(context);
-        String su = RootManager.getInstance(context).suBinary();
-        String cmd = mpio + " copy " + RootManager.escapeShellArg(src) + " " + RootManager.escapeShellArg(dest);
+        String shellCmd = mpio + " copy " + RootManager.escapeShellArg(src) + " " + RootManager.escapeShellArg(dest);
+        String[] cmd = RootManager.suCommandForFs(context, shellCmd);
 
-        Process process = Runtime.getRuntime().exec(new String[]{su, "-c", cmd});
+        Process process = Runtime.getRuntime().exec(cmd);
         AtomicBoolean cancelled = new AtomicBoolean(false);
 
         Thread watcher = null;
@@ -197,10 +236,10 @@ public final class NativeRootManager {
     public static boolean delete(Context context, String path,
                                  ProgressCallback callback, TransferControl control) throws IOException {
         String mpio = getMpioPath(context);
-        String su = RootManager.getInstance(context).suBinary();
-        String cmd = mpio + " delete " + RootManager.escapeShellArg(path);
+        String shellCmd = mpio + " delete " + RootManager.escapeShellArg(path);
+        String[] cmd = RootManager.suCommandForFs(context, shellCmd);
 
-        Process process = Runtime.getRuntime().exec(new String[]{su, "-c", cmd});
+        Process process = Runtime.getRuntime().exec(cmd);
         AtomicBoolean cancelled = new AtomicBoolean(false);
 
         Thread watcher = null;

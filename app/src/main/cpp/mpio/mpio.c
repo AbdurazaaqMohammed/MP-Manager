@@ -76,13 +76,21 @@ static void scan_recursive(const char *path, ScanStats *stats) {
     }
 }
 
-static int do_scan(const char *path) {
-    char fast_path[4096];
-    resolve_fast_path(path, fast_path, sizeof(fast_path));
-
-    ScanStats stats = {0, 0, 0};
+static int do_scan(int count, char *paths[]) {
+    ScanStats total = {0, 0, 0};
     uint64_t t0 = current_time_ms();
-    scan_recursive(fast_path, &stats);
+    for (int i = 0; i < count; i++) {
+        if (g_cancelled) break;
+        char fast_path[4096];
+        resolve_fast_path(paths[i], fast_path, sizeof(fast_path));
+        ScanStats item_stats = {0, 0, 0};
+        scan_recursive(fast_path, &item_stats);
+        total.files += item_stats.files;
+        total.dirs += item_stats.dirs;
+        total.bytes += item_stats.bytes;
+        printf("ITEM_RESULT idx=%d files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 "\n",
+               i, item_stats.files, item_stats.dirs, item_stats.bytes);
+    }
     uint64_t elapsed = current_time_ms() - t0;
     if (g_cancelled) {
         printf("CANCELLED\n");
@@ -90,7 +98,7 @@ static int do_scan(const char *path) {
         return 1;
     }
     printf("SCAN_RESULT files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 " ms=%" PRIu64 "\n",
-           stats.files, stats.dirs, stats.bytes, elapsed);
+           total.files, total.dirs, total.bytes, elapsed);
     fflush(stdout);
     return 0;
 }
@@ -207,11 +215,36 @@ static int copy_recursive(const char *src, const char *dst, CopyContext *ctx) {
     return 0;
 }
 
+static void mkdir_p(const char *dir_path) {
+    char tmp[4096];
+    snprintf(tmp, sizeof(tmp), "%s", dir_path);
+    size_t len = strlen(tmp);
+    if (len == 0) return;
+    if (tmp[len - 1] == '/') tmp[len - 1] = '\0';
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            mkdir(tmp, 0755);
+            *p = '/';
+        }
+    }
+    mkdir(tmp, 0755);
+}
+
 static int do_copy(const char *src, const char *dst) {
     char fast_src[4096];
     char fast_dst[4096];
     resolve_fast_path(src, fast_src, sizeof(fast_src));
     resolve_fast_path(dst, fast_dst, sizeof(fast_dst));
+
+    // Ensure destination parent directory exists
+    char dst_parent[4096];
+    snprintf(dst_parent, sizeof(dst_parent), "%s", fast_dst);
+    char *slash = strrchr(dst_parent, '/');
+    if (slash && slash != dst_parent) {
+        *slash = '\0';
+        mkdir_p(dst_parent);
+    }
 
     CopyContext ctx = {0, 0, 0};
     uint64_t t0 = current_time_ms();
@@ -304,7 +337,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "MPIO v1.0 Native I/O Daemon for MP-Manager\n");
         fprintf(stderr, "Usage:\n");
-        fprintf(stderr, "  %s scan <path>\n", argv[0]);
+        fprintf(stderr, "  %s scan <path1> [path2 ...]\n", argv[0]);
         fprintf(stderr, "  %s copy <src> <dst>\n", argv[0]);
         fprintf(stderr, "  %s delete <path>\n", argv[0]);
         return 1;
@@ -313,7 +346,7 @@ int main(int argc, char *argv[]) {
     const char *cmd = argv[1];
     if (strcmp(cmd, "scan") == 0) {
         if (argc < 3) return 1;
-        return do_scan(argv[2]);
+        return do_scan(argc - 2, argv + 2);
     } else if (strcmp(cmd, "copy") == 0) {
         if (argc < 4) return 1;
         return do_copy(argv[2], argv[3]);
