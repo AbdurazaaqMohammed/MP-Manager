@@ -64,7 +64,7 @@
     <string name="appname">Имя приложения</string>
     <string name="edit_all_ac">Редактировать все Activity / свойства из манифеста</string>
     <string name="auto_sign">Автоподпись</string>
-    <string name="sign_set">Настройки подписи</string>
+    <string name="sign_set">Настроить</string>
     <string name="target_android_version">Целевая версия Android</string>
     <string name="compression_level">Уровень сжатия</string>
     <string name="update_mode">Режим обновления</string>
@@ -95,7 +95,7 @@
     <string name="protectd">Защищено</string>
     <string name="file_modified_x">Файл %1$s был изменён, обновить %2$s?</string>
     <string name="clone">Клонировать APK</string>
-    <string name="pkgName">Имя пакета</string>
+    <string name="pkgName">Название пакета</string>
     <string name="opt">Оптимизировать APK</string>
     <string name="delete_useless_files">Удалить бесполезные файлы</string>
     <string name="ultra_compress">Ультра-сжатие</string>
@@ -233,7 +233,7 @@
     <string name="expected_hash">Ожидаемый: %1$s</string>
     <string name="actual_hash">Фактический: %1$s</string>
     <string name="app_icon">Значок приложения</string>
-    <string name="p_package">Имя пакета</string>
+    <string name="p_package">Название пакета</string>
     <string name="p_signatures">Подписи</string>
     <string name="p_protected">Защищено</string>
     <string name="file_size">Размер файла</string>
@@ -307,7 +307,7 @@
     <string name="extract_ic">Извлечь значок приложения</string>
     <string name="root_permissions">Права root</string>
     <string name="permissions_updated">Разрешения обновлены</string>
-    <string name="invert_selection">Инвертировать выделение</string>
+    <string name="invert_selection">Инверсия</string>
     <string name="playback_error">Ошибка воспроизведения</string>
     <string name="buffering">Буферизация: %1$d\%</string>
     <string name="search_ex_paths">Укажите список путей, которые нужно исключить из области поиска, по одному на строку, например:\ncom/gms/\nandroidx/\nВнимание! Список исключений действует только когда путь поиска пуст или равен \"/\"!</string>
@@ -1344,7 +1344,7 @@
     <string name="done_organizing_sidebar">Готово</string>
     <string name="drag_to_reorder">Перетащите для изменения порядка</string>
     <string name="include_bookmark_groups_sidebar">Включать группы закладок в боковую панель</string>
-    <string name="invalid_pkg_name">Недопустимое имя пакета</string>
+    <string name="invalid_pkg_name">Недопустимое название пакета</string>
     <string name="locate_failed">Не удалось найти этот файл</string>
     <string name="locate_resolving">Определение файла…</string>
     <string name="disabled">отключено</string>
