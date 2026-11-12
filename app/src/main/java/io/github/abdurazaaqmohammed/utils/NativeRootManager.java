@@ -57,6 +57,22 @@ public final class NativeRootManager {
 
             String assetPath = "bin/" + preferredAbi + "/" + BIN_NAME;
             boolean extractNeeded = !mpioBin.exists() || mpioBin.length() == 0;
+            if (!extractNeeded) {
+                try (android.content.res.AssetFileDescriptor afd = context.getAssets().openFd(assetPath)) {
+                    if (afd.getLength() > 0 && afd.getLength() != mpioBin.length()) {
+                        extractNeeded = true;
+                    }
+                } catch (Exception ignored) {
+                    // compressed asset, compare using package lastUpdateTime or stream
+                    try (InputStream in = context.getAssets().open(assetPath)) {
+                        int available = in.available();
+                        if (available > 0 && available != mpioBin.length()) {
+                            extractNeeded = true;
+                        }
+                    } catch (Exception ignored2) {
+                    }
+                }
+            }
 
             if (extractNeeded) {
                 try (InputStream in = context.getAssets().open(assetPath);
