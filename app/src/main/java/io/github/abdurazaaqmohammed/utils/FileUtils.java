@@ -367,9 +367,40 @@ public class FileUtils {
     }
 
     public static OutputStream getOutputStream(File file) throws IOException {
+        try {
+            return openOutputStream(file);
+        } catch (IOException error) {
+            if (!SharedStorageCompat.recoverDestination(file)) throw error;
+            return openOutputStream(file);
+        }
+    }
+
+    private static OutputStream openOutputStream(File file) throws IOException {
         return LegacyUtils.supportsFileChannel ?
         Files.newOutputStream(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
                 : new FileOutputStream(file);
+    }
+
+    /** Exclusive creation, with recovery for a file removed behind FUSE's back. */
+    public static boolean createNewFile(File file) throws IOException {
+        try {
+            if (file.createNewFile()) return true;
+            return SharedStorageCompat.recoverDestination(file);
+        } catch (IOException error) {
+            if (!SharedStorageCompat.recoverDestination(file)) throw error;
+            return true;
+        }
+    }
+
+    private static FileChannel openOutputChannel(File file) throws IOException {
+        try {
+            return FileChannel.open(file.toPath(), StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException error) {
+            if (!SharedStorageCompat.recoverDestination(file)) throw error;
+            return FileChannel.open(file.toPath(), StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        }
     }
 
     /**
@@ -430,9 +461,7 @@ public class FileUtils {
         // possible file copy on Android internal and shared storage.
         if (LegacyUtils.supportsFileChannel) {
             try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ);
-                 FileChannel dst = FileChannel.open(destinationFile.toPath(),
-                         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                         StandardOpenOption.TRUNCATE_EXISTING)) {
+                 FileChannel dst = openOutputChannel(destinationFile)) {
                 long size = src.size();
                 long transferred = 0;
                 while (transferred < size) {

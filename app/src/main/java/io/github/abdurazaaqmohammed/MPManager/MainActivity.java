@@ -1329,7 +1329,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 File newFile = new File(ogFolder, name);
                                 success = false;
                                 try {
-                                    success = newFile.createNewFile();
+                                    success = FileUtils.createNewFile(newFile);
                                 } catch (IOException ignored) {}
                                 if (!success) {
                                     success = touchViaRoot(ogFolder, name);

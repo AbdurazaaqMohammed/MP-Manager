@@ -773,7 +773,7 @@ public final class AccessManager {
             }
         }
         File f = new File(path);
-        if (!f.exists() && !f.createNewFile()) throw new IOException("touch failed");
+        if (!FileUtils.createNewFile(f) && !f.exists()) throw new IOException("touch failed");
     }
 
     public static RootManager.ShellResult execute(Context context, String command, int timeout) {

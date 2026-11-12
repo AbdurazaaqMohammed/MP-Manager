@@ -260,6 +260,9 @@ public class SignWrapper {
             if (v4) {
                 builder.setV4SignatureOutputFile(getV4SignatureOutputFile(inputApk, actualOutput));
             }
+            // apksig uses RandomAccessFile directly, so repair a previously
+            // root-deleted destination before handing it to the signer.
+            FileUtils.createNewFile(actualOutput);
             builder.build().sign();
         } finally {
             if (alignedCopy != null) {

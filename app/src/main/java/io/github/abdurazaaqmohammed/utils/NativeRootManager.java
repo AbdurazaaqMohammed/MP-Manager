@@ -196,6 +196,23 @@ public final class NativeRootManager {
      */
     public static boolean delete(Context context, String path,
                                  ProgressCallback callback, TransferControl control) throws IOException {
+        File file = new File(path);
+        if (SharedStorageCompat.canDeleteThroughApp(file)) {
+            // Removing a public file through /data/media bypasses FUSE's
+            // permanent dentry cache and breaks the next same-name creation.
+            final long[] done = {0L};
+            FileUtils.TransferListener listener = new FileUtils.TransferListener() {
+                @Override public void onFile(File source, File destination) {
+                    if (callback != null) callback.onProgress(++done[0], 0L, source.getPath());
+                }
+                @Override public void onBytes(long count) {
+                }
+                @Override public void checkpoint() {
+                    if (control != null) control.checkpoint();
+                }
+            };
+            if (FileUtils.deleteTree(file, listener)) return true;
+        }
         String mpio = getMpioPath(context);
         String su = RootManager.getInstance(context).suBinary();
         String cmd = mpio + " delete " + RootManager.escapeShellArg(path);
