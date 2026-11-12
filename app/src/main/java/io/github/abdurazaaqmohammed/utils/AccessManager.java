@@ -575,14 +575,9 @@ public final class AccessManager {
         Backend backend = active(context);
         try {
             if (backend == Backend.ROOT) {
-                // If single path (e.g. package folder like /data/user/0/com.facebook.katana), try native mpio scan first
-                if (paths.size() == 1) {
-                    FileUtils.Measure m = NativeRootManager.scan(context, paths.get(0));
-                    if (m != null && m.files > 0) {
-                        List<FileUtils.Measure> list = new ArrayList<>();
-                        list.add(m);
-                        return new FileUtils.MeasureSet(m, list);
-                    }
+                FileUtils.MeasureSet nativeSet = NativeRootManager.scan(context, paths);
+                if (nativeSet != null && nativeSet.total.files > 0) {
+                    return nativeSet;
                 }
                 return RootManager.getInstance(context).measureSet(paths);
             }
