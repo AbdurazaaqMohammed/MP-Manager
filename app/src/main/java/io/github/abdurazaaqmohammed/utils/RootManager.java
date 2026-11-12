@@ -241,21 +241,34 @@ public class RootManager {
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
             while (true) {
                 try {
-                    if (process.exitValue() != 0) return false;
+                    if (process.exitValue() != 0) {
+                        java.io.InputStream es = process.getErrorStream();
+                        byte[] eb = new byte[512];
+                        int en = 0;
+                        try { en = es.read(eb); } catch (Exception ignored) {}
+                        android.util.Log.w("RootManager", "checkRoot su exit=" + process.exitValue()
+                                + " stderr=" + (en > 0 ? new String(eb, 0, en) : ""));
+                        return false;
+                    }
                     break;
                 } catch (IllegalThreadStateException running) {
-                    if (System.nanoTime() >= deadline) return false;
+                    if (System.nanoTime() >= deadline) {
+                        android.util.Log.w("RootManager", "checkRoot su timeout");
+                        return false;
+                    }
                     Thread.sleep(25);
                 }
             }
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line = reader.readLine();
+                android.util.Log.d("RootManager", "checkRoot su id -> exit=" + process.exitValue() + " line=" + line);
                 return line != null && line.contains("uid=0");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
         } catch (Exception e) {
+            android.util.Log.w("RootManager", "checkRoot failed", e);
             return false;
         } finally {
             if (process != null) process.destroy();

@@ -2294,4 +2294,19 @@
     <string name="frida_console_sort_name">Nama</string>
     <string name="frida_console_sort_updated">Tanggal diperbarui</string>
     <string name="frida_console_sort_installed">Tanggal diinstal</string>
+    <!-- Jiagu unpacker -->
+    <string name="jiagu_dumper_title">Jiagu Dumper</string>
+    <string name="jiagu_dumper_subtitle">Dump DEX yang sudah di-unpack dari aplikasi terproteksi (root)</string>
+    <string name="jiagu_root_required">Jiagu Dumper butuh root: membaca DEX hasil unpack dari memori proses yang berjalan.</string>
+    <string name="jiagu_package_hint">Paket target (com.example.app)</string>
+    <string name="jiagu_wait_hint">Tunggu setelah peluncuran untuk unpack (detik)</string>
+    <string name="jiagu_apk_path_hint">Path APK asli (opsional, bangun ulang setelah dump)</string>
+    <string name="jiagu_invalid_package">Masukkan nama paket yang valid</string>
+    <string name="jiagu_dump_start">MULAI DUMP</string>
+    <string name="jiagu_unpack">Pembuka Jiagu</string>
+    <string name="jiagu_not_protected">APK ini tampaknya tidak dilindungi Jiagu (aplikasi bukan com.stub.StubApp dan tidak ada libjiagu).</string>
+    <string name="jiagu_no_dump">Tidak ada dump DEX untuk %1$s.\n\nJalankan dulu Alat → Jiagu Dumper: buka aplikasi terproteksi, biarkan unpack selesai, dan dump DEX asli dari memori (butuh root).</string>
+    <string name="jiagu_open_dumper">Buka Jiagu Dumper</string>
+    <string name="jiagu_pick_app">Pilih dari aplikasi terinstal</string>
+    <string name="jiagu_unpack_confirm">Bangun ulang APK ini dari %1$d file DEX hasil dump?\n\nDump: %2$s\n\nAplikasi stub diganti dengan aplikasi asli yang ditemukan di dump dan semua hook yang disuntikkan dihapus. Hasilnya harus ditandatangani sebelum dipasang.</string>
 </resources>

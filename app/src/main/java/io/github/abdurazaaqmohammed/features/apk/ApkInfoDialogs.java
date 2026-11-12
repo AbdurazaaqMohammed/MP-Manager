@@ -904,6 +904,8 @@ public class ApkInfoDialogs {
             io.github.abdurazaaqmohammed.features.apk.frida.FridaGadgetDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) {
             showLibPatcherDialog(file, fileName);
+        } else if (ApkMoreMenuOrder.JIAGU.equals(actionId)) {
+            JiaguUnpackDialog.show(context, file);
         } else {
             // Check plugin APK actions
             for (ApkMoreAction ext : ExtensionRegistry.apkActions()) {

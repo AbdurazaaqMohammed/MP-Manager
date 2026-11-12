@@ -113,6 +113,8 @@ public class McpToolRegistry {
             case "mp_apk_decompile_class": return apkTools.decompileClass(args);
             case "mp_apk_build": return apkTools.build(args);
             case "mp_apk_sign": return apkTools.sign(args);
+            case "mp_apk_jiagu_dump": return apkTools.jiaguDump(args);
+            case "mp_apk_jiagu_unpack": return apkTools.jiaguUnpack(args);
             case "mp_apk_copy_entry": return apkTools.copyEntry(args);
             case "mp_apk_search_entries": return apkTools.searchEntries(args);
             case "mp_apk_read_signature": return apkTools.readSignature(args);
@@ -415,6 +417,23 @@ public class McpToolRegistry {
                 schemaProps(new String[0],
                         "path", "string", "APK file to sign",
                         "session", "string", "Or sign a session's working copy"));
+        put("mp_apk_jiagu_dump",
+                "Root Jiagu Dumper: launch a Jiagu (com.stub.StubApp) protected app, wait for its stub to unpack"
+                        + " the real dexes into memory, and carve every dex out of the process memory through su."
+                        + " Optional apk_path rebuilds an unpacked APK from the dump in the same run.",
+                schemaProps(new String[]{"package"},
+                        "package", "string", "Target app package name, e.g. com.example.app",
+                        "wait_seconds", "integer", "Seconds to wait after launch for unpacking (default 15)",
+                        "apk_path", "string", "Optional original APK path to rebuild right after the dump"));
+        put("mp_apk_jiagu_unpack",
+                "Offline Jiagu unpacker: rebuild an installable APK from the original Jiagu APK plus the dex dump"
+                        + " produced by mp_apk_jiagu_dump. Replaces the stub application with the real one and NOPs"
+                        + " all injected hook calls. Signs the result by default.",
+                schemaProps(new String[]{"apk_path"},
+                        "apk_path", "string", "Original protected APK path",
+                        "dump_dir", "string", "Dump folder (default: newest dump of the APK's package)",
+                        "output_dir", "string", "Folder for the rebuilt APK (default: next to the original APK)",
+                        "sign", "boolean", "Sign the rebuilt APK with the configured key (default true)"));
         put("mp_apk_install",
                 "Hand an APK to the Android system installer (a confirmation dialog appears on the phone).",
                 schemaProps(new String[0],

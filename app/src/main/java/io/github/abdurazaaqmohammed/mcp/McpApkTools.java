@@ -64,7 +64,9 @@ import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.HashUtil;
+import com.reandroid.apk.ApkModule;
 import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
@@ -734,6 +736,116 @@ public final class McpApkTools {
         result.addProperty("output", output.getPath());
         result.addProperty("size", output.length());
         result.addProperty("signed", sign);
+        return result;
+    }
+
+    // ------------------------------------------------------------------
+    // Jiagu (360 stub) unpacker: root dumper + offline rebuild
+    // ------------------------------------------------------------------
+
+    /**
+     * Dumps the real dexes of a running Jiagu-protected app out of process
+     * memory through su. Optionally rebuilds an unpacked APK right away.
+     */
+    public JsonObject jiaguDump(JsonObject args) throws McpJson.McpToolException {
+        String pkg = McpJson.reqStr(args, "package");
+        if (!io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.isValidPackage(pkg)) {
+            throw new McpJson.McpToolException("Invalid package name: " + pkg);
+        }
+        RootManager rm = RootManager.getInstance(ctx.context);
+        if (!rm.isRootAvailable()) {
+            throw new McpJson.McpToolException("Root is required for the Jiagu Dumper");
+        }
+        if (!rm.isRootMode()) {
+            throw new McpJson.McpToolException("Root mode is disabled: switch the app's working mode to Root first");
+        }
+        int waitSec = McpJson.intVal(args, "wait_seconds", 15);
+        final com.google.gson.JsonArray logLines = new com.google.gson.JsonArray();
+        io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
+        File outDir;
+        try {
+            outDir = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.dump(ctx.context, pkg, waitSec, sink);
+        } catch (Exception e) {
+            JsonObject err = new JsonObject();
+            err.addProperty("error", String.valueOf(e.getMessage()));
+            err.add("log", logLines);
+            return err;
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("output_dir", outDir.getPath());
+        com.google.gson.JsonArray dexes = new com.google.gson.JsonArray();
+        File[] children = outDir.listFiles();
+        if (children != null) {
+            for (File c : children) {
+                if (c.isFile() && c.getName().endsWith(".dex")) dexes.add(c.getName());
+            }
+        }
+        result.add("dexes", dexes);
+        String apkPath = McpJson.str(args, "apk_path", null);
+        if (apkPath != null && !apkPath.isEmpty()) {
+            File apk = resolvePath(apkPath, true);
+            if (!apk.isFile()) throw new McpJson.McpToolException("APK not found: " + apk);
+            try {
+                File rebuilt = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.rebuild(ctx.context, apk, outDir, sink);
+                result.addProperty("rebuilt", rebuilt.getPath());
+            } catch (Exception e) {
+                result.addProperty("rebuild_error", String.valueOf(e.getMessage()));
+            }
+        }
+        result.add("log", logLines);
+        return result;
+    }
+
+    /**
+     * Offline Jiagu unpack: rebuild an installable APK from the original file
+     * plus the dex dump produced by mp_apk_jiagu_dump (or the Tools Hub dumper).
+     */
+    public JsonObject jiaguUnpack(JsonObject args) throws McpJson.McpToolException {
+        File apk = resolvePath(McpJson.reqStr(args, "apk_path"), false);
+        if (!apk.isFile()) throw new McpJson.McpToolException("APK not found: " + apk);
+        String outDirArg = McpJson.str(args, "output_dir", null);
+        File outDir = (outDirArg != null && !outDirArg.isEmpty()) ? resolvePath(outDirArg, true) : null;
+        String dumpDirArg = McpJson.str(args, "dump_dir", null);
+        File dumpDir;
+        if (dumpDirArg != null && !dumpDirArg.isEmpty()) {
+            dumpDir = resolvePath(dumpDirArg, false);
+        } else {
+            String pkg = null;
+            try (ApkModule module = ApkModule.loadApkFile(apk)) {
+                pkg = module.getPackageName();
+            } catch (Exception e) {
+                throw new McpJson.McpToolException("Cannot read APK: " + e.getMessage());
+            }
+            dumpDir = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.latestDump(ctx.context, pkg);
+        }
+        if (dumpDir == null || !dumpDir.isDirectory()) {
+            throw new McpJson.McpToolException("No dump folder found - run mp_apk_jiagu_dump or the Tools Hub dumper first");
+        }
+        final com.google.gson.JsonArray logLines = new com.google.gson.JsonArray();
+        io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
+        File rebuilt;
+        try {
+            rebuilt = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.rebuild(ctx.context, apk, dumpDir, sink, outDir);
+        } catch (Exception e) {
+            JsonObject err = new JsonObject();
+            err.addProperty("error", String.valueOf(e.getMessage()));
+            err.add("log", logLines);
+            return err;
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("output", rebuilt.getPath());
+        result.addProperty("size", rebuilt.length());
+        if (McpJson.bool(args, "sign", true)) {
+            File signed = new File(rebuilt.getParentFile(),
+                    rebuilt.getName().replaceFirst("(?i)" + java.util.regex.Pattern.quote(".apk"), "") + "-signed.apk");
+            try {
+                defaultSignWrapper().signApk(rebuilt, signed);
+                result.addProperty("signed", signed.getPath());
+            } catch (Exception e) {
+                result.addProperty("sign_error", String.valueOf(e.getMessage()));
+            }
+        }
+        result.add("log", logLines);
         return result;
     }
 

@@ -2332,4 +2332,19 @@ androidx/
 <string name="frida_console_sort_name">ชื่อ</string>
 <string name="frida_console_sort_updated">วันที่อัปเดต</string>
 <string name="frida_console_sort_installed">วันที่ติดตั้ง</string>
+    <!-- Jiagu unpacker -->
+    <string name="jiagu_dumper_title">Jiagu Dumper</string>
+    <string name="jiagu_dumper_subtitle">ดัมเปอ DEX ที่ถอดการป้องกันออกแล้วจากแอปที่ถูกป้องกัน (root)</string>
+    <string name="jiagu_root_required">Jiagu Dumper ต้องใช้ root: อ่าน DEX ที่ถอดออกแล้วจากหน่วยความจำของโปรเซสที่กำลังทำงาน</string>
+    <string name="jiagu_package_hint">แพ็กเกจเป้าหมาย (com.example.app)</string>
+    <string name="jiagu_wait_hint">รอหลังเปิดแอปเพื่อถอดการป้องกัน (วินาที)</string>
+    <string name="jiagu_apk_path_hint">พาธ APK ต้นฉบับ (ไม่บังคับ สร้างใหม่หลังดัมเปอ)</string>
+    <string name="jiagu_invalid_package">กรอกชื่อแพ็กเกจที่ถูกต้อง</string>
+    <string name="jiagu_dump_start">เริ่มดัมเปอ</string>
+    <string name="jiagu_unpack">ตัวถอดการป้องกัน Jiagu</string>
+    <string name="jiagu_not_protected">APK นี้ดูเหมือนไม่ได้รับการป้องกันแบบ Jiagu (application ไม่ใช่ com.stub.StubApp และไม่มี libjiagu)</string>
+    <string name="jiagu_no_dump">ไม่พบดัมเปอ DEX สำหรับ %1$s\n\nรัน เครื่องมือ → Jiagu Dumper ก่อน: เปิดแอปที่ถูกป้องกัน รอให้ถอดเสร็จ แล้วดัมเปอ DEX จริงจากหน่วยความจำ (ต้องใช้ root)</string>
+    <string name="jiagu_open_dumper">เปิด Jiagu Dumper</string>
+    <string name="jiagu_pick_app">เลือกจากแอปที่ติดตั้ง</string>
+    <string name="jiagu_unpack_confirm">สร้าง APK นี้ใหม่จากไฟล์ DEX ที่ดัมเปอไว้ %1$d ไฟล์หรือไม่?\n\nดัมเปอ: %2$s\n\nแอป stub จะถูกแทนที่ด้วยแอปจริงที่พบในดัมเปอ และ hook ที่ถูกฉีดเข้ามาทั้งหมดจะถูกลบ ต้องลงนามผลลัพธ์ก่อนติดตั้ง</string>
 </resources>

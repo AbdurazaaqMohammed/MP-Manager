@@ -2302,4 +2302,19 @@
     <string name="frida_console_sort_name">Имя</string>
     <string name="frida_console_sort_updated">Дата обновления</string>
     <string name="frida_console_sort_installed">Дата установки</string>
+    <!-- Jiagu unpacker -->
+    <string name="jiagu_dumper_title">Jiagu Dumper</string>
+    <string name="jiagu_dumper_subtitle">Дамп распакованного DEX защищённых приложений (root)</string>
+    <string name="jiagu_root_required">Jiagu Dumper требует root: он читает распакованный DEX из памяти запущенного процесса.</string>
+    <string name="jiagu_package_hint">Целевой пакет (com.example.app)</string>
+    <string name="jiagu_wait_hint">Ожидание после запуска для распаковки (секунды)</string>
+    <string name="jiagu_apk_path_hint">Путь к исходному APK (необязательно, пересборка после дампа)</string>
+    <string name="jiagu_invalid_package">Введите корректное имя пакета</string>
+    <string name="jiagu_dump_start">НАЧАТЬ ДАМП</string>
+    <string name="jiagu_unpack">Распаковщик Jiagu</string>
+    <string name="jiagu_not_protected">APK не выглядит защищённым Jiagu (application не com.stub.StubApp и libjiagu отсутствует).</string>
+    <string name="jiagu_no_dump">Дамп DEX для %1$s не найден.\n\nСначала запустите Инструменты → Jiagu Dumper: откройте защищённое приложение, дождитесь распаковки и сдампите настоящий DEX из памяти (нужен root).</string>
+    <string name="jiagu_open_dumper">Открыть Jiagu Dumper</string>
+    <string name="jiagu_pick_app">Выбрать из установленных приложений</string>
+    <string name="jiagu_unpack_confirm">Пересобрать этот APK из %1$d сдампленного(ых) DEX-файла(ов)?\n\nДамп: %2$s\n\nПриложение-заглушка заменяется настоящим, найденным в дампе, а все внедрённые хук-вызовы удаляются. Результат нужно подписать перед установкой.</string>
 </resources>
