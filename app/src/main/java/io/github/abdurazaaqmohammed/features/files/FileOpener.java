@@ -52,6 +52,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
@@ -1745,8 +1747,7 @@ public class FileOpener {
     }
 
     private void importSignature(File file, String fileName) {
-        File keysDir = new File(Environment.getExternalStorageDirectory()
-                + File.separator + "MT2" + File.separator + "keys");
+        File keysDir = UiPrefs.keysDir(context);
         new Thread(() -> {
             try {
                 if (!keysDir.isDirectory() && !keysDir.mkdirs() && !keysDir.isDirectory()) {

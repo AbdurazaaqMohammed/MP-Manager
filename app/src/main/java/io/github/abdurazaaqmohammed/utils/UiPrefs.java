@@ -176,6 +176,11 @@ public final class UiPrefs {
         return fw;
     }
 
+    /** Keys directory (<app dir>/keys). */
+    public static File keysDir(Context context) {
+        return new File(appPathDir(context, defaultAppDir()), "keys");
+    }
+
     public static boolean genBackup(Context context) {
         try {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("gen_backup", true);

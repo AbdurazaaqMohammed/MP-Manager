@@ -56,6 +56,8 @@ public class SamePanePasteController {
         return move;
     }
 
+    private Snackbar currentSnackbar;
+
     /** Starts the mode: parks {@code items} and shows the FABs over {@code pane1}. */
     public void start(boolean move, List<Object> items, boolean pane1) {
         ensureViews();
@@ -68,15 +70,35 @@ public class SamePanePasteController {
         pasteBar.setVisibility(View.VISIBLE);
         String hint = activity.getString(move
                 ? R.string.same_pane_move_hint : R.string.same_pane_copy_hint);
-        // Indefinite for a move: the selection stays parked until Paste/Cancel,
-        // so the hint must not silently vanish while the user navigates.
-        Snackbar.make(activity.findViewById(android.R.id.content), hint,
-                Snackbar.LENGTH_INDEFINITE).show();
+        
+        dismissSnackbar();
+        View anchor = activity.findViewById(R.id.bottomBar);
+        View root = (anchor != null && anchor.getVisibility() == View.VISIBLE) ? anchor : activity.findViewById(android.R.id.content);
+        if (root != null) {
+            currentSnackbar = Snackbar.make(root, hint, Snackbar.LENGTH_LONG);
+            if (anchor != null && anchor.getVisibility() == View.VISIBLE) {
+                currentSnackbar.setAnchorView(anchor);
+            }
+            currentSnackbar.setAction(android.R.string.ok, v -> dismissSnackbar());
+            currentSnackbar.getView().setOnClickListener(v -> dismissSnackbar());
+            currentSnackbar.show();
+        }
+    }
+
+    private void dismissSnackbar() {
+        if (currentSnackbar != null) {
+            try {
+                currentSnackbar.dismiss();
+            } catch (Exception ignored) {
+            }
+            currentSnackbar = null;
+        }
     }
 
     public void cancel() {
         active = false;
         items = null;
+        dismissSnackbar();
         if (pasteBar != null) pasteBar.setVisibility(View.GONE);
     }
 

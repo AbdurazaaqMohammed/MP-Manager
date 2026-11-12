@@ -1981,27 +1981,6 @@ Strings are sent to the external service you configured.</string>
     <string name="save_to_original">Apply to original</string>
     <string name="keep_exported_copy_only">Keep exported copy only</string>
     <string name="set_edit">SetEdit</string>
-    <!-- Jiagu (360 stub) unpacker: root dumper + offline rebuild -->
-    <string name="jiagu_dumper_title">Jiagu Dumper</string>
-    <string name="jiagu_dumper_subtitle">Dump unpacked DEX from protected apps (root)</string>
-    <string name="jiagu_root_required">Jiagu Dumper needs root: it reads the unpacked DEX out of the running process memory.</string>
-    <string name="jiagu_package_hint">Target package (com.example.app)</string>
-    <string name="jiagu_wait_hint">Wait after launch for unpacking (seconds)</string>
-    <string name="jiagu_apk_path_hint">Original APK path (optional, rebuild after dump)</string>
-    <string name="jiagu_invalid_package">Enter a valid package name</string>
-    <string name="jiagu_dump_start">START DUMP</string>
-    <string name="jiagu_unpack">Jiagu Unpacker</string>
-    <string name="jiagu_not_protected">This APK does not look Jiagu protected (application is not com.stub.StubApp and no libjiagu payloads found).</string>
-    <string name="jiagu_no_dump">No DEX dump found for %1$s.
-
-Run Tools Hub → Jiagu Dumper first: launch the protected app, let it unpack, and dump the real DEX files from memory (root required).</string>
-    <string name="jiagu_open_dumper">Open Jiagu Dumper</string>
-    <string name="jiagu_pick_app">Pick from installed apps</string>
-    <string name="jiagu_unpack_confirm">Rebuild this APK from %1$d dumped DEX file(s)?
-
-Dump: %2$s
-
-The stub application is replaced with the real one found in the dump and all injected hook calls are removed. The result must be signed before install.</string>
     <string name="settings_editor_title">Settings Editor</string>
     <string name="global_settings">Global</string>
     <string name="secure_settings">Secure</string>

@@ -518,6 +518,33 @@ public final class AccessManager {
         if (ops == null || ops.isEmpty()) return;
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
+            // High-performance Native I/O Daemon (mpio) path:
+            boolean allNative = true;
+            try {
+                for (RootManager.CopyOp op : ops) {
+                    if (control != null && control.isCancelled()) throw new TransferCancelledException();
+                    final int baseFiles = op.files;
+                    final long baseBytes = op.bytes;
+                    boolean success = NativeRootManager.copy(context, op.src, op.dest,
+                            (filesDone, bytesDone, currentItem) -> {
+                                if (progress != null) {
+                                    progress.onProgress((int) filesDone, bytesDone);
+                                }
+                            }, control);
+                    if (!success) {
+                        allNative = false;
+                        break;
+                    }
+                }
+                if (allNative) {
+                    RootManager.getInstance(context).invalidateListCache();
+                    return;
+                }
+            } catch (TransferCancelledException tce) {
+                throw tce;
+            } catch (Exception ignored) {
+                // Fall back to standard shell copy
+            }
             RootManager.getInstance(context).copyAllPreserving(ops, progress, control);
             return;
         }
@@ -547,7 +574,18 @@ public final class AccessManager {
         if (paths == null || paths.isEmpty()) return null;
         Backend backend = active(context);
         try {
-            if (backend == Backend.ROOT) return RootManager.getInstance(context).measureSet(paths);
+            if (backend == Backend.ROOT) {
+                // If single path (e.g. package folder like /data/user/0/com.facebook.katana), try native mpio scan first
+                if (paths.size() == 1) {
+                    FileUtils.Measure m = NativeRootManager.scan(context, paths.get(0));
+                    if (m != null && m.files > 0) {
+                        List<FileUtils.Measure> list = new ArrayList<>();
+                        list.add(m);
+                        return new FileUtils.MeasureSet(m, list);
+                    }
+                }
+                return RootManager.getInstance(context).measureSet(paths);
+            }
             if (backend == Backend.SHIZUKU) return ShizukuManager.measureSet(context, paths);
         } catch (Exception ignored) {
         }
@@ -603,6 +641,30 @@ public final class AccessManager {
         if (useElevated) {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
+                boolean allNative = true;
+                try {
+                    for (String path : paths) {
+                        if (control != null && control.isCancelled()) throw new TransferCancelledException();
+                        boolean success = NativeRootManager.delete(context, path,
+                                (itemsDone, bytesDone, currentItem) -> {
+                                    if (progress != null) {
+                                        progress.onProgress((int) itemsDone, bytesDone);
+                                    }
+                                }, control);
+                        if (!success) {
+                            allNative = false;
+                            break;
+                        }
+                    }
+                    if (allNative) {
+                        RootManager.getInstance(context).invalidateListCache();
+                        return;
+                    }
+                } catch (TransferCancelledException tce) {
+                    throw tce;
+                } catch (Exception ignored) {
+                    // Fall back to shell deleteTree
+                }
                 RootManager.getInstance(context).deleteTree(paths, progress, control);
                 return;
             }
@@ -681,14 +743,6 @@ public final class AccessManager {
             if (kids != null) for (File k : kids) delete(context, k.getAbsolutePath(), false);
         }
         if (!f.delete() && f.exists()) throw new IOException("delete failed");
-        // A plain unlink can leave MediaProvider's row for the path in place,
-        // which blocks re-creating the same name (ENOENT). Drop the stale row
-        // and ask for a scan so the index matches the filesystem again.
-        if (!f.exists()) FileUtils.purgeStaleMediaRow(context, path);
-        try {
-            android.media.MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
-        } catch (Exception ignored) {
-        }
     }
 
     public static void rename(Context context, String oldPath, String newPath, boolean useElevated) throws IOException {
