@@ -19,6 +19,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
 import java.util.ArrayDeque;
@@ -511,29 +513,66 @@ public class FileUtils {
         // copies data without any user-space buffer, making this the fastest
         // possible file copy on Android internal and shared storage.
         if (LegacyUtils.supportsFileChannel) {
-            try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ);
-                 FileChannel dst = FileChannel.open(destinationFile.toPath(),
-                         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                         StandardOpenOption.TRUNCATE_EXISTING)) {
-                long size = src.size();
-                long transferred = 0;
-                while (transferred < size) {
-                    // The checkpoint sits between chunks, so a pause stops the
-                    // copy here and a resume continues from this exact offset.
-                    if (listener != null) listener.checkpoint();
-                    long want = listener == null ? size - transferred
-                            : Math.min(size - transferred, TRANSFER_CHUNK);
-                    long written = src.transferTo(transferred, want, dst);
-                    if (written <= 0) break;
-                    transferred += written;
-                    if (listener != null) listener.onBytes(written);
+            try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ)) {
+                try {
+                    transferTo(sourceFile.length(), destinationFile, src, listener);
+                    return;
+                } catch (NoSuchFileException e) {
+                    // Re-creating a name this app recently deleted or moved into
+                    // the recycle bin can fail with ENOENT even though the
+                    // folder exists: MediaProvider's index still owns the old
+                    // path and refuses to create it again. Stage the copy under
+                    // a fresh name and rename it over the destination, which
+                    // replaces the stale entry instead of colliding with it.
+                    File staged;
+                    try {
+                        staged = File.createTempFile(destinationFile.getName() + "-mp", ".part",
+                                destinationFile.getParentFile());
+                    } catch (IOException ignored) {
+                        throw e;
+                    }
+                    try {
+                        transferTo(0L, staged, src, listener);
+                        Files.move(staged.toPath(), destinationFile.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING);
+                        return;
+                    } catch (IOException e2) {
+                        //noinspection ResultOfMethodCallIgnored
+                        staged.delete();
+                        throw e;
+                    }
                 }
-                return;
             }
         }
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {
             copyFile(is, os, listener);
+        }
+    }
+
+    /**
+     * The chunked sendfile loop of {@link #copyFile(File, File, TransferListener)}.
+     * {@code knownSize} of {@code 0} means the source size must be read again
+     * (the recovery path re-reads it after a failed attempt).
+     */
+    private static void transferTo(long knownSize, File destinationFile,
+                                   FileChannel src, TransferListener listener) throws IOException {
+        try (FileChannel dst = FileChannel.open(destinationFile.toPath(),
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+                StandardOpenOption.TRUNCATE_EXISTING)) {
+            long size = knownSize > 0 ? knownSize : src.size();
+            long transferred = 0;
+            while (transferred < size) {
+                // The checkpoint sits between chunks, so a pause stops the
+                // copy here and a resume continues from this exact offset.
+                if (listener != null) listener.checkpoint();
+                long want = listener == null ? size - transferred
+                        : Math.min(size - transferred, TRANSFER_CHUNK);
+                long written = src.transferTo(transferred, want, dst);
+                if (written <= 0) break;
+                transferred += written;
+                if (listener != null) listener.onBytes(written);
+            }
         }
     }
 

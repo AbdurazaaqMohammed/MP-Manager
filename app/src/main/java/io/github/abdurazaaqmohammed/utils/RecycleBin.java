@@ -252,10 +252,12 @@ public final class RecycleBin {
         try {
             if (file.renameTo(target)) {
                 target.setLastModified(origLastMod);
+                rescanGone(context, file.getAbsolutePath());
                 return record(context, file, target, reason, origLastMod);
             }
             if (copyTree(file, target) && deleteFile(context, file)) {
                 target.setLastModified(origLastMod);
+                rescanGone(context, file.getAbsolutePath());
                 return record(context, file, target, reason, origLastMod);
             }
             // Plain I/O failed (root-only path): stage through the elevated backend.
@@ -264,6 +266,7 @@ public final class RecycleBin {
                     AccessManager.copyFile(context, file.getAbsolutePath(), target.getAbsolutePath(), true);
                     AccessManager.delete(context, file.getAbsolutePath(), true);
                     target.setLastModified(origLastMod);
+                    rescanGone(context, file.getAbsolutePath());
                     return record(context, file, target, reason, origLastMod);
                 } catch (Exception ignored) {
                     try {
@@ -279,6 +282,19 @@ public final class RecycleBin {
             }
         }
         return false;
+    }
+
+    /**
+     * A plain rename or unlink does not tell MediaProvider, whose index then
+     * still owns the old path — and on Android 11+ re-creating a file with the
+     * same name afterwards can fail with ENOENT. A scan of the now-missing
+     * path makes the provider drop the stale row.
+     */
+    private static void rescanGone(Context context, String path) {
+        try {
+            android.media.MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
+        } catch (Exception ignored) {
+        }
     }
 
     private static boolean record(Context context, File original, File target, String reason, long lastModified) {
@@ -340,11 +356,13 @@ public final class RecycleBin {
         try {
             if (entry.file.renameTo(target)) {
                 target.setLastModified(restoreTime);
+                rescanGone(context, target.getAbsolutePath());
                 forget(context, entry, target);
                 return new RestoreResult(target, wasRenamed);
             }
             if (copyTree(entry.file, target) && deleteFile(context, entry.file)) {
                 target.setLastModified(restoreTime);
+                rescanGone(context, target.getAbsolutePath());
                 forget(context, entry, target);
                 return new RestoreResult(target, wasRenamed);
             }
