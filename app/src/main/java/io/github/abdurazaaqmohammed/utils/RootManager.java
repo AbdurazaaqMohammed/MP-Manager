@@ -470,17 +470,22 @@ public class RootManager {
         return "'" + s.replace("'", "'\\''") + "'";
     }
 
-    private String[] suCommandForFs(String shellCommand) {
+    public static String[] suCommandForFs(Context context, String shellCommand) {
         boolean global = false;
         try {
-            global = prefersGlobalNs();
+            global = getInstance(context).prefersGlobalNs();
         } catch (Exception ignored) {
         }
+        String su = getInstance(context).suBinary();
         if (global) {
-            return new String[]{suBinary(), "-c",
+            return new String[]{su, "-c",
                     "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(shellCommand)};
         }
-        return new String[]{suBinary(), "-c", shellCommand};
+        return new String[]{su, "-c", shellCommand};
+    }
+
+    private String[] suCommandForFs(String shellCommand) {
+        return suCommandForFs(context, shellCommand);
     }
 
     public ShellResult executeGlobalNs(String command, int timeoutSeconds) {
