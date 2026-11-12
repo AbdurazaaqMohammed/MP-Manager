@@ -53,12 +53,6 @@ public class ProgressManager {
     private static final long TICK_MS = 400L;
     /** Ignore samples closer together than this; the rate would be pure noise. */
     private static final long SAMPLE_MIN_MS = 120L;
-    /**
-     * Hide the rate and ETA once the counter has been static this long: a
-     * stalled counter means the reported rate is stale, and dividing the
-     * remaining bytes by it produces absurd estimates like "come back tomorrow".
-     */
-    private static final long STALL_LIMIT_MS = 3000L;
     /** Weight of the newest sample in the exponential moving average. */
     private static final double SPEED_SMOOTHING = 0.45d;
     /** Determinate byte bars are scaled to this to avoid int overflow past 2 GB. */
@@ -106,9 +100,6 @@ public class ProgressManager {
     private long lastSampleMs = -1L;
     private long lastSampleBytes;
     private long lastSampleItems;
-    /** When the counters last actually moved, so a stall can be detected. */
-    private long lastByteMoveMs = -1L;
-    private long lastItemMoveMs = -1L;
     private double speedBps;
     private double itemRate;
 
@@ -584,15 +575,10 @@ public class ProgressManager {
             lastSampleMs = now;
             lastSampleBytes = bytesDone;
             lastSampleItems = progressVal;
-            lastByteMoveMs = now;
-            lastItemMoveMs = now;
             return;
         }
         // Guard against a torn read of the 64-bit counter on 32-bit devices.
         if (dBytes > 4L * 1024 * 1024 * 1024) return;
-
-        if (dBytes > 0) lastByteMoveMs = now;
-        if (dItems > 0) lastItemMoveMs = now;
 
         double instantBytes = dBytes * 1000.0d / dt;
         double instantItems = dItems * 1000.0d / dt;
@@ -783,36 +769,15 @@ public class ProgressManager {
     private String buildSpeedLine() {
         StringBuilder sb = new StringBuilder();
         long eta = -1L;
-        long elapsed = elapsedSeconds();
-        long now = SystemClock.elapsedRealtime();
 
         if (hasBytes() && speedBps >= 1d) {
-            boolean moving = lastByteMoveMs >= 0
-                    && now - lastByteMoveMs <= STALL_LIMIT_MS;
-            // A stalled counter (sampling gave up, shell is opaque) means the
-            // displayed rate is stale — hide it instead of extrapolating a
-            // remaining time from it.
-            if (moving) {
-                sb.append(activity.getString(R.string.progress_speed_bytes, formatSize((long) speedBps)));
-                long left = bytesTotal - bytesDone;
-                // Only show ETA after a brief settling period (at least 1.5s elapsed and reasonable speed) to avoid wild initial spikes
-                if (left > 0 && elapsed >= 1 && speedBps >= 1024d) {
-                    eta = (long) (left / speedBps);
-                    // Cap unreasonable ETA (over 48 hours)
-                    if (eta > 172800L) eta = -1L;
-                }
-            }
+            sb.append(activity.getString(R.string.progress_speed_bytes, formatSize((long) speedBps)));
+            long left = bytesTotal - bytesDone;
+            if (left > 0) eta = (long) (left / speedBps);
         } else if (!hasBytes() && maxVal > 0 && itemRate >= 0.2d) {
-            boolean moving = lastItemMoveMs >= 0
-                    && now - lastItemMoveMs <= STALL_LIMIT_MS;
-            if (moving) {
-                sb.append(activity.getString(R.string.progress_speed_items, Math.round(itemRate)));
-                int leftItems = maxVal - Math.min(progressVal, maxVal);
-                if (leftItems > 0 && elapsed >= 1) {
-                    eta = (long) (leftItems / itemRate);
-                    if (eta > 172800L) eta = -1L;
-                }
-            }
+            sb.append(activity.getString(R.string.progress_speed_items, Math.round(itemRate)));
+            int leftItems = maxVal - Math.min(progressVal, maxVal);
+            if (leftItems > 0) eta = (long) (leftItems / itemRate);
         }
 
         if (eta > 0) {

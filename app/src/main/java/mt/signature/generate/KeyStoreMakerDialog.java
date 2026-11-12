@@ -235,6 +235,18 @@ public class KeyStoreMakerDialog extends DialogFragment {
         // Set default country
         country.setText(requireContext().getResources().getConfiguration().locale.getCountry());
 
+        try {
+            File kDir = io.github.abdurazaaqmohammed.utils.UiPrefs.keysDir(requireContext());
+            String extPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+            String relPath = kDir.getAbsolutePath();
+            if (relPath.startsWith(extPath)) {
+                relPath = relPath.substring(extPath.length());
+            }
+            if (!relPath.endsWith("/")) relPath += "/";
+            directory.setText(relPath);
+        } catch (Exception ignored) {
+        }
+
         // Set listeners
         setupListeners();
     }
