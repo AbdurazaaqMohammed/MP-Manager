@@ -9,8 +9,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,8 +39,14 @@ public final class NativeRootManager {
         }
 
         synchronized (extractLock) {
+            if (cachedMpioPath != null) {
+                File f = new File(cachedMpioPath);
+                if (f.exists() && f.canExecute()) return cachedMpioPath;
+            }
             File internalDir = new File(context.getFilesDir(), "bin");
-            if (!internalDir.exists()) internalDir.mkdirs();
+            if (!internalDir.isDirectory() && !internalDir.mkdirs()) {
+                throw new IOException("Cannot create native tools directory: " + internalDir);
+            }
             File mpioBin = new File(internalDir, BIN_NAME);
 
             String preferredAbi = "arm64-v8a";
@@ -56,47 +60,25 @@ public final class NativeRootManager {
             }
 
             String assetPath = "bin/" + preferredAbi + "/" + BIN_NAME;
-            boolean extractNeeded = !mpioBin.exists() || mpioBin.length() == 0;
-            if (!extractNeeded) {
-                try (android.content.res.AssetFileDescriptor afd = context.getAssets().openFd(assetPath)) {
-                    if (afd.getLength() > 0 && afd.getLength() != mpioBin.length()) {
-                        extractNeeded = true;
-                    }
-                } catch (Exception ignored) {
-                    // compressed asset, compare using package lastUpdateTime or stream
-                    try (InputStream in = context.getAssets().open(assetPath)) {
-                        int available = in.available();
-                        if (available > 0 && available != mpioBin.length()) {
-                            extractNeeded = true;
-                        }
-                    } catch (Exception ignored2) {
-                    }
-                }
-            }
-
-            if (extractNeeded) {
+            // Once per app process, atomically install the current APK's helper.
+            // Binary length is not a version: a same-size bug fix must replace it too.
+            File temporary = File.createTempFile("mpio-", ".tmp", internalDir);
+            try {
                 try (InputStream in = context.getAssets().open(assetPath);
-                     OutputStream out = new FileOutputStream(mpioBin)) {
+                     FileOutputStream out = new FileOutputStream(temporary)) {
                     byte[] buffer = new byte[32768];
                     int len;
                     while ((len = in.read(buffer)) != -1) {
                         out.write(buffer, 0, len);
                     }
-                    out.flush();
-                } catch (IOException e) {
-                    // Fallback to arm64-v8a if specified ABI wasn't found
-                    try (InputStream in = context.getAssets().open("bin/arm64-v8a/" + BIN_NAME);
-                         OutputStream out = new FileOutputStream(mpioBin)) {
-                        byte[] buffer = new byte[32768];
-                        int len;
-                        while ((len = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, len);
-                        }
-                        out.flush();
-                    }
+                    out.getFD().sync();
                 }
-                mpioBin.setExecutable(true, false);
-                mpioBin.setReadable(true, false);
+                if (temporary.length() == 0 || !temporary.setExecutable(true, false)
+                        || !temporary.setReadable(true, false) || !temporary.renameTo(mpioBin)) {
+                    throw new IOException("Cannot install native copy helper: " + mpioBin);
+                }
+            } finally {
+                if (temporary.exists()) temporary.delete();
             }
 
             cachedMpioPath = mpioBin.getAbsolutePath();
@@ -185,67 +167,21 @@ public final class NativeRootManager {
      */
     public static boolean copy(Context context, String src, String dest,
                                ProgressCallback callback, TransferControl control) throws IOException {
+        if (control != null) control.checkpoint();
         String mpio = getMpioPath(context);
-        String shellCmd = mpio + " copy " + RootManager.escapeShellArg(src) + " " + RootManager.escapeShellArg(dest);
+        String shellCmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(mpio)
+                + " copy " + RootManager.escapeShellArg(src) + " " + RootManager.escapeShellArg(dest);
         String[] cmd = RootManager.suCommandForFs(context, shellCmd);
-
-        Process process = Runtime.getRuntime().exec(cmd);
-        AtomicBoolean cancelled = new AtomicBoolean(false);
-
-        Thread watcher = null;
-        if (control != null) {
-            watcher = new Thread(() -> {
-                while (process.isAlive()) {
-                    if (control.isCancelled()) {
-                        cancelled.set(true);
-                        process.destroyForcibly();
-                        break;
-                    }
+        Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        return NativeCopyProcess.run(process, callback == null ? null : callback::onProgress, control,
+                signal -> {
+                    Process signalProcess = Runtime.getRuntime().exec(RootManager.suCommandForFs(context, signal));
                     try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        break;
+                        if (!signalProcess.waitFor(10, TimeUnit.SECONDS)) signalProcess.destroyForcibly();
+                    } finally {
+                        if (signalProcess.isAlive()) signalProcess.destroyForcibly();
                     }
-                }
-            });
-            watcher.start();
-        }
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.startsWith("PROGRESS")) {
-                    // PROGRESS <done_files> <done_bytes> <cur_name>
-                    String[] parts = line.split("\\s+", 4);
-                    if (parts.length >= 3 && callback != null) {
-                        try {
-                            long files = Long.parseLong(parts[1]);
-                            long bytes = Long.parseLong(parts[2]);
-                            String curName = parts.length >= 4 ? parts[3] : "";
-                            callback.onProgress(files, bytes, curName);
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-                } else if (line.startsWith("COPY_DONE")) {
-                    break;
-                }
-            }
-        }
-
-        try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } finally {
-            if (watcher != null) watcher.interrupt();
-        }
-
-        if (cancelled.get() || (control != null && control.isCancelled())) {
-            throw new TransferCancelledException();
-        }
-
-        return process.exitValue() == 0;
+                });
     }
 
     /**

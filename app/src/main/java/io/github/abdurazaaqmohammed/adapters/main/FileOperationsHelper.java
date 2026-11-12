@@ -66,6 +66,7 @@ import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.NativeCopyException;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
@@ -316,7 +317,8 @@ public class FileOperationsHelper {
 
     /**
      * Bridges {@link ShellProgress} counters from a single elevated shell process
-     * into the dialog, walking the op list so the file name follows along.
+     * into the dialog. Select the current op by completed files rather than
+     * treating every byte update from mpio as an item-completion marker.
      *
      * @param ops    ordered exactly as the shell will run them
      * @param poller optional sampler that fills in the bytes of the item in
@@ -341,15 +343,21 @@ public class FileOperationsHelper {
         final int fileOffset = Math.max(0, totalFiles - batchFiles);
         final long byteOffset = Math.max(0L, totalBytes - batchBytes);
         return new ShellProgress.Listener() {
-            private int next = 0;
+            private int current = -1;
 
             @Override
             public void onProgress(int filesDone, long bytesDone) {
                 if (totalFiles > 0) pm.setProgress(Math.min(fileOffset + filesDone, totalFiles), totalFiles);
                 if (totalBytes > 0) pm.setBytes(Math.min(byteOffset + bytesDone, totalBytes), totalBytes);
-                // A marker means op[next] just finished, so show the one after it.
                 if (ops == null || ops.isEmpty()) return;
-                int show = Math.min(next, ops.size() - 1);
+                int show = 0;
+                long boundary = Math.max(1, ops.get(0).files);
+                while (show < ops.size() - 1 && filesDone >= boundary) {
+                    show++;
+                    boundary += Math.max(1, ops.get(show).files);
+                }
+                if (show == current) return;
+                current = show;
                 RootManager.CopyOp op = ops.get(show);
                 pm.setPaths(op.src, op.dest);
                 pm.setFile(new File(op.dest));
@@ -358,7 +366,6 @@ public class FileOperationsHelper {
                     for (int i = 0; i < show; i++) before += Math.max(0L, ops.get(i).bytes);
                     poller.watch(new File(op.dest), before);
                 }
-                next++;
             }
         };
     }
@@ -1099,7 +1106,11 @@ public class FileOperationsHelper {
                 opFiles += im.files;
             }
             if (!ops.isEmpty()) {
-                DestSizePoller poller = newPoller(totalBytes);
+                // mpio already reports every written chunk. Sampling a raw
+                // /data/media copy through FUSE can return stale sizes and race
+                // those counters, making the bar jump backwards.
+                DestSizePoller poller = useElevated && AccessManager.active(context) == AccessManager.Backend.ROOT
+                        ? null : newPoller(totalBytes);
                 try {
                     if (listener != null) {
                         listener.onFile(new File(ops.get(0).src), new File(ops.get(0).dest));
@@ -1115,7 +1126,7 @@ public class FileOperationsHelper {
                 } catch (Exception e) {
                     // A cancelled batch must not fall through to the plain
                     // copy path below: the user asked to stop.
-                    if (TransferCancelledException.isCancellation(e)) throw e;
+                    if (TransferCancelledException.isCancellation(e) || e instanceof NativeCopyException) throw e;
                 } finally {
                     if (poller != null) poller.stop();
                 }

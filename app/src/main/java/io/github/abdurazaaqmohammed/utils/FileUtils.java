@@ -456,27 +456,30 @@ public class FileUtils {
      */
     public static void copyFile(File sourceFile, File destinationFile, TransferListener listener) throws IOException {
         if (listener != null) listener.onFile(sourceFile, destinationFile);
+        if (sourceFile.getCanonicalFile().equals(destinationFile.getCanonicalFile())) {
+            throw new IOException("Source and destination are the same file: " + sourceFile);
+        }
         // FileChannel.transferTo delegates to sendfile(2) on Linux — the kernel
         // copies data without any user-space buffer, making this the fastest
         // possible file copy on Android internal and shared storage.
         if (LegacyUtils.supportsFileChannel) {
+            if (destinationFile.exists() && Files.isSameFile(sourceFile.toPath(), destinationFile.toPath())) {
+                throw new IOException("Source and destination are the same file: " + sourceFile);
+            }
+            boolean destinationOpened = false;
             try (FileChannel src = FileChannel.open(sourceFile.toPath(), StandardOpenOption.READ);
                  FileChannel dst = openOutputChannel(destinationFile)) {
-                long size = src.size();
-                long transferred = 0;
-                while (transferred < size) {
-                    // The checkpoint sits between chunks, so a pause stops the
-                    // copy here and a resume continues from this exact offset.
-                    if (listener != null) listener.checkpoint();
-                    long want = listener == null ? size - transferred
-                            : Math.min(size - transferred, TRANSFER_CHUNK);
-                    long written = src.transferTo(transferred, want, dst);
-                    if (written <= 0) break;
-                    transferred += written;
-                    if (listener != null) listener.onBytes(written);
-                }
-                return;
+                destinationOpened = true;
+                FileChannelCopy.copy(src, dst, listener == null ? Long.MAX_VALUE : TRANSFER_CHUNK,
+                        listener == null ? null : listener::checkpoint,
+                        listener == null ? null : listener::onBytes);
+            } catch (IOException | TransferCancelledException e) {
+                // Do not leave a truncated file for the caller to mistake for a
+                // successful copy. The source remains intact.
+                if (destinationOpened) destinationFile.delete();
+                throw e;
             }
+            return;
         }
         try (InputStream is = getInputStream(sourceFile);
              OutputStream os = getOutputStream(destinationFile)) {

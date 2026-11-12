@@ -519,33 +519,50 @@ public final class AccessManager {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             // High-performance Native I/O Daemon (mpio) path:
-            boolean allNative = true;
+            int completedFiles = 0;
+            long completedBytes = 0L;
+            int completedOps = 0;
             try {
                 for (RootManager.CopyOp op : ops) {
-                    if (control != null && control.isCancelled()) throw new TransferCancelledException();
-                    final int baseFiles = op.files;
-                    final long baseBytes = op.bytes;
+                    if (control != null) control.checkpoint();
+                    final int baseFiles = completedFiles;
+                    final long baseBytes = completedBytes;
+                    final long[] itemDone = {0L, 0L};
                     boolean success = NativeRootManager.copy(context, op.src, op.dest,
                             (filesDone, bytesDone, currentItem) -> {
+                                itemDone[0] = filesDone;
+                                itemDone[1] = bytesDone;
                                 if (progress != null) {
-                                    progress.onProgress((int) filesDone, bytesDone);
+                                    progress.onProgress(baseFiles + (int) Math.min(Integer.MAX_VALUE, filesDone),
+                                            baseBytes + bytesDone);
                                 }
                             }, control);
-                    if (!success) {
-                        allNative = false;
-                        break;
+                    if (!success) throw new NativeCopyException("Native copy did not complete: " + op.src);
+                    completedFiles += (int) Math.min(Integer.MAX_VALUE, itemDone[0]);
+                    completedBytes += itemDone[1];
+                    completedOps++;
+                }
+                return;
+            } catch (TransferCancelledException | NativeCopyException e) {
+                // An I/O failure is not a missing tool. Never hide it by copying
+                // the whole batch again (or letting a partial copy look complete).
+                throw e;
+            } catch (IOException unavailable) {
+                // Only extraction/process startup can fall back, and only for
+                // items not already copied successfully.
+                final int baseFiles = completedFiles;
+                final long baseBytes = completedBytes;
+                ShellProgress.Listener relay = progress == null ? null : new ShellProgress.Listener() {
+                    @Override public void onProgress(int filesDone, long bytesDone) {
+                        progress.onProgress(baseFiles + filesDone, baseBytes + bytesDone);
                     }
-                }
-                if (allNative) {
-                    RootManager.getInstance(context).invalidateListCache();
-                    return;
-                }
-            } catch (TransferCancelledException tce) {
-                throw tce;
-            } catch (Exception ignored) {
-                // Fall back to standard shell copy
+                    @Override public void onFailure() { progress.onFailure(); }
+                    @Override public void onPid(int pid) { progress.onPid(pid); }
+                };
+                RootManager.getInstance(context).copyAllPreserving(ops.subList(completedOps, ops.size()), relay, control);
+            } finally {
+                RootManager.getInstance(context).invalidateListCache();
             }
-            RootManager.getInstance(context).copyAllPreserving(ops, progress, control);
             return;
         }
         if (backend == Backend.SHIZUKU) {
