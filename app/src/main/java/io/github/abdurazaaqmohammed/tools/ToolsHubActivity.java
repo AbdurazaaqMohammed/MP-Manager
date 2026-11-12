@@ -100,7 +100,7 @@ public class ToolsHubActivity extends BaseActivity {
         if (!io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable()) {
             List<ToolRegistry.ToolItem> filtered = new java.util.ArrayList<>();
             for (ToolRegistry.ToolItem item : allTools) {
-                if (!"frida".equals(item.id())) filtered.add(item);
+                if (!"frida".equals(item.id()) && !"jiagudumper".equals(item.id())) filtered.add(item);
             }
             allTools = filtered;
         }
@@ -510,6 +510,8 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity.class));
         } else if ("setedit".equals(item.id())) {
             startActivity(new Intent(this, SetEditActivity.class));
+        } else if ("jiagudumper".equals(item.id())) {
+            io.github.abdurazaaqmohammed.features.apk.JiaguDumpDialog.show(this);
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());

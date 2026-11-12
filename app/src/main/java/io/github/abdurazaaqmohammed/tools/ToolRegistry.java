@@ -49,6 +49,9 @@ public class ToolRegistry {
         tools.add(new ToolItem("setedit", context.getString(R.string.set_edit),
                 context.getString(R.string.set_edit_subtitle),
                 resId(context, "baseline_settings_24", pkg), context.getString(R.string.cat_device)));
+        tools.add(new ToolItem("jiagudumper", context.getString(R.string.jiagu_dumper_title),
+                context.getString(R.string.jiagu_dumper_subtitle),
+                resId(context, "terminal_24px", pkg), context.getString(R.string.cat_device)));
         return tools;
     }
 

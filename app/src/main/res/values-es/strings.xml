@@ -2314,4 +2314,19 @@ Layout Inspector
     <string name="frida_console_sort_name">Nombre</string>
     <string name="frida_console_sort_updated">Fecha de actualización</string>
     <string name="frida_console_sort_installed">Fecha de instalación</string>
+    <!-- Jiagu unpacker -->
+    <string name="jiagu_dumper_title">Jiagu Dumper</string>
+    <string name="jiagu_dumper_subtitle">Extraer DEX desempaquetado de apps protegidas (root)</string>
+    <string name="jiagu_root_required">Jiagu Dumper necesita root: lee el DEX desempaquetado de la memoria del proceso en ejecución.</string>
+    <string name="jiagu_package_hint">Paquete objetivo (com.example.app)</string>
+    <string name="jiagu_wait_hint">Espera tras el inicio para el desempaquetado (segundos)</string>
+    <string name="jiagu_apk_path_hint">Ruta del APK original (opcional, reconstruir tras el volcado)</string>
+    <string name="jiagu_invalid_package">Introduce un nombre de paquete válido</string>
+    <string name="jiagu_dump_start">INICIAR VOLCADO</string>
+    <string name="jiagu_unpack">Desempaquetador Jiagu</string>
+    <string name="jiagu_not_protected">Este APK no parece protegido con Jiagu (la aplicación no es com.stub.StubApp y no hay libjiagu).</string>
+    <string name="jiagu_no_dump">No hay volcado de DEX para %1$s.\n\nEjecuta primero Herramientas → Jiagu Dumper: abre la app protegida, deja que se desempaquete y vuelca los DEX reales de la memoria (requiere root).</string>
+    <string name="jiagu_open_dumper">Abrir Jiagu Dumper</string>
+    <string name="jiagu_pick_app">Elegir entre las apps instaladas</string>
+    <string name="jiagu_unpack_confirm">¿Reconstruir este APK a partir de %1$d archivo(s) DEX volcados?\n\nVolcado: %2$s\n\nLa aplicación stub se sustituye por la real encontrada en el volcado y se eliminan todos los hooks inyectados. Hay que firmar el resultado antes de instalar.</string>
 </resources>
