@@ -1302,9 +1302,14 @@ public class SidebarController {
                 .setTitle(entry.displayName())
                 .setMessage(details.toString())
                 .setNeutralButton(R.string.delete, (d, w) -> {
-                    RecycleBin.deleteEntry(activity, entry);
-                    Extensions.showMessage(activity, R.string.item_deleted);
-                    if (onUpdated != null) onUpdated.run();
+                    d.dismiss();
+                    new Thread(() -> {
+                        RecycleBin.deleteEntry(activity, entry);
+                        activity.runOnUiThread(() -> {
+                            Extensions.showMessage(activity, R.string.item_deleted);
+                            if (onUpdated != null) onUpdated.run();
+                        });
+                    }).start();
                 })
                 .setPositiveButton(R.string.action_jump, (d, w) -> {
                     d.dismiss();

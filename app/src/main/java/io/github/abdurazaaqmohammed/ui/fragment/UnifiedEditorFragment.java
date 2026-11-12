@@ -1845,14 +1845,35 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         intent.addCategory("android.intent.category.DEFAULT");
         intent.setType("text/plain");
         final List<ResolveInfo> resolveInfoList = packageManager.queryIntentActivities(intent, 0);
+        if (resolveInfoList.isEmpty()) {
+            Extensions.showMessage(requireActivity(), R.string.translation_no_services);
+            return;
+        }
+        String currentPkg = sharedPreferences.getString("selectedPackage", "");
+        final String[] selectedPackage = { currentPkg };
+        int selectedIndex = -1;
+        String[] items = new String[resolveInfoList.size()];
+        for (int i = 0; i < resolveInfoList.size(); i++) {
+            ResolveInfo ri = resolveInfoList.get(i);
+            String pkg = ri.activityInfo.packageName;
+            items[i] = ri.activityInfo.applicationInfo.loadLabel(packageManager) + " - " + ri.loadLabel(packageManager);
+            if (pkg.equals(currentPkg)) {
+                selectedIndex = i;
+            }
+        }
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.available_tl)
-                .setSingleChoiceItems(resolveInfoList.stream()
-                        .map(ri -> ri.activityInfo.applicationInfo.loadLabel(packageManager) + " - " + ri.loadLabel(packageManager))
-                        .toArray(String[]::new),
-                        -1, (dialog, which) -> {})
+                .setSingleChoiceItems(items, selectedIndex, (dialog, which) -> {
+                    selectedPackage[0] = resolveInfoList.get(which).activityInfo.packageName;
+                })
                 .setPositiveButton(R.string.save, (dialog, which) -> {
-                    // handled via listview
+                    if (selectedPackage[0] == null || selectedPackage[0].isEmpty()) {
+                        Extensions.showMessage(requireActivity(), R.string.translation_select_app);
+                        return;
+                    }
+                    preferencesEditor.putString("selectedPackage", selectedPackage[0]);
+                    preferencesEditor.apply();
+                    Extensions.showMessage(requireActivity(), R.string.translation_service_saved);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();

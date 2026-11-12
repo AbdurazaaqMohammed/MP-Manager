@@ -56,7 +56,6 @@ import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
-import io.github.abdurazaaqmohammed.data.prefs.PaneCache;
 import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
@@ -228,6 +227,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * never waits on storage I/O. Single thread keeps ordering predictable.
      */
     private final ExecutorService listingExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService statsExecutor = Executors.newSingleThreadExecutor();
     /** Generation per pane: a stale background listing never overwrites a newer pane. */
     private volatile long paneLoadGen1;
     private volatile long paneLoadGen2;
@@ -1450,13 +1450,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 if (!restored) {
                     boolean locateMode = !TextUtils.isEmpty(locate);
-                    // Instant paint: only when the cache matches the folder this
-                    // start will actually open (home or last-opened per pane),
-                    // otherwise the paint would flash the wrong folder.
-                    String expect1 = expectedStartupPath(true, startHome1);
-                    String expect2 = expectedStartupPath(false, startHome2);
-                    if (!locateMode) paintCachedPane(true, expect1);
-                    paintCachedPane(false, expect2);
                     // Real listing off the main thread. Startup-folder
                     // resolution can hit the elevated backend (shell), so it
                     // runs on the worker too, then binds back on the main thread.
@@ -1560,22 +1553,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
         return home;
-    }
-
-    private String expectedStartupPath(boolean pane1, File home) {
-        try {
-            if ("last".equals(UiPrefs.startupMode(this, pane1))) {
-                String saved = PreferenceManager.getDefaultSharedPreferences(this)
-                        .getString(pane1 ? "last_path_1" : "last_path_2", null);
-                if (!TextUtils.isEmpty(saved)) return new File(saved).getAbsolutePath();
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            return home == null ? null : home.getAbsolutePath();
-        } catch (Exception ignored) {
-            return null;
-        }
     }
 
     /**
@@ -1909,7 +1886,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             pane2Folder = folder;
             if (addToHistory) pushNavigationHistory(false, new NavigationHistoryEntry(folder, false, null));
         }
-        setCurrentFolder(folder, files);
+        if (pane1 == (lastPaneSelected == 1)) setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = SafFs.parentOf(folder);
         // Without a parent the ".." row points at the folder itself, which
@@ -2210,7 +2187,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 pushNavigationHistory(false, new NavigationHistoryEntry(folder, false, null));
             }
         }
-        setCurrentFolder(folder, files);
+        if (pane1 == (lastPaneSelected == 1)) setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = BootInspectManager.getParentOrImageOrigin(folder);
         if (parent == null || parent.equals(folder.getParentFile())) {
@@ -2460,8 +2437,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     pushNavigationHistory(false, new NavigationHistoryEntry(zipFile, true, path));
                 }
             }
-
-        setCurrentFolder(zipFile.getPath() + "!" + path, entries);
+        if (pane1 == (lastPaneSelected == 1)) setCurrentFolder(zipFile.getPath() + "!" + path, entries);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         if (pane != null) {
             boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
@@ -2552,71 +2528,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } catch (Exception ignored) {
                     }
                 }
-                // Persist the instant-paint cache off the main thread, but only
-                // for folders a future cold start will actually open (the home
-                // folder, or anything when "last opened" mode is on). Caching
-                // every browsed folder would paint the wrong folder on next
-                // start when home mode is on.
-                listingExecutor.execute(() -> {
-                    try {
-                        String expect = expectedStartupPath(pane1, pane1 ? homeDir1 : homeDir2);
-                        if (expect == null || !expect.equals(folderPath)) return;
-                        PaneCache.save(MainActivity.this, pane1, folderPath, files);
-                    } catch (Exception ignored) {
-                    }
-                });
             });
         });
-    }
-
-    /**
-     * Paints the last cached listing for a pane slot: no stat, no sort, one
-     * tiny JSON read. Returns true when something was painted. The real
-     * listing (loadFolderInPaneAsync) replaces it right after.
-     */
-    private boolean paintCachedPane(boolean pane1, String expectedPath) {
-        try {
-            PaneCache.Snapshot snap = PaneCache.load(this, pane1);
-            if (snap == null || snap.dirPath == null || snap.dirPath.isEmpty()) return false;
-            if (expectedPath == null || !expectedPath.equals(snap.dirPath)) return false;
-            File dir = new File(snap.dirPath);
-            int n = snap.names.size();
-            File[] files = new File[n];
-            for (int i = 0; i < n; i++) files[i] = new File(dir, snap.names.get(i));
-            if (pane1) {
-                currentPane1Files = files;
-                pane1Folder = dir;
-            } else {
-                currentPane2Files = files;
-                pane2Folder = dir;
-            }
-            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-            if (pane == null) return false;
-            File parent = dir.getParentFile() != null ? dir.getParentFile() : dir;
-            pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
-            // Header now; folder counts come from the snapshot flags so no
-            // per-file stat happens on the main thread.
-            try {
-                TextView pathView = findViewById(R.id.currentFolderPath);
-                if (pathView != null) {
-                    pathView.setText(dir.getPath());
-                    uiHelper.scrollTextView(pathView);
-                }
-                int folders = 0;
-                for (int i = 0; i < snap.isDir.size() && i < n; i++) {
-                    try {
-                        if (snap.isDir.get(i)) folders++;
-                    } catch (Exception ignored) {
-                    }
-                }
-                TextView countView = findViewById(R.id.folderCount);
-                if (countView != null) countView.setText(rss.getString(R.string.folders_files_x, folders, n - folders));
-            } catch (Exception ignored) {
-            }
-            return true;
-        } catch (Exception ignored) {
-            return false;
-        }
     }
 
     /**
@@ -3269,7 +3182,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // on the main thread blocked the first frame of big listings such as
         // /vendor, so count in the background and post just the two numbers.
         final File folder = curr;
-        listingExecutor.execute(() -> {
+        statsExecutor.execute(() -> {
             int foldersCount = 0;
             for (int i = 0; i < files.length; i++) {
                 File f = files[i];
@@ -3503,6 +3416,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ftp.close();
         try {
             listingExecutor.shutdownNow();
+            statsExecutor.shutdownNow();
         } catch (Exception ignored) {
         }
         try {

@@ -58,6 +58,10 @@ public final class DirSizeCache {
         if (context != null) appContext = new WeakReference<>(context.getApplicationContext());
     }
 
+    public static Context getContext() {
+        return appContext == null ? null : appContext.get();
+    }
+
     /**
      * Parses the cache file off the main thread. Only worth doing when folder
      * sizes are actually shown ("Always" mode) — otherwise the file is never

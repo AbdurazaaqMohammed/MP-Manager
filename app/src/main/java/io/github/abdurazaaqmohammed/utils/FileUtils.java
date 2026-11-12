@@ -21,18 +21,9 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
@@ -345,102 +336,29 @@ public class FileUtils {
     }
 
     /**
-     * Parallel multi-threaded directory copy utilizing all available processor cores.
-     * Fast-walks the folder structure to create directories and queues file copies
-     * to a ThreadPoolExecutor sized to {@link Runtime#availableProcessors()}.
+     * Recursive copy that reports every file it starts and every chunk it writes,
+     * so a single walk can drive both the item counter and the byte rate.
      */
     public static void copyFolder(File src, File dest, TransferListener listener) throws IOException {
         if (listener != null) listener.checkpoint();
-        if (!src.isDirectory()) {
+        if (src.isDirectory()) {
+            if (!dest.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                dest.mkdir();
+            }
+            String[] children = src.list();
+            if (children == null) return;
+            for (String child : children) {
+                if (listener != null) listener.checkpoint();
+                File srcChild = new File(src, child);
+                File dstChild = new File(dest, child);
+                copyFolder(srcChild, dstChild, listener);
+            }
+        } else {
+            // dest might be the parent dir OR the exact target file (when called
+            // from the recursive case above it is always the exact target file).
             File target = dest.isDirectory() ? new File(dest, src.getName()) : dest;
             copyFile(src, target, listener);
-            return;
-        }
-
-        // Collect all file pairs to copy and directories to create
-        List<File[]> filePairs = new ArrayList<>();
-        Deque<File[]> dirQueue = new ArrayDeque<>();
-        dirQueue.add(new File[]{src, dest});
-
-        while (!dirQueue.isEmpty()) {
-            if (listener != null) listener.checkpoint();
-            File[] current = dirQueue.poll();
-            File currentSrc = current[0];
-            File currentDest = current[1];
-
-            if (!currentDest.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                currentDest.mkdirs();
-            }
-
-            File[] children = currentSrc.listFiles();
-            if (children == null) continue;
-
-            for (File child : children) {
-                File targetChild = new File(currentDest, child.getName());
-                if (child.isDirectory()) {
-                    dirQueue.add(new File[]{child, targetChild});
-                } else {
-                    filePairs.add(new File[]{child, targetChild});
-                }
-            }
-        }
-
-        if (filePairs.isEmpty()) return;
-
-        // If only 1 file or 1 core, avoid thread pool overhead
-        int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
-        if (cores <= 1 || filePairs.size() <= 1) {
-            for (File[] pair : filePairs) {
-                if (listener != null) listener.checkpoint();
-                copyFile(pair[0], pair[1], listener);
-            }
-            return;
-        }
-
-        // Multi-threaded parallel file copy across CPU cores (clamped between 2 and 16)
-        int threads = Math.min(filePairs.size(), Math.max(2, Math.min(cores, 16)));
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-        AtomicReference<Throwable> firstError = new AtomicReference<>();
-        List<Future<?>> futures = new ArrayList<>(filePairs.size());
-
-        try {
-            for (File[] pair : filePairs) {
-                if (listener != null) listener.checkpoint();
-                if (firstError.get() != null) break;
-
-                final File s = pair[0];
-                final File d = pair[1];
-                futures.add(pool.submit(() -> {
-                    if (firstError.get() != null) return;
-                    try {
-                        copyFile(s, d, listener);
-                    } catch (Throwable t) {
-                        firstError.compareAndSet(null, t);
-                    }
-                }));
-            }
-
-            for (Future<?> f : futures) {
-                try {
-                    f.get();
-                } catch (ExecutionException e) {
-                    firstError.compareAndSet(null, e.getCause() != null ? e.getCause() : e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    firstError.compareAndSet(null, e);
-                    break;
-                }
-            }
-        } finally {
-            pool.shutdownNow();
-        }
-
-        Throwable err = firstError.get();
-        if (err != null) {
-            if (err instanceof TransferCancelledException) throw (TransferCancelledException) err;
-            if (err instanceof IOException) throw (IOException) err;
-            throw new IOException("Parallel copy failed: " + err.getMessage(), err);
         }
     }
 
@@ -572,11 +490,11 @@ public class FileUtils {
         }
     }
 
-    /** I/O buffer size: 256 KB gives optimal throughput on modern UFS / FUSE / OTG storage. */
-    private static final int IO_BUFFER_SIZE = 262144;
+    /** I/O buffer size: 64 KB gives good throughput on FUSE / shared storage. */
+    private static final int IO_BUFFER_SIZE = 65536;
 
-    /** Granularity of the reported transfer progress: 2 MB keeps the UI smooth without high frequency callbacks. */
-    private static final long TRANSFER_CHUNK = 2L * 1024L * 1024L;
+    /** Granularity of the reported transfer progress: 1 MB keeps the UI smooth. */
+    private static final long TRANSFER_CHUNK = 1024L * 1024L;
 
     public static void copyFile(InputStream is, OutputStream os) throws IOException {
         if (LegacyUtils.supportsWriteExternalStorage) {

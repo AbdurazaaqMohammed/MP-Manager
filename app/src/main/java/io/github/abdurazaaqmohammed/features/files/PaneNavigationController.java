@@ -53,8 +53,8 @@ public class PaneNavigationController {
             NavigationHistoryEntry current = (historyIndex >= 0 && historyIndex < history.size()) ? history.get(historyIndex) : null;
             while (historyIndex > 0) {
                 NavigationHistoryEntry entry = history.get(--historyIndex);
-                if (current != null && current.file() != null && entry.file() != null
-                        && current.file().equals(entry.file())) {
+                if (current != null && current.isZip() && entry.isZip()
+                        && current.file() != null && current.file().equals(entry.file())) {
                     continue; // Skip deeper levels in same archive
                 }
                 setIndex(pane1, historyIndex);

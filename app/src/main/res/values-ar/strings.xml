@@ -2532,4 +2532,11 @@
     <string name="app_ops_mode_deny_hard">حظر (رفض كامل)</string>
     <string name="app_ops_toast_mode_set">تم تعيين وضع %1$s إلى %2$s</string>
     <string name="folder_sizes_cache_reset">تمت إعادة تعيين كاش مساحات المجلدات. جاري إعادة الحساب…</string>
+    <string name="calculating">جاري الحساب</string>
+    <string name="clear_cache">مسح التخزين المؤقت (الكاش)</string>
+    <string name="clear_cache_desc">تحرير الملفات المؤقتة وبقايا الأرشيفات مع الحفاظ على كاش الأيقونات</string>
+    <string name="clear_cache_confirm_title">تنظيف كاش التطبيق الذكي؟</string>
+    <string name="clear_cache_confirm_msg">سيتم حذف كافة الملفات المؤقتة وبقايا الأرشيفات والـ Staging الضخمة (%s).\n\nسيتم الاحتفاظ بكاش أيقونات التطبيقات والمصغرات لضمان استمرار سرعة وسلاسة التصفح.</string>
+    <string name="clear_cache_success">تم تنظيف الكاش بنجاح (تم تحرير %s)</string>
+    <string name="clear_cache_empty">التخزين المؤقت نظيف بالفعل</string>
 </resources>
