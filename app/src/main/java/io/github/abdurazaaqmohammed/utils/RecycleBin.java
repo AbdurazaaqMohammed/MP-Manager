@@ -285,12 +285,13 @@ public final class RecycleBin {
     }
 
     /**
-     * A plain rename or unlink does not tell MediaProvider, whose index then
-     * still owns the old path — and on Android 11+ re-creating a file with the
-     * same name afterwards can fail with ENOENT. A scan of the now-missing
-     * path makes the provider drop the stale row.
+     * A plain rename or unlink does not always clear MediaProvider's index,
+     * and while a stale row still owns a path, Android 11+ can fail to
+     * re-create a file with the same name (ENOENT). Drop the stale row and
+     * request a scan so the index matches the filesystem again.
      */
     private static void rescanGone(Context context, String path) {
+        FileUtils.purgeStaleMediaRow(context, path);
         try {
             android.media.MediaScannerConnection.scanFile(context, new String[]{path}, null, null);
         } catch (Exception ignored) {

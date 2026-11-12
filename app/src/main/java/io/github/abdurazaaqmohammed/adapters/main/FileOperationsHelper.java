@@ -755,6 +755,10 @@ public class FileOperationsHelper {
             if (dest.isDirectory()) deleteRecursive(dest);
             else //noinspection ResultOfMethodCallIgnored
                 dest.delete();
+            // Free the name for re-creation: a plain unlink can leave a stale
+            // MediaProvider row that makes the next write to the same path
+            // fail with ENOENT.
+            if (!dest.exists()) FileUtils.purgeStaleMediaRow(context, dest.getAbsolutePath());
         } catch (Exception ignored) {
         }
     }

@@ -978,6 +978,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ShizukuFileOps.init(this);
         DirSizeCache.init(this);
+        FileUtils.initContext(this);
         // Logcat capture is opt-in at app start; opening the Logcat screen
         // always starts it regardless of this preference.
         if (PreferenceManager.getDefaultSharedPreferences(this)
