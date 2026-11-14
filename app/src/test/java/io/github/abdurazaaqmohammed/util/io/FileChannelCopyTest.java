@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;

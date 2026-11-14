@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.NativeProcess;
 

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.feature.system.SystemImageEngine;
 import org.junit.Test;

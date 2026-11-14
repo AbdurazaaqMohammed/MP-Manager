@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.util.archive;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;

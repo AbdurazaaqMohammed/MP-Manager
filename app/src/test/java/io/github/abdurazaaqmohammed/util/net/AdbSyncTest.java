@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.util.net;
 
 import io.github.abdurazaaqmohammed.util.net.AdbSync;
 

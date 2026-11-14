@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.util.misc;
 
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.misc.HexPageCache;

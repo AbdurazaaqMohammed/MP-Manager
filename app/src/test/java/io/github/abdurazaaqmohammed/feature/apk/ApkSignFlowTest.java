@@ -1,5 +1,6 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
