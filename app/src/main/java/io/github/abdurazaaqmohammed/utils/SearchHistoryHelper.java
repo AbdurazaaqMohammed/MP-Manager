@@ -15,6 +15,7 @@ public final class SearchHistoryHelper {
 
     public static final String KEY_MAIN = "search_history";
     public static final String KEY_DEX = "dex_search_history";
+    public static final String KEY_DEX_STRINGS_FILTER = "dex_strings_filter_history";
     public static final String KEY_ARSC_PLUS = "arsc_plus_search_history";
     public static final String KEY_COMPARE_DEX = "compare_dex_search_history";
     public static final String KEY_COMPARE_TEXT = "compare_text_search_history";

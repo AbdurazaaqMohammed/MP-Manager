@@ -52,6 +52,7 @@ public final class SearchHistoryDropdown {
         listView.setOnItemLongClickListener((parent, view, position, id) -> {
             SearchHistoryHelper.Item it = adapter.getItem(position);
             if (it != null) {
+                Haptics.perform(view, Haptics.Event.ACTION);
                 it.pinned = !it.pinned;
                 List<SearchHistoryHelper.Item> pinned = new ArrayList<>();
                 List<SearchHistoryHelper.Item> rest = new ArrayList<>();
@@ -151,16 +152,19 @@ public final class SearchHistoryDropdown {
             int s = (int) (32 * context.getResources().getDisplayMetrics().density);
             LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(s, s);
             del.setPadding(pad / 2, pad / 2, pad / 2, pad / 2);
+            del.setContentDescription(context.getString(R.string.delete));
             try {
                 del.setImageTintList(ColorStateList.valueOf(0xFF888888));
             } catch (Exception ignored) {
             }
             del.setOnClickListener(v -> {
+                Haptics.perform(v, Haptics.Event.ACTION);
                 if (onDelete != null) onDelete.onDelete(it.query);
             });
             if(it.pinned) {
                 ImageView pin = new ImageView(context);
                 pin.setImageResource(R.drawable.keep_24px);
+                pin.setContentDescription(context.getString(R.string.pinned_history_item));
                 row.addView(pin, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             }
             row.addView(text, tp);

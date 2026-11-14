@@ -2381,8 +2381,9 @@ public class DexEditorActivity extends BaseActivity {
         });
     }
 
-    public void showStringFilterDialog(final StringAdapter adapter) {
+    public AlertDialog showStringFilterDialog(final StringAdapter adapter) {
         final EditText editText = new EditText(this);
+        editText.setId(R.id.dex_strings_filter_input);
         ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         editText.setLayoutParams(params);
         editText.setHint(R.string.type_to_filter);
@@ -2390,18 +2391,49 @@ public class DexEditorActivity extends BaseActivity {
 
         int pad = (int) getDip(16);
         LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad, pad, pad);
         container.setLayoutParams(params);
-        container.addView(UiFields.wrap(this, editText, null, 0));
+        com.google.android.material.textfield.TextInputLayout filterBox = UiFields.wrap(this, editText, null, 0);
+        filterBox.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_CUSTOM);
+        filterBox.setEndIconDrawable(R.drawable.baseline_arrow_drop_down_24);
+        filterBox.setEndIconContentDescription(R.string.history);
+        filterBox.setEndIconOnClickListener(v -> {
+            var history = io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this,
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER);
+            if (history.isEmpty()) {
+                Extensions.showMessage(this, R.string.history_empty);
+                return;
+            }
+            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(this, filterBox, history,
+                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+                        @Override public void onSelect(String query) {
+                            editText.setText(query);
+                            editText.setSelection(editText.length());
+                        }
+                        @Override public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(DexEditorActivity.this,
+                                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, items);
+                        }
+                    });
+        });
+        container.addView(filterBox);
 
         AlertDialog filterDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.filter_strings)
                 .setView(container)
-                .setPositiveButton(R.string.apply, (d, w) -> adapter.setFilter(editText.getText().toString()))
+                .setPositiveButton(R.string.apply, (d, w) -> {
+                    String filter = editText.getText().toString();
+                    adapter.setFilter(filter);
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(this,
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, filter);
+                })
                 .setNegativeButton(R.string.clear, (d, w) -> adapter.setFilter(null))
+                .setNeutralButton(android.R.string.cancel, null)
                 .create();
         KeyboardUtil.focusOnShow(filterDialog, editText, false);
         filterDialog.show();
+        return filterDialog;
     }
 
     public void showStringReplaceAllDialog() {
@@ -2462,14 +2494,15 @@ public class DexEditorActivity extends BaseActivity {
 
     /** Switches to the Search tab and runs a "String" type search for the given exact text. */
     public void searchStringInClasses(String query) {
+        pendingStringSearchQuery = query;
         showSearchTab();
         Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
-        if (f instanceof SearchFragment) {
-            ((SearchFragment) f).runStringSearch(query);
-        } else {
-            // Fragment not created/attached yet - SearchFragment.onResume() will pick this up.
-            pendingStringSearchQuery = query;
+        if (f instanceof SearchFragment search && f.isAdded() && f.getView() != null) {
+            pendingStringSearchQuery = null;
+            search.runStringSearch(query);
         }
+        // A retained Search fragment can exist without its view/activity during
+        // pager changes. onResume consumes the pending query once it is ready.
     }
 
     private void runUsageOnSearchTab(Runnable search) {
