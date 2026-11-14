@@ -66,6 +66,10 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.DirectoryStats;
+import io.github.abdurazaaqmohammed.utils.FileTreeStats;
+import io.github.abdurazaaqmohammed.utils.TransferControl;
+import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
 
 public class FilePropertiesDialog {
 
@@ -182,6 +186,12 @@ public class FilePropertiesDialog {
         }
         String initialSizeText = size >= 0 ? FileSize.getHumanReadableFileSize(size) : (context.getString(R.string.calculating) + "…");
         TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), initialSizeText);
+        boolean showCounts = (isFolder && !multi) || (multi && !isInZip);
+        TextView fileCount = showCounts ? addPropertyRow(propRows,
+                context.getString(R.string.property_file_count), context.getString(R.string.calculating) + "…") : null;
+        TextView folderCount = showCounts ? addPropertyRow(propRows,
+                context.getString(R.string.property_folder_count), context.getString(R.string.calculating) + "…") : null;
+        TransferControl statsControl = new TransferControl();
 
         final List<File> selectedFilesList = new ArrayList<>();
         if (!isInZip) {
@@ -293,23 +303,59 @@ public class FilePropertiesDialog {
 
             if (hasDirectories) {
                 new Thread(() -> {
-                    long totalComputedSize = 0;
-                    for (File f : selectedFilesList) {
-                        if (f.isDirectory()) {
-                            totalComputedSize += getFolderSize(f, sizeValue);
-                        } else {
-                            totalComputedSize += f.length();
+                    try {
+                        DirectoryStats total = new DirectoryStats(0, 0, 0, 0, 0);
+                        for (File f : selectedFilesList) {
+                            DirectoryStats stats = FileTreeStats.read(context, f, statsControl, 120_000);
+                            // Folder properties describe contents, not the selected root itself.
+                            if (f.isDirectory() && stats.folders() > 0) stats = new DirectoryStats(stats.files(),
+                                    stats.folders() - 1, stats.bytes(), stats.hidden(), stats.errors());
+                            total = total.plus(stats);
                         }
+                        DirectoryStats result = total;
+                        if (!multi && file != null && result.complete()) {
+                            DirSizeCache.record(file, result.bytes());
+                            DirSizeCache.scheduleSave();
+                        }
+                        context.handler.post(() -> {
+                            if (statsControl.isCancelled()) return;
+                            String partial = result.complete() ? "" : context.getString(R.string.property_partial);
+                            sizeValue.setText(FileSize.getHumanReadableFileSize(result.bytes()) + partial);
+                            fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(result.files()) + partial);
+                            folderCount.setText(java.text.NumberFormat.getIntegerInstance().format(result.folders()) + partial);
+                        });
+                    } catch (TransferCancelledException ignored) {
                     }
-                    long finalTotal = totalComputedSize;
-                    if (!multi && file != null && file.isDirectory()) {
-                        DirSizeCache.record(file, finalTotal);
-                        DirSizeCache.scheduleSave();
-                    }
-                    context.handler.post(() -> sizeValue.setText(FileSize.getHumanReadableFileSize(finalTotal)));
-                }).start();
+                }, "properties-stats").start();
+            } else if (multi && fileCount != null) {
+                fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(selectedFilesList.size()));
+                folderCount.setText("0");
             }
-        } else if (!multi && !entry.isDirectory()) {
+        } else if (isInZip && !multi && entry.isDirectory()) {
+            new Thread(() -> {
+                try {
+                    String prefix = entry.getFullPath();
+                    if (!prefix.endsWith("/")) prefix += "/";
+                    long bytes = 0, files = 0;
+                    Set<String> folders = new java.util.HashSet<>();
+                    for (var child : io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.listEntries(entry.getZipFile())) {
+                        statsControl.checkpoint();
+                        String path = child.path();
+                        if (!path.startsWith(prefix) || path.equals(prefix)) continue;
+                        if (!child.isDirectory()) { files++; bytes += child.size(); }
+                        for (int slash = path.indexOf('/', prefix.length()); slash >= 0; slash = path.indexOf('/', slash + 1))
+                            folders.add(path.substring(0, slash));
+                    }
+                    final long finalBytes = bytes, finalFiles = files;
+                    context.handler.post(() -> {
+                        if (statsControl.isCancelled()) return;
+                        sizeValue.setText(FileSize.getHumanReadableFileSize(finalBytes));
+                        fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(finalFiles));
+                        folderCount.setText(java.text.NumberFormat.getIntegerInstance().format(folders.size()));
+                    });
+                } catch (Exception ignored) {}
+            }, "archive-properties-stats").start();
+        } else if (isInZip && !multi && !entry.isDirectory()) {
             long modTime = entry.getLastModified();
             if (modTime > 0) {
                 addPropertyRow(propRows, context.getString(R.string.modified),
@@ -403,6 +449,7 @@ public class FilePropertiesDialog {
         }
 
         selfDialog[0] = dialogBuilder.create();
+        selfDialog[0].setOnDismissListener(d -> statsControl.cancel());
         if (!isInZip && !multi && file != null && file.isFile()) {
             selfDialog[0].setOnShowListener(di -> {
                 android.widget.Button neutral = selfDialog[0].getButton(AlertDialog.BUTTON_NEUTRAL);
@@ -535,56 +582,6 @@ public class FilePropertiesDialog {
                 .setPositiveButton(R.string.close, null)
                 .create();
         dialogUtil.styleAlertDialog(mimeDialog);
-    }
-
-    private long getFolderSize(File file, TextView toUpdate) {
-        if (file == null) return 0;
-        Long cached = DirSizeCache.peek(file);
-        if (cached != null && cached >= 0) {
-            if (toUpdate != null) {
-                context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(cached)));
-            }
-            return cached;
-        }
-        String path = file.getAbsolutePath();
-        if (!FileIconLoader.isUserStorage(path)) {
-            try {
-                long fastSize = AccessManager.dirSize(context, path);
-                if (fastSize >= 0) {
-                    if (toUpdate != null) {
-                        context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(fastSize)));
-                    }
-                    return fastSize;
-                }
-            } catch (Exception ignored) {}
-        }
-        File[] files = file.listFiles();
-        if (files == null) {
-            try {
-                if (AccessManager.fileOpsOn(context)) {
-                    long size = AccessManager.dirSize(context, path);
-                    if (size >= 0) {
-                        if (toUpdate != null) {
-                            context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(size)));
-                        }
-                        return size;
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-            return 0;
-        }
-        long length = 0;
-        for (File f : files) {
-            if (f.isFile()) {
-                length += f.length();
-            } else if (f.isDirectory()) {
-                length += getFolderSize(f, toUpdate);
-            }
-        }
-        if (toUpdate != null)
-            toUpdate.setText(FileSize.getHumanReadableFileSize(length));
-        return length;
     }
 
     private void showEditLastModifiedDialog(List<File> files, TextView modifiedView) {
