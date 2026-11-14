@@ -288,6 +288,13 @@ public class FileOperationsHelper {
         }
 
         Map<String, FileUtils.Measure> byPath = new HashMap<>();
+        if (!paths.isEmpty() && AccessManager.active(context) == AccessManager.Backend.ROOT) {
+            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.utils.NativeRootManager.scan(context, paths);
+            if (nativeTotals != null) {
+                for (int i = 0; i < paths.size(); i++) byPath.put(paths.get(i), nativeTotals.each.get(i));
+                return new MeasureInfo(nativeTotals.total, byPath);
+            }
+        }
         int files = 0;
         long bytes = 0L;
         boolean blind = false;

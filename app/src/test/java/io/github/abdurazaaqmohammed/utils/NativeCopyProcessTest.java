@@ -64,6 +64,20 @@ public class NativeCopyProcessTest {
                 new Result("CANCELLED done_files=0 done_bytes=100\n", 1), null, null, null));
     }
 
+    @Test public void deleteRequiresSuccessfulFinalResultAndPreservesLargeCounters() throws Exception {
+        List<Long> counts = new ArrayList<>();
+        assertTrue(NativeCopyProcess.runDelete(new Result("MPIO_PID 123\nDEL_PROGRESS 6000 name with spaces\n"
+                + "DELETE_DONE done_items=6003 ms=20\n", 0),
+                (items, bytes, name) -> counts.add(items), null, null));
+        assertEquals(List.of(6000L, 6003L), counts);
+        assertThrows(NativeDeleteException.class, () -> NativeCopyProcess.runDelete(
+                new Result("DEL_PROGRESS 6003 complete-looking\n", 0), null, null, null));
+        assertThrows(NativeDeleteException.class, () -> NativeCopyProcess.runDelete(
+                new Result("DELETE_ERROR errno=13 done_items=5\n", 1), null, null, null));
+        assertThrows(TransferCancelledException.class, () -> NativeCopyProcess.runDelete(
+                new Result("CANCELLED done_items=100\n", 1), null, null, null));
+    }
+
     private static final class Running extends Result {
         final PipedInputStream stream = new PipedInputStream();
         final PipedOutputStream writer;
@@ -76,6 +90,10 @@ public class NativeCopyProcessTest {
         }
         @Override public InputStream getInputStream() { return stream; }
         @Override public boolean isAlive() { return stopped.getCount() > 0; }
+        @Override public int exitValue() {
+            if (stopped.getCount() > 0) throw new IllegalThreadStateException();
+            return 1;
+        }
         @Override public int waitFor() throws InterruptedException {
             assertTrue("native process stopped", stopped.await(5, TimeUnit.SECONDS));
             return 1;

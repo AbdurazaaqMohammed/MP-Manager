@@ -17,12 +17,26 @@ final class NativeCopyProcess {
 
     static boolean run(Process process, Progress progress, TransferControl control,
                        ShellProcess.Runner signals) throws IOException {
+        return run(process, progress, control, signals, false);
+    }
+
+    static boolean runDelete(Process process, Progress progress, TransferControl control,
+                             ShellProcess.Runner signals) throws IOException {
+        try {
+            return run(process, progress, control, signals, true);
+        } catch (NativeCopyException error) {
+            throw new NativeDeleteException(error.getMessage(), error);
+        }
+    }
+
+    private static boolean run(Process process, Progress progress, TransferControl control,
+                               ShellProcess.Runner signals, boolean deleting) throws IOException {
         AtomicLong pid = new AtomicLong(-1L);
         AtomicBoolean finished = new AtomicBoolean();
         Thread watcher = control == null ? null : new Thread(() -> {
             boolean paused = false;
             boolean cancellationSent = false;
-            while (!finished.get() && process.isAlive()) {
+            while (!finished.get() && NativeProcess.isAlive(process)) {
                 long nativePid = pid.get();
                 if (nativePid > 0) {
                     if (control.isCancelled() && !cancellationSent) {
@@ -66,7 +80,13 @@ final class NativeCopyProcess {
                             if (reported > 1) pid.compareAndSet(-1L, reported);
                         } catch (NumberFormatException ignored) {
                         }
-                    } else if (line.startsWith("PROGRESS ")) {
+                    } else if (deleting && line.startsWith("DEL_PROGRESS ")) {
+                        String[] parts = line.split("\\s+", 3);
+                        try {
+                            long items = Long.parseLong(parts[1]);
+                            if (items >= 0 && progress != null) progress.onProgress(items, 0L, parts.length == 3 ? parts[2] : "");
+                        } catch (NumberFormatException | IndexOutOfBoundsException ignored) {}
+                    } else if (!deleting && line.startsWith("PROGRESS ")) {
                         String[] parts = line.split("\\s+", 4);
                         if (parts.length >= 3) {
                             try {
@@ -78,17 +98,17 @@ final class NativeCopyProcess {
                             } catch (NumberFormatException ignored) {
                             }
                         }
-                    } else if (line.startsWith("COPY_DONE ")) {
-                        long files = counter(line, "done_files=");
-                        long bytes = counter(line, "done_bytes=");
+                    } else if (line.startsWith(deleting ? "DELETE_DONE " : "COPY_DONE ")) {
+                        long files = counter(line, deleting ? "done_items=" : "done_files=");
+                        long bytes = deleting ? 0 : counter(line, "done_bytes=");
                         if (files < 0 || bytes < 0) {
                             copyError = true;
-                            append(diagnostics, "Invalid native copy result: " + line);
+                            append(diagnostics, "Invalid native " + (deleting ? "delete" : "copy") + " result: " + line);
                         } else {
                             copyDone = true;
                             if (progress != null) progress.onProgress(files, bytes, "");
                         }
-                    } else if (line.startsWith("COPY_ERROR")) {
+                    } else if (line.startsWith(deleting ? "DELETE_ERROR" : "COPY_ERROR")) {
                         copyError = true;
                         append(diagnostics, line);
                     } else if (line.startsWith("CANCELLED")) {
@@ -102,8 +122,8 @@ final class NativeCopyProcess {
             if (cancelled || (control != null && control.isCancelled())) throw new TransferCancelledException();
             if (exitCode != 0 || !copyDone || copyError) {
                 String detail = diagnostics.length() > 0 ? diagnostics.toString()
-                        : "exit=" + exitCode + (copyDone ? "" : ", missing COPY_DONE");
-                throw new NativeCopyException("Native copy failed: " + detail);
+                        : "exit=" + exitCode + (copyDone ? "" : deleting ? ", missing DELETE_DONE" : ", missing COPY_DONE");
+                throw new NativeCopyException("Native " + (deleting ? "delete" : "copy") + " failed: " + detail);
             }
             return true;
         } catch (InterruptedException e) {
@@ -116,11 +136,11 @@ final class NativeCopyProcess {
         } finally {
             finished.set(true);
             if (watcher != null) watcher.interrupt();
-            if (process.isAlive()) {
+            if (NativeProcess.isAlive(process)) {
                 long nativePid = pid.get();
                 if (nativePid > 0) signal(signals, "kill -CONT " + nativePid
                         + " 2>/dev/null; kill -TERM " + nativePid + " 2>/dev/null");
-                process.destroyForcibly();
+                process.destroy();
             }
         }
     }

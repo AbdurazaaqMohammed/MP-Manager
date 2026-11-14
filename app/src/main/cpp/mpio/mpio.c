@@ -79,26 +79,43 @@ typedef struct {
     uint64_t files;
     uint64_t dirs;
     uint64_t bytes;
+    uint64_t hidden;
+    uint64_t errors;
 } ScanStats;
 
-static void scan_recursive(const char *path, ScanStats *stats) {
+static bool virtual_filesystem(const char *path) {
+    static const char *roots[] = {"/proc", "/sys", "/dev", "/acct", "/config", "/d", "/linkerconfig", "/data_mirror"};
+    for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); i++) {
+        size_t len = strlen(roots[i]);
+        if (strncmp(path, roots[i], len) == 0 && (path[len] == '\0' || path[len] == '/')) return true;
+    }
+    return false;
+}
+
+static void scan_recursive(const char *path, ScanStats *stats, bool root) {
     if (g_cancelled) return;
     struct stat st;
-    if (lstat(path, &st) != 0) return;
+    if (lstat(path, &st) != 0) { stats->errors++; return; }
+    const char *name = strrchr(path, '/');
+    if (!root && (name ? name[1] : path[0]) == '.') stats->hidden++;
 
     if (S_ISDIR(st.st_mode)) {
         stats->dirs++;
+        if (virtual_filesystem(path)) return;
         DIR *dir = opendir(path);
-        if (!dir) return;
-        struct dirent *entry;
+        if (!dir) { stats->errors++; return; }
         char subpath[4096];
-        while ((entry = readdir(dir)) != NULL) {
+        for (;;) {
             if (g_cancelled) break;
+            errno = 0;
+            struct dirent *entry = readdir(dir);
+            if (!entry) { if (errno != 0) stats->errors++; break; }
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-            snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
-            scan_recursive(subpath, stats);
+            int len = snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
+            if (len < 0 || (size_t)len >= sizeof(subpath)) { stats->errors++; continue; }
+            scan_recursive(subpath, stats, false);
         }
-        closedir(dir);
+        if (closedir(dir) != 0) stats->errors++;
     } else if (S_ISREG(st.st_mode)) {
         stats->files++;
         stats->bytes += (uint64_t)st.st_size;
@@ -109,19 +126,24 @@ static void scan_recursive(const char *path, ScanStats *stats) {
 }
 
 static int do_scan(int count, char *paths[]) {
-    ScanStats total = {0, 0, 0};
+    ScanStats total = {0};
     uint64_t t0 = current_time_ms();
+    printf("MPIO_PID %ld\n", (long)getpid());
+    fflush(stdout);
     for (int i = 0; i < count; i++) {
         if (g_cancelled) break;
         char fast_path[4096];
         if (resolve_fast_path(paths[i], fast_path, sizeof(fast_path)) != 0) return 1;
-        ScanStats item_stats = {0, 0, 0};
-        scan_recursive(fast_path, &item_stats);
+        ScanStats item_stats = {0};
+        scan_recursive(fast_path, &item_stats, true);
         total.files += item_stats.files;
         total.dirs += item_stats.dirs;
         total.bytes += item_stats.bytes;
-        printf("ITEM_RESULT idx=%d files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 "\n",
-               i, item_stats.files, item_stats.dirs, item_stats.bytes);
+        total.hidden += item_stats.hidden;
+        total.errors += item_stats.errors;
+        printf("ITEM_RESULT idx=%d files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 " hidden=%" PRIu64 " errors=%" PRIu64 "\n",
+               i, item_stats.files, item_stats.dirs, item_stats.bytes, item_stats.hidden, item_stats.errors);
+        fflush(stdout);
     }
     uint64_t elapsed = current_time_ms() - t0;
     if (g_cancelled) {
@@ -129,8 +151,8 @@ static int do_scan(int count, char *paths[]) {
         fflush(stdout);
         return 1;
     }
-    printf("SCAN_RESULT files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 " ms=%" PRIu64 "\n",
-           total.files, total.dirs, total.bytes, elapsed);
+    printf("SCAN_RESULT files=%" PRIu64 " dirs=%" PRIu64 " bytes=%" PRIu64 " hidden=%" PRIu64 " errors=%" PRIu64 " ms=%" PRIu64 "\n",
+           total.files, total.dirs, total.bytes, total.hidden, total.errors, elapsed);
     fflush(stdout);
     return 0;
 }
@@ -512,46 +534,65 @@ static void report_delete_progress(DeleteContext *ctx, const char *cur_name, boo
         return;
     }
     ctx->last_report_ms = now;
-    printf("DEL_PROGRESS %" PRIu64 " %s\n", ctx->done_items, cur_name ? cur_name : "");
+    printf("DEL_PROGRESS %" PRIu64 " ", ctx->done_items);
+    if (cur_name) {
+        for (const char *p = cur_name; *p; p++) putchar(*p == '\n' || *p == '\r' ? ' ' : *p);
+    }
+    putchar('\n');
     fflush(stdout);
 }
 
 static int delete_recursive(const char *path, DeleteContext *ctx) {
-    if (g_cancelled) return -1;
+    if (g_cancelled) { errno = ECANCELED; return -1; }
     struct stat st;
-    if (lstat(path, &st) != 0) return 0;
+    if (lstat(path, &st) != 0) return errno == ENOENT ? 0 : -1;
 
     if (S_ISDIR(st.st_mode)) {
         DIR *dir = opendir(path);
-        if (dir) {
-            struct dirent *entry;
-            char subpath[4096];
-            while ((entry = readdir(dir)) != NULL) {
-                if (g_cancelled) break;
-                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-                snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
-                delete_recursive(subpath, ctx);
+        if (!dir) return -1;
+        char subpath[4096];
+        int result = 0;
+        for (;;) {
+            if (g_cancelled) { errno = ECANCELED; result = -1; break; }
+            errno = 0;
+            struct dirent *entry = readdir(dir);
+            if (!entry) { if (errno != 0) result = -1; break; }
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+            int len = snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
+            if (len < 0 || (size_t)len >= sizeof(subpath)) {
+                errno = ENAMETOOLONG; result = -1; break;
             }
-            closedir(dir);
+            if (delete_recursive(subpath, ctx) != 0) { result = -1; break; }
         }
-        rmdir(path);
-        ctx->done_items++;
-        report_delete_progress(ctx, path, false);
+        int saved_errno = errno;
+        if (closedir(dir) != 0 && result == 0) return -1;
+        if (result != 0) { errno = saved_errno; return -1; }
+        if (g_cancelled) { errno = ECANCELED; return -1; }
+        if (rmdir(path) != 0 && errno != ENOENT) return -1;
     } else {
-        unlink(path);
-        ctx->done_items++;
-        report_delete_progress(ctx, path, false);
+        if (unlink(path) != 0 && errno != ENOENT) return -1;
     }
+    ctx->done_items++;
+    report_delete_progress(ctx, path, false);
     return 0;
 }
 
-static int do_delete(const char *path) {
-    char fast_path[4096];
-    if (resolve_fast_path(path, fast_path, sizeof(fast_path)) != 0) return 1;
-
+static int do_delete(int count, char *paths[]) {
     DeleteContext ctx = {0, 0};
     uint64_t t0 = current_time_ms();
-    delete_recursive(fast_path, &ctx);
+    printf("MPIO_PID %ld\n", (long)getpid());
+    report_delete_progress(&ctx, "", true);
+    int result = 0;
+    for (int i = 0; i < count; i++) {
+        char fast_path[4096];
+        if (resolve_fast_path(paths[i], fast_path, sizeof(fast_path)) != 0) { result = -1; break; }
+        if (strcmp(fast_path, "/") == 0) { errno = EPERM; result = -1; break; }
+        if (delete_recursive(fast_path, &ctx) != 0) {
+            result = -1;
+            break;
+        }
+    }
+    int saved_errno = errno;
     report_delete_progress(&ctx, "", true);
     uint64_t elapsed = current_time_ms() - t0;
 
@@ -560,9 +601,43 @@ static int do_delete(const char *path) {
         fflush(stdout);
         return 1;
     }
+    if (result != 0) {
+        printf("DELETE_ERROR errno=%d done_items=%" PRIu64 " ms=%" PRIu64 "\n", saved_errno, ctx.done_items, elapsed);
+        fflush(stdout);
+        return 1;
+    }
     printf("DELETE_DONE done_items=%" PRIu64 " ms=%" PRIu64 "\n", ctx.done_items, elapsed);
     fflush(stdout);
     return 0;
+}
+
+// A NUL-delimited list avoids Android's per-argument limit for large selections
+// and preserves spaces, quotes and newlines without invoking a shell per file.
+static int from_path_list(const char *command, const char *list_path) {
+    FILE *list = fopen(list_path, "rb");
+    if (!list) return 1;
+    char **paths = NULL, *line = NULL;
+    size_t capacity = 0, count = 0;
+    ssize_t len;
+    int result = 1;
+    while ((len = getdelim(&line, &capacity, '\0', list)) != -1) {
+        if (len <= 1 || line[len - 1] != '\0' || count >= INT32_MAX) goto done;
+        char **grown = realloc(paths, (count + 1) * sizeof(char *));
+        if (!grown) goto done;
+        paths = grown;
+        paths[count] = strdup(line);
+        if (!paths[count]) goto done;
+        count++;
+    }
+    if (!ferror(list) && count > 0) {
+        result = strcmp(command, "scan") == 0 ? do_scan((int)count, paths) : do_delete((int)count, paths);
+    }
+done:
+    free(line);
+    for (size_t i = 0; i < count; i++) free(paths[i]);
+    free(paths);
+    fclose(list);
+    return result;
 }
 
 int main(int argc, char *argv[]) {
@@ -576,11 +651,15 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage:\n");
         fprintf(stderr, "  %s scan <path1> [path2 ...]\n", argv[0]);
         fprintf(stderr, "  %s copy <src> <dst>\n", argv[0]);
-        fprintf(stderr, "  %s delete <path>\n", argv[0]);
+        fprintf(stderr, "  %s delete <path1> [path2 ...]\n", argv[0]);
         return 1;
     }
 
     const char *cmd = argv[1];
+    if (argc == 4 && strcmp(argv[2], "--list") == 0
+            && (strcmp(cmd, "scan") == 0 || strcmp(cmd, "delete") == 0)) {
+        return from_path_list(cmd, argv[3]);
+    }
     if (strcmp(cmd, "scan") == 0) {
         if (argc < 3) return 1;
         return do_scan(argc - 2, argv + 2);
@@ -589,7 +668,7 @@ int main(int argc, char *argv[]) {
         return do_copy(argv[2], argv[3]);
     } else if (strcmp(cmd, "delete") == 0) {
         if (argc < 3) return 1;
-        return do_delete(argv[2]);
+        return do_delete(argc - 2, argv + 2);
     } else {
         fprintf(stderr, "Unknown command: %s\n", cmd);
         return 1;

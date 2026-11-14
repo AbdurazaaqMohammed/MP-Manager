@@ -215,8 +215,18 @@ public final class FileSorting {
         // If folders are unreadable by regular app UID (e.g. /data/media/0 or system dirs),
         // try fast batch du via root/Shizuku first so the entire directory tree is measured in one shot.
         if (ctx != null) {
+            // Root mode: measure all sibling directories with one mpio process,
+            // including app-readable system folders, before any Java walk.
+            if (io.github.abdurazaaqmohammed.utils.AccessManager.active(ctx)
+                    == io.github.abdurazaaqmohammed.utils.AccessManager.Backend.ROOT) {
+                List<String> paths = new ArrayList<>();
+                for (File d : dirs) if (d != null && !isVirtualOrSpecialFs(pathOf(d))) paths.add(pathOf(d));
+                java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.utils.NativeRootManager.sizes(ctx, paths, 30_000);
+                DirSizeCache.recordBatch(nativeSizes);
+                DIR_SIZE_CACHE.putAll(nativeSizes);
+            }
             for (File d : dirs) {
-                if (d != null && !d.canRead()) {
+                if (d != null && !DIR_SIZE_CACHE.containsKey(pathOf(d)) && !d.canRead()) {
                     File parent = d.getParentFile();
                     if (parent != null) {
                         try {
@@ -286,11 +296,15 @@ public final class FileSorting {
 
         long total = 0;
         File[] children = dir.listFiles();
+        if (children == null) return -1;
         if (children != null) {
             for (File c : children) {
                 if (c == null) continue;
                 try {
-                    total += c.isDirectory() ? recursiveSize(c) : c.length();
+                    if (io.github.abdurazaaqmohammed.utils.FileUtils.isSymlink(c)) continue;
+                    long size = c.isDirectory() ? recursiveSize(c) : c.length();
+                    if (size < 0) return -1;
+                    total += size;
                 } catch (Exception ignored) {
                 }
             }

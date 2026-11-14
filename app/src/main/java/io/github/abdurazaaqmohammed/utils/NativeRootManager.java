@@ -12,6 +12,9 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.nio.charset.StandardCharsets;
+import java.io.OutputStream;
 
 /**
  * Manages the native I/O daemon (mpio) for root-level file operations.
@@ -102,64 +105,122 @@ public final class NativeRootManager {
      */
     public static FileUtils.MeasureSet scan(Context context, java.util.List<String> paths) {
         if (paths == null || paths.isEmpty()) return null;
+        NativeScanResult result = scanStats(context, paths, null, 120_000);
+        if (result == null || !result.total.complete()) return null;
+        List<FileUtils.Measure> items = new java.util.ArrayList<>();
+        for (DirectoryStats item : result.items) items.add(measure(item));
+        return new FileUtils.MeasureSet(measure(result.total), items);
+    }
+
+    private static FileUtils.Measure measure(DirectoryStats stats) {
+        FileUtils.Measure measure = new FileUtils.Measure((int) Math.min(Integer.MAX_VALUE, stats.files()), stats.bytes());
+        measure.dirs = (int) Math.min(Integer.MAX_VALUE, stats.folders());
+        return measure;
+    }
+
+    public static DirectoryStats stats(Context context, String path, TransferControl control, long timeoutMs) {
+        NativeScanResult result = scanStats(context, java.util.Collections.singletonList(path), control, timeoutMs);
+        return result == null ? null : result.total;
+    }
+
+    public static List<DirectoryStats> stats(Context context, List<String> paths, TransferControl control, long timeoutMs) {
+        NativeScanResult result = scanStats(context, paths, control, timeoutMs);
+        return result == null ? null : result.items;
+    }
+
+    /** One native traversal per sibling, in one process; keyed by the original pane paths. */
+    public static java.util.Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) {
+        NativeScanResult result = scanStats(context, paths, null, timeoutMs);
+        java.util.Map<String, Long> sizes = new java.util.HashMap<>();
+        if (result != null) for (int i = 0; i < paths.size(); i++) {
+            DirectoryStats item = result.items.get(i);
+            if (item.complete()) sizes.put(paths.get(i), item.bytes());
+        }
+        return sizes;
+    }
+
+    private static File writePaths(Context context, List<String> paths) throws IOException {
+        File list = File.createTempFile("mpio-paths-", ".list", context.getCacheDir());
+        try (OutputStream output = new java.io.BufferedOutputStream(new FileOutputStream(list))) {
+            for (String path : paths) {
+                if (path == null || path.isEmpty() || path.indexOf('\0') >= 0) throw new IOException("Invalid native path");
+                output.write(path.getBytes(StandardCharsets.UTF_8));
+                output.write(0);
+            }
+            return list;
+        } catch (IOException error) { list.delete(); throw error; }
+    }
+
+    private static NativeScanResult scanStats(Context context, List<String> paths, TransferControl control, long timeoutMs) {
+        if (paths == null || paths.isEmpty()) return null;
+        File list = null;
+        Process process = null;
+        AtomicBoolean finished = new AtomicBoolean();
+        AtomicLong pid = new AtomicLong(-1);
+        Thread watcher = null;
         try {
-            String mpio = getMpioPath(context);
-            StringBuilder sb = new StringBuilder(mpio).append(" scan");
-            for (String p : paths) {
-                sb.append(' ').append(RootManager.escapeShellArg(p));
-            }
-            String[] cmd = RootManager.suCommandForFs(context, sb.toString());
-            Process process = Runtime.getRuntime().exec(cmd);
-
-            java.util.List<FileUtils.Measure> items = new java.util.ArrayList<>();
-            for (int i = 0; i < paths.size(); i++) {
-                items.add(new FileUtils.Measure(1, 0L));
-            }
-            FileUtils.Measure total = null;
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            if (control != null) control.checkpoint();
+            list = writePaths(context, paths);
+            String cmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(getMpioPath(context))
+                    + " scan --list " + RootManager.escapeShellArg(list.getPath());
+            process = new ProcessBuilder(RootManager.suCommandForFs(context, cmd)).redirectErrorStream(true).start();
+            Process running = process;
+            watcher = new Thread(() -> {
+                long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+                boolean paused = false;
+                while (!finished.get() && NativeProcess.isAlive(running)) {
+                    if ((control != null && control.isCancelled()) || System.nanoTime() > deadline) {
+                        if (pid.get() > 1) signal(context, "kill -CONT " + pid.get()
+                                + " 2>/dev/null; kill -TERM " + pid.get() + " 2>/dev/null");
+                        running.destroy();
+                        return;
+                    }
+                    if (control != null && pid.get() > 1 && control.isPaused() != paused) {
+                        paused = control.isPaused();
+                        signal(context, "kill -" + (paused ? "STOP " : "CONT ") + pid.get() + " 2>/dev/null");
+                    }
+                    try { Thread.sleep(100); } catch (InterruptedException e) { return; }
+                }
+            }, "mpio-scan-control");
+            watcher.setDaemon(true);
+            watcher.start();
+            NativeScanResult result = new NativeScanResult(paths.size());
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.startsWith("ITEM_RESULT")) {
-                        // ITEM_RESULT idx=... files=... dirs=... bytes=...
-                        int idx = -1;
-                        int files = 0;
-                        long bytes = 0L;
-                        for (String part : line.split("\\s+")) {
-                            if (part.startsWith("idx=")) {
-                                idx = Integer.parseInt(part.substring(4));
-                            } else if (part.startsWith("files=")) {
-                                files = Integer.parseInt(part.substring(6));
-                            } else if (part.startsWith("bytes=")) {
-                                bytes = Long.parseLong(part.substring(6));
-                            }
-                        }
-                        if (idx >= 0 && idx < items.size()) {
-                            items.set(idx, new FileUtils.Measure(Math.max(1, files), bytes));
-                        }
-                    } else if (line.startsWith("SCAN_RESULT")) {
-                        // SCAN_RESULT files=... dirs=... bytes=... ms=...
-                        int files = 0;
-                        long bytes = 0L;
-                        for (String part : line.split("\\s+")) {
-                            if (part.startsWith("files=")) {
-                                files = Integer.parseInt(part.substring(6));
-                            } else if (part.startsWith("bytes=")) {
-                                bytes = Long.parseLong(part.substring(6));
-                            }
-                        }
-                        total = new FileUtils.Measure(Math.max(1, files), bytes);
-                    }
+                    if (line.startsWith("MPIO_PID ")) {
+                        try { pid.set(Long.parseLong(line.substring(9).trim())); } catch (NumberFormatException ignored) {}
+                    } else result.accept(line);
                 }
             }
-            process.waitFor(10, TimeUnit.SECONDS);
-            if (total != null) {
-                return new FileUtils.MeasureSet(total, items);
+            if (control != null && control.isCancelled()) throw new TransferCancelledException();
+            return process.waitFor() == 0 && result.valid() ? result : null;
+        } catch (TransferCancelledException cancelled) {
+            throw cancelled;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (IOException ignored) {
+            if (control != null && control.isCancelled()) throw new TransferCancelledException();
+            return null;
+        } finally {
+            finished.set(true);
+            if (watcher != null) watcher.interrupt();
+            if (process != null && NativeProcess.isAlive(process)) {
+                if (pid.get() > 1) signal(context, "kill -CONT " + pid.get()
+                        + " 2>/dev/null; kill -TERM " + pid.get() + " 2>/dev/null");
+                process.destroy();
             }
-        } catch (Exception ignored) {
+            if (list != null) list.delete();
         }
-        return null;
+    }
+
+    private static void signal(Context context, String command) {
+        try {
+            Process process = new ProcessBuilder(RootManager.suCommandForFs(context, command)).redirectErrorStream(true).start();
+            try { if (!NativeProcess.await(process, 10_000)) process.destroy(); }
+            finally { if (NativeProcess.isAlive(process)) process.destroy(); }
+        } catch (Exception ignored) {}
     }
 
     /**
@@ -177,9 +238,9 @@ public final class NativeRootManager {
                 signal -> {
                     Process signalProcess = Runtime.getRuntime().exec(RootManager.suCommandForFs(context, signal));
                     try {
-                        if (!signalProcess.waitFor(10, TimeUnit.SECONDS)) signalProcess.destroyForcibly();
+                        if (!NativeProcess.await(signalProcess, 10_000)) signalProcess.destroy();
                     } finally {
-                        if (signalProcess.isAlive()) signalProcess.destroyForcibly();
+                        if (NativeProcess.isAlive(signalProcess)) signalProcess.destroy();
                     }
                 });
     }
@@ -188,83 +249,54 @@ public final class NativeRootManager {
      * Executes native recursive delete via root with streaming progress and cancellation.
      */
     public static boolean delete(Context context, String path,
+                                  ProgressCallback callback, TransferControl control) throws IOException {
+        return delete(context, java.util.Collections.singletonList(path), callback, control);
+    }
+
+    public static boolean delete(Context context, List<String> paths,
                                  ProgressCallback callback, TransferControl control) throws IOException {
-        File file = new File(path);
-        if (SharedStorageCompat.canDeleteThroughApp(file)) {
-            // Removing a public file through /data/media bypasses FUSE's
-            // permanent dentry cache and breaks the next same-name creation.
-            final long[] done = {0L};
-            FileUtils.TransferListener listener = new FileUtils.TransferListener() {
-                @Override public void onFile(File source, File destination) {
-                    if (callback != null) callback.onProgress(++done[0], 0L, source.getPath());
-                }
-                @Override public void onBytes(long count) {
-                }
-                @Override public void checkpoint() {
-                    if (control != null) control.checkpoint();
-                }
-            };
-            if (FileUtils.deleteTree(file, listener)) return true;
+        List<String> nativePaths = new java.util.ArrayList<>();
+        for (String path : paths) {
+            if (RootManager.isPathBlocked(path)) throw new NativeDeleteException("Blocked: refusing to delete " + path);
         }
-        String mpio = getMpioPath(context);
-        String shellCmd = mpio + " delete " + RootManager.escapeShellArg(path);
-        String[] cmd = RootManager.suCommandForFs(context, shellCmd);
-
-        Process process = Runtime.getRuntime().exec(cmd);
-        AtomicBoolean cancelled = new AtomicBoolean(false);
-
-        Thread watcher = null;
-        if (control != null) {
-            watcher = new Thread(() -> {
-                while (process.isAlive()) {
-                    if (control.isCancelled()) {
-                        cancelled.set(true);
-                        process.destroyForcibly();
-                        break;
+        final long[] done = {0L};
+        for (String path : paths) {
+            if (control != null) control.checkpoint();
+            File file = new File(path);
+            if (SharedStorageCompat.canDeleteThroughApp(file)) {
+                // Removing a public file through /data/media bypasses FUSE's
+                // permanent dentry cache and breaks the next same-name creation.
+                FileUtils.TransferListener listener = new FileUtils.TransferListener() {
+                    @Override public void onFile(File source, File destination) {
+                        ++done[0];
+                        if (callback != null) callback.onProgress(done[0], 0L, source.getPath());
                     }
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        break;
+                    @Override public void onBytes(long count) {}
+                    @Override public void checkpoint() {
+                        if (control != null) control.checkpoint();
                     }
-                }
-            });
-            watcher.start();
-        }
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.startsWith("DEL_PROGRESS")) {
-                    // DEL_PROGRESS <done_items> <cur_name>
-                    String[] parts = line.split("\\s+", 3);
-                    if (parts.length >= 2 && callback != null) {
-                        try {
-                            long items = Long.parseLong(parts[1]);
-                            String curName = parts.length >= 3 ? parts[2] : "";
-                            callback.onProgress(items, 0L, curName);
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-                } else if (line.startsWith("DELETE_DONE")) {
-                    break;
-                }
+                };
+                if (!FileUtils.deleteTree(file, listener)) throw new NativeDeleteException("Cannot delete " + path);
+            } else {
+                nativePaths.add(path);
             }
         }
-
+        if (nativePaths.isEmpty()) return true;
+        File list = null;
         try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            list = writePaths(context, nativePaths);
+            String shellCmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(getMpioPath(context))
+                    + " delete --list " + RootManager.escapeShellArg(list.getPath());
+            Process process = new ProcessBuilder(RootManager.suCommandForFs(context, shellCmd)).redirectErrorStream(true).start();
+            long base = done[0];
+            return NativeCopyProcess.runDelete(process, callback == null ? null
+                    : (files, bytes, item) -> callback.onProgress(base + files, bytes, item), control,
+                    command -> signal(context, command));
+        } catch (IOException unavailable) {
+            if (unavailable instanceof NativeDeleteException || done[0] == 0) throw unavailable;
+            throw new NativeDeleteException("Cannot continue deletion after " + done[0] + " entries", unavailable);
         } finally {
-            if (watcher != null) watcher.interrupt();
+            if (list != null) list.delete();
         }
-
-        if (cancelled.get() || (control != null && control.isCancelled())) {
-            throw new TransferCancelledException();
-        }
-
-        return process.exitValue() == 0;
     }
 }

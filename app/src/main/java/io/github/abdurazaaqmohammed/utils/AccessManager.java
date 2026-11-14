@@ -634,7 +634,7 @@ public final class AccessManager {
     }
 
     /**
-     * Recursive delete that reports one step per directory removed, so the
+     * Recursive delete that reports one step per entry removed, so the
      * dialog keeps moving instead of jumping from 0% when {@code rm -rf}
      * returns.
      */
@@ -653,31 +653,19 @@ public final class AccessManager {
         if (useElevated) {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
-                boolean allNative = true;
                 try {
-                    for (String path : paths) {
-                        if (control != null && control.isCancelled()) throw new TransferCancelledException();
-                        boolean success = NativeRootManager.delete(context, path,
-                                (itemsDone, bytesDone, currentItem) -> {
-                                    if (progress != null) {
-                                        progress.onProgress((int) itemsDone, bytesDone);
-                                    }
-                                }, control);
-                        if (!success) {
-                            allNative = false;
-                            break;
-                        }
-                    }
-                    if (allNative) {
-                        RootManager.getInstance(context).invalidateListCache();
-                        return;
-                    }
-                } catch (TransferCancelledException tce) {
-                    throw tce;
-                } catch (Exception ignored) {
-                    // Fall back to shell deleteTree
+                    NativeRootManager.delete(context, paths, (itemsDone, bytesDone, currentItem) -> {
+                        if (progress != null) progress.onProgress((int) Math.min(Integer.MAX_VALUE, itemsDone), 0L);
+                    }, control);
+                } catch (TransferCancelledException | NativeDeleteException failed) {
+                    throw failed;
+                } catch (IOException unavailable) {
+                    // The helper never started. A running destructive batch is
+                    // never replayed, and all backends use the same entry unit.
+                    RootManager.getInstance(context).deleteTree(paths, progress, control);
+                } finally {
+                    RootManager.getInstance(context).invalidateListCache();
                 }
-                RootManager.getInstance(context).deleteTree(paths, progress, control);
                 return;
             }
             if (backend == Backend.SHIZUKU) {
@@ -687,11 +675,12 @@ public final class AccessManager {
         }
         // Plain delete still reports per entry, so the dialog keeps moving.
         final int[] done = {0};
-        FileUtils.TransferListener perEntry = progress == null ? null : new FileUtils.TransferListener() {
+        FileUtils.TransferListener perEntry = new FileUtils.TransferListener() {
             @Override
             public void onFile(File source, File destination) {
                 if (source == null) return;
-                progress.onProgress(++done[0], 0L);
+                ++done[0];
+                if (progress != null) progress.onProgress(done[0], 0L);
             }
 
             @Override
@@ -705,7 +694,7 @@ public final class AccessManager {
             }
         };
         for (String path : paths) {
-            FileUtils.deleteTree(new File(path), perEntry);
+            if (!FileUtils.deleteTree(new File(path), perEntry)) throw new IOException("Cannot delete " + path);
         }
     }
 
@@ -824,6 +813,8 @@ public final class AccessManager {
         try {
             Backend backend = active(context);
             if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                DirectoryStats nativeStats = NativeRootManager.stats(context, path, null, 5000);
+                if (nativeStats != null && nativeStats.complete()) return nativeStats.bytes();
                 RootManager rm = RootManager.getInstance(context);
                 String safeCmd = "timeout 5 du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null";
                 RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
@@ -852,6 +843,13 @@ public final class AccessManager {
         try {
             Backend backend = active(context);
             if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                File[] siblings = RootManager.getInstance(context).listRootFilesWithStat(path);
+                if (siblings != null) {
+                    List<String> directories = new ArrayList<>();
+                    for (File sibling : siblings) if (sibling.isDirectory()) directories.add(sibling.getAbsolutePath());
+                    map.putAll(NativeRootManager.sizes(context, directories, 5000));
+                    if (!map.isEmpty()) return map;
+                }
                 RootManager rm = RootManager.getInstance(context);
                 String safeCmd = "timeout 5 du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null";
                 RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
