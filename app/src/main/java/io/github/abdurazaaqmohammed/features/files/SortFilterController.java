@@ -200,6 +200,7 @@ public class SortFilterController {
 
         CheckBox cbOnlyThisFolder = new CheckBox(activity);
         cbOnlyThisFolder.setText(activity.rss.getString(R.string.only_for_this_folder));
+        cbOnlyThisFolder.setChecked(prefs.hasFolderSort(currentPath));
         layout.addView(cbOnlyThisFolder);
 
         SortDirectionToggle directionToggle = new SortDirectionToggle(activity);
@@ -212,8 +213,13 @@ public class SortFilterController {
                 .setPositiveButton(activity.getString(R.string.apply), (dialog, which) -> {
                     int selectedSort = radioGroup.getCheckedRadioButtonId();
                     boolean selectedReverse = directionToggle.isDescending();
-                    prefs.saveSort(cbOnlyThisFolder.isChecked() ? currentPath : null,
-                            selectedSort, selectedReverse);
+                    if (cbOnlyThisFolder.isChecked()) {
+                        prefs.saveSort(currentPath, selectedSort, selectedReverse);
+                    } else {
+                        // User chose global sorting: remove this folder's specific override so the global sort applies immediately
+                        prefs.removeFolderSort(currentPath);
+                        prefs.saveSort(null, selectedSort, selectedReverse);
+                    }
                     activity.reloadCurrentFolder();
                 })
                 .setNegativeButton(android.R.string.cancel, null)

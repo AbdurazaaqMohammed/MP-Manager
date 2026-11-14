@@ -737,6 +737,9 @@ public class SidebarController {
                 activity.startActivity(new Intent(activity, FridaConsoleActivity.class)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 break;
+            case "command_shell":
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity.class));
+                break;
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));
                 break;

@@ -140,6 +140,11 @@ public class APKExtractorActivity extends BaseActivity {
 
     public static File getAppFolder(Context context) {
         try {
+            String custom = UiPrefs.apkExtractDir(context, null);
+            if (custom != null && !custom.trim().isEmpty()) {
+                File dir = new File(custom.trim());
+                if (dir.exists() || dir.mkdirs()) return dir;
+            }
             String base = UiPrefs.appPathDir(context,
                     new File(Environment.getExternalStorageDirectory(), "MP Manager").getAbsolutePath());
             File dir = new File(base, "Extracted APKs");

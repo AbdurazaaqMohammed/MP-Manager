@@ -917,6 +917,13 @@ public class SettingsController {
                     // Logs and framework resources follow the new base immediately.
                     UiPrefs.frameworkDir(activity);
                 }));
+
+        TextView apkExtractPathTv = root.findViewById(R.id.apkExtractPathTv);
+        apkExtractPathTv.setText(UiPrefs.apkExtractDir(activity, UiPrefs.defaultApkExtractDir(activity)));
+        root.findViewById(R.id.pickApkExtractPathBtn).setOnClickListener(v ->
+                pickDirInto(apkExtractPathTv, chosen -> {
+                    settings.edit().putString("apk_extract_dir", chosen).apply();
+                }));
     }
 
     public interface DirPicked {

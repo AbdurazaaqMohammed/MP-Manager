@@ -142,6 +142,14 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity"
+            android:label="@string/command_shell"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:exported="false">
+        </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.FridaConsoleActivity"
             android:label="@string/frida_console"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
