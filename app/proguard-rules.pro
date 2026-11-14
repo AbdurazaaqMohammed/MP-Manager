@@ -40,8 +40,8 @@
 -dontwarn javax.el.**
 -keep class io.github.abdurazaaqmohammed.util.net.DnsManager$DnsProfile { *; }
 -keep class io.github.abdurazaaqmohammed.util.io.RecycleBin$Meta { *; }
--keep class io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil$ToastOptions { *; }
--keep class io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil$DialogOptions { *; }
+-keep class io.github.abdurazaaqmohammed.feature.apk.OverlayInjectorUtil$ToastOptions { *; }
+-keep class io.github.abdurazaaqmohammed.feature.apk.OverlayInjectorUtil$DialogOptions { *; }
 -keep class io.github.abdurazaaqmohammed.data.prefs.** { *; }
 -keep class modder.hub.dexeditor.utils.EditorPositionManager$Position { *; }
 
