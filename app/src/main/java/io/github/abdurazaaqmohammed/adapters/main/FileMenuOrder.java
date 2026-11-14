@@ -27,6 +27,7 @@ public final class FileMenuOrder {
     public static final String SHARE = "share";
     public static final String OPEN_WITH = "open_with";
     public static final String BOOKMARK = "bookmark";
+    public static final String PIN_FOLDER = "pin_folder";
     public static final String CMD = "cmd";
     public static final String CHECK = "check";
     public static final String BATCH_SIGN = "batch_sign";
@@ -49,7 +50,7 @@ public final class FileMenuOrder {
 
     public static final String[] DEFAULT_ORDER = {
             COPY, MOVE, RENAME, DELETE, SHARE, OPEN_WITH,
-            COMPRESS, EXTRACT, SPLIT, MERGE_SPLIT, BOOKMARK, PROPERTIES,
+            COMPRESS, EXTRACT, SPLIT, MERGE_SPLIT, BOOKMARK, PIN_FOLDER, PROPERTIES,
             RESTORE, CMD, CHECK, HIDE, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
             CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK, CMP_DEX,
             BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
@@ -173,6 +174,7 @@ public final class FileMenuOrder {
             case SHARE -> context.getString(R.string.share);
             case OPEN_WITH -> context.getString(R.string.open_with);
             case BOOKMARK -> context.getString(R.string.bookmark);
+            case PIN_FOLDER -> context.getString(R.string.pin_folder);
             case CMD -> context.getString(R.string.command_helper);
             case CHECK -> context.getString(R.string.checksums);
             case BATCH_SIGN -> context.getString(R.string.batch_sign);
@@ -221,6 +223,7 @@ public final class FileMenuOrder {
             case SHARE -> R.drawable.baseline_share_24;
             case OPEN_WITH -> R.drawable.baseline_open_in_new_24;
             case BOOKMARK -> android.R.drawable.ic_input_get;
+            case PIN_FOLDER -> R.drawable.keep_24px;
             case CMD -> R.drawable.terminal_24px;
             case CHECK -> R.drawable.tag_24px;
             case BATCH_SIGN, BATCH_OPT, BATCH_INSTALL -> R.drawable.apk_document_24px;

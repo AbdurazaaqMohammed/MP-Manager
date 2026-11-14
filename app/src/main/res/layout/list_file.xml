@@ -28,6 +28,15 @@
             android:contentDescription="@string/app_icon"
             android:visibility="gone"
             tools:ignore="RtlHardcoded" />
+        <ImageView
+            android:id="@+id/rowFolderPin"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="top|end"
+            android:src="@drawable/keep_24px"
+            android:tint="?attr/colorPrimary"
+            android:contentDescription="@string/pinned_folder"
+            android:visibility="gone" />
     </FrameLayout>
 
     <LinearLayout

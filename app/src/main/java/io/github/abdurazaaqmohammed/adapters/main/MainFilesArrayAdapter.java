@@ -72,6 +72,8 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.FolderPins;
+import io.github.abdurazaaqmohammed.utils.Haptics;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
@@ -120,6 +122,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final FileRowStyle rowStyle;
     /** Memoized isDir per listing (one adapter instance == one listing). */
     private final Map<String, Boolean> dirMemo = new HashMap<>();
+    private final Set<String> pinnedFolders;
 
     public void setMultiSelectMode(boolean multiSelectMode) {
         context.setMultiSelectModeUI(isMultiSelectMode = multiSelectMode);
@@ -200,6 +203,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     /** Parent folder / parent archive location the ".." row navigates to. */
     public boolean goUp(boolean blink) {
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.NAVIGATION);
         context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
         if (isSearchResultsMode) {
@@ -379,6 +383,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void handleRowClick(final File f, final String fileName) {
         if (f == null) return;
         if (isDirCached(f)) {
+            Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.NAVIGATION);
             context.clearGreen(pane1);
             context.setSelectedPane(pane1 ? 1 : 2);
             context.loadFolderInPaneAsync(f, pane1);
@@ -425,7 +430,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
             String currentZipPath) {
-        this.values = isInZip ? values : getNewValues(values, (File) parent);
+        pinnedFolders = FolderPins.load(context);
+        if (!isInZip) {
+            File[] sorted = Arrays.copyOf(values, values.length, File[].class);
+            FolderPins.sort(sorted, pinnedFolders);
+            this.values = getNewValues(sorted, (File) parent);
+        } else this.values = values;
         this.context = context;
         this.pane1 = pane1;
         this.isInZip = isInZip;
@@ -462,7 +472,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     public List<File> selectedImages() {
                         List<File> out = new ArrayList<>();
                         for (int p : selectedPositions) {
-                            Object o = values[p];
+                             Object o = MainFilesArrayAdapter.this.values[p];
                             if (o instanceof File f) {
                                 if (f.isFile() && FileUtils.isImageFile(f.getName())) out.add(f);
                             }
@@ -550,7 +560,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView fileNameView, fileDateView;
-        final ImageView fileIconView, appBadgeView;
+        final ImageView fileIconView, appBadgeView, pinView;
         final int defaultNameColor;
         // Avoid invalidating the background on every bind.
         int appliedBackgroundColor = -2;
@@ -569,6 +579,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             fileNameView = v.findViewById(R.id.fileName);
             fileIconView = v.findViewById(R.id.fileIcon);
             appBadgeView = v.findViewById(R.id.appBadge);
+            pinView = v.findViewById(R.id.rowFolderPin);
             fileDateView = v.findViewById(R.id.fileDate);
             int color;
             try {
@@ -758,6 +769,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final ZipEntryInfo finalEntry = entry;
         final String finalFileName = fileName;
         final Object finalItem = item;
+        holder.pinView.setVisibility(position > 0 && file != null && isDirCached(file)
+                && pinnedFolders.contains(FolderPins.key(file)) ? View.VISIBLE : View.GONE);
 
 final View.OnClickListener originalClickListener;
         if (finalPosition == 0) {
@@ -887,6 +900,19 @@ final View.OnClickListener originalClickListener;
                 // folder and Move between the panes is then a no-op.
                 Set<String> disabledIds = new HashSet<>();
                 boolean isTargetFolder = isTargetOnlyFolder(multi, isInZip, file, entry);
+                List<File> foldersToPin = new ArrayList<>();
+                if (!isInZip && isTargetFolder) {
+                    if (multi) {
+                        for (int selected : selectedPositions)
+                            if (selected > 0 && selected < values.length && values[selected] instanceof File folder)
+                                foldersToPin.add(folder);
+                    } else if (file != null) foldersToPin.add(file);
+                }
+                boolean unpin = !foldersToPin.isEmpty();
+                for (File folder : foldersToPin) unpin &= pinnedFolders.contains(FolderPins.key(folder));
+                final boolean removePin = unpin;
+                if (!foldersToPin.isEmpty()) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.PIN_FOLDER,
+                        context.getString(removePin ? R.string.unpin_folder : R.string.pin_folder)));
                 if (isTargetFolder) {
                     disabledIds.add(FileMenuOrder.OPEN_WITH);
                 }
@@ -1458,6 +1484,13 @@ final View.OnClickListener originalClickListener;
                                     case FileMenuOrder.BOOKMARK:
                                         if (!isInZip) context.addBookmark(file);
                                         break;
+                                    case FileMenuOrder.PIN_FOLDER:
+                                        FolderPins.set(context, foldersToPin, !removePin);
+                                        clearSelection();
+                                        context.reloadPane(pane1, false);
+                                        if (context.isSameLocationInPanes()) context.reloadPane(!pane1, false);
+                                        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.ACTION);
+                                        break;
                                 }
                                 break;
                         }
@@ -1549,6 +1582,7 @@ final View.OnClickListener originalClickListener;
 
     public void handleSwipe(int position) {
         if (position <= 0 || position >= values.length) return;
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.SELECTION);
         context.setCurrentPane(pane1 ? 1 : 2);
         if (isMultiSelectMode) {
             if (rangeStartPosition != null) {
@@ -1576,6 +1610,7 @@ final View.OnClickListener originalClickListener;
 
     public void handleMultiSelect(int position) {
         if (position <= 0 || position >= values.length) return;
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.SELECTION);
         if (selectedPositions.contains(position)) {
             selectedPositions.remove(position);
             if (selectedPositions.isEmpty()) {
@@ -1622,6 +1657,7 @@ final View.OnClickListener originalClickListener;
     }
 
     public void invertSelection() {
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.SELECTION);
         isMultiSelectMode = true;
         for (int i = (isInZip ? 0 : 1); i < values.length; i++) {
             if (selectedPositions.contains(i)) selectedPositions.remove(i);
@@ -1632,6 +1668,7 @@ final View.OnClickListener originalClickListener;
 
     public void selectSameType() {
         if (selectedPositions.isEmpty() || values.length == 0) return;
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.SELECTION);
         Object ref = values[selectedPositions.iterator().next()];
         boolean refIsFolder = isInZip ? ((ZipEntryInfo) ref).isDirectory() : ((File) ref).isDirectory();
         String refName = ref instanceof File ? ((File) ref).getName() : ((ZipEntryInfo) ref).getName();
@@ -1654,6 +1691,7 @@ final View.OnClickListener originalClickListener;
     }
 
     public void selectAll() {
+        Haptics.perform(context.getWindow().getDecorView(), Haptics.Event.SELECTION);
         isMultiSelectMode = true;
         for (int i = (isInZip ? 0 : 1); i < values.length; i++) selectedPositions.add(i);
         notifyDataSetChanged();
