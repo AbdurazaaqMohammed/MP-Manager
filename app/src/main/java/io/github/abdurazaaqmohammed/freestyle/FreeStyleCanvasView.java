@@ -889,12 +889,10 @@ public class FreeStyleCanvasView extends View {
 
         RectF bounds = autoCropToBounds ? getLayersBoundingBox() : null;
         if (bounds != null) {
-            // Add slight 12px margin around contents if space permits
-            float margin = 12f * getResources().getDisplayMetrics().density;
-            bounds.left = Math.max(0, bounds.left - margin);
-            bounds.top = Math.max(0, bounds.top - margin);
-            bounds.right = Math.min(w, bounds.right + margin);
-            bounds.bottom = Math.min(h, bounds.bottom + margin);
+            bounds.left = Math.max(0, bounds.left);
+            bounds.top = Math.max(0, bounds.top);
+            bounds.right = Math.min(w, bounds.right);
+            bounds.bottom = Math.min(h, bounds.bottom);
 
             int outW = Math.max(1, Math.round(bounds.width()));
             int outH = Math.max(1, Math.round(bounds.height()));

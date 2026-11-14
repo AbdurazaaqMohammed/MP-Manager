@@ -157,9 +157,24 @@ public final class UiPrefs {
         return def;
     }
 
+    public static String apkExtractDir(Context context, String def) {
+        try {
+            String p = PreferenceManager.getDefaultSharedPreferences(context).getString("apk_extract_dir", "");
+            if (p != null && !p.trim().isEmpty()) return p.trim();
+        } catch (Exception ignored) {
+        }
+        return def;
+    }
+
     /** Default working directory base ("MP Manager" on the sdcard). */
     public static String defaultAppDir() {
         return new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath();
+    }
+
+    /** Default APK extract directory (inside app files directory or sdcard). */
+    public static String defaultApkExtractDir(Context context) {
+        String base = appPathDir(context, defaultAppDir());
+        return new File(base, "Extracted APKs").getPath();
     }
 
     /**

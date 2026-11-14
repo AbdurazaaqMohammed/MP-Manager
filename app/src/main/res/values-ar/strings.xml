@@ -798,6 +798,7 @@
     <string name="home_folder_1">المجلد الرئيسي، الجزء 1</string>
     <string name="home_folder_2">المجلد الرئيسي، الجزء 2</string>
     <string name="app_path_dir">مجلد ملفات التطبيق</string>
+    <string name="apk_extract_dir">مجلد استخراج APK</string>
     <string name="pick_folder">اختيار مجلد</string>
     <string name="gen_backup">إنشاء نسخة احتياطية .bak قبل التعديل</string>
     <string name="preserve_mtime">الاحتفاظ بالتاريخ الأصلي عند النسخ</string>
@@ -2554,4 +2555,18 @@
     <string name="clear_cache_confirm_msg">سيتم حذف كافة الملفات المؤقتة وبقايا الأرشيفات والـ Staging الضخمة (%s).\n\nسيتم الاحتفاظ بكاش أيقونات التطبيقات والمصغرات لضمان استمرار سرعة وسلاسة التصفح.</string>
     <string name="clear_cache_success">تم تنظيف الكاش بنجاح (تم تحرير %s)</string>
     <string name="clear_cache_empty">التخزين المؤقت نظيف بالفعل</string>
+    <string name="command_shell">شيل الأوامر</string>
+    <string name="command_shell_subtitle">تنفيذ أوامر الشيل و ADB بصلاحيات الروت أو شيزوكو</string>
+    <string name="command_title">نافذة الأوامر</string>
+    <string name="command_hint">أدخل أمر الشيل أو ADB هنا</string>
+    <string name="clear_all">مسح الكل</string>
+    <string name="clear_all_message">هل تريد مسح كل السجلات من هذه الشاشة؟</string>
+    <string name="bookmark_added_message">تمت إضافة \'%s\' إلى الإشارات المرجعية</string>
+    <string name="bookmark_removed_message">تمت إزالة \'%s\' من الإشارات المرجعية</string>
+    <string name="examples">أمثلة شائعة</string>
+    <string name="tab_shell">&gt;_ الشيل</string>
+    <string name="tab_files">الملفات والسكربتات</string>
+    <string name="run_script">تشغيل السكربت</string>
+    <string name="run_script_confirm">هل تريد تشغيل هذا السكربت؟\n\n%s</string>
+    <string name="shell_mode_status">وضع العمل: %s</string>
 </resources>

@@ -73,8 +73,8 @@
 
         <ImageView
             android:id="@+id/corner_status_badge"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true"
             android:layout_marginEnd="-12dp"

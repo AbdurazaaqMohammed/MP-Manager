@@ -1,0 +1,22 @@
+<androidx.appcompat.widget.LinearLayoutCompat
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/breadcrumb_item"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:textSize="13sp"
+        android:paddingHorizontal="6dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="/"
+        android:textSize="13sp"
+        android:alpha="0.5" />
+</androidx.appcompat.widget.LinearLayoutCompat>
