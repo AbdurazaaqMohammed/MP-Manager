@@ -8,6 +8,7 @@ local.properties
 
 # Log/OS Files
 *.log
+.build.pid
 
 # Android Studio generated files and folders
 captures/
