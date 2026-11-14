@@ -6,8 +6,8 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

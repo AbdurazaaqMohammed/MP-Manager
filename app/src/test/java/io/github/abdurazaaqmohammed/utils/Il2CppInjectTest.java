@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.feature.apk.Il2CppDumperUtil;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;

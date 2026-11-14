@@ -40,7 +40,7 @@ import java.util.Locale;
  * <p><b>This class lives in MP-Manager's own source on purpose.</b> It is
  * never used by MP-Manager itself (the app manifest declares no provider); it
  * is compiled into MP-Manager's dex so that
- * {@link io.github.abdurazaaqmohammed.utils.DocumentsProviderInjector} can
+ * {@link io.github.abdurazaaqmohammed.feature.apk.DocumentsProviderInjector} can
  * lift its class definitions out of the installed APK at patch time and write
  * them into the target APK as an extra dex. That keeps the injected provider
  * byte-for-byte in sync with this source instead of relying on a prebuilt dex

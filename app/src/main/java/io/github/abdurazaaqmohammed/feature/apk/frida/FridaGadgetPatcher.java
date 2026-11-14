@@ -1,9 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk.frida;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.app.Activity;
 import android.content.Context;

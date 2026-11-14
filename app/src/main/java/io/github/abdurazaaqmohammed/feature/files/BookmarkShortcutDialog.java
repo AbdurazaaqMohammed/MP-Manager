@@ -4,7 +4,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

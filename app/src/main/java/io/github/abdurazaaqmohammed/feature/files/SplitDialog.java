@@ -5,7 +5,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
 import android.text.Editable;
 import android.text.TextWatcher;

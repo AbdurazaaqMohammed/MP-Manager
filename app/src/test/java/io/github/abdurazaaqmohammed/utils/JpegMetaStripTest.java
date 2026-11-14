@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

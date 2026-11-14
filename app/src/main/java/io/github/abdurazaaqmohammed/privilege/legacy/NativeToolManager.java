@@ -3,8 +3,12 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 

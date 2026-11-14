@@ -1,15 +1,23 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsDialog;
+import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
+import io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex;
+import io.github.abdurazaaqmohammed.feature.apk.ExtractorIconCache;
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.text.CompareUtils;
 
 import io.github.abdurazaaqmohammed.util.text.CompareUtils;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.MergeUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
+import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import androidx.appcompat.app.ActionBar;

@@ -1,14 +1,18 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
+
+import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.SignatureStripUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
+import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.feature.apk.SignatureStripUtil;
 
 import android.graphics.Typeface;
 import android.widget.ScrollView;

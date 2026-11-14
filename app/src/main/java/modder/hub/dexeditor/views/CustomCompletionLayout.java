@@ -129,8 +129,8 @@ public class CustomCompletionLayout implements CompletionLayout {
 		// Traditional click listener instead of lambda
 		listView.setOnItemClickListener((parent, view, position, id) -> {
             try {
-                io.github.abdurazaaqmohammed.utils.Haptics.perform(view,
-                        io.github.abdurazaaqmohammed.utils.Haptics.Event.ACTION);
+                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(view,
+                        io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.ACTION);
                 editorAutoCompletion.select(position);
             } catch (Exception e) {
                 e.printStackTrace(System.err);

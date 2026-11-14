@@ -5,13 +5,13 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.DexDebugStripper;
-import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
-import io.github.abdurazaaqmohammed.utils.DexRepairEngine;
-import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
-import io.github.abdurazaaqmohammed.utils.DexStringUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper;
+import io.github.abdurazaaqmohammed.feature.apk.DexMergeUtil;
+import io.github.abdurazaaqmohammed.feature.apk.DexRepairEngine;
+import io.github.abdurazaaqmohammed.feature.apk.DexStringDecryptor;
+import io.github.abdurazaaqmohammed.feature.apk.DexStringUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 
@@ -516,7 +516,7 @@ public class DexTools {
                 DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
                 com.android.tools.smali.dexlib2.writer.pool.DexPool pool = new com.android.tools.smali.dexlib2.writer.pool.DexPool(dex.getOpcodes());
                 for (ClassDef cd : dex.getClasses()) {
-                    pool.internClass(io.github.abdurazaaqmohammed.utils.DexDebugStripper.strip(cd));
+                    pool.internClass(io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper.strip(cd));
                 }
                 com.android.tools.smali.dexlib2.writer.io.MemoryDataStore store = new com.android.tools.smali.dexlib2.writer.io.MemoryDataStore();
                 pool.writeTo(store);

@@ -6,10 +6,10 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBackupUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.ApkSignaturePreserver;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignaturePreserver;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import android.content.SharedPreferences;

@@ -3,9 +3,9 @@ package io.github.abdurazaaqmohammed.feature.files.network;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.widget.ProgressBar;
 

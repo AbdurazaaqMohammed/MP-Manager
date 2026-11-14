@@ -1,9 +1,13 @@
 package io.github.abdurazaaqmohammed.app;
 
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
-import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
+
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
+
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
+import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;

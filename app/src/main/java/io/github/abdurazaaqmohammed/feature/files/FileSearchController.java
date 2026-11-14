@@ -5,8 +5,8 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 

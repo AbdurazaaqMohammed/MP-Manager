@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
@@ -340,7 +344,7 @@ public class RightMenuController {
 
         if (onLongClick != null) {
             itemLayout.setOnLongClickListener(v -> {
-                io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
+                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
                 if (activity.drawerLayout != null && activity.drawerLayout.isDrawerOpen(GravityCompat.END)) {
                     activity.drawerLayout.closeDrawer(GravityCompat.END);
                     activity.drawerLayout.postDelayed(() -> {

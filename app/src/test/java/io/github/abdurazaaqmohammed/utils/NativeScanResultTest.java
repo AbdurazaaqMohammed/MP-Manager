@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeScanResult;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
 

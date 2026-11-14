@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.feature.apk.FastDexPatch;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;

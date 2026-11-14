@@ -4,7 +4,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 
 import android.content.Context;
 import android.content.res.Configuration;

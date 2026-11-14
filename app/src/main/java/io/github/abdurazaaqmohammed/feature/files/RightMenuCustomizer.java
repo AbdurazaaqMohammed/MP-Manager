@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
 import android.app.Activity;
 import android.util.DisplayMetrics;

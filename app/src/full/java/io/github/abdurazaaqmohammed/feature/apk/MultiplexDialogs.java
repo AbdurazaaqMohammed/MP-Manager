@@ -14,10 +14,10 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import top.nkbe.nza.sign.GenericSignatureKey;
 import top.nkbe.nza.sign.V2V3SchemeSigner;

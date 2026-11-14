@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
+import io.github.abdurazaaqmohammed.util.misc.HexPageCache;
+import io.github.abdurazaaqmohammed.util.misc.HexViewport;
+
 import org.junit.Test;
 import java.io.File;
 import java.io.RandomAccessFile;

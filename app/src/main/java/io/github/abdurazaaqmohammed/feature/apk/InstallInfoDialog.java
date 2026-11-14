@@ -1,13 +1,17 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
 
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.AppReinstaller;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
+
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.feature.apk.AppReinstaller;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;

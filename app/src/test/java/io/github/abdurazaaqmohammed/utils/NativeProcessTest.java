@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeProcess;
+
 import org.junit.Test;
 import java.io.InputStream;
 import java.io.OutputStream;

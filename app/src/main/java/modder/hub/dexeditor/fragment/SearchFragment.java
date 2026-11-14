@@ -102,7 +102,7 @@ import com.android.tools.smali.dexlib2.dexbacked.*;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;

@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.os.IBinder;
 
-import io.github.abdurazaaqmohammed.utils.ApkInstallDialogHelper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInstallDialogHelper;
 
 public class APKInstallService extends Service {
 

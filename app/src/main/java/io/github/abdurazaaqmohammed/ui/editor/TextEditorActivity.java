@@ -7,7 +7,7 @@ import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 

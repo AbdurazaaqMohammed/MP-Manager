@@ -1,11 +1,15 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
@@ -188,7 +192,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {
                         try { io.github.abdurazaaqmohammed.feature.files.network.RemotePath.validateName(newName); }
-                        catch (IllegalArgumentException e) { new io.github.abdurazaaqmohammed.utils.ErrorUtil(context).showError(e); return; }
+                        catch (IllegalArgumentException e) { new io.github.abdurazaaqmohammed.util.misc.ErrorUtil(context).showError(e); return; }
                         String oldPath = file.remotePath();
                         String newPath = file.remoteParent() + (file.remoteParent().endsWith("/") ? "" : "/") + newName;
                         ftpClient.rename(oldPath, newPath, new OnEZFtpCallBack<>() {

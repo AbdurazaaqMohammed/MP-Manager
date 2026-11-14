@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -13,13 +17,13 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.Haptics;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
 
@@ -2670,7 +2674,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private boolean showMsgOnLongPress(View v) {
-        io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
+        io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
@@ -2990,7 +2994,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     pm.dismiss();
-                    new io.github.abdurazaaqmohammed.utils.ErrorUtil(MainActivity.this).showError(e);
+                    new io.github.abdurazaaqmohammed.util.misc.ErrorUtil(MainActivity.this).showError(e);
                 });
             }
         }).start();

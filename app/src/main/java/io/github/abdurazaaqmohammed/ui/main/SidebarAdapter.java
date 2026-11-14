@@ -4,7 +4,7 @@ import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
 import android.content.Context;
 import android.content.res.Resources;

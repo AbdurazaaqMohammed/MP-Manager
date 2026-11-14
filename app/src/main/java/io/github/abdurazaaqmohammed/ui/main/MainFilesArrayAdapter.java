@@ -9,12 +9,12 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FolderPins;
-import io.github.abdurazaaqmohammed.utils.Haptics;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import android.app.Activity;

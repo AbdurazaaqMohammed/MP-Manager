@@ -5,12 +5,12 @@ import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.Haptics;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
-import io.github.abdurazaaqmohammed.utils.SettingsBackupHelper;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
+import io.github.abdurazaaqmohammed.util.misc.SettingsBackupHelper;
+import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 
 import android.app.Activity;
@@ -356,7 +356,7 @@ public class SettingsController {
     private void setupHaptics(ViewFinder root, SharedPreferences settings) {
         int[] ids = {R.id.hapticsEnabled, R.id.hapticsSelection, R.id.hapticsActions,
                 R.id.hapticsNavigation, R.id.hapticsCompletion};
-        String[] keys = {io.github.abdurazaaqmohammed.utils.Haptics.ENABLED, "haptics_selection",
+        String[] keys = {io.github.abdurazaaqmohammed.ui.common.util.Haptics.ENABLED, "haptics_selection",
                 "haptics_actions", "haptics_navigation", "haptics_completion"};
         for (int i = 0; i < ids.length; i++) {
             CompoundButton toggle = root.findViewById(ids[i]);
@@ -365,8 +365,8 @@ public class SettingsController {
             toggle.setChecked(settings.getBoolean(key, i < 3));
             toggle.setOnCheckedChangeListener((button, checked) -> {
                 settings.edit().putBoolean(key, checked).apply();
-                if (checked) io.github.abdurazaaqmohammed.utils.Haptics.perform(button,
-                        io.github.abdurazaaqmohammed.utils.Haptics.Event.ACTION);
+                if (checked) io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(button,
+                        io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.ACTION);
             });
         }
     }

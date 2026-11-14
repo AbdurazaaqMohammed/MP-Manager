@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 
 

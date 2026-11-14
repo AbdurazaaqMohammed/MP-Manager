@@ -5,7 +5,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;

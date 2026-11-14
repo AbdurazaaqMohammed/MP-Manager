@@ -111,7 +111,7 @@ import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;

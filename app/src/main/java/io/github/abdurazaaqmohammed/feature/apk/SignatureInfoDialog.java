@@ -2,10 +2,10 @@ package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
 
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import android.app.Activity;

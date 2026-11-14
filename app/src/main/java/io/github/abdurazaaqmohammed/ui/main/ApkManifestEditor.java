@@ -2,14 +2,14 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.MergeUtil;
-import io.github.abdurazaaqmohammed.utils.RunUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
+import io.github.abdurazaaqmohammed.util.misc.RunUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import android.annotation.SuppressLint;

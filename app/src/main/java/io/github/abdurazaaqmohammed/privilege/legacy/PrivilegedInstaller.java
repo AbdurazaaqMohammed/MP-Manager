@@ -3,7 +3,11 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
 
 import android.annotation.SuppressLint;

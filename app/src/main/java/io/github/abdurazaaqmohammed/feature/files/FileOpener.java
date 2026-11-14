@@ -13,14 +13,14 @@ import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
-import io.github.abdurazaaqmohammed.utils.MergeUtil;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.StickerUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
+import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
+import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 
@@ -154,7 +154,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.utils.nativelib.ElfParser;
+import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**

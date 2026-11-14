@@ -6,9 +6,9 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.HexPageCache;
-import io.github.abdurazaaqmohammed.utils.HexViewport;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.misc.HexPageCache;
+import io.github.abdurazaaqmohammed.util.misc.HexViewport;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 

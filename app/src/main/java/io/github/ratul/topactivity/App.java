@@ -34,7 +34,7 @@ import androidx.core.app.NotificationManagerCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.app.ServiceLocator;
-import io.github.abdurazaaqmohammed.utils.AppLogs;
+import io.github.abdurazaaqmohammed.util.misc.AppLogs;
 import io.github.ratul.topactivity.manager.NotificationUiManager;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
 

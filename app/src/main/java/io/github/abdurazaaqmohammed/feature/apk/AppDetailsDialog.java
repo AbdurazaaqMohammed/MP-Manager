@@ -1,9 +1,15 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 
-import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
+
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
+
+import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 
 import android.content.ClipData;
 import android.content.Context;

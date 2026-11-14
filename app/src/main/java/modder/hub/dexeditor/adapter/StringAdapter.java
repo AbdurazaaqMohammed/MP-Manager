@@ -397,14 +397,14 @@
 
             holder.itemView.setOnClickListener(v -> {
                 if (selectionMode) {
-                    io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.SELECTION);
+                    io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.SELECTION);
                     toggleSelected(original);
                 } else if (listener != null) {
                     listener.onStringClick(original);
                 }
             });
             holder.itemView.setOnLongClickListener(v -> {
-                io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
+                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
                 if (longClickListener != null) {
                     longClickListener.onStringLongClick(original);
                     return true;

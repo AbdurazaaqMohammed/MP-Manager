@@ -1,23 +1,32 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
+
+import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
+import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuOrder;
+import io.github.abdurazaaqmohammed.feature.apk.ApkOverlayTools;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureTools;
+import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackDialog;
+import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
+
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
-import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
-import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FastDexPatch;
-import io.github.abdurazaaqmohammed.utils.Il2CppDumperUtil;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
-import io.github.abdurazaaqmohammed.utils.NativeLibPatcher;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkOptimizer;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.FastDexPatch;
+import io.github.abdurazaaqmohammed.feature.apk.Il2CppDumperUtil;
+import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
+import io.github.abdurazaaqmohammed.feature.apk.NativeLibPatcher;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
+import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;

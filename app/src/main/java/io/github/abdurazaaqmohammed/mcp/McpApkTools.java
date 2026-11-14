@@ -1,12 +1,17 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
+
+import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
+
 import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 
 import android.content.Intent;

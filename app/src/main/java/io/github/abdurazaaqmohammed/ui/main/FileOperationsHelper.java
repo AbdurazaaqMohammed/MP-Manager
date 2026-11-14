@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -16,9 +20,9 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;

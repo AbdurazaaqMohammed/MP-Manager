@@ -1,9 +1,13 @@
 package io.github.abdurazaaqmohammed.feature.translation;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.app.Activity;
 import android.content.Intent;

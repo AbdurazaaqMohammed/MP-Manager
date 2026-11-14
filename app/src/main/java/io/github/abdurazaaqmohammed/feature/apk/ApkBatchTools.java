@@ -2,14 +2,14 @@ package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkCompareUtil;
 
-import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
-import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
-import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.feature.apk.ApkCompareUtil;
+import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
+import io.github.abdurazaaqmohammed.feature.apk.ApkOptimizer;
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 import android.content.SharedPreferences;
 import android.graphics.Typeface;

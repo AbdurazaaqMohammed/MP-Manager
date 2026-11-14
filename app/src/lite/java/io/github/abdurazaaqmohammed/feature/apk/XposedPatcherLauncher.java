@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 import android.content.Intent;
 import android.net.Uri;
@@ -13,7 +15,7 @@ public final class XposedPatcherLauncher {
     }
 
     public static void open(io.github.abdurazaaqmohammed.ui.main.MainActivity context,
-                            io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil,
+                            io.github.abdurazaaqmohammed.ui.common.util.DialogUtil dialogUtil,
                             boolean pane1, File file, String fileName) {
         context.handler.post(() -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.xposed_patcher_lite_title)

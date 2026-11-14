@@ -1,9 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
 import android.content.Intent;
 import android.database.Cursor;

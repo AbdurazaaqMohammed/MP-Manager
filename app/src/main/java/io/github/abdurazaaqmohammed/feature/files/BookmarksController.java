@@ -1,11 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FolderPins;
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import android.content.SharedPreferences;
 import android.text.Editable;
