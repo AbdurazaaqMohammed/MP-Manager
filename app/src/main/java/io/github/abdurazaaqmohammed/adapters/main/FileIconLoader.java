@@ -189,7 +189,7 @@ public class FileIconLoader {
         } catch (Exception ignored) {
         }
         this.elevatedFileOps = elevated;
-        ensureCachedIcons(context.getResources(), context.theme);
+        ensureCachedIcons(context, context.theme);
     }
 
     public static Drawable getCachedApkIcon() {
@@ -674,12 +674,6 @@ public class FileIconLoader {
         }
         if (!isUserStorage(path)) {
             try {
-                java.util.Map<String, Long> tree = AccessManager.dirSizeTree(ctx, path);
-                if (tree != null && !tree.isEmpty()) {
-                    DirSizeCache.recordBatch(tree);
-                    Long selfSize = tree.get(path);
-                    if (selfSize != null && selfSize >= 0) return selfSize;
-                }
                 long du = AccessManager.dirSize(ctx, path);
                 if (du >= 0) return du;
             } catch (Exception ignored) {}
@@ -707,9 +701,10 @@ public class FileIconLoader {
                 rootChecked = true;
                 if (children == null) return -1; // Unreadable root directory should never be treated as 0B
             }
-            if (children == null) continue;
+            if (children == null) return -1;
             for (File c : children) {
                 if (c == null) continue;
+                if (FileUtils.isSymlink(c)) continue;
                 if (c.isDirectory()) {
                     stack.push(c);
                 } else {
@@ -1064,7 +1059,7 @@ public class FileIconLoader {
         return resolved;
     }
 
-    private static boolean isDatabaseExt(String ext) {
+    static boolean isDatabaseExt(String ext) {
         return ".db".equals(ext) || ".sqlite".equals(ext) || ".sqlite3".equals(ext)
                 || ".db-wal".equals(ext) || ".db-shm".equals(ext) || ".db-journal".equals(ext)
                 || ".workdb".equals(ext) || ".workdb-wal".equals(ext) || ".workdb-shm".equals(ext)
@@ -1073,11 +1068,11 @@ public class FileIconLoader {
                 || ".wallet".equals(ext) || ".keychain".equals(ext);
     }
 
-    private static boolean isFontExt(String ext) {
+    static boolean isFontExt(String ext) {
         return ".ttf".equals(ext) || ".otf".equals(ext) || ".woff".equals(ext) || ".woff2".equals(ext) || ".ttc".equals(ext);
     }
 
-    private static boolean isBinaryExt(String ext) {
+    static boolean isBinaryExt(String ext) {
         return ".so".equals(ext) || ".bin".equals(ext) || ".dat".equals(ext) || ".vdex".equals(ext)
                 || ".odex".equals(ext) || ".art".equals(ext) || ".o".equals(ext) || ".dylib".equals(ext) || ".dll".equals(ext)
                 || ".binproto".equals(ext) || ".binwalk".equals(ext) || ".bios".equals(ext) || ".rom".equals(ext)
@@ -1092,34 +1087,34 @@ public class FileIconLoader {
                 || ".xpo".equals(ext) || ".crypt14".equals(ext) || ".crypt15".equals(ext);
     }
 
-    private static boolean isProtoExt(String ext) {
+    static boolean isProtoExt(String ext) {
         return ".pb".equals(ext) || ".proto".equals(ext) || ".preferences_pb".equals(ext) || ".pma".equals(ext) || ".bson".equals(ext)
                 || ".parquet".equals(ext) || ".arrow".equals(ext) || ".avro".equals(ext);
     }
 
-    private static boolean isWordExt(String ext) {
+    static boolean isWordExt(String ext) {
         return ".doc".equals(ext) || ".docx".equals(ext) || ".odt".equals(ext) || ".rtf".equals(ext);
     }
 
-    private static boolean isSheetExt(String ext) {
+    static boolean isSheetExt(String ext) {
         return ".xls".equals(ext) || ".xlsx".equals(ext) || ".csv".equals(ext) || ".ods".equals(ext) || ".tsv".equals(ext);
     }
 
-    private static boolean isSlideExt(String ext) {
+    static boolean isSlideExt(String ext) {
         return ".ppt".equals(ext) || ".pptx".equals(ext) || ".odp".equals(ext);
     }
 
-    private static boolean isScriptExt(String ext) {
+    static boolean isScriptExt(String ext) {
         return ".sh".equals(ext) || ".bash".equals(ext) || ".py".equals(ext) || ".c".equals(ext)
                 || ".cpp".equals(ext) || ".h".equals(ext) || ".hpp".equals(ext) || ".cs".equals(ext)
                 || ".rs".equals(ext) || ".go".equals(ext) || ".lua".equals(ext);
     }
 
-    private static boolean isBackupExt(String ext) {
+    static boolean isBackupExt(String ext) {
         return ".bak".equals(ext) || ".backup".equals(ext) || ".old".equals(ext) || ".orig".equals(ext) || ".save".equals(ext);
     }
 
-    private static boolean isCertExt(String ext) {
+    static boolean isCertExt(String ext) {
         return ".pem".equals(ext) || ".crt".equals(ext) || ".cer".equals(ext) || ".key".equals(ext)
                 || ".keystore".equals(ext) || ".jks".equals(ext) || ".bks".equals(ext) || ".der".equals(ext) || ".p12".equals(ext) || ".pfx".equals(ext)
                 || ".asc".equals(ext) || ".gpg".equals(ext) || ".csr".equals(ext) || ".crl".equals(ext)
@@ -1291,55 +1286,37 @@ public class FileIconLoader {
         return false;
     }
 
-    private static void ensureCachedIcons(Resources res, int theme) {
+    private static void ensureCachedIcons(Context context, int theme) {
+        Resources res = context.getResources();
         float density = res.getDisplayMetrics().density;
         int bucket = (int) (density * 4);
         if (cachedIconTheme == theme && cachedIconBucket == bucket) return;
         cachedIconTheme = theme;
         cachedIconBucket = bucket;
-        cachedFolderIcon  = badge(res, density, R.drawable.ic_folder_mt, 0xFF252525, false);
-        cachedApkIcon     = badge(res, density, R.drawable.apk_document_24px, 0xFF2E7D32, true);
-        cachedImageIcon   = badge(res, density, R.drawable.image_24px, 0xFF6A1B9A, true);
-        cachedVideoIcon   = badge(res, density, R.drawable.video_24px, 0xFFC62828, true);
-        cachedMusicIcon   = badge(res, density, R.drawable.music_24px, 0xFF00897B, true);
-        cachedArscIcon    = badge(res, density, R.drawable.stacks_24px, 0xFF9A6A00, true);
-        cachedDexIcon     = badge(res, density, R.drawable.code_24px, 0xFF549395, true);
-        cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, 0xFFE65100, true);
-        cachedStickerIcon = badge(res, density, R.drawable.ic_sticker_24px, 0xFF00897B, true);
-        cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
-        cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
-        cachedElfIcon     = badge(res, density, R.drawable.terminal_24px, 0xFF37474F, true);
-        cachedImgIcon     = badge(res, density, R.drawable.ic_disk_drive_24px, 0xFF455A64, true);
-        cachedDbIcon      = badge(res, density, R.drawable.ic_database_24px, 0xFF00695C, true);
-        cachedFontIcon    = badge(res, density, R.drawable.ic_font_aa_24px, 0xFFD84315, true);
-        cachedBinaryIcon  = badge(res, density, R.drawable.baseline_settings_24, 0xFF455A64, true);
-        cachedProtoIcon   = badge(res, density, R.drawable.ic_data_proto_24px, 0xFF4527A0, true);
-        cachedDocIcon     = badge(res, density, R.drawable.ic_office_doc_24px, 0xFF1565C0, true);
-        cachedSheetIcon   = badge(res, density, R.drawable.ic_office_sheet_24px, 0xFF2E7D32, true);
-        cachedSlideIcon   = badge(res, density, R.drawable.ic_office_slide_24px, 0xFFE65100, true);
-        cachedScriptIcon  = badge(res, density, R.drawable.terminal_24px, 0xFF283593, true);
-        cachedBackupIcon  = badge(res, density, R.drawable.ic_history, 0xFF5D4037, true);
-        cachedCertIcon    = badge(res, density, R.drawable.ic_certificate_seal_24px, 0xFFF57F17, true);
-        cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
-                theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
-    }
-
-    private static Drawable badge(Resources res, float density, int glyphId, int bgColor, boolean whiteGlyph) {
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(6 * density);
-        bg.setColor(bgColor);
-        Drawable glyph = ResourcesCompat.getDrawable(res, glyphId, null);
-        if (glyph != null) {
-            glyph = glyph.mutate();
-            if (whiteGlyph) DrawableCompat.setTint(glyph, Color.WHITE);
-        } else {
-            glyph = new ColorDrawable(Color.TRANSPARENT);
-        }
-        LayerDrawable layer = new LayerDrawable(
-                new Drawable[]{bg, glyph});
-        int inset = (int) (6 * density + 0.5f);
-        layer.setLayerInset(1, inset, inset, inset, inset);
-        return layer;
+        cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
+        cachedApkIcon = FileIconSpec.APK.drawable(context);
+        cachedImageIcon = FileIconSpec.IMAGE.drawable(context);
+        cachedVideoIcon = FileIconSpec.VIDEO.drawable(context);
+        cachedMusicIcon = FileIconSpec.AUDIO.drawable(context);
+        cachedArscIcon = FileIconSpec.ARSC.drawable(context);
+        cachedDexIcon = FileIconSpec.DEX.drawable(context);
+        cachedArchiveIcon = FileIconSpec.ARCHIVE.drawable(context);
+        cachedStickerIcon = FileIconSpec.STICKER.drawable(context);
+        cachedPdfIcon = FileIconSpec.PDF.drawable(context);
+        cachedTextIcon = FileIconSpec.TEXT.drawable(context);
+        cachedElfIcon = FileIconSpec.ELF.drawable(context);
+        cachedImgIcon = FileIconSpec.DISK.drawable(context);
+        cachedDbIcon = FileIconSpec.DATABASE.drawable(context);
+        cachedFontIcon = FileIconSpec.FONT.drawable(context);
+        cachedBinaryIcon = FileIconSpec.BINARY.drawable(context);
+        cachedProtoIcon = FileIconSpec.PROTO.drawable(context);
+        cachedDocIcon = FileIconSpec.DOCUMENT.drawable(context);
+        cachedSheetIcon = FileIconSpec.SHEET.drawable(context);
+        cachedSlideIcon = FileIconSpec.SLIDE.drawable(context);
+        cachedScriptIcon = FileIconSpec.SCRIPT.drawable(context);
+        cachedBackupIcon = FileIconSpec.BACKUP.drawable(context);
+        cachedCertIcon = FileIconSpec.CERTIFICATE.drawable(context);
+        cachedFileIcon = FileIconSpec.forPath("", false, theme).drawable(context);
     }
 
     private static String resolveAccessiblePath(String path) {
@@ -1352,7 +1329,7 @@ public class FileIconLoader {
         return path;
     }
 
-    private static Bitmap loadImageThumbnail(String path) {
+    public static Bitmap loadImageThumbnail(String path) {
         if (SafFs.isSafPath(path)) {
             // Provider documents have no readable path: decode through the
             // ContentResolver stream (bounds pass, then the scaled pass).
@@ -1363,7 +1340,7 @@ public class FileIconLoader {
                 int width = options.outWidth;
                 int height = options.outHeight;
                 int scale = 1;
-                while (width / 2 >= 128 && height / 2 >= 128) {
+                while (Math.max(width, height) / 2 >= 256) {
                     width /= 2;
                     height /= 2;
                     scale *= 2;
@@ -1410,7 +1387,7 @@ public class FileIconLoader {
             if (width <= 0 || height <= 0) return null;
 
             int scale = 1;
-            while (width / 2 >= 128 && height / 2 >= 128) {
+            while (Math.max(width, height) / 2 >= 256) {
                 width /= 2;
                 height /= 2;
                 scale *= 2;
@@ -1442,7 +1419,7 @@ public class FileIconLoader {
             if (width <= 0 || height <= 0) return null;
 
             int scale = 1;
-            while (width / 2 >= 128 && height / 2 >= 128) {
+            while (Math.max(width, height) / 2 >= 256) {
                 width /= 2;
                 height /= 2;
                 scale *= 2;
@@ -1456,7 +1433,7 @@ public class FileIconLoader {
         }
     }
 
-    private static Bitmap loadVideoThumbnail(String path) {
+    public static Bitmap loadVideoThumbnail(String path) {
         String resolvedPath = resolveAccessiblePath(path);
         try {
             Bitmap b = ThumbnailUtils.createVideoThumbnail(resolvedPath, MediaStore.Video.Thumbnails.MINI_KIND);

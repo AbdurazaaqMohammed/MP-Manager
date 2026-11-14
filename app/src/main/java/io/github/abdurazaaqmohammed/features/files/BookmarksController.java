@@ -37,6 +37,8 @@ import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.utils.FolderPins;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import org.apache.commons.io.FilenameUtils;
@@ -134,7 +136,7 @@ public class BookmarksController {
             activity.closeBookmarksDrawer();
         });
         list.setOnItemLongClickListener((parent, view, position, id) -> {
-            showBookmarkItemMenu(mainBookmarkController, position);
+            showBookmarkItemMenu(mainBookmarkController, position, view);
             return true;
         });
 
@@ -331,7 +333,7 @@ public class BookmarksController {
             activity.closeBookmarksDrawer();
         });
         listView.setOnItemLongClickListener((parent, view, position, id) -> {
-            showBookmarkItemMenu(controller, position);
+            showBookmarkItemMenu(controller, position, view);
             return true;
         });
         return listView;
@@ -450,6 +452,7 @@ public class BookmarksController {
 
     private boolean handleBookmarkListClick(BookmarkListController controller, int position) {
         if (batchController == controller) {
+            Haptics.perform(controller.listView, Haptics.Event.SELECTION);
             if (batchSelected.contains(position)) batchSelected.remove(position);
             else batchSelected.add(position);
             controller.adapter.notifyDataSetChanged();
@@ -470,24 +473,47 @@ public class BookmarksController {
     }
 
     private void showBookmarkItemMenu(BookmarkListController controller, int position, View anchor) {
+        if (position < 0 || position >= controller.items.size()) return;
+        Haptics.perform(anchor, Haptics.Event.LONG_PRESS);
         PopupMenu popup = new PopupMenu(activity, anchor);
-        String edit = activity.rss.getString(R.string.edit_bookmark);
-        String move = activity.rss.getString(R.string.move);
-        String delete = activity.rss.getString(R.string.delete);
-        String batch = activity.rss.getString(R.string.batch_operations);
-        popup.getMenu().add(edit);
-        popup.getMenu().add(move);
-        popup.getMenu().add(delete);
-        popup.getMenu().add(batch);
+        popup.setForceShowIcon(true);
+        popup.getMenu().add(0, 1, 0, R.string.edit_bookmark).setIcon(R.drawable.edit_24px);
+        popup.getMenu().add(0, 2, 1, R.string.move).setIcon(R.drawable.baseline_content_cut_24);
+        popup.getMenu().add(0, 3, 2, R.string.move_to_top).setIcon(R.drawable.ic_arrow_up_mt);
+        popup.getMenu().add(0, 4, 3, R.string.plugin_create_shortcut).setIcon(R.drawable.baseline_open_in_new_24);
+        popup.getMenu().add(0, 5, 4, R.string.delete).setIcon(R.drawable.baseline_delete_24);
+        popup.getMenu().add(0, 6, 5, R.string.batch_operations).setIcon(R.drawable.baseline_select_all_24);
+        File bookmark = controller.items.get(position);
+        if (bookmark.isDirectory()) popup.getMenu().add(0, 7, 6,
+                FolderPins.isPinned(activity, bookmark) ? R.string.unpin_folder : R.string.pin_folder).setIcon(R.drawable.keep_24px);
         popup.setOnMenuItemClickListener(item -> {
-            CharSequence title = item.getTitle();
-            if (delete.contentEquals(title)) confirmDeleteBookmark(controller, position);
-            else if (move.contentEquals(title)) showMoveBookmarkDialog(controller, position);
-            else if (batch.contentEquals(title)) enterBookmarkBatchMode(controller);
-            else showEditBookmarkDialog(controller, position);
+            if (position >= controller.items.size()) return false;
+            Haptics.perform(anchor, Haptics.Event.ACTION);
+            switch (item.getItemId()) {
+                case 1 -> showEditBookmarkDialog(controller, position);
+                case 2 -> showMoveBookmarkDialog(controller, position);
+                case 3 -> moveBookmarkToTop(controller, position);
+                case 4 -> new BookmarkShortcutDialog(activity, bookmark, controller.labelOf(bookmark)).show();
+                case 5 -> confirmDeleteBookmark(controller, position);
+                case 6 -> enterBookmarkBatchMode(controller);
+                case 7 -> {
+                    FolderPins.set(activity, List.of(bookmark), !FolderPins.isPinned(activity, bookmark));
+                    activity.refreshAllPanes();
+                }
+                default -> { return false; }
+            }
             return true;
         });
         popup.show();
+    }
+
+    private void moveBookmarkToTop(BookmarkListController controller, int position) {
+        if (position <= 0 || position >= controller.items.size()) return;
+        controller.items.add(0, controller.items.remove(position));
+        persistBookmarkOrder(controller);
+        controller.adapter.notifyDataSetChanged();
+        controller.listView.setSelection(0);
+        activity.refreshSidebar(activity.getSidebarSectionOrder());
     }
 
     private void showEditBookmarkDialog(BookmarkListController controller, int position) {
@@ -725,7 +751,7 @@ public class BookmarksController {
                         activeController.items.clear();
                         activeController.items.addAll(reorderItems);
                         persistBookmarkOrder(activeController);
-                        BookmarksController.this.bookmarks = activeController.items;
+                         if (activeController.key.equals("bookmarks")) BookmarksController.this.bookmarks = activeController.items;
                         activeController.adapter.notifyDataSetChanged();
                         activity.refreshSidebar(activity.getSidebarSectionOrder());
                         return true;
@@ -743,7 +769,8 @@ public class BookmarksController {
                     @Override
                     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
                         super.onSelectedChanged(viewHolder, actionState);
-                        if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                         if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                             Haptics.perform(viewHolder.itemView, Haptics.Event.LONG_PRESS);
                             viewHolder.itemView.setElevation(8f * density);
                         }
                     }
@@ -765,7 +792,7 @@ public class BookmarksController {
                     activeController.items.clear();
                     activeController.items.addAll(reorderItems);
                     persistBookmarkOrder(activeController);
-                    this.bookmarks = activeController.items;
+                    if (activeController.key.equals("bookmarks")) this.bookmarks = activeController.items;
                     activeController.adapter.notifyDataSetChanged();
                     activity.refreshSidebar(activity.getSidebarSectionOrder());
                 })

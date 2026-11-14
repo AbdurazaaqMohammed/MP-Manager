@@ -2651,7 +2651,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private boolean showMsgOnLongPress(View v) {
-        v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
@@ -3341,7 +3341,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     Extensions.showMessage(this, rss.getString(R.string.cannot_open_item));
                 }
             }
-            String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
+            String locate = getIntent() == null || getIntent().hasExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH)
+                    ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
                     getIntent().removeExtra("locatePath");
@@ -3410,6 +3411,52 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             fileSearch.onActivityResume();
         } catch (Exception ignored) {
         }
+        openBookmarkShortcut();
+    }
+
+    private void openBookmarkShortcut() {
+        Intent intent = getIntent();
+        if (intent == null || !io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.ACTION_OPEN.equals(intent.getAction())) return;
+        String path = intent.getStringExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH);
+        if (path == null || path.isEmpty()) return;
+        boolean directory = intent.getBooleanExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_DIRECTORY, true);
+        intent.removeExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH);
+        intent.removeExtra("locatePath");
+        new Thread(() -> {
+            File target;
+            try {
+                io.github.abdurazaaqmohammed.utils.SafFs.init(this);
+                target = io.github.abdurazaaqmohammed.utils.SafFs.isSafPath(path)
+                        ? io.github.abdurazaaqmohammed.utils.SafFs.statWrap(path) : new File(path);
+                if (!io.github.abdurazaaqmohammed.utils.SafFs.isSaf(target)
+                        && !AccessManager.exists(this, target.getAbsolutePath())) {
+                    handler.post(() -> Extensions.showMessage(this, R.string.cannot_open_item));
+                    return;
+                }
+                if (!(target instanceof io.github.abdurazaaqmohammed.utils.SafFile) && directory) {
+                    target = new io.github.abdurazaaqmohammed.utils.RootFile(path, true, true, false, 0, 0, "d");
+                }
+            } catch (Exception error) {
+                handler.post(() -> new ErrorUtil(this).showError(error));
+                return;
+            }
+            File resolved = target;
+            handler.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                setSelectedPane(1);
+                if (directory) {
+                    loadFolderInPaneAsync(resolved, true, true);
+                } else {
+                    File parent = resolved.getParentFile();
+                    if (parent == null) { Extensions.showMessage(this, R.string.cannot_open_item); return; }
+                    loadFolderInPaneAsync(parent, true, true, () -> {
+                        highlightAndFocusItem(true, resolved.getName());
+                        var adapter = paneFilesAdapter(true);
+                        if (adapter != null) adapter.getFileOpener().handleFileClick(resolved, resolved.getName());
+                    });
+                }
+            });
+        }, "bookmark-shortcut-open").start();
     }
 
 
