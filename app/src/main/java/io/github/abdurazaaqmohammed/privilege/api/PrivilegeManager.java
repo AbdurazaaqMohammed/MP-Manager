@@ -41,7 +41,7 @@ public final class PrivilegeManager {
     }
 
     /** Which channel is currently active (mirrors AccessManager.active). */
-    public enum Backend { NONE, ROOT, SHIZUKU }
+    public enum Backend { NONE, ROOT, SHIZUKU } // DHIZUKU slot lands with settings wiring
 
     public static Backend active(Context context) {
         AccessManager.Backend legacy = AccessManager.active(context);

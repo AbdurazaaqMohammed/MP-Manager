@@ -28,6 +28,7 @@ import android.os.Build;
 import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
+import io.github.abdurazaaqmohammed.privilege.backend.DhizukuBackend;
 import io.github.abdurazaaqmohammed.privilege.backend.RootBackend;
 import io.github.abdurazaaqmohammed.privilege.backend.ShizukuBackend;
 import io.github.abdurazaaqmohammed.privilege.internal.Registry;
@@ -70,8 +71,9 @@ public class App extends Application {
         super.onCreate();
         instance = this;
         ServiceLocator.init(this);
-        // Privilege layer (M3): register the available backends. Selection
-        // order lives in Registry; the DHIZUKU line lands with M4.
+        // Privilege layer (M3/M4): register the available backends. Selection
+        // order lives in Registry: DHIZUKU > SHIZUKU > ROOT > NONE.
+        Registry.register(DhizukuBackend.get());
         Registry.register(ShizukuBackend.get());
         Registry.register(RootBackend.get());
         // Cold-start optimization: each pack costs an asset read, a signature
