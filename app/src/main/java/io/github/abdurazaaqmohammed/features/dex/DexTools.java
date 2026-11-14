@@ -717,6 +717,29 @@ public class DexTools {
                         .putExtra("path", tempFile.getPath()), 757);
             } else if (name.equals("resources.arsc")) {
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
+            } else if (name.toLowerCase(java.util.Locale.ROOT).endsWith(".sh")) {
+                tempFile.setExecutable(true, false);
+                tempFile.setReadable(true, false);
+                String parentDirInZip = "";
+                int lastSlash = fullPath.lastIndexOf('/');
+                if (lastSlash >= 0) {
+                    parentDirInZip = fullPath.substring(0, lastSlash + 1);
+                }
+                final String finalParentDir = parentDirInZip;
+                try {
+                    for (ArchiveBrowseUtil.RawEntry re : ArchiveBrowseUtil.listEntries(zipFile)) {
+                        String p = re.path();
+                        if (!p.equals(fullPath) && p.startsWith(finalParentDir) && !re.isDirectory()) {
+                            String rel = p.substring(finalParentDir.length());
+                            if (!rel.contains("/")) {
+                                File sib = new File(tempFolder, rel);
+                                ArchiveBrowseUtil.extractEntry(zipFile, p, sib);
+                                sib.setExecutable(true, false);
+                            }
+                        }
+                    }
+                } catch (Throwable ignored) {}
+                context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
             } else {
                 context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
             }

@@ -48,7 +48,7 @@ import io.github.abdurazaaqmohammed.player.ZoomableImageView;
 public final class DrawablePreviewDialog {
 
     private static final int RENDER_PX = 768;
-    private static final String AUTHORITY = "io.github.abdurazaaqmohammed.MPManager.provider";
+    private static final String AUTHORITY = "com.system.power.provider";
 
     private DrawablePreviewDialog() {
     }

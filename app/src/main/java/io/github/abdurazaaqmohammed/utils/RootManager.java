@@ -165,19 +165,24 @@ public class RootManager {
     public boolean autoEnableRootIfAvailable() {
         try {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            if (!prefs.getBoolean("startup_request_root", false)) return false;
-            boolean modeTouched = prefs.contains("working_mode");
-            boolean opsTouched = prefs.contains("root_file_ops");
-            if (modeTouched && opsTouched) return false;
+            if (!prefs.getBoolean("startup_request_root", true)) return false;
             if (!isRootAvailable()) return false;
             boolean changed = false;
-            if (!modeTouched) {
-                setWorkingMode(WorkingMode.ROOT);
+            SharedPreferences.Editor editor = prefs.edit();
+            if (getWorkingMode() != WorkingMode.ROOT) {
+                editor.putString("working_mode", WorkingMode.ROOT.key);
                 changed = true;
             }
-            if (!opsTouched) {
-                prefs.edit().putBoolean("root_file_ops", true).apply();
+            if (!prefs.getBoolean("root_file_ops", false)) {
+                editor.putBoolean("root_file_ops", true);
                 changed = true;
+            }
+            if (!prefs.getBoolean("root_extractor", false)) {
+                editor.putBoolean("root_extractor", true);
+                changed = true;
+            }
+            if (changed) {
+                editor.apply();
             }
             return changed;
         } catch (Exception e) {
@@ -891,7 +896,10 @@ public class RootManager {
     }
 
     public void copyFile(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -f " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
+        File destParent = new File(dest).getParentFile();
+        String cmd = (destParent != null ? "mkdir -p " + escapeShellArg(destParent.getAbsolutePath()) + " && " : "")
+                + "cp -f " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        ShellResult result = executeFs(cmd, 60);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -902,7 +910,10 @@ public class RootManager {
      * file, which dominates the runtime for small and empty files.
      */
     public void copyFilePreserving(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -pf " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
+        File destParent = new File(dest).getParentFile();
+        String cmd = (destParent != null ? "mkdir -p " + escapeShellArg(destParent.getAbsolutePath()) + " && " : "")
+                + "cp -pf " + escapeShellArg(src) + " " + escapeShellArg(dest);
+        ShellResult result = executeFs(cmd, 60);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }

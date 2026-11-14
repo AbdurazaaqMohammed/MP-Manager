@@ -42,7 +42,7 @@ public class MimeUtil {
     public static String getReportedMimeType(Context context, Object fileOrZipEntry) {
         try {
             if (fileOrZipEntry instanceof ZipEntryInfo entry) return guessFromExtension(entry.getName());
-            return context.getContentResolver().getType(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", (File) fileOrZipEntry));
+            return context.getContentResolver().getType(FileProvider.getUriForFile(context, "com.system.power.provider", (File) fileOrZipEntry));
         } catch (Exception e) {
             return null;
         }

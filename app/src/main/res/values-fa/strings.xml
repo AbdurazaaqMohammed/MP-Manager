@@ -1449,7 +1449,7 @@ com/gms/
     <string name="wifi_current_connection">اتصال فعلی</string>
     <string name="wifi_data_usage">مصرف شبکه</string>
     <string name="wifi_export_failed">صادرات انجام نشد</string>
-    <string name="wifi_exported">به Download/MP Manager صادر شد</string>
+    <string name="wifi_exported">به Download/MPlite صادر شد</string>
     <string name="wifi_grant_failed">مجوز اعطا نشد</string>
     <string name="wifi_grant_msg">دسترسی ریشه/روت پیدا شد. به این برنامه مجوز WRITE_SECURE_SETTINGS را اعطا کنید تا دفعه بعد DNS بتواند با یک ضربه تغییر کند؟</string>
     <string name="wifi_grant_title">اعطای مجوز WRITE_SECURE_SETTINGS</string>
@@ -1658,7 +1658,7 @@ com/gms/
     <string name="mtime_failed">به‌روزرسانی تاریخ آخرین تغییر انجام نشد</string>
     <string name="shizuku_silent_install">نصب بی‌صدا با Shizuku</string>
     <string name="installer_source">منبع نصب‌کننده (انتساب نصب)</string>
-    <string name="installer_source_self">خود برنامه (MP Manager)</string>
+    <string name="installer_source_self">خود برنامه (MPlite)</string>
     <string name="installer_source_play">فروشگاه Google Play (جعل، نیازمند root/Shizuku)</string>
     <string name="installer_source_shell">شل (نیازمند root/Shizuku، برای HyperOS/MIUI)</string>
     <string name="installer_source_custom">بسته سفارشی…</string>
@@ -1942,7 +1942,7 @@ com/gms/
     <string name="npatch_done">وصله شد: %1$s</string>
     <string name="npatch_install_prompt">%1$s ساخته شد. ماژول‌ها امبد شده‌اند — برنامه مستقل اجرا می‌شود. نصب شود؟</string>
     <string name="xposed_patcher_lite_title">وصله‌کنندهٔ Xposed</string>
-    <string name="xposed_patcher_lite_message">موتورهای وصله‌کنندهٔ Xposed (LSPatch) در نسخهٔ lite بسته‌بنده نشده‌اند. برای وصلهٔ APKها با ماژول‌های امبدشده، نسخهٔ کامل MP Manager را نصب کنید.</string>
+    <string name="xposed_patcher_lite_message">موتورهای وصله‌کنندهٔ Xposed (LSPatch) در نسخهٔ lite بسته‌بنده نشده‌اند. برای وصلهٔ APKها با ماژول‌های امبدشده، نسخهٔ کامل MPlite را نصب کنید.</string>
     <string name="op_copying">رونوشت</string>
     <string name="op_moving">جابه‌جایی</string>
     <string name="op_deleting">حذف</string>
@@ -1977,7 +1977,7 @@ com/gms/
     <string name="version_comparison">مقایسه نسخه</string>
     <string name="installed_app">برنامه نصب‌شده</string>
     <string name="new_apk">APK جدید</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">حافظه داخلی</string>
     <string name="storage_provider_appdata">داده‌های اندروید (root/Shizuku)</string>
     <string name="storage_provider_root">سیستم پرونده root</string>
@@ -2015,7 +2015,7 @@ com/gms/
     <string name="logcat_stop">توقف</string>
     <string name="logcat_settings">تنظیمات</string>
     <string name="logcat_keep_running">ادامه ضبط در پس‌زمینه (اعلان نشان داده می‌شود)</string>
-    <string name="logcat_auto_start">شروع ضبط هنگام باز شدن MP Manager</string>
+    <string name="logcat_auto_start">شروع ضبط هنگام باز شدن MPlite</string>
     <string name="logcat_add_shortcut">افزودن به صفحه اصلی</string>
     <string name="logcat_shortcut_old_android">میان‌برها به اندروید 8.0 یا جدیدتر نیاز دارند</string>
     <string name="logcat_shortcut_unsupported">لانچر اجازه میان‌برها را نمی‌دهد</string>

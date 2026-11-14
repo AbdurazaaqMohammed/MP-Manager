@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="app_name" translatable="false">MPlite</string>
     <string name="success_saved">Berhasil menyimpan berkas ke %s</string>
     <string name="enable_logs">Simpan log</string>
     <string name="sign_apk_after_merge">Tandatangani APK setelah penggabungan</string>
@@ -429,7 +429,7 @@
     <string name="warning_dangerous_directory">Peringatan: Direktori Berbahaya</string>
     <string name="warn_delete_s">Anda akan menghapus berkas di direktori sistem sensitif. Ini dapat merusak aplikasi atau menyebabkan ketidakstabilan sistem.\n\nApakah Anda benar-benar yakin?</string>
     <string name="no_apk_files_found">Tidak ada berkas APK ditemukan di arsip</string>
-    <string name="termux_perm"><![CDATA[Catatan: Anda perlu memberikan izin agar MP Manager dapat mengirim perintah ke Termux\n(Izin > Izin Tambahan > Jalankan perintah di lingkungan Termux)]]></string>
+    <string name="termux_perm"><![CDATA[Catatan: Anda perlu memberikan izin agar MPlite dapat mengirim perintah ke Termux\n(Izin > Izin Tambahan > Jalankan perintah di lingkungan Termux)]]></string>
     <string name="editor_settings">Pengaturan Editor</string>
     <string name="icon_changed">Ikon diubah</string>
     <string name="icon_not_found">Tidak dapat menemukan resource ikon peluncur di APK ini</string>
@@ -697,7 +697,7 @@
     <string name="root_install">Instal root</string>
     <string name="shizuku_silent_install">Instal diam-diam Shizuku</string>
     <string name="installer_source">Paket penginstal (atribusi instalasi)</string>
-    <string name="installer_source_self">Sendiri (MP Manager)</string>
+    <string name="installer_source_self">Sendiri (MPlite)</string>
     <string name="installer_source_initiator">Aplikasi yang membagikan berkas ini</string>
     <string name="installer_source_play">Google Play Store (penyamaran, perlu root/Shizuku)</string>
     <string name="installer_source_shell">Shell (perlu root/Shizuku, untuk HyperOS/MIUI)</string>
@@ -1081,7 +1081,7 @@
     <string name="rec_capturing_sub">Ketuk perekam untuk berhenti</string>
     <string name="locate_failed">Tidak dapat menemukan berkas ini</string>
     <string name="locate_resolving">Menguraikan berkas…</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">Pilih apa yang akan dilakukan dengan berkas ini</string>
     <string name="shared_entry_file_icon">Ikon berkas</string>
     <string name="shared_entry_unknown">Berkas bersama</string>
@@ -1124,8 +1124,8 @@
     <string name="storage_roundtrip_done">Siklus bolak-balik selesai</string>
     <string name="storage_nothing_selected">Tidak ada yang dipilih, muat terlebih dahulu</string>
     <string name="storage_enable_autoclear">Aktifkan layanan bersihkan otomatis</string>
-    <string name="storage_autoclear_need">Bersihkan otomatis memerlukan layanan aksesibilitas MP Manager Cache Cleaner. Aktifkan di pengaturan sistem, lalu mulai lagi.</string>
-    <string name="storage_autoclear_need_elevated">Bersihkan otomatis memerlukan layanan aksesibilitas MP Manager Cache Cleaner. Root/Shizuku ditemukan, dapat diaktifkan secara otomatis.</string>
+    <string name="storage_autoclear_need">Bersihkan otomatis memerlukan layanan aksesibilitas MPlite Cache Cleaner. Aktifkan di pengaturan sistem, lalu mulai lagi.</string>
+    <string name="storage_autoclear_need_elevated">Bersihkan otomatis memerlukan layanan aksesibilitas MPlite Cache Cleaner. Root/Shizuku ditemukan, dapat diaktifkan secara otomatis.</string>
     <string name="storage_enable_auto">Aktifkan secara otomatis</string>
     <string name="storage_open_settings">Buka pengaturan</string>
     <string name="storage_service_enabled_again">Layanan diaktifkan, ketuk bersihkan otomatis lagi</string>
@@ -1241,7 +1241,7 @@
     <string name="wifi_save_failed">Penyimpanan gagal</string>
     <string name="wifi_qr_failed">QR gagal</string>
     <string name="wifi_nothing_to_export">Tidak ada yang diekspor</string>
-    <string name="wifi_exported">Diekspor ke Download/MP Manager</string>
+    <string name="wifi_exported">Diekspor ke Download/MPlite</string>
     <string name="wifi_export_failed">Ekspor gagal</string>
     <string name="wifi_networks_n">%1$d jaringan</string>
     <string name="wifi_root_needed_passwords">Root diperlukan untuk kata sandi tersimpan</string>
@@ -1365,7 +1365,7 @@
     <string name="toggle_hex_keypad">Alihkan keypad hex</string>
     <string name="height_15_90">Tinggi %% (15–90)</string>
     <string name="toast_message">Pesan toast</string>
-    <string name="def_msg">Halo dari MP Manager</string>
+    <string name="def_msg">Halo dari MPlite</string>
     <string name="duration">Durasi</string>
     <string name="position">Posisi</string>
     <string name="def">Default</string>
@@ -1705,7 +1705,7 @@
     <string name="dex_export_jar">Jar (sumber Java)</string>
     <string name="dex_export_choose_folder">Pilih folder ekspor</string>
     <string name="dex_export_none">Tidak ada kelas dipilih</string>
-    <string name="ai_warning">Peringatan: Respons yang dihasilkan AI disediakan semata-mata untuk tujuan informasi dan dapat tidak akurat, tidak lengkap, usang, atau tidak aman. Anda sepenuhnya bertanggung jawab atas peninjauan, verifikasi, dan penggunaan keluaran AI. Sepanjang yang diizinkan oleh hukum, pengembang MP Manager tidak bertanggung jawab atas kerugian, kerusakan, atau konsekuensi yang timbul dari penggunaan fitur AI ini atau dari kebergantungan pada keluarannya. Pemakaian API tunduk pada ketentuan layanan Gemini Google, dan Anda bertanggung jawab atas biaya yang timbul melalui kunci API Anda.</string>
+    <string name="ai_warning">Peringatan: Respons yang dihasilkan AI disediakan semata-mata untuk tujuan informasi dan dapat tidak akurat, tidak lengkap, usang, atau tidak aman. Anda sepenuhnya bertanggung jawab atas peninjauan, verifikasi, dan penggunaan keluaran AI. Sepanjang yang diizinkan oleh hukum, pengembang MPlite tidak bertanggung jawab atas kerugian, kerusakan, atau konsekuensi yang timbul dari penggunaan fitur AI ini atau dari kebergantungan pada keluarannya. Pemakaian API tunduk pada ketentuan layanan Gemini Google, dan Anda bertanggung jawab atas biaya yang timbul melalui kunci API Anda.</string>
     <string name="agree">Setuju</string>
     <string name="ai_usage_disclaimer">Sangkalan Penggunaan AI</string>
     <string name="edpref_display">Pengaturan Tampilan</string>
@@ -1901,7 +1901,7 @@
     <string name="npatch_done">Ditambal: %1$s</string>
     <string name="npatch_install_prompt">%1$s dibuat. Modul ditanam — aplikasi berjalan mandiri. Pasang?</string>
     <string name="xposed_patcher_lite_title">Patcher Xposed</string>
-    <string name="xposed_patcher_lite_message">Mesin patcher Xposed (LSPatch) tidak disertakan dalam build lite. Pasang versi lengkap MP Manager untuk menambal APK dengan modul tertanam.</string>
+    <string name="xposed_patcher_lite_message">Mesin patcher Xposed (LSPatch) tidak disertakan dalam build lite. Pasang versi lengkap MPlite untuk menambal APK dengan modul tertanam.</string>
     <string name="op_copying">SALIN</string>
     <string name="op_moving">PINDAH</string>
     <string name="op_deleting">HAPUS</string>
@@ -1935,7 +1935,7 @@
     <string name="version_comparison">Perbandingan versi</string>
     <string name="installed_app">Aplikasi terinstal</string>
     <string name="new_apk">APK baru</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">Penyimpanan internal</string>
     <string name="storage_provider_appdata">Data Android (root/Shizuku)</string>
     <string name="storage_provider_root">Sistem berkas root</string>
@@ -1973,7 +1973,7 @@
     <string name="logcat_stop">Hentikan</string>
     <string name="logcat_settings">Pengaturan</string>
     <string name="logcat_keep_running">Lanjutkan perekaman di latar belakang (notifikasi ditampilkan)</string>
-    <string name="logcat_auto_start">Mulai merekam saat MP Manager dibuka</string>
+    <string name="logcat_auto_start">Mulai merekam saat MPlite dibuka</string>
     <string name="logcat_add_shortcut">Tambahkan ke layar utama</string>
     <string name="logcat_shortcut_old_android">Pintasan memerlukan Android 8.0 atau lebih baru</string>
     <string name="logcat_shortcut_unsupported">Launcher tidak mengizinkan pintasan</string>

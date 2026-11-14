@@ -31,6 +31,9 @@ public class ToolRegistry {
         tools.add(new ToolItem("mcpserver", context.getString(R.string.mcp_server),
                 context.getString(R.string.mcp_subtitle),
                 resId(context, "code_24px", pkg), context.getString(R.string.cat_network)));
+                tools.add(new ToolItem("terminal", context.getString(R.string.terminal_title),
+                context.getString(R.string.terminal_subtitle),
+                resId(context, "terminal_24px", pkg), context.getString(R.string.cat_device)));
         tools.add(new ToolItem("logcat", context.getString(R.string.sidebar_logcat),
                 context.getString(R.string.logcat_subtitle),
                 resId(context, "terminal_24px", pkg), context.getString(R.string.cat_device)));

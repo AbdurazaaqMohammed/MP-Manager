@@ -1519,7 +1519,7 @@ androidx/
     <string name="rec_capturing_sub">แตะตัวบันทึกเพื่อหยุด</string>
     <string name="locate_failed">ระบุตำแหน่งไฟล์นี้ไม่ได้</string>
     <string name="locate_resolving">กำลังระบุไฟล์…</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">เลือกว่าจะทำอะไรกับไฟล์นี้</string>
     <string name="shared_entry_file_icon">ไอคอนไฟล์</string>
     <string name="shared_entry_unknown">ไฟล์ที่แชร์</string>
@@ -1595,7 +1595,7 @@ androidx/
 
 วิธีสร้าง: คัดลอกโมดูล samples/plugin-sample ประกาศ hook ที่ใช้ใน manifest และทำตาม contract string ใน PluginContracts จากนั้น build APK โฮสต์ไว้ที่ใดก็ได้ และแชร์ลายนิ้วมือกับผู้ใช้</string>
     <string name="installer">ตัวติดตั้ง</string>
-    <string name="ai_warning">คำเตือน: คำตอบที่ AI สร้างให้เพื่อข้อมูลเท่านั้น อาจไม่ถูกต้อง ไม่ครบ ล้าสมัย หรือไม่ปลอดภัย คุณรับผิดชอบตรวจสอบ ยืนยัน และใช้เอาต์พุต AI แต่เพียงผู้เดียว ในขอบเขตสูงสุดที่กฎหมายอนุญาต นักพัฒนา MP Manager ไม่รับผิดชอบความสูญเสีย ความเสียหาย หรือผลใดๆ จากการใช้ฟีเจอร์ AI นี้ การใช้ API อยู่ภายใต้ข้อกำหนดบริการ Gemini ของ Google และคุณรับผิดชอบค่าใช้จ่ายใดๆ ผ่าน API key ของคุณ</string>
+    <string name="ai_warning">คำเตือน: คำตอบที่ AI สร้างให้เพื่อข้อมูลเท่านั้น อาจไม่ถูกต้อง ไม่ครบ ล้าสมัย หรือไม่ปลอดภัย คุณรับผิดชอบตรวจสอบ ยืนยัน และใช้เอาต์พุต AI แต่เพียงผู้เดียว ในขอบเขตสูงสุดที่กฎหมายอนุญาต นักพัฒนา MPlite ไม่รับผิดชอบความสูญเสีย ความเสียหาย หรือผลใดๆ จากการใช้ฟีเจอร์ AI นี้ การใช้ API อยู่ภายใต้ข้อกำหนดบริการ Gemini ของ Google และคุณรับผิดชอบค่าใช้จ่ายใดๆ ผ่าน API key ของคุณ</string>
     <string name="agree">ยอมรับ</string>
     <string name="ai_usage_disclaimer">ข้อปฏิเสธการใช้ AI</string>
     <string name="edpref_display">ตั้งค่าการแสดงผล</string>
@@ -1646,7 +1646,7 @@ androidx/
     <string name="mtime_failed">อัปเดตเวลาแก้ไขล่าสุดไม่สำเร็จ</string>
     <string name="shizuku_silent_install">ติดตั้งเงียบด้วย Shizuku</string>
     <string name="installer_source">แหล่งตัวติดตั้ง (การระบุที่มาติดตั้ง)</string>
-    <string name="installer_source_self">ตัวเอง (MP Manager)</string>
+    <string name="installer_source_self">ตัวเอง (MPlite)</string>
     <string name="installer_source_play">Google Play Store (ปลอม ต้องใช้ root/Shizuku)</string>
     <string name="installer_source_shell">Shell (ต้องใช้ root/Shizuku สำหรับ HyperOS/MIUI)</string>
     <string name="installer_source_custom">แพ็กเกจกำหนดเอง…</string>
@@ -1930,7 +1930,7 @@ androidx/
     <string name="npatch_done">แพตช์แล้ว: %1$s</string>
     <string name="npatch_install_prompt">สร้าง %1$s แล้ว โมดูลถูกฝังไว้ — แอปทำงานเองได้ ติดตั้งหรือไม่?</string>
     <string name="xposed_patcher_lite_title">ตวแพตช Xposed</string>
-    <string name="xposed_patcher_lite_message">ระบบตวแพตช Xposed (LSPatch) ไมไดรวมมาในสรางไลต ติดตั้ ง MP Manager  เวอรชนเต็มเพือแพตช APK แบบฝงโมดูล</string>
+    <string name="xposed_patcher_lite_message">ระบบตวแพตช Xposed (LSPatch) ไมไดรวมมาในสรางไลต ติดตั้ ง MPlite  เวอรชนเต็มเพือแพตช APK แบบฝงโมดูล</string>
     <string name="op_copying">คัดลอก</string>
     <string name="op_moving">ย้าย</string>
     <string name="op_deleting">ลบ</string>
@@ -1967,7 +1967,7 @@ androidx/
 <string name="version_comparison">เปรียบเทียบเวอร์ชัน</string>
 <string name="installed_app">แอปที่ติดตั้งแล้ว</string>
 <string name="new_apk">APK ใหม่</string>
-<string name="storage_provider_label">MP Manager</string>
+<string name="storage_provider_label">MPlite</string>
 <string name="storage_provider_internal">พื้นที่จัดเก็บภายใน</string>
 <string name="storage_provider_appdata">ข้อมูล Android (root/Shizuku)</string>
 <string name="storage_provider_root">ระบบไฟล์ root</string>
@@ -2005,7 +2005,7 @@ androidx/
 <string name="logcat_stop">หยุด</string>
 <string name="logcat_settings">การตั้งค่า</string>
 <string name="logcat_keep_running">บันทึก log ต่อในเบื้องหลัง (แสดงการแจ้งเตือน)</string>
-<string name="logcat_auto_start">เริ่มบันทึก log เมื่อเปิด MP Manager</string>
+<string name="logcat_auto_start">เริ่มบันทึก log เมื่อเปิด MPlite</string>
 <string name="logcat_add_shortcut">เพิ่มไปยังหน้าจอหลัก</string>
 <string name="logcat_shortcut_old_android">ทางลัดต้องใช้ Android 8.0 ขึ้นไป</string>
 <string name="logcat_shortcut_unsupported">Launcher ไม่อนุญาตให้สร้างทางลัด</string>

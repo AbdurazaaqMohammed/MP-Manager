@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="app_name" translatable="false">MPlite</string>
     <string name="success_saved">Archivo guardado correctamente en %s</string>
     <string name="enable_logs">Guardar registros</string>
     <string name="sign_apk_after_merge">Firmar el APK después de combinar</string>
@@ -346,7 +346,7 @@
     <string name="warning_dangerous_directory">Advertencia: directorio peligroso</string>
     <string name="warn_delete_s">Estás a punto de eliminar archivos en un directorio sensible del sistema. Esto puede dañar aplicaciones o causar inestabilidad del sistema.\n\n¿Estás totalmente seguro?</string>
     <string name="no_apk_files_found">No se encontraron archivos APK en el archivo</string>
-    <string name="termux_perm"><![CDATA[Nota: Debes conceder permiso para que MP Manager pueda enviar comandos a Termux\n(Permisos > Permisos adicionales > Ejecutar comandos en el entorno Termux)]]></string>
+    <string name="termux_perm"><![CDATA[Nota: Debes conceder permiso para que MPlite pueda enviar comandos a Termux\n(Permisos > Permisos adicionales > Ejecutar comandos en el entorno Termux)]]></string>
     <string name="editor_settings">Ajustes del editor</string>
     <string name="icon_changed">Icono cambiado</string>
     <string name="could_not_decode_am">No se pudo decodificar AndroidManifest.xml</string>
@@ -941,8 +941,8 @@ Layout Inspector
     <string name="storage_roundtrip_done">Prueba completada</string>
     <string name="storage_nothing_selected">Nada seleccionado, toca Cargar primero</string>
     <string name="storage_enable_autoclear">Habilitar servicio de autoborrado</string>
-    <string name="storage_autoclear_need">El autoborrado necesita el servicio de accesibilidad MP Manager Cache Cleaner. Actívalo en ajustes del sistema y vuelve a iniciar.</string>
-    <string name="storage_autoclear_need_elevated">El autoborrado necesita el servicio de accesibilidad MP Manager Cache Cleaner. Root/Shizuku detectado, se puede activar automáticamente.</string>
+    <string name="storage_autoclear_need">El autoborrado necesita el servicio de accesibilidad MPlite Cache Cleaner. Actívalo en ajustes del sistema y vuelve a iniciar.</string>
+    <string name="storage_autoclear_need_elevated">El autoborrado necesita el servicio de accesibilidad MPlite Cache Cleaner. Root/Shizuku detectado, se puede activar automáticamente.</string>
     <string name="storage_enable_auto">Habilitar automáticamente</string>
     <string name="storage_open_settings">Abrir ajustes</string>
     <string name="storage_service_enabled_again">Servicio habilitado, toca autoborrado de nuevo</string>
@@ -1058,7 +1058,7 @@ Layout Inspector
     <string name="wifi_save_failed">Error al guardar</string>
     <string name="wifi_qr_failed">QR fallido</string>
     <string name="wifi_nothing_to_export">Nada que exportar</string>
-    <string name="wifi_exported">Exportado a Download/MP Manager</string>
+    <string name="wifi_exported">Exportado a Download/MPlite</string>
     <string name="wifi_export_failed">Exportación fallida</string>
     <string name="wifi_networks_n">%1$d redes</string>
     <string name="wifi_root_needed_passwords">Se necesita root para contraseñas guardadas</string>
@@ -1182,7 +1182,7 @@ Layout Inspector
     <string name="toggle_hex_keypad">Alternar teclado hexadecimal</string>
     <string name="height_15_90">Altura %% (15–90)</string>
     <string name="toast_message">Mensaje toast</string>
-    <string name="def_msg">Hola de MP Manager</string>
+    <string name="def_msg">Hola de MPlite</string>
     <string name="duration">Duración</string>
     <string name="position">Posición</string>
     <string name="def">Predeterminado</string>
@@ -1559,7 +1559,7 @@ Layout Inspector
     <string name="folder_anim_slide_up">Deslizar hacia arriba</string>
     <string name="folder_anim_fade">Fundido</string>
     <string name="folder_anim_slide_fade">Deslizar + fundido</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">Elige qué hacer con este archivo</string>
     <string name="shared_entry_file_icon">Icono de archivo</string>
     <string name="shared_entry_unknown">Archivo compartido</string>
@@ -1585,7 +1585,7 @@ Layout Inspector
     <string name="x_strings_found">%1$d cadenas encontradas</string>
     <string name="x_more_strings">…y %1$d más</string>
     <string name="installer">Instalador</string>
-    <string name="ai_warning">Advertencia: las respuestas generadas por IA se proporcionan solo con fines informativos y pueden ser inexactas, incompletas, estar desactualizadas o no ser seguras. Eres el único responsable de revisar, verificar y utilizar cualquier salida de la IA. En la máxima medida permitida por la ley, el desarrollador de MP Manager no se hace responsable de ninguna pérdida, daño o consecuencia derivada del uso de esta función de IA o de la confianza en su salida. El uso de la API está sujeto a las condiciones de servicio de Gemini de Google, y eres responsable de cualquier cargo generado a través de tu clave de API.</string>
+    <string name="ai_warning">Advertencia: las respuestas generadas por IA se proporcionan solo con fines informativos y pueden ser inexactas, incompletas, estar desactualizadas o no ser seguras. Eres el único responsable de revisar, verificar y utilizar cualquier salida de la IA. En la máxima medida permitida por la ley, el desarrollador de MPlite no se hace responsable de ninguna pérdida, daño o consecuencia derivada del uso de esta función de IA o de la confianza en su salida. El uso de la API está sujeto a las condiciones de servicio de Gemini de Google, y eres responsable de cualquier cargo generado a través de tu clave de API.</string>
     <string name="agree">Aceptar</string>
     <string name="ai_usage_disclaimer">Aviso de uso de la IA</string>
     <string name="edpref_display">Ajustes de visualización</string>
@@ -1636,7 +1636,7 @@ Layout Inspector
     <string name="mtime_failed">No se pudo actualizar la última modificación</string>
     <string name="shizuku_silent_install">Instalación silenciosa con Shizuku</string>
     <string name="installer_source">Fuente del instalador (atribución de instalación)</string>
-    <string name="installer_source_self">Propio (MP Manager)</string>
+    <string name="installer_source_self">Propio (MPlite)</string>
     <string name="installer_source_play">Google Play Store (falso, necesita root/Shizuku)</string>
     <string name="installer_source_shell">Shell (necesita root/Shizuku, para HyperOS/MIUI)</string>
     <string name="installer_source_custom">Paquete personalizado…</string>
@@ -1920,7 +1920,7 @@ Layout Inspector
     <string name="npatch_done">Parcheado: %1$s</string>
     <string name="npatch_install_prompt">Se creó %1$s. Los módulos están incrustados — la app funciona de forma independiente. ¿Instalarla?</string>
     <string name="xposed_patcher_lite_title">Parcheador Xposed</string>
-    <string name="xposed_patcher_lite_message">El motor del parcheador Xposed (LSPatch) no se incluye en la versión lite. Instala la versión completa de MP Manager para parchear APK con módulos incrustados.</string>
+    <string name="xposed_patcher_lite_message">El motor del parcheador Xposed (LSPatch) no se incluye en la versión lite. Instala la versión completa de MPlite para parchear APK con módulos incrustados.</string>
     <string name="op_copying">COPIAR</string>
     <string name="op_moving">MOVER</string>
     <string name="op_deleting">ELIMINAR</string>
@@ -1955,7 +1955,7 @@ Layout Inspector
     <string name="version_comparison">Comparación de versiones</string>
     <string name="installed_app">Aplicación instalada</string>
     <string name="new_apk">APK nuevo</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">Almacenamiento interno</string>
     <string name="storage_provider_appdata">Datos de Android (root/Shizuku)</string>
     <string name="storage_provider_root">Sistema de archivos root</string>
@@ -1993,7 +1993,7 @@ Layout Inspector
     <string name="logcat_stop">Detener</string>
     <string name="logcat_settings">Ajustes</string>
     <string name="logcat_keep_running">Seguir capturando en segundo plano (se muestra una notificación)</string>
-    <string name="logcat_auto_start">Iniciar la captura al abrir MP Manager</string>
+    <string name="logcat_auto_start">Iniciar la captura al abrir MPlite</string>
     <string name="logcat_add_shortcut">Añadir a la pantalla de inicio</string>
     <string name="logcat_shortcut_old_android">Los accesos directos requieren Android 8.0 o posterior</string>
     <string name="logcat_shortcut_unsupported">El lanzador no permite accesos directos</string>

@@ -178,7 +178,7 @@ public final class FileMenuOrder {
             case BATCH_SIGN -> context.getString(R.string.batch_sign);
             case BATCH_OPT -> context.getString(R.string.batch_optimize);
             case BATCH_INSTALL -> context.getString(R.string.batch_install);
-            case EXTRACT -> context.getString(R.string.extract);
+            case EXTRACT -> context.getString(R.string.extract) + (direction != null && !direction.isEmpty() ? ' ' + direction : "");
             case CMP_ZIP -> context.getString(R.string.compare_zip);
             case CMP_ARSC -> context.getString(R.string.compare_arsc);
             case CMP_TEXT -> context.getString(R.string.compare_text);

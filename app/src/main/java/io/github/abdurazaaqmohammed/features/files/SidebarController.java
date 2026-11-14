@@ -723,6 +723,9 @@ public class SidebarController {
             case "mcp_server":
                 activity.startActivity(new Intent(activity, McpServerActivity.class));
                 break;
+                        case "terminal":
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.TerminalActivity.class));
+                break;
             case "logcat":
                 // NEW_TASK + the activity's own taskAffinity give the viewer
                 // its own recents entry, so a home-screen shortcut and the

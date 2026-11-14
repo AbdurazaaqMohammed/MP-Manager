@@ -1530,7 +1530,7 @@ public class APKExtractorActivity extends BaseActivity {
         ArrayList<File> mergedFiles = new ArrayList<>();
 
         new Thread(() -> {
-            String authority = "io.github.abdurazaaqmohammed.MPManager.provider";
+            String authority = "com.system.power.provider";
             for(int i : itemsToProcess) try {
                 AppInfo ai = getCurrentAdapter().filteredAppInfoList.get(i);
                 boolean split = ai.isSplit;
@@ -1630,7 +1630,7 @@ public class APKExtractorActivity extends BaseActivity {
                         if (files != null) {
                             for (File f : files) {
                                 if (f.isFile() && f.getName().endsWith(".apk")) {
-                                    fileUris.add(FileProvider.getUriForFile(this, "io.github.abdurazaaqmohammed.MPManager.provider", f));
+                                    fileUris.add(FileProvider.getUriForFile(this, "com.system.power.provider", f));
                                 }
                             }
                         }
@@ -1680,7 +1680,7 @@ public class APKExtractorActivity extends BaseActivity {
                     .setType("application/vnd.android.package-archive")
                     .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
         } else {
-            Uri u = FileProvider.getUriForFile(this, "io.github.abdurazaaqmohammed.MPManager.provider", single);
+            Uri u = FileProvider.getUriForFile(this, "com.system.power.provider", single);
             intent = new Intent(Intent.ACTION_SEND)
                     .setType("application/vnd.android.package-archive")
                     .putExtra(Intent.EXTRA_STREAM, u);
