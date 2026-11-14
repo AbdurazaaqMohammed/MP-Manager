@@ -925,6 +925,7 @@ Layout Inspector
     <string name="home_folder_1">Home folder, pane 1</string>
     <string name="home_folder_2">Home folder, pane 2</string>
     <string name="app_path_dir">App files directory</string>
+    <string name="apk_extract_dir">APK extract directory</string>
     <string name="pick_folder">Pick folder</string>
     <string name="gen_backup">Create .bak backup before editing</string>
     <string name="preserve_mtime">Keep original date when copying</string>
@@ -2628,4 +2629,18 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="clear_cache_confirm_msg">This will safely delete all temporary files, unpacked archives, and staging data (%s).\n\nApp icon caches, code caches, and editor sessions will be preserved so app performance stays fast.</string>
     <string name="clear_cache_success">Cache cleared successfully (%s freed)</string>
     <string name="clear_cache_empty">Cache is already clean</string>
+    <string name="command_shell">Command Shell</string>
+    <string name="command_shell_subtitle">Run shell and ADB commands via Root or Shizuku</string>
+    <string name="command_title">Command Box</string>
+    <string name="command_hint">Input ADB or shell command here</string>
+    <string name="clear_all">Clear all</string>
+    <string name="clear_all_message">Clear everything on this screen?</string>
+    <string name="bookmark_added_message">\'%s\' added to bookmarks</string>
+    <string name="bookmark_removed_message">\'%s\' removed from bookmarks</string>
+    <string name="examples">Examples</string>
+    <string name="tab_shell">&gt;_ Shell</string>
+    <string name="tab_files">Files</string>
+    <string name="run_script">Run script</string>
+    <string name="run_script_confirm">Do you want to run this script?\n\n%s</string>
+    <string name="shell_mode_status">Working Mode: %s</string>
 </resources>

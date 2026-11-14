@@ -1291,11 +1291,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .setNegativeButton(rss.getString(R.string.folder), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
                              File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                             String rawInput = input.getText().toString().trim();
                              if (ogFolder instanceof RemoteFile remote) {
-                                 network.create(remote, input.getText().toString(), true, isPane1);
+                                 network.create(remote, rawInput.isEmpty() ? "Folder" : rawInput, true, isPane1);
                                  return;
                              }
-                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), true);
+                             String name = resolveNewEntryName(ogFolder, rawInput, true);
                             boolean success;
                             if (SafFs.isSaf(ogFolder)) {
                                 success = SafFs.createDirectory((SafFile) ogFolder, name);
@@ -1317,11 +1318,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .setPositiveButton(rss.getString(R.string.file), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
                              File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                             String rawInput = input.getText().toString().trim();
                              if (ogFolder instanceof RemoteFile remote) {
-                                 network.create(remote, input.getText().toString(), false, isPane1);
+                                 network.create(remote, rawInput.isEmpty() ? "File" : rawInput, false, isPane1);
                                  return;
                              }
-                             String name = resolveNewEntryName(ogFolder, input.getText().toString(), false);
+                             String name = resolveNewEntryName(ogFolder, rawInput, false);
                             boolean success;
                             if (SafFs.isSaf(ogFolder)) {
                                 success = SafFs.createFile((SafFile) ogFolder, name, null);
@@ -1629,7 +1631,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         String baseName = inputStr != null ? inputStr.trim() : "";
         String ext = "";
         if (baseName.isEmpty()) {
-            baseName = isFolder ? "New folder" : "New file";
+            baseName = isFolder ? "Folder" : "File";
         } else if (!isFolder) {
             int dot = baseName.lastIndexOf('.');
             if (dot > 0) {

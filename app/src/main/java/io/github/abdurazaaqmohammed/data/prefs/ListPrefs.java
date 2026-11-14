@@ -36,6 +36,20 @@ public final class ListPrefs {
         return prefs.getBoolean("sort_reverse_" + folderPath, prefs.getBoolean("sort_reverse", false));
     }
 
+    public boolean hasFolderSort(String folderPath) {
+        if (folderPath == null) return false;
+        SharedPreferences prefs = prefs();
+        return prefs.contains("sort_by_" + folderPath);
+    }
+
+    public void removeFolderSort(String folderPath) {
+        if (folderPath == null) return;
+        prefs().edit()
+                .remove("sort_by_" + folderPath)
+                .remove("sort_reverse_" + folderPath)
+                .apply();
+    }
+
     /** Save sort mode globally, or only for one folder when folderPath != null. */
     public void saveSort(String folderPath, int sortBy, boolean reverse) {
         SharedPreferences.Editor editor = prefs().edit();

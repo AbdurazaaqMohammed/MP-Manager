@@ -167,9 +167,79 @@ public final class AppDetailsDialog {
         pkgView.setOnLongClickListener(copy);
     }
 
+    private static void ensureDetailsLoaded(APKExtractorActivity act, AppInfo ai, Set<String> hidden) {
+        if (ai == null || ai.packageName == null) return;
+        PackageManager pm = act.getPackageManager();
+
+        // Check if installer/initiator/origin are needed and not yet loaded
+        boolean needInstaller = (!hidden.contains("detail:installer") && ai.installer == null)
+                || (!hidden.contains("detail:initiator") && ai.installInitiator == null)
+                || (!hidden.contains("detail:origin") && ai.installOrigin == null);
+
+        if (needInstaller) {
+            try {
+                String inst = null;
+                String initiator = null;
+                String origin = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    try {
+                        android.content.pm.InstallSourceInfo si = pm.getInstallSourceInfo(ai.packageName);
+                        if (si != null) {
+                            inst = si.getInstallingPackageName();
+                            initiator = si.getInitiatingPackageName();
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                try {
+                                    int src = si.getPackageSource();
+                                    if (src == 1) origin = "Local file";
+                                    else if (src == 2) origin = "Downloaded file";
+                                    else if (src == 3) origin = "Other";
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (inst == null) inst = pm.getInstallerPackageName(ai.packageName);
+                ai.installer = inst;
+                ai.installInitiator = initiator;
+                ai.installOrigin = origin;
+            } catch (Exception ignored) {}
+        }
+
+        // Check if dataDir or extDataDir are needed and missing
+        if ((!hidden.contains("detail:data_dir") || !hidden.contains("action:open_data_dir")) && ai.dataDir == null) {
+            try {
+                if (ai.appInfo != null) ai.dataDir = ai.appInfo.dataDir;
+                else {
+                    android.content.pm.ApplicationInfo appInfo = pm.getApplicationInfo(ai.packageName, 0);
+                    ai.dataDir = appInfo.dataDir;
+                    ai.appInfo = appInfo;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if ((!hidden.contains("detail:ext_data") || !hidden.contains("action:open_ext_data_dir")) && ai.extDataDir == null) {
+            try {
+                ai.extDataDir = new File(android.os.Environment.getExternalStorageDirectory(), "Android/data/" + ai.packageName).getAbsolutePath();
+            } catch (Exception ignored) {}
+        }
+
+        // Check if size is needed and missing
+        if (!hidden.contains("detail:apk_size") && ai.totalSize <= 0 && ai.filePath != null) {
+            try {
+                File f = new File(ai.filePath);
+                ai.baseSize = f.length();
+                ai.totalSize = ai.baseSize;
+                ai.apkDir = f.getParent();
+            } catch (Exception ignored) {}
+        }
+    }
+
     private static void renderNormalMode(APKExtractorActivity act, LinearLayout container, AppInfo ai, AppRecyclerViewAdapter adapter, AlertDialog dialog) {
         List<String> order = AppDetailsConfig.getOrder(act);
         Set<String> hidden = AppDetailsConfig.getHiddenKeys(act);
+
+        // Dynamically load any details that were previously hidden and are now visible
+        ensureDetailsLoaded(act, ai, hidden);
 
         boolean hasAddedActionHeader = false;
 

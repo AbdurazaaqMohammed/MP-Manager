@@ -1633,8 +1633,11 @@ public class FileOpener {
                 .setTitle(context.getString(R.string.sh_select_action) + ": " + fileName)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setNeutralButton(R.string.sh_edit, (dialog, which) -> context.startActivity(
-                        rootAwareEditorIntent(readable, original).putExtra("path", readable.getPath())))
+                .setNeutralButton(R.string.command_shell, (dialog, which) -> {
+                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity.class);
+                    intent.putExtra("script_path", readable.getAbsolutePath());
+                    context.startActivity(intent);
+                })
                 .setPositiveButton(R.string.sh_execute, (dialog, which) -> executeShellScript(
                         readable, runAsRootBox != null && runAsRootBox.isChecked()))
                 .create());
