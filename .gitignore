@@ -38,9 +38,10 @@ toolpacks/
 /app/release/baselineProfiles
 app/release/output-metadata.json
 
-# Reference clones of upstream projects (local only, see docs/NPATCH_INTEGRATION.md)
+# Reference clones of upstream projects (local only, see docs/XPOSED_PATCHER.md)
 /NPatch-dev/
 /NeoApk/
+/LSPatch-master/
 
 # Manual backup archives (local only)
 MP-Manager.zip
