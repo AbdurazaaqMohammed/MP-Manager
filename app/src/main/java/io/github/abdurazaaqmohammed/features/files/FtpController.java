@@ -25,8 +25,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile;
-import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileManager;
+import io.github.abdurazaaqmohammed.feature.ftp.FtpProfile;
+import io.github.abdurazaaqmohammed.feature.ftp.ProfileManager;
 import com.lilincpp.github.libezftp.EZFtpClient;
 import com.lilincpp.github.libezftp.EZFtpFile;
 import com.lilincpp.github.libezftp.EZFtpServer;
@@ -37,12 +37,12 @@ import com.lilincpp.github.libezftp.IEZFtpServer;
 import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 import com.lilincpp.github.libezftp.EZFtpServer.Builder;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
-import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
+import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.feature.ftp.FtpForegroundService;
+import io.github.abdurazaaqmohammed.feature.ftp.FtpsCertificateUtil;
+import io.github.abdurazaaqmohammed.feature.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;

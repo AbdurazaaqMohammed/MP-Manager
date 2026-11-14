@@ -35,10 +35,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.boot.BootInspectManager;
+import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.FileMenuAction;
@@ -179,8 +179,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             } else {
                 File current = pane1 ? context.pane1Folder : context.pane2Folder;
                 File target = upFile;
-                if (io.github.abdurazaaqmohammed.boot.BootInspectManager.isBootInspectFolder(current)) {
-                    File resolved = io.github.abdurazaaqmohammed.boot.BootInspectManager.getParentOrImageOrigin(current);
+                if (io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.isBootInspectFolder(current)) {
+                    File resolved = io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.getParentOrImageOrigin(current);
                     if (resolved != null) target = resolved;
                 }
                 if (target == null) return false;

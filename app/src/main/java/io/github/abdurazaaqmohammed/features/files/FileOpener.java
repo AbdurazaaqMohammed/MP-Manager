@@ -61,8 +61,8 @@ import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
-import io.github.abdurazaaqmohammed.boot.BootImageEngine;
-import io.github.abdurazaaqmohammed.boot.BootInspectManager;
+import io.github.abdurazaaqmohammed.feature.boot.BootImageEngine;
+import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.ui.editor.DrawablePreviewDialog;
 import io.github.abdurazaaqmohammed.ui.editor.StickerPreviewDialog;
@@ -106,15 +106,15 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.CompareDexActivity;
 import io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.HtmlViewerActivity;
@@ -1634,7 +1634,7 @@ public class FileOpener {
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.command_shell, (dialog, which) -> {
-                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity.class);
+                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class);
                     intent.putExtra("script_path", readable.getAbsolutePath());
                     context.startActivity(intent);
                 })
@@ -1794,8 +1794,8 @@ public class FileOpener {
         } else if (isKernelFile(file, fileName)) {
             withReadableCopy(file, readable -> showKernelOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") || fileName.endsWith(".iso") || file.getAbsolutePath().startsWith("/dev/block/")) {
-            if (io.github.abdurazaaqmohammed.boot.BootImageEngine.isBootImage(file)) {
-                io.github.abdurazaaqmohammed.boot.BootInspectManager.openBootImage(context, file, pane1);
+            if (io.github.abdurazaaqmohammed.feature.boot.BootImageEngine.isBootImage(file)) {
+                io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.openBootImage(context, file, pane1);
             } else if (io.github.abdurazaaqmohammed.features.system.SystemImageEngine.isSparseImage(file)) {
                 promptUnsparseImage(file, fileName);
             } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountableImage(file)) {

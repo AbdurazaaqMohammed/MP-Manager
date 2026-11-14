@@ -60,13 +60,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.ui.editor.DrawablePreviewDialog;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.DexMergeUtil;

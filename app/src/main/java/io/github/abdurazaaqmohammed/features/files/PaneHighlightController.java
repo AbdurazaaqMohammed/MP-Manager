@@ -8,7 +8,7 @@ import android.widget.RelativeLayout;
 
 import androidx.preference.PreferenceManager;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.PaneHighlightView;
 

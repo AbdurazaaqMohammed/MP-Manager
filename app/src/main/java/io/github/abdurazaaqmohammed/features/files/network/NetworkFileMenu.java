@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuDialog;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
 

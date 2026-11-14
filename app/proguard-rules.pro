@@ -29,7 +29,7 @@
 # them and silently lose stored user data.
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
--keep class io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile { *; }
+-keep class io.github.abdurazaaqmohammed.feature.ftp.FtpProfile { *; }
 -keep class io.github.abdurazaaqmohammed.features.files.network.NetworkProfile { *; }
 
 # SMBJ uses MBassador's annotation-based event subscriptions. EL filters are an

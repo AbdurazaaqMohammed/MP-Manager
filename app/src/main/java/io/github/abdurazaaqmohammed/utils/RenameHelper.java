@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 import android.widget.EditText;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.io.File;

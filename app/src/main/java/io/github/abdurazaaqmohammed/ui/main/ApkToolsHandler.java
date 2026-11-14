@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 import java.io.File;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkInfoDialogs;
 import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;

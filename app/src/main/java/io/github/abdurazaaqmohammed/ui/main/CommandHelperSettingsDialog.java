@@ -31,8 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.commandhelper.ProfileManager;
-import io.github.abdurazaaqmohammed.commandhelper.ProfileManager.Profile;
+import io.github.abdurazaaqmohammed.feature.text.ProfileManager;
+import io.github.abdurazaaqmohammed.feature.text.ProfileManager.Profile;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class CommandHelperSettingsDialog extends DialogFragment {

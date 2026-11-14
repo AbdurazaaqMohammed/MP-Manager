@@ -27,7 +27,7 @@ public final class JiaguUnpackDialog {
 
     private JiaguUnpackDialog() {}
 
-    public static void show(io.github.abdurazaaqmohammed.MPManager.MainActivity context, File file) {
+    public static void show(io.github.abdurazaaqmohammed.ui.main.MainActivity context, File file) {
         new Thread(() -> {
             String pkg = null;
             boolean jiagu;
@@ -88,7 +88,7 @@ public final class JiaguUnpackDialog {
         }, "jiagu-check").start();
     }
 
-    private static void run(io.github.abdurazaaqmohammed.MPManager.MainActivity context, File file, List<File> dexes, boolean autosign) {
+    private static void run(io.github.abdurazaaqmohammed.ui.main.MainActivity context, File file, List<File> dexes, boolean autosign) {
         ProgressManager pm = new ProgressManager(context, true).show();
         APKLogger logger = pm.getLogger();
         new Thread(() -> {

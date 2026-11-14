@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.ApkManifestEditor;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;

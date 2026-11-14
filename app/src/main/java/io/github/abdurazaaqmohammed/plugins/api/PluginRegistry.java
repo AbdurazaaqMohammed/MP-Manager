@@ -4,7 +4,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 
-import io.github.abdurazaaqmohammed.tools.ToolRegistry;
+import io.github.abdurazaaqmohammed.feature.system.ToolRegistry;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

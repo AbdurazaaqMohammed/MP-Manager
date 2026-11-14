@@ -1,0 +1,652 @@
+package io.github.abdurazaaqmohammed.feature.system;
+
+import android.content.Intent;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Icon;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.widget.ImageViewCompat;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
+import io.github.abdurazaaqmohammed.ui.common.util.ThemeDialogs;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
+import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
+import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
+import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+
+public class ToolsHubActivity extends BaseActivity {
+    private RecyclerView grid;
+    private EditText searchInput;
+    private ToolAdapter adapter;
+    private List<ToolRegistry.ToolItem> allTools = new ArrayList<>();
+    private List<PackDescriptor> catalog = new ArrayList<>();
+    private MaterialToolbar toolbar;
+    private String currentQuery = "";
+    private final Set<String> expandedPacks = new HashSet<>();
+
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_tools_hub);
+        toolbar = findViewById(R.id.tools_toolbar);
+        toolbar.setSubtitle(getString(R.string.tools_hub_loading));
+        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.getMenu().add(getString(R.string.tools_hub_theme)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.getMenu().add(getString(R.string.tools_hub_refresh_packs)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (getString(R.string.tools_hub_refresh_packs).contentEquals(item.getTitle())) {
+                refreshCatalog();
+                return true;
+            }
+            ThemeDialogs.showThemeChooser(ToolsHubActivity.this);
+            return true;
+        });
+        searchInput = findViewById(R.id.tools_search);
+        grid = findViewById(R.id.tools_grid);
+        GridLayoutManager layout = new GridLayoutManager(this, 3);
+        layout.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            public int getSpanSize(int position) {
+                return adapter != null && adapter.getItemViewType(position) == 1 ? 1 : 3;
+            }
+        });
+        grid.setLayoutManager(layout);
+        allTools = ToolRegistry.getTools(this);
+        // The Frida console needs root (frida-inject via su) — hide it otherwise.
+        if (!io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable()) {
+            List<ToolRegistry.ToolItem> filtered = new java.util.ArrayList<>();
+            for (ToolRegistry.ToolItem item : allTools) {
+                if (!"frida".equals(item.id()) && !"jiagudumper".equals(item.id())) filtered.add(item);
+            }
+            allTools = filtered;
+        }
+        adapter = new ToolAdapter(displayRows());
+        grid.setAdapter(adapter);
+        searchInput.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentQuery = s == null ? "" : s.toString();
+                adapter.setRows(displayRows());
+            }
+            public void afterTextChanged(Editable s) {
+            }
+        });
+        catalog = PackCatalog.load(this);
+        rebuildPacks();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        rebuildPacks();
+    }
+
+    private void refreshCatalog() {
+        Toast.makeText(this, getString(R.string.tools_hub_refreshing), Toast.LENGTH_SHORT).show();
+        PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
+            if (fresh != null && !fresh.isEmpty()) {
+                catalog = fresh;
+                Toast.makeText(this, getString(R.string.tools_hub_updated), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.tools_hub_refresh_failed), Toast.LENGTH_SHORT).show();
+            }
+            rebuildPacks();
+        }));
+    }
+
+    /** Single scrolling list: external plugins, packs, then built-in tools. */
+    private List<Object> displayRows() {
+        List<Object> rows = new ArrayList<>();
+        List<PluginHost.ExternalPlugin> external = externalPlugins();
+        if (!external.isEmpty()) {
+            rows.add(new ExtSection());
+            rows.addAll(external);
+        }
+        rows.add(new PacksSection());
+        rows.addAll(catalog);
+        rows.addAll(buildRows(filterTools(currentQuery)));
+        rows.add(new DevSection());
+        return rows;
+    }
+
+    /** External plugins installed on the device, deduped by package. */
+    private List<PluginHost.ExternalPlugin> externalPlugins() {
+        List<PluginHost.ExternalPlugin> out = new ArrayList<>();
+        try {
+            String[] actions = {
+                    PluginContracts.ACTION_SIDEBAR_OPEN,
+                    PluginContracts.ACTION_SETTING_CONFIG,
+                    PluginContracts.ACTION_FILE_MENU,
+                    PluginContracts.ACTION_EDITOR,
+                    PluginContracts.ACTION_APK};
+            for (String action : actions) {
+                for (PluginHost.ExternalPlugin p : PluginHost.query(this, action)) {
+                    boolean seen = false;
+                    for (PluginHost.ExternalPlugin q : out) {
+                        if (q.packageName.equals(p.packageName)) {
+                            seen = true;
+                            break;
+                        }
+                    }
+                    if (!seen) out.add(p);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        String q = currentQuery == null ? "" : currentQuery.trim().toLowerCase();
+        if (!q.isEmpty()) {
+            List<PluginHost.ExternalPlugin> filtered = new ArrayList<>();
+            for (PluginHost.ExternalPlugin p : out) {
+                String label = String.valueOf(p.label).toLowerCase();
+                if (label.contains(q) || p.packageName.toLowerCase().contains(q)) {
+                    filtered.add(p);
+                }
+            }
+            return filtered;
+        }
+        return out;
+    }
+
+    private void showExternalDialog(PluginHost.ExternalPlugin ext) {
+        try {
+            boolean trusted = PluginHost.isTrusted(this, ext.packageName);
+            String digest = PluginHost.certDigest(this, ext.packageName);
+            StringBuilder msg = new StringBuilder();
+            msg.append(ext.packageName);
+            msg.append("\n\n").append(getString(R.string.tools_hub_certificate)).append("\n").append(shortDigest(digest));
+            msg.append("\n\n").append(getString(R.string.tools_hub_status)).append(" ")
+                    .append(getString(trusted ? R.string.tools_hub_trusted : R.string.tools_hub_not_trusted));
+            AlertDialog.Builder builder =
+                    new MaterialAlertDialogBuilder(this)
+                            .setTitle(String.valueOf(ext.label))
+                            .setMessage(msg.toString())
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .setNeutralButton(R.string.tools_hub_app_info, (d, w) -> {
+                                try {
+                                    Intent info = new Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:" + ext.packageName));
+                                    startActivity(info);
+                                } catch (Exception ignored) {
+                                }
+                            });
+            if (trusted) {
+                builder.setPositiveButton(R.string.tools_hub_disable, (d, w) -> {
+                    PluginHost.setTrusted(this, ext.packageName,
+                            PluginHost.pinnedDigest(this, ext.packageName),
+                            String.valueOf(ext.label), false);
+                    rebuildPacks();
+                });
+            } else {
+                builder.setPositiveButton(R.string.tools_hub_trust, (d, w) -> {
+                    String fresh = PluginHost.certDigest(this, ext.packageName);
+                    if (fresh != null) {
+                        PluginHost.setTrusted(this, ext.packageName, fresh,
+                                String.valueOf(ext.label), true);
+                        rebuildPacks();
+                    }
+                });
+            }
+            builder.show();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String shortDigest(String hex) {
+        if (hex == null || hex.isEmpty()) return getString(R.string.tools_hub_cert_unavailable);
+        if (hex.length() <= 32) return hex;
+        return hex.substring(0, 16) + "…" + hex.substring(hex.length() - 8);
+    }
+
+    private void rebuildPacks() {
+        int installedPacks = 0;
+        int installedTools = 0;
+        for (PackDescriptor pack : catalog) {
+            if (PackManager.isInstalled(this, pack.id)) {
+                installedPacks++;
+                installedTools += pack.tools.size();
+            }
+        }
+        toolbar.setSubtitle(getString(R.string.tools_hub_summary, allTools.size(), installedTools,
+                installedPacks, catalog.size()));
+        if (adapter != null) {
+            adapter.setRows(displayRows());
+        }
+    }
+
+    private void bindPackCard(View card, PackDescriptor pack) {
+        boolean installed = PackManager.isInstalled(this, pack.id);
+        TextView title = card.findViewById(R.id.pack_title);
+        title.setText(getString(R.string.tools_hub_pack_title, pack.title, pack.tools.size(), pack.versionName));
+        boolean expanded = expandedPacks.contains(pack.id);
+        ImageButton expand = card.findViewById(R.id.pack_expand);
+        expand.setImageResource(expanded
+                ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px);
+        View.OnClickListener toggle = v -> {
+            if (expandedPacks.contains(pack.id)) expandedPacks.remove(pack.id);
+            else expandedPacks.add(pack.id);
+            bindPackCard(card, pack);
+        };
+        expand.setOnClickListener(toggle);
+        card.setOnClickListener(toggle);
+        TextView desc = card.findViewById(R.id.pack_description);
+        desc.setText(pack.description);
+        MaterialButton action = card.findViewById(R.id.pack_action);
+        action.setText(getString(installed
+                ? (pack.version > PackManager.installedVersion(this, pack.id) ? R.string.tools_hub_update : R.string.tools_hub_open)
+                : R.string.tools_hub_get));
+
+        LinearLayout toolsBox = card.findViewById(R.id.pack_tools);
+        toolsBox.removeAllViews();
+        toolsBox.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        float density = getResources().getDisplayMetrics().density;
+        for (PackDescriptor.ToolMeta tool : pack.tools) {
+            toolsBox.addView(packToolRow(pack, tool, installed, density));
+        }
+
+        MaterialButton remove = card.findViewById(R.id.pack_remove);
+        if (installed) {
+            remove.setVisibility(View.VISIBLE);
+            remove.setOnClickListener(v -> {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(pack.title)
+                        .setMessage(getString(R.string.tools_hub_remove_msg, pack.tools.size()))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.tools_hub_remove, (d, w) -> {
+                            PackManager.uninstallPack(this, pack.id);
+                            rebuildPacks();
+                        })
+                        .show();
+            });
+        } else {
+            remove.setVisibility(View.GONE);
+            remove.setOnClickListener(null);
+        }
+
+        action.setOnClickListener(v -> {
+            if (PackManager.isInstalled(this, pack.id)
+                    && pack.version <= PackManager.installedVersion(this, pack.id)) {
+                if (!pack.tools.isEmpty()) openPackTool(pack, pack.tools.get(0));
+                return;
+            }
+            action.setEnabled(false);
+            PackPrompts.downloadPack(this, pack, () -> rebuildPacks());
+            action.setEnabled(true);
+        });
+        card.setOnLongClickListener(v -> {
+            pickApkForPack(pack);
+            return true;
+        });
+    }
+
+    private View packToolRow(PackDescriptor pack, PackDescriptor.ToolMeta tool,
+                             boolean installed, float density) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        int pv = (int) (6 * density);
+        row.setPadding(0, pv, 0, pv);
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textsParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        texts.setLayoutParams(textsParams);
+        TextView title = new TextView(this);
+        title.setText(packToolTitle(tool));
+        title.setTextSize(14);
+        texts.addView(title);
+        TextView sub = new TextView(this);
+        sub.setText(packToolSubtitle(tool));
+        sub.setTextSize(12);
+        sub.setAlpha(0.6f);
+        texts.addView(sub);
+        row.addView(texts);
+        MaterialButton open = new MaterialButton(this, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        open.setText(getString(R.string.plugin_open));
+        open.setEnabled(installed);
+        open.setOnClickListener(v -> openPackTool(pack, tool));
+        row.addView(open);
+        MaterialButton shortcut = new MaterialButton(this, null,
+                com.google.android.material.R.attr.materialIconButtonStyle);
+        shortcut.setIconResource(R.drawable.add_24px);
+        shortcut.setIconPadding(0);
+        shortcut.setIconSize((int) (20 * density));
+        shortcut.setInsetTop(0);
+        shortcut.setInsetBottom(0);
+        shortcut.setMinWidth(0);
+        shortcut.setMinimumWidth(0);
+        shortcut.setMinHeight(0);
+        shortcut.setMinimumHeight(0);
+        shortcut.setPadding((int) (8 * density), 0, (int) (8 * density), 0);
+        String cs = getString(R.string.plugin_create_shortcut);
+        shortcut.setContentDescription(cs);
+        shortcut.setOnLongClickListener(v -> {
+            Extensions.showMessage(this, cs);
+            return false;
+        });
+        LinearLayout.LayoutParams shortcutParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        shortcutParams.setMarginStart((int) (4 * density));
+        shortcut.setLayoutParams(shortcutParams);
+        shortcut.setOnClickListener(v -> createToolShortcut(tool));
+        row.addView(shortcut);
+        return row;
+    }
+
+    private void createToolShortcut(PackDescriptor.ToolMeta tool) {
+        if (Build.VERSION.SDK_INT < 26) {
+            Toast.makeText(this, getString(R.string.plugin_shortcut_old_android),
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            ShortcutManager sm =
+                    getSystemService(ShortcutManager.class);
+            if (sm == null || !sm.isRequestPinShortcutSupported()) {
+                Toast.makeText(this, getString(R.string.plugin_shortcut_unsupported),
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent intent = new Intent(this, ToolRunnerActivity.class);
+            intent.setAction("io.github.abdurazaaqmohammed.MPManager.TOOL_" + tool.id);
+            intent.putExtra("tool_id", tool.id);
+            intent.putExtra("tool_title", packToolTitle(tool));
+            ShortcutInfo info =
+                    new ShortcutInfo.Builder(this, "tool_" + tool.id)
+                            .setShortLabel(packToolTitle(tool))
+                            .setLongLabel(packToolTitle(tool) + " — " + packToolSubtitle(tool))
+                            .setIcon(Icon.createWithResource(
+                                    this, R.drawable.tools_24px))
+                            .setIntent(intent)
+                            .build();
+            sm.requestPinShortcut(info, null);
+            Toast.makeText(this, getString(R.string.plugin_shortcut_done),
+                    Toast.LENGTH_SHORT).show();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void pickApkForPack(PackDescriptor pack) {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.FILE_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle(getString(R.string.tools_hub_pick_apk, pack.id));
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            File picked = new File(files[0]);
+            if (!picked.getName().toLowerCase().endsWith(".apk")) {
+                Toast.makeText(this, getString(R.string.tools_hub_not_apk), Toast.LENGTH_SHORT).show();
+                return;
+            }
+            new Thread(() -> {
+                String error = PackManager.installFromFile(this, pack, picked);
+                runOnUiThread(() -> {
+                    if (error == null) {
+                        Toast.makeText(this, getString(R.string.tools_hub_installed_toast, pack.title), Toast.LENGTH_SHORT).show();
+                        rebuildPacks();
+                    } else {
+                        Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                    }
+                });
+            }).start();
+        });
+        picker.show();
+    }
+
+    private void openPackTool(PackDescriptor pack, PackDescriptor.ToolMeta tool) {
+        Intent intent = new Intent(this, ToolRunnerActivity.class);
+        intent.putExtra("tool_id", tool.id);
+        intent.putExtra("tool_title", packToolTitle(tool));
+        startActivity(intent);
+    }
+
+    /** Localized tool title from the owning pack's strings.xml, else catalog text. */
+    static String packToolTitle(PackDescriptor.ToolMeta tool) {
+        return PackRes.str("title_" + tool.id, tool.title);
+    }
+
+    /** Localized tool subtitle from the owning pack's strings.xml, else catalog text. */
+    static String packToolSubtitle(PackDescriptor.ToolMeta tool) {
+        return PackRes.str("subtitle_" + tool.id, tool.subtitle);
+    }
+
+    private List<ToolRegistry.ToolItem> filterTools(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+        if (q.isEmpty()) return new ArrayList<>(allTools);
+        List<ToolRegistry.ToolItem> result = new ArrayList<>();
+        for (ToolRegistry.ToolItem item : allTools) {
+            if (item.title().toLowerCase().contains(q) || item.subtitle().toLowerCase().contains(q) || item.category().toLowerCase().contains(q)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+    private List<Object> buildRows(List<ToolRegistry.ToolItem> items) {
+        Map<String, List<ToolRegistry.ToolItem>> grouped = new LinkedHashMap<>();
+        for (String cat : ToolRegistry.categoriesInOrder(this)) grouped.put(cat, new ArrayList<>());
+        for (ToolRegistry.ToolItem item : items) {
+            List<ToolRegistry.ToolItem> bucket = grouped.get(item.category());
+            if (bucket == null) {
+                bucket = new ArrayList<>();
+                grouped.put(item.category(), bucket);
+            }
+            bucket.add(item);
+        }
+        List<Object> rows = new ArrayList<>();
+        for (Map.Entry<String, List<ToolRegistry.ToolItem>> entry : grouped.entrySet()) {
+            if (entry.getValue().isEmpty()) continue;
+            rows.add(entry.getKey());
+            rows.addAll(entry.getValue());
+        }
+        return rows;
+    }
+    private void openTool(ToolRegistry.ToolItem item) {
+        if ("wifimanager".equals(item.id())) {
+            startActivity(new Intent(this, WifiManagerActivity.class));
+        } else if ("storagemanager".equals(item.id())) {
+            startActivity(new Intent(this, StorageManagerActivity.class));
+        } else if ("adb".equals(item.id())) {
+            startActivity(new Intent(this, AdbBrowserActivity.class));
+        } else if ("mcpserver".equals(item.id())) {
+            startActivity(new Intent(this, McpServerActivity.class));
+        } else if ("logcat".equals(item.id())) {
+            startActivity(new Intent(this, LogcatActivity.class)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } else if ("frida".equals(item.id())) {
+            startActivity(new Intent(this, FridaConsoleActivity.class));
+        } else if ("documents".equals(item.id())) {
+            startActivity(new Intent(this, DocumentsBrowserActivity.class));
+        } else if ("partitiondumper".equals(item.id())) {
+            io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(this);
+        } else if ("app_ops".equals(item.id())) {
+            startActivity(new Intent(this, io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity.class));
+        } else if ("commandshell".equals(item.id())) {
+            startActivity(new Intent(this, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class));
+        } else if ("setedit".equals(item.id())) {
+            startActivity(new Intent(this, SetEditActivity.class));
+        } else if ("jiagudumper".equals(item.id())) {
+            io.github.abdurazaaqmohammed.features.apk.JiaguDumpDialog.show(this);
+        } else {
+            Intent intent = new Intent(this, ToolRunnerActivity.class);
+            intent.putExtra("tool_id", item.id());
+            intent.putExtra("tool_title", item.title());
+            startActivity(intent);
+        }
+    }
+    private class ToolAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private List<Object> rows;
+        ToolAdapter(List<Object> initial) {
+            rows = initial;
+        }
+        void setRows(List<Object> next) {
+            rows = next;
+            notifyDataSetChanged();
+        }
+        public int getItemViewType(int position) {
+            Object row = rows.get(position);
+            if (row instanceof PackDescriptor) return 2;
+            if (row instanceof ExtSection || row instanceof PacksSection) return 3;
+            if (row instanceof PluginHost.ExternalPlugin) return 4;
+            if (row instanceof DevSection) return 5;
+            return row instanceof String ? 0 : 1;
+        }
+        @NonNull
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            if (viewType == 2) {
+                return new PackHolder(inflater.inflate(R.layout.item_pack, parent, false));
+            }
+            if (viewType == 5) {
+                return new DevHolder(inflater.inflate(R.layout.item_dev_info, parent, false));
+            }
+            if (viewType == 0 || viewType == 3) {
+                return new HeaderHolder(inflater.inflate(R.layout.item_tool_header, parent, false));
+            }
+            View card = inflater.inflate(R.layout.item_tool_grid, parent, false);
+            return new ToolViewHolder(card,
+                    card.findViewById(R.id.tool_icon),
+                    card.findViewById(R.id.tool_title),
+                    card.findViewById(R.id.tool_subtitle));
+        }
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            Object row = rows.get(position);
+            if (holder instanceof DevHolder) {
+                return;
+            }
+            if (holder instanceof PackHolder) {
+                bindPackCard(holder.itemView, (PackDescriptor) row);
+            } else if (holder instanceof HeaderHolder) {
+                if (row instanceof ExtSection) {
+                    int count = 0;
+                    for (int i = position + 1; i < rows.size()
+                            && rows.get(i) instanceof PluginHost.ExternalPlugin; i++) count++;
+                    ((HeaderHolder) holder).label.setText(
+                            ToolsHubActivity.this.getString(R.string.tools_hub_external_plugins_n, count));
+                } else if (row instanceof PacksSection) {
+                    ((HeaderHolder) holder).label.setText(
+                            ToolsHubActivity.this.getString(R.string.tools_hub_tool_packs));
+                } else {
+                    String cat = (String) row;
+                    int count = 0;
+                    for (int i = position + 1; i < rows.size() && rows.get(i) instanceof ToolRegistry.ToolItem; i++) count++;
+                    ((HeaderHolder) holder).label.setText(cat + "  (" + count + ")");
+                }
+            } else if (holder instanceof ToolViewHolder h
+                    && row instanceof PluginHost.ExternalPlugin ext) {
+                try {
+                    h.icon.setImageDrawable(h.card.getContext().getPackageManager()
+                            .getApplicationIcon(ext.packageName));
+                    ImageViewCompat.setImageTintList(h.icon, null);
+                } catch (Exception ignored) {
+                    h.icon.setImageResource(R.drawable.tools_24px);
+                }
+                h.title.setText(String.valueOf(ext.label));
+                boolean trusted = false;
+                try {
+                    trusted = PluginHost.isTrusted(h.card.getContext(), ext.packageName);
+                } catch (Exception ignored) {
+                }
+                h.subtitle.setText(ext.packageName + "  •  " + ToolsHubActivity.this.getString(
+                        trusted ? R.string.tools_hub_trusted : R.string.tools_hub_not_trusted));
+                h.card.setOnClickListener(v -> showExternalDialog(ext));
+            } else if (holder instanceof ToolViewHolder h) {
+                ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;
+                h.icon.setImageResource(item.iconRes());
+                ImageViewCompat.setImageTintList(h.icon, ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), android.R.attr.colorPrimary, 0xFF000000)));
+                h.title.setText(item.title());
+                h.subtitle.setText(item.subtitle());
+                h.card.setOnClickListener(v -> openTool(item));
+            }
+        }
+        public int getItemCount() {
+            return rows.size();
+        }
+    }
+    private static class PackHolder extends RecyclerView.ViewHolder {
+        PackHolder(@NonNull View itemView) {
+            super(itemView);
+        }
+    }
+    /** Marker row starting the external-plugins section. */
+    private static class ExtSection {
+    }
+    /** Marker row starting the tool-packs section. */
+    private static class PacksSection {
+    }
+    /** Marker row for the developer info card. */
+    private static class DevSection {
+    }
+    private static class DevHolder extends RecyclerView.ViewHolder {
+        DevHolder(@NonNull View itemView) {
+            super(itemView);
+        }
+    }
+    private static class HeaderHolder extends RecyclerView.ViewHolder {
+        final TextView label;
+        HeaderHolder(@NonNull View itemView) {
+            super(itemView);
+            this.label = (TextView) itemView;
+        }
+    }
+    private static class ToolViewHolder extends RecyclerView.ViewHolder {
+        final MaterialCardView card;
+        final ImageView icon;
+        final TextView title;
+        final TextView subtitle;
+        ToolViewHolder(@NonNull View itemView, ImageView icon, TextView title, TextView subtitle) {
+            super(itemView);
+            this.card = (MaterialCardView) itemView;
+            this.icon = icon;
+            this.title = title;
+            this.subtitle = subtitle;
+        }
+    }
+}

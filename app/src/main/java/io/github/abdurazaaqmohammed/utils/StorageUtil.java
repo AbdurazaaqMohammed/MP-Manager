@@ -21,9 +21,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
+import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
 
 public class StorageUtil {
 

@@ -77,7 +77,7 @@
            android:label="MP Manager">
         <activity
             android:theme="@style/Theme.MPManager.Splash"
-            android:name="io.github.abdurazaaqmohammed.MPManager.MainActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.main.MainActivity"
             android:launchMode="singleTop"
             android:alwaysRetainTaskState="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
@@ -89,7 +89,7 @@
         </activity>
            <activity
                android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-               android:name="io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity"
+               android:name="io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity"
             android:exported="false">
         </activity>
         <activity
@@ -100,18 +100,18 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.ToolsHubActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.ToolsHubActivity"
             android:exported="false"
             android:label="Plugins">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.ToolRunnerActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.ToolRunnerActivity"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.WifiManagerActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.WifiManagerActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.APPLY_DNS_PROFILE" />
@@ -120,12 +120,12 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.StorageManagerActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.AdbBrowserActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.AdbBrowserActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="false">
         </activity>
@@ -137,14 +137,14 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.LogcatActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.LogcatActivity"
             android:label="@string/sidebar_logcat"
             android:taskAffinity="io.github.abdurazaaqmohammed.MPManager.logcat"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity"
             android:label="@string/command_shell"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
@@ -152,13 +152,13 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.FridaConsoleActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.FridaConsoleActivity"
             android:label="@string/frida_console"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
         <service
-            android:name="io.github.abdurazaaqmohammed.tools.LogcatService"
+            android:name="io.github.abdurazaaqmohammed.feature.system.LogcatService"
             android:foregroundServiceType="specialUse"
             android:exported="false" />
         <activity
@@ -167,13 +167,13 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.freestyle.FreeStylePickerActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:label="@string/free_style"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.freestyle.FreeStyleCanvasActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.freestyle.FreeStyleCanvasActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:label="@string/free_style"
             android:exported="false"
@@ -211,30 +211,30 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.DocumentsBrowserActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.SetEditActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.SetEditActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.appops.AppOpsDetailActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.system.appops.AppOpsDetailActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="false">
         </activity>
         <service
-            android:name="io.github.abdurazaaqmohammed.tools.PrivateDnsTileService"
+            android:name="io.github.abdurazaaqmohammed.feature.system.PrivateDnsTileService"
             android:icon="@drawable/wifi_24px"
             android:label="Private DNS"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
@@ -244,7 +244,7 @@
             </intent-filter>
         </service>
         <service
-            android:name="io.github.abdurazaaqmohammed.tools.CacheCleanerService"
+            android:name="io.github.abdurazaaqmohammed.feature.system.CacheCleanerService"
             android:label="MP Manager Cache Cleaner"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
@@ -282,19 +282,19 @@
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.arsc.ArscEditorActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.arsc.ArscTextActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden"
@@ -403,7 +403,7 @@
                 android:foregroundServiceType="dataSync"
                 android:exported="false" />
             <service
-                android:name="io.github.abdurazaaqmohammed.tools.ScreenCaptureService"
+                android:name="io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService"
                 android:enabled="true"
                 android:exported="false"
                 android:foregroundServiceType="mediaProjection" />

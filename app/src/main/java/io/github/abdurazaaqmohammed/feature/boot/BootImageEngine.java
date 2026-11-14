@@ -1,0 +1,615 @@
+package io.github.abdurazaaqmohammed.feature.boot;
+
+import org.json.JSONObject;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.List;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+/**
+ * Android Boot / InitBoot Image Engine (supports Header v0, v1, v2, v3, v4).
+ * Pure Java: Unpacks kernel + ramdisk into editable directory with metadata,
+ * and accurately repacks with correct alignment and header fields.
+ */
+public class BootImageEngine {
+
+    public interface EngineCallback {
+        void onProgress(String status, int percent);
+        void onLog(String log);
+    }
+
+    public static boolean isBootImage(File file) {
+        if (file == null || !file.isFile() || file.length() < 4096) return false;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] magic = new byte[8];
+            if (fis.read(magic) < 8) return false;
+            String m = new String(magic, StandardCharsets.US_ASCII);
+            return "ANDROID!".equals(m) || "VNDRBOOT".equals(m);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static JSONObject unpack(File imageFile, File outputDir, EngineCallback cb) throws Exception {
+        if (!imageFile.exists()) {
+            throw new IOException("File does not exist: " + imageFile.getAbsolutePath());
+        }
+        outputDir.mkdirs();
+
+        if (cb != null) {
+            cb.onProgress("Reading Boot Image Header...", 10);
+            cb.onLog("Reading image: " + imageFile.getName());
+        }
+
+        byte[] headerData = new byte[4096];
+        try (FileInputStream fis = new FileInputStream(imageFile)) {
+            fis.read(headerData);
+        }
+
+        String magic = new String(headerData, 0, 8, StandardCharsets.US_ASCII);
+        boolean isVendorBoot = "VNDRBOOT".equals(magic);
+        if (!"ANDROID!".equals(magic) && !isVendorBoot) {
+            throw new IOException("Not a valid Android Boot Image ('ANDROID!' or 'VNDRBOOT' magic missing)");
+        }
+
+        ByteBuffer bb = ByteBuffer.wrap(headerData).order(ByteOrder.LITTLE_ENDIAN);
+        int kernelSize = 0;
+        int ramdiskSize;
+        int osVersionRaw = 0;
+        int headerSize;
+        int headerVersion;
+        int pageSize;
+        String cmdline;
+        String cmdlineExtra = "";
+        int dtbSize = 0;
+        int bootconfigSize = 0;
+
+        if (isVendorBoot) {
+            headerVersion = bb.getInt(8);
+            pageSize = bb.getInt(12);
+            if (pageSize <= 0) pageSize = 4096;
+            ramdiskSize = bb.getInt(24); // vendor_ramdisk_size
+            cmdline = readNullTermString(headerData, 28, 2048);
+            headerSize = bb.getInt(2096);
+            dtbSize = bb.getInt(2100);
+            if (headerVersion >= 4 && headerData.length >= 2128) {
+                bootconfigSize = bb.getInt(2124);
+            }
+        } else {
+            kernelSize = bb.getInt(8);
+            ramdiskSize = bb.getInt(12);
+            osVersionRaw = bb.getInt(16);
+            headerSize = bb.getInt(20);
+            headerVersion = bb.getInt(40);
+            pageSize = 4096;
+            if (headerVersion < 3) {
+                pageSize = bb.getInt(36);
+                if (pageSize <= 0) pageSize = 2048;
+            }
+            cmdline = readNullTermString(headerData, 44, 1536);
+            cmdlineExtra = headerSize > 1580 ? readNullTermString(headerData, 1580, 512) : "";
+        }
+
+        JSONObject meta = new JSONObject();
+        meta.put("magic", magic);
+        meta.put("is_vendor_boot", isVendorBoot);
+        meta.put("header_version", headerVersion);
+        meta.put("kernel_size", kernelSize);
+        meta.put("ramdisk_size", ramdiskSize);
+        meta.put("header_size", headerSize);
+        meta.put("os_version_raw", osVersionRaw);
+        meta.put("page_size", pageSize);
+        meta.put("cmdline", cmdline);
+        meta.put("cmdline_extra", cmdlineExtra);
+        meta.put("dtb_size", dtbSize);
+        meta.put("bootconfig_size", bootconfigSize);
+        meta.put("original_file_name", imageFile.getName());
+        meta.put("original_image_size", imageFile.length());
+
+        File metaFile = new File(outputDir, "header_info.json");
+        try (FileOutputStream fos = new FileOutputStream(metaFile)) {
+            fos.write(meta.toString(2).getBytes(StandardCharsets.UTF_8));
+        }
+
+        long headerBlockSize = pageSize;
+        long ramdiskOffset;
+        long dtbOffset = 0;
+        long bootconfigOffset = 0;
+
+        if (isVendorBoot) {
+            ramdiskOffset = headerBlockSize;
+            long ramdiskPadded = align(ramdiskSize, pageSize);
+            dtbOffset = ramdiskOffset + ramdiskPadded;
+            long dtbPadded = align(dtbSize, pageSize);
+            bootconfigOffset = dtbOffset + dtbPadded;
+        } else {
+            long kernelOffset = headerBlockSize;
+            long kernelPadded = align(kernelSize, pageSize);
+            ramdiskOffset = kernelOffset + kernelPadded;
+
+            // If kernel is present, extract it as kernel / Image
+            if (kernelSize > 0) {
+                File kernelOut = new File(outputDir, "kernel");
+                try (FileInputStream fis = new FileInputStream(imageFile);
+                     FileOutputStream fos = new FileOutputStream(kernelOut)) {
+                    fis.skip(kernelOffset);
+                    copyBytes(fis, fos, kernelSize);
+                }
+            }
+        }
+
+        // If dtb is present in vendor_boot, extract it
+        if (dtbSize > 0) {
+            File dtbOut = new File(outputDir, "dtb");
+            try (FileInputStream fis = new FileInputStream(imageFile);
+                 FileOutputStream fos = new FileOutputStream(dtbOut)) {
+                fis.skip(dtbOffset);
+                copyBytes(fis, fos, dtbSize);
+            }
+        }
+
+        // If bootconfig is present in vendor_boot v4, extract it
+        if (bootconfigSize > 0) {
+            File bcOut = new File(outputDir, "bootconfig");
+            try (FileInputStream fis = new FileInputStream(imageFile);
+                 FileOutputStream fos = new FileOutputStream(bcOut)) {
+                fis.skip(bootconfigOffset);
+                copyBytes(fis, fos, bootconfigSize);
+            }
+        }
+
+        // Extract Ramdisk
+        if (ramdiskSize > 0) {
+            File ramdiskCompressed = new File(outputDir, "ramdisk.raw");
+            byte[] magicPeek = new byte[4];
+            try (FileInputStream fis = new FileInputStream(imageFile);
+                 FileOutputStream fos = new FileOutputStream(ramdiskCompressed)) {
+                fis.skip(ramdiskOffset);
+                byte[] buf = new byte[65536];
+                long rem = ramdiskSize;
+                boolean peekDone = false;
+                while (rem > 0) {
+                    int toRead = (int) Math.min(buf.length, rem);
+                    int r = fis.read(buf, 0, toRead);
+                    if (r == -1) break;
+                    if (!peekDone && r >= 4) {
+                        System.arraycopy(buf, 0, magicPeek, 0, 4);
+                        peekDone = true;
+                    }
+                    fos.write(buf, 0, r);
+                    rem -= r;
+                }
+            }
+
+            File cpioOut = new File(outputDir, "ramdisk.cpio");
+            String compType = "raw";
+
+            // LZ4 Legacy stream (0x184C2102)
+            if (magicPeek[0] == 0x02 && magicPeek[1] == 0x21 && magicPeek[2] == 0x4C && magicPeek[3] == 0x18) {
+                compType = "lz4";
+                boolean success = Lz4Engine.decompressFile(ramdiskCompressed, cpioOut);
+                if (!success || !cpioOut.exists() || cpioOut.length() == 0) {
+                    byte[] raw = readFile(ramdiskCompressed);
+                    byte[] decomp = Lz4Engine.decompress(raw);
+                    try (FileOutputStream fos = new FileOutputStream(cpioOut)) {
+                        fos.write(decomp);
+                    }
+                }
+            } else if (magicPeek[0] == (byte) 0x1F && magicPeek[1] == (byte) 0x8B) {
+                // GZIP
+                compType = "gzip";
+                try (FileInputStream fis = new FileInputStream(ramdiskCompressed);
+                     GZIPInputStream gis = new GZIPInputStream(fis);
+                     FileOutputStream fos = new FileOutputStream(cpioOut)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = gis.read(b)) > 0) fos.write(b, 0, r);
+                }
+            } else {
+                copyFile(ramdiskCompressed, cpioOut);
+            }
+
+            meta.put("ramdisk_compression", compType);
+            try (FileOutputStream fos = new FileOutputStream(metaFile)) {
+                fos.write(meta.toString(2).getBytes(StandardCharsets.UTF_8));
+            }
+
+            File ramdiskDir = new File(outputDir, "ramdisk");
+            List<RamdiskManifest.Entry> manifestEntries = CpioEngine.extractFile(cpioOut, ramdiskDir, (msg, p) -> {
+                if (cb != null) cb.onProgress(msg, 30 + (p * 50 / 100));
+            });
+
+            File treeFile = new File(outputDir, "ramdisk_tree.json");
+            try {
+                RamdiskManifest.saveManifest(manifestEntries, treeFile);
+            } catch (Exception ignored) {}
+
+            ramdiskCompressed.delete();
+            cpioOut.delete();
+        }
+
+        // Check for AVB footer at the end of the image (last 64 bytes)
+        long fileLen = imageFile.length();
+        if (fileLen >= 64) {
+            byte[] footerBuf = new byte[64];
+            try (FileInputStream fis = new FileInputStream(imageFile)) {
+                fis.skip(fileLen - 64);
+                fis.read(footerBuf);
+            }
+            if (footerBuf[0] == 'A' && footerBuf[1] == 'V' && footerBuf[2] == 'B' && footerBuf[3] == 'f') {
+                ByteBuffer fbb = ByteBuffer.wrap(footerBuf).order(ByteOrder.BIG_ENDIAN);
+                long vbmetaOffset = fbb.getLong(20);
+                long vbmetaSize = fbb.getLong(28);
+                if (vbmetaOffset > 0 && vbmetaSize > 0 && vbmetaOffset + vbmetaSize <= fileLen) {
+                    File vbmetaOut = new File(outputDir, "avb_vbmeta.bin");
+                    try (FileInputStream fis = new FileInputStream(imageFile);
+                         FileOutputStream fos = new FileOutputStream(vbmetaOut)) {
+                        fis.skip(vbmetaOffset);
+                        copyBytes(fis, fos, vbmetaSize);
+                    }
+                    meta.put("has_avb_footer", true);
+                    meta.put("avb_vbmeta_size", vbmetaSize);
+                    try (FileOutputStream fos = new FileOutputStream(metaFile)) {
+                        fos.write(meta.toString(2).getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+            }
+        }
+
+        if (cb != null) {
+            cb.onProgress("Unpack Finished!", 100);
+        }
+
+        JSONObject res = new JSONObject();
+        res.put("status", "success");
+        res.put("output_dir", outputDir.getAbsolutePath());
+        res.put("metadata", meta);
+        return res;
+    }
+
+    public static JSONObject repack(File inputDir, File outputImageFile, EngineCallback cb) throws Exception {
+        if (!inputDir.exists()) {
+            throw new IOException("Input directory does not exist: " + inputDir.getAbsolutePath());
+        }
+
+        File ramdiskSrc = new File(inputDir, "ramdisk");
+        if (!ramdiskSrc.exists()) {
+            if (new File(inputDir, "init").exists()) {
+                ramdiskSrc = inputDir;
+            } else {
+                throw new IOException("Cannot locate 'ramdisk' folder or 'init' inside: " + inputDir.getAbsolutePath());
+            }
+        }
+
+        JSONObject meta = null;
+        File metaFile = new File(inputDir, "header_info.json");
+        if (metaFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(metaFile)) {
+                byte[] b = new byte[(int) metaFile.length()];
+                fis.read(b);
+                meta = new JSONObject(new String(b, StandardCharsets.UTF_8));
+            }
+        }
+
+        int headerVersion = meta != null ? meta.optInt("header_version", 4) : 4;
+        int kernelSize = meta != null ? meta.optInt("kernel_size", 0) : 0;
+        int osVersionRaw = meta != null ? meta.optInt("os_version_raw", 0) : 0;
+        int headerSize = meta != null ? meta.optInt("header_size", 4096) : 4096;
+        int pageSize = meta != null ? meta.optInt("page_size", 4096) : 4096;
+        String cmdline = meta != null ? meta.optString("cmdline", "") : "";
+        String cmdlineExtra = meta != null ? meta.optString("cmdline_extra", "") : "";
+        String compType = meta != null ? meta.optString("ramdisk_compression", "lz4") : "lz4";
+
+        File kernelFile = new File(inputDir, "kernel");
+        if (kernelFile.exists()) {
+            kernelSize = (int) kernelFile.length();
+        }
+
+        // Pack ramdisk directory to CPIO
+        File tempCpio = new File(inputDir, "temp_repack.cpio");
+        File treeFile = new File(inputDir, "ramdisk_tree.json");
+        List<RamdiskManifest.Entry> originalManifest = RamdiskManifest.loadManifest(treeFile);
+        CpioEngine.packFolderToFile(ramdiskSrc, tempCpio, originalManifest);
+
+        // Compress ramdisk
+        File tempCompressed = new File(inputDir, "temp_repack.compressed");
+        if ("gzip".equalsIgnoreCase(compType)) {
+            try (FileInputStream fis = new FileInputStream(tempCpio);
+                 FileOutputStream fos = new FileOutputStream(tempCompressed);
+                 GZIPOutputStream gos = new GZIPOutputStream(fos)) {
+                byte[] b = new byte[65536];
+                int r;
+                while ((r = fis.read(b)) > 0) gos.write(b, 0, r);
+            }
+        } else {
+            // Default LZ4 Legacy
+            boolean success = Lz4Engine.compressLegacyFile(tempCpio, tempCompressed);
+            if (!success || !tempCompressed.exists() || tempCompressed.length() < 4) {
+                byte[] cpioBytes = readFile(tempCpio);
+                byte[] lz4Bytes = Lz4Engine.compressLegacy(cpioBytes);
+                try (FileOutputStream fos = new FileOutputStream(tempCompressed)) {
+                    fos.write(lz4Bytes);
+                }
+            }
+        }
+
+        int compressedRamdiskLen = (int) tempCompressed.length();
+
+        boolean isVendorBoot = meta != null && (meta.optBoolean("is_vendor_boot", false) || "VNDRBOOT".equals(meta.optString("magic")));
+        byte[] headerBuf = new byte[pageSize];
+        ByteBuffer bb = ByteBuffer.wrap(headerBuf).order(ByteOrder.LITTLE_ENDIAN);
+
+        File dtbFile = new File(inputDir, "dtb");
+        int dtbLen = dtbFile.exists() ? (int) dtbFile.length() : (meta != null ? meta.optInt("dtb_size", 0) : 0);
+        File bootconfigFile = new File(inputDir, "bootconfig");
+        int bootconfigLen = bootconfigFile.exists() ? (int) bootconfigFile.length() : (meta != null ? meta.optInt("bootconfig_size", 0) : 0);
+
+        if (isVendorBoot) {
+            System.arraycopy("VNDRBOOT".getBytes(StandardCharsets.US_ASCII), 0, headerBuf, 0, 8);
+            bb.putInt(8, headerVersion);
+            bb.putInt(12, pageSize);
+            bb.putInt(16, meta != null ? meta.optInt("kernel_addr", 0) : 0);
+            bb.putInt(20, meta != null ? meta.optInt("ramdisk_addr", 0) : 0);
+            bb.putInt(24, compressedRamdiskLen);
+            byte[] cmdBytes = cmdline.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(cmdBytes, 0, headerBuf, 28, Math.min(cmdBytes.length, 2048));
+            bb.putInt(2096, headerSize > 0 ? headerSize : 2112);
+            bb.putInt(2100, dtbLen);
+            if (headerVersion >= 4) {
+                bb.putInt(2124, bootconfigLen);
+            }
+        } else {
+            System.arraycopy("ANDROID!".getBytes(StandardCharsets.US_ASCII), 0, headerBuf, 0, 8);
+            bb.putInt(8, kernelSize);
+            bb.putInt(12, compressedRamdiskLen);
+            bb.putInt(16, osVersionRaw);
+            bb.putInt(20, headerSize);
+            if (headerVersion < 3) {
+                bb.putInt(36, pageSize);
+            }
+            bb.putInt(40, headerVersion);
+
+            byte[] cmdBytes = cmdline.getBytes(StandardCharsets.UTF_8);
+            int cmdLen = Math.min(cmdBytes.length, 1536);
+            System.arraycopy(cmdBytes, 0, headerBuf, 44, cmdLen);
+
+            if (!cmdlineExtra.isEmpty() && headerSize > 1580) {
+                byte[] extraBytes = cmdlineExtra.getBytes(StandardCharsets.UTF_8);
+                int extraLen = Math.min(extraBytes.length, 512);
+                System.arraycopy(extraBytes, 0, headerBuf, 1580, extraLen);
+            }
+        }
+
+        long originalImgSize = meta != null ? meta.optLong("original_image_size", 0) : 0;
+
+        File parentOut = outputImageFile.getParentFile();
+        if (parentOut != null) parentOut.mkdirs();
+
+        try (FileOutputStream fos = new FileOutputStream(outputImageFile);
+             BufferedOutputStream bos = new BufferedOutputStream(fos, 65536)) {
+            bos.write(headerBuf);
+
+            // Write Kernel if exists (only for boot.img)
+            if (!isVendorBoot && kernelSize > 0 && kernelFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(kernelFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, kernelSize, pageSize);
+            }
+
+            // Write Ramdisk
+            try (FileInputStream fis = new FileInputStream(tempCompressed)) {
+                byte[] b = new byte[65536];
+                int r;
+                while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+            }
+            writePadding(bos, compressedRamdiskLen, pageSize);
+
+            // Write DTB if vendor_boot
+            if (isVendorBoot && dtbFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(dtbFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, dtbLen, pageSize);
+            }
+
+            // Write Bootconfig if vendor_boot v4
+            if (isVendorBoot && bootconfigFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(bootconfigFile)) {
+                    byte[] b = new byte[65536];
+                    int r;
+                    while ((r = fis.read(b)) > 0) bos.write(b, 0, r);
+                }
+                writePadding(bos, bootconfigLen, pageSize);
+            }
+
+            // Write AVB vbmeta if present
+            File vbmetaFile = new File(inputDir, "avb_vbmeta.bin");
+            boolean hasAvb = vbmetaFile.exists() && (meta != null && meta.optBoolean("has_avb_footer", false));
+            long vbmetaOffset = 0;
+            long vbmetaLen = 0;
+            if (hasAvb) {
+                bos.flush();
+                vbmetaOffset = outputImageFile.length();
+                byte[] vbmetaBytes = readFile(vbmetaFile);
+                vbmetaLen = vbmetaBytes.length;
+
+                // Update hash descriptor inside vbmeta to match new image size and digest
+                updateAvbHashDescriptor(vbmetaBytes, outputImageFile, vbmetaOffset);
+
+                bos.write(vbmetaBytes);
+                writePadding(bos, vbmetaLen, pageSize);
+            }
+
+            bos.flush();
+
+            // Maintain partition / original size padding so the boot image matches partition size
+            long written = outputImageFile.length();
+            if (hasAvb && originalImgSize >= written + 64) {
+                long needed = (originalImgSize - 64) - written;
+                byte[] zeros = new byte[65536];
+                while (needed > 0) {
+                    int chunk = (int) Math.min(zeros.length, needed);
+                    bos.write(zeros, 0, chunk);
+                    needed -= chunk;
+                }
+                // Write AVB footer (64 bytes big-endian)
+                ByteBuffer fbb = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+                fbb.put("AVBf".getBytes(StandardCharsets.US_ASCII));
+                fbb.putInt(4, 1); // version_major
+                fbb.putInt(8, 0); // version_minor
+                fbb.putLong(12, vbmetaOffset); // original_image_size / image_size
+                fbb.putLong(20, vbmetaOffset); // vbmeta_offset
+                fbb.putLong(28, vbmetaLen);    // vbmeta_size
+                bos.write(fbb.array());
+                bos.flush();
+            } else if (originalImgSize > written) {
+                long needed = originalImgSize - written;
+                byte[] zeros = new byte[65536];
+                while (needed > 0) {
+                    int chunk = (int) Math.min(zeros.length, needed);
+                    bos.write(zeros, 0, chunk);
+                    needed -= chunk;
+                }
+                bos.flush();
+            }
+        }
+
+        tempCpio.delete();
+        tempCompressed.delete();
+
+        JSONObject res = new JSONObject();
+        res.put("status", "success");
+        res.put("output_image", outputImageFile.getAbsolutePath());
+        res.put("ramdisk_size", compressedRamdiskLen);
+        return res;
+    }
+
+    private static void writePadding(OutputStream out, long size, int pageSize) throws IOException {
+        long padded = align(size, pageSize);
+        long padLen = padded - size;
+        if (padLen > 0) {
+            byte[] zeros = new byte[(int) padLen];
+            out.write(zeros);
+        }
+    }
+
+    private static long align(long val, int pageSize) {
+        return ((val + pageSize - 1) / pageSize) * pageSize;
+    }
+
+    private static void copyBytes(FileInputStream in, FileOutputStream out, long count) throws IOException {
+        byte[] buf = new byte[65536];
+        long remaining = count;
+        while (remaining > 0) {
+            int toRead = (int) Math.min(buf.length, remaining);
+            int r = in.read(buf, 0, toRead);
+            if (r == -1) break;
+            out.write(buf, 0, r);
+            remaining -= r;
+        }
+    }
+
+    private static void copyFile(File src, File dest) throws IOException {
+        try (FileInputStream fis = new FileInputStream(src);
+             FileOutputStream fos = new FileOutputStream(dest)) {
+            byte[] buf = new byte[65536];
+            int r;
+            while ((r = fis.read(buf)) > 0) fos.write(buf, 0, r);
+        }
+    }
+
+    private static byte[] readFile(File f) throws IOException {
+        byte[] b = new byte[(int) f.length()];
+        try (FileInputStream fis = new FileInputStream(f)) {
+            int read = 0;
+            while (read < b.length) {
+                int r = fis.read(b, read, b.length - read);
+                if (r == -1) break;
+                read += r;
+            }
+        }
+        return b;
+    }
+
+    private static void updateAvbHashDescriptor(byte[] vbmeta, File imageFile, long newImageSize) {
+        if (vbmeta == null || vbmeta.length < 256) return;
+        // Verify AVB0 magic
+        if (vbmeta[0] != 'A' || vbmeta[1] != 'V' || vbmeta[2] != 'B' || vbmeta[3] != '0') return;
+
+        try {
+            ByteBuffer bb = ByteBuffer.wrap(vbmeta).order(ByteOrder.BIG_ENDIAN);
+            long authBlockSize = bb.getLong(12);
+            long auxBlockSize = bb.getLong(20);
+
+            int descStart = (int) (256 + authBlockSize);
+            int descEnd = (int) Math.min(vbmeta.length, descStart + auxBlockSize);
+
+            int offset = descStart;
+            while (offset + 16 <= descEnd) {
+                long tag = bb.getLong(offset);
+                long nbf = bb.getLong(offset + 8);
+
+                // Tag 1 or 2 is AVB_DESCRIPTOR_TAG_HASH
+                if ((tag == 1 || tag == 2) && offset + 16 + nbf <= descEnd && nbf >= 56) {
+                    // Update image_size in descriptor
+                    bb.putLong(offset + 16, newImageSize);
+
+                    int partNameLen = bb.getInt(offset + 56);
+                    int saltLen = bb.getInt(offset + 60);
+                    int digestLen = bb.getInt(offset + 64);
+
+                    int saltOffset = offset + 132 + partNameLen;
+                    int digestOffset = saltOffset + saltLen;
+
+                    if (digestOffset + digestLen <= descEnd && digestLen == 32) {
+                        byte[] salt = new byte[saltLen];
+                        System.arraycopy(vbmeta, saltOffset, salt, 0, saltLen);
+
+                        // Calculate SHA-256 of salt + body (first newImageSize bytes of imageFile)
+                        MessageDigest md = MessageDigest.getInstance("SHA-256");
+                        md.update(salt);
+
+                        try (FileInputStream fis = new FileInputStream(imageFile)) {
+                            byte[] buf = new byte[65536];
+                            long remaining = newImageSize;
+                            while (remaining > 0) {
+                                int toRead = (int) Math.min(buf.length, remaining);
+                                int r = fis.read(buf, 0, toRead);
+                                if (r == -1) break;
+                                md.update(buf, 0, r);
+                                remaining -= r;
+                            }
+                        }
+
+                        byte[] newDigest = md.digest();
+                        System.arraycopy(newDigest, 0, vbmeta, digestOffset, digestLen);
+                    }
+                    break;
+                }
+                offset += 16 + (int) nbf;
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private static String readNullTermString(byte[] b, int offset, int maxLen) {
+        int end = offset;
+        int limit = Math.min(b.length, offset + maxLen);
+        while (end < limit && b[end] != 0) end++;
+        return new String(b, offset, end - offset, StandardCharsets.UTF_8).trim();
+    }
+}

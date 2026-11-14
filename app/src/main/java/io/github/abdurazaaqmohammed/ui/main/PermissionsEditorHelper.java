@@ -15,7 +15,7 @@ import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class PermissionsEditorHelper {

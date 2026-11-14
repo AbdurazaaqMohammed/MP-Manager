@@ -1,0 +1,1272 @@
+package io.github.abdurazaaqmohammed.feature.system;
+
+import android.annotation.TargetApi;
+import android.app.ProgressDialog;
+import android.app.usage.StorageStatsManager;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.media.ThumbnailUtils;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Process;
+import android.os.storage.StorageManager;
+import android.provider.MediaStore;
+import android.provider.Settings;
+import android.util.LruCache;
+import android.util.Size;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import androidx.core.content.FileProvider;
+import androidx.preference.PreferenceManager;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+
+public class StorageManagerActivity extends BaseActivity {
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private LinearLayout volumeBox;
+    private LinearLayout typeBox;
+    private ListView largeList;
+    private ListView cacheList;
+    private TextView scanStatus;
+    private ProgressBar scanBar;
+    private volatile boolean scanning = false;
+    private final List<FileRow> largeFiles = new ArrayList<>();
+    private final List<FileRow> largeVisible = new ArrayList<>();
+    private BaseAdapter largeAdapter;
+    private final List<CacheRow> cacheRows = new ArrayList<>();
+    private BaseAdapter cacheAdapter;
+    private TextView cacheStatus;
+    private TextView largeTitle;
+    private MaterialButton scanBtn;
+    private MaterialButton stopBtn;
+    private MaterialButton deleteSelectedBtn;
+    private String typeFilter;
+    private Map<String, Long> lastBuckets = new HashMap<>();
+    private long lastGrand;
+    private LruCache<String, Bitmap> thumbCache;
+    private ExecutorService thumbExecutor;
+
+    private static class FileRow {
+        final File file;
+        final long size;
+        final String bucket;
+        boolean checked;
+
+        FileRow(File file, long size, String bucket) {
+            this.file = file;
+            this.size = size;
+            this.bucket = bucket == null ? "Other" : bucket;
+        }
+    }
+
+    private static class CacheRow {
+        final String packageName;
+        final String label;
+        final long cacheBytes;
+        boolean checked;
+
+        CacheRow(String packageName, String label, long cacheBytes) {
+            this.packageName = packageName;
+            this.label = label;
+            this.cacheBytes = cacheBytes;
+        }
+    }
+
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
+        MaterialToolbar toolbar = new MaterialToolbar(this);
+        toolbar.setTitle(getString(R.string.storage_manager));
+        toolbar.setSubtitle(getString(R.string.storage_free_up));
+        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        toolbar.setNavigationOnClickListener(v -> finish());
+        root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        box.setPadding(pad, pad, pad, pad);
+        scroll.addView(box, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        setContentView(root);
+        section(box, getString(R.string.storage_volumes));
+        volumeBox = new LinearLayout(this);
+        volumeBox.setOrientation(LinearLayout.VERTICAL);
+        box.addView(volumeBox);
+        section(box, getString(R.string.storage_space_by_type));
+        scanStatus = new TextView(this);
+        scanStatus.setText(getString(R.string.storage_not_scanned));
+        scanStatus.setTextSize(13);
+        box.addView(scanStatus);
+        scanBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        scanBar.setMax(100);
+        box.addView(scanBar);
+        LinearLayout scanRow = new LinearLayout(this);
+        scanRow.setOrientation(LinearLayout.HORIZONTAL);
+        box.addView(scanRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        scanBtn = new MaterialButton(this);
+        scanBtn.setText(getString(R.string.storage_scan_now));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        int m = dp(4);
+        sp.setMargins(m, m, m, m);
+        scanRow.addView(scanBtn, sp);
+        stopBtn = new MaterialButton(this);
+        stopBtn.setText(getString(R.string.stop));
+        scanRow.addView(stopBtn, sp);
+        scanBtn.setOnClickListener(v -> startScan());
+        stopBtn.setOnClickListener(v -> scanning = false);
+        updateScanButtons();
+        typeBox = new LinearLayout(this);
+        typeBox.setOrientation(LinearLayout.VERTICAL);
+        box.addView(typeBox);
+        TextView typeHint = new TextView(this);
+        typeHint.setText(getString(R.string.storage_tap_type_hint));
+        typeHint.setTextSize(12);
+        box.addView(typeHint);
+        largeTitle = section(box, getString(R.string.storage_largest_files));
+        View.OnTouchListener nestedScrollFix = (v, event) -> {
+            int action = event.getAction();
+            boolean hasItems = v instanceof ListView && ((ListView) v).getAdapter() != null && ((ListView) v).getAdapter().getCount() > 0;
+            if (hasItems && (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE)) {
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                v.getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return false;
+        };
+        largeList = new ListView(this);
+        largeList.setOnTouchListener(nestedScrollFix);
+        largeList.setVisibility(View.GONE);
+        box.addView(largeList, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(340)));
+        largeAdapter = fileAdapter();
+        largeList.setAdapter(largeAdapter);
+        largeList.setOnItemClickListener((p, v, pos, id) -> {
+            if (pos < 0 || pos >= largeVisible.size()) return;
+            openFile(largeVisible.get(pos).file, largeVisible.get(pos).bucket);
+        });
+        largeList.setOnItemLongClickListener((p, v, pos, id) -> {
+            if (pos < 0 || pos >= largeVisible.size()) return true;
+            confirmDeleteFile(largeVisible.get(pos).file);
+            return true;
+        });
+        deleteSelectedBtn = new MaterialButton(this);
+        deleteSelectedBtn.setText(getString(R.string.storage_delete_selected));
+        deleteSelectedBtn.setVisibility(View.GONE);
+        box.addView(deleteSelectedBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        deleteSelectedBtn.setOnClickListener(v -> confirmDeleteSelected());
+        updateDeleteSelectedBtn();
+        section(box, getString(R.string.storage_app_caches));
+        cacheStatus = new TextView(this);
+        cacheStatus.setTextSize(13);
+        box.addView(cacheStatus);
+        TextView modeLabel = new TextView(this);
+        modeLabel.setText(getString(R.string.storage_clear_mode));
+        modeLabel.setTextSize(13);
+        box.addView(modeLabel);
+        Spinner modeSpinner = new Spinner(this);
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{getString(R.string.storage_mode_root), getString(R.string.storage_mode_accessibility)});
+        modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        modeSpinner.setAdapter(modeAdapter);
+        final SharedPreferences clearModePrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int modeIndex = clearModePrefs.getInt("cache_clear_mode", 0);
+        modeSpinner.setSelection(modeIndex);
+        modeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                clearModePrefs.edit().putInt("cache_clear_mode", position).apply();
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        box.addView(modeSpinner);
+        LinearLayout cacheRow = new LinearLayout(this);
+        cacheRow.setOrientation(LinearLayout.HORIZONTAL);
+        box.addView(cacheRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        MaterialButton loadCache = new MaterialButton(this);
+        loadCache.setText(getString(R.string.storage_load));
+        cacheRow.addView(loadCache, sp);
+        MaterialButton clearSel = new MaterialButton(this);
+        clearSel.setText(getString(R.string.storage_clear_selected));
+        cacheRow.addView(clearSel, sp);
+        MaterialButton clearAll = new MaterialButton(this);
+        clearAll.setText(getString(R.string.storage_clear_all));
+        box.addView(clearAll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        cacheList = new ListView(this);
+        cacheList.setOnTouchListener((v, event) -> {
+            int action = event.getAction();
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                v.getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return false;
+        });
+        box.addView(cacheList, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(320)));
+        cacheAdapter = cacheAdapter();
+        cacheList.setAdapter(cacheAdapter);
+        cacheList.setOnItemClickListener((p, v, pos, id) -> {
+            CacheRow row = cacheRows.get(pos);
+            row.checked = !row.checked;
+            cacheAdapter.notifyDataSetChanged();
+        });
+        cacheList.setOnItemLongClickListener((p, v, pos, id) -> {
+            openAppInfo(cacheRows.get(pos).packageName);
+            return true;
+        });
+        loadCache.setOnClickListener(v -> loadCaches());
+        clearSel.setOnClickListener(v -> {
+            int mode = PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            if (mode == 1) autoClearCaches(true);
+            else clearCaches(true);
+        });
+        clearAll.setOnClickListener(v -> {
+            int mode = PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            if (mode == 1) autoClearCaches(false);
+            else clearCaches(false);
+        });
+
+        refreshVolumes();
+    }
+
+    private String safeErr(RootManager.ShellResult r) {
+        try {
+            if (r == null || r.error() == null) return "";
+            String e = r.error().trim().replace("\n", " ");
+            return e.length() > 120 ? e.substring(0, 120) : e;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private void runRootRoundTrip(TextView body) {
+        Extensions.showMessage(this, getString(R.string.storage_testing_rw));
+        new Thread(() -> {
+            StringBuilder out = new StringBuilder();
+            File local = null;
+            File back = null;
+            String remote = "/data/local/tmp/mpman_roundtrip_test";
+            try {
+                RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
+                String canary = "MPManager roundtrip " + System.currentTimeMillis() + " 0123456789 abcdefgh";
+                local = new File(getCacheDir(), "roundtrip_src.tmp");
+                try (FileOutputStream fos = new FileOutputStream(local)) {
+                    fos.write(canary.getBytes(StandardCharsets.UTF_8));
+                }
+                try {
+                    rm.streamToRoot(local, remote);
+                    out.append("roundtrip write: OK\n");
+                } catch (Exception e) {
+                    out.append("roundtrip write FAIL: ").append(e.getMessage()).append("\n");
+                    throw new Exception("stop");
+                }
+                try {
+                    back = new File(getCacheDir(), "roundtrip_back.tmp");
+                    try (FileOutputStream fos = new FileOutputStream(back)) {
+                        rm.streamFromRoot(remote, fos, 65536L);
+                    }
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    try (FileInputStream fis = new FileInputStream(back)) {
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = fis.read(buf)) != -1) bos.write(buf, 0, n);
+                    }
+                    byte[] data = bos.toByteArray();
+                    String readBack = new String(data, StandardCharsets.UTF_8);
+                    out.append("roundtrip read: OK\n");
+                    out.append("roundtrip match: ").append(canary.equals(readBack) ? "YES" : "NO (got " + data.length + " bytes)").append("\n");
+                } catch (Exception e) {
+                    out.append("roundtrip read FAIL: ").append(e.getMessage()).append("\n");
+                    throw new Exception("stop");
+                }
+            } catch (Exception e) {
+                if (!"stop".equals(e.getMessage())) out.append("roundtrip error: ").append(e.getMessage()).append("\n");
+            } finally {
+                try {
+                    RootManager.getInstance(StorageManagerActivity.this).deleteFile(remote);
+                    out.append("roundtrip cleanup: OK\n");
+                } catch (Exception e) {
+                    out.append("roundtrip cleanup FAIL: ").append(e.getMessage()).append("\n");
+                }
+                try {
+                    if (local != null) local.delete();
+                    if (back != null) back.delete();
+                } catch (Exception ignored) {
+                }
+            }
+            String extra = out.toString();
+            handler.post(() -> {
+                body.setText(body.getText().toString() + "\n" + extra.trim());
+                Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_roundtrip_done));
+            });
+        }).start();
+    }
+
+    private void autoClearCaches(boolean selectedOnly) {
+        List<CacheCleaner.QueueItem> targets = new ArrayList<>();
+        for (CacheRow r : cacheRows) {
+            if (!selectedOnly || r.checked) targets.add(new CacheCleaner.QueueItem(r.packageName, r.label));
+        }
+        if (targets.isEmpty()) {
+            Extensions.showMessage(this, getString(R.string.storage_nothing_selected));
+            return;
+        }
+        if (!CacheCleaner.isServiceEnabled(this)) {
+            boolean elevated = RootPermissionHelper.hasElevatedShell(this);
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.storage_enable_autoclear))
+                    .setMessage(elevated ? getString(R.string.storage_autoclear_need_elevated) : getString(R.string.storage_autoclear_need))
+                    .setPositiveButton(elevated ? getString(R.string.storage_enable_auto) : getString(R.string.storage_open_settings), (d, w) -> {
+                        if (elevated) {
+                            new Thread(() -> {
+                                boolean ok = RootPermissionHelper.enableAccessibilityForViaElevated(StorageManagerActivity.this, CacheCleanerService.class.getName());
+                                handler.post(() -> {
+                                    Extensions.showMessage(StorageManagerActivity.this, ok ? getString(R.string.storage_service_enabled_again) : getString(R.string.storage_autoenable_failed));
+                                    if (!ok) CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
+                                });
+                            }).start();
+                        } else {
+                            CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(selectedOnly ? getString(R.string.storage_auto_selected) : getString(R.string.storage_auto_all))
+                .setMessage(getString(R.string.storage_autoclear_apps, targets.size()))
+                .setPositiveButton(getString(R.string.start), (d, w) -> startAutoClear(targets))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void startAutoClear(List<CacheCleaner.QueueItem> targets) {
+        ProgressDialog progress = new ProgressDialog(this);
+        progress.setTitle(getString(R.string.storage_autoclearing));
+        progress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progress.setMax(targets.size());
+        progress.setProgress(0);
+        progress.setCancelable(false);
+        progress.setButton(DialogInterface.BUTTON_NEGATIVE, getString(android.R.string.cancel), (d, w) -> CacheCleaner.stop());
+        progress.show();
+        boolean started = CacheCleaner.start(this, targets, new CacheCleaner.Listener() {
+            public void onAppStarted(String label, int index, int total) {
+                progress.setMessage((index + 1) + "/" + total + " " + label);
+            }
+
+            public void onAppCleared(String packageName) {
+                progress.setProgress(progress.getProgress() + 1);
+            }
+
+            public void onAppSkipped(String packageName) {
+                progress.setProgress(progress.getProgress() + 1);
+            }
+
+            public void onFinished(int cleared, int total) {
+                try {
+                    progress.dismiss();
+                } catch (Exception ignored) {
+                }
+                Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_cleared_x, cleared, total));
+                List<String> remaining = new ArrayList<>();
+                new Thread(() -> {
+                    for (CacheCleaner.QueueItem it : targets) {
+                        rootEmptyCacheDirsWithVerify(it.packageName);
+                        remaining.add(it.packageName);
+                    }
+                    handler.post(() -> {
+                        loadCaches();
+                        refreshVolumes();
+                    });
+                }).start();
+            }
+        });
+        if (!started) {
+            try {
+                progress.dismiss();
+            } catch (Exception ignored) {
+            }
+            Extensions.showMessage(this, getString(R.string.storage_enable_service_first));
+        }
+    }
+
+    private void rootEmptyCacheDirsWithVerify(String pkg) {
+        try {
+            RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
+            String[] dirs = new String[]{
+                    "/data/data/" + pkg + "/cache",
+                    "/data/data/" + pkg + "/code_cache",
+                    "/data/user_de/0/" + pkg + "/cache",
+                    "/data/media/0/Android/data/" + pkg + "/cache"
+            };
+            StringBuilder script = new StringBuilder("rm -rf");
+            for (String dir : dirs) {
+                script.append(' ').append(RootManager.escapeShellArg(dir));
+            }
+            script.append(" 2>/dev/null; ec=$?; echo RM_EXIT=$ec");
+            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+            boolean ok = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0");
+            if (!ok) {
+                String err = r.error() == null ? "" : r.error().trim();
+                if (err.isEmpty() && r.output() != null) err = r.output().trim();
+                Extensions.showMessage(StorageManagerActivity.this, err.isEmpty() ? getString(R.string.storage_cleared_x, 0, 1) : err);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    private TextView section(LinearLayout box, String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(18);
+        t.setTypeface(null, Typeface.BOLD);
+        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        p.setMargins(0, dp(16), 0, dp(8));
+        box.addView(t, p);
+        return t;
+    }
+
+    private void refreshVolumes() {
+        new Thread(() -> {
+            List<StorageUtil.StorageInfo> infos = StorageUtil.getStorageInfos(StorageManagerActivity.this);
+            handler.post(() -> {
+                volumeBox.removeAllViews();
+                for (StorageUtil.StorageInfo si : infos) {
+                    MaterialCardView card = new MaterialCardView(this);
+                    card.setRadius(dp(12));
+                    LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    cp.setMargins(0, dp(4), 0, dp(4));
+                    card.setLayoutParams(cp);
+                    LinearLayout inner = new LinearLayout(this);
+                    inner.setOrientation(LinearLayout.VERTICAL);
+                    inner.setPadding(dp(12), dp(12), dp(12), dp(12));
+                    TextView name = new TextView(this);
+                    name.setText(si.name + "  " + si.path);
+                    name.setTypeface(null, Typeface.BOLD);
+                    inner.addView(name);
+                    ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+                    bar.setMax(100);
+                    bar.setProgress(si.usedPercent());
+                    inner.addView(bar);
+                    TextView detail = new TextView(this);
+                    detail.setText(getString(R.string.uff, FileSize.getHumanReadableFileSize(si.usedBytes), FileSize.getHumanReadableFileSize(si.totalBytes), si.usedPercent(), FileSize.getHumanReadableFileSize(si.freeBytes)));
+                    detail.setTextSize(13);
+                    inner.addView(detail);
+                    card.addView(inner);
+                    card.setOnClickListener(v -> startScan());
+                    volumeBox.addView(card);
+                }
+            });
+        }).start();
+    }
+
+    private void startScan() {
+        if (scanning) return;
+        scanning = true;
+        updateScanButtons();
+        largeFiles.clear();
+        applyTypeFilter();
+        typeBox.removeAllViews();
+        scanBar.setIndeterminate(true);
+        scanStatus.setText(getString(R.string.storage_scanning));
+        new Thread(() -> {
+            Map<String, Long> buckets = new HashMap<>();
+            String[] names = new String[]{"Images", "Videos", "Audio", "Documents", "Archives", "APKs", "Other"};
+            for (String n : names) buckets.put(n, 0L);
+            PriorityQueue<FileRow> top = new PriorityQueue<>(40, Comparator.comparingLong(a -> a.size));
+            long totalFiles = 0;
+            try {
+                File rootDir = Environment.getExternalStorageDirectory();
+                Deque<File> stack = new ArrayDeque<>();
+                if (rootDir != null) stack.push(rootDir);
+                int visited = 0;
+                while (!stack.isEmpty() && scanning && visited < 400000) {
+                    File dir = stack.pop();
+                    File[] kids;
+                    try {
+                        kids = dir.listFiles();
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (kids == null) continue;
+                    for (File kid : kids) {
+                        if (!scanning) break;
+                        try {
+                            if (kid.isDirectory()) {
+                                if (!isSymlink(kid)) stack.push(kid);
+                            } else {
+                                long len = kid.length();
+                                totalFiles++;
+                                String bucket = bucketFor(kid.getName());
+                                buckets.put(bucket, buckets.get(bucket) + len);
+                                if (len > 1024 * 1024) {
+                                    if (top.size() < 40) {
+                                        top.offer(new FileRow(kid, len, bucket));
+                                    } else if (len > top.peek().size) {
+                                        top.poll();
+                                        top.offer(new FileRow(kid, len, bucket));
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    visited++;
+                    if (visited % 400 == 0) {
+                        long done = totalFiles;
+                        handler.post(() -> scanStatus.setText(getString(R.string.storage_scanning_n, done)));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            List<FileRow> sorted = new ArrayList<>(top);
+            sorted.sort((a, b) -> Long.compare(b.size, a.size));
+            long files = totalFiles;
+            scanning = false;
+            handler.post(() -> {
+                scanBar.setIndeterminate(false);
+                scanBar.setProgress(100);
+                scanStatus.setText(getString(R.string.storage_files_scanned, files));
+                largeFiles.clear();
+                largeFiles.addAll(sorted);
+                lastBuckets = buckets;
+                lastGrand = 0;
+                for (long v : buckets.values()) lastGrand += v;
+                applyTypeFilter();
+                rebuildTypeRows();
+                updateDeleteSelectedBtn();
+                updateScanButtons();
+                refreshVolumes();
+            });
+        }).start();
+    }
+
+    private boolean isSymlink(File f) {
+        try {
+            File canon;
+            if (Build.VERSION.SDK_INT >= 26) {
+                canon = f.getCanonicalFile();
+            } else {
+                canon = new File(f.getCanonicalPath());
+            }
+            File parent = f.getAbsoluteFile().getParentFile();
+            return parent != null && !canon.getParent().equals(parent.getCanonicalPath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String bucketFor(String name) {
+        String n = name.toLowerCase(Locale.US);
+        int dot = n.lastIndexOf('.');
+        String ext = dot >= 0 ? n.substring(dot + 1) : "";
+        if (isExt(ext, new String[]{"jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "svg", "raw", "dng"})) return "Images";
+        if (isExt(ext, new String[]{"mp4", "mkv", "webm", "avi", "mov", "3gp", "ts", "m2ts", "flv"})) return "Videos";
+        if (isExt(ext, new String[]{"mp3", "wav", "ogg", "flac", "m4a", "aac", "opus", "mid", "midi"})) return "Audio";
+        if (isExt(ext, new String[]{"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "csv", "epub", "rtf", "odt"})) return "Documents";
+        if (isExt(ext, new String[]{"zip", "rar", "7z", "tar", "gz", "bz2", "xz"})) return "Archives";
+        if (isExt(ext, new String[]{"apk", "apks", "xapk"})) return "APKs";
+        return "Other";
+    }
+
+    private boolean isExt(String ext, String[] list) {
+        for (String s : list) if (s.equals(ext)) return true;
+        return false;
+    }
+
+    private void updateScanButtons() {
+        if (scanBtn != null) scanBtn.setEnabled(!scanning);
+        if (stopBtn != null) stopBtn.setEnabled(scanning);
+    }
+
+    private void applyTypeFilter() {
+        largeVisible.clear();
+        if (typeFilter == null) {
+            largeVisible.addAll(largeFiles);
+            if (largeTitle != null) largeTitle.setText(getString(R.string.storage_largest_n, largeVisible.size()));
+        } else {
+            for (FileRow row : largeFiles) {
+                if (typeFilter.equals(row.bucket)) largeVisible.add(row);
+            }
+            if (largeTitle != null) largeTitle.setText(getString(R.string.storage_largest_type_n, bucketLabel(typeFilter), largeVisible.size()));
+        }
+        if (largeAdapter != null) largeAdapter.notifyDataSetChanged();
+        updateLargeVisibility();
+        updateDeleteSelectedBtn();
+    }
+
+    private void updateLargeVisibility() {
+        boolean show = !largeVisible.isEmpty();
+        if (largeList != null) largeList.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (deleteSelectedBtn != null) deleteSelectedBtn.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void rebuildTypeRows() {
+        typeBox.removeAllViews();
+        String[] names = new String[]{"Images", "Videos", "Audio", "Documents", "Archives", "APKs", "Other"};
+        for (String n : names) {
+            long v = lastBuckets.containsKey(n) ? lastBuckets.get(n) : 0L;
+            addBucketRow(n, v, lastGrand);
+        }
+    }
+
+    private void updateDeleteSelectedBtn() {
+        if (deleteSelectedBtn == null) return;
+        int count = 0;
+        for (FileRow row : largeVisible) {
+            if (row.checked) count++;
+        }
+        deleteSelectedBtn.setText(count == 0 ? getString(R.string.storage_delete_selected) : getString(R.string.storage_delete_selected_n, count));
+        deleteSelectedBtn.setEnabled(count > 0);
+    }
+
+    private String bucketLabel(String bucket) {
+        if (bucket == null) return getString(R.string.storage_type_other);
+        switch (bucket) {
+            case "Images": return getString(R.string.storage_type_images);
+            case "Videos": return getString(R.string.storage_type_videos);
+            case "Audio": return getString(R.string.storage_type_audio);
+            case "Documents": return getString(R.string.storage_type_documents);
+            case "Archives": return getString(R.string.storage_type_archives);
+            case "APKs": return getString(R.string.storage_type_apks);
+            default: return getString(R.string.storage_type_other);
+        }
+    }
+
+    private void addBucketRow(String name, long value, long grand) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, dp(4), 0, dp(4));
+        row.setBackgroundResource(android.R.color.transparent);
+        row.setClickable(true);
+        row.setFocusable(true);
+        TextView label = new TextView(this);
+        int pct = grand <= 0 ? 0 : (int) (value * 100 / grand);
+        label.setText(bucketLabel(name) + "  " + FileSize.getHumanReadableFileSize(value) + "  " + pct + "%");
+        label.setTextSize(14);
+        if (name.equals(typeFilter)) {
+            label.setTypeface(null, Typeface.BOLD);
+            label.setTextColor(MaterialColors.getColor(this, android.R.attr.colorPrimary, Color.BLUE));
+        }
+        row.addView(label);
+        ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(100);
+        bar.setProgress(pct);
+        row.addView(bar);
+        row.setOnClickListener(v -> {
+            if (name.equals(typeFilter)) {
+                typeFilter = null;
+            } else {
+                typeFilter = name;
+            }
+            applyTypeFilter();
+            rebuildTypeRows();
+        });
+        typeBox.addView(row);
+    }
+
+    private static class LargeHolder {
+        ImageView thumb;
+        TextView name;
+        TextView path;
+        CheckBox box;
+    }
+
+    private void ensureThumbCache() {
+        if (thumbCache != null && thumbExecutor != null) return;
+        int mem = (int) (Runtime.getRuntime().maxMemory() / 1024);
+        int size = Math.max(4096, mem / 8);
+        thumbCache = new LruCache<>(size) {
+            protected int sizeOf(String key, Bitmap value) {
+                try {
+                    return value.getByteCount() / 1024;
+                } catch (Exception e) {
+                    return 64;
+                }
+            }
+        };
+        thumbExecutor = Executors.newFixedThreadPool(2);
+    }
+
+    private Bitmap loadThumb(File file, String bucket) {
+        try {
+            if ("Images".equals(bucket)) {
+                BitmapFactory.Options bounds = new BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+                int sample = 1;
+                int max = Math.max(bounds.outWidth, bounds.outHeight);
+                while (max / (sample * 2) >= 144 && sample < 16) sample *= 2;
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inSampleSize = sample;
+                return BitmapFactory.decodeFile(file.getAbsolutePath(), opts);
+            }
+            if ("Videos".equals(bucket)) {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    return ThumbnailUtils.createVideoThumbnail(file, new Size(144, 144), null);
+                }
+                return ThumbnailUtils.createVideoThumbnail(file.getAbsolutePath(), MediaStore.Images.Thumbnails.MINI_KIND);
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private BaseAdapter fileAdapter() {
+        ensureThumbCache();
+        float density = getResources().getDisplayMetrics().density;
+        int onSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
+        int onVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+        return new BaseAdapter() {
+            public int getCount() {
+                return largeVisible.size();
+            }
+
+            public Object getItem(int position) {
+                return largeVisible.get(position);
+            }
+
+            public long getItemId(int position) {
+                return position;
+            }
+
+            public View getView(int position, View convertView, ViewGroup parent) {
+                FileRow row = largeVisible.get(position);
+                LargeHolder holder;
+                if (convertView == null) {
+                    MaterialCardView card = new MaterialCardView(StorageManagerActivity.this);
+                    card.setRadius(12 * density);
+                    LinearLayout line = new LinearLayout(StorageManagerActivity.this);
+                    line.setOrientation(LinearLayout.HORIZONTAL);
+                    line.setGravity(Gravity.CENTER_VERTICAL);
+                    int cp = (int) (10 * density);
+                    line.setPadding(cp, cp, cp, cp);
+                    ImageView thumb = new ImageView(StorageManagerActivity.this);
+                    int ts = (int) (56 * density);
+                    thumb.setLayoutParams(new LinearLayout.LayoutParams(ts, ts));
+                    thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    line.addView(thumb);
+                    LinearLayout text = new LinearLayout(StorageManagerActivity.this);
+                    text.setOrientation(LinearLayout.VERTICAL);
+                    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                    tp.setMargins(cp, 0, cp, 0);
+                    text.setLayoutParams(tp);
+                    TextView name = new TextView(StorageManagerActivity.this);
+                    name.setTypeface(null, Typeface.BOLD);
+                    name.setTextColor(onSurface);
+                    text.addView(name);
+                    TextView path = new TextView(StorageManagerActivity.this);
+                    path.setTextSize(12);
+                    path.setTextColor(onVariant);
+                    text.addView(path);
+                    line.addView(text);
+                    CheckBox box = new CheckBox(StorageManagerActivity.this);
+                    box.setFocusable(false);
+                    line.addView(box);
+                    card.addView(line);
+                    holder = new LargeHolder();
+                    holder.thumb = thumb;
+                    holder.name = name;
+                    holder.path = path;
+                    holder.box = box;
+                    card.setTag(holder);
+                    convertView = card;
+                } else {
+                    holder = (LargeHolder) convertView.getTag();
+                }
+                holder.name.setText(row.file.getName() + "  " + FileSize.getHumanReadableFileSize(row.size));
+                holder.path.setText(row.file.getAbsolutePath());
+                holder.box.setOnCheckedChangeListener(null);
+                holder.box.setChecked(row.checked);
+                holder.box.setOnCheckedChangeListener((b, checked) -> {
+                    row.checked = checked;
+                    updateDeleteSelectedBtn();
+                });
+                String absPath = row.file.getAbsolutePath();
+                if ("Images".equals(row.bucket) || "Videos".equals(row.bucket)) {
+                    holder.thumb.setTag(absPath);
+                    Bitmap cached = thumbCache.get(absPath);
+                    if (cached != null) {
+                        holder.thumb.setImageBitmap(cached);
+                    } else {
+                        holder.thumb.setImageResource(android.R.drawable.ic_menu_gallery);
+                        ImageView target = holder.thumb;
+                        thumbExecutor.execute(() -> {
+                            Bitmap bmp = loadThumb(row.file, row.bucket);
+                            if (bmp != null) {
+                                try {
+                                    thumbCache.put(absPath, bmp);
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            final Bitmap done = bmp;
+                            handler.post(() -> {
+                                if (absPath.equals(target.getTag()) && done != null) {
+                                    target.setImageBitmap(done);
+                                }
+                            });
+                        });
+                    }
+                } else if ("APKs".equals(row.bucket)) {
+                    holder.thumb.setTag(null);
+                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.apk_document_24px);
+                } else if ("Archives".equals(row.bucket)) {
+                    holder.thumb.setTag(null);
+                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.archive_24px);
+                } else {
+                    holder.thumb.setTag(null);
+                    holder.thumb.setImageResource(R.drawable.baseline_insert_drive_file_24);
+                }
+                return convertView;
+            }
+        };
+    }
+
+    private void openFile(File file, String bucket) {
+        try {
+            if ("Images".equals(bucket)) {
+                ImageViewerActivity.open(this, file.getAbsolutePath());
+                return;
+            }
+            if ("Videos".equals(bucket) || "Audio".equals(bucket)) {
+                MediaPlayerActivity.openAndPlay(this, file.getAbsolutePath());
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+            String type = getContentResolver().getType(uri);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(uri, type == null ? "*/*" : type);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(intent, getString(R.string.open_with)));
+        } catch (Exception e) {
+            Extensions.showMessage(this, getString(R.string.storage_cannot_open));
+        }
+    }
+
+    private void removeFromLargeLists(String absPath) {
+        for (int i = largeFiles.size() - 1; i >= 0; i--) {
+            if (largeFiles.get(i).file.getAbsolutePath().equals(absPath)) largeFiles.remove(i);
+        }
+        try {
+            thumbCache.remove(absPath);
+        } catch (Exception ignored) {
+        }
+        applyTypeFilter();
+    }
+
+    private boolean deleteOneFile(File file) {
+        try {
+            AccessManager.delete(StorageManagerActivity.this, file.getAbsolutePath(), true);
+        } catch (Exception ignored) {
+        }
+        if (file.exists()) {
+            try {
+                file.delete();
+            } catch (Exception ignored) {
+            }
+        }
+        return !file.exists();
+    }
+
+    private void confirmDeleteSelected() {
+        List<FileRow> targets = new ArrayList<>();
+        for (FileRow row : largeVisible) {
+            if (row.checked) targets.add(row);
+        }
+        if (targets.isEmpty()) return;
+        long total = 0;
+        for (FileRow row : targets) total += row.size;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.storage_delete_n_files, targets.size()))
+                .setMessage(getString(R.string.storage_will_be_freed, FileSize.getHumanReadableFileSize(total)))
+                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                    int ok = 0;
+                    for (FileRow row : targets) {
+                        if (deleteOneFile(row.file)) ok++;
+                    }
+                    int done = ok;
+                    handler.post(() -> {
+                        for (FileRow row : targets) {
+                            if (!row.file.exists()) removeFromLargeLists(row.file.getAbsolutePath());
+                        }
+                        refreshVolumes();
+                        Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_deleted_x, done, targets.size()));
+                    });
+                }).start())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void confirmDeleteFile(File file) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.delete))
+                .setMessage(file.getAbsolutePath() + "\n" + FileSize.getHumanReadableFileSize(file.length()))
+                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                    final boolean done = deleteOneFile(file);
+                    handler.post(() -> {
+                        Extensions.showMessage(StorageManagerActivity.this, done ? getString(R.string.storage_deleted) : getString(R.string.storage_delete_failed));
+                        if (done) {
+                            removeFromLargeLists(file.getAbsolutePath());
+                            refreshVolumes();
+                        }
+                    });
+                }).start())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private BaseAdapter cacheAdapter() {
+        float density = getResources().getDisplayMetrics().density;
+        int onSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
+        int onVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+        return new BaseAdapter() {
+            public int getCount() {
+                return cacheRows.size();
+            }
+
+            public Object getItem(int position) {
+                return cacheRows.get(position);
+            }
+
+            public long getItemId(int position) {
+                return position;
+            }
+
+            public View getView(int position, View convertView, ViewGroup parent) {
+                CacheRow row = cacheRows.get(position);
+                LinearLayout line = new LinearLayout(StorageManagerActivity.this);
+                line.setOrientation(LinearLayout.HORIZONTAL);
+                line.setGravity(Gravity.CENTER_VERTICAL);
+                line.setPadding((int) (8 * density), (int) (8 * density), (int) (8 * density), (int) (8 * density));
+                CheckBox box = new CheckBox(StorageManagerActivity.this);
+                box.setChecked(row.checked);
+                box.setFocusable(false);
+                line.addView(box);
+                LinearLayout text = new LinearLayout(StorageManagerActivity.this);
+                text.setOrientation(LinearLayout.VERTICAL);
+                text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                TextView name = new TextView(StorageManagerActivity.this);
+                name.setText(row.label);
+                name.setTextColor(onSurface);
+                text.addView(name);
+                TextView sub = new TextView(StorageManagerActivity.this);
+                sub.setText(row.packageName + "  " + FileSize.getHumanReadableFileSize(row.cacheBytes));
+                sub.setTextSize(12);
+                sub.setTextColor(onVariant);
+                text.addView(sub);
+                line.addView(text);
+                box.setOnCheckedChangeListener((b, checked) -> row.checked = checked);
+                return line;
+            }
+        };
+    }
+
+    @TargetApi(26)
+    private long queryCacheBytes26(ApplicationInfo app) {
+        try {
+            StorageStatsManager stats = (StorageStatsManager) getSystemService(Context.STORAGE_STATS_SERVICE);
+            StorageManager sm = (StorageManager) getSystemService(Context.STORAGE_SERVICE);
+            if (stats == null || sm == null) return -1;
+            return stats.queryStatsForPackage(sm.getUuidForPath(new File(app.sourceDir)), app.packageName, Process.myUserHandle()).getCacheBytes();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private void loadCaches() {
+        cacheStatus.setText(getString(R.string.storage_loading_caches));
+        new Thread(() -> {
+            List<CacheRow> rows = new ArrayList<>();
+            boolean rootReady = RootPermissionHelper.isRootShellReady(StorageManagerActivity.this);
+            Map<String, Long> rootSizes = rootReady ? readCacheSizesViaRoot() : new HashMap<>();
+            boolean statsReady = Build.VERSION.SDK_INT >= 26 && RootPermissionHelper.hasUsageAccess(StorageManagerActivity.this);
+            PackageManager pm = getPackageManager();
+            List<ApplicationInfo> apps;
+            try {
+                apps = pm.getInstalledApplications(0);
+            } catch (Exception e) {
+                apps = new ArrayList<>();
+            }
+            for (ApplicationInfo app : apps) {
+                long cache = -1;
+                if (statsReady) {
+                    cache = queryCacheBytes26(app);
+                } else if (rootSizes.containsKey(app.packageName)) {
+                    cache = rootSizes.get(app.packageName);
+                }
+                if (cache < 0) continue;
+                if (cache == 0 && !statsReady) continue;
+                String label;
+                try {
+                    label = String.valueOf(pm.getApplicationLabel(app));
+                } catch (Exception e) {
+                    label = app.packageName;
+                }
+                rows.add(new CacheRow(app.packageName, label, cache));
+            }
+            rows.sort((a, b) -> Long.compare(b.cacheBytes, a.cacheBytes));
+            handler.post(() -> {
+                cacheRows.clear();
+                cacheRows.addAll(rows);
+                cacheAdapter.notifyDataSetChanged();
+                long total = 0;
+                for (CacheRow r : rows) total += r.cacheBytes;
+                if (rows.isEmpty()) {
+                    if (Build.VERSION.SDK_INT >= 26 && !RootPermissionHelper.hasUsageAccess(StorageManagerActivity.this) && !rootReady) {
+                        cacheStatus.setText(getString(R.string.storage_grant_usage));
+                        MaterialButton grant = new MaterialButton(StorageManagerActivity.this);
+                        grant.setText(getString(R.string.storage_grant_usage_btn));
+                        grant.setOnClickListener(v -> RootPermissionHelper.ensureUsageAccess(StorageManagerActivity.this));
+                        ((ViewGroup) cacheList.getParent()).addView(grant, ((ViewGroup) cacheList.getParent()).indexOfChild(cacheList));
+                    } else {
+                        cacheStatus.setText(getString(R.string.storage_no_caches));
+                    }
+                } else {
+                    cacheStatus.setText(getString(R.string.storage_apps_cache, rows.size(), FileSize.getHumanReadableFileSize(total)));
+                }
+            });
+        }).start();
+    }
+
+    private Map<String, Long> readCacheSizesViaRoot() {
+        Map<String, Long> out = new HashMap<>();
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            RootManager.ShellResult r = rm.executeFs("du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
+            if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                parseDuOutput(r.output(), 1024L, out);
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    private void parseDuOutput(String output, long factor, Map<String, Long> out) {
+        for (String line : output.split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) continue;
+            int tab = t.indexOf('\t');
+            if (tab <= 0) tab = t.indexOf(' ');
+            if (tab <= 0) continue;
+            try {
+                long size = Long.parseLong(t.substring(0, tab).trim()) * factor;
+                String path = t.substring(tab).trim();
+                String pkg = null;
+                if (path.startsWith("/data/data/")) {
+                    String rest = path.substring("/data/data/".length());
+                    int slash = rest.indexOf('/');
+                    if (slash > 0) pkg = rest.substring(0, slash);
+                } else if (path.startsWith("/data/user_de/") || path.startsWith("/data/user/")) {
+                    String rest = path.substring(path.startsWith("/data/user_de/") ? "/data/user_de/".length() : "/data/user/".length());
+                    int s1 = rest.indexOf('/');
+                    if (s1 > 0) {
+                        String rest2 = rest.substring(s1 + 1);
+                        int s2 = rest2.indexOf('/');
+                        if (s2 > 0) pkg = rest2.substring(0, s2);
+                    }
+                } else if (path.contains("/Android/data/")) {
+                    String rest = path.substring(path.indexOf("/Android/data/") + "/Android/data/".length());
+                    int slash = rest.indexOf('/');
+                    if (slash > 0) pkg = rest.substring(0, slash);
+                }
+                if (pkg != null && !pkg.isEmpty()) {
+                    Long prev = out.get(pkg);
+                    out.put(pkg, (prev == null ? 0L : prev) + size);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void clearCaches(boolean selectedOnly) {
+        List<String> targets = new ArrayList<>();
+        for (CacheRow r : cacheRows) {
+            if (!selectedOnly || r.checked) targets.add(r.packageName);
+        }
+        if (targets.isEmpty()) {
+            Extensions.showMessage(this, getString(R.string.storage_nothing_sel));
+            return;
+        }
+        if (!RootPermissionHelper.isRootShellReady(this)) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.storage_root_needed))
+                    .setMessage(getString(R.string.storage_root_need_msg))
+                    .setPositiveButton(getString(R.string.storage_use_autoclear), (d, w) -> autoClearCaches(selectedOnly))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(selectedOnly ? getString(R.string.storage_clear_sel) : getString(R.string.storage_clear_all_caches))
+                .setMessage(getString(R.string.storage_apps_n, targets.size()))
+                .setPositiveButton(getString(R.string.clear), (d, w) -> new Thread(() -> {
+                    RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
+                    int ok = 0;
+                    List<String> failures = new ArrayList<>();
+                    String firstError = "";
+                    for (String pkg : targets) {
+                        try {
+                            String[] dirs = new String[]{
+                                    "/data/data/" + pkg + "/cache",
+                                    "/data/data/" + pkg + "/code_cache",
+                                    "/data/user_de/0/" + pkg + "/cache",
+                                    "/data/media/0/Android/data/" + pkg + "/cache"
+                            };
+                            StringBuilder script = new StringBuilder("rm -rf");
+                            for (String dir : dirs) {
+                                script.append(' ').append(RootManager.escapeShellArg(dir));
+                            }
+                            script.append(" 2>/dev/null; ec=$?; ");
+                            for (String dir : dirs) {
+                                script.append("if [ -e ").append(RootManager.escapeShellArg(dir)).append(" ] || [ -L ").append(RootManager.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(RootManager.escapeShellArg(dir)).append("; fi; ");
+                            }
+                            script.append("echo RM_EXIT=$ec");
+                            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+                            boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0") && !r.output().contains("LEFT:");
+                            if (clearedOk) {
+                                ok++;
+                            } else {
+                                failures.add(pkg);
+                                if (firstError.isEmpty()) {
+                                    String err = r.error() == null ? "" : r.error().trim();
+                                    if (err.isEmpty() && r.output() != null) err = r.output().trim();
+                                    if (!err.isEmpty()) firstError = err.length() > 300 ? err.substring(0, 300) : err;
+                                }
+                            }
+                        } catch (Exception e) {
+                            failures.add(pkg);
+                            if (firstError.isEmpty() && e.getMessage() != null) firstError = e.getMessage();
+                        }
+                    }
+                    try {
+                        rm.execute("pm trim-caches 9223372036854775807", 90);
+                    } catch (Exception ignored) {
+                    }
+                    if (!failures.isEmpty()) {
+                        try {
+                            RootManager.ShellResult diag = rm.executeFs("id; ls -ld " + RootManager.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
+                            String extra = diag.output() == null ? "" : diag.output().trim();
+                            String derr = diag.error() == null ? "" : diag.error().trim();
+                            if (!derr.isEmpty()) extra = (extra + " " + derr).trim();
+                            if (!extra.isEmpty()) firstError = (firstError + "\n" + extra).trim();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    int done = ok;
+                    int total = targets.size();
+                    List<String> failedPkgs = new ArrayList<>(failures);
+                    String errText = firstError;
+                    handler.post(() -> {
+                        Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_cleared_x, done, total));
+                        if (!failedPkgs.isEmpty()) {
+                            StringBuilder names = new StringBuilder();
+                            int shown = Math.min(failedPkgs.size(), 5);
+                            for (int i = 0; i < shown; i++) {
+                                if (i > 0) names.append(", ");
+                                names.append(failedPkgs.get(i));
+                            }
+                            new MaterialAlertDialogBuilder(StorageManagerActivity.this)
+                                    .setTitle(getString(R.string.storage_some_not_cleared))
+                                    .setMessage(getString(R.string.storage_apps_failed, failedPkgs.size(), names.length() == 0 ? "" : ": " + names, errText.isEmpty() ? "" : "\n\n" + errText))
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show();
+                        }
+                        loadCaches();
+                        refreshVolumes();
+                    });
+                }).start())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openAppInfo(String pkg) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+            startActivity(intent);
+        } catch (Exception e) {
+            Extensions.showMessage(this, getString(R.string.storage_cannot_open));
+        }
+    }
+
+    protected void onDestroy() {
+        scanning = false;
+        try {
+            CacheCleaner.stopQuiet();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (thumbExecutor != null) thumbExecutor.shutdownNow();
+        } catch (Exception ignored) {
+        }
+        super.onDestroy();
+    }
+}

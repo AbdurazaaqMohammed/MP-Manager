@@ -43,9 +43,9 @@ public final class EditorTasks {
         return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
                 || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscTextActivity");
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity")
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
     }
 
     public static boolean isEditor(Intent intent) {
@@ -54,9 +54,9 @@ public final class EditorTasks {
         return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
                 || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity")
-                || name.equals("io.github.abdurazaaqmohammed.arsc.ArscTextActivity");
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity")
+                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
     }
 
     public static Intent prepare(Intent source, String owner, int request) {
@@ -111,7 +111,7 @@ public final class EditorTasks {
         }
         // Fallback if AppTask not found
         try {
-            Intent main = new Intent(activity, io.github.abdurazaaqmohammed.MPManager.MainActivity.class);
+            Intent main = new Intent(activity, io.github.abdurazaaqmohammed.ui.main.MainActivity.class);
             main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             activity.startActivity(main);
         } catch (Exception ignored) {

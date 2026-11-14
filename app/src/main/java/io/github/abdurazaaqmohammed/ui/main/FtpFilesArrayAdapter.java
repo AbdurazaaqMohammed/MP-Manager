@@ -22,8 +22,8 @@ import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.ui.main.ApkManifestEditor;

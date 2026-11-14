@@ -24,7 +24,7 @@ import java.util.Map;
 
 import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;

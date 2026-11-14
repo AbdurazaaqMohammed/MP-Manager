@@ -12,7 +12,7 @@ import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 /** Keeps hidden file-operation workers eligible to run when the UI goes into the background. */

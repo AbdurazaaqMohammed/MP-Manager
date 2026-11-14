@@ -266,7 +266,7 @@ public class ScreenCapture {
     private void startService() {
         try {
             Intent intent = new Intent(context,
-                    Class.forName("io.github.abdurazaaqmohammed.tools.ScreenCaptureService"));
+                    Class.forName("io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService"));
             intent.setAction("io.github.abdurazaaqmohammed.MPManager.action.SCREEN_CAPTURE_START");
             if (Build.VERSION.SDK_INT >= 26) {
                 context.startForegroundService(intent);
@@ -280,7 +280,7 @@ public class ScreenCapture {
     private void stopService() {
         try {
             Intent intent = new Intent(context,
-                    Class.forName("io.github.abdurazaaqmohammed.tools.ScreenCaptureService"));
+                    Class.forName("io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService"));
             intent.setAction("io.github.abdurazaaqmohammed.MPManager.action.SCREEN_CAPTURE_STOP");
             context.startService(intent);
         } catch (Exception ignored) {

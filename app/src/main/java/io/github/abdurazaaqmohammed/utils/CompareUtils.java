@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.ApkExtractor.AppInfo;
+import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
 
 public class CompareUtils {
     public static int compareAppInfoByName(AppInfo p1, AppInfo p2) {

@@ -20,7 +20,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 
 /** Shortcut identity, bitmap rendering and explicit navigation are shared by both launcher modes. */

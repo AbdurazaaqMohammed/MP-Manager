@@ -35,7 +35,7 @@ import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.main.CopyConflictDialog;

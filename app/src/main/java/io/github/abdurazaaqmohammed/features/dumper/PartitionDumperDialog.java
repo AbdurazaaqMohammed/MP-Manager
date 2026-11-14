@@ -44,7 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.system.SystemImageEngine;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;

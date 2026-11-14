@@ -47,7 +47,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import mt.signature.generate.KeyStoreMakerDialog;
 

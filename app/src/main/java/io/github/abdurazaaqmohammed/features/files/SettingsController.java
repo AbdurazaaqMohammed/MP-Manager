@@ -47,7 +47,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuCustomizer;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;

@@ -56,8 +56,8 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.zip.Deflater;
 
-import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 public class MergeUtil {
     public static CompressionLevel getPreferredCompressionLevel(Context context) {

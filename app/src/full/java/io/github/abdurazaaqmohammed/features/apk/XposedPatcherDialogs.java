@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.function.IntConsumer;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;

@@ -18,7 +18,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
@@ -140,7 +140,7 @@ public final class NetworkController {
     }
 
     public void editFtpProfile(String name) {
-        for (io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile profile : activity.getFtp().clientProfiles()) {
+        for (io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile : activity.getFtp().clientProfiles()) {
             if (profile.getName().equals(name)) {
                 showConnectionDialog("ftp");
                 connections.loadFtpProfile(profile);
@@ -265,7 +265,7 @@ public final class NetworkController {
             for (Object item : items) {
                 checkpoint();
                 if (listener != null) listener.checkpoint();
-                if (!(item instanceof File) || item instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper)
+                if (!(item instanceof File) || item instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper)
                     throw new IOException("Extract archive entries to a local folder before uploading");
                 File source = (File) item;
                 uploadSource(source, destination.connection.client, destination.entry.path, listener);
@@ -324,7 +324,7 @@ public final class NetworkController {
         boolean supported = opposite.getAdapter() instanceof MainFilesArrayAdapter
                 || opposite.getAdapter() instanceof io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
         runOperation(activity.getString(move ? R.string.move : android.R.string.copy), () -> {
-            if (!supported || destination == null || destination instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper
+            if (!supported || destination == null || destination instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper
                     || (other != null && other.isInZip))
                 throw new IOException("Choose a destination folder, not an archive");
             if (destination instanceof RemoteFile remote && remote.connection.address.equals(source.connection.address)
@@ -357,7 +357,7 @@ public final class NetworkController {
     public boolean canCopyOut(RemoteFile source, boolean sourcePane1) {
         File destination = sourcePane1 ? activity.pane2Folder : activity.pane1Folder;
         MainFilesArrayAdapter other = activity.paneFilesAdapter(!sourcePane1);
-        if (destination == null || destination instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper
+        if (destination == null || destination instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper
                 || (other != null && other.isInZip)) return false;
         if (destination instanceof RemoteFile remote) {
             return !remote.connection.address.equals(source.connection.address)

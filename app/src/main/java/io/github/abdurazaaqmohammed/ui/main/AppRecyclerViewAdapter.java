@@ -28,8 +28,8 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
-import io.github.abdurazaaqmohammed.ApkExtractor.AppInfo;
+import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerViewAdapter.ViewHolder> implements Filterable {
@@ -37,12 +37,12 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
     public final APKExtractorActivity apkExtractorActivity;
     public final List<AppInfo> appInfoList;
     public final List<AppInfo> filteredAppInfoList;
-    private java.util.Map<String, io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Entry> extractedIndex;
+    private java.util.Map<String, io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Entry> extractedIndex;
 
     private Comparator<AppInfo> currentComparator;
     private AppInfoFilter filter;
 
-    public void setExtractedIndex(java.util.Map<String, io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Entry> index) {
+    public void setExtractedIndex(java.util.Map<String, io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Entry> index) {
         this.extractedIndex = index;
         notifyDataSetChanged();
     }
@@ -209,14 +209,14 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         }
 
         // Corner status badge indicating extracted state
-        io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match match =
-                io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.findMatch(extractedIndex, appInfo);
+        io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match match =
+                io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.findMatch(extractedIndex, appInfo);
         if (match != null && match.file() != null && match.file().exists()) {
             holder.cornerBadgeView.setVisibility(View.VISIBLE);
             int color;
-            if (match.status() == io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match.STATUS_SAME) {
+            if (match.status() == io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match.STATUS_SAME) {
                 color = 0xFF4CAF50; // Green (identical version)
-            } else if (match.status() == io.github.abdurazaaqmohammed.ApkExtractor.ExtractedApksIndex.Match.STATUS_NEWER) {
+            } else if (match.status() == io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match.STATUS_NEWER) {
                 color = 0xFFFFC107; // Yellow (extracted is newer)
             } else {
                 color = 0xFFF44336; // Red (extracted is older)

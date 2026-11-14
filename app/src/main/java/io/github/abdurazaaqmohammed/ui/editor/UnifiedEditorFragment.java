@@ -29,7 +29,7 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.features.editor.ColorPreviewHelper;
 import io.github.abdurazaaqmohammed.features.editor.ColorPreviewLanguageWrapper;
-import io.github.abdurazaaqmohammed.arsc.ArscTextActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;

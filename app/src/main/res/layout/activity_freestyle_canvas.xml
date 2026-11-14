@@ -64,7 +64,7 @@
     </com.google.android.material.appbar.MaterialToolbar>
 
     <!-- Interactive Canvas View -->
-    <io.github.abdurazaaqmohammed.freestyle.FreeStyleCanvasView
+    <io.github.abdurazaaqmohammed.feature.freestyle.FreeStyleCanvasView
         android:id="@+id/canvasView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

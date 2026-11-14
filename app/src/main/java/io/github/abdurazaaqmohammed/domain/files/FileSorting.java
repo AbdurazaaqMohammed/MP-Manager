@@ -129,7 +129,7 @@ public final class FileSorting {
             List<File> dirsToSize = new ArrayList<>();
             for (int i = 0; i < n; i++) {
                 if (files[i] instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile
-                        || files[i] instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper) {
+                        || files[i] instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper) {
                     sizes[i] = dirs[i] ? 0 : files[i].length(); // No recursive network walks or fake local-path stats.
                 } else if (dirs[i]) {
                     Long cached = DirSizeCache.peek(files[i]);
@@ -154,7 +154,7 @@ public final class FileSorting {
             computeSizesParallel(dirsToSize);
             for (int i = 0; i < n; i++) {
                 if (dirs[i] && !(files[i] instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile)
-                        && !(files[i] instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper)) sizes[i] = dirSize(files[i]);
+                        && !(files[i] instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper)) sizes[i] = dirSize(files[i]);
             }
             if (!dirsToSize.isEmpty()) DirSizeCache.scheduleSave();
         }

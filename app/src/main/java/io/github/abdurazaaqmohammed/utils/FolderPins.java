@@ -15,7 +15,7 @@ public final class FolderPins {
     public static String key(File file) {
         if (file instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile remote)
             return remote.displayPath();
-        if (file instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper ftp)
+        if (file instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper ftp)
             return ftp.displayPath();
         return SafFs.isSaf(file) ? file.getPath() : file.getAbsolutePath();
     }

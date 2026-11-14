@@ -2,7 +2,7 @@ package io.github.abdurazaaqmohammed.features.apk;
 
 import java.io.File;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 
 /** Full-flavor host: runs the real APK data multiplexing flow. */

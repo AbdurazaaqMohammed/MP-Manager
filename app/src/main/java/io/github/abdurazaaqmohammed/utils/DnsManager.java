@@ -267,7 +267,7 @@ public class DnsManager {
     private static void requestTileRefresh(Context context) {
         try {
             if (Build.VERSION.SDK_INT >= 24) {
-                TileService.requestListeningState(context, new ComponentName(context, "io.github.abdurazaaqmohammed.tools.PrivateDnsTileService"));
+                TileService.requestListeningState(context, new ComponentName(context, "io.github.abdurazaaqmohammed.feature.system.PrivateDnsTileService"));
             }
         } catch (Exception ignored) {
         }
@@ -285,7 +285,7 @@ public class DnsManager {
                 return;
             }
             Intent intent = new Intent(APPLY_ACTION);
-            intent.setClassName(activity.getPackageName(), "io.github.abdurazaaqmohammed.tools.WifiManagerActivity");
+            intent.setClassName(activity.getPackageName(), "io.github.abdurazaaqmohammed.feature.system.WifiManagerActivity");
             intent.putExtra(EXTRA_PROFILE_ID, profile.id);
             ShortcutInfo info = new ShortcutInfo.Builder(activity, "dns_" + profile.id)
                     .setShortLabel(activity.getString(R.string.dns_applied, profile.name))

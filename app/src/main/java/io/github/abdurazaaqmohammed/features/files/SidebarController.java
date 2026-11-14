@@ -48,16 +48,16 @@ import com.google.gson.reflect.TypeToken;
 import android.net.Uri;
 
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
-import io.github.abdurazaaqmohammed.freestyle.FreeStylePickerActivity;
+import io.github.abdurazaaqmohammed.feature.freestyle.FreeStylePickerActivity;
 import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
-import io.github.abdurazaaqmohammed.tools.LogcatActivity;
+import io.github.abdurazaaqmohammed.feature.system.LogcatActivity;
 import io.github.abdurazaaqmohammed.utils.AppGson;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
@@ -68,13 +68,13 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
-import io.github.abdurazaaqmohammed.tools.SetEditActivity;
-import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
-import io.github.abdurazaaqmohammed.tools.ToolRunnerActivity;
-import io.github.abdurazaaqmohammed.tools.DocumentsBrowserActivity;
-import io.github.abdurazaaqmohammed.tools.FridaConsoleActivity;
-import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
-import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
+import io.github.abdurazaaqmohammed.feature.system.SetEditActivity;
+import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
+import io.github.abdurazaaqmohammed.feature.system.ToolRunnerActivity;
+import io.github.abdurazaaqmohammed.feature.system.DocumentsBrowserActivity;
+import io.github.abdurazaaqmohammed.feature.system.FridaConsoleActivity;
+import io.github.abdurazaaqmohammed.feature.system.ToolsHubActivity;
+import io.github.abdurazaaqmohammed.feature.system.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.abdurazaaqmohammed.features.files.network.NetworkProfile;
 import io.github.abdurazaaqmohammed.features.files.network.NetworkProfileStore;
@@ -570,9 +570,9 @@ public class SidebarController {
         try {
             for (NetworkProfile profile : new NetworkProfileStore(activity).load()) networkProfiles.put(profile.pinId(), profile);
         } catch (Exception ignored) { /* Keystore failures must not hide local/provider storage. */ }
-        Map<String, io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile> ftpProfiles = new LinkedHashMap<>();
+        Map<String, io.github.abdurazaaqmohammed.feature.ftp.FtpProfile> ftpProfiles = new LinkedHashMap<>();
         try {
-            for (io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile profile : activity.getFtp().clientProfiles())
+            for (io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile : activity.getFtp().clientProfiles())
                 ftpProfiles.put(profile.getName(), profile);
         } catch (Exception ignored) {}
         try {
@@ -590,7 +590,7 @@ public class SidebarController {
                             "storage", pin, label, R.drawable.folder_24px, null, null));
                 } else if (pin.startsWith(SidebarPins.FTP_PREFIX)) {
                     String name = pin.substring(SidebarPins.FTP_PREFIX.length());
-                    io.github.abdurazaaqmohammed.MPManager.ftp.FtpProfile profile = ftpProfiles.get(name);
+                    io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile = ftpProfiles.get(name);
                     if (profile != null) data.pinned.add(networkPin(pin, name, "FTP",
                             activity.getFtp().spaceForProfile(profile), activity.getFtp().hasCheckedSpace(profile)));
                 } else if (pin.startsWith(SidebarPins.WEBDAV_PREFIX) || pin.startsWith(SidebarPins.SMB_PREFIX)) {
@@ -694,7 +694,7 @@ public class SidebarController {
                 activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
                 break;
             case "app_ops":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity.class));
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity.class));
                 break;
             case "set_edit":
                 activity.startActivity(new Intent(activity, SetEditActivity.class));
@@ -738,7 +738,7 @@ public class SidebarController {
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 break;
             case "command_shell":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity.class));
+                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class));
                 break;
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));

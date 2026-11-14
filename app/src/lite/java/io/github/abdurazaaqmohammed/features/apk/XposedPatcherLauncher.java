@@ -12,7 +12,7 @@ public final class XposedPatcherLauncher {
     private XposedPatcherLauncher() {
     }
 
-    public static void open(io.github.abdurazaaqmohammed.MPManager.MainActivity context,
+    public static void open(io.github.abdurazaaqmohammed.ui.main.MainActivity context,
                             io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil,
                             boolean pane1, File file, String fileName) {
         context.handler.post(() -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
