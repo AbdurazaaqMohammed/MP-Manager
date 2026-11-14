@@ -617,11 +617,14 @@ public class RootManager {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
-                stdin.writeBytes(command + "\n");
+                // writeBytes only keeps the low 8 bits of each char, which turns
+                // non-ASCII paths (e.g. Chinese APK names) into garbage before
+                // they reach su. The UTF-8 bytes must be written directly.
+                stdin.write((command + "\n").getBytes(StandardCharsets.UTF_8));
                 if (input != null) {
-                    stdin.writeBytes(input + "\n");
+                    stdin.write((input + "\n").getBytes(StandardCharsets.UTF_8));
                 }
-                stdin.writeBytes("exit\n");
+                stdin.write("exit\n".getBytes(StandardCharsets.UTF_8));
                 stdin.flush();
 
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -1447,7 +1450,10 @@ public class RootManager {
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
                 String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
                 if (content == null) content = "";
-                stdin.writeBytes("cat > " + escapeShellArg(path) + " << '" + delimiter + "'\n");
+                // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
+                // characters that writeBytes would truncate (see executeWithInput).
+                stdin.write(("cat > " + escapeShellArg(path) + " << '" + delimiter + "'\n")
+                        .getBytes(StandardCharsets.UTF_8));
                 stdin.write(content.getBytes(StandardCharsets.UTF_8));
                 stdin.writeBytes("\n" + delimiter + "\n");
                 stdin.writeBytes("exit\n");
@@ -1486,7 +1492,10 @@ public class RootManager {
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
                 String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
                 if (content == null) content = "";
-                stdin.writeBytes("cat >> " + escapeShellArg(path) + " << '" + delimiter + "'\n");
+                // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
+                // characters that writeBytes would truncate (see executeWithInput).
+                stdin.write(("cat >> " + escapeShellArg(path) + " << '" + delimiter + "'\n")
+                        .getBytes(StandardCharsets.UTF_8));
                 stdin.write(content.getBytes(StandardCharsets.UTF_8));
                 stdin.writeBytes("\n" + delimiter + "\n");
                 stdin.writeBytes("exit\n");
