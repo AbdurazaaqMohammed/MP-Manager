@@ -321,6 +321,7 @@
 
         private void applyCurrentFilter() {
             FilterSpec spec = currentSpec;
+            currentFilter = spec != null && spec.active ? spec.query : null;
             List<String> filtered = new ArrayList<>();
             Pattern regex = null;
             if (spec != null && spec.regex && spec.query != null && !spec.query.isEmpty()) {
@@ -396,12 +397,14 @@
 
             holder.itemView.setOnClickListener(v -> {
                 if (selectionMode) {
+                    io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.SELECTION);
                     toggleSelected(original);
                 } else if (listener != null) {
                     listener.onStringClick(original);
                 }
             });
             holder.itemView.setOnLongClickListener(v -> {
+                io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
                 if (longClickListener != null) {
                     longClickListener.onStringLongClick(original);
                     return true;

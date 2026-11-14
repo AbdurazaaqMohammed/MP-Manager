@@ -163,6 +163,7 @@ public class SettingsController {
 
     public void attach(ViewFinder settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
+        setupHaptics(settingsDialog, settings);
 
         // Accent color (follow material color / presets / custom picker).
         View accentRow = settingsDialog.findViewById(R.id.accentColorRow);
@@ -342,6 +343,24 @@ public class SettingsController {
         saveDateFormat(root);
         saveSearchHistoryLimit(root);
         refreshFileLists();
+    }
+
+    private void setupHaptics(ViewFinder root, SharedPreferences settings) {
+        int[] ids = {R.id.hapticsEnabled, R.id.hapticsSelection, R.id.hapticsActions,
+                R.id.hapticsNavigation, R.id.hapticsCompletion};
+        String[] keys = {io.github.abdurazaaqmohammed.utils.Haptics.ENABLED, "haptics_selection",
+                "haptics_actions", "haptics_navigation", "haptics_completion"};
+        for (int i = 0; i < ids.length; i++) {
+            CompoundButton toggle = root.findViewById(ids[i]);
+            if (toggle == null) continue;
+            String key = keys[i];
+            toggle.setChecked(settings.getBoolean(key, i < 3));
+            toggle.setOnCheckedChangeListener((button, checked) -> {
+                settings.edit().putBoolean(key, checked).apply();
+                if (checked) io.github.abdurazaaqmohammed.utils.Haptics.perform(button,
+                        io.github.abdurazaaqmohammed.utils.Haptics.Event.ACTION);
+            });
+        }
     }
 
     /**

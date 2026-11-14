@@ -335,7 +335,7 @@ public class RightMenuController {
 
         if (onLongClick != null) {
             itemLayout.setOnLongClickListener(v -> {
-                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
                 if (activity.drawerLayout != null && activity.drawerLayout.isDrawerOpen(GravityCompat.END)) {
                     activity.drawerLayout.closeDrawer(GravityCompat.END);
                     activity.drawerLayout.postDelayed(() -> {

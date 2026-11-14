@@ -38,6 +38,36 @@
                     android:layout_marginBottom="8dp" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hapticsEnabled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/haptics_enabled" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hapticsSelection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/haptics_selection" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hapticsActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/haptics_actions" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hapticsNavigation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/haptics_navigation" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hapticsCompletion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/haptics_completion" />
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/logToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

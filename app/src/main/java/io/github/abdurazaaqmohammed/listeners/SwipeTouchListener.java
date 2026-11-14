@@ -108,7 +108,8 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
                             if (touchView != null) {
-                                touchView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                                io.github.abdurazaaqmohammed.utils.Haptics.perform(touchView,
+                                        io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
                             }
                             originalLongClickListener.onLongClick(touchView);
                         }

@@ -316,12 +316,14 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                         if (listener != null) listener.onNodeClick(node);
                     }
                 } else {
+                    io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.SELECTION);
                     toggleChecked(node);
                 }
             }
         });
 
         holder.checkBox.setOnClickListener(v -> {
+            io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.SELECTION);
             int pos = holder.getBindingAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) toggleChecked(visibleNodes.get(pos));
         });
@@ -649,6 +651,9 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     @SuppressLint("NotifyDataSetChanged")
     private void handleLongClick(View v, TreeNode node, int pos) {
+        io.github.abdurazaaqmohammed.utils.Haptics.perform(v, isSelectionMode
+                ? io.github.abdurazaaqmohammed.utils.Haptics.Event.SELECTION
+                : io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
         if (isSelectionMode) {
             if (initialLongPressPosition == -1) {
                 initialLongPressPosition = pos;
