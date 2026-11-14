@@ -38,6 +38,12 @@ toolpacks/
 /app/release/baselineProfiles
 app/release/output-metadata.json
 
+# Per-module release build outputs ("Build APK" etc.)
+# packs/*/release/*.apk and samples/*/release/*.apk are currently tracked;
+# left as-is pending maintainer decision.
+packs/*/release/
+samples/*/release/
+
 # Reference clones of upstream projects (local only, see docs/XPOSED_PATCHER.md)
 /NPatch-dev/
 /NeoApk/
