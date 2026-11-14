@@ -1,12 +1,15 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import net.lingala.zip4j.model.FileHeader;
 
 import java.io.File;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 
 /**
  * Value holder for one zip entry. Moved here from the adapters package;

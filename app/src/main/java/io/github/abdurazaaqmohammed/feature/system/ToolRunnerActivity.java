@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -25,7 +29,6 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 
 /**
  * Thin host for toolkit screens.

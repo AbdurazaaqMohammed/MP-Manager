@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
+
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
@@ -19,7 +23,6 @@ import java.io.File;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.StickerUtil;
 
 public class StickerPreviewDialog {
 

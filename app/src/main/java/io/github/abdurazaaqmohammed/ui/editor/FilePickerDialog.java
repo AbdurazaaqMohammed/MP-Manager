@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -32,7 +36,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.ui.main.SortDirectionToggle;
 
 import org.apache.commons.io.FilenameUtils;

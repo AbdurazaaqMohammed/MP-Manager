@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -44,7 +48,6 @@ import io.github.abdurazaaqmohammed.feature.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.feature.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.feature.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteSpace;
 import io.github.codehasan.colorpicker.extensions.Extensions;

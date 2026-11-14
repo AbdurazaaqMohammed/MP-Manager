@@ -1,5 +1,13 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -75,11 +83,6 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.translation.TranslationExportDialog;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ArscEditorPlusActivity extends BaseActivity {

@@ -2,7 +2,12 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
-import io.github.abdurazaaqmohammed.utils.DnsManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
 
 import android.app.AppOpsManager;
 import android.content.ComponentName;

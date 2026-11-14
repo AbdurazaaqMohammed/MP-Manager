@@ -1,5 +1,14 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.utils.AppReinstaller;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -24,12 +33,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
-import io.github.abdurazaaqmohammed.utils.AppReinstaller;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**

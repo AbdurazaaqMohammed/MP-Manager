@@ -1,6 +1,13 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -62,14 +69,12 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.HashUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import com.reandroid.apk.ApkModule;
-import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;

@@ -1,7 +1,30 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.utils.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.RenameHelper;
+import io.github.abdurazaaqmohammed.util.io.RenameUtil;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -44,28 +67,22 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.main.CopyConflictDialog;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.FileTreeStats;
-import io.github.abdurazaaqmohammed.utils.DirectoryStats;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.RecycleBin;
-import io.github.abdurazaaqmohammed.utils.RenameHelper;
-import io.github.abdurazaaqmohammed.utils.RenameUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.RenameHelper;
+import io.github.abdurazaaqmohammed.util.io.RenameUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
-import io.github.abdurazaaqmohammed.utils.SafFile;
-import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.ZipProgressPump;
-import io.github.abdurazaaqmohammed.utils.ZipTransferControl;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
+import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -707,7 +724,7 @@ public class EntryDialogs {
         if (targets.isEmpty()) return;
         CharSequence base = target.getText();
         target.setText(base + "\n" + context.rss.getString(R.string.delete_size_calc));
-        io.github.abdurazaaqmohammed.utils.TransferControl scanControl = new io.github.abdurazaaqmohammed.utils.TransferControl();
+        io.github.abdurazaaqmohammed.util.io.TransferControl scanControl = new io.github.abdurazaaqmohammed.util.io.TransferControl();
         shown.setOnDismissListener(d -> scanControl.cancel());
         new Thread(() -> {
             try {

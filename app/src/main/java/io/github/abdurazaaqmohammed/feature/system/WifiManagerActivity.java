@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
+
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
+import io.github.abdurazaaqmohammed.util.net.WifiPasswordUtil;
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
@@ -68,11 +73,11 @@ import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.utils.DnsManager;
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
-import io.github.abdurazaaqmohammed.utils.WifiPasswordUtil;
+import io.github.abdurazaaqmohammed.util.net.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class WifiManagerActivity extends BaseActivity {

@@ -1,7 +1,12 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
 
 import android.content.SharedPreferences;
 import android.os.Build;

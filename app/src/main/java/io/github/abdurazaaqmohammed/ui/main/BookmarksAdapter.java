@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+
 import android.graphics.Color;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -21,8 +26,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 
 public class BookmarksAdapter extends ArrayAdapter<File> {

@@ -52,7 +52,7 @@ import androidx.fragment.app.Fragment;
 import java.nio.charset.StandardCharsets;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
 /*

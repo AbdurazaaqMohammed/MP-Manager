@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,7 +24,6 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.files.NavigationHistoryEntry;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
 
 public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
     private final MainActivity context;

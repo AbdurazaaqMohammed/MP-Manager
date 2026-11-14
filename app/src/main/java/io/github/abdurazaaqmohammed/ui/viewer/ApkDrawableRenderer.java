@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -38,7 +42,6 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 
 /**
  * Renders an Android drawable XML that lives inside an APK (or any archive) to

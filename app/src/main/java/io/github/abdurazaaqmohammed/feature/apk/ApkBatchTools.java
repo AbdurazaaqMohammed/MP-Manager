@@ -1,5 +1,16 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
+
+import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
+import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
+import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.widget.ScrollView;
@@ -12,14 +23,8 @@ import com.reandroid.apk.APKLogger;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
-import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
-import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;

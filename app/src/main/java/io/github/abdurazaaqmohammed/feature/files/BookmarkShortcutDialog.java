@@ -1,5 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.Haptics;
+
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -42,9 +48,7 @@ import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.ColorWheelView;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.Haptics;
-import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /** Configures, previews and publishes file/folder bookmark shortcuts without decoding on the UI thread. */

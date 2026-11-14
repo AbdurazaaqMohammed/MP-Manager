@@ -1,5 +1,22 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FolderPins;
+import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Intent;
@@ -53,27 +70,19 @@ import io.github.abdurazaaqmohammed.ui.editor.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.editor.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.editor.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.editor.CompareZipDialog;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.feature.files.SplitDialog;
-import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.feature.media.BatchImageTools;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
-import io.github.abdurazaaqmohammed.utils.MimeUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.FolderPins;
-import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {

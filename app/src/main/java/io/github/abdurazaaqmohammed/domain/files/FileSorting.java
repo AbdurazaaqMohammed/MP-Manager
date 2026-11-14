@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -305,7 +309,7 @@ public final class FileSorting {
             for (File c : children) {
                 if (c == null) continue;
                 try {
-                    if (io.github.abdurazaaqmohammed.utils.FileUtils.isSymlink(c)) continue;
+                    if (io.github.abdurazaaqmohammed.util.io.FileUtils.isSymlink(c)) continue;
                     long size = c.isDirectory() ? recursiveSize(c) : c.length();
                     if (size < 0) return -1;
                     total += size;

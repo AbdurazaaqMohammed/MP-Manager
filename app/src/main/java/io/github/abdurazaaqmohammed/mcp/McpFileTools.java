@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.mcp;
 
-import io.github.abdurazaaqmohammed.utils.HashUtil;
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 
 import android.os.Environment;
 import android.util.Base64;
@@ -23,7 +27,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.utils.HashUtil;
 
 /**
  * MCP file tools: browse, read, edit, search, manage, upload and download.

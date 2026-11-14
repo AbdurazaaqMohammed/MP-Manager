@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+
 import android.app.Activity;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -25,7 +29,6 @@ import java.util.List;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public final class ApkMoreMenuCustomizer {

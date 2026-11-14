@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.provider;
 
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
@@ -21,7 +25,6 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 

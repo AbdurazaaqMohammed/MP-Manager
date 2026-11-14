@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
@@ -43,7 +47,6 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

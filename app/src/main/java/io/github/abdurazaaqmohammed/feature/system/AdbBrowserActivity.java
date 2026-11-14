@@ -2,6 +2,11 @@ package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.net.AdbFileService;
+import io.github.abdurazaaqmohammed.util.net.AdbSync;
+
+
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -23,8 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.utils.AdbFileService;
-import io.github.abdurazaaqmohammed.utils.AdbSync;
+import io.github.abdurazaaqmohammed.util.net.AdbFileService;
+import io.github.abdurazaaqmohammed.util.net.AdbSync;
 
 /**
  * Walks the device over a local ADB session, reaching past this app's sandbox.

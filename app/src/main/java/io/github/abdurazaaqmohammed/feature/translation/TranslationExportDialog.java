@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.translation;
 
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
@@ -24,8 +29,6 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 
 /**
  * Dialog for exporting strings from an APK's strings.xml for translation.

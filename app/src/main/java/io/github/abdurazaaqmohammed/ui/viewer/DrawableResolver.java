@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -27,7 +31,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
 
 /**
  * Turns the string values found in drawable XML ({@code #ff0000},

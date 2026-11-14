@@ -1,5 +1,12 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
+import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Intent;
@@ -52,11 +59,10 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
-import io.github.abdurazaaqmohammed.utils.JpegtranJni;
+import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
+import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 

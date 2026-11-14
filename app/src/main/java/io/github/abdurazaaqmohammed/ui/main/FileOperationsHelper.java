@@ -1,7 +1,27 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.utils.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 
 import android.content.SharedPreferences;
 import android.text.Editable;
@@ -33,7 +53,6 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
-import io.github.abdurazaaqmohammed.utils.RecycleBin;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,26 +78,21 @@ import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.DestSizePoller;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
-import io.github.abdurazaaqmohammed.utils.SafFile;
-import io.github.abdurazaaqmohammed.utils.SafFs;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
-import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
-import io.github.abdurazaaqmohammed.utils.TransferControl;
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
-import io.github.abdurazaaqmohammed.utils.ZipTransferControl;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class FileOperationsHelper {

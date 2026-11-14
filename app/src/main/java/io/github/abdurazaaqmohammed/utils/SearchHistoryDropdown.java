@@ -1,7 +1,10 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import io.github.abdurazaaqmohammed.utils.Haptics;
+
+import io.github.abdurazaaqmohammed.utils.Haptics;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+
 
 import android.content.Context;
 import android.content.res.ColorStateList;

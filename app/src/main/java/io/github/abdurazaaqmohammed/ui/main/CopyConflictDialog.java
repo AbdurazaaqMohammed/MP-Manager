@@ -1,5 +1,11 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,9 +21,7 @@ import java.util.concurrent.CountDownLatch;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 /**
  * Dialogs shown when a copy would overwrite an existing name. Offers the useful

@@ -1,11 +1,30 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.utils.CollectionsUtils;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+
+import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
+import static io.github.abdurazaaqmohammed.util.io.FileUtils.doesNotHaveStoragePerm;
 
 import android.Manifest;
 import android.content.ClipboardManager;
@@ -86,8 +105,7 @@ import io.github.abdurazaaqmohammed.ui.viewer.MusicService;
 import io.github.abdurazaaqmohammed.feature.system.CacheCleaner;
 import io.github.abdurazaaqmohammed.feature.system.LogcatService;
 import io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.RecycleBin;
+import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.privilege.legacy.StartupPrivileges;
 import io.github.abdurazaaqmohammed.feature.files.SortFilterController;
 
@@ -152,21 +170,15 @@ import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.ui.viewer.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.ui.viewer.PlayerManager;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
-import io.github.abdurazaaqmohammed.utils.SafFile;
-import io.github.abdurazaaqmohammed.utils.SafFs;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.UpdateUtil;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -2951,7 +2963,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return;
         }
 
-        io.github.abdurazaaqmohammed.utils.ProgressManager pm = new io.github.abdurazaaqmohammed.utils.ProgressManager(this, true);
+        io.github.abdurazaaqmohammed.util.io.ProgressManager pm = new io.github.abdurazaaqmohammed.util.io.ProgressManager(this, true);
         pm.setText(getString(R.string.comparing_folders));
         pm.show();
 
@@ -3432,15 +3444,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         new Thread(() -> {
             File target;
             try {
-                io.github.abdurazaaqmohammed.utils.SafFs.init(this);
-                target = io.github.abdurazaaqmohammed.utils.SafFs.isSafPath(path)
-                        ? io.github.abdurazaaqmohammed.utils.SafFs.statWrap(path) : new File(path);
-                if (!io.github.abdurazaaqmohammed.utils.SafFs.isSaf(target)
+                io.github.abdurazaaqmohammed.util.io.SafFs.init(this);
+                target = io.github.abdurazaaqmohammed.util.io.SafFs.isSafPath(path)
+                        ? io.github.abdurazaaqmohammed.util.io.SafFs.statWrap(path) : new File(path);
+                if (!io.github.abdurazaaqmohammed.util.io.SafFs.isSaf(target)
                         && !AccessManager.exists(this, target.getAbsolutePath())) {
                     handler.post(() -> Extensions.showMessage(this, R.string.cannot_open_item));
                     return;
                 }
-                if (!(target instanceof io.github.abdurazaaqmohammed.utils.SafFile) && directory) {
+                if (!(target instanceof io.github.abdurazaaqmohammed.util.io.SafFile) && directory) {
                     target = new io.github.abdurazaaqmohammed.privilege.legacy.RootFile(path, true, true, false, 0, 0, "d");
                 }
             } catch (Exception error) {

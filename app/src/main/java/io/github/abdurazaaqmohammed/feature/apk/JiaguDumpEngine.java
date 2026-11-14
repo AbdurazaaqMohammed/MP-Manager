@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -26,7 +30,6 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**

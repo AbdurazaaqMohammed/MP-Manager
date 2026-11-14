@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
 
 import android.content.Context;
 import android.content.SharedPreferences;

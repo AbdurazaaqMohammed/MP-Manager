@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
 import net.lingala.zip4j.model.FileHeader;
 
 /**

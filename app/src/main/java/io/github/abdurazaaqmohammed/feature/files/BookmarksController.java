@@ -1,5 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.utils.FolderPins;
+import io.github.abdurazaaqmohammed.utils.Haptics;
+
 import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -35,10 +42,7 @@ import io.github.abdurazaaqmohammed.ui.main.BookmarksAdapter;
 import io.github.abdurazaaqmohammed.ui.common.util.ViewPagers;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.Haptics;
-import io.github.abdurazaaqmohammed.utils.FolderPins;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import org.apache.commons.io.FilenameUtils;

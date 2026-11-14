@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 
 import android.content.ContentUris;
 import android.content.Context;
@@ -20,7 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**

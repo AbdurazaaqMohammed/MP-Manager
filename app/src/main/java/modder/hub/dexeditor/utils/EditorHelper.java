@@ -3,7 +3,7 @@ package modder.hub.dexeditor.utils;
 import android.app.Activity;
 import android.content.Context;
 
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.rosemoe.sora.widget.CodeEditor;
 
 /**

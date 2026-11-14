@@ -1,5 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -33,10 +40,9 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
-import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 

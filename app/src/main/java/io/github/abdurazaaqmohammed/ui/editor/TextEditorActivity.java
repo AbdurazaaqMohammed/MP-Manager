@@ -1,6 +1,17 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.text.AbxUtil;
+
+import io.github.abdurazaaqmohammed.util.text.AbxUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import android.content.Intent;
 import android.graphics.Color;
@@ -60,14 +71,10 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
-import io.github.abdurazaaqmohammed.utils.AbxUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.text.AbxUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -801,7 +808,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_large_file_title)
                 .setMessage(getString(R.string.editor_large_file_warning,
-                        io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(tab.fileSize)))
+                        io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(tab.fileSize)))
                 .setPositiveButton(R.string.editor_open_text_anyway, (d, w) -> {
                     tab.allowLargeText = true;
                     tab.loading = false;

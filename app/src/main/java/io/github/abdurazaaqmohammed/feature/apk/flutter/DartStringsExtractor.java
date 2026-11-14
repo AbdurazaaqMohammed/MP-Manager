@@ -1,6 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -16,8 +21,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import net.lingala.zip4j.model.FileHeader;
 
 /**

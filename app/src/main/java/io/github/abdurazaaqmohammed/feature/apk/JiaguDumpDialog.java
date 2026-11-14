@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
 import android.content.pm.PackageManager;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
@@ -25,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
 
 /**
  * Root Jiagu Dumper (tools hub). UI over {@link JiaguDumpEngine}: dump the real

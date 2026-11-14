@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +31,7 @@ import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.files.network.RemotePath;
 import io.github.abdurazaaqmohammed.feature.files.network.NetworkFileMenu;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 public final class RemoteFilesArrayAdapter extends RecyclerView.Adapter<RemoteFilesArrayAdapter.Holder> {
     private static final int VIEW_TYPE = 0x4e4554;

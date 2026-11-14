@@ -2,11 +2,16 @@ package io.github.abdurazaaqmohammed.utils;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;

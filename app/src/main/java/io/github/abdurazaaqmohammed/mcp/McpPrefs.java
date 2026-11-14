@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.mcp;
 
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
@@ -12,7 +15,6 @@ import androidx.preference.PreferenceManager;
 import java.io.File;
 import java.util.UUID;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 /** Preferences for the MCP service (port, home folder, auth token, path rules). */
 public final class McpPrefs {

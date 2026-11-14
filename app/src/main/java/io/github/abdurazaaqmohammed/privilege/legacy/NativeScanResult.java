@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.privilege.legacy;
 
-import io.github.abdurazaaqmohammed.utils.DirectoryStats;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,10 @@
 package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;

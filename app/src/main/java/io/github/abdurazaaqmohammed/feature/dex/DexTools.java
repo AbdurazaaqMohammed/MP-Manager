@@ -1,7 +1,19 @@
 package io.github.abdurazaaqmohammed.feature.dex;
 
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.utils.DexDebugStripper;
+import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
 import io.github.abdurazaaqmohammed.utils.DexRepairEngine;
+import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
+import io.github.abdurazaaqmohammed.utils.DexStringUtil;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 
 import android.content.Context;
 import android.content.Intent;
@@ -16,8 +28,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
-import io.github.abdurazaaqmohammed.utils.DexRepairEngine;
-import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
@@ -71,14 +81,9 @@ import io.github.abdurazaaqmohammed.ui.editor.DrawablePreviewDialog;
 import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
-import io.github.abdurazaaqmohammed.utils.DexStringUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.activity.TranslationModeActivity;

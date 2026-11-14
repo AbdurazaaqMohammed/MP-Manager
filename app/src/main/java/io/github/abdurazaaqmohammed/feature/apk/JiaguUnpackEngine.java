@@ -1,6 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -48,7 +53,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 /**
  * Offline unpacker for 360 "Jiagu" protected APKs (com.stub.StubApp).

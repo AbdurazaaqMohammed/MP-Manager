@@ -2,10 +2,16 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeDeleteException;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeDeleteException;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeProcess;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
-import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
-import io.github.abdurazaaqmohammed.utils.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import java.io.BufferedReader;
 import java.io.IOException;

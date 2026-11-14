@@ -1,6 +1,17 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -9,8 +20,8 @@ import android.graphics.Bitmap;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -57,14 +68,10 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.StickerUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 public class FileIconLoader {
 

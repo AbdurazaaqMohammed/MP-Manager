@@ -1,12 +1,16 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.util.text.AppGson;
+
+import io.github.abdurazaaqmohammed.util.text.AppGson;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.google.gson.reflect.TypeToken;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.AppGson;
+import io.github.abdurazaaqmohammed.util.text.AppGson;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;

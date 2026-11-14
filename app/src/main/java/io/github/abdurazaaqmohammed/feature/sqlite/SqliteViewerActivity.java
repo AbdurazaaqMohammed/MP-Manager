@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
@@ -42,7 +46,6 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 /**
  * Modern, in-app SQLite Database Viewer & Editor:

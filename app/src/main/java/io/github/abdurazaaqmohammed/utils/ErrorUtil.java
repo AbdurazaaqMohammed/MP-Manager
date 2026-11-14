@@ -1,10 +1,14 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.utils.AppLogs;
+
 import io.github.abdurazaaqmohammed.utils.AppLogs;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
 
-import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import static io.github.abdurazaaqmohammed.util.io.FileUtils.doesNotHaveStoragePerm;
 
 import android.app.Activity;
 import android.content.ClipData;

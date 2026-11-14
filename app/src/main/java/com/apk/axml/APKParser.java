@@ -46,7 +46,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 /*
  * Created by APK Explorer & Editor <apkeditor@protonmail.com> on January 25, 2023

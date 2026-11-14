@@ -1,7 +1,13 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import android.text.TextUtils;
 import android.text.format.Formatter;
@@ -28,7 +34,6 @@ import java.util.Set;
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.ui.main.ApkManifestEditor;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
@@ -37,7 +42,7 @@ import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.ui.main.FileRowStyle;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.feature.files.network.NetworkFileMenu;
-import io.github.abdurazaaqmohammed.utils.SafFile;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import java.io.File;
 import java.io.IOException;
@@ -258,7 +263,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
             if (!dir.mkdir()) throw new IOException("Cannot create download cache");
             opened[0] = new File(dir, file.getName());
             try { download(file, opened[0]); }
-            catch (Exception e) { io.github.abdurazaaqmohammed.utils.FileUtils.deleteTree(dir, null); throw e; }
+            catch (Exception e) { io.github.abdurazaaqmohammed.util.io.FileUtils.deleteTree(dir, null); throw e; }
         }, () -> opener().handleFileClick(opened[0], file.getName()));
     }
 

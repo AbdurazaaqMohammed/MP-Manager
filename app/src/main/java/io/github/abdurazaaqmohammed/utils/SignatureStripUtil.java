@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
 
 import com.reandroid.apk.ApkModule;
 import com.reandroid.archive.ZipEntryMap;

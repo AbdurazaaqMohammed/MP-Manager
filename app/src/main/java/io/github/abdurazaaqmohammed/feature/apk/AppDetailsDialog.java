@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+
 import android.content.ClipData;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -28,8 +33,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
-import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import java.io.File;

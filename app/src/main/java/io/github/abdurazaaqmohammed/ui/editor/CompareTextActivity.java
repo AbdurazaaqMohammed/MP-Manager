@@ -1,6 +1,12 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+
 
 import android.content.Context;
 import android.content.Intent;
@@ -41,9 +47,6 @@ import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -145,8 +148,8 @@ public class CompareTextActivity extends BaseActivity {
         String zip2 = intent.getStringExtra("zip2");
 
         progressBar.setVisibility(View.VISIBLE);
-        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.utils.ProgressManager(this, true);
+        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.util.io.ProgressManager(this, true);
         pm.setText(getString(R.string.dex_comparing));
         pm.show();
 

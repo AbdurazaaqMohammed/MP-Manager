@@ -1,6 +1,28 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.MergeUtil;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -54,7 +76,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
@@ -68,9 +89,8 @@ import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.ui.editor.DrawablePreviewDialog;
 import io.github.abdurazaaqmohammed.ui.editor.StickerPreviewDialog;
-import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.feature.payload.PayloadDialog;
 import io.github.abdurazaaqmohammed.feature.payload.PayloadParser;
 
@@ -121,27 +141,19 @@ import io.github.abdurazaaqmohammed.ui.editor.CompareDexActivity;
 import io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.HtmlViewerActivity;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.HashUtil;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
-import io.github.abdurazaaqmohammed.utils.MergeUtil;
-import io.github.abdurazaaqmohammed.utils.MimeUtil;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
-import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.StickerUtil;
-import io.github.abdurazaaqmohammed.utils.ZipCompat;
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.utils.nativelib.ElfParser;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -1898,7 +1910,7 @@ public class FileOpener {
                 io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.readSparseInfo(file);
         long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
         String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
-                io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
+                io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
 
         String msg = (isAr
                 ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"

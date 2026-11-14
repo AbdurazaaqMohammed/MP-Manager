@@ -1,5 +1,5 @@
-import io.github.abdurazaaqmohammed.utils.MpZstdInputStream;
-import io.github.abdurazaaqmohammed.utils.MpZstdOutputStream;
+import io.github.abdurazaaqmohammed.util.archive.MpZstdInputStream;
+import io.github.abdurazaaqmohammed.util.archive.MpZstdOutputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

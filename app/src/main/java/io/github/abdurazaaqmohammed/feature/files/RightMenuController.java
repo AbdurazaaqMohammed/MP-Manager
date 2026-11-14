@@ -2,6 +2,11 @@ package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.utils.Haptics;
 
+import io.github.abdurazaaqmohammed.utils.Haptics;
+import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
@@ -29,8 +34,6 @@ import com.google.android.material.textfield.TextInputLayout;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;

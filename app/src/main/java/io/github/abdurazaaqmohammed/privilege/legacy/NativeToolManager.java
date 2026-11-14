@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.JpegtranJni;
+
+import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 
 import android.app.Activity;
 import android.content.Context;

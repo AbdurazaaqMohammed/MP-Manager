@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
-import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -97,20 +101,20 @@ public final class SystemImageEngine {
 
             if (kernelSize == 0 && ramdiskSize > 0) {
                 if (ramdiskSize > 30L * 1024 * 1024) {
-                    String en = "Android Boot Image (Likely recovery - Header v" + headerVersion + ", Ramdisk: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
-                    String ar = "صورة إقلاع أندرويد (مرجح: ريكفري / Likely recovery - إصدار v" + headerVersion + " - رام ديسك: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
+                    String en = "Android Boot Image (Likely recovery - Header v" + headerVersion + ", Ramdisk: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
+                    String ar = "صورة إقلاع أندرويد (مرجح: ريكفري / Likely recovery - إصدار v" + headerVersion + " - رام ديسك: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
                     return new ImageIdentity("recovery", en, ar, "Recovery", true, false, true);
                 } else {
-                    String en = "Android Boot Image (Likely init_boot - Header v" + headerVersion + ", Ramdisk: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
-                    String ar = "صورة إقلاع أندرويد (مرجح: init_boot / Likely init_boot - إصدار v" + headerVersion + " - رام ديسك: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
+                    String en = "Android Boot Image (Likely init_boot - Header v" + headerVersion + ", Ramdisk: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
+                    String ar = "صورة إقلاع أندرويد (مرجح: init_boot / Likely init_boot - إصدار v" + headerVersion + " - رام ديسك: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
                     return new ImageIdentity("init_boot", en, ar, "init_boot", true, false, true);
                 }
             } else if (kernelSize > 0 && ramdiskSize == 0) {
-                String en = "Android Boot Image (Likely boot / GKI Kernel - Header v" + headerVersion + ", Kernel: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(kernelSize) + ")";
-                String ar = "صورة إقلاع أندرويد (مرجح: بوت كيرنل GKI / Likely boot - إصدار v" + headerVersion + " - كيرنل: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(kernelSize) + ")";
+                String en = "Android Boot Image (Likely boot / GKI Kernel - Header v" + headerVersion + ", Kernel: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(kernelSize) + ")";
+                String ar = "صورة إقلاع أندرويد (مرجح: بوت كيرنل GKI / Likely boot - إصدار v" + headerVersion + " - كيرنل: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(kernelSize) + ")";
                 return new ImageIdentity("boot_gki", en, ar, "GKI Kernel", true, false, true);
             } else {
-                String en = "Android Boot Image (Likely boot - Header v" + headerVersion + ", Kernel: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(kernelSize) + ", Ramdisk: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
+                String en = "Android Boot Image (Likely boot - Header v" + headerVersion + ", Kernel: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(kernelSize) + ", Ramdisk: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(ramdiskSize) + ")";
                 String ar = "صورة إقلاع أندرويد (مرجح: بوت / Likely boot - إصدار v" + headerVersion + " - كيرنل ورام ديسك)";
                 return new ImageIdentity("boot", en, ar, "Kernel + Ramdisk", true, false, true);
             }
@@ -565,7 +569,7 @@ public final class SystemImageEngine {
 
                 if (cb != null && totalBytes > 0 && chunk % 10 == 0) {
                     int percent = (int) ((writtenBytes * 100) / totalBytes);
-                    cb.onProgress("Unsparsing: " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(writtenBytes) + " / " + io.github.abdurazaaqmohammed.utils.FileSize.getHumanReadableFileSize(totalBytes), percent);
+                    cb.onProgress("Unsparsing: " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(writtenBytes) + " / " + io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(totalBytes), percent);
                 }
             }
             if (writtenBytes != totalBytes) throw new IOException("Sparse output size mismatch");

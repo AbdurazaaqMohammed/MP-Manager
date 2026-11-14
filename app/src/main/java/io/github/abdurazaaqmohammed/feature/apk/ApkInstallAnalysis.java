@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -20,8 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
-import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 
 /**

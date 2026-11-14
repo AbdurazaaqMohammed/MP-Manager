@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
+
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
+
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,7 +15,7 @@ import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.DnsManager;
+import io.github.abdurazaaqmohammed.util.net.DnsManager;
 
 public class PrivateDnsTileService extends TileService {
     public void onStartListening() {

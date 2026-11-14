@@ -2,7 +2,12 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
-import io.github.abdurazaaqmohammed.utils.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 /**
  * Drives an elevated shell batch from a {@link TransferControl}.

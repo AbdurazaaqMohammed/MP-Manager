@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.utils.Haptics;
 
+import io.github.abdurazaaqmohammed.utils.Haptics;
+
+
 import android.view.GestureDetector;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;

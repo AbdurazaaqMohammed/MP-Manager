@@ -1,13 +1,16 @@
 package io.github.abdurazaaqmohammed.feature.payload;
 
-import io.github.abdurazaaqmohammed.utils.FileSize;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+
+import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.utils.FileSize;
 
 /**
  * Represents a single partition inside an Android OTA payload.bin.

@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -39,8 +44,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.InstallerConfig;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

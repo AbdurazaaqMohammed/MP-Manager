@@ -1,5 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -27,8 +32,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 public class UIHelper {
     private final AppCompatActivity context;

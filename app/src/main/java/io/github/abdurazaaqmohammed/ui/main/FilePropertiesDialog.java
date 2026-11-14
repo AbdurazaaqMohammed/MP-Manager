@@ -1,6 +1,24 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.RenameHelper;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -30,7 +48,6 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.color.MaterialColors;
@@ -58,20 +75,16 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.MimeUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.RenameHelper;
+import io.github.abdurazaaqmohammed.util.io.CopyUtil;
+import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.util.io.RenameHelper;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.DirectoryStats;
-import io.github.abdurazaaqmohammed.utils.FileTreeStats;
-import io.github.abdurazaaqmohammed.utils.TransferControl;
-import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 
 public class FilePropertiesDialog {
 
@@ -340,7 +353,7 @@ public class FilePropertiesDialog {
                     if (!prefix.endsWith("/")) prefix += "/";
                     long bytes = 0, files = 0;
                     Set<String> folders = new java.util.HashSet<>();
-                    for (var child : io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil.listEntries(entry.getZipFile())) {
+                    for (var child : io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil.listEntries(entry.getZipFile())) {
                         statsControl.checkpoint();
                         String path = child.path();
                         if (!path.startsWith(prefix) || path.equals(prefix)) continue;

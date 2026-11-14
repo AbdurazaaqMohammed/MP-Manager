@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.MPManager.shizuku;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
 
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -17,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuProcessFactory;

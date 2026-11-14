@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.boot;
 
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+
 
 import android.os.Handler;
 import android.os.Looper;
@@ -9,7 +13,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -130,8 +133,8 @@ public class BootInspectManager {
 
     public static void openBootImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null || !imageFile.exists()) return;
-        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.utils.ProgressManager(context, true);
+        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.util.io.ProgressManager(context, true);
         pm.setText(context.getString(R.string.extracting));
         pm.show();
 
@@ -188,8 +191,8 @@ public class BootInspectManager {
     }
 
     private static void executeRepack(MainActivity context, Session session) {
-        io.github.abdurazaaqmohammed.utils.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.utils.ProgressManager(context, true);
+        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
+                new io.github.abdurazaaqmohammed.util.io.ProgressManager(context, true);
         pm.setText(context.getString(R.string.compressing));
         pm.show();
 

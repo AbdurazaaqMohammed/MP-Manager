@@ -3,6 +3,10 @@ package io.github.abdurazaaqmohammed.privilege.legacy;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Handler;

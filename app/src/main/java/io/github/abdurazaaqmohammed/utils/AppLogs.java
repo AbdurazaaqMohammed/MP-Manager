@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.utils;
 
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.os.Build;

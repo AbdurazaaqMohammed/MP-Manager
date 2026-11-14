@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.payload;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.tukaani.xz.XZInputStream;
@@ -12,8 +16,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 /**
  * Extracts partition images (.img) from Android OTA payload.bin.

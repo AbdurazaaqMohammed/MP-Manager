@@ -2,13 +2,15 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 /** The same row metrics for local, provider and network listings. */
 public final class FileRowStyle {
