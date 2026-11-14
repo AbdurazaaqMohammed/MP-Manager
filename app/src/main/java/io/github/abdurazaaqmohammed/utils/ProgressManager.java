@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -29,6 +30,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 
@@ -100,6 +104,7 @@ public class ProgressManager {
 
     private volatile boolean hidden;
     private volatile boolean dismissed;
+    private final java.util.concurrent.atomic.AtomicBoolean dismissRequested = new java.util.concurrent.atomic.AtomicBoolean();
 
     // ---- owned by the ticker (main thread only) ----------------------------
     private long startMs = -1L;
@@ -115,7 +120,14 @@ public class ProgressManager {
     private NotificationManagerCompat nm;
 
     private static final String CHANNEL_ID = "progress_channel";
-    private static final int NOTIFICATION_ID = 1001;
+    private static final AtomicInteger NEXT_NOTIFICATION_ID = new AtomicInteger(2000);
+    private final int notificationId = NEXT_NOTIFICATION_ID.getAndIncrement();
+    private final ExecutorService notificationWorker = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "operation-notification");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final java.util.concurrent.atomic.AtomicBoolean notificationQueued = new java.util.concurrent.atomic.AtomicBoolean();
 
     private static final List<ProgressManager> activeInstances = new CopyOnWriteArrayList<>();
     /** Every live operation, hidden or not, so an app exit can cancel them all. */
@@ -124,8 +136,7 @@ public class ProgressManager {
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
-            if (dismissed || activity.isFinishing()) {
-                dismissed = true;
+            if (dismissed) {
                 stopTicker();
                 return;
             }
@@ -163,6 +174,23 @@ public class ProgressManager {
         else pm.pause();
     }
 
+    public static void togglePause(int notificationId) {
+        ProgressManager pm = operation(notificationId);
+        if (pm == null) return;
+        if (pm.control.isPaused()) pm.resume(); else pm.pause();
+    }
+
+    public static void cancel(int notificationId) {
+        ProgressManager pm = operation(notificationId);
+        if (pm != null) pm.cancel();
+    }
+
+    private static ProgressManager operation(int notificationId) {
+        for (ProgressManager pm : liveInstances)
+            if (pm.notificationId == notificationId && !pm.dismissed) return pm;
+        return null;
+    }
+
     /** Cancels the running operation from the notification action. */
     public static void cancelActive() {
         ProgressManager pm = activeOperation();
@@ -188,7 +216,7 @@ public class ProgressManager {
      */
     private void cancelForExit() {
         cancelling = true;
-        control.cancel();
+        if (!notificationWorker.isShutdown()) notificationWorker.execute(control::cancel);
         dismiss();
     }
 
@@ -253,16 +281,16 @@ public class ProgressManager {
      * work continues in the background.
      */
     public void pause() {
-        if (!controllable || control.isCancelled()) return;
-        control.pause();
-        render();
+        if (!controllable || dismissed || control.isCancelled()) return;
+        notificationWorker.execute(() -> { control.pause(); handler.post(this::render); });
+        handler.post(this::render);
     }
 
     /** Resumes a paused operation; the worker continues where it stopped. */
     public void resume() {
-        if (!controllable) return;
-        control.resume();
-        render();
+        if (!controllable || dismissed) return;
+        notificationWorker.execute(() -> { control.resume(); handler.post(this::render); });
+        handler.post(this::render);
     }
 
     /**
@@ -273,10 +301,12 @@ public class ProgressManager {
      * told "cancelled" while work is still running.
      */
     public void cancel() {
-        if (!controllable || control.isCancelled()) return;
+        if (!controllable || dismissed || control.isCancelled()) return;
         cancelling = true;
-        control.cancel();
-        render();
+        // A shell-control listener can spawn su and wait. Never do that on the
+        // main thread: hiding/restoring or tapping Stop must remain responsive.
+        notificationWorker.execute(() -> { control.cancel(); handler.post(this::render); });
+        handler.post(this::render);
     }
 
     /**
@@ -296,7 +326,8 @@ public class ProgressManager {
     public ProgressManager show() {
         markStarted();
         handler.post(() -> {
-            if (dismissed || (dialog != null && dialog.isShowing())) return;
+            if (dismissed || hidden || activity.isFinishing() || activity.isDestroyed()
+                    || (dialog != null && dialog.isShowing())) return;
             contentView = LayoutInflater.from(activity)
                     .inflate(R.layout.progress_dialog, null, false);
             contentView.findViewById(R.id.hideButton).setOnClickListener(v1 -> hide());
@@ -490,16 +521,21 @@ public class ProgressManager {
     }
 
     public void dismiss() {
+        if (!dismissRequested.compareAndSet(false, true)) return;
+        dismissed = true;
         handler.post(() -> {
-            dismissed = true;
+            if (startMs >= 0 && !cancelling && !control.isCancelled())
+                Haptics.perform(activity.getWindow().getDecorView(), Haptics.Event.COMPLETION);
             // A dismissed dialog must not leave a worker parked in a
             // checkpoint: release it so the operation can finish and unwind.
-            if (control.isPaused()) control.resume();
+            if (control.isPaused()) notificationWorker.execute(control::resume);
             stopTicker();
             activeInstances.remove(this);
             liveInstances.remove(this);
             if (dialog != null) dialog.dismiss();
             cancelNotification();
+            stopBackgroundServiceIfIdle();
+            notificationWorker.shutdown();
             contentView = null;
         });
     }
@@ -520,11 +556,29 @@ public class ProgressManager {
     }
 
     public void hide() {
-        hidden = true;
-        if (dialog != null) dialog.hide();
-        if (!activeInstances.contains(this)) activeInstances.add(this);
-        showNotification();
-        startTicker();
+        handler.post(() -> {
+            if (dismissed) return;
+            if (!nmAvailable()) {
+                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, R.string.progress_notifications_needed);
+                return;
+            }
+            hidden = true;
+            Haptics.perform(contentView, Haptics.Event.ACTION);
+            if (dialog != null) dialog.hide();
+            if (!activeInstances.contains(this)) activeInstances.add(this);
+            try {
+                ContextCompat.startForegroundService(activity.getApplicationContext(),
+                        new Intent(activity, BackgroundOperationService.class));
+            } catch (RuntimeException unavailable) {
+                // Keep the UI accessible if the OS refuses background execution.
+                hidden = false;
+                activeInstances.remove(this);
+                if (dialog != null) dialog.show();
+                return;
+            }
+            showNotification();
+            startTicker();
+        });
     }
 
     public void restore() {
@@ -532,7 +586,10 @@ public class ProgressManager {
             if (dismissed) return;
             hidden = false;
             cancelNotification();
-            if (dialog != null && !dialog.isShowing()) {
+            stopBackgroundServiceIfIdle();
+            if (!activity.isFinishing() && !activity.isDestroyed() && dialog != null) {
+                // Dialog.hide() hides its decor but deliberately leaves
+                // isShowing() true. Calling show() is required to reveal it.
                 dialog.show();
             }
             startTicker();
@@ -611,8 +668,9 @@ public class ProgressManager {
     // =======================================================================
 
     private void render() {
+        if (Looper.myLooper() != Looper.getMainLooper()) { handler.post(this::render); return; }
         if (dismissed) return;
-        if (contentView != null && dialog != null && dialog.isShowing()) {
+        if (!hidden && !activity.isDestroyed() && contentView != null && dialog != null && dialog.isShowing()) {
             bind(contentView);
         }
         // The notification mirrors the dialog, including the paused badge and
@@ -638,6 +696,7 @@ public class ProgressManager {
 
 
         handler.post(() -> {
+            if (dismissed || hidden || contentView != v || activity.isDestroyed()) return;
             TextView op = v.findViewById(R.id.operationLabel);
             if (isBlank(operationLabel)) {
                 op.setVisibility(View.GONE);
@@ -863,19 +922,18 @@ public class ProgressManager {
 
     private void showNotification() {
         nm = NotificationManagerCompat.from(activity);
-        try {
-            nm.notify(NOTIFICATION_ID, buildNotif().build());
-        } catch (SecurityException ignored) {
-            // POST_NOTIFICATIONS revoked: the dialog still works, just no fallback.
-        }
+        updateNotification();
     }
 
     private void updateNotification() {
         if (nm == null) return;
-        try {
-            nm.notify(NOTIFICATION_ID, buildNotif().build());
-        } catch (SecurityException ignored) {
-        }
+        var notification = buildNotif().build();
+        if (!notificationWorker.isShutdown() && notificationQueued.compareAndSet(false, true)) notificationWorker.execute(() -> {
+            try {
+                if (hidden && !dismissed) nm.notify(notificationId, notification);
+            } catch (SecurityException ignored) {
+            } finally { notificationQueued.set(false); }
+        });
     }
 
     private NotificationCompat.Builder buildNotif() {
@@ -883,7 +941,7 @@ public class ProgressManager {
         intent.setAction("io.github.abdurazaaqmohammed.RESTORE_PROGRESS");
         intent.putExtra("restore_progress", true);
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        PendingIntent pi = PendingIntent.getActivity(activity, NOTIFICATION_ID, intent,
+        PendingIntent pi = PendingIntent.getActivity(activity, notificationId, intent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         String title = isBlank(currentText) ? activity.getString(R.string.progress_working) : currentText;
@@ -940,16 +998,25 @@ public class ProgressManager {
     private PendingIntent actionIntent(String action, int requestCode) {
         Intent intent = new Intent(activity, ProgressActionReceiver.class);
         intent.setAction(action);
-        return PendingIntent.getBroadcast(activity, requestCode, intent,
+        intent.putExtra("operation_id", notificationId);
+        return PendingIntent.getBroadcast(activity, notificationId * 4 + requestCode, intent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private void cancelNotification() {
         if (nm != null) {
-            try {
-                nm.cancel(NOTIFICATION_ID);
-            } catch (Exception ignored) {
-            }
+            if (!notificationWorker.isShutdown()) notificationWorker.execute(() -> {
+                try { nm.cancel(notificationId); } catch (Exception ignored) {}
+            });
         }
     }
+
+    private boolean nmAvailable() {
+        return NotificationManagerCompat.from(activity).areNotificationsEnabled();
+    }
+
+    private void stopBackgroundServiceIfIdle() {
+        if (!hasHidden()) activity.getApplicationContext().stopService(new Intent(activity, BackgroundOperationService.class));
+    }
+
 }

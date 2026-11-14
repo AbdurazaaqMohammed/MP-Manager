@@ -24,10 +24,11 @@ public class ProgressActionReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) return;
         String action = intent.getAction();
+        int operationId = intent.getIntExtra("operation_id", -1);
         if (ACTION_TOGGLE_PAUSE.equals(action)) {
-            ProgressManager.togglePauseActive();
+            if (operationId >= 0) ProgressManager.togglePause(operationId); else ProgressManager.togglePauseActive();
         } else if (ACTION_CANCEL.equals(action)) {
-            ProgressManager.cancelActive();
+            if (operationId >= 0) ProgressManager.cancel(operationId); else ProgressManager.cancelActive();
         }
     }
 }
