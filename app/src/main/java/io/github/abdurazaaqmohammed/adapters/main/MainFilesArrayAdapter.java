@@ -394,7 +394,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             return;
         }
         String path = f.getAbsolutePath();
-        if ("/".equals(path) || RootManager.isRootOnlyPath(path) || ShizukuFile.isAndroidDataPath(f)) {
+        if ("/".equals(path)) {
             context.clearGreen(pane1);
             context.setSelectedPane(pane1 ? 1 : 2);
             context.loadFolderInPaneAsync(f, pane1);
@@ -858,11 +858,19 @@ final View.OnClickListener originalClickListener;
                 String direction = pane1 ? "->" : "<-";
                 boolean canMutate = !isInZip || archiveMutable;
                 List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
-                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COPY, FileMenuOrder.labelFor(context, FileMenuOrder.COPY, direction)));
-                if (canMutate) {
-                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
-                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
-                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                if (isInZip) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
+                    if (canMutate) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                    }
+                } else {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COPY, FileMenuOrder.labelFor(context, FileMenuOrder.COPY, direction)));
+                    if (canMutate) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                    }
                 }
 
                 final List<String> targetPaths = new ArrayList<>();
@@ -1286,7 +1294,15 @@ final View.OnClickListener originalClickListener;
                                 commandHelper.showCommandHelperDialog(cmdFilePaths);
                                 return;
                             case FileMenuOrder.EXTRACT:
-                                if (isInZip || multi) return;
+                                if (isInZip) {
+                                    if (multi) {
+                                        List<Object> itemsToCopy = new ArrayList<>();
+                                        for (int f : selectedPositions) itemsToCopy.add(values[f]);
+                                        fileOps.copyItemsAsync(itemsToCopy);
+                                    } else fileOps.copyAsync(item);
+                                    return;
+                                }
+                                if (multi) return;
                                 fileOps.extractArchive(file);
                                 return;
                             case FileMenuOrder.SPLIT:
@@ -1411,7 +1427,7 @@ final View.OnClickListener originalClickListener;
                                                 if (plainFiles.size() == 1) {
                                                     File only = plainFiles.get(0);
                                                     fileOpener.withReadableCopy(only, readable -> {
-                                                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                        Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", readable);
                                                         String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
                                                         context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
                                                                 .setType(shareMime != null ? shareMime : "application/octet-stream")
@@ -1425,7 +1441,7 @@ final View.OnClickListener originalClickListener;
                                                     for (File sf : plainFiles) {
                                                         fileOpener.withReadableCopy(sf, readable -> {
                                                             try {
-                                                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                                                Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", readable);
                                                                 uris.add(uri);
                                                             } catch (Exception ignored) {
                                                             }
@@ -1445,7 +1461,7 @@ final View.OnClickListener originalClickListener;
                                         } else if (file != null && file.isDirectory()) {
                                             fileOpener.shareFolderAsZip(file);
                                         } else fileOpener.withReadableCopy(file, readable -> {
-                                            Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                            Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", readable);
                                             String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
                                             context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
                                         });

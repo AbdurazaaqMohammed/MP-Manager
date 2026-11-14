@@ -2253,7 +2253,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             handler.postDelayed(showProgressRunnable, 120);
         }
         listingExecutor.execute(() -> {
-            if (zipFile == null || !zipFile.exists()) {
+            File actualZip = zipFile;
+            if (actualZip != null && (!actualZip.canRead() || !actualZip.exists())) {
+                try {
+                    if (io.github.abdurazaaqmohammed.utils.AccessManager.fileOpsOn(this)
+                            || io.github.abdurazaaqmohammed.utils.RootManager.getInstance(this).isRootAvailable()) {
+                        File staged = io.github.abdurazaaqmohammed.utils.RootStaging.stageForRead(this, zipFile.getAbsolutePath());
+                        noteArchiveParent(staged, zipFile, "");
+                        actualZip = staged;
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+            if (actualZip == null || !actualZip.exists()) {
                 handler.post(() -> {
                     loadFinished[0] = true;
                     handler.removeCallbacks(showProgressRunnable);
@@ -2266,7 +2278,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 handler.post(() -> loadFolderInPaneAsync(validFallback, pane1, false));
                 return;
             }
-            if (ArchiveBrowseUtil.detectArchiveType(zipFile) == ArchiveBrowseUtil.ArchiveType.NONE) {
+            if (ArchiveBrowseUtil.detectArchiveType(actualZip) == ArchiveBrowseUtil.ArchiveType.NONE) {
                 handler.post(() -> {
                     loadFinished[0] = true;
                     handler.removeCallbacks(showProgressRunnable);
@@ -2277,7 +2289,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             final ZipRead read;
             try {
-                read = readZipFolder(zipFile, path);
+                read = readZipFolder(actualZip, path);
             } catch (OutOfMemoryError oom) {
                 // A huge central directory can exhaust the heap; an Error is
                 // not caught below and would crash instead of reporting.

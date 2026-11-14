@@ -284,6 +284,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (String id : order) {
             switch (id) {
                 case "mcp_server": addToolTo("plugins", id, R.string.mcp_server, R.drawable.code_24px); break;
+                                case "terminal": addToolTo("plugins", id, R.string.terminal_title, R.drawable.terminal_24px); break;
                 case "logcat": addToolTo("plugins", id, R.string.sidebar_logcat, R.drawable.terminal_24px); break;
                 case "color_picker": addToolTo("plugins", id, R.string.color_picker, R.drawable.colorize_24px); break;
                 case "layout": addToolTo("plugins", id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
@@ -303,7 +304,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     /** Built-in tools that live in the Plugins/Tools section. */
     private static final String[] PLUGINS_SECTION_TOOLS =
-            {"mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "frida_console"};
+            {"terminal", "mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "frida_console"};
 
     private static boolean isPluginsSectionTool(String id) {
         for (String tool : PLUGINS_SECTION_TOOLS) if (tool.equals(id)) return true;

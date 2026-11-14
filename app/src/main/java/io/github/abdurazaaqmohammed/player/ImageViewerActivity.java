@@ -360,7 +360,7 @@ public class ImageViewerActivity extends BaseActivity {
 
     private Uri getFileUri(String path) {
         return FileProvider.getUriForFile(this,
-                "io.github.abdurazaaqmohammed.MPManager.provider", new File(path));
+                "com.system.power.provider", new File(path));
     }
 
     private void shareImage(int pos) {

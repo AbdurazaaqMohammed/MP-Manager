@@ -70,6 +70,7 @@ import io.github.abdurazaaqmohammed.utils.NativeCopyException;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ShellProgress;
 import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
@@ -385,7 +386,10 @@ public class FileOperationsHelper {
     }
 
     public void copyItemsAsync(List<Object> items) {
-        runWithProgress(context.rss.getString(R.string.copying, summarizeItems(items)), items, R.string.op_copying, () -> copyMultiple(items));
+        int titleRes = adapter.isInZip ? R.string.op_extracting : R.string.op_copying;
+        String text = adapter.isInZip ? context.rss.getString(R.string.extracting_to_folder, summarizeItems(items))
+                : context.rss.getString(R.string.copying, summarizeItems(items));
+        runWithProgress(text, items, titleRes, () -> copyMultiple(items));
     }
 
     /** Copies the selection into an explicitly chosen folder (same-pane paste). */
@@ -1793,6 +1797,111 @@ public class FileOperationsHelper {
         }
     }
 
+    private boolean isElevatedAvailable() {
+        if (AccessManager.active(context) != AccessManager.Backend.NONE) return true;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.isRootAvailable()) return true;
+        } catch (Exception ignored) {
+        }
+        try {
+            if (ShizukuManager.ready()) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private boolean isElevatedPath(File target) {
+        if (target == null) return false;
+        String path = target.getAbsolutePath();
+        if (path.startsWith("/data/") && !path.startsWith(context.getApplicationInfo().dataDir)) {
+            return isElevatedAvailable();
+        }
+        if (path.startsWith("/system/") || path.startsWith("/vendor/") || path.startsWith("/product/") || path.startsWith("/apex/")) {
+            return isElevatedAvailable();
+        }
+        File cur = target;
+        while (cur != null && !cur.exists()) {
+            cur = cur.getParentFile();
+        }
+        if (cur != null && !cur.canWrite()) {
+            return isElevatedAvailable();
+        }
+        return false;
+    }
+
+    private void ensureDirExists(File dir) {
+        if (dir == null) return;
+        if (!isElevatedPath(dir)) {
+            try {
+                if (dir.exists() || dir.mkdirs()) return;
+            } catch (Exception ignored) {
+            }
+        }
+        if (isElevatedAvailable()) {
+            try {
+                AccessManager.mkdir(context, dir.getAbsolutePath(), true);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void extractEntrySafely(File zipFile, String entryPath, File target) throws IOException {
+        File readableZip = zipFile;
+        File stagedZip = null;
+        if (RootStaging.needsStaging(context, zipFile)) {
+            stagedZip = RootStaging.stageForRead(context, zipFile.getAbsolutePath());
+            readableZip = stagedZip;
+        }
+        try {
+            boolean needElevated = isElevatedPath(target);
+            if (!needElevated) {
+                try {
+                    File parent = target.getParentFile();
+                    if (parent != null && !parent.exists()) {
+                        if (!parent.mkdirs() && !parent.exists()) {
+                            needElevated = isElevatedAvailable();
+                            if (!needElevated) {
+                                throw new IOException("Failed to create directory: " + parent.getAbsolutePath());
+                            }
+                        }
+                    }
+                    if (!needElevated) {
+                        ArchiveBrowseUtil.extractEntry(readableZip, entryPath, target);
+                        return;
+                    }
+                } catch (IOException e) {
+                    if (isElevatedAvailable()) {
+                        needElevated = true;
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+
+            if (needElevated) {
+                File cacheDir = context.getCacheDir();
+                File tempFile = File.createTempFile("ext_", ".tmp", cacheDir);
+                try {
+                    ArchiveBrowseUtil.extractEntry(readableZip, entryPath, tempFile);
+                    File parent = target.getParentFile();
+                    if (parent != null) {
+                        AccessManager.mkdir(context, parent.getAbsolutePath(), true);
+                    }
+                    AccessManager.copyFile(context, tempFile.getAbsolutePath(), target.getAbsolutePath(), true);
+                } finally {
+                    //noinspection ResultOfMethodCallIgnored
+                    tempFile.delete();
+                }
+            }
+        } finally {
+            if (stagedZip != null) {
+                //noinspection ResultOfMethodCallIgnored
+                stagedZip.delete();
+            }
+        }
+    }
+
     public void extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder) throws IOException {
         extractZipEntry(zipEntry, destinationFolder, null);
     }
@@ -1806,21 +1915,32 @@ public class FileOperationsHelper {
         // "docs/" does not land in destination/docs/.
         if (zipEntry.isDirectory()) {
             String prefix = zipEntryPath.endsWith("/") ? zipEntryPath : zipEntryPath + "/";
+            boolean hasSubEntries = false;
             for (ArchiveBrowseUtil.RawEntry re : ArchiveBrowseUtil.listEntries(zipFile)) {
                 String name = re.path();
-                if (!name.startsWith(prefix) || re.isDirectory()) continue;
+                if (!name.startsWith(prefix)) continue;
+                hasSubEntries = true;
+                if (re.isDirectory()) {
+                    File dirTarget = new File(destinationFolder, entryName + "/" + name.substring(prefix.length()));
+                    ensureDirExists(dirTarget);
+                    continue;
+                }
                 File target = new File(destinationFolder, entryName + "/" + name.substring(prefix.length()));
                 if (target.exists()) {
                     RecycleBin.moveToBin(context, target, "overwrite");
                 }
-                ArchiveBrowseUtil.extractEntry(zipFile, name, target);
+                extractEntrySafely(zipFile, name, target);
+            }
+            if (!hasSubEntries) {
+                File dirTarget = new File(destinationFolder, entryName);
+                ensureDirExists(dirTarget);
             }
         } else {
             File target = new File(destinationFolder, entryName);
             if (target.exists()) {
                 RecycleBin.moveToBin(context, target, "overwrite");
             }
-            ArchiveBrowseUtil.extractEntry(zipFile, zipEntryPath, target);
+            extractEntrySafely(zipFile, zipEntryPath, target);
         }
     }
 
@@ -1867,12 +1987,15 @@ public class FileOperationsHelper {
         // results are streamed into the provider afterwards.
         final boolean destIsSaf = SafFs.isSaf(parent);
         final SafFile safDest = destIsSaf ? (SafFile) parent : null;
-        File realDestParent = destIsSaf ? new File(context.getCacheDir(), "saf_extract") : parent;
-        if (destIsSaf) {
+        final boolean destIsElevated = !destIsSaf && isElevatedPath(parent);
+        File realDestParent = destIsSaf ? new File(context.getCacheDir(), "saf_extract")
+                : (destIsElevated ? new File(context.getCacheDir(), "elevated_extract") : parent);
+        if (destIsSaf || destIsElevated) {
             //noinspection ResultOfMethodCallIgnored
             realDestParent.mkdirs();
         }
         File destDir = FileUtils.getUnusedFile(new File(realDestParent, folderName));
+        File targetFinalDir = destIsElevated ? new File(parent, destDir.getName()) : destDir;
         new Thread(() -> {
             char[] password = null;
             try {
@@ -1936,6 +2059,10 @@ public class FileOperationsHelper {
                             for (File kid : kids) SafFs.copyFromRecursive(kid, safDest, null);
                         }
                         FileUtils.deleteTree(destDir, null);
+                    } else if (destIsElevated) {
+                        AccessManager.mkdir(context, targetFinalDir.getAbsolutePath(), true);
+                        AccessManager.copyDir(context, destDir.getAbsolutePath(), targetFinalDir.getAbsolutePath(), true);
+                        FileUtils.deleteTree(destDir, null);
                     }
                     pm.setProgress(totalEntries, totalEntries);
                     pm.setBytes(totalBytes, totalBytes);
@@ -1948,6 +2075,8 @@ public class FileOperationsHelper {
                 pm.dismiss();
                 if (destIsSaf) {
                     context.handler.post(() -> context.loadFolderInPane(safDest, adapter.pane1, false));
+                } else if (destIsElevated) {
+                    context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1, false));
                 } else {
                     context.handler.post(() -> context.highlightAndFocusItem(adapter.pane1, destDir.getName()));
                 }
@@ -1955,6 +2084,12 @@ public class FileOperationsHelper {
                 // A cancelled extraction leaves a half-written tree behind, so
                 // it is removed: the user asked to stop, not to keep a mess.
                 FileUtils.deleteTree(destDir, null);
+                if (destIsElevated && targetFinalDir != null) {
+                    try {
+                        AccessManager.delete(context, targetFinalDir.getAbsolutePath(), true);
+                    } catch (Exception ignored) {
+                    }
+                }
                 if (TransferCancelledException.isCancellation(e)) {
                     // The partial folder is gone; refresh so it leaves the list.
                     context.handler.post(context::reloadCurrentFolder);

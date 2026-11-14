@@ -39,7 +39,7 @@ import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 public class PickFileActivity extends AppCompatActivity {
 
     /** Must match the authority declared for the provider in the manifest. */
-    public static final String AUTHORITY = "io.github.abdurazaaqmohammed.MPManager.documents";
+    public static final String AUTHORITY = "com.system.power.documents";
 
     private boolean delivered;
 

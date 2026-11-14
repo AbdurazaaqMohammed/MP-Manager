@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="app_name" translatable="false">MPlite</string>
     <string name="success_saved">File saved successfully to %s</string>
     <string name="enable_logs" >Save logs</string>
     <string name="sign_apk_after_merge">Sign the APK after merging</string>
@@ -445,7 +445,7 @@
     <string name="warning_dangerous_directory">Warning: Dangerous Directory</string>
     <string name="warn_delete_s">You are about to delete files in a sensitive system directory. This may break apps or cause system instability.\n\nAre you absolutely sure?</string>
     <string name="no_apk_files_found">No APK files found in archive</string>
-    <string name="termux_perm"><![CDATA[Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)]]></string>
+    <string name="termux_perm"><![CDATA[Note: You need to grant permission for MPlite to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)]]></string>
     <string name="editor_settings">Editor Settings</string>
     <string name="icon_changed">Icon changed</string>
     <string name="icon_not_found">Could not find the launcher icon resource in this APK</string>
@@ -736,7 +736,7 @@ Layout Inspector
     <string name="root_install">Root install</string>
     <string name="shizuku_silent_install">Shizuku silent install</string>
     <string name="installer_source">Installer package (install attribution)</string>
-    <string name="installer_source_self">Self (MP Manager)</string>
+    <string name="installer_source_self">Self (MPlite)</string>
     <string name="installer_source_initiator">App that shared this file</string>
     <string name="installer_source_play">Google Play Store (spoof, needs root/Shizuku)</string>
     <string name="installer_source_shell">Shell (needs root/Shizuku, for HyperOS/MIUI)</string>
@@ -765,7 +765,7 @@ Layout Inspector
     <string name="install_backup_failed">Could not back up this app\'s data, so it was not uninstalled.\n\nReason: %1$s</string>
     <string name="install_restore_failed">App was installed, but restoring its data failed.\n\nReason: %1$s</string>
     <string name="install_enable_root_mode_title">Enable Root Mode?</string>
-    <string name="install_enable_root_mode_msg">Root access is detected on this device, but Root Mode is currently not enabled in MP Manager. Backing up and restoring app data requires Root Mode to be enabled. Would you like to enable Root Mode now and proceed?</string>
+    <string name="install_enable_root_mode_msg">Root access is detected on this device, but Root Mode is currently not enabled in MPlite. Backing up and restoring app data requires Root Mode to be enabled. Would you like to enable Root Mode now and proceed?</string>
     <string name="install_uninstall_note_root">“Uninstall and install” removes the existing app and installs this one. Its data is copied first and restored afterwards.</string>
     <string name="install_uninstall_note_no_data">“Uninstall and install” removes the existing app and installs this one. Its data cannot be read without root, so it will be lost.</string>
     <string name="install_dont_show_again">Don\'t show again</string>
@@ -877,7 +877,7 @@ Layout Inspector
     <string name="shizuku_unsupported">Shizuku needs Android 6+</string>
     <string name="grant_shizuku">Grant Shizuku permission</string>
     <string name="shizuku_file_operations">Shizuku file operations (Android/data, obb, media)</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">Internal storage</string>
     <string name="storage_provider_appdata">Android data (root/Shizuku)</string>
     <string name="storage_provider_root">Root filesystem</string>
@@ -1083,7 +1083,7 @@ Layout Inspector
     <string name="logcat_stop">Stop</string>
     <string name="logcat_settings">Settings</string>
     <string name="logcat_keep_running">Keep capturing in background (notification shown)</string>
-    <string name="logcat_auto_start">Start capturing when MP Manager opens</string>
+    <string name="logcat_auto_start">Start capturing when MPlite opens</string>
     <string name="logcat_add_shortcut">Add to home screen</string>
     <string name="logcat_shortcut_old_android">Shortcuts need Android 8.0 or newer</string>
     <string name="logcat_shortcut_unsupported">Launcher does not allow shortcuts</string>
@@ -1244,7 +1244,7 @@ Strings are sent to the external service you configured.</string>
     <string name="rec_capturing_sub">Tap the recorder to stop</string>
     <string name="locate_failed">Could not locate this file</string>
     <string name="locate_resolving">Resolving file…</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">Choose what to do with this file</string>
     <string name="shared_entry_file_icon">File icon</string>
     <string name="shared_entry_unknown">Shared file</string>
@@ -1294,8 +1294,8 @@ Strings are sent to the external service you configured.</string>
     <string name="storage_roundtrip_done">Round-trip done</string>
     <string name="storage_nothing_selected">Nothing selected, tap Load first</string>
     <string name="storage_enable_autoclear">Enable auto-clear service</string>
-    <string name="storage_autoclear_need">Auto-clear needs the MP Manager Cache Cleaner accessibility service. Enable it in system settings, then start again.</string>
-    <string name="storage_autoclear_need_elevated">Auto-clear needs the MP Manager Cache Cleaner accessibility service. Root/Shizuku found, it can be enabled automatically.</string>
+    <string name="storage_autoclear_need">Auto-clear needs the MPlite Cache Cleaner accessibility service. Enable it in system settings, then start again.</string>
+    <string name="storage_autoclear_need_elevated">Auto-clear needs the MPlite Cache Cleaner accessibility service. Root/Shizuku found, it can be enabled automatically.</string>
     <string name="storage_enable_auto">Enable automatically</string>
     <string name="storage_open_settings">Open settings</string>
     <string name="storage_service_enabled_again">Service enabled, tap auto-clear again</string>
@@ -1422,7 +1422,7 @@ Strings are sent to the external service you configured.</string>
     <string name="wifi_save_failed">Save failed</string>
     <string name="wifi_qr_failed">QR failed</string>
     <string name="wifi_nothing_to_export">Nothing to export</string>
-    <string name="wifi_exported">Exported to Download/MP Manager</string>
+    <string name="wifi_exported">Exported to Download/MPlite</string>
     <string name="wifi_export_failed">Export failed</string>
     <string name="wifi_networks_n">%1$d networks</string>
     <string name="wifi_root_needed_passwords">Root needed for saved passwords</string>
@@ -1569,7 +1569,7 @@ Strings are sent to the external service you configured.</string>
     <string name="toggle_hex_keypad">Toggle hex keypad</string>
     <string name="height_15_90">Height %% (15–90)</string>
     <string name="toast_message">Toast message</string>
-    <string name="def_msg">Hello from MP Manager</string>
+    <string name="def_msg">Hello from MPlite</string>
     <string name="duration">Duration</string>
     <string name="position">Position</string>
     <string name="def">Default</string>
@@ -1909,7 +1909,7 @@ Strings are sent to the external service you configured.</string>
     <string name="dex_export_jar">Jar (Java sources)</string>
     <string name="dex_export_choose_folder">Select export folder</string>
     <string name="dex_export_none">No classes selected</string>
-    <string name="ai_warning">Warning: AI-generated responses are provided solely for informational purposes and may be inaccurate, incomplete, outdated, or unsafe. You are solely responsible for reviewing, verifying, and using any AI output. To the fullest extent permitted by law, the developer of MP Manager is not responsible for any loss, damage, or consequence arising from the use of this AI feature or from reliance on its output. API usage is subject to Google\'s Gemini terms of service, and you are responsible for any charges incurred through your API key.</string>
+    <string name="ai_warning">Warning: AI-generated responses are provided solely for informational purposes and may be inaccurate, incomplete, outdated, or unsafe. You are solely responsible for reviewing, verifying, and using any AI output. To the fullest extent permitted by law, the developer of MPlite is not responsible for any loss, damage, or consequence arising from the use of this AI feature or from reliance on its output. API usage is subject to Google\'s Gemini terms of service, and you are responsible for any charges incurred through your API key.</string>
     <string name="agree">Agree</string>
     <string name="ai_usage_disclaimer">AI Usage Disclaimer</string>
     <string name="edpref_display">Display Settings</string>
@@ -2167,7 +2167,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MPlite to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">COPY</string>
@@ -2628,4 +2628,26 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="clear_cache_confirm_msg">This will safely delete all temporary files, unpacked archives, and staging data (%s).\n\nApp icon caches, code caches, and editor sessions will be preserved so app performance stays fast.</string>
     <string name="clear_cache_success">Cache cleared successfully (%s freed)</string>
     <string name="clear_cache_empty">Cache is already clean</string>
+    <string name="terminal_title">Terminal Emulator</string>
+    <string name="terminal_subtitle">Built-in terminal with PTY and shell support</string>
+    <string name="terminal_clear">Clear</string>
+    <string name="terminal_copy_all">Copy All</string>
+    <string name="terminal_paste">Paste</string>
+    <string name="terminal_toggle_ime">Keyboard</string>
+    <string name="terminal_session_finished">Process finished</string>
+    <string name="sh_run_in_terminal">Run in Terminal</string>
+    <string name="terminal_input_hint">Enter input (option/confirm/args)...</string>
+    <string name="terminal_send">Send</string>
+    <string name="terminal_interrupt">Interrupt</string>
+    <string name="terminal_running_root">Running as Root</string>
+    <string name="terminal_running_normal">Running with standard privileges</string>
+    <string name="terminal_finished">Finished</string>
+    <string name="extract_encoding_prompt">Archive File Name Encoding</string>
+    <string name="encoding_auto">Auto-detect (UTF-8 / GBK / Big5)</string>
+    <string name="encoding_utf8">UTF-8</string>
+    <string name="encoding_gbk">GBK / GB18030 (Simplified Chinese)</string>
+    <string name="encoding_big5">Big5 (Traditional Chinese)</string>
+    <string name="encoding_shiftjis">Shift-JIS (Japanese)</string>
+    <string name="encoding_cp437">CP437 (DOS OEM Default)</string>
+    <string name="encoding_custom">Custom Charset…</string>
 </resources>

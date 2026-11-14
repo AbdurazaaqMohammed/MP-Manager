@@ -277,7 +277,7 @@ public class HtmlViewerActivity extends BaseActivity {
     private void openExternally() {
         try {
             Uri uri = FileProvider.getUriForFile(this,
-                    "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                    "com.system.power.provider", file);
             openInExternalApp(uri);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);

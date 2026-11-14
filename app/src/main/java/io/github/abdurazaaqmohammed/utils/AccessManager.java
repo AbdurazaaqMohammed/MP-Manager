@@ -28,6 +28,14 @@ public final class AccessManager {
         if (mode == RootManager.WorkingMode.ROOT) return Backend.ROOT;
         if (mode == RootManager.WorkingMode.SHIZUKU
                 && Build.VERSION.SDK_INT >= 23) return Backend.SHIZUKU;
+        try {
+            if (RootManager.getInstance(context).isRootAvailable()) return Backend.ROOT;
+        } catch (Exception ignored) {
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 23 && ShizukuManager.ready()) return Backend.SHIZUKU;
+        } catch (Exception ignored) {
+        }
         return Backend.NONE;
     }
 
@@ -263,8 +271,8 @@ public final class AccessManager {
     private static void stageForRead(Context context, Backend backend, String srcAbsPath, File dst) throws IOException {
         if (backend == Backend.ROOT) {
             RootManager rm = RootManager.getInstance(context);
-            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
-                throw new IOException("Root file access is disabled or unavailable");
+            if (!rm.isRootAvailable()) {
+                throw new IOException("Root access is unavailable");
             }
             // No size cap on read staging: the staged copy is a temp file on
             // disk, not an in-memory read, so a big file should simply be
@@ -1075,8 +1083,8 @@ public final class AccessManager {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             RootManager rm = RootManager.getInstance(context);
-            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
-                throw new IOException("Root file access is disabled or unavailable");
+            if (!rm.isRootAvailable()) {
+                throw new IOException("Root access is unavailable");
             }
             return rm.openReadPipe(absPath);
         }

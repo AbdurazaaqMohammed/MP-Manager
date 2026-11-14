@@ -489,7 +489,9 @@ public class ToolsHubActivity extends BaseActivity {
         return rows;
     }
     private void openTool(ToolRegistry.ToolItem item) {
-        if ("wifimanager".equals(item.id())) {
+                if ("terminal".equals(item.id())) {
+            startActivity(new Intent(this, TerminalActivity.class));
+        } else if ("wifimanager".equals(item.id())) {
             startActivity(new Intent(this, WifiManagerActivity.class));
         } else if ("storagemanager".equals(item.id())) {
             startActivity(new Intent(this, StorageManagerActivity.class));

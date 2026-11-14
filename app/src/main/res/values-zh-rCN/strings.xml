@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="app_name" translatable="false">MPlite</string>
     <string name="success_saved">文件已成功保存到 %s</string>
     <string name="enable_logs" >保存日志</string>
     <string name="sign_apk_after_merge">合并后签名 APK</string>
@@ -345,7 +345,7 @@
     <string name="warning_dangerous_directory">警告：危险目录</string>
     <string name="warn_delete_s">您即将删除敏感系统目录中的文件。这可能会破坏应用或导致系统不稳定。\n\n您绝对确定吗？</string>
     <string name="no_apk_files_found">归档中未找到 APK 文件</string>
-    <string name="termux_perm"><![CDATA[注意：您需要授予 MP Manager 权限才能向 Termux 发送命令\n（权限 > 附加权限 > 在 Termux 环境中运行命令）]]></string>
+    <string name="termux_perm"><![CDATA[注意：您需要授予 MPlite 权限才能向 Termux 发送命令\n（权限 > 附加权限 > 在 Termux 环境中运行命令）]]></string>
     <string name="editor_settings">编辑器设置</string>
     <string name="icon_changed">图标已更改</string>
     <string name="could_not_decode_am">无法解码 AndroidManifest.xml</string>
@@ -848,8 +848,8 @@ Layout Inspector
     <string name="storage_roundtrip_done">往返完成</string>
     <string name="storage_nothing_selected">未选择任何内容，请先点击加载</string>
     <string name="storage_enable_autoclear">启用自动清除服务</string>
-    <string name="storage_autoclear_need">自动清除需要 MP Manager 缓存清理器无障碍服务。请在系统设置中启用它，然后再次启动。</string>
-    <string name="storage_autoclear_need_elevated">自动清除需要 MP Manager 缓存清理器无障碍服务。发现 Root/Shizuku，可以自动启用。</string>
+    <string name="storage_autoclear_need">自动清除需要 MPlite 缓存清理器无障碍服务。请在系统设置中启用它，然后再次启动。</string>
+    <string name="storage_autoclear_need_elevated">自动清除需要 MPlite 缓存清理器无障碍服务。发现 Root/Shizuku，可以自动启用。</string>
     <string name="storage_enable_auto">自动启用</string>
     <string name="storage_open_settings">打开设置</string>
     <string name="storage_service_enabled_again">服务已启用，请再次点击自动清除</string>
@@ -965,7 +965,7 @@ Layout Inspector
     <string name="wifi_save_failed">保存失败</string>
     <string name="wifi_qr_failed">二维码生成失败</string>
     <string name="wifi_nothing_to_export">无可导出内容</string>
-    <string name="wifi_exported">已导出到 Download/MP Manager</string>
+    <string name="wifi_exported">已导出到 Download/MPlite</string>
     <string name="wifi_export_failed">导出失败</string>
     <string name="wifi_networks_n">%1$d 个网络</string>
     <string name="wifi_root_needed_passwords">查看已保存密码需要 Root</string>
@@ -1089,7 +1089,7 @@ Layout Inspector
     <string name="toggle_hex_keypad">切换十六进制键盘</string>
     <string name="height_15_90">高度 %% (15–90)</string>
     <string name="toast_message">Toast 消息</string>
-    <string name="def_msg">来自 MP Manager 的问候</string>
+    <string name="def_msg">来自 MPlite 的问候</string>
     <string name="duration">持续时间</string>
     <string name="position">位置</string>
     <string name="def">默认</string>
@@ -1568,7 +1568,7 @@ Layout Inspector
     <string name="folder_anim_slide_up">上滑</string>
     <string name="folder_anim_fade">淡入淡出</string>
     <string name="folder_anim_slide_fade">滑动 + 淡入淡出</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">选择如何处理此文件</string>
     <string name="shared_entry_file_icon">文件图标</string>
     <string name="shared_entry_unknown">共享文件</string>
@@ -1594,7 +1594,7 @@ Layout Inspector
     <string name="x_strings_found">找到 %1$d 个字符串</string>
     <string name="x_more_strings">…以及另外 %1$d 个</string>
     <string name="installer">安装来源</string>
-    <string name="ai_warning">警告：AI 生成的回复仅供参考，可能不准确、不完整、过时或不安全。您应对任何 AI 输出的审查、验证和使用全权负责。在法律允许的最大范围内，MP Manager 开发者对因使用此 AI 功能或信赖其输出而产生的任何损失、损害或后果不承担责任。API 使用受 Google Gemini 服务条款约束，您需承担通过您的 API 密钥产生的任何费用。</string>
+    <string name="ai_warning">警告：AI 生成的回复仅供参考，可能不准确、不完整、过时或不安全。您应对任何 AI 输出的审查、验证和使用全权负责。在法律允许的最大范围内，MPlite 开发者对因使用此 AI 功能或信赖其输出而产生的任何损失、损害或后果不承担责任。API 使用受 Google Gemini 服务条款约束，您需承担通过您的 API 密钥产生的任何费用。</string>
     <string name="agree">同意</string>
     <string name="ai_usage_disclaimer">AI 使用声明</string>
     <string name="edpref_display">显示设置</string>
@@ -1645,7 +1645,7 @@ Layout Inspector
     <string name="mtime_failed">更新最后修改时间失败</string>
     <string name="shizuku_silent_install">Shizuku 静默安装</string>
     <string name="installer_source">安装来源（安装归因）</string>
-    <string name="installer_source_self">自身 (MP Manager)</string>
+    <string name="installer_source_self">自身 (MPlite)</string>
     <string name="installer_source_play">Google Play 商店（伪造，需要 root/Shizuku）</string>
     <string name="installer_source_shell">Shell（需要 root/Shizuku，适用于 HyperOS/MIUI）</string>
     <string name="installer_source_custom">自定义包…</string>
@@ -1925,7 +1925,7 @@ Layout Inspector
     <string name="npatch_done">已修补：%1$s</string>
     <string name="npatch_install_prompt">已创建 %1$s。模块已嵌入 — 应用可独立运行。是否安装？</string>
     <string name="xposed_patcher_lite_title">Xposed 修补器</string>
-    <string name="xposed_patcher_lite_message">Xposed 修补引擎 (LSPatch) 未包含在 lite 版中。请安装完整版 MP Manager 以修补内嵌模块的 APK。</string>
+    <string name="xposed_patcher_lite_message">Xposed 修补引擎 (LSPatch) 未包含在 lite 版中。请安装完整版 MPlite 以修补内嵌模块的 APK。</string>
     <string name="op_copying">复制</string>
     <string name="op_moving">移动</string>
     <string name="op_deleting">删除</string>
@@ -1991,7 +1991,7 @@ Layout Inspector
     <string name="version_comparison">版本对比</string>
     <string name="installed_app">已安装应用</string>
     <string name="new_apk">新 APK</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">内部存储</string>
     <string name="storage_provider_appdata">Android 数据（root/Shizuku）</string>
     <string name="storage_provider_root">Root 文件系统</string>
@@ -2029,7 +2029,7 @@ Layout Inspector
     <string name="logcat_stop">停止</string>
     <string name="logcat_settings">设置</string>
     <string name="logcat_keep_running">在后台继续捕获（显示通知）</string>
-    <string name="logcat_auto_start">打开 MP Manager 时开始捕获</string>
+    <string name="logcat_auto_start">打开 MPlite 时开始捕获</string>
     <string name="logcat_add_shortcut">添加到主屏幕</string>
     <string name="logcat_shortcut_old_android">快捷方式需要 Android 8.0 或更高版本</string>
     <string name="logcat_shortcut_unsupported">启动器不允许使用快捷方式</string>
@@ -2341,4 +2341,26 @@ Layout Inspector
     <string name="jiagu_open_dumper">打开 Jiagu Dumper</string>
     <string name="jiagu_pick_app">从已安装应用中选择</string>
     <string name="jiagu_unpack_confirm">用 %1$d 个转储的 DEX 文件重建此 APK？\n\n转储：%2$s\n\n占位 Application 将替换为转储中找到的真实 Application，并移除所有注入的 hook 调用。结果需签名后才能安装。</string>
+    <string name="terminal_title">终端模拟器</string>
+    <string name="terminal_subtitle">内置全功能 PTY 终端模拟器</string>
+    <string name="terminal_clear">清屏</string>
+    <string name="terminal_copy_all">复制全部输出</string>
+    <string name="terminal_paste">粘贴</string>
+    <string name="terminal_toggle_ime">切换软键盘</string>
+    <string name="terminal_session_finished">进程已退出</string>
+    <string name="sh_run_in_terminal">在终端中运行</string>
+    <string name="terminal_input_hint">输入字符/选项 (如 1/y/n)...</string>
+    <string name="terminal_send">发送</string>
+    <string name="terminal_interrupt">中断</string>
+    <string name="terminal_running_root">以 Root 身份运行</string>
+    <string name="terminal_running_normal">普通权限运行</string>
+    <string name="terminal_finished">已结束</string>
+    <string name="extract_encoding_prompt">压缩包文件名编码</string>
+    <string name="encoding_auto">自动检测 (UTF-8 / GBK / Big5)</string>
+    <string name="encoding_utf8">UTF-8</string>
+    <string name="encoding_gbk">GBK / GB18030 (简体中文)</string>
+    <string name="encoding_big5">Big5 (繁体中文)</string>
+    <string name="encoding_shiftjis">Shift-JIS (日文)</string>
+    <string name="encoding_cp437">CP437 (DOS/OEM 默认)</string>
+    <string name="encoding_custom">自定义编码…</string>
 </resources>

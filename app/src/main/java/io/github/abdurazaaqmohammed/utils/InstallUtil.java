@@ -12,7 +12,7 @@ import java.util.List;
 
 public class InstallUtil {
     public static void installApk(Context context, File file) {
-        Uri uri = Build.VERSION.SDK_INT < 24 ? Uri.fromFile(file) : FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+        Uri uri = Build.VERSION.SDK_INT < 24 ? Uri.fromFile(file) : FileProvider.getUriForFile(context, "com.system.power.provider", file);
         try {
             context.startActivity(new Intent(Intent.ACTION_INSTALL_PACKAGE)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -26,7 +26,7 @@ public class InstallUtil {
                         .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK)
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
             } catch (Exception e2) {
-                uri = uri.toString().startsWith("content") ? Uri.fromFile(file) : FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                uri = uri.toString().startsWith("content") ? Uri.fromFile(file) : FileProvider.getUriForFile(context, "com.system.power.provider", file);
                 try {
                     context.startActivity(new Intent(Intent.ACTION_INSTALL_PACKAGE)
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

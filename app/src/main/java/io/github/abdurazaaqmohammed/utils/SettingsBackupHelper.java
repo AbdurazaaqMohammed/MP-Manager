@@ -21,7 +21,7 @@ import java.util.Set;
 public final class SettingsBackupHelper {
 
     private static final String[] PREF_FILES = new String[]{
-            "io.github.abdurazaaqmohammed.MPManager_preferences",
+            "com.system.power_preferences",
             "set",
             "editor_prefs",
             "search_prefs",
@@ -40,7 +40,7 @@ public final class SettingsBackupHelper {
 
         JSONObject prefsObj = new JSONObject();
         for (String prefName : PREF_FILES) {
-            SharedPreferences sp = prefName.equals("io.github.abdurazaaqmohammed.MPManager_preferences")
+            SharedPreferences sp = prefName.equals("com.system.power_preferences")
                     ? PreferenceManager.getDefaultSharedPreferences(context)
                     : context.getSharedPreferences(prefName, Context.MODE_PRIVATE);
 
@@ -104,7 +104,7 @@ public final class SettingsBackupHelper {
             String prefName = prefKeys.next();
             JSONObject singlePref = prefsObj.getJSONObject(prefName);
 
-            SharedPreferences sp = prefName.equals("io.github.abdurazaaqmohammed.MPManager_preferences")
+            SharedPreferences sp = prefName.equals("com.system.power_preferences")
                     ? PreferenceManager.getDefaultSharedPreferences(context)
                     : context.getSharedPreferences(prefName, Context.MODE_PRIVATE);
 

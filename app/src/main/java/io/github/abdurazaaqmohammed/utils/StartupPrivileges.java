@@ -38,7 +38,7 @@ public final class StartupPrivileges {
      */
     public static void apply(Activity activity, Handler handler, Runnable refreshSidebar) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-        boolean reqRoot = prefs.getBoolean("startup_request_root", false);
+        boolean reqRoot = prefs.getBoolean("startup_request_root", true);
         boolean reqShell = prefs.getBoolean("startup_request_shell", false);
         if (!reqRoot && !reqShell) return; // silent start: no privilege prompts
         RootManager rm = RootManager.getInstance(activity);

@@ -199,6 +199,10 @@ public class FileOpener {
     }
 
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
+        if (fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".sh")) {
+            showShellScriptDialog(file, file, fileName);
+            return;
+        }
         if (fileName != null && FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.IMAGE_EXTS)) {
             withReadableCopy(file, readable -> {
                 if (StickerUtil.isLottieSticker(readable)) {
@@ -325,6 +329,12 @@ public class FileOpener {
             actionNames.add(context.getString(R.string.sqlite_viewer));
             actionIcons.add(R.drawable.ic_disk_drive_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_SQLITE, file, fileName, zipFile, zipEntryPath));
+        }
+        if (lower.endsWith(".sh")) {
+            actionIds.add("builtin_sh");
+            actionNames.add(context.getString(R.string.sh_execute));
+            actionIcons.add(R.drawable.terminal_24px);
+            actionHandlers.add(() -> showShellScriptDialog(file, originalFile != null ? originalFile : file, fileName));
         }
 
         GridView gridView = new GridView(context);
@@ -477,10 +487,12 @@ public class FileOpener {
                 openTextEditor(file, zipFile, zipEntryPath);
                 return;
             case BUILTIN_ARCHIVE:
-                if (file == null || !file.isFile()) return;
+                if (file == null) return;
                 withReadableCopy(file, readable -> {
                     if (zipFile != null && zipEntryPath != null)
                         context.noteArchiveParent(readable, zipFile, zipEntryPath);
+                    else if (!readable.getAbsolutePath().equals(file.getAbsolutePath()))
+                        context.noteArchiveParent(readable, file, "");
                     context.loadZipFolderInPane(readable, "", pane1, true);
                 });
                 return;
@@ -673,15 +685,18 @@ public class FileOpener {
             }
             Uri uri = null;
             try {
-                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                uri = FileProvider.getUriForFile(context, "com.system.power.provider", readable);
             } catch (Exception ignored) {
             }
             if (uri != null && tryLaunchExternalDefault(uri, readable)) return;
-            if (staged || !ArchiveBrowseUtil.isBrowsable(readable)) {
-                openWithDefaultOrDialog(readable, fileName);
+            if (!ArchiveBrowseUtil.isBrowsable(readable)) {
+                showOpenWithDialog(readable, fileName, null, null, file);
                 return;
             }
-            openArchiveSafe(readable);
+            if (staged) {
+                context.noteArchiveParent(readable, file, "");
+            }
+            context.loadZipFolderInPane(readable, "", pane1, true);
         });
     }
 
@@ -690,7 +705,7 @@ public class FileOpener {
         withReadableCopy(file, readable -> {
             Uri uri;
             try {
-                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                uri = FileProvider.getUriForFile(context, "com.system.power.provider", readable);
             } catch (Exception e) {
                 showOpenWithDialog(readable, fileName);
                 return;
@@ -728,7 +743,7 @@ public class FileOpener {
     private void showAppsForMime(File file, String fileName, boolean useActual) {
         Uri uri;
         try {
-            uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+            uri = FileProvider.getUriForFile(context, "com.system.power.provider", file);
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
             return;
@@ -1606,10 +1621,11 @@ public class FileOpener {
         }).start();
     }
 
-    private void showShellScriptDialog(File readable, File original, String fileName) {
-        boolean rootMode = false;
+    public void showShellScriptDialog(File readable, File original, String fileName) {
+        boolean rootAvailable = false;
         try {
-            rootMode = RootManager.getInstance(context).isRootMode();
+            RootManager rm = RootManager.getInstance(context);
+            rootAvailable = rm.isRootAvailable() || rm.isRootMode();
         } catch (Exception ignored) {
         }
         LinearLayout root = new LinearLayout(context);
@@ -1622,9 +1638,12 @@ public class FileOpener {
         root.addView(warning);
 
         CheckBox rootBox = null;
-        if (rootMode) {
+        if (rootAvailable) {
             rootBox = new CheckBox(context);
             rootBox.setText(R.string.sh_run_as_root);
+            try {
+                rootBox.setChecked(RootManager.getInstance(context).isRootMode());
+            } catch (Exception ignored) {}
             root.addView(rootBox);
         }
         final CheckBox runAsRootBox = rootBox;
@@ -1636,90 +1655,42 @@ public class FileOpener {
                 .setNeutralButton(R.string.sh_edit, (dialog, which) -> context.startActivity(
                         rootAwareEditorIntent(readable, original).putExtra("path", readable.getPath())))
                 .setPositiveButton(R.string.sh_execute, (dialog, which) -> executeShellScript(
-                        readable, runAsRootBox != null && runAsRootBox.isChecked()))
+                        readable, original, fileName, runAsRootBox != null && runAsRootBox.isChecked()))
                 .create());
     }
 
-    private void executeShellScript(File script, boolean asRoot) {
-        boolean rootMode = false;
+    private void executeShellScript(File readable, File original, String fileName, boolean asRoot) {
+        boolean rootAvailable = false;
         try {
-            rootMode = RootManager.getInstance(context).isRootMode();
+            RootManager rm = RootManager.getInstance(context);
+            rootAvailable = rm.isRootAvailable() || rm.isRootMode();
         } catch (Exception ignored) {
         }
-        if (asRoot && !rootMode) {
+        if (asRoot && !rootAvailable) {
             Extensions.showMessage(context, R.string.sh_root_unavailable);
             return;
         }
-        ProgressManager pm = new ProgressManager(context, true);
-        pm.show();
-        try {
-            pm.setText(context.getString(R.string.sh_executing));
-        } catch (Exception ignored) {
+
+        File targetScript = original;
+        if (targetScript == null || (!asRoot && !targetScript.canRead() && readable != null)) {
+            targetScript = readable;
         }
-        new Thread(() -> {
-            int exitCode = -1;
-            String out = "";
-            String err = "";
-            try {
-                if (asRoot) {
-                    RootManager.ShellResult r = RootManager.getInstance(context).execute(
-                            "sh " + RootManager.escapeShellArg(script.getAbsolutePath()), 120);
-                    exitCode = r.exitCode();
-                    out = r.output();
-                    err = r.error();
-                } else {
-                    Process process = new ProcessBuilder("sh", script.getAbsolutePath()).start();
-                    StringBuilder outSb = new StringBuilder();
-                    StringBuilder errSb = new StringBuilder();
-                    Thread drainOut = new Thread(() -> {
-                        try (BufferedReader br = new BufferedReader(
-                                new InputStreamReader(process.getInputStream()))) {
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                if (outSb.length() > 0) outSb.append('\n');
-                                outSb.append(line);
-                            }
-                        } catch (Exception ignored) {
-                        }
-                    });
-                    Thread drainErr = new Thread(() -> {
-                        try (BufferedReader br = new BufferedReader(
-                                new InputStreamReader(process.getErrorStream()))) {
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                if (errSb.length() > 0) errSb.append('\n');
-                                errSb.append(line);
-                            }
-                        } catch (Exception ignored) {
-                        }
-                    });
-                    drainOut.start();
-                    drainErr.start();
-                    boolean finished = process.waitFor(120, TimeUnit.SECONDS);
-                    if (!finished) {
-                        process.destroyForcibly();
-                        errSb.append("Command timed out");
-                    } else {
-                        exitCode = process.exitValue();
-                    }
-                    try {
-                        drainOut.join(2000);
-                        drainErr.join(2000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    out = outSb.toString();
-                    err = errSb.toString();
-                }
-            } catch (Exception e) {
-                err = String.valueOf(e.getMessage());
-            }
-            pm.dismiss();
-            final int code = exitCode;
-            final String stdout = out;
-            final String stderr = err;
-            context.handler.post(() -> showShellOutputDialog(code, stdout, stderr));
-        }).start();
+
+        String workingDir = null;
+        if (original != null && original.getParentFile() != null) {
+            workingDir = original.getParent();
+        } else if (readable != null && readable.getParentFile() != null) {
+            workingDir = readable.getParent();
+        }
+
+        Intent intent = new Intent(context, io.github.abdurazaaqmohammed.tools.TerminalActivity.class);
+        intent.putExtra(io.github.abdurazaaqmohammed.tools.TerminalActivity.EXTRA_SCRIPT_PATH, targetScript.getAbsolutePath());
+        intent.putExtra(io.github.abdurazaaqmohammed.tools.TerminalActivity.EXTRA_SCRIPT_NAME, fileName != null ? fileName : targetScript.getName());
+        if (workingDir != null) {
+            intent.putExtra(io.github.abdurazaaqmohammed.tools.TerminalActivity.EXTRA_WORKING_DIR, workingDir);
+        }
+        intent.putExtra(io.github.abdurazaaqmohammed.tools.TerminalActivity.EXTRA_RUN_AS_ROOT, asRoot);
+        context.startActivity(intent);
     }
 
     private void showShellOutputDialog(int exitCode, String stdout, String stderr) {
@@ -1972,7 +1943,7 @@ public class FileOpener {
                 File staged = stageZipEntry((ZipEntryInfo) item);
                 context.handler.post(() -> {
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged);
+                        Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", staged);
                         String shareMime = MimeUtil.getMimeTypeForAction(context, staged);
                         context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
                     } catch (Exception e) {
@@ -1994,7 +1965,7 @@ public class FileOpener {
                 if (entry == null || entry.isDirectory()) continue;
                 try {
                     File staged = stageZipEntry(entry);
-                    uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged));
+                    uris.add(FileProvider.getUriForFile(context, "com.system.power.provider", staged));
                 } catch (IOException e) {
                     if (failure == null) failure = e;
                 }
@@ -2211,7 +2182,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -2290,7 +2261,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -2366,7 +2337,7 @@ public class FileOpener {
                 }
 
                 List<Uri> uris = new ArrayList<>();
-                uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", zipFile));
+                uris.add(FileProvider.getUriForFile(context, "com.system.power.provider", zipFile));
 
                 if (plainFiles != null) {
                     for (File sf : plainFiles) {
@@ -2378,7 +2349,7 @@ public class FileOpener {
                         }
                         if (readableFile != null && readableFile.exists()) {
                             try {
-                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readableFile);
+                                Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", readableFile);
                                 uris.add(uri);
                             } catch (Exception ignored) {}
                         }
@@ -2501,7 +2472,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, "com.system.power.provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -2582,7 +2553,7 @@ public class FileOpener {
             new ErrorUtil(context).showError(e);
             return;
         }
-        if (!AccessManager.fileOpsOn(context)) {
+        if (!AccessManager.fileOpsOn(context) && AccessManager.active(context) == AccessManager.Backend.NONE) {
             Extensions.showMessage(context, R.string.cannot_open_permission_denied);
             return;
         }

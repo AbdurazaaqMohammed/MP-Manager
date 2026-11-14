@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="app_name" translatable="false">MPlite</string>
     <string name="success_saved">Файл успешно сохранён: %s</string>
     <string name="enable_logs">Сохранять журналы</string>
     <string name="sign_apk_after_merge">Подписывать APK после объединения</string>
@@ -345,7 +345,7 @@
     <string name="warning_dangerous_directory">Внимание: опасный каталог</string>
     <string name="warn_delete_s">Вы собираетесь удалить файлы в чувствительном системном каталоге. Это может нарушить работу приложений или вызвать нестабильность системы.\n\nВы абсолютно уверены?</string>
     <string name="no_apk_files_found">APK-файлы в архиве не найдены</string>
-    <string name="termux_perm"><![CDATA[Примечание: необходимо разрешить MP Manager отправлять команды в Termux\n(Разрешения > Дополнительные разрешения > Выполнение команд в среде Termux)]]></string>
+    <string name="termux_perm"><![CDATA[Примечание: необходимо разрешить MPlite отправлять команды в Termux\n(Разрешения > Дополнительные разрешения > Выполнение команд в среде Termux)]]></string>
     <string name="editor_settings">Настройки редактора</string>
     <string name="icon_changed">Значок изменён</string>
     <string name="could_not_decode_am">Не удалось декодировать AndroidManifest.xml</string>
@@ -823,8 +823,8 @@
     <string name="storage_roundtrip_done">Проверка завершена</string>
     <string name="storage_nothing_selected">Ничего не выбрано, сначала нажмите «Загрузить»</string>
     <string name="storage_enable_autoclear">Включить службу автоочистки</string>
-    <string name="storage_autoclear_need">Для автоочистки нужна служба специальных возможностей «MP Manager Cache Cleaner». Включите её в системных настройках, затем начните снова.</string>
-    <string name="storage_autoclear_need_elevated">Для автоочистки нужна служба специальных возможностей «MP Manager Cache Cleaner». Найден Root/Shizuku, её можно включить автоматически.</string>
+    <string name="storage_autoclear_need">Для автоочистки нужна служба специальных возможностей «MPlite Cache Cleaner». Включите её в системных настройках, затем начните снова.</string>
+    <string name="storage_autoclear_need_elevated">Для автоочистки нужна служба специальных возможностей «MPlite Cache Cleaner». Найден Root/Shizuku, её можно включить автоматически.</string>
     <string name="storage_enable_auto">Включить автоматически</string>
     <string name="storage_open_settings">Открыть настройки</string>
     <string name="storage_service_enabled_again">Служба включена, снова нажмите автоочистку</string>
@@ -940,7 +940,7 @@
     <string name="wifi_save_failed">Не удалось сохранить</string>
     <string name="wifi_qr_failed">Не удалось создать QR</string>
     <string name="wifi_nothing_to_export">Нечего экспортировать</string>
-    <string name="wifi_exported">Экспортировано в Download/MP Manager</string>
+    <string name="wifi_exported">Экспортировано в Download/MPlite</string>
     <string name="wifi_export_failed">Не удалось экспортировать</string>
     <string name="wifi_networks_n">Сетей: %1$d</string>
     <string name="wifi_root_needed_passwords">Для сохранённых паролей нужен root</string>
@@ -1064,7 +1064,7 @@
     <string name="toggle_hex_keypad">Переключить hex-клавиатуру</string>
     <string name="height_15_90">Высота %% (15–90)</string>
     <string name="toast_message">Сообщение Toast</string>
-    <string name="def_msg">Привет от MP Manager</string>
+    <string name="def_msg">Привет от MPlite</string>
     <string name="duration">Длительность</string>
     <string name="position">Позиция</string>
     <string name="def">По умолчанию</string>
@@ -1540,7 +1540,7 @@
     <string name="folder_anim_slide_up">Слайд вверх</string>
     <string name="folder_anim_fade">Затухание</string>
     <string name="folder_anim_slide_fade">Слайд + затухание</string>
-    <string name="shared_entry_title">MP Manager</string>
+    <string name="shared_entry_title">MPlite</string>
     <string name="shared_entry_subtitle">Выберите, что сделать с этим файлом</string>
     <string name="shared_entry_file_icon">Значок файла</string>
     <string name="shared_entry_unknown">Общий файл</string>
@@ -1566,7 +1566,7 @@
     <string name="x_strings_found">Найдено строк: %1$d</string>
     <string name="x_more_strings">…и ещё %1$d</string>
     <string name="installer">Установщик</string>
-    <string name="ai_warning">Внимание: ответы, созданные ИИ, предоставляются исключительно в информационных целях и могут быть неточными, неполными, устаревшими или небезопасными. Вы несёте полную ответственность за проверку и использование любых результатов ИИ. В максимальной степени, разрешённой законом, разработчик MP Manager не несёт ответственности за убытки, ущерб или последствия использования этой функции ИИ. Использование API регулируется условиями сервиса Google Gemini, и вы отвечаете за любые расходы по вашему API-ключу.</string>
+    <string name="ai_warning">Внимание: ответы, созданные ИИ, предоставляются исключительно в информационных целях и могут быть неточными, неполными, устаревшими или небезопасными. Вы несёте полную ответственность за проверку и использование любых результатов ИИ. В максимальной степени, разрешённой законом, разработчик MPlite не несёт ответственности за убытки, ущерб или последствия использования этой функции ИИ. Использование API регулируется условиями сервиса Google Gemini, и вы отвечаете за любые расходы по вашему API-ключу.</string>
     <string name="agree">Согласен</string>
     <string name="ai_usage_disclaimer">Предупреждение об использовании ИИ</string>
     <string name="edpref_display">Настройки отображения</string>
@@ -1617,7 +1617,7 @@
     <string name="mtime_failed">Не удалось обновить дату изменения</string>
     <string name="shizuku_silent_install">Тихая установка через Shizuku</string>
     <string name="installer_source">Источник установщика (атрибуция установки)</string>
-    <string name="installer_source_self">Само приложение (MP Manager)</string>
+    <string name="installer_source_self">Само приложение (MPlite)</string>
     <string name="installer_source_play">Google Play Store (подмена, нужен root/Shizuku)</string>
     <string name="installer_source_shell">Shell (нужен root/Shizuku, для HyperOS/MIUI)</string>
     <string name="installer_source_custom">Свой пакет…</string>
@@ -1901,7 +1901,7 @@
     <string name="npatch_done">Запатчено: %1$s</string>
     <string name="npatch_install_prompt">Создан %1$s. Модули встроены — приложение работает автономно. Установить?</string>
     <string name="xposed_patcher_lite_title">Xposed-патчер</string>
-    <string name="xposed_patcher_lite_message">Движок Xposed-патчера (LSPatch) не включён в lite-сборку. Установите полную версию MP Manager, чтобы патчить APK со встроенными модулями.</string>
+    <string name="xposed_patcher_lite_message">Движок Xposed-патчера (LSPatch) не включён в lite-сборку. Установите полную версию MPlite, чтобы патчить APK со встроенными модулями.</string>
     <string name="op_copying">КОПИРОВАНИЕ</string>
     <string name="op_moving">ПЕРЕМЕЩЕНИЕ</string>
     <string name="op_deleting">УДАЛЕНИЕ</string>
@@ -1937,7 +1937,7 @@
     <string name="version_comparison">Сравнение версий</string>
     <string name="installed_app">Установленное приложение</string>
     <string name="new_apk">Новый APK</string>
-    <string name="storage_provider_label">MP Manager</string>
+    <string name="storage_provider_label">MPlite</string>
     <string name="storage_provider_internal">Внутренняя память</string>
     <string name="storage_provider_appdata">Данные Android (root/Shizuku)</string>
     <string name="storage_provider_root">Корневая файловая система</string>
@@ -1975,7 +1975,7 @@
     <string name="logcat_stop">Остановить</string>
     <string name="logcat_settings">Настройки</string>
     <string name="logcat_keep_running">Продолжать захват в фоне (показано уведомление)</string>
-    <string name="logcat_auto_start">Начинать захват при открытии MP Manager</string>
+    <string name="logcat_auto_start">Начинать захват при открытии MPlite</string>
     <string name="logcat_add_shortcut">Добавить на главный экран</string>
     <string name="logcat_shortcut_old_android">Для ярлыков нужен Android 8.0 или новее</string>
     <string name="logcat_shortcut_unsupported">Лаунчер не разрешает ярлыки</string>
