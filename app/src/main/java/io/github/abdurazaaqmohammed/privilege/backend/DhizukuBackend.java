@@ -16,11 +16,10 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import com.rosan.dhizuku.api.DhizukuRemoteProcess;
 
 import java.io.BufferedReader;
-import java.io.File;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
@@ -111,7 +110,7 @@ public final class DhizukuBackend implements PrivilegeBackend, ShellCap {
             return exec(command, 30);
         }
 
-        private static Thread pump(java.io.InputStream in, StringBuilder into) {
+        private static Thread pump(InputStream in, StringBuilder into) {
             Thread t = new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(in, StandardCharsets.UTF_8))) {

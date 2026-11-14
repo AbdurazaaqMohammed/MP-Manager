@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.feature.files.network;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 /** Android 17 local-network permission classification. DNS must run off the UI thread. */
 public final class NetworkAccess {
@@ -21,7 +22,7 @@ public final class NetworkAccess {
         String host = URI.create(address).getHost();
         if (host == null) throw new UnknownHostException("Missing host");
         if (host.startsWith("[") && host.endsWith("]")) host = host.substring(1, host.length() - 1);
-        String lower = host.toLowerCase(java.util.Locale.ROOT);
+        String lower = host.toLowerCase(Locale.ROOT);
         // .local resolution itself is permission-protected. Unqualified hostnames
         // are generally LAN/NetBIOS names, so don't attempt resolution first.
         if (lower.endsWith(".local") || lower.endsWith(".local.") || (!host.contains(".") && !host.contains(":"))) return true;

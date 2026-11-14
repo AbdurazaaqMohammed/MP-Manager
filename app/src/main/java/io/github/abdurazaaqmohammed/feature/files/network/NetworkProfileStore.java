@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.ArrayList;
@@ -49,12 +50,12 @@ public final class NetworkProfileStore {
         String data = preferences.getString("encrypted", null);
         if (data == null) return new ArrayList<>();
         String[] parts = data.split(":", -1);
-        if (parts.length != 2) throw new java.io.IOException("Invalid saved network profiles");
+        if (parts.length != 2) throw new IOException("Invalid saved network profiles");
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE, key(), new GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)));
         String json = new String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), StandardCharsets.UTF_8);
         List<NetworkProfile> profiles = new Gson().fromJson(json, new TypeToken<List<NetworkProfile>>() {}.getType());
-        if (profiles == null) throw new java.io.IOException("Invalid saved network profiles");
+        if (profiles == null) throw new IOException("Invalid saved network profiles");
         return profiles;
     }
 
@@ -63,7 +64,7 @@ public final class NetworkProfileStore {
         cipher.init(Cipher.ENCRYPT_MODE, key());
         byte[] encrypted = cipher.doFinal(new Gson().toJson(profiles).getBytes(StandardCharsets.UTF_8));
         String data = Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP) + ":" + Base64.encodeToString(encrypted, Base64.NO_WRAP);
-        if (!preferences.edit().putString("encrypted", data).commit()) throw new java.io.IOException("Could not save connection");
+        if (!preferences.edit().putString("encrypted", data).commit()) throw new IOException("Could not save connection");
     }
 
     public void put(NetworkProfile profile) throws Exception {

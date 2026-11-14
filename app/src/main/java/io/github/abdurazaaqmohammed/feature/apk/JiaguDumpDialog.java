@@ -2,20 +2,10 @@ package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
 
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
-import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
-
-import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
-
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 import android.content.pm.PackageManager;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.graphics.Typeface;
@@ -27,9 +17,11 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -84,7 +76,7 @@ public final class JiaguDumpDialog {
             pkgInput.setText(prefillPackage);
         }
         // "pick from installed apps" button: full package list with app labels
-        com.google.android.material.button.MaterialButton pick = new com.google.android.material.button.MaterialButton(
+        MaterialButton pick = new MaterialButton(
                 activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         pick.setText(R.string.jiagu_pick_app);
         pick.setOnClickListener(v -> showAppPicker(activity, packages, pkgInput));
@@ -94,7 +86,7 @@ public final class JiaguDumpDialog {
         TextInputLayout waitLayout = new TextInputLayout(activity);
         waitLayout.setHint(activity.getString(R.string.jiagu_wait_hint));
         EditText waitInput = new EditText(activity);
-        waitInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        waitInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         waitInput.setText("15");
         waitLayout.addView(waitInput);
         root.addView(waitLayout);
@@ -127,14 +119,14 @@ public final class JiaguDumpDialog {
             rerender.run();
         });
 
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.jiagu_dumper_title)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.jiagu_dump_start, null)
                 .create();
         dialog.show();
-        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
             if (!busy.compareAndSet(false, true)) return;
             final String pkg = pkgInput.getText() == null ? "" : pkgInput.getText().toString().trim();
             if (!JiaguDumpEngine.isValidPackage(pkg)) {
@@ -150,7 +142,7 @@ public final class JiaguDumpDialog {
             }
             final int waitSec = waitSecTmp;
             final String apkPath = apkInput.getText() == null ? "" : apkInput.getText().toString().trim();
-            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
             new Thread(() -> {
                 try {
                     File outDir = JiaguDumpEngine.dump(activity, pkg, waitSec, sink);
@@ -185,7 +177,7 @@ public final class JiaguDumpDialog {
                 busy.set(false);
                 activity.runOnUiThread(() -> {
                     try {
-                        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
+                        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
                     } catch (Exception ignored) {}
                 });
             }, "jiagu-dump").start();
@@ -206,7 +198,7 @@ public final class JiaguDumpDialog {
             }
             rows.add(label);
         }
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.jiagu_pick_app)
                 .setItems(rows.toArray(new String[0]), (d, which) -> target.setText(packages.get(which)))
                 .setNegativeButton(android.R.string.cancel, null)

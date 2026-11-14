@@ -3,6 +3,13 @@ package io.github.abdurazaaqmohammed.feature.files.network;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import com.hierynomus.msfscc.fileinformation.ShareInfo;
+import com.hierynomus.protocol.commons.buffer.Buffer;
+import com.hierynomus.protocol.commons.buffer.Endian;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 public class RemoteSpaceTest {
     @Test public void usedSpaceIsDerivedFromTheReportedTotalAndFree() {
         RemoteSpace space = RemoteSpace.fromTotalFree(100, 25);
@@ -29,13 +36,13 @@ public class RemoteSpaceTest {
         assertThrows(ArithmeticException.class, () -> RemoteSpace.fromQuota(Long.MAX_VALUE, 1));
     }
 
-    private static com.hierynomus.msfscc.fileinformation.ShareInfo smbInfo(long total, long callerFree, long actualFree,
+    private static ShareInfo smbInfo(long total, long callerFree, long actualFree,
                                                                          int sectors, int bytes) throws Exception {
-        byte[] encoded = java.nio.ByteBuffer.allocate(32).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        byte[] encoded = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN)
                 .putLong(total).putLong(callerFree).putLong(actualFree).putInt(sectors).putInt(bytes).array();
-        return com.hierynomus.msfscc.fileinformation.ShareInfo.parseFsFullSizeInformation(
-                new com.hierynomus.protocol.commons.buffer.Buffer.PlainBuffer(encoded,
-                        com.hierynomus.protocol.commons.buffer.Endian.LE));
+        return ShareInfo.parseFsFullSizeInformation(
+                new Buffer.PlainBuffer(encoded,
+                        Endian.LE));
     }
 
     @Test public void smbSpaceUsesAllocationUnitsAndTheAuthenticatedUsersFreeSpace() throws Exception {

@@ -1,11 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.dex;
 
 
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper;
 import io.github.abdurazaaqmohammed.feature.apk.DexMergeUtil;
 import io.github.abdurazaaqmohammed.feature.apk.DexRepairEngine;
@@ -32,6 +27,8 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.lingala.zip4j.ZipFile;
@@ -515,11 +512,11 @@ public class DexTools {
                 // Pre-repair corrupted/zeroed headers and recalculate checksums if needed
                 DexRepairEngine.repairHeader(dexFile);
                 DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
-                com.android.tools.smali.dexlib2.writer.pool.DexPool pool = new com.android.tools.smali.dexlib2.writer.pool.DexPool(dex.getOpcodes());
+                DexPool pool = new DexPool(dex.getOpcodes());
                 for (ClassDef cd : dex.getClasses()) {
-                    pool.internClass(io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper.strip(cd));
+                    pool.internClass(DexDebugStripper.strip(cd));
                 }
-                com.android.tools.smali.dexlib2.writer.io.MemoryDataStore store = new com.android.tools.smali.dexlib2.writer.io.MemoryDataStore();
+                MemoryDataStore store = new MemoryDataStore();
                 pool.writeTo(store);
                 try (OutputStream os = new FileOutputStream(dexFile)) {
                     os.write(store.getData(), 0, store.getSize());

@@ -1,13 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
-
-import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
-
-import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
+import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterDetector;
+import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog;
+import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetDialog;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuOrder;
@@ -15,10 +10,6 @@ import io.github.abdurazaaqmohammed.feature.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackDialog;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
-
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
@@ -206,7 +197,7 @@ public class ApkInfoDialogs {
         } catch (Exception ignored) {
         }
         try {
-            r[2] = io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterDetector.isFlutterApk(file);
+            r[2] = FlutterDetector.isFlutterApk(file);
         } catch (Exception ignored) {
         }
         nativeScanFile = file;
@@ -921,9 +912,9 @@ public class ApkInfoDialogs {
         } else if (ApkMoreMenuOrder.IL2CPP.equals(actionId)) {
             showIl2CppDumpDialog(file, fileName);
         } else if (ApkMoreMenuOrder.FLUTTER.equals(actionId)) {
-            io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog.showForApk(context, file, fileName);
+            FlutterToolsDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.FRIDA.equals(actionId)) {
-            io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetDialog.showForApk(context, file, fileName);
+            FridaGadgetDialog.showForApk(context, file, fileName);
         } else if (ApkMoreMenuOrder.PATCH_LIBS.equals(actionId)) {
             showLibPatcherDialog(file, fileName);
         } else if (ApkMoreMenuOrder.JIAGU.equals(actionId)) {

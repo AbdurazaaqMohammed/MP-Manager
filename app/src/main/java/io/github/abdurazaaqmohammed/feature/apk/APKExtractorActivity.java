@@ -3,25 +3,11 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
-
-import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
-
-import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
-
-import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsDialog;
 import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
 import io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex;
 import io.github.abdurazaaqmohammed.feature.apk.ExtractorIconCache;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.text.CompareUtils;
-
-import io.github.abdurazaaqmohammed.util.text.CompareUtils;
 import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
@@ -32,7 +18,6 @@ import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import android.content.ComponentName;
@@ -1441,7 +1426,7 @@ public class APKExtractorActivity extends BaseActivity {
     private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
         // Also scan Extracted APKs folder to populate corner status badges
         try {
-            java.util.Map<String, ExtractedApksIndex.Entry> extractedIndex = ExtractedApksIndex.scanExtractedFolder(this);
+            Map<String, ExtractedApksIndex.Entry> extractedIndex = ExtractedApksIndex.scanExtractedFolder(this);
             handler.post(() -> {
                 if (appAdapter[0] != null) appAdapter[0].setExtractedIndex(extractedIndex);
                 if (appAdapter[1] != null) appAdapter[1].setExtractedIndex(extractedIndex);

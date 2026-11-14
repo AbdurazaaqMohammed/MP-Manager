@@ -1,23 +1,6 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
@@ -41,7 +24,9 @@ import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -494,8 +479,8 @@ public final class ShizukuManager {
         }
     }
 
-    public static java.util.Map<String, Long> dirSizeTree(Context context, String path) {
-        java.util.Map<String, Long> map = new java.util.HashMap<>();
+    public static Map<String, Long> dirSizeTree(Context context, String path) {
+        Map<String, Long> map = new HashMap<>();
         if (path == null || path.isEmpty()) return map;
         try {
             if (ShizukuShell.isAvailable()) {

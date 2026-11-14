@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -24,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.text.ClipboardManager;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
@@ -35,7 +24,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -57,14 +45,13 @@ import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.feature.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.feature.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.feature.ftp.ProfileHelper;
-import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteSpace;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
@@ -272,7 +259,7 @@ public class FtpController {
 
     public void connect(FtpProfile profile, boolean pane1) {
         String address;
-        try { address = new java.net.URI("ftp", null, profile.getIp(), profile.getPort(), "/", null, null).toString(); }
+        try { address = new URI("ftp", null, profile.getIp(), profile.getPort(), "/", null, null).toString(); }
         catch (Exception e) { new ErrorUtil(activity).showError(e); return; }
         activity.getNetwork().withPermissionForAddress(address, () -> connectReady(profile, pane1));
     }
@@ -315,7 +302,7 @@ public class FtpController {
                             Extensions.showMessage(activity, activity.rss.getString(R.string.connected_to_ftp));
                             String scheme = profile.getSecurityType() == 0 ? "ftp" : "ftps";
                             String address;
-                            try { address = new java.net.URI(scheme, null, profile.getIp(), profile.getPort(), null, null, null).toString(); }
+                            try { address = new URI(scheme, null, profile.getIp(), profile.getPort(), null, null, null).toString(); }
                             catch (Exception e) { address = scheme + "://" + profile.getIp(); }
                             fetchFtpDirAndLoad(client, File.separator, address, pane1, true);
                             refreshSpace(client);
@@ -337,7 +324,7 @@ public class FtpController {
     private void refreshSpace(IEZFtpClient client) {
         FtpProfile profile = sessionProfiles.get(client);
         if (closed || profile == null) return;
-        long now = android.os.SystemClock.elapsedRealtime();
+        long now = SystemClock.elapsedRealtime();
         Long previous = spaceCheckTimes.putIfAbsent(client, now);
         if (previous != null && (now - previous < 60_000 || !spaceCheckTimes.replace(client, previous, now))) return;
         String identity = storageIdentity(profile);

@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
 
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
-import io.github.abdurazaaqmohammed.util.misc.LogcatReader;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;

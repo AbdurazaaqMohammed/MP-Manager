@@ -1,31 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.feature.system.SystemImageEngine;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.RenameHelper;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
@@ -39,6 +16,7 @@ import android.media.MediaScannerConnection;
 import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.widget.Button;
 import android.widget.EditText;
 
 import androidx.appcompat.app.AlertDialog;
@@ -49,7 +27,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -74,10 +51,12 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -349,14 +328,14 @@ public class FilePropertiesDialog {
                             if (statsControl.isCancelled()) return;
                             String partial = result.complete() ? "" : context.getString(R.string.property_partial);
                             sizeValue.setText(FileSize.getHumanReadableFileSize(result.bytes()) + partial);
-                            fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(result.files()) + partial);
-                            folderCount.setText(java.text.NumberFormat.getIntegerInstance().format(result.folders()) + partial);
+                            fileCount.setText(NumberFormat.getIntegerInstance().format(result.files()) + partial);
+                            folderCount.setText(NumberFormat.getIntegerInstance().format(result.folders()) + partial);
                         });
                     } catch (TransferCancelledException ignored) {
                     }
                 }, "properties-stats").start();
             } else if (multi && fileCount != null) {
-                fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(selectedFilesList.size()));
+                fileCount.setText(NumberFormat.getIntegerInstance().format(selectedFilesList.size()));
                 folderCount.setText("0");
             }
         } else if (isInZip && !multi && entry.isDirectory()) {
@@ -365,8 +344,8 @@ public class FilePropertiesDialog {
                     String prefix = entry.getFullPath();
                     if (!prefix.endsWith("/")) prefix += "/";
                     long bytes = 0, files = 0;
-                    Set<String> folders = new java.util.HashSet<>();
-                    for (var child : io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil.listEntries(entry.getZipFile())) {
+                    Set<String> folders = new HashSet<>();
+                    for (var child : ArchiveBrowseUtil.listEntries(entry.getZipFile())) {
                         statsControl.checkpoint();
                         String path = child.path();
                         if (!path.startsWith(prefix) || path.equals(prefix)) continue;
@@ -378,8 +357,8 @@ public class FilePropertiesDialog {
                     context.handler.post(() -> {
                         if (statsControl.isCancelled()) return;
                         sizeValue.setText(FileSize.getHumanReadableFileSize(finalBytes));
-                        fileCount.setText(java.text.NumberFormat.getIntegerInstance().format(finalFiles));
-                        folderCount.setText(java.text.NumberFormat.getIntegerInstance().format(folders.size()));
+                        fileCount.setText(NumberFormat.getIntegerInstance().format(finalFiles));
+                        folderCount.setText(NumberFormat.getIntegerInstance().format(folders.size()));
                     });
                 } catch (Exception ignored) {}
             }, "archive-properties-stats").start();
@@ -456,11 +435,11 @@ public class FilePropertiesDialog {
                     ownerView.setText(finalOwner);
                 });
 
-                io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.ImageIdentity identity =
-                        io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.identifyImage(file);
+                SystemImageEngine.ImageIdentity identity =
+                        SystemImageEngine.identifyImage(file);
                 if (identity != null && !"unknown".equals(identity.typeKey)) {
                     context.handler.post(() -> {
-                        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+                        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
                         addPropertyRow(propRows, context.getString(R.string.property_image_type), identity.getDisplayName(isAr));
                     });
                 }
@@ -480,7 +459,7 @@ public class FilePropertiesDialog {
         selfDialog[0].setOnDismissListener(d -> statsControl.cancel());
         if (!isInZip && !multi && file != null && file.isFile()) {
             selfDialog[0].setOnShowListener(di -> {
-                android.widget.Button neutral = selfDialog[0].getButton(AlertDialog.BUTTON_NEUTRAL);
+                Button neutral = selfDialog[0].getButton(AlertDialog.BUTTON_NEUTRAL);
                 if (neutral != null) {
                     neutral.setOnClickListener(v -> showMimeDialog(file));
                 }

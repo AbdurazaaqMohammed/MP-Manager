@@ -2,28 +2,18 @@ package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.DateFormat;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.EditText;
@@ -31,6 +21,8 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -107,8 +99,8 @@ public class FridaConsoleActivity extends BaseActivity {
                 com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle);
         packageLayout.setHint(getString(R.string.frida_console_target_package));
         packageView = new MaterialAutoCompleteTextView(this);
-        packageView.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        packageView.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         packageLayout.addView(packageView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(packageLayout, new LinearLayout.LayoutParams(
@@ -262,7 +254,7 @@ public class FridaConsoleActivity extends BaseActivity {
             }
 
             @Override
-            public android.view.View getView(int position, android.view.View convertView, ViewGroup parent) {
+            public View getView(int position, View convertView, ViewGroup parent) {
                 LinearLayout row;
                 IconHolder holder;
                 if (convertView instanceof LinearLayout && convertView.getTag() instanceof IconHolder) {
@@ -388,7 +380,7 @@ public class FridaConsoleActivity extends BaseActivity {
                     .show();
         });
 
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.frida_console_pick_app)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)

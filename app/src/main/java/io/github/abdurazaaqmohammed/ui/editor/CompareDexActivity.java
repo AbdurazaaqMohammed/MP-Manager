@@ -1,24 +1,11 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
 
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -1370,8 +1357,8 @@ public class CompareDexActivity extends BaseActivity {
         if (!downloadDir.exists()) downloadDir.mkdirs();
         File outFile = new File(downloadDir, outFileName);
 
-        final io.github.abdurazaaqmohammed.util.io.ProgressManager progress =
-                new io.github.abdurazaaqmohammed.util.io.ProgressManager(this, true);
+        final ProgressManager progress =
+                new ProgressManager(this, true);
         progress.setText(getString(R.string.exporting));
         progress.show();
 

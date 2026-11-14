@@ -1,19 +1,6 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;

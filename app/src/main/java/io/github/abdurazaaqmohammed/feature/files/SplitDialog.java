@@ -1,13 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
+import android.graphics.Typeface;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +30,6 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -88,7 +84,7 @@ public final class SplitDialog {
         TextView fileInfo = new TextView(context);
         fileInfo.setText(file.getName() + " (" + FileSize.getHumanReadableFileSize(totalLength) + ")");
         fileInfo.setTextSize(15f);
-        fileInfo.setTypeface(null, android.graphics.Typeface.BOLD);
+        fileInfo.setTypeface(null, Typeface.BOLD);
         root.addView(fileInfo);
 
         // Split Mode RadioGroup
@@ -123,7 +119,7 @@ public final class SplitDialog {
         customSizeRow.setPadding(0, Extensions.dp2px(context, 4), 0, 0);
 
         EditText customSizeInput = new EditText(context);
-        customSizeInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        customSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         customSizeInput.setHint("100");
         customSizeInput.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         customSizeRow.addView(customSizeInput);
@@ -141,7 +137,7 @@ public final class SplitDialog {
         countContainer.setVisibility(View.GONE);
 
         EditText countInput = new EditText(context);
-        countInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        countInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         countInput.setHint("2");
         countInput.setText("2");
         countContainer.addView(countInput);
@@ -345,7 +341,7 @@ public final class SplitDialog {
 
         TextView partsInfo = new TextView(context);
         partsInfo.setText(context.getString(R.string.merge_split_files) + ": " + parts.size() + " (" + FileSize.getHumanReadableFileSize(totalSize) + ")");
-        partsInfo.setTypeface(null, android.graphics.Typeface.BOLD);
+        partsInfo.setTypeface(null, Typeface.BOLD);
         root.addView(partsInfo);
 
         // List of checkboxes for each detected split part (all checked by default)

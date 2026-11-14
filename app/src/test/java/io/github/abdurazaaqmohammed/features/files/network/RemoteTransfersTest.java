@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
+
+import com.hierynomus.mserref.NtStatus;
 
 public class RemoteTransfersTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
@@ -150,17 +153,17 @@ public class RemoteTransfersTest {
 
     @Test public void classifyAndroid17LocalNetworksWithoutBlockingPublicServers() throws Exception {
         for (String local : new String[]{"127.0.0.1", "192.168.1.1", "10.1.2.3", "172.16.0.1", "169.254.1.1", "::1", "fd00::1"})
-            assertTrue(local, NetworkAccess.isLocal(java.net.InetAddress.getByName(local)));
-        assertFalse(NetworkAccess.isLocal(java.net.InetAddress.getByName("8.8.8.8")));
+            assertTrue(local, NetworkAccess.isLocal(InetAddress.getByName(local)));
+        assertFalse(NetworkAccess.isLocal(InetAddress.getByName("8.8.8.8")));
         assertTrue(NetworkAccess.requiresPermission("smb://nas/share/"));
         assertTrue(NetworkAccess.requiresPermission("https://nas.local/dav/"));
     }
 
     @Test public void onlyMissingSmbStatusesAreTreatedAsAbsent() {
-        assertTrue(SmbClient.isMissing(com.hierynomus.mserref.NtStatus.STATUS_NO_SUCH_FILE.getValue()));
-        assertTrue(SmbClient.isMissing(com.hierynomus.mserref.NtStatus.STATUS_OBJECT_NAME_NOT_FOUND.getValue()));
-        assertTrue(SmbClient.isMissing(com.hierynomus.mserref.NtStatus.STATUS_OBJECT_PATH_NOT_FOUND.getValue()));
-        assertFalse(SmbClient.isMissing(com.hierynomus.mserref.NtStatus.STATUS_ACCESS_DENIED.getValue()));
-        assertFalse(SmbClient.isMissing(com.hierynomus.mserref.NtStatus.STATUS_LOGON_FAILURE.getValue()));
+        assertTrue(SmbClient.isMissing(NtStatus.STATUS_NO_SUCH_FILE.getValue()));
+        assertTrue(SmbClient.isMissing(NtStatus.STATUS_OBJECT_NAME_NOT_FOUND.getValue()));
+        assertTrue(SmbClient.isMissing(NtStatus.STATUS_OBJECT_PATH_NOT_FOUND.getValue()));
+        assertFalse(SmbClient.isMissing(NtStatus.STATUS_ACCESS_DENIED.getValue()));
+        assertFalse(SmbClient.isMissing(NtStatus.STATUS_LOGON_FAILURE.getValue()));
     }
 }

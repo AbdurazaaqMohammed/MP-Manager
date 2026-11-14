@@ -1,20 +1,8 @@
 package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 

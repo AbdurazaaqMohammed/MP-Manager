@@ -5,13 +5,8 @@
 package io.github.abdurazaaqmohammed.privilege.internal;
 
 import android.content.Context;
-import java.io.File;
-import java.io.IOException;
-import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
-import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
+
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
 /** M2 shell session: delegates to the legacy Shizuku shell wrapper. */

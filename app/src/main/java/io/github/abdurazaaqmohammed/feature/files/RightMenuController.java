@@ -1,16 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
@@ -83,8 +73,8 @@ public class RightMenuController {
             refreshBtn.setOnLongClickListener(v -> {
                 File currentFolder = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
                 if (currentFolder != null) {
-                    io.github.abdurazaaqmohammed.data.prefs.DirSizeCache.invalidatePrefix(currentFolder);
-                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
+                    DirSizeCache.invalidatePrefix(currentFolder);
+                    Extensions.showMessage(activity, activity.getString(R.string.folder_sizes_cache_reset));
                     activity.reloadCurrentFolder();
                 }
                 return true;
@@ -350,7 +340,7 @@ public class RightMenuController {
 
         if (onLongClick != null) {
             itemLayout.setOnLongClickListener(v -> {
-                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
+                Haptics.perform(v, Haptics.Event.LONG_PRESS);
                 if (activity.drawerLayout != null && activity.drawerLayout.isDrawerOpen(GravityCompat.END)) {
                     activity.drawerLayout.closeDrawer(GravityCompat.END);
                     activity.drawerLayout.postDelayed(() -> {

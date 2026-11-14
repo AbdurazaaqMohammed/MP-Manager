@@ -46,8 +46,12 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -104,9 +108,9 @@ public class SetEditActivity extends BaseActivity {
     private FloatingActionButton fabAdd;
 
     private final List<SettingEntry> allEntries = new ArrayList<>();
-    private final java.util.Map<SettingType, List<SettingEntry>> entriesByType = new java.util.EnumMap<>(SettingType.class);
+    private final Map<SettingType, List<SettingEntry>> entriesByType = new EnumMap<>(SettingType.class);
     private final List<SettingEntry> displayedEntries = new ArrayList<>();
-    private final java.util.Set<String> favoriteKeys = new java.util.HashSet<>();
+    private final Set<String> favoriteKeys = new HashSet<>();
     private SettingAdapter adapter;
 
     private SettingType currentFilter = null; // null = All
@@ -158,8 +162,8 @@ public class SetEditActivity extends BaseActivity {
     }
 
     private void loadFavorites() {
-        android.content.SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
-        java.util.Set<String> set = sp.getStringSet(PREF_SETEDIT_FAVS, null);
+        SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
+        Set<String> set = sp.getStringSet(PREF_SETEDIT_FAVS, null);
         favoriteKeys.clear();
         if (set != null) {
             favoriteKeys.addAll(set);
@@ -167,8 +171,8 @@ public class SetEditActivity extends BaseActivity {
     }
 
     private void saveFavorites() {
-        android.content.SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
-        sp.edit().putStringSet(PREF_SETEDIT_FAVS, new java.util.HashSet<>(favoriteKeys)).apply();
+        SharedPreferences sp = getSharedPreferences("setedit_prefs", Context.MODE_PRIVATE);
+        sp.edit().putStringSet(PREF_SETEDIT_FAVS, new HashSet<>(favoriteKeys)).apply();
     }
 
     private static String favKey(SettingEntry entry) {

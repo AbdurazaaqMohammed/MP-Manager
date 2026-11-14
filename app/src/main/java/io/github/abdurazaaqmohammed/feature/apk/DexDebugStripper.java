@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.android.tools.smali.dexlib2.DebugItemType;
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 import com.android.tools.smali.dexlib2.iface.Annotation;
 import com.android.tools.smali.dexlib2.iface.ClassDef;

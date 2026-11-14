@@ -1,11 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;

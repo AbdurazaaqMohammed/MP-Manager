@@ -1,15 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.text.AbxUtil;
-
-import io.github.abdurazaaqmohammed.util.text.AbxUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
@@ -17,6 +8,7 @@ import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -35,6 +27,8 @@ import androidx.annotation.Nullable;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -67,9 +61,13 @@ import java.io.InterruptedIOException;
 import android.provider.OpenableColumns;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.ContentIO;
+
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
@@ -136,7 +134,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     private int currentIndex = -1;
 
     private UnifiedEditorFragment editorFragment;
-    private final java.util.concurrent.ExecutorService sessionWriter = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final ExecutorService sessionWriter = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -239,7 +237,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 try {
                     for (int i = 0; i < snapshots.size(); i++) contentRecords.get(i).put("content", snapshots.get(i).toString());
                     File temporary = new File(file.getPath() + ".tmp");
-                    try (java.io.Writer writer = new OutputStreamWriter(FileUtils.getOutputStream(temporary), StandardCharsets.UTF_8)) {
+                    try (Writer writer = new OutputStreamWriter(FileUtils.getOutputStream(temporary), StandardCharsets.UTF_8)) {
                         writer.write(root.toString());
                     }
                     if (!temporary.renameTo(file)) {
@@ -796,7 +794,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         if (tab.fileUri == null) return 0;
         try {
             if ("file".equals(tab.fileUri.getScheme())) return new File(tab.fileUri.getPath()).length();
-            try (android.database.Cursor cursor = getContentResolver().query(tab.fileUri,
+            try (Cursor cursor = getContentResolver().query(tab.fileUri,
                     new String[]{OpenableColumns.SIZE}, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
             }
@@ -811,7 +809,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_large_file_title)
                 .setMessage(getString(R.string.editor_large_file_warning,
-                        io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(tab.fileSize)))
+                        FileSize.getHumanReadableFileSize(tab.fileSize)))
                 .setPositiveButton(R.string.editor_open_text_anyway, (d, w) -> {
                     tab.allowLargeText = true;
                     tab.loading = false;
@@ -829,7 +827,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     if (tab.zipEntryPath != null) i.putExtra("zipEntryPath", tab.zipEntryPath);
                     startActivity(i);
                 });
-        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        AlertDialog dialog = builder.create();
         dialog.setOnDismissListener(d -> { if (tab.loadToken == token) tab.loading = false; });
         dialog.show();
     }

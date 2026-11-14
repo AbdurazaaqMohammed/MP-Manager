@@ -1,11 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.media;
 
-import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 

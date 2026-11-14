@@ -3,19 +3,6 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 

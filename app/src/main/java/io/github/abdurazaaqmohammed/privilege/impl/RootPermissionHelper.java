@@ -2,20 +2,6 @@ package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.util.net.DnsManager;
-
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
 

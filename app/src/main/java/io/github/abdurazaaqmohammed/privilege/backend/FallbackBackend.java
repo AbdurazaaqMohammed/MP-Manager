@@ -16,7 +16,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
-import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.privilege.spi.FileOpsCap;
 import io.github.abdurazaaqmohammed.privilege.spi.InstallerCap;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
@@ -209,7 +209,7 @@ public final class FallbackBackend implements PrivilegeBackend, FileOpsCap, Inst
 
         @Override
         public void installAsync(Context context, List<File> apkFiles,
-                                 io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller.Callback cb) {
+                                 PrivilegedInstaller.Callback cb) {
             if (cb != null) cb.onError(new IllegalStateException("No privilege backend authorized"));
         }
 

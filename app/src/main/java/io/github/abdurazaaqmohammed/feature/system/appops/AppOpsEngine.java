@@ -2,12 +2,14 @@ package io.github.abdurazaaqmohammed.feature.system.appops;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.InstallSourceInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.Signature;
 import android.os.Build;
 import android.text.TextUtils;
 
@@ -15,15 +17,19 @@ import java.io.BufferedReader;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
@@ -108,10 +114,10 @@ public class AppOpsEngine {
         // Batch query all launchable packages in a single IPC call instead of 400+ calls
         Set<String> launchablePackages = new HashSet<>();
         try {
-            android.content.Intent launchIntent = new android.content.Intent(android.content.Intent.ACTION_MAIN);
-            launchIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
-            List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(launchIntent, 0);
-            for (android.content.pm.ResolveInfo ri : resolveInfos) {
+            Intent launchIntent = new Intent(Intent.ACTION_MAIN);
+            launchIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launchIntent, 0);
+            for (ResolveInfo ri : resolveInfos) {
                 if (ri.activityInfo != null && ri.activityInfo.packageName != null) {
                     launchablePackages.add(ri.activityInfo.packageName);
                 }
@@ -186,7 +192,7 @@ public class AppOpsEngine {
         // Installer
         try {
             if (Build.VERSION.SDK_INT >= 30) {
-                android.content.pm.InstallSourceInfo info = pm.getInstallSourceInfo(packageName);
+                InstallSourceInfo info = pm.getInstallSourceInfo(packageName);
                 data.installer = info.getInstallingPackageName();
             } else {
                 data.installer = pm.getInstallerPackageName(packageName);
@@ -416,8 +422,8 @@ public class AppOpsEngine {
         if (TextUtils.isEmpty(raw)) return "";
         raw = raw.trim();
         try {
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\+)?(?:(\\d+)d)?(?:(\\d+)h)?(?:(\\d+)m(?!s))?(?:(\\d+)s)?(?:(\\d+)ms)?\\s*ago");
-            java.util.regex.Matcher m = p.matcher(raw);
+            Pattern p = Pattern.compile("(\\+)?(?:(\\d+)d)?(?:(\\d+)h)?(?:(\\d+)m(?!s))?(?:(\\d+)s)?(?:(\\d+)ms)?\\s*ago");
+            Matcher m = p.matcher(raw);
             if (m.find()) {
                 long days = m.group(2) != null ? Long.parseLong(m.group(2)) : 0;
                 long hours = m.group(3) != null ? Long.parseLong(m.group(3)) : 0;
@@ -428,8 +434,8 @@ public class AppOpsEngine {
                 long totalMs = ((days * 86400L + hours * 3600L + minutes * 60L + seconds) * 1000L) + millis;
                 if (totalMs > 0) {
                     long targetTime = System.currentTimeMillis() - totalMs;
-                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
-                    return sdf.format(new java.util.Date(targetTime));
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                    return sdf.format(new Date(targetTime));
                 }
             }
         } catch (Exception ignored) {}
@@ -641,7 +647,7 @@ public class AppOpsEngine {
 
     private static String getSignatureSha256(PackageInfo pi) {
         try {
-            android.content.pm.Signature[] sigs = null;
+            Signature[] sigs = null;
             if (Build.VERSION.SDK_INT >= 28 && pi.signingInfo != null) {
                 sigs = pi.signingInfo.hasMultipleSigners() ? pi.signingInfo.getApkContentsSigners() : pi.signingInfo.getSigningCertificateHistory();
             } else {

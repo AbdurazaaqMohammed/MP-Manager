@@ -48,6 +48,7 @@
     import java.util.regex.Pattern;
 
     import io.github.abdurazaaqmohammed.MPManager.R;
+    import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
     /*
      * Author - @developer-krushna
@@ -397,14 +398,14 @@
 
             holder.itemView.setOnClickListener(v -> {
                 if (selectionMode) {
-                    io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.SELECTION);
+                    Haptics.perform(v, Haptics.Event.SELECTION);
                     toggleSelected(original);
                 } else if (listener != null) {
                     listener.onStringClick(original);
                 }
             });
             holder.itemView.setOnLongClickListener(v -> {
-                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
+                Haptics.perform(v, Haptics.Event.LONG_PRESS);
                 if (longClickListener != null) {
                     longClickListener.onStringLongClick(original);
                     return true;

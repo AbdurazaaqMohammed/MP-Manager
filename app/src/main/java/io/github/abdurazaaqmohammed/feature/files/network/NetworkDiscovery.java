@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
@@ -13,14 +14,20 @@ import android.os.Looper;
 
 import com.hierynomus.smbj.SMBClient;
 import com.hierynomus.smbj.SmbConfig;
+import com.hierynomus.smbj.connection.Connection;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
+import okhttp3.HttpUrl;
 
 import java.io.Closeable;
+import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.Map;
 import java.util.LinkedHashMap;
@@ -31,6 +38,7 @@ import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -118,13 +126,13 @@ public final class NetworkDiscovery implements Closeable {
                                 String host = service.getHost().getHostAddress();
                                 if (type.contains("_smb.")) {
                                     profile.protocol = "smb";
-                                    profile.address = new java.net.URI("smb", null, host, service.getPort(), "/", null, null).toASCIIString();
+                                    profile.address = new URI("smb", null, host, service.getPort(), "/", null, null).toASCIIString();
                                 } else {
                                     profile.protocol = "webdav";
                                     byte[] pathValue = service.getAttributes().get("path");
                                     String path = pathValue == null ? "/" : new String(pathValue, StandardCharsets.UTF_8);
                                     if (!path.startsWith("/")) path = "/" + path;
-                                    profile.address = new okhttp3.HttpUrl.Builder().scheme(type.contains("_webdavs.") ? "https" : "http")
+                                    profile.address = new HttpUrl.Builder().scheme(type.contains("_webdavs.") ? "https" : "http")
                                             .host(host).port(service.getPort()).encodedPath(path).build().toString();
                                 }
                                 emit(profile);
@@ -141,7 +149,7 @@ public final class NetworkDiscovery implements Closeable {
     private void emit(NetworkProfile profile) {
         String key = endpointKey(profile);
         NetworkProfile previous = seenEndpoints.get(key);
-        String host = java.net.URI.create(profile.address).getHost();
+        String host = URI.create(profile.address).getHost();
         if (previous == null || (previous.name.equals(host) && !profile.name.equals(host))) {
             seenEndpoints.put(key, profile);
             listener.found(profile);
@@ -150,8 +158,8 @@ public final class NetworkDiscovery implements Closeable {
 
     public static String endpointKey(NetworkProfile profile) {
         if (!profile.protocol.equals("smb")) return profile.protocol + ":" + profile.address;
-        java.net.URI uri = java.net.URI.create(profile.address);
-        return "smb:" + uri.getHost().toLowerCase(java.util.Locale.ROOT) + ":" + (uri.getPort() == -1 ? 445 : uri.getPort());
+        URI uri = URI.create(profile.address);
+        return "smb:" + uri.getHost().toLowerCase(Locale.ROOT) + ":" + (uri.getPort() == -1 ? 445 : uri.getPort());
     }
 
     public void scanSmb() {
@@ -181,15 +189,15 @@ public final class NetworkDiscovery implements Closeable {
         });
     }
 
-    private record Lan(android.net.Network network, LinkAddress address, LinkProperties properties) {}
+    private record Lan(Network network, LinkAddress address, LinkProperties properties) {}
 
     private Lan findLan() {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm == null) return null;
-        List<android.net.Network> networks = new ArrayList<>();
+        List<Network> networks = new ArrayList<>();
         if (cm.getActiveNetwork() != null) networks.add(cm.getActiveNetwork());
-        for (android.net.Network network : cm.getAllNetworks()) if (!networks.contains(network)) networks.add(network);
-        for (android.net.Network network : networks) {
+        for (Network network : cm.getAllNetworks()) if (!networks.contains(network)) networks.add(network);
+        for (Network network : networks) {
             NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
             LinkProperties properties = cm.getLinkProperties(network);
             if (capabilities == null || properties == null || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
@@ -202,13 +210,13 @@ public final class NetworkDiscovery implements Closeable {
         return null;
     }
 
-    private void probeSmb(Lan lan, String host) throws java.io.IOException {
+    private void probeSmb(Lan lan, String host) throws IOException {
         if (closed.get() || Thread.currentThread().isInterrupted()) return;
         // Negotiate SMB2/3, never authenticate or enumerate shares during discovery.
         try (SMBClient client = new SMBClient(SmbConfig.builder().withSoTimeout(1000)
                 .withSocketFactory(new TimedSocketFactory(lan.network.getSocketFactory(), 500))
                 .withTimeout(1, TimeUnit.SECONDS).build());
-             com.hierynomus.smbj.connection.Connection connection = client.connect(host, 445)) {
+             Connection connection = client.connect(host, 445)) {
             NetworkProfile profile = new NetworkProfile();
             profile.protocol = "smb";
             profile.name = host;
@@ -256,7 +264,7 @@ public final class NetworkDiscovery implements Closeable {
                 if (iface != null) socket.setNetworkInterface(iface);
                 socket.setTimeToLive(1);
                 socket.setSoTimeout(250);
-                String id = "urn:uuid:" + java.util.UUID.randomUUID();
+                String id = "urn:uuid:" + UUID.randomUUID();
                 byte[] probe = WsDiscovery.probe(id);
                 DatagramPacket request = new DatagramPacket(probe, probe.length, InetAddress.getByName("239.255.255.250"), 3702);
                 long start = System.nanoTime(), nextSend = start;

@@ -1,17 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
+import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
+import io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
@@ -113,8 +105,8 @@ public class ToolsHubActivity extends BaseActivity {
         grid.setLayoutManager(layout);
         allTools = ToolRegistry.getTools(this);
         // The Frida console needs root (frida-inject via su) — hide it otherwise.
-        if (!io.github.abdurazaaqmohammed.privilege.impl.RootManager.getInstance(this).isRootAvailable()) {
-            List<ToolRegistry.ToolItem> filtered = new java.util.ArrayList<>();
+        if (!RootManager.getInstance(this).isRootAvailable()) {
+            List<ToolRegistry.ToolItem> filtered = new ArrayList<>();
             for (ToolRegistry.ToolItem item : allTools) {
                 if (!"frida".equals(item.id()) && !"jiagudumper".equals(item.id())) filtered.add(item);
             }
@@ -521,15 +513,15 @@ public class ToolsHubActivity extends BaseActivity {
         } else if ("documents".equals(item.id())) {
             startActivity(new Intent(this, DocumentsBrowserActivity.class));
         } else if ("partitiondumper".equals(item.id())) {
-            io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog.show(this);
+            PartitionDumperDialog.show(this);
         } else if ("app_ops".equals(item.id())) {
-            startActivity(new Intent(this, io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity.class));
+            startActivity(new Intent(this, AppOpsActivity.class));
         } else if ("commandshell".equals(item.id())) {
-            startActivity(new Intent(this, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class));
+            startActivity(new Intent(this, CommandShellActivity.class));
         } else if ("setedit".equals(item.id())) {
             startActivity(new Intent(this, SetEditActivity.class));
         } else if ("jiagudumper".equals(item.id())) {
-            io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog.show(this);
+            JiaguDumpDialog.show(this);
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());

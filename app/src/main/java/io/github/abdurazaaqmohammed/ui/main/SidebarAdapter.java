@@ -1,9 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.util.io.StorageUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
 import android.content.Context;
@@ -25,12 +21,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -594,7 +590,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 int size = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
                 glyph = glyph.mutate();
                 glyph.setBounds(0, 0, size, size);
-                androidx.core.graphics.drawable.DrawableCompat.setTint(glyph,
+                DrawableCompat.setTint(glyph,
                         MaterialColors.getColor(name, android.R.attr.colorPrimary));
             }
             name.setCompoundDrawablesRelative(glyph, null, null, null);

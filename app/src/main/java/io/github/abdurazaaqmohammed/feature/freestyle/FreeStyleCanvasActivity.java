@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.feature.freestyle;
 import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -75,7 +76,7 @@ public class FreeStyleCanvasActivity extends AppCompatActivity {
         MaterialButton btnCropCanvas = findViewById(R.id.btnCropCanvas);
         btnCropCanvas.setOnClickListener(v -> {
             // Toggles auto-crop to content bounds or trims canvas
-            android.graphics.RectF bounds = canvasView.getLayersBoundingBox();
+            RectF bounds = canvasView.getLayersBoundingBox();
             if (bounds == null) {
                 Toast.makeText(this, "No images on canvas", Toast.LENGTH_SHORT).show();
                 return;

@@ -1,23 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
@@ -34,15 +17,11 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.LayerDrawable;
 import android.media.ThumbnailUtils;
 import android.os.Handler;
 import android.os.Looper;
@@ -53,8 +32,6 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.core.content.res.ResourcesCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.preference.PreferenceManager;
 
 import org.apache.commons.io.FilenameUtils;
@@ -73,7 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
-import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;

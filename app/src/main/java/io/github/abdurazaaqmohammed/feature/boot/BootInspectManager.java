@@ -1,18 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.boot;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 
@@ -143,8 +131,8 @@ public class BootInspectManager {
 
     public static void openBootImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null || !imageFile.exists()) return;
-        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.util.io.ProgressManager(context, true);
+        ProgressManager pm =
+                new ProgressManager(context, true);
         pm.setText(context.getString(R.string.extracting));
         pm.show();
 
@@ -201,8 +189,8 @@ public class BootInspectManager {
     }
 
     private static void executeRepack(MainActivity context, Session session) {
-        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.util.io.ProgressManager(context, true);
+        ProgressManager pm =
+                new ProgressManager(context, true);
         pm.setText(context.getString(R.string.compressing));
         pm.show();
 

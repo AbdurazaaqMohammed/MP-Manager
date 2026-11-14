@@ -1,21 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.util.io.StorageUtil;
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
+import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
+import io.github.abdurazaaqmohammed.feature.ftp.FtpProfile;
+import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
+import io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity;
 
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -587,9 +575,9 @@ public class SidebarController {
         try {
             for (NetworkProfile profile : new NetworkProfileStore(activity).load()) networkProfiles.put(profile.pinId(), profile);
         } catch (Exception ignored) { /* Keystore failures must not hide local/provider storage. */ }
-        Map<String, io.github.abdurazaaqmohammed.feature.ftp.FtpProfile> ftpProfiles = new LinkedHashMap<>();
+        Map<String, FtpProfile> ftpProfiles = new LinkedHashMap<>();
         try {
-            for (io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile : activity.getFtp().clientProfiles())
+            for (FtpProfile profile : activity.getFtp().clientProfiles())
                 ftpProfiles.put(profile.getName(), profile);
         } catch (Exception ignored) {}
         try {
@@ -607,7 +595,7 @@ public class SidebarController {
                             "storage", pin, label, R.drawable.folder_24px, null, null));
                 } else if (pin.startsWith(SidebarPins.FTP_PREFIX)) {
                     String name = pin.substring(SidebarPins.FTP_PREFIX.length());
-                    io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile = ftpProfiles.get(name);
+                    FtpProfile profile = ftpProfiles.get(name);
                     if (profile != null) data.pinned.add(networkPin(pin, name, "FTP",
                             activity.getFtp().spaceForProfile(profile), activity.getFtp().hasCheckedSpace(profile)));
                 } else if (pin.startsWith(SidebarPins.WEBDAV_PREFIX) || pin.startsWith(SidebarPins.SMB_PREFIX)) {
@@ -711,13 +699,13 @@ public class SidebarController {
                 activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
                 break;
             case "app_ops":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity.class));
+                activity.startActivity(new Intent(activity, AppOpsActivity.class));
                 break;
             case "set_edit":
                 activity.startActivity(new Intent(activity, SetEditActivity.class));
                 break;
             case "partition_dumper":
-                io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog.show(activity);
+                PartitionDumperDialog.show(activity);
                 break;
             case "recycle_bin":
                 showRecycleBinDialog();
@@ -755,7 +743,7 @@ public class SidebarController {
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 break;
             case "command_shell":
-                activity.startActivity(new Intent(activity, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class));
+                activity.startActivity(new Intent(activity, CommandShellActivity.class));
                 break;
             case "tools":
                 activity.startActivity(new Intent(activity, ToolsHubActivity.class));

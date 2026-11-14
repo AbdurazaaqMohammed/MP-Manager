@@ -5,17 +5,22 @@ import com.hierynomus.mserref.NtStatus;
 import com.hierynomus.msfscc.FileAttributes;
 import com.hierynomus.msfscc.fileinformation.FileAllInformation;
 import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation;
+import com.hierynomus.msfscc.fileinformation.ShareInfo;
 import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.mssmb2.SMB2CreateOptions;
 import com.hierynomus.mssmb2.SMB2ShareAccess;
 import com.hierynomus.mssmb2.SMBApiException;
+import com.hierynomus.protocol.commons.buffer.Buffer;
 import com.hierynomus.smbj.SMBClient;
 import com.hierynomus.smbj.SmbConfig;
 import com.hierynomus.smbj.auth.AuthenticationContext;
+import com.hierynomus.smbj.common.SMBRuntimeException;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskEntry;
 import com.hierynomus.smbj.share.DiskShare;
+import com.hierynomus.smbj.share.File;
+import com.hierynomus.smbj.share.Share;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +29,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.SocketFactory;
 
 public final class SmbClient implements RemoteClient {
     private final SMBClient client;
@@ -37,13 +44,13 @@ public final class SmbClient implements RemoteClient {
         if (host.isEmpty() || host.contains("/") || host.contains("\\") || port < 1 || port > 65535)
             throw new IllegalArgumentException("Invalid SMB host or port");
         client = new SMBClient(SmbConfig.builder().withTimeout(60, TimeUnit.SECONDS)
-                .withSocketFactory(new TimedSocketFactory(javax.net.SocketFactory.getDefault(), 20000))
+                .withSocketFactory(new TimedSocketFactory(SocketFactory.getDefault(), 20000))
                 .withSoTimeout(20000).build());
         try {
             connection = client.connect(host, port);
             session = connection.authenticate(username.isEmpty() ? AuthenticationContext.anonymous()
                     : new AuthenticationContext(username, password.toCharArray(), domain));
-            com.hierynomus.smbj.share.Share connected = session.connectShare(shareName);
+            Share connected = session.connectShare(shareName);
             if (!(connected instanceof DiskShare)) {
                 connected.close();
                 throw new IOException("SMB location is not a disk share");
@@ -103,7 +110,7 @@ public final class SmbClient implements RemoteClient {
     }
 
     @Override public synchronized void download(String path, OutputStream destination) throws IOException {
-        try (com.hierynomus.smbj.share.File file = share.openFile(smbPath(path),
+        try (File file = share.openFile(smbPath(path),
                 EnumSet.of(AccessMask.GENERIC_READ), null, SMB2ShareAccess.ALL,
                 SMB2CreateDisposition.FILE_OPEN, EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE));
              InputStream input = file.getInputStream()) {
@@ -113,7 +120,7 @@ public final class SmbClient implements RemoteClient {
 
     @Override public synchronized void upload(String path, InputStream source, long size) throws IOException {
         WebDavClient.requireNonRoot(path);
-        try (com.hierynomus.smbj.share.File file = share.openFile(smbPath(path),
+        try (File file = share.openFile(smbPath(path),
                 EnumSet.of(AccessMask.GENERIC_WRITE), EnumSet.of(FileAttributes.FILE_ATTRIBUTE_NORMAL),
                 SMB2ShareAccess.ALL, SMB2CreateDisposition.FILE_CREATE,
                 EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE));
@@ -150,7 +157,7 @@ public final class SmbClient implements RemoteClient {
 
     @Override public synchronized RemoteSpace space() throws IOException {
         try {
-            com.hierynomus.msfscc.fileinformation.ShareInfo info = share.getShareInformation();
+            ShareInfo info = share.getShareInformation();
             return spaceFromInformation(info);
         } catch (SMBApiException e) {
             if (e.getStatusCode() == NtStatus.STATUS_NOT_SUPPORTED.getValue()
@@ -158,15 +165,15 @@ public final class SmbClient implements RemoteClient {
                     || e.getStatusCode() == NtStatus.STATUS_INVALID_INFO_CLASS.getValue()
                     || e.getStatusCode() == NtStatus.STATUS_ACCESS_DENIED.getValue()) return null;
             throw error(e);
-        } catch (com.hierynomus.smbj.common.SMBRuntimeException e) {
+        } catch (SMBRuntimeException e) {
             // Some servers report success with an empty/truncated optional FS-info body.
             // Reject that metadata, but keep the authenticated session usable for files.
-            if (e.getCause() instanceof com.hierynomus.protocol.commons.buffer.Buffer.BufferException) return null;
+            if (e.getCause() instanceof Buffer.BufferException) return null;
             throw error(e);
         } catch (Exception e) { throw error(e); }
     }
 
-    static RemoteSpace spaceFromInformation(com.hierynomus.msfscc.fileinformation.ShareInfo info) {
+    static RemoteSpace spaceFromInformation(ShareInfo info) {
         try {
             if (info.getSectorsPerAllocationUnit() <= 0 || info.getBytesPerSector() <= 0) return null;
             long unit = Math.multiplyExact(info.getSectorsPerAllocationUnit(), info.getBytesPerSector());

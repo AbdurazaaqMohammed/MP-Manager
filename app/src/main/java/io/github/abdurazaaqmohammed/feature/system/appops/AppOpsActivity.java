@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.system.appops;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
@@ -24,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
 import java.util.ArrayList;
@@ -138,19 +138,19 @@ public class AppOpsActivity extends BaseActivity {
             if (item.isHidden) hiddenCount++;
         }
 
-        com.google.android.material.chip.Chip chipAll = findViewById(R.id.chip_all);
+        Chip chipAll = findViewById(R.id.chip_all);
         if (chipAll != null) chipAll.setText(getString(R.string.app_ops_chip_all) + " (" + allCount + ")");
 
-        com.google.android.material.chip.Chip chipUser = findViewById(R.id.chip_user);
+        Chip chipUser = findViewById(R.id.chip_user);
         if (chipUser != null) chipUser.setText(getString(R.string.app_ops_chip_user) + " (" + userCount + ")");
 
-        com.google.android.material.chip.Chip chipSystem = findViewById(R.id.chip_system);
+        Chip chipSystem = findViewById(R.id.chip_system);
         if (chipSystem != null) chipSystem.setText(getString(R.string.app_ops_chip_system) + " (" + systemCount + ")");
 
-        com.google.android.material.chip.Chip chipDisabled = findViewById(R.id.chip_disabled);
+        Chip chipDisabled = findViewById(R.id.chip_disabled);
         if (chipDisabled != null) chipDisabled.setText(getString(R.string.app_ops_chip_disabled) + " (" + disabledCount + ")");
 
-        com.google.android.material.chip.Chip chipHidden = findViewById(R.id.chip_hidden);
+        Chip chipHidden = findViewById(R.id.chip_hidden);
         if (chipHidden != null) chipHidden.setText(getString(R.string.app_ops_chip_hidden) + " (" + hiddenCount + ")");
     }
 

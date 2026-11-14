@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,7 +51,7 @@ public final class RemoteFilesArrayAdapter extends RecyclerView.Adapter<RemoteFi
     public void goUp() {
         RemoteFile parent = folder.getParentFile();
         if (parent != null) activity.loadFolderInPane(parent, pane1, true);
-        else activity.loadFolderInPane(android.os.Environment.getExternalStorageDirectory(), pane1, true);
+        else activity.loadFolderInPane(Environment.getExternalStorageDirectory(), pane1, true);
     }
 
     @Override public int getItemCount() { return files.length + 1; }

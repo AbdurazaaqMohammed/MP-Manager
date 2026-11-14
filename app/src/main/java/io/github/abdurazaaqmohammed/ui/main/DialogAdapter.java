@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
 
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
@@ -102,13 +90,13 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
         holder.itemView.setEnabled(!disabled);
         holder.itemView.setOnClickListener(disabled ? null : v -> {
             if (listener == null) return;
-            io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.ACTION);
+            Haptics.perform(v, Haptics.Event.ACTION);
             int pos = holder.getBindingAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onItemClick(pos);
         });
         if (longClickListener != null && !disabled) {
             holder.itemView.setOnLongClickListener(v -> {
-                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
+                Haptics.perform(v, Haptics.Event.LONG_PRESS);
                 int pos = holder.getBindingAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION) longClickListener.onItemLongClick(pos);
                 return true;

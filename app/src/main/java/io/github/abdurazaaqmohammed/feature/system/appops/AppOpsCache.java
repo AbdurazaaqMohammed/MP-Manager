@@ -1,9 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.system.appops;
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.LruCache;
 

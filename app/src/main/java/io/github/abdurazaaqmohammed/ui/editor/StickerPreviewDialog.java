@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
-import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;

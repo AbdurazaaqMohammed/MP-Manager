@@ -1,10 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
-import io.github.abdurazaaqmohammed.util.net.DnsManager;
-
-import io.github.abdurazaaqmohammed.util.net.DnsManager;
-import io.github.abdurazaaqmohammed.util.net.WifiPasswordUtil;
-
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;

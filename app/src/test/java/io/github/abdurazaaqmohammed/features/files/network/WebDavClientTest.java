@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files.network;
 
+import okhttp3.internal.platform.Platform;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -25,15 +26,15 @@ public class WebDavClientTest {
     private MockWebServer server;
     private WebDavClient client;
     private String address;
-    private okhttp3.internal.platform.Platform platform;
+    private Platform platform;
     // null = directory, non-null = file bytes
     private final Map<String, byte[]> resources = new LinkedHashMap<>();
 
     @Before public void start() throws Exception {
         // The suite has an Android Build stub for APK tests. Real HTTP tests
         // must explicitly use the JVM platform, not Android's unmocked TLS APIs.
-        platform = okhttp3.internal.platform.Platform.Companion.get();
-        okhttp3.internal.platform.Platform.Companion.resetForTests(new okhttp3.internal.platform.Platform());
+        platform = Platform.Companion.get();
+        Platform.Companion.resetForTests(new Platform());
         resources.put("", null);
         server = new MockWebServer();
         server.setDispatcher(new Dispatcher() {
@@ -47,7 +48,7 @@ public class WebDavClientTest {
     @After public void stop() throws IOException {
         if (client != null) client.close();
         if (server != null) server.shutdown();
-        okhttp3.internal.platform.Platform.Companion.resetForTests(platform);
+        Platform.Companion.resetForTests(platform);
     }
 
     private MockResponse serve(RecordedRequest request) {

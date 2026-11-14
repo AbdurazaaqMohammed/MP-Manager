@@ -9,9 +9,6 @@ package io.github.abdurazaaqmohammed.privilege.backend;
 
 import android.content.Context;
 
-import java.io.IOException;
-import java.util.List;
-
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.internal.RootSessions;

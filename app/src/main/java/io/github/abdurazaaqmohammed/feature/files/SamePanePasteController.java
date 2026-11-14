@@ -10,6 +10,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -129,7 +130,7 @@ public class SamePanePasteController {
         }
         List<Object> payload = items;
         cancel();
-        io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter sourceAdapter =
+        MainFilesArrayAdapter sourceAdapter =
                 activity.paneFilesAdapter(pane1);
         if (sourceAdapter == null) return;
         if (move) sourceAdapter.getFileOperations().moveItemsToFolder(payload, dest);

@@ -1,22 +1,16 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
 
 
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ProviderInfo;
+import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -24,6 +18,9 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.util.Log;
+
+import org.xmlpull.v1.XmlPullParser;
 
 import java.io.File;
 import java.util.ArrayDeque;
@@ -412,16 +409,16 @@ public final class SharedPathResolver {
         String auth = uri.getAuthority();
         if (auth == null || auth.isEmpty()) return null;
         String pkg = sourcePackage;
-        android.content.pm.ProviderInfo provider = null;
+        ProviderInfo provider = null;
         try {
-            android.content.pm.PackageManager pm = ctx.getPackageManager();
+            PackageManager pm = ctx.getPackageManager();
             if (pkg != null && !pkg.isEmpty()) {
                 provider = findProviderForAuthority(pm, pkg, auth);
             }
             if (provider == null) {
                 // Unknown source: scan installed providers for the authority.
-                for (android.content.pm.ProviderInfo pi : pm.queryContentProviders(null, 0,
-                        android.content.pm.PackageManager.GET_META_DATA)) {
+                for (ProviderInfo pi : pm.queryContentProviders(null, 0,
+                        PackageManager.GET_META_DATA)) {
                     if (pi != null && auth.equals(pi.authority)) {
                         provider = pi;
                         break;
@@ -453,7 +450,7 @@ public final class SharedPathResolver {
         String rest = path.substring(slash + 1);
 
         try {
-            android.content.res.Resources res = ctx.getPackageManager()
+            Resources res = ctx.getPackageManager()
                     .getResourcesForApplication(provider.packageName);
             List<PathEntry> entries = parseProviderPaths(res.getXml(xmlId));
             for (PathEntry entry : entries) {
@@ -483,14 +480,14 @@ public final class SharedPathResolver {
             "androidx.core.content.FileProvider.FILE_PROVIDER_PATHS",
     };
 
-    private static android.content.pm.ProviderInfo findProviderForAuthority(
-            android.content.pm.PackageManager pm, String pkg, String authority) {
+    private static ProviderInfo findProviderForAuthority(
+            PackageManager pm, String pkg, String authority) {
         try {
-            android.content.pm.PackageInfo pi = pm.getPackageInfo(pkg,
-                    android.content.pm.PackageManager.GET_PROVIDERS
-                            | android.content.pm.PackageManager.GET_META_DATA);
+            PackageInfo pi = pm.getPackageInfo(pkg,
+                    PackageManager.GET_PROVIDERS
+                            | PackageManager.GET_META_DATA);
             if (pi != null && pi.providers != null) {
-                for (android.content.pm.ProviderInfo p : pi.providers) {
+                for (ProviderInfo p : pi.providers) {
                     if (p != null && authority.equals(p.authority)) return p;
                 }
             }
@@ -507,13 +504,13 @@ public final class SharedPathResolver {
         String path;
     }
 
-    private static List<PathEntry> parseProviderPaths(android.content.res.XmlResourceParser parser)
+    private static List<PathEntry> parseProviderPaths(XmlResourceParser parser)
             throws Exception {
         List<PathEntry> entries = new ArrayList<>();
         try {
             int event = parser.getEventType();
-            while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
-                if (event == org.xmlpull.v1.XmlPullParser.START_TAG) {
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG) {
                     PathEntry entry = new PathEntry();
                     entry.tag = parser.getName();
                     for (int i = 0; i < parser.getAttributeCount(); i++) {
@@ -586,7 +583,7 @@ public final class SharedPathResolver {
 
     private static String dataDirOf(Context ctx, String pkg) {
         try {
-            android.content.pm.ApplicationInfo info = ctx.getPackageManager()
+            ApplicationInfo info = ctx.getPackageManager()
                     .getApplicationInfo(pkg, 0);
             if (info != null && info.dataDir != null && !info.dataDir.isEmpty()) return info.dataDir;
         } catch (Exception ignored) {
@@ -595,7 +592,7 @@ public final class SharedPathResolver {
     }
 
     private static void log(String message) {
-        android.util.Log.d("SharedPathResolver", message);
+        Log.d("SharedPathResolver", message);
     }
 
     private static String packageFromAuthority(String authority) {

@@ -6,6 +6,7 @@ import com.lilincpp.github.libezftp.EZFtpFile;
 import com.lilincpp.github.libezftp.IEZFtpClient;
 
 import java.io.File;
+import java.net.URI;
 
 public class FTPFileWrapper extends File {
 
@@ -37,7 +38,7 @@ public class FTPFileWrapper extends File {
     public String connectionAddress() { return address; }
     public String remoteParent() { return currentPath; }
     public String displayPath() {
-        try { return address + new java.net.URI(null, null, remotePath(), null).toASCIIString(); }
+        try { return address + new URI(null, null, remotePath(), null).toASCIIString(); }
         catch (Exception ignored) { return address + remotePath(); }
     }
 

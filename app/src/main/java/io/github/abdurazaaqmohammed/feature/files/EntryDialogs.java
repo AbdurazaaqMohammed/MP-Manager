@@ -1,33 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.util.io.RenameHelper;
-import io.github.abdurazaaqmohammed.util.io.RenameUtil;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -56,6 +29,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
+import java.io.IOException;
 import java.util.Collections;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -73,7 +47,6 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.CopyConflictDialog;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
@@ -96,9 +69,7 @@ import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -488,11 +459,11 @@ public class EntryDialogs {
     }
 
     private void deletePlainFiles(ProgressManager pm, List<File> files, boolean toBin,
-                                  boolean elevated, CharSequence names) throws java.io.IOException {
+                                  boolean elevated, CharSequence names) throws IOException {
         if (files.isEmpty()) return;
         for (File file : files) {
             if (!(file instanceof SafFile) && RootManager.isPathBlocked(file.getAbsolutePath()))
-                throw new java.io.IOException("Blocked: refusing to delete critical path: " + file.getAbsolutePath());
+                throw new IOException("Blocked: refusing to delete critical path: " + file.getAbsolutePath());
         }
         pm.setText(context.getString(R.string.calculating));
         pm.setFile(files.get(0));
@@ -505,7 +476,7 @@ public class EntryDialogs {
         for (File file : files) paths.add(file.getAbsolutePath());
         boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
         List<DirectoryStats> batch = allLocal && backend == PrivilegeManager.Backend.ROOT
-                ? io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
+                ? NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
         for (int i = 0; i < files.size(); i++) {
             pm.control().checkpoint();
             File file = files.get(i);
@@ -529,7 +500,7 @@ public class EntryDialogs {
                 pm.setPaths(file.getAbsolutePath(), null);
                 if (!RecycleBin.moveToBin(context, file)) {
                     // Bin failure is not consent to permanently delete a file.
-                    throw new java.io.IOException(context.getString(R.string.recycle_bin_move_failed, file.getName()));
+                    throw new IOException(context.getString(R.string.recycle_bin_move_failed, file.getName()));
                 }
                 removed[0] += shares[i];
                 if (total > 0) pm.setProgress(Math.min(removed[0], total), total);
@@ -544,7 +515,7 @@ public class EntryDialogs {
                 if (file instanceof SafFile saf) {
                     SafFs.delete(saf);
                 } else if (!FileUtils.deleteTree(file, countingDeleter(pm, removed, total))) {
-                    throw new java.io.IOException(context.getString(R.string.delete_failed, file.getName()));
+                    throw new IOException(context.getString(R.string.delete_failed, file.getName()));
                 }
             }
         }
@@ -734,7 +705,7 @@ public class EntryDialogs {
         if (targets.isEmpty()) return;
         CharSequence base = target.getText();
         target.setText(base + "\n" + context.rss.getString(R.string.delete_size_calc));
-        io.github.abdurazaaqmohammed.util.io.TransferControl scanControl = new io.github.abdurazaaqmohammed.util.io.TransferControl();
+        TransferControl scanControl = new TransferControl();
         shown.setOnDismissListener(d -> scanControl.cancel());
         new Thread(() -> {
             try {
@@ -745,7 +716,7 @@ public class EntryDialogs {
                 for (File t : targets) paths.add(t.getAbsolutePath());
                 boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
                 List<DirectoryStats> batch = local && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT
-                        ? io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
+                        ? NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
                 boolean complete = true;
                 for (int i = 0; i < targets.size(); i++) {
                     scanControl.checkpoint();

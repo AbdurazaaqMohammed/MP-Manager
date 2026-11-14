@@ -1,20 +1,14 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex;
 
 import static android.view.View.GONE;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.text.format.Formatter;
@@ -38,6 +32,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
@@ -48,12 +43,12 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
     public final APKExtractorActivity apkExtractorActivity;
     public final List<AppInfo> appInfoList;
     public final List<AppInfo> filteredAppInfoList;
-    private java.util.Map<String, io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Entry> extractedIndex;
+    private Map<String, ExtractedApksIndex.Entry> extractedIndex;
 
     private Comparator<AppInfo> currentComparator;
     private AppInfoFilter filter;
 
-    public void setExtractedIndex(java.util.Map<String, io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Entry> index) {
+    public void setExtractedIndex(Map<String, ExtractedApksIndex.Entry> index) {
         this.extractedIndex = index;
         notifyDataSetChanged();
     }
@@ -220,25 +215,25 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         }
 
         // Corner status badge indicating extracted state
-        io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match match =
-                io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.findMatch(extractedIndex, appInfo);
+        ExtractedApksIndex.Match match =
+                ExtractedApksIndex.findMatch(extractedIndex, appInfo);
         if (match != null && match.file() != null && match.file().exists()) {
             holder.cornerBadgeView.setVisibility(View.VISIBLE);
             int color;
-            if (match.status() == io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match.STATUS_SAME) {
+            if (match.status() == ExtractedApksIndex.Match.STATUS_SAME) {
                 color = 0xFF4CAF50; // Green (identical version)
-            } else if (match.status() == io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex.Match.STATUS_NEWER) {
+            } else if (match.status() == ExtractedApksIndex.Match.STATUS_NEWER) {
                 color = 0xFFFFC107; // Yellow (extracted is newer)
             } else {
                 color = 0xFFF44336; // Red (extracted is older)
             }
-            holder.cornerBadgeView.setColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN);
+            holder.cornerBadgeView.setColorFilter(color, PorterDuff.Mode.SRC_IN);
             final File targetFile = match.file();
             holder.cornerBadgeView.setOnClickListener(v -> {
-                android.content.Intent result = new android.content.Intent();
+                Intent result = new Intent();
                 result.putExtra("dirToLoad", targetFile.getParent());
                 result.putExtra("highlightName", targetFile.getName());
-                apkExtractorActivity.setResult(android.app.Activity.RESULT_OK, result);
+                apkExtractorActivity.setResult(Activity.RESULT_OK, result);
                 apkExtractorActivity.finish();
             });
         } else {

@@ -2,19 +2,6 @@ package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 
 import android.app.Activity;

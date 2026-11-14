@@ -19,6 +19,9 @@ import androidx.core.graphics.drawable.IconCompat;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
@@ -34,9 +37,9 @@ public final class BookmarkShortcuts {
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(path.getBytes(StandardCharsets.UTF_8));
             StringBuilder id = new StringBuilder("bookmark_");
-            for (byte b : hash) id.append(String.format(java.util.Locale.ROOT, "%02x", b & 255));
+            for (byte b : hash) id.append(String.format(Locale.ROOT, "%02x", b & 255));
             return id.toString();
-        } catch (java.security.NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
+        } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
     }
 
     public static Intent intent(Context context, File file, boolean directory) {
@@ -56,7 +59,7 @@ public final class BookmarkShortcuts {
         if (launcher) return ShortcutManagerCompat.requestPinShortcut(context, info, null);
         // addDynamicShortcuts fails cleanly at the launcher's limit; never remove
         // unrelated tool/DNS shortcuts to make room for a bookmark.
-        return ShortcutManagerCompat.addDynamicShortcuts(context, java.util.Collections.singletonList(info));
+        return ShortcutManagerCompat.addDynamicShortcuts(context, Collections.singletonList(info));
     }
 
     public static Bitmap render(Context context, FileIconSpec spec, int foreground, int background,

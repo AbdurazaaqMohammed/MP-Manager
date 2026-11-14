@@ -1,16 +1,7 @@
 package io.github.abdurazaaqmohammed.data.prefs;
 
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
+import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
 
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
@@ -19,6 +10,8 @@ import android.content.Context;
 import androidx.preference.PreferenceManager;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,16 +21,16 @@ public final class FolderPins {
     private FolderPins() {}
 
     public static String key(File file) {
-        if (file instanceof io.github.abdurazaaqmohammed.feature.files.network.RemoteFile remote)
+        if (file instanceof RemoteFile remote)
             return remote.displayPath();
-        if (file instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper ftp)
+        if (file instanceof FTPFileWrapper ftp)
             return ftp.displayPath();
         return SafFs.isSaf(file) ? file.getPath() : file.getAbsolutePath();
     }
 
     public static Set<String> load(Context context) {
         return new HashSet<>(PreferenceManager.getDefaultSharedPreferences(context)
-                .getStringSet(KEY, java.util.Collections.emptySet()));
+                .getStringSet(KEY, Collections.emptySet()));
     }
 
     public static boolean isPinned(Context context, File file) { return load(context).contains(key(file)); }
@@ -58,7 +51,7 @@ public final class FolderPins {
         // O(n log n) times when opening a very large directory.
         Set<File> pinned = new HashSet<>();
         for (File file : files) if (file != null && file.isDirectory() && pins.contains(key(file))) pinned.add(file);
-        Arrays.sort(files, java.util.Comparator.comparingInt(file ->
+        Arrays.sort(files, Comparator.comparingInt(file ->
                 pinned.contains(file) ? 0 : 1));
     }
 }

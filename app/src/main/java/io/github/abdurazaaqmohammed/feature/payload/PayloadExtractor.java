@@ -1,30 +1,15 @@
 package io.github.abdurazaaqmohammed.feature.payload;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.tukaani.xz.XZInputStream;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.util.List;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
@@ -118,7 +103,7 @@ public final class PayloadExtractor {
 
     private static byte[] readAllBytes(InputStream is) throws IOException {
         byte[] buf = new byte[64 * 1024];
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int r;
         while ((r = is.read(buf)) != -1) {
             baos.write(buf, 0, r);

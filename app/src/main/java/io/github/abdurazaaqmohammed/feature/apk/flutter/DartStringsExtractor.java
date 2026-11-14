@@ -1,25 +1,10 @@
 package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +13,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
@@ -133,7 +117,7 @@ public final class DartStringsExtractor {
         for (DartStringItem item : items) {
             sb.append("[").append(item.category).append("] ").append(item.text).append("\n");
         }
-        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile)) {
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
             fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             fos.flush();
         }

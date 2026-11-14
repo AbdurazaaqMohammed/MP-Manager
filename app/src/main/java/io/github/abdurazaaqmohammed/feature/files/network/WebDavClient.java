@@ -1,13 +1,17 @@
 package io.github.abdurazaaqmohammed.feature.files.network;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,7 +21,9 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import okhttp3.Credentials;
 import okhttp3.HttpUrl;
@@ -51,7 +57,7 @@ public final class WebDavClient implements RemoteClient {
         root = parsed.newBuilder().encodedPath(parsed.encodedPath().endsWith("/")
                 ? parsed.encodedPath() : parsed.encodedPath() + "/").build();
         authorization = username.isEmpty() ? null : Credentials.basic(username, password,
-                java.nio.charset.StandardCharsets.UTF_8);
+                StandardCharsets.UTF_8);
         // Redirects are handled below, confined to this origin and collection.
         http = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS).writeTimeout(60, TimeUnit.SECONDS)
@@ -139,7 +145,7 @@ public final class WebDavClient implements RemoteClient {
     /** Namespace-aware and entity-safe; hrefs must remain inside this connection's root. */
     List<RemoteEntry> parse(InputStream input, HttpUrl requested) throws IOException {
         try {
-            org.w3c.dom.Document document = parseDocument(input);
+            Document document = parseDocument(input);
             NodeList responses = document.getElementsByTagNameNS(DAV, "response");
             List<RemoteEntry> entries = new ArrayList<>();
             Set<String> seen = new HashSet<>();
@@ -179,7 +185,7 @@ public final class WebDavClient implements RemoteClient {
                             SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
                             format.setTimeZone(TimeZone.getTimeZone("GMT"));
                             modified = format.parse(date).getTime();
-                        } catch (java.text.ParseException ignored) {}
+                        } catch (ParseException ignored) {}
                     }
                 }
                 if (readable && seen.add(path)) entries.add(new RemoteEntry(path, directory, size, modified));
@@ -194,7 +200,7 @@ public final class WebDavClient implements RemoteClient {
         return list.getLength() == 0 ? "" : list.item(0).getTextContent().trim();
     }
 
-    private static org.w3c.dom.Document parseDocument(InputStream input) throws Exception {
+    private static Document parseDocument(InputStream input) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         factory.setExpandEntityReferences(false);
@@ -203,11 +209,11 @@ public final class WebDavClient implements RemoteClient {
                 "http://xml.org/sax/features/external-general-entities",
                 "http://xml.org/sax/features/external-parameter-entities"}) {
             try { factory.setFeature(feature, feature.contains("disallow-doctype")); }
-            catch (javax.xml.parsers.ParserConfigurationException ignored) {}
+            catch (ParserConfigurationException ignored) {}
         }
-        javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
+        DocumentBuilder builder = factory.newDocumentBuilder();
         builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
-        org.w3c.dom.Document document = builder.parse(input);
+        Document document = builder.parse(input);
         if (document.getDoctype() != null) throw new IOException("WebDAV XML must not contain a DTD");
         return document;
     }
@@ -306,7 +312,7 @@ public final class WebDavClient implements RemoteClient {
         byte[] buffer = new byte[65536];
         int n;
         while ((n = source.read(buffer)) != -1) {
-            if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Transfer cancelled");
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Transfer cancelled");
             destination.write(buffer, 0, n);
         }
     }

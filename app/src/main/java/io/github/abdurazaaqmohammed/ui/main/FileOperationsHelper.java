@@ -1,31 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
@@ -316,7 +293,7 @@ public class FileOperationsHelper {
 
         Map<String, FileUtils.Measure> byPath = new HashMap<>();
         if (!paths.isEmpty() && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.scan(context, paths);
+            FileUtils.MeasureSet nativeTotals = NativeRootManager.scan(context, paths);
             if (nativeTotals != null) {
                 for (int i = 0; i < paths.size(); i++) byPath.put(paths.get(i), nativeTotals.each.get(i));
                 return new MeasureInfo(nativeTotals.total, byPath);

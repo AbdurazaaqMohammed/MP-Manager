@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.files.network;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
 
 import okhttp3.HttpUrl;
 
@@ -45,7 +48,7 @@ public final class NetworkProfile {
         return share;
     }
 
-    public RemoteClient connect() throws java.io.IOException {
+    public RemoteClient connect() throws IOException {
         validate();
         if (protocol.equals("webdav")) return new WebDavClient(address, username, password);
         URI uri = smbUri();
@@ -63,8 +66,8 @@ public final class NetworkProfile {
         }
         URI uri = smbUri();
         try {
-            return new URI("smb", null, uri.getHost().toLowerCase(java.util.Locale.ROOT),
+            return new URI("smb", null, uri.getHost().toLowerCase(Locale.ROOT),
                     uri.getPort() == 445 ? -1 : uri.getPort(), "/" + share() + "/", null, null).toASCIIString();
-        } catch (java.net.URISyntaxException e) { throw new IllegalArgumentException("Invalid SMB URL", e); }
+        } catch (URISyntaxException e) { throw new IllegalArgumentException("Invalid SMB URL", e); }
     }
 }

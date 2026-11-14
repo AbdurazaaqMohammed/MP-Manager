@@ -6,22 +6,47 @@ import android.app.Activity;
 import android.app.Application;
 import android.app.Instrumentation;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.ParcelFileDescriptor;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inspector.WindowInspector;
 import android.widget.TextView;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 import androidx.test.platform.app.InstrumentationRegistry;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
+import io.github.abdurazaaqmohammed.feature.dumper.PartitionItem;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity;
@@ -33,6 +58,8 @@ import modder.hub.dexeditor.activity.DexEditorActivity;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.dexlib2.writer.io.FileDataStore;
+import com.google.android.material.color.MaterialColors;
+
 import static org.junit.Assert.*;
 
 /** Runs against real Android task routing and the shipped Sora AAR, not mocks. */
@@ -59,14 +86,14 @@ public class EditorRegressionTest {
         application.registerActivityLifecycleCallbacks(callbacks);
         // The existing rooted AVD may have an interactive su manager. UI tests
         // use local fixtures and must not block startup on its grant dialog.
-        androidx.preference.PreferenceManager.getDefaultSharedPreferences(application).edit()
+        PreferenceManager.getDefaultSharedPreferences(application).edit()
                 .putString("working_mode", "non_root")
                 .putString("su_command", "/system/bin/false")
                 .putBoolean("startup_request_root", false)
                 .putBoolean("root_file_ops", false).commit();
         try (ParcelFileDescriptor descriptor = instrumentation.getUiAutomation().executeShellCommand(
                 "appops set " + application.getPackageName() + " MANAGE_EXTERNAL_STORAGE allow")) {
-            java.io.InputStream input = new ParcelFileDescriptor.AutoCloseInputStream(descriptor);
+            InputStream input = new ParcelFileDescriptor.AutoCloseInputStream(descriptor);
             byte[] buffer = new byte[4096];
             while (input.read(buffer) != -1) { /* wait for appops to finish */ }
         }
@@ -144,13 +171,13 @@ public class EditorRegressionTest {
         minimize(b);
         assertNotEquals(a.getTaskId(), b.getTaskId());
         restore(a);
-        assertEquals(0xA2, ((java.util.Map<?, ?>) field(a, "mods")).get(0L));
+        assertEquals(0xA2, ((Map<?, ?>) field(a, "mods")).get(0L));
         minimize(a);
         restore(b);
-        assertEquals(0xB6, ((java.util.Map<?, ?>) field(b, "mods")).get(0L));
+        assertEquals(0xB6, ((Map<?, ?>) field(b, "mods")).get(0L));
         minimize(b);
         restore(a);
-        assertEquals(0xA2, ((java.util.Map<?, ?>) field(a, "mods")).get(0L));
+        assertEquals(0xA2, ((Map<?, ?>) field(a, "mods")).get(0L));
     }
 
     private UnifiedEditorFragment loaded(TextEditorActivity activity, String expected) throws Exception {
@@ -186,14 +213,14 @@ public class EditorRegressionTest {
 
     @Test public void soraStreamingRoundTripPreservesChunkBoundaryCrLfAndSnapshots() throws Exception {
         char[] characters = new char[16383];
-        java.util.Arrays.fill(characters, 'x');
+        Arrays.fill(characters, 'x');
         String input = new String(characters) + "\r\n" + "y\r" + "z\nend";
-        Content content = ContentIO.createFrom(new java.io.StringReader(input));
+        Content content = ContentIO.createFrom(new StringReader(input));
         assertEquals(input, content.toString());
         Content snapshot = content.copyTextShallow();
         content.insert(0, 0, "changed");
         assertEquals(input, snapshot.toString());
-        java.io.StringWriter writer = new java.io.StringWriter();
+        StringWriter writer = new StringWriter();
         ContentIO.writeTo(snapshot, writer, false);
         assertEquals(input, writer.toString());
     }
@@ -204,8 +231,8 @@ public class EditorRegressionTest {
         Activity activity = open(HexEditorActivity.class, file);
         assertEquals(true, field(activity, "readOnly"));
         nibble(activity, 15);
-        assertTrue(((java.util.Map<?, ?>) field(activity, "mods")).isEmpty());
-        assertEquals(android.view.View.GONE, activity.findViewById(R.id.hexKeypad).getVisibility());
+        assertTrue(((Map<?, ?>) field(activity, "mods")).isEmpty());
+        assertEquals(View.GONE, activity.findViewById(R.id.hexKeypad).getVisibility());
     }
 
     private Object call(Activity activity, String name, Class<?>[] types, Object... args) throws Exception {
@@ -262,10 +289,10 @@ public class EditorRegressionTest {
         instrumentation.waitForIdleSync();
     }
 
-    private TextView findText(android.view.View view, String label) {
+    private TextView findText(View view, String label) {
         if (view instanceof TextView && label.contentEquals(((TextView) view).getText())) return (TextView) view;
-        if (view instanceof android.view.ViewGroup) {
-            android.view.ViewGroup group = (android.view.ViewGroup) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
                 TextView found = findText(group.getChildAt(i), label);
                 if (found != null) return found;
@@ -277,7 +304,7 @@ public class EditorRegressionTest {
     @Test public void largeTextWarningHasWorkingOpenAnywayAndLoadsReadOnlyWithoutCopy() throws Exception {
         File file = file(".txt", new byte[0]);
         byte[] line = new byte[256];
-        java.util.Arrays.fill(line, (byte) 'x');
+        Arrays.fill(line, (byte) 'x');
         line[255] = '\n';
         try (FileOutputStream output = new FileOutputStream(file)) {
             for (int i = 0; i < 49152; i++) output.write(line); // 12 MiB
@@ -288,7 +315,7 @@ public class EditorRegressionTest {
         long deadline = System.currentTimeMillis() + 20000;
         while (button.get() == null && System.currentTimeMillis() < deadline) {
             instrumentation.runOnMainSync(() -> {
-                for (android.view.View root : android.view.inspector.WindowInspector.getGlobalWindowViews()) {
+                for (View root : WindowInspector.getGlobalWindowViews()) {
                     TextView found = findText(root, label);
                     if (found != null) button.set(found);
                 }
@@ -317,13 +344,13 @@ public class EditorRegressionTest {
 
     @Test public void editorTasksPreserveActivityResultRegistryCallbacks() throws Exception {
         File file = file(".txt", "result".getBytes(StandardCharsets.UTF_8));
-        AtomicReference<androidx.activity.result.ActivityResult> result = new AtomicReference<>();
-        AtomicReference<androidx.activity.result.ActivityResultLauncher<Intent>> launcher = new AtomicReference<>();
-        java.util.concurrent.CountDownLatch delivered = new java.util.concurrent.CountDownLatch(1);
+        AtomicReference<ActivityResult> result = new AtomicReference<>();
+        AtomicReference<ActivityResultLauncher<Intent>> launcher = new AtomicReference<>();
+        CountDownLatch delivered = new CountDownLatch(1);
         Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(TextEditorActivity.class.getName(), null, false);
         instrumentation.runOnMainSync(() -> {
             launcher.set(main.getActivityResultRegistry().register("editor-regression-result",
-                    new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(), value -> {
+                    new ActivityResultContracts.StartActivityForResult(), value -> {
                         result.set(value);
                         delivered.countDown();
                     }));
@@ -338,54 +365,54 @@ public class EditorRegressionTest {
             editor.setEditorResult(Activity.RESULT_OK, new Intent().putExtra("sentinel", "correct-editor"));
             editor.finish();
         });
-        assertTrue(delivered.await(15, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(delivered.await(15, TimeUnit.SECONDS));
         assertEquals(Activity.RESULT_OK, result.get().getResultCode());
         assertEquals("correct-editor", result.get().getData().getStringExtra("sentinel"));
         instrumentation.runOnMainSync(() -> launcher.get().unregister());
     }
 
     @Test public void partitionBrowserUsesLightThemeAndArabicResources() throws Exception {
-        android.content.res.Resources resources = main.getResources();
-        android.content.res.Configuration original = new android.content.res.Configuration(resources.getConfiguration());
-        android.content.res.Resources.Theme originalTheme = resources.newTheme();
+        Resources resources = main.getResources();
+        Configuration original = new Configuration(resources.getConfiguration());
+        Resources.Theme originalTheme = resources.newTheme();
         originalTheme.setTo(main.getTheme());
-        Method browse = io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog.class.getDeclaredMethod(
-                "browse", androidx.appcompat.app.AppCompatActivity.class, List.class, String.class);
+        Method browse = PartitionDumperDialog.class.getDeclaredMethod(
+                "browse", AppCompatActivity.class, List.class, String.class);
         browse.setAccessible(true);
         var items = List.of(
-                new io.github.abdurazaaqmohammed.feature.dumper.PartitionItem("boot_a", "boot", "", "/dev/block/by-name/boot_a", "sda1", 64L * 1024 * 1024,
-                        io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Slot.A, true, false, "boot_a.img", io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Group.COMMON),
-                new io.github.abdurazaaqmohammed.feature.dumper.PartitionItem("boot_b", "boot", "", "/dev/block/by-name/boot_b", "sda2", 64L * 1024 * 1024,
-                        io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Slot.B, false, false, "boot_b.img", io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Group.COMMON));
-        File screenshotDirectory = new File(android.os.Environment.getExternalStoragePublicDirectory(
-                android.os.Environment.DIRECTORY_DOWNLOADS), "mp-editor-regression-" + java.util.UUID.randomUUID());
+                new PartitionItem("boot_a", "boot", "", "/dev/block/by-name/boot_a", "sda1", 64L * 1024 * 1024,
+                        PartitionItem.Slot.A, true, false, "boot_a.img", PartitionItem.Group.COMMON),
+                new PartitionItem("boot_b", "boot", "", "/dev/block/by-name/boot_b", "sda2", 64L * 1024 * 1024,
+                        PartitionItem.Slot.B, false, false, "boot_b.img", PartitionItem.Group.COMMON));
+        File screenshotDirectory = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "mp-editor-regression-" + UUID.randomUUID());
         screenshotDirectory.mkdirs();
         System.out.println("Partition screenshots: " + screenshotDirectory.getAbsolutePath());
         try {
             for (String language : new String[]{"en", "ar"}) {
-                android.content.res.Configuration config = new android.content.res.Configuration(original);
-                config.setLocale(java.util.Locale.forLanguageTag(language));
+                Configuration config = new Configuration(original);
+                config.setLocale(Locale.forLanguageTag(language));
                 instrumentation.runOnMainSync(() -> {
                     resources.updateConfiguration(config, resources.getDisplayMetrics());
                     main.getTheme().applyStyle(com.google.android.material.R.style.Theme_Material3_Light_NoActionBar, true);
                     try { browse.invoke(null, main, items, "a"); } catch (Exception error) { throw new AssertionError(error); }
                 });
                 instrumentation.waitForIdleSync();
-                android.graphics.Bitmap screenshot = instrumentation.getUiAutomation().takeScreenshot();
+                Bitmap screenshot = instrumentation.getUiAutomation().takeScreenshot();
                 if (screenshot != null) {
                     try (FileOutputStream output = new FileOutputStream(new File(screenshotDirectory, "partition-" + language + ".png"))) {
-                        screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output);
+                        screenshot.compress(Bitmap.CompressFormat.PNG, 100, output);
                     }
                     screenshot.recycle();
                 }
                 instrumentation.runOnMainSync(() -> {
                     boolean titleFound = false;
-                    for (android.view.View root : android.view.inspector.WindowInspector.getGlobalWindowViews()) {
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
                         if (findText(root, main.getString(R.string.partition_dumper_title)) != null) {
                             titleFound = true;
                             TextView title = findText(root, "boot");
                             assertNotNull(title);
-                            assertEquals(com.google.android.material.color.MaterialColors.getColor(main,
+                            assertEquals(MaterialColors.getColor(main,
                                     com.google.android.material.R.attr.colorOnSurface, 0), title.getCurrentTextColor());
                             TextView button = findText(root, main.getString(android.R.string.ok));
                             assertNotNull(button);

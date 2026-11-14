@@ -2,20 +2,7 @@ package io.github.abdurazaaqmohammed.ui.viewer;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
+import android.R;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -44,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -481,7 +469,7 @@ public final class ApkDrawableRenderer {
             if (pkg == null) pkg = guessPackageName(archive);
             Resources.Theme theme = res.newTheme();
             try {
-                theme.applyStyle(android.R.style.Theme_Material_Light, true);
+                theme.applyStyle(R.style.Theme_Material_Light, true);
             } catch (Throwable ignored) {
             }
             if (themeId != 0) {
@@ -509,7 +497,7 @@ public final class ApkDrawableRenderer {
      */
     private static Resources reflectResources(Context context, File apk) {
         try {
-            java.lang.reflect.Constructor<AssetManager> ctor =
+            Constructor<AssetManager> ctor =
                     AssetManager.class.getDeclaredConstructor();
             ctor.setAccessible(true);
             AssetManager assets = ctor.newInstance();

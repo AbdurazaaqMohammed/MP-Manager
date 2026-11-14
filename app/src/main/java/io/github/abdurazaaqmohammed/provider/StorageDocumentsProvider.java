@@ -1,12 +1,5 @@
 package io.github.abdurazaaqmohammed.provider;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-
-
-
-
-
-
 
 import android.content.Context;
 import android.database.Cursor;

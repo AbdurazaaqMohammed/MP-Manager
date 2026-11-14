@@ -1,29 +1,19 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog;
+import io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity;
+import io.github.abdurazaaqmohammed.feature.system.SystemImageEngine;
+import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
+import io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.hash.HashUtil;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
-import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
@@ -58,6 +48,7 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 import android.widget.ScrollView;
@@ -155,7 +146,6 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
@@ -587,9 +577,9 @@ public class FileOpener {
                 Extensions.showMessage(context, R.string.cannot_open_item);
                 return;
             }
-            Intent intent = new Intent(context, io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity.class)
-                    .putExtra(io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
-                    .putExtra(io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
+            Intent intent = new Intent(context, SqliteViewerActivity.class)
+                    .putExtra(SqliteViewerActivity.EXTRA_DB_PATH, readable.getAbsolutePath())
+                    .putExtra(SqliteViewerActivity.EXTRA_ORIGINAL_PATH, file.getAbsolutePath());
             context.startActivity(intent);
         });
     }
@@ -1083,7 +1073,7 @@ public class FileOpener {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialog.setOnShowListener(d -> {
-            android.widget.ListView lv = dialog.getListView();
+            ListView lv = dialog.getListView();
             if (lv != null) {
                 lv.setOnItemLongClickListener((parent, view, position, id) -> {
                     if (position == 1) { // Long press on "ELF Inspector"
@@ -1227,12 +1217,12 @@ public class FileOpener {
             final String infoText = sb.toString();
             context.runOnUiThread(() -> {
                 pm.dismiss();
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                new MaterialAlertDialogBuilder(context)
                         .setTitle("Kernel Info: " + fileName)
                         .setMessage(infoText)
                         .setPositiveButton(android.R.string.ok, null)
                         .setNeutralButton("📋 Copy", (d, w) -> {
-                            android.content.ClipboardManager cm = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                             if (cm != null) {
                                 cm.setPrimaryClip(ClipData.newPlainText("Kernel Info", infoText));
                                 Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
@@ -1268,7 +1258,7 @@ public class FileOpener {
                 context.runOnUiThread(() -> {
                     pm.dismiss();
                     context.refreshPane(true);
-                    android.widget.Toast.makeText(context, "Exported: " + finalExportFile.getName() + " to Download", android.widget.Toast.LENGTH_LONG).show();
+                    Toast.makeText(context, "Exported: " + finalExportFile.getName() + " to Download", Toast.LENGTH_LONG).show();
                 });
             } catch (Exception e) {
                 context.runOnUiThread(() -> {
@@ -1652,7 +1642,7 @@ public class FileOpener {
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.command_shell, (dialog, which) -> {
-                    Intent intent = new Intent(context, io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity.class);
+                    Intent intent = new Intent(context, CommandShellActivity.class);
                     intent.putExtra("script_path", readable.getAbsolutePath());
                     context.startActivity(intent);
                 })
@@ -1812,12 +1802,12 @@ public class FileOpener {
         } else if (isKernelFile(file, fileName)) {
             withReadableCopy(file, readable -> showKernelOptionsDialog(readable, fileName, file));
         } else if (fileName.endsWith(".img") || fileName.endsWith(".iso") || file.getAbsolutePath().startsWith("/dev/block/")) {
-            if (io.github.abdurazaaqmohammed.feature.boot.BootImageEngine.isBootImage(file)) {
-                io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.openBootImage(context, file, pane1);
-            } else if (io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.isSparseImage(file)) {
+            if (BootImageEngine.isBootImage(file)) {
+                BootInspectManager.openBootImage(context, file, pane1);
+            } else if (SystemImageEngine.isSparseImage(file)) {
                 promptUnsparseImage(file, fileName);
-            } else if (io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.isMountableImage(file)) {
-                io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.showImageOptionsDialog(context, this, file, fileName, pane1);
+            } else if (SystemImageMountManager.isMountableImage(file)) {
+                SystemImageMountManager.showImageOptionsDialog(context, this, file, fileName, pane1);
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
@@ -1894,7 +1884,7 @@ public class FileOpener {
                     context.startActivity(intent);
                 });
             } else if (fileName.equals("libapp.so") || fileName.equals("libflutter.so")) {
-                withReadableCopy(file, readable -> io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog.showForLibrary(context, readable, fileName));
+                withReadableCopy(file, readable -> FlutterToolsDialog.showForLibrary(context, readable, fileName));
             } else if (ext.equals(".db") || ext.equals(".sqlite") || ext.equals(".sqlite3") || ext.equals(".db3")) {
                 openSqliteViewer(file);
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
@@ -1909,18 +1899,18 @@ public class FileOpener {
     }
 
     private void promptUnsparseImage(File file, String fileName) {
-        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
-        io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.SparseInfo sInfo =
-                io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.readSparseInfo(file);
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
+        SystemImageEngine.SparseInfo sInfo =
+                SystemImageEngine.readSparseInfo(file);
         long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
         String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
-                io.github.abdurazaaqmohammed.util.text.FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
+                FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
 
         String msg = (isAr
                 ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"
                 : "This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?") + sizeStr;
 
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle(isAr ? "فك ضغط Sparse Image" : "Unsparse Image")
                 .setMessage(msg)
                 .setPositiveButton(isAr ? "📂 فك الضغط" : "📂 Unsparse", (d, w) -> {
@@ -1934,8 +1924,8 @@ public class FileOpener {
 
                     new Thread(() -> {
                         try {
-                            io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.unsparseToFile(file, outRaw,
-                                    new io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.ProgressCallback() {
+                            SystemImageEngine.unsparseToFile(file, outRaw,
+                                    new SystemImageEngine.ProgressCallback() {
                                 @Override
                                 public void onProgress(String message, int percent) {
                                     context.runOnUiThread(() -> {
@@ -1956,9 +1946,9 @@ public class FileOpener {
                                 public void onSuccess(File result) {
                                     context.runOnUiThread(() -> {
                                         pm.dismiss();
-                                        android.widget.Toast.makeText(context,
+                                        Toast.makeText(context,
                                                 (isAr ? "تم فك الضغط بنجاح: " : "Unsparsed successfully: ") + result.getName(),
-                                                android.widget.Toast.LENGTH_LONG).show();
+                                                Toast.LENGTH_LONG).show();
                                         context.reloadCurrentFolder();
                                     });
                                 }

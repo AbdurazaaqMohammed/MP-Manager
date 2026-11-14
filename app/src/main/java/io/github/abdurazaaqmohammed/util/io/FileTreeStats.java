@@ -1,23 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
@@ -34,6 +17,7 @@ import android.system.StructStat;
 
 import java.io.File;
 import java.util.ArrayDeque;
+import java.util.concurrent.TimeUnit;
 
 /** One bounded, cancellable walk for properties and delete totals; never follows symlinks. */
 public final class FileTreeStats {
@@ -45,7 +29,7 @@ public final class FileTreeStats {
             DirectoryStats nativeStats = NativeRootManager.stats(context, root.getAbsolutePath(), control, timeoutMs);
             if (nativeStats != null) return nativeStats;
         }
-        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         ArrayDeque<File> pending = new ArrayDeque<>();
         pending.push(root);
         long files = 0, folders = 0, bytes = 0, hidden = 0, errors = 0;
@@ -60,7 +44,7 @@ public final class FileTreeStats {
                 directory = entry.isDirectory();
                 regular = !directory;
                 length = entry.length();
-            } else if (entry instanceof io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile shizuku) {
+            } else if (entry instanceof ShizukuFile shizuku) {
                 directory = shizuku.isDirectory() && !shizuku.isLink();
                 regular = shizuku.isFile() && !shizuku.isLink();
                 length = shizuku.length();

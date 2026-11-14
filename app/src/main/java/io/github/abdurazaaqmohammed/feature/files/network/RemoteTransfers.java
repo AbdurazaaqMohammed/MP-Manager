@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.List;
+import java.nio.file.Files;
 
 /** Recursive transfers with fail-on-conflict and delete-source-only-after-success semantics. */
 public final class RemoteTransfers {
@@ -27,7 +27,7 @@ public final class RemoteTransfers {
                 }
                 if (entry.size > 0 && temporary.length() != entry.size)
                     throw new IOException("Downloaded size does not match; source may have changed");
-                java.nio.file.Files.move(temporary.toPath(), destination.toPath());
+                Files.move(temporary.toPath(), destination.toPath());
             } finally {
                 //noinspection ResultOfMethodCallIgnored
                 temporary.delete();
@@ -37,7 +37,7 @@ public final class RemoteTransfers {
     }
 
     public static void upload(RemoteClient destination, String parent, File source) throws IOException {
-        if (java.nio.file.Files.isSymbolicLink(source.toPath())) throw new IOException("Symbolic links cannot be uploaded");
+        if (Files.isSymbolicLink(source.toPath())) throw new IOException("Symbolic links cannot be uploaded");
         String path = RemotePath.child(parent, source.getName());
         if (destination.stat(path) != null) throw new IOException("Destination already exists: " + source.getName());
         if (source.isDirectory()) {

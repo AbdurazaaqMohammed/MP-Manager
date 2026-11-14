@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.privilege.impl.ipc;
 
 import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;

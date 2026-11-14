@@ -1,20 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
 import android.content.Context;
 import android.text.TextUtils;
 
@@ -23,6 +8,7 @@ import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.VersionMap;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
@@ -30,17 +16,25 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
-import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
+import com.android.tools.smali.dexlib2.iface.reference.Reference;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
+import com.apk.axml.ResourceTableParser;
+import com.apk.axml.aXMLDecoder;
+import com.apk.axml.aXMLEncoder;
+import com.apk.axml.aXMLUtils.StringPoolChunk;
+import com.apk.axml.serializableItems.ResEntry;
+import com.apk.axml.serializableItems.XMLEntry;
 import com.reandroid.apk.APKLogger;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -58,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
@@ -102,8 +97,8 @@ public final class JiaguUnpackEngine {
 
     /** Manifest entries + resource table decoded from an APK (the app's own axml stack). */
     public static class ManifestData {
-        public List<com.apk.axml.serializableItems.XMLEntry> entries;
-        public List<com.apk.axml.serializableItems.ResEntry> res;
+        public List<XMLEntry> entries;
+        public List<ResEntry> res;
         public String poolEncoding;
     }
 
@@ -116,12 +111,12 @@ public final class JiaguUnpackEngine {
             FileHeader resHeader = zf.getFileHeader("resources.arsc");
             if (resHeader != null) {
                 try (InputStream ris = zf.getInputStream(resHeader)) {
-                    out.res = new com.apk.axml.ResourceTableParser(ris).parse();
+                    out.res = new ResourceTableParser(ris).parse();
                 } catch (Exception ignored) {
                 }
             }
             try (InputStream is = zf.getInputStream(manifestEntry)) {
-                out.entries = new com.apk.axml.aXMLDecoder(is, out.res).decode();
+                out.entries = new aXMLDecoder(is, out.res).decode();
             }
             out.poolEncoding = manifestPoolEncoding(zf, manifestEntry);
             return out;
@@ -147,9 +142,9 @@ public final class JiaguUnpackEngine {
     }
 
     /** @return value of the given attribute (middle tag) inside the manifest entries, or null. */
-    public static String manifestAttr(List<com.apk.axml.serializableItems.XMLEntry> entries, String attr) {
+    public static String manifestAttr(List<XMLEntry> entries, String attr) {
         if (entries == null) return null;
-        for (com.apk.axml.serializableItems.XMLEntry e : entries) {
+        for (XMLEntry e : entries) {
             String tag = e.getTag();
             if (tag != null && tag.contains(attr)) {
                 String v = e.getValue();
@@ -164,7 +159,7 @@ public final class JiaguUnpackEngine {
         try {
             ManifestData md = decodeManifest(apk);
             if (md.entries != null) {
-                for (com.apk.axml.serializableItems.XMLEntry e : md.entries) {
+                for (XMLEntry e : md.entries) {
                     String v = e.getValue();
                     if (v != null && v.trim().equals(STUB_APP_JAVA)) return true;
                 }
@@ -235,7 +230,7 @@ public final class JiaguUnpackEngine {
             List<DexBackedClassDef> classes;
             try {
                 int api = VersionMap.mapDexVersionToApi(
-                        com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem.getVersion(bytes, 0));
+                        HeaderItem.getVersion(bytes, 0));
                 dex = new DexBackedDexFile(Opcodes.forApi(api), bytes);
                 classes = new ArrayList<>(dex.getClasses());
                 // dexlib2 resolves strings lazily - force a full parse now so a
@@ -407,7 +402,7 @@ public final class JiaguUnpackEngine {
      */
     static byte[] rewriteDex(LoadedDex ld, Result out, int[] patched) throws IOException {
         DexPool pool = new DexPool(Opcodes.forApi(
-                VersionMap.mapDexVersionToApi(com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem.getVersion(ld.bytes, 0))));
+                VersionMap.mapDexVersionToApi(HeaderItem.getVersion(ld.bytes, 0))));
         boolean dexModified = false;
         for (DexBackedClassDef classDef : ld.classes) {
             List<Method> direct = new ArrayList<>();
@@ -457,7 +452,7 @@ public final class JiaguUnpackEngine {
                 }
             }
             if (ins instanceof ReferenceInstruction) {
-                com.android.tools.smali.dexlib2.iface.reference.Reference ref =
+                Reference ref =
                         ((ReferenceInstruction) ins).getReference();
                 if (ref instanceof MethodReference mr && STUB_APP_DESCRIPTOR.equals(mr.getDefiningClass())) {
                     addNops(outIns, ins.getCodeUnits());
@@ -510,8 +505,8 @@ public final class JiaguUnpackEngine {
         ManifestData md = decodeManifest(apk);
         if (md.entries == null) throw new IllegalArgumentException("Cannot decode AndroidManifest.xml");
         String stubName = null;
-        com.apk.axml.serializableItems.XMLEntry stubEntry = null;
-        for (com.apk.axml.serializableItems.XMLEntry e : md.entries) {
+        XMLEntry stubEntry = null;
+        for (XMLEntry e : md.entries) {
             String tag = e.getTag();
             if (tag != null && tag.contains("android:name") && !TextUtils.isEmpty(e.getValue())
                     && e.getValue().trim().toLowerCase(Locale.US).contains("stub")) {
@@ -563,9 +558,9 @@ public final class JiaguUnpackEngine {
         int removedProviders = removeInjectedProviders(md.entries, out);
         byte[] manifestBytes;
         try {
-            com.apk.axml.aXMLUtils.StringPoolChunk.Encoding enc = "UTF8".equals(md.poolEncoding)
-                    ? com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UTF8 : com.apk.axml.aXMLUtils.StringPoolChunk.Encoding.UNICODE;
-            manifestBytes = new com.apk.axml.aXMLEncoder().encodeString(md.entries, context, md.res, enc);
+            StringPoolChunk.Encoding enc = "UTF8".equals(md.poolEncoding)
+                    ? StringPoolChunk.Encoding.UTF8 : StringPoolChunk.Encoding.UNICODE;
+            manifestBytes = new aXMLEncoder().encodeString(md.entries, context, md.res, enc);
         } catch (Exception e) {
             throw new IOException("Manifest re-encode failed: " + e.getMessage(), e);
         }
@@ -621,10 +616,10 @@ public final class JiaguUnpackEngine {
         return out;
     }
 
-    private static net.lingala.zip4j.model.ZipParameters params(String name) {
-        net.lingala.zip4j.model.ZipParameters p = new net.lingala.zip4j.model.ZipParameters();
+    private static ZipParameters params(String name) {
+        ZipParameters p = new ZipParameters();
         p.setFileNameInZip(name);
-        p.setCompressionLevel(net.lingala.zip4j.model.enums.CompressionLevel.FASTEST);
+        p.setCompressionLevel(CompressionLevel.FASTEST);
         return p;
     }
 
@@ -635,15 +630,15 @@ public final class JiaguUnpackEngine {
      *
      * @return number of removed providers
      */
-    static int removeInjectedProviders(List<com.apk.axml.serializableItems.XMLEntry> entries, Result out) {
+    static int removeInjectedProviders(List<XMLEntry> entries, Result out) {
         if (entries == null) return 0;
-        java.util.regex.Pattern junkName = java.util.regex.Pattern.compile("^[oO0_.]{8,}$");
-        java.util.regex.Pattern componentName = java.util.regex.Pattern.compile(
+        Pattern junkName = Pattern.compile("^[oO0_.]{8,}$");
+        Pattern componentName = Pattern.compile(
                 "android:name\s*=\s*\"([^\"]+)\"");
         int removed = 0;
         int i = 0;
         while (i < entries.size()) {
-            com.apk.axml.serializableItems.XMLEntry e = entries.get(i);
+            XMLEntry e = entries.get(i);
             String tag = e.getTag() == null ? "" : e.getTag();
             String trimmed = tag.trim();
             boolean component = trimmed.startsWith("<activity") || trimmed.startsWith("<service")
@@ -656,14 +651,14 @@ public final class JiaguUnpackEngine {
             // merged short elements carry the whole tag text in one entry
             boolean merged = trimmed.contains("/>");
             String name = null;
-            java.util.regex.Matcher nm = componentName.matcher(tag);
+            Matcher nm = componentName.matcher(tag);
             if (nm.find()) name = nm.group(1);
             int end = i;
             if (!merged) {
                 String close = "</" + element;
                 int j = i + 1;
                 while (j < entries.size()) {
-                    com.apk.axml.serializableItems.XMLEntry a = entries.get(j);
+                    XMLEntry a = entries.get(j);
                     String atag = a.getTag() == null ? "" : a.getTag();
                     String amid = a.getMiddleTag() == null ? "" : a.getMiddleTag();
                     if (name == null && amid.contains("=\"") && atag.contains("android:name")) {

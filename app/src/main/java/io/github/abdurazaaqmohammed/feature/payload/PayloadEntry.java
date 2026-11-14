@@ -2,23 +2,10 @@ package io.github.abdurazaaqmohammed.feature.payload;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 
@@ -103,7 +90,7 @@ public class PayloadEntry {
     }
 
     public boolean isBootTypeImage() {
-        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        String lower = name.toLowerCase(Locale.ROOT);
         return lower.contains("boot") || lower.contains("recovery");
     }
 }

@@ -1,18 +1,8 @@
 package io.github.abdurazaaqmohammed.util.misc;
 
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
-import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
-import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
-
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
@@ -22,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
 /** Gives each editor its own task without breaking activity-result callers. */
 public final class EditorTasks {
@@ -106,10 +97,10 @@ public final class EditorTasks {
     public static void returnToMain(Activity activity) {
         if (activity == null) return;
         try {
-            android.app.ActivityManager am = (android.app.ActivityManager) activity.getSystemService(android.content.Context.ACTIVITY_SERVICE);
+            ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
             if (am != null) {
-                for (android.app.ActivityManager.AppTask task : am.getAppTasks()) {
-                    android.app.ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                for (ActivityManager.AppTask task : am.getAppTasks()) {
+                    ActivityManager.RecentTaskInfo info = task.getTaskInfo();
                     if (info != null && info.baseIntent != null && info.baseIntent.getComponent() != null) {
                         String cls = info.baseIntent.getComponent().getClassName();
                         if (cls.contains("MainActivity")) {
@@ -123,7 +114,7 @@ public final class EditorTasks {
         }
         // Fallback if AppTask not found
         try {
-            Intent main = new Intent(activity, io.github.abdurazaaqmohammed.ui.main.MainActivity.class);
+            Intent main = new Intent(activity, MainActivity.class);
             main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             activity.startActivity(main);
         } catch (Exception ignored) {

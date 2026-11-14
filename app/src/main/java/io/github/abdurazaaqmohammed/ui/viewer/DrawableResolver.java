@@ -2,23 +2,10 @@ package io.github.abdurazaaqmohammed.ui.viewer;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
@@ -509,7 +496,7 @@ final class DrawableResolver {
             }
         }
         try {
-            android.graphics.Bitmap bm = BitmapFactory.decodeByteArray(data, 0, data.length);
+            Bitmap bm = BitmapFactory.decodeByteArray(data, 0, data.length);
             return bm == null ? null : new BitmapDrawable(context.getResources(), bm);
         } catch (Throwable ignored) {
             return null;

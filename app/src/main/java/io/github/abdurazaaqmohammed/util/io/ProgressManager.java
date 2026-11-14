@@ -1,20 +1,5 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressActionReceiver;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-import io.github.abdurazaaqmohammed.util.misc.AppLogs;
-
 import io.github.abdurazaaqmohammed.util.misc.AppLogs;
 import io.github.abdurazaaqmohammed.util.misc.BackgroundOperationService;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -56,9 +41,11 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
  * Live progress dialog for long running file work (copy, move, delete, extract,
@@ -128,7 +115,7 @@ public class ProgressManager {
 
     private volatile boolean hidden;
     private volatile boolean dismissed;
-    private final java.util.concurrent.atomic.AtomicBoolean dismissRequested = new java.util.concurrent.atomic.AtomicBoolean();
+    private final AtomicBoolean dismissRequested = new AtomicBoolean();
 
     // ---- owned by the ticker (main thread only) ----------------------------
     private long startMs = -1L;
@@ -151,7 +138,7 @@ public class ProgressManager {
         thread.setDaemon(true);
         return thread;
     });
-    private final java.util.concurrent.atomic.AtomicBoolean notificationQueued = new java.util.concurrent.atomic.AtomicBoolean();
+    private final AtomicBoolean notificationQueued = new AtomicBoolean();
 
     private static final List<ProgressManager> activeInstances = new CopyOnWriteArrayList<>();
     /** Every live operation, hidden or not, so an app exit can cancel them all. */
@@ -583,7 +570,7 @@ public class ProgressManager {
         handler.post(() -> {
             if (dismissed) return;
             if (!nmAvailable()) {
-                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(activity, R.string.progress_notifications_needed);
+                Extensions.showMessage(activity, R.string.progress_notifications_needed);
                 return;
             }
             hidden = true;

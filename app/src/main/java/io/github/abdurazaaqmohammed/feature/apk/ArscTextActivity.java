@@ -2,20 +2,10 @@ package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
-import io.github.abdurazaaqmohammed.feature.apk.ArscData;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscData;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscData;
-
-import io.github.abdurazaaqmohammed.feature.apk.ArscData;
-
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -39,8 +29,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.TypeBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
@@ -58,13 +51,13 @@ import modder.hub.dexeditor.views.TextActionWindow;
 public class ArscTextActivity extends BaseActivity {
 
     private record Session(ArscData data, TypeBlock block, String title, String highlight) {}
-    private static final java.util.Map<String, Session> sessions = new java.util.HashMap<>();
+    private static final Map<String, Session> sessions = new HashMap<>();
 
-    static android.content.Intent createIntent(android.content.Context context, ArscData data,
-                                               TypeBlock block, String title, String highlight) {
-        String key = java.util.UUID.randomUUID().toString();
+    static Intent createIntent(Context context, ArscData data,
+                               TypeBlock block, String title, String highlight) {
+        String key = UUID.randomUUID().toString();
         sessions.put(key, new Session(data, block, title, highlight));
-        return new android.content.Intent(context, ArscTextActivity.class).putExtra("arscTextSession", key);
+        return new Intent(context, ArscTextActivity.class).putExtra("arscTextSession", key);
     }
 
     private ArscData data;

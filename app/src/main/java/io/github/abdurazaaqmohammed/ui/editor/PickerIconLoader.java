@@ -1,9 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 
 import android.content.Context;

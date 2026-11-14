@@ -2,15 +2,16 @@ package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
@@ -38,8 +39,10 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.IntConsumer;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -259,7 +262,7 @@ public final class BookmarkShortcutDialog {
                         activity.getString(R.string.shortcut_image_system_picker)}, (d, which) -> {
                     if (which == 0) {
                         FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
-                        properties.root = android.os.Environment.getExternalStorageDirectory();
+                        properties.root = Environment.getExternalStorageDirectory();
                         properties.extensions = new String[]{"png", "jpg", "jpeg", "webp", "gif", "bmp", "heic", "heif"};
                         FilePickerDialog picker = new FilePickerDialog(activity, properties);
                         picker.setTitle(activity.getString(R.string.shortcut_choose_image));
@@ -268,9 +271,9 @@ public final class BookmarkShortcutDialog {
                         });
                         picker.show();
                     } else {
-                        activity.launchExternalFile(new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT)
-                                .setType("image/*").addCategory(android.content.Intent.CATEGORY_OPENABLE), result -> {
-                            if (result.getResultCode() != android.app.Activity.RESULT_OK || result.getData() == null) return;
+                        activity.launchExternalFile(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), result -> {
+                            if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) return;
                             Uri uri = result.getData().getData();
                             if (uri != null && dialog.isShowing()) loadImage(() -> decodeUri(uri), true);
                         });
@@ -313,7 +316,7 @@ public final class BookmarkShortcutDialog {
         });
     }
 
-    private void chooseColor(int initial, java.util.function.IntConsumer apply) {
+    private void chooseColor(int initial, IntConsumer apply) {
         LinearLayout content = column();
         ColorWheelView wheel = new ColorWheelView(activity);
         content.addView(wheel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(240)));
@@ -324,7 +327,7 @@ public final class BookmarkShortcutDialog {
         wheel.setListener(() -> {
             if (syncing[0]) return;
             syncing[0] = true;
-            hex.setText(String.format(java.util.Locale.ROOT, "#%06X", wheel.getColor(255) & 0xffffff));
+            hex.setText(String.format(Locale.ROOT, "#%06X", wheel.getColor(255) & 0xffffff));
             syncing[0] = false;
         });
         hex.addTextChangedListener(new TextWatcher() {

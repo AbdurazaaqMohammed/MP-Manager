@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import android.R;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -41,22 +42,22 @@ final class XmlDrawable extends Drawable {
     private static final Map<String, Integer> STATE_ATTRS = new HashMap<>();
 
     static {
-        STATE_ATTRS.put("state_pressed", android.R.attr.state_pressed);
-        STATE_ATTRS.put("state_focused", android.R.attr.state_focused);
-        STATE_ATTRS.put("state_selected", android.R.attr.state_selected);
-        STATE_ATTRS.put("state_checkable", android.R.attr.state_checkable);
-        STATE_ATTRS.put("state_checked", android.R.attr.state_checked);
-        STATE_ATTRS.put("state_enabled", android.R.attr.state_enabled);
-        STATE_ATTRS.put("state_activated", android.R.attr.state_activated);
-        STATE_ATTRS.put("state_window_focused", android.R.attr.state_window_focused);
-        STATE_ATTRS.put("state_hovered", android.R.attr.state_hovered);
-        STATE_ATTRS.put("state_first", android.R.attr.state_first);
-        STATE_ATTRS.put("state_middle", android.R.attr.state_middle);
-        STATE_ATTRS.put("state_last", android.R.attr.state_last);
-        STATE_ATTRS.put("state_single", android.R.attr.state_single);
-        STATE_ATTRS.put("state_accelerated", android.R.attr.state_accelerated);
-        STATE_ATTRS.put("state_drag_can_accept", android.R.attr.state_drag_can_accept);
-        STATE_ATTRS.put("state_drag_hovered", android.R.attr.state_drag_hovered);
+        STATE_ATTRS.put("state_pressed", R.attr.state_pressed);
+        STATE_ATTRS.put("state_focused", R.attr.state_focused);
+        STATE_ATTRS.put("state_selected", R.attr.state_selected);
+        STATE_ATTRS.put("state_checkable", R.attr.state_checkable);
+        STATE_ATTRS.put("state_checked", R.attr.state_checked);
+        STATE_ATTRS.put("state_enabled", R.attr.state_enabled);
+        STATE_ATTRS.put("state_activated", R.attr.state_activated);
+        STATE_ATTRS.put("state_window_focused", R.attr.state_window_focused);
+        STATE_ATTRS.put("state_hovered", R.attr.state_hovered);
+        STATE_ATTRS.put("state_first", R.attr.state_first);
+        STATE_ATTRS.put("state_middle", R.attr.state_middle);
+        STATE_ATTRS.put("state_last", R.attr.state_last);
+        STATE_ATTRS.put("state_single", R.attr.state_single);
+        STATE_ATTRS.put("state_accelerated", R.attr.state_accelerated);
+        STATE_ATTRS.put("state_drag_can_accept", R.attr.state_drag_can_accept);
+        STATE_ATTRS.put("state_drag_hovered", R.attr.state_drag_hovered);
     }
 
     private final XmlNode root;
@@ -473,7 +474,7 @@ final class XmlDrawable extends Drawable {
             // A ripple with no child is a solid mask; paint its colour faintly.
             int c = res.color(node.attr("color"), Color.TRANSPARENT);
             if (c != Color.TRANSPARENT) fillColor(canvas, bounds, (c & 0x00FFFFFF) | 0x22000000);
-        } else if (contains(getState(), android.R.attr.state_pressed)) {
+        } else if (contains(getState(), R.attr.state_pressed)) {
             int c = res.color(node.attr("color"), Color.TRANSPARENT);
             if (c != Color.TRANSPARENT) fillColor(canvas, bounds, (c & 0x00FFFFFF) | 0x55000000);
         }

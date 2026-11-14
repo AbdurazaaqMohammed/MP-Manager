@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.files.network;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.UUID;
 
 /** Metadata-only File for pane/history bookkeeping. Never performs network I/O. */
@@ -41,9 +43,9 @@ public final class RemoteFile extends File {
     public String displayPath() {
         // URI encoding makes spaces, %, # and Unicode unambiguous without exposing credentials.
         try {
-            String encoded = new java.net.URI(null, null, "/" + entry.path, null).toASCIIString().substring(1);
+            String encoded = new URI(null, null, "/" + entry.path, null).toASCIIString().substring(1);
             return connection.address + encoded;
-        } catch (java.net.URISyntaxException e) { return connection.address + entry.path; }
+        } catch (URISyntaxException e) { return connection.address + entry.path; }
     }
 
     @Override public String getName() { return entry.path.isEmpty() ? connection.address : entry.name(); }

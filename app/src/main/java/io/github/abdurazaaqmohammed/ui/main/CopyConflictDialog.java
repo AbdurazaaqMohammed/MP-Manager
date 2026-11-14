@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 

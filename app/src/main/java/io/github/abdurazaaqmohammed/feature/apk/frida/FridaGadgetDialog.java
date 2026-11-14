@@ -1,24 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.apk.frida;
 
 import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.Il2CppDumperUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 
+import android.content.SharedPreferences;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -93,7 +81,7 @@ public final class FridaGadgetDialog {
         MaterialSwitch debugLog = ll.findViewById(R.id.frida_debug_log);
         MaterialCheckBox autosign = ll.findViewById(R.id.autosign);
 
-        android.content.SharedPreferences settings =
+        SharedPreferences settings =
                 PreferenceManager.getDefaultSharedPreferences(context);
         FridaConfig config = FridaConfig.load(context);
         final boolean[] sign = new boolean[1];
@@ -151,7 +139,7 @@ public final class FridaGadgetDialog {
         // APKs without native libraries can take a gadget for any ABI —
         // default to this device's so the patched build runs here.
         boolean noLibs = !FridaGadgetPatcher.hasNativeLibDir(apkFile);
-        String deviceAbi = io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager.deviceAbi();
+        String deviceAbi = NativeToolManager.deviceAbi();
         for (String abi : abis) {
             MaterialCheckBox cb = new MaterialCheckBox(context);
             cb.setText(abi);

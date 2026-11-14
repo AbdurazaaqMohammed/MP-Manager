@@ -1,9 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
-import io.github.abdurazaaqmohammed.util.net.DnsManager;
-
-import io.github.abdurazaaqmohammed.util.net.DnsManager;
-
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;

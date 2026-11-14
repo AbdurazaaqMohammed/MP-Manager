@@ -1,13 +1,16 @@
 package io.github.abdurazaaqmohammed.feature.apk.frida;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.app.Activity;
 import android.content.Context;
 import android.text.TextUtils;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
 
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
@@ -16,6 +19,7 @@ import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodParameter;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
@@ -54,12 +58,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -125,7 +132,7 @@ public final class FridaGadgetPatcher {
     /** True when the APK contains a lib/<abi>/ folder we can add the gadget to. */
     public static boolean hasNativeLibDir(File apk) {
         try (ZipFile zf = new ZipFile(apk)) {
-            for (java.util.Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements(); ) {
+            for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements(); ) {
                 String name = e.nextElement().getName();
                 if (name.startsWith("lib/") && name.endsWith(".so")) return true;
             }
@@ -138,7 +145,7 @@ public final class FridaGadgetPatcher {
     public static List<String> gadgetAbis(File apk) throws IOException {
         Set<String> dirs = new LinkedHashSet<>();
         try (ZipFile zf = new ZipFile(apk)) {
-            for (java.util.Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements(); ) {
+            for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements(); ) {
                 String name = e.nextElement().getName();
                 if (!name.startsWith("lib/") || !name.endsWith(".so")) continue;
                 int secondSlash = name.indexOf('/', 4);
@@ -153,7 +160,7 @@ public final class FridaGadgetPatcher {
             // No native libraries yet: the gadget can be added for any ABI —
             // Android loads the folder matching the device at install time.
             // The dialog pre-checks this device's ABI by default.
-            return new ArrayList<>(java.util.Arrays.asList(SUPPORTED_ABIS));
+            return new ArrayList<>(Arrays.asList(SUPPORTED_ABIS));
         }
         return result;
     }
@@ -209,7 +216,7 @@ public final class FridaGadgetPatcher {
         if (first < 0) return data; // already a plain script
         int second = indexOf(data, BUNDLE_SCISSORS, first + BUNDLE_SCISSORS.length);
         if (second < 0) return data;
-        return java.util.Arrays.copyOfRange(data, first + BUNDLE_SCISSORS.length, second);
+        return Arrays.copyOfRange(data, first + BUNDLE_SCISSORS.length, second);
     }
 
     private static int indexOf(byte[] haystack, byte[] needle, int from) {
@@ -374,24 +381,24 @@ public final class FridaGadgetPatcher {
     }
 
     /** Runs a download with a cancelable progress dialog; completes async. */
-    private static java.util.concurrent.CompletableFuture<Boolean> downloadWithUi(
+    private static CompletableFuture<Boolean> downloadWithUi(
             Activity activity, String title, String url, File tmp,
             ThrowingConsumer<File> onDownloaded) {
-        java.util.concurrent.CompletableFuture<Boolean> future = new java.util.concurrent.CompletableFuture<>();
-        android.widget.LinearLayout root = new android.widget.LinearLayout(activity);
-        root.setOrientation(android.widget.LinearLayout.VERTICAL);
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density + 0.5f);
         root.setPadding(pad, pad, pad, pad);
-        android.widget.TextView status = new android.widget.TextView(activity);
+        TextView status = new TextView(activity);
         status.setTextSize(14);
         root.addView(status);
-        android.widget.ProgressBar bar = new android.widget.ProgressBar(activity, null,
+        ProgressBar bar = new ProgressBar(activity, null,
                 android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
-        root.addView(bar, new android.widget.LinearLayout.LayoutParams(
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        root.addView(bar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(title)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -596,7 +603,7 @@ public final class FridaGadgetPatcher {
         try (ZipFile zip = new ZipFile(apk)) {
             ZipEntry entry = zip.getEntry("AndroidManifest.xml");
             if (entry == null) throw new IOException("APK has no AndroidManifest.xml");
-            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
             try (InputStream is = zip.getInputStream(entry)) {
                 byte[] buf = new byte[16384];
                 int n;
@@ -671,7 +678,7 @@ public final class FridaGadgetPatcher {
         if (!found) throw new IOException(descriptor + " disappeared from the dex file");
         MemoryDataStore store = new MemoryDataStore();
         pool.writeTo(store);
-        return java.util.Arrays.copyOf(store.getData(), store.getSize());
+        return Arrays.copyOf(store.getData(), store.getSize());
     }
 
     /**
@@ -724,7 +731,7 @@ public final class FridaGadgetPatcher {
                         + "pick another injection point");
             }
             boolean activity = kind == KIND_ACTIVITY;
-            List<com.android.tools.smali.dexlib2.iface.MethodParameter> params = activity
+            List<MethodParameter> params = activity
                     ? Collections.singletonList(new ImmutableMethodParameter("Landroid/os/Bundle;", null, null))
                     : Collections.emptyList();
             virtualMethods.add(buildOnCreateWrapper(classDef.getType(), "onCreate", params, "V",
@@ -770,7 +777,7 @@ public final class FridaGadgetPatcher {
      * </pre>
      */
     private static ImmutableMethod buildOnCreateWrapper(String classType, String delegateName,
-                                                        List<? extends com.android.tools.smali.dexlib2.iface.MethodParameter> params,
+                                                        List<? extends MethodParameter> params,
                                                         String returnType, int accessFlags,
                                                         boolean invokeSuper, String superType) throws IOException {
         int ins = 1 + paramWords(params);

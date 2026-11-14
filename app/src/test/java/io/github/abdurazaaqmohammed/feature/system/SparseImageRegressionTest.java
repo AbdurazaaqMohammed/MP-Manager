@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -56,7 +57,7 @@ public class SparseImageRegressionTest {
         File file = file(Arrays.copyOf(image, image.length - 1));
         try {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
-            assertThrows(java.io.IOException.class, () -> SystemImageEngine.unsparseToStream(file, output, null));
+            assertThrows(IOException.class, () -> SystemImageEngine.unsparseToStream(file, output, null));
             assertEquals(0, output.size());
         } finally { file.delete(); }
     }
@@ -67,7 +68,7 @@ public class SparseImageRegressionTest {
             if (mode == 0) bytes[16] = 4;
             else bytes[28] = 0;
             File file = file(bytes);
-            try { assertThrows(java.io.IOException.class, () -> SystemImageEngine.validateSparseImage(file)); }
+            try { assertThrows(IOException.class, () -> SystemImageEngine.validateSparseImage(file)); }
             finally { file.delete(); }
         }
     }

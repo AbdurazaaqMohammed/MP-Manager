@@ -3,11 +3,6 @@ package io.github.abdurazaaqmohammed.ui.editor;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
-import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.misc.HexPageCache;
 import io.github.abdurazaaqmohammed.util.misc.HexViewport;
@@ -52,10 +47,9 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.color.MaterialColors;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -636,7 +630,7 @@ public class HexEditorActivity extends BaseActivity {
         structural = true;
         chunks.clear();
         long position = 0;
-        java.io.ByteArrayOutputStream run = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream run = new ByteArrayOutputStream();
         for (Map.Entry<Long, Integer> e : mods.entrySet()) {
             if (e.getKey() != position) {
                 if (run.size() > 0) { chunks.add(new Chunk(run.toByteArray())); run.reset(); }

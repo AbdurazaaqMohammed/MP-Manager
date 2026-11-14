@@ -12,7 +12,9 @@ import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
 import com.lilincpp.github.libezftp.exceptions.EZFtpNoInitException;
 
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.ftp.FTPSClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.io.CopyStreamEvent;
@@ -27,6 +29,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.X509TrustManager;
 
@@ -195,7 +199,7 @@ final class EZFtpClientImpl implements IEZFtpClient {
                     return;
                 }
                 ftpClient.enterLocalPassiveMode();
-                ftpClient.setFileType(org.apache.commons.net.ftp.FTP.BINARY_FILE_TYPE);
+                ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
                 ftpClient.setDataTimeout(60000);
                 if (securityType == IEZFtpClient.SECURITY_FTPS_EXPLICIT && ftpClient instanceof FTPSClient) {
                     ((FTPSClient) ftpClient).execPBSZ(0);
@@ -255,7 +259,7 @@ final class EZFtpClientImpl implements IEZFtpClient {
         taskHandler.post(() -> {
             try {
                 FTPFile[] ftpFiles = ftpClient.listFiles(path);
-                if (!org.apache.commons.net.ftp.FTPReply.isPositiveCompletion(ftpClient.getReplyCode()))
+                if (!FTPReply.isPositiveCompletion(ftpClient.getReplyCode()))
                     throw new IOException(ftpClient.getReplyString());
                 List<EZFtpFile> ezFtpFiles = new ArrayList<>();
                 for (FTPFile ftpFile : ftpFiles) {
@@ -475,7 +479,7 @@ final class EZFtpClientImpl implements IEZFtpClient {
             try {
                 Long available = null;
                 if (ftpClient.sendCommand("AVBL") == 213) {
-                    java.util.regex.Matcher number = java.util.regex.Pattern.compile("^213\\s+(\\d+)\\b")
+                    Matcher number = Pattern.compile("^213\\s+(\\d+)\\b")
                             .matcher(ftpClient.getReplyString().trim());
                     if (number.find()) available = Long.parseLong(number.group(1));
                 }

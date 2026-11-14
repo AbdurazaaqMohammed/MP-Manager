@@ -1,14 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.payload;
 
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -142,7 +139,7 @@ public final class PayloadDialog {
                 TextView t1 = new TextView(context);
                 t1.setId(android.R.id.text1);
                 t1.setTextSize(14f);
-                t1.setTypeface(null, android.graphics.Typeface.BOLD);
+                t1.setTypeface(null, Typeface.BOLD);
                 t1.setEllipsize(TextUtils.TruncateAt.END);
                 t1.setMaxLines(1);
 

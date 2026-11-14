@@ -1,18 +1,6 @@
 package io.github.abdurazaaqmohammed.app;
 
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-
-import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 import android.app.DownloadManager;

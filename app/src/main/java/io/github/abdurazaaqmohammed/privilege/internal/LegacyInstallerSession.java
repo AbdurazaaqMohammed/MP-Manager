@@ -6,13 +6,10 @@ package io.github.abdurazaaqmohammed.privilege.internal;
 
 import android.content.Context;
 import java.io.File;
-import java.io.IOException;
-import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
+import java.util.List;
+
 import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
-import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
 import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
 /** M2 installer session: delegates to PrivilegedInstaller. */
 public final class LegacyInstallerSession implements InstallerSession {
@@ -37,18 +34,18 @@ public final class LegacyInstallerSession implements InstallerSession {
     }
 
     @Override
-    public void installAsync(Context context, java.util.List<File> apkFiles,
+    public void installAsync(Context context, List<File> apkFiles,
                              PrivilegedInstaller.Callback cb) {
         PrivilegedInstaller.installAsync(context, apkFiles, cb);
     }
 
     @Override
-    public String installBlocking(Context context, java.util.List<File> apkFiles) throws Exception {
+    public String installBlocking(Context context, List<File> apkFiles) throws Exception {
         return PrivilegedInstaller.installBlocking(context, apkFiles);
     }
 
     @Override
-    public boolean hasSignatureMismatch(Context context, java.util.List<File> apkFiles) {
+    public boolean hasSignatureMismatch(Context context, List<File> apkFiles) {
         return PrivilegedInstaller.hasSignatureMismatch(context, apkFiles);
     }
 

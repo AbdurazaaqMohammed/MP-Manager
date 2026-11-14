@@ -1,11 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 import io.github.abdurazaaqmohammed.util.misc.SettingsBackupHelper;
@@ -357,7 +352,7 @@ public class SettingsController {
     private void setupHaptics(ViewFinder root, SharedPreferences settings) {
         int[] ids = {R.id.hapticsEnabled, R.id.hapticsSelection, R.id.hapticsActions,
                 R.id.hapticsNavigation, R.id.hapticsCompletion};
-        String[] keys = {io.github.abdurazaaqmohammed.ui.common.util.Haptics.ENABLED, "haptics_selection",
+        String[] keys = {Haptics.ENABLED, "haptics_selection",
                 "haptics_actions", "haptics_navigation", "haptics_completion"};
         for (int i = 0; i < ids.length; i++) {
             CompoundButton toggle = root.findViewById(ids[i]);
@@ -366,8 +361,8 @@ public class SettingsController {
             toggle.setChecked(settings.getBoolean(key, i < 3));
             toggle.setOnCheckedChangeListener((button, checked) -> {
                 settings.edit().putBoolean(key, checked).apply();
-                if (checked) io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(button,
-                        io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.ACTION);
+                if (checked) Haptics.perform(button,
+                        Haptics.Event.ACTION);
             });
         }
     }
@@ -1486,7 +1481,7 @@ public class SettingsController {
                         return;
                     }
                     String formatted = FileSize.getHumanReadableFileSize(totalBytes);
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+                    new MaterialAlertDialogBuilder(activity)
                             .setTitle(R.string.clear_cache_confirm_title)
                             .setMessage(activity.getString(R.string.clear_cache_confirm_msg, formatted))
                             .setPositiveButton(R.string.clear_cache, (dialog, which) -> performClearCache(cacheDesc))

@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.app.Activity;
@@ -43,9 +40,6 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import android.view.inputmethod.InputMethodManager;
@@ -63,10 +57,8 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

@@ -2,24 +2,6 @@ package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeDeleteException;
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
-
 import io.github.abdurazaaqmohammed.privilege.impl.NativeDeleteException;
 import io.github.abdurazaaqmohammed.privilege.impl.NativeProcess;
 import io.github.abdurazaaqmohammed.privilege.impl.NativeScanResult;
@@ -33,13 +15,18 @@ import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import android.content.Context;
 import android.os.Build;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -124,7 +111,7 @@ public final class NativeRootManager {
      */
     public static FileUtils.Measure scan(Context context, String path) {
         if (path == null) return null;
-        List<String> paths = new java.util.ArrayList<>();
+        List<String> paths = new ArrayList<>();
         paths.add(path);
         FileUtils.MeasureSet set = scan(context, paths);
         return set != null ? set.total : null;
@@ -133,11 +120,11 @@ public final class NativeRootManager {
     /**
      * Executes native fast scan via root for multiple paths. Returns MeasureSet.
      */
-    public static FileUtils.MeasureSet scan(Context context, java.util.List<String> paths) {
+    public static FileUtils.MeasureSet scan(Context context, List<String> paths) {
         if (paths == null || paths.isEmpty()) return null;
         NativeScanResult result = scanStats(context, paths, null, 120_000);
         if (result == null || !result.total.complete()) return null;
-        List<FileUtils.Measure> items = new java.util.ArrayList<>();
+        List<FileUtils.Measure> items = new ArrayList<>();
         for (DirectoryStats item : result.items) items.add(measure(item));
         return new FileUtils.MeasureSet(measure(result.total), items);
     }
@@ -149,7 +136,7 @@ public final class NativeRootManager {
     }
 
     public static DirectoryStats stats(Context context, String path, TransferControl control, long timeoutMs) {
-        NativeScanResult result = scanStats(context, java.util.Collections.singletonList(path), control, timeoutMs);
+        NativeScanResult result = scanStats(context, Collections.singletonList(path), control, timeoutMs);
         return result == null ? null : result.total;
     }
 
@@ -159,9 +146,9 @@ public final class NativeRootManager {
     }
 
     /** One native traversal per sibling, in one process; keyed by the original pane paths. */
-    public static java.util.Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) {
+    public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) {
         NativeScanResult result = scanStats(context, paths, null, timeoutMs);
-        java.util.Map<String, Long> sizes = new java.util.HashMap<>();
+        Map<String, Long> sizes = new HashMap<>();
         if (result != null) for (int i = 0; i < paths.size(); i++) {
             DirectoryStats item = result.items.get(i);
             if (item.complete()) sizes.put(paths.get(i), item.bytes());
@@ -171,7 +158,7 @@ public final class NativeRootManager {
 
     private static File writePaths(Context context, List<String> paths) throws IOException {
         File list = File.createTempFile("mpio-paths-", ".list", context.getCacheDir());
-        try (OutputStream output = new java.io.BufferedOutputStream(new FileOutputStream(list))) {
+        try (OutputStream output = new BufferedOutputStream(new FileOutputStream(list))) {
             for (String path : paths) {
                 if (path == null || path.isEmpty() || path.indexOf('\0') >= 0) throw new IOException("Invalid native path");
                 output.write(path.getBytes(StandardCharsets.UTF_8));
@@ -280,12 +267,12 @@ public final class NativeRootManager {
      */
     public static boolean delete(Context context, String path,
                                   ProgressCallback callback, TransferControl control) throws IOException {
-        return delete(context, java.util.Collections.singletonList(path), callback, control);
+        return delete(context, Collections.singletonList(path), callback, control);
     }
 
     public static boolean delete(Context context, List<String> paths,
                                  ProgressCallback callback, TransferControl control) throws IOException {
-        List<String> nativePaths = new java.util.ArrayList<>();
+        List<String> nativePaths = new ArrayList<>();
         for (String path : paths) {
             if (RootManager.isPathBlocked(path)) throw new NativeDeleteException("Blocked: refusing to delete " + path);
         }

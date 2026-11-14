@@ -2,20 +2,9 @@ package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /** Strict parser: a partial/missing scan must never become a cached zero-byte directory. */
@@ -24,7 +13,7 @@ final class NativeScanResult {
     DirectoryStats total;
 
     NativeScanResult(int expected) {
-        items = new ArrayList<>(java.util.Collections.nCopies(expected, null));
+        items = new ArrayList<>(Collections.nCopies(expected, null));
     }
 
     void accept(String line) {

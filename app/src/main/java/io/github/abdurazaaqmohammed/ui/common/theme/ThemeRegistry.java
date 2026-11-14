@@ -3,10 +3,13 @@ package io.github.abdurazaaqmohammed.ui.common.theme;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.color.DynamicColors;
+import com.google.android.material.color.DynamicColorsOptions;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -249,10 +252,10 @@ public final class ThemeRegistry {
             if (argb == 0) return;
 
             boolean blackTheme = BuiltInThemes.BLACK_ID.equals(getCurrentId(activity));
-            if (!blackTheme && com.google.android.material.color.DynamicColors.isDynamicColorAvailable()) {
-                com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(
+            if (!blackTheme && DynamicColors.isDynamicColorAvailable()) {
+                DynamicColors.applyToActivityIfAvailable(
                         activity,
-                        new com.google.android.material.color.DynamicColorsOptions.Builder()
+                        new DynamicColorsOptions.Builder()
                                 .setContentBasedSource(argb)
                                 .build());
                 return;
@@ -262,7 +265,7 @@ public final class ThemeRegistry {
             int overlay = idx < 0 || idx >= AccentOverlays.RES.length
                     ? 0 : AccentOverlays.RES[idx];
             if (overlay != 0) {
-                android.content.res.Resources.Theme theme = activity.getTheme();
+                Resources.Theme theme = activity.getTheme();
                 if (theme != null) {
                     theme.applyStyle(overlay, true);
                 }

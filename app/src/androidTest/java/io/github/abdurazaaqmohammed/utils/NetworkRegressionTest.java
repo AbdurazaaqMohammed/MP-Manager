@@ -7,18 +7,36 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import android.content.Context;
 import android.app.Instrumentation;
 import android.content.Intent;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
+import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.apache.ftpserver.DataConnectionConfigurationFactory;
+import org.apache.ftpserver.FtpServer;
+import org.apache.ftpserver.FtpServerFactory;
+import org.apache.ftpserver.listener.ListenerFactory;
+import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
+import org.apache.ftpserver.usermanager.impl.BaseUser;
+import org.apache.ftpserver.usermanager.impl.WritePermission;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -35,10 +53,18 @@ import com.lilincpp.github.libezftp.EZFtpFile;
 import io.github.abdurazaaqmohammed.feature.files.network.*;
 import okhttp3.mockwebserver.*;
 import java.io.*;
+import java.lang.reflect.Field;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.URI;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
-import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfile;
-import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfileStore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import okio.Buffer;
+
 import static org.junit.Assert.*;
 
 /** Exercises real Android Keystore, not JVM substitutes. Use the isolated test build. */
@@ -50,14 +76,14 @@ public class NetworkRegressionTest {
     @Before public void prepare() throws Exception {
         context = instrumentation.getTargetContext();
         assertTrue("Never modify an installed release", context.getPackageName().endsWith(".editorregression"));
-        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit()
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
                 .putString("working_mode", "non_root").putString("su_command", "/system/bin/false")
                 .putBoolean("startup_request_root", false).putBoolean("root_file_ops", false)
                 .putBoolean("filemenu_two_column", true).putStringSet("filemenu_hidden", Collections.emptySet())
                 .putBoolean("checkForUpdates", false).putString("home1", context.getFilesDir().getPath())
                 .putString("home2", context.getFilesDir().getPath()).commit();
         for (String permission : new String[]{"READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"}) {
-            try (InputStream input = new android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.getUiAutomation()
+            try (InputStream input = new ParcelFileDescriptor.AutoCloseInputStream(instrumentation.getUiAutomation()
                     .executeShellCommand("pm grant " + context.getPackageName() + " android.permission." + permission))) {
                 byte[] buffer = new byte[1024];
                 while (input.read(buffer) != -1) { /* wait for the targeted permission grant */ }
@@ -98,12 +124,12 @@ public class NetworkRegressionTest {
     }
 
     private AccessibilityNodeInfo awaitText(String text) {
-        long deadline = android.os.SystemClock.uptimeMillis() + 5000;
+        long deadline = SystemClock.uptimeMillis() + 5000;
         do {
             AccessibilityNodeInfo match = find(instrumentation.getUiAutomation().getRootInActiveWindow(), text);
             if (match != null) return match;
-            android.os.SystemClock.sleep(50);
-        } while (android.os.SystemClock.uptimeMillis() < deadline);
+            SystemClock.sleep(50);
+        } while (SystemClock.uptimeMillis() < deadline);
         throw new AssertionError("Missing visible UI text: " + text);
     }
 
@@ -141,7 +167,7 @@ public class NetworkRegressionTest {
 
     private AlertDialog connectionDialog() {
         try {
-            java.lang.reflect.Field field = NetworkController.class.getDeclaredField("connections");
+            Field field = NetworkController.class.getDeclaredField("connections");
             field.setAccessible(true);
             Object connections = field.get(main.getNetwork());
             field = connections.getClass().getDeclaredField("dialog");
@@ -213,7 +239,7 @@ public class NetworkRegressionTest {
             files.put("", null);
             server.setDispatcher(new Dispatcher() {
                 @Override public MockResponse dispatch(RecordedRequest request) {
-                    String path = java.net.URI.create(request.getRequestUrl().toString()).getPath().substring(5);
+                    String path = URI.create(request.getRequestUrl().toString()).getPath().substring(5);
                     if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
                     synchronized (files) {
                         switch (request.getMethod()) {
@@ -228,11 +254,11 @@ public class NetworkRegressionTest {
                                 if (files.containsKey(path)) return new MockResponse().setResponseCode(412);
                                 files.put(path, request.getBody().readByteArray()); return new MockResponse().setResponseCode(201);
                             case "GET":
-                                return new MockResponse().setBody(new okio.Buffer().write(files.get(path)));
+                                return new MockResponse().setBody(new Buffer().write(files.get(path)));
                             case "MKCOL":
                                 files.put(path, null); return new MockResponse().setResponseCode(201);
                             case "MOVE":
-                                String target = java.net.URI.create(request.getHeader("Destination")).getPath().substring(5);
+                                String target = URI.create(request.getHeader("Destination")).getPath().substring(5);
                                 files.put(target, files.remove(path)); return new MockResponse().setResponseCode(201);
                             case "DELETE":
                                 final String removed = path;
@@ -243,7 +269,7 @@ public class NetworkRegressionTest {
                     }
                 }
             });
-            server.start(java.net.InetAddress.getByName("0.0.0.0"), 0);
+            server.start(InetAddress.getByName("0.0.0.0"), 0);
         }
         private String properties(String path) {
             byte[] bytes = files.get(path);
@@ -278,9 +304,9 @@ public class NetworkRegressionTest {
             awaitText("empty");
             instrumentation.runOnMainSync(() -> main.loadFolderInPane(root, false, true));
             // Both panes must retain the real connection identity, not local synthetic paths.
-            long deadline = android.os.SystemClock.uptimeMillis() + 5000;
-            while (!(main.pane2Folder instanceof RemoteFile) && android.os.SystemClock.uptimeMillis() < deadline)
-                android.os.SystemClock.sleep(50);
+            long deadline = SystemClock.uptimeMillis() + 5000;
+            while (!(main.pane2Folder instanceof RemoteFile) && SystemClock.uptimeMillis() < deadline)
+                SystemClock.sleep(50);
             assertTrue(main.pane1Folder instanceof RemoteFile);
             assertTrue(main.pane2Folder instanceof RemoteFile);
             client.delete("folder", true);
@@ -295,28 +321,28 @@ public class NetworkRegressionTest {
 
     @Test public void advertisedWebdavServiceIsDetectedOnAndroid() throws Exception {
         launchMain();
-        android.net.nsd.NsdManager nsd = (android.net.nsd.NsdManager) context.getSystemService(Context.NSD_SERVICE);
+        NsdManager nsd = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         CountDownLatch registered = new CountDownLatch(1);
         CountDownLatch detected = new CountDownLatch(1);
-        java.util.concurrent.atomic.AtomicReference<NetworkProfile> result = new java.util.concurrent.atomic.AtomicReference<>();
-        java.util.concurrent.atomic.AtomicReference<String> error = new java.util.concurrent.atomic.AtomicReference<>();
+        AtomicReference<NetworkProfile> result = new AtomicReference<>();
+        AtomicReference<String> error = new AtomicReference<>();
         String name = "mp-dav-" + UUID.randomUUID().toString().substring(0, 8);
-        android.net.nsd.NsdManager.RegistrationListener registration = new android.net.nsd.NsdManager.RegistrationListener() {
-            @Override public void onServiceRegistered(android.net.nsd.NsdServiceInfo service) { registered.countDown(); }
-            @Override public void onRegistrationFailed(android.net.nsd.NsdServiceInfo service, int code) { error.set("Registration error " + code); registered.countDown(); }
-            @Override public void onServiceUnregistered(android.net.nsd.NsdServiceInfo service) {}
-            @Override public void onUnregistrationFailed(android.net.nsd.NsdServiceInfo service, int code) {}
+        NsdManager.RegistrationListener registration = new NsdManager.RegistrationListener() {
+            @Override public void onServiceRegistered(NsdServiceInfo service) { registered.countDown(); }
+            @Override public void onRegistrationFailed(NsdServiceInfo service, int code) { error.set("Registration error " + code); registered.countDown(); }
+            @Override public void onServiceUnregistered(NsdServiceInfo service) {}
+            @Override public void onUnregistrationFailed(NsdServiceInfo service, int code) {}
         };
         try (DavFixture fixture = new DavFixture(); NetworkDiscovery discovery = new NetworkDiscovery(context, new NetworkDiscovery.Listener() {
             @Override public void found(NetworkProfile profile) { if (profile.name.startsWith(name)) { result.set(profile); detected.countDown(); } }
             @Override public void status(String message) { /* UI status does not replace discovery results. */ }
         })) {
-            android.net.nsd.NsdServiceInfo service = new android.net.nsd.NsdServiceInfo();
+            NsdServiceInfo service = new NsdServiceInfo();
             service.setServiceName(name);
             service.setServiceType("_webdav._tcp.");
             service.setPort(fixture.server.getPort());
             service.setAttribute("path", "/dav/");
-            nsd.registerService(service, android.net.nsd.NsdManager.PROTOCOL_DNS_SD, registration);
+            nsd.registerService(service, NsdManager.PROTOCOL_DNS_SD, registration);
             try {
                 assertTrue("mDNS registration timed out", registered.await(10, TimeUnit.SECONDS));
                 assertNull(error.get());
@@ -343,9 +369,9 @@ public class NetworkRegressionTest {
     }
 
     @Test public void smbRoundTripOnAndroid() throws Exception {
-        android.os.Bundle arguments = InstrumentationRegistry.getArguments();
+        Bundle arguments = InstrumentationRegistry.getArguments();
         String port = arguments.getString("networkSmbPort");
-        org.junit.Assume.assumeTrue("Supply an adb-reversed disposable SMB fixture", port != null);
+        Assume.assumeTrue("Supply an adb-reversed disposable SMB fixture", port != null);
         String folder = "android-network-test-" + UUID.randomUUID();
         try (SmbClient client = new SmbClient("127.0.0.1", Integer.parseInt(port), "test", "tester", "test-only", "")) {
             client.mkdir(folder);
@@ -369,7 +395,7 @@ public class NetworkRegressionTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertTrue("Never change a user's release profiles", context.getPackageName().endsWith(".editorregression"));
         NetworkProfile profile = new NetworkProfile();
-        profile.name = "regression-" + java.util.UUID.randomUUID();
+        profile.name = "regression-" + UUID.randomUUID();
         profile.address = "https://example.invalid/dav/";
         profile.username = "network-regression-user";
         profile.password = "network-regression-secret";
@@ -407,13 +433,13 @@ public class NetworkRegressionTest {
                 });
                 instrumentation.waitForIdleSync(); // AlertDialog's onShow callback installs its button listeners asynchronously.
                 instrumentation.runOnMainSync(() -> connectionDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick());
-                long deadline = android.os.SystemClock.uptimeMillis() + 5000;
+                long deadline = SystemClock.uptimeMillis() + 5000;
                 boolean saved;
                 do {
                     saved = store.load().stream().anyMatch(p -> p.name.equals(profile.name) && p.protocol.equals(protocol));
                     if (saved && SidebarPins.isPinned(context, profile.pinId())) break;
-                    android.os.SystemClock.sleep(50);
-                } while (android.os.SystemClock.uptimeMillis() < deadline);
+                    SystemClock.sleep(50);
+                } while (SystemClock.uptimeMillis() < deadline);
                 assertTrue("Configuration must save without trying to reach the server", saved);
                 assertTrue(SidebarPins.isPinned(context, profile.pinId()));
                 instrumentation.waitForIdleSync();
@@ -435,7 +461,7 @@ public class NetworkRegressionTest {
             store.put(dav); store.put(smb);
             SidebarPins.add(context, dav.pinId()); SidebarPins.add(context, smb.pinId()); SidebarPins.add(context, ftpPin);
             int position = SidebarPins.get(context).indexOf(dav.pinId());
-            java.lang.reflect.Field previous = NetworkProfile.class.getDeclaredField("previousName");
+            Field previous = NetworkProfile.class.getDeclaredField("previousName");
             previous.setAccessible(true); previous.set(dav, name);
             dav.name = name + "-renamed";
             store.put(dav);
@@ -465,8 +491,8 @@ public class NetworkRegressionTest {
         try {
             instrumentation.runOnMainSync(() -> {
                 main.getNetwork().showConnectionDialog("ftp");
-                com.google.android.material.textfield.MaterialAutoCompleteTextView saved =
-                        (com.google.android.material.textfield.MaterialAutoCompleteTextView) field(visibleForm(), R.string.network_saved_connections);
+                MaterialAutoCompleteTextView saved =
+                        (MaterialAutoCompleteTextView) field(visibleForm(), R.string.network_saved_connections);
                 saved.getOnItemClickListener().onItemClick(null, null, 0, 0);
                 field(visibleForm(), R.string.network_connection_name).setText(name);
                 field(visibleForm(), R.string.ip_address_hint).setText("192.0.2.1");
@@ -484,30 +510,30 @@ public class NetworkRegressionTest {
         final File directory;
         final File share;
         final int port;
-        final org.apache.ftpserver.FtpServer server;
+        final FtpServer server;
 
         FtpFixture(Context context) throws Exception {
             directory = new File(context.getCacheDir(), "ftp-fixture-" + UUID.randomUUID());
             share = new File(directory, "share");
             if (!share.mkdirs()) throw new IOException("Cannot create FTP fixture");
-            try (java.net.ServerSocket socket = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
+            try (ServerSocket socket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
                 port = socket.getLocalPort();
             }
-            org.apache.ftpserver.FtpServerFactory factory = new org.apache.ftpserver.FtpServerFactory();
-            org.apache.ftpserver.listener.ListenerFactory listener = new org.apache.ftpserver.listener.ListenerFactory();
+            FtpServerFactory factory = new FtpServerFactory();
+            ListenerFactory listener = new ListenerFactory();
             listener.setServerAddress("127.0.0.1"); listener.setPort(port);
-            org.apache.ftpserver.DataConnectionConfigurationFactory data = new org.apache.ftpserver.DataConnectionConfigurationFactory();
+            DataConnectionConfigurationFactory data = new DataConnectionConfigurationFactory();
             data.setPassiveAddress("127.0.0.1");
             listener.setDataConnectionConfiguration(data.createDataConnectionConfiguration());
             factory.addListener("default", listener.createListener());
-            org.apache.ftpserver.usermanager.PropertiesUserManagerFactory users = new org.apache.ftpserver.usermanager.PropertiesUserManagerFactory();
+            PropertiesUserManagerFactory users = new PropertiesUserManagerFactory();
             File usersFile = new File(directory, "users.properties");
             if (!usersFile.createNewFile()) throw new IOException("Cannot create fixture users file");
             users.setFile(usersFile);
             factory.setUserManager(users.createUserManager());
-            org.apache.ftpserver.usermanager.impl.BaseUser user = new org.apache.ftpserver.usermanager.impl.BaseUser();
+            BaseUser user = new BaseUser();
             user.setName("tester"); user.setPassword("test-only"); user.setHomeDirectory(share.getPath());
-            user.setAuthorities(Collections.singletonList(new org.apache.ftpserver.usermanager.impl.WritePermission()));
+            user.setAuthorities(Collections.singletonList(new WritePermission()));
             factory.getUserManager().save(user);
             server = factory.createServer(); server.start();
         }
@@ -533,22 +559,22 @@ public class NetworkRegressionTest {
     }
 
     private void awaitFile(File file, long length) {
-        long deadline = android.os.SystemClock.uptimeMillis() + 5000;
-        while ((!file.isFile() || file.length() != length) && android.os.SystemClock.uptimeMillis() < deadline)
-            android.os.SystemClock.sleep(50);
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        while ((!file.isFile() || file.length() != length) && SystemClock.uptimeMillis() < deadline)
+            SystemClock.sleep(50);
         assertTrue("Download did not complete: " + file.getName(), file.isFile());
         assertEquals(length, file.length());
         instrumentation.waitForIdleSync();
     }
 
     private void awaitFtpFolder(String path) {
-        long deadline = android.os.SystemClock.uptimeMillis() + 5000;
-        java.util.concurrent.atomic.AtomicBoolean loaded = new java.util.concurrent.atomic.AtomicBoolean();
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        AtomicBoolean loaded = new AtomicBoolean();
         do {
             instrumentation.runOnMainSync(() -> loaded.set(main.pane1Folder instanceof FTPFileWrapper folder && folder.remotePath().equals(path)));
             if (loaded.get()) return;
-            android.os.SystemClock.sleep(50);
-        } while (android.os.SystemClock.uptimeMillis() < deadline);
+            SystemClock.sleep(50);
+        } while (SystemClock.uptimeMillis() < deadline);
         throw new AssertionError("FTP folder did not load: " + path);
     }
 
@@ -575,17 +601,17 @@ public class NetworkRegressionTest {
             click(context.getString(android.R.string.copy) + " ->");
             File copied = new File(destination, "binary.bin");
             awaitFile(copied, binary.length);
-            assertArrayEquals(binary, java.nio.file.Files.readAllBytes(copied.toPath()));
+            assertArrayEquals(binary, Files.readAllBytes(copied.toPath()));
             assertTrue(source.exists());
             awaitText("move.bin");
             longPressFile("move.bin");
             click(context.getString(R.string.move) + " ->");
             File moved = new File(destination, "move.bin");
             awaitFile(moved, binary.length);
-            long deadline = android.os.SystemClock.uptimeMillis() + 5000;
-            while (moving.exists() && android.os.SystemClock.uptimeMillis() < deadline) android.os.SystemClock.sleep(50);
+            long deadline = SystemClock.uptimeMillis() + 5000;
+            while (moving.exists() && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(50);
             assertFalse("A move deletes its source only after the complete binary download", moving.exists());
-            assertArrayEquals(binary, java.nio.file.Files.readAllBytes(moved.toPath()));
+            assertArrayEquals(binary, Files.readAllBytes(moved.toPath()));
             instrumentation.runOnMainSync(() -> {
                 main.loadFolderInPane(context.getFilesDir(), true, false);
                 main.loadFolderInPane(context.getFilesDir(), false, false);
@@ -605,11 +631,11 @@ public class NetworkRegressionTest {
             int position = -1;
             for (int i = 0; i < adapter.getCount(); i++) if ("smb:test".equals(adapter.getEntry(i).id())) position = i;
             assertEquals(1, adapter.getItemViewType(position));
-            View row = adapter.getView(position, null, new android.widget.LinearLayout(main));
+            View row = adapter.getView(position, null, new LinearLayout(main));
             assertEquals(60, ((ProgressBar) row.findViewById(R.id.pbUsed)).getProgress());
             info.totalBytes = info.usedBytes = -1;
             info.freeBytes = 25;
-            row = adapter.getView(position, row, new android.widget.LinearLayout(main));
+            row = adapter.getView(position, row, new LinearLayout(main));
             assertEquals(View.GONE, ((View) row.findViewById(R.id.pbUsed).getParent()).getVisibility());
             assertEquals(context.getString(R.string.network_storage_free, FileSize.getHumanReadableFileSize(25)),
                     ((TextView) row.findViewById(R.id.tvUsedFree)).getText().toString());
@@ -617,8 +643,8 @@ public class NetworkRegressionTest {
     }
 
     private View awaitRow() {
-        long deadline = android.os.SystemClock.uptimeMillis() + 5000;
-        java.util.concurrent.atomic.AtomicReference<View> result = new java.util.concurrent.atomic.AtomicReference<>();
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        AtomicReference<View> result = new AtomicReference<>();
         do {
             instrumentation.runOnMainSync(() -> {
                 RecyclerView pane = main.findViewById(R.id.listViewPane1);
@@ -626,8 +652,8 @@ public class NetworkRegressionTest {
                 if (holder != null) result.set(holder.itemView);
             });
             if (result.get() != null) return result.get();
-            android.os.SystemClock.sleep(50);
-        } while (android.os.SystemClock.uptimeMillis() < deadline);
+            SystemClock.sleep(50);
+        } while (SystemClock.uptimeMillis() < deadline);
         throw new AssertionError("File row never bound");
     }
 
@@ -642,7 +668,7 @@ public class NetworkRegressionTest {
             instrumentation.waitForIdleSync();
             View normal = awaitRow();
             TextView localName = normal.findViewById(R.id.fileName), localDate = normal.findViewById(R.id.fileDate);
-            android.widget.ImageView localIcon = normal.findViewById(R.id.fileIcon);
+            ImageView localIcon = normal.findViewById(R.id.fileIcon);
             for (String protocol : new String[]{"webdav", "smb", "ftp"}) {
                 instrumentation.runOnMainSync(() -> {
                     RecyclerView pane = main.findViewById(R.id.listViewPane1);
@@ -661,7 +687,7 @@ public class NetworkRegressionTest {
                 View row = awaitRow();
                 instrumentation.runOnMainSync(() -> {
                     TextView nameView = row.findViewById(R.id.fileName), dateView = row.findViewById(R.id.fileDate);
-                    android.widget.ImageView icon = row.findViewById(R.id.fileIcon);
+                    ImageView icon = row.findViewById(R.id.fileIcon);
                     assertEquals(localName.getTextSize(), nameView.getTextSize(), 0.01f);
                     assertEquals(localName.getMaxLines(), nameView.getMaxLines());
                     assertEquals(localDate.getTextSize(), dateView.getTextSize(), 0.01f);

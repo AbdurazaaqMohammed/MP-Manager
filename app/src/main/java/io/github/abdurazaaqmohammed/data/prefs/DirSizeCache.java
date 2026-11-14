@@ -2,20 +2,6 @@ package io.github.abdurazaaqmohammed.data.prefs;
 
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
-import io.github.abdurazaaqmohammed.util.text.AppGson;
-
 import android.content.Context;
 import android.os.Looper;
 

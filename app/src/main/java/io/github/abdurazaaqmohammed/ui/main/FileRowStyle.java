@@ -1,15 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
-
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
-
-
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
-
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
-
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 

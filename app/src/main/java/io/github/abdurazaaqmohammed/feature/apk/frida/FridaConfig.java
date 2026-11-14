@@ -8,6 +8,10 @@ import androidx.preference.PreferenceManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 /**
@@ -199,8 +203,8 @@ public final class FridaConfig {
 
     /** Restores the engine defaults: every module off, debug log on. */
     public void reset(Context context) {
-        java.util.Iterator<String> keys = params.keys();
-        java.util.List<String> names = new java.util.ArrayList<>();
+        Iterator<String> keys = params.keys();
+        List<String> names = new ArrayList<>();
         while (keys.hasNext()) names.add(keys.next());
         for (String key : names) {
             params.remove(key);

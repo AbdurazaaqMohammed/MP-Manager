@@ -1,20 +1,18 @@
 package io.github.abdurazaaqmohammed.feature.dumper;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
-
-import io.github.abdurazaaqmohammed.util.text.FileSize;
+import io.github.abdurazaaqmohammed.ui.UiFields;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -139,7 +137,7 @@ public final class PartitionDumperDialog {
     private static void browse(AppCompatActivity activity, List<PartitionItem> partitions, String activeSlot) {
         LinearLayout content = column(activity);
         content.addView(text(activity, activity.getString(R.string.partition_device_summary,
-                android.os.Build.MODEL, android.os.Build.DEVICE,
+                Build.MODEL, Build.DEVICE,
                 TextUtils.isEmpty(activeSlot) ? activity.getString(R.string.partition_unspecified)
                         : activeSlot.toUpperCase(Locale.ROOT)), true));
         EditText search = new EditText(activity);
@@ -164,7 +162,7 @@ public final class PartitionDumperDialog {
         RecyclerView.Adapter<PartitionHolder> adapter = new RecyclerView.Adapter<>() {
             @NonNull @Override public PartitionHolder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
                 View row = LayoutInflater.from(activity).inflate(android.R.layout.simple_list_item_2, parent, false);
-                android.util.TypedValue background = new android.util.TypedValue();
+                TypedValue background = new TypedValue();
                 activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, background, true);
                 row.setBackgroundResource(background.resourceId);
                 row.setMinimumHeight(Extensions.dp2px(activity, 64));
@@ -297,7 +295,7 @@ public final class PartitionDumperDialog {
                     .setMessage(activity.getString(R.string.partition_backup_confirm, items.size(), directory.getAbsolutePath()))
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(R.string.partition_copy_btn, null);
-            if (items.size() == 1) builder.setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(activity,
+            if (items.size() == 1) builder.setView(UiFields.wrap(activity,
                     filename, activity.getString(R.string.partition_dump_filename_label), 20));
             AlertDialog confirmation = builder.show();
             confirmation.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {

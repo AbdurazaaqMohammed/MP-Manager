@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import android.os.Handler;
@@ -12,6 +9,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.security.MessageDigest;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -91,7 +89,7 @@ public final class SystemImageMountManager {
      */
     public static void openFilesystemImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null) return;
-        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.ImageIdentity id = SystemImageEngine.identifyImage(imageFile);
         if (id == null || !id.isFilesystem) {
             Extensions.showMessage(context, isAr ? "الملف ليس نظام ملفات صالح للتصفح" : "File is not a valid filesystem image");
@@ -168,7 +166,7 @@ public final class SystemImageMountManager {
      * Shows options dialog when an image file or partition is clicked.
      */
     public static void showImageOptionsDialog(MainActivity context, FileOpener opener, File file, String fileName, boolean pane1) {
-        boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");
+        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.ImageIdentity id = SystemImageEngine.identifyImage(file);
         String desc = id != null ? id.getDisplayName(isAr) : fileName;
         String details = (id != null && id.details != null && !id.details.isEmpty()) ? (" (" + id.details + ")") : "";

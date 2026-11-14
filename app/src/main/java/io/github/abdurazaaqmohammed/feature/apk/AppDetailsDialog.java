@@ -1,29 +1,21 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
-
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
-
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 
 import android.content.ClipData;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.InstallSourceInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.TypedValue;
@@ -197,13 +189,13 @@ public final class AppDetailsDialog {
                 String inst = null;
                 String initiator = null;
                 String origin = null;
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     try {
-                        android.content.pm.InstallSourceInfo si = pm.getInstallSourceInfo(ai.packageName);
+                        InstallSourceInfo si = pm.getInstallSourceInfo(ai.packageName);
                         if (si != null) {
                             inst = si.getInstallingPackageName();
                             initiator = si.getInitiatingPackageName();
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 try {
                                     int src = si.getPackageSource();
                                     if (src == 1) origin = "Local file";
@@ -226,7 +218,7 @@ public final class AppDetailsDialog {
             try {
                 if (ai.appInfo != null) ai.dataDir = ai.appInfo.dataDir;
                 else {
-                    android.content.pm.ApplicationInfo appInfo = pm.getApplicationInfo(ai.packageName, 0);
+                    ApplicationInfo appInfo = pm.getApplicationInfo(ai.packageName, 0);
                     ai.dataDir = appInfo.dataDir;
                     ai.appInfo = appInfo;
                 }
@@ -235,7 +227,7 @@ public final class AppDetailsDialog {
 
         if ((!hidden.contains("detail:ext_data") || !hidden.contains("action:open_ext_data_dir")) && ai.extDataDir == null) {
             try {
-                ai.extDataDir = new File(android.os.Environment.getExternalStorageDirectory(), "Android/data/" + ai.packageName).getAbsolutePath();
+                ai.extDataDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + ai.packageName).getAbsolutePath();
             } catch (Exception ignored) {}
         }
 

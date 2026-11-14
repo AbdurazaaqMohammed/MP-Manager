@@ -1,31 +1,17 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-
-import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackEngine;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
-import android.text.TextUtils;
-
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.reandroid.apk.ApkModule;
 import com.reandroid.apk.APKLogger;
 
 import java.io.File;
@@ -33,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 /**
@@ -44,7 +29,7 @@ public final class JiaguUnpackDialog {
 
     private JiaguUnpackDialog() {}
 
-    public static void show(io.github.abdurazaaqmohammed.ui.main.MainActivity context, File file) {
+    public static void show(MainActivity context, File file) {
         new Thread(() -> {
             String pkg = null;
             boolean jiagu;
@@ -105,7 +90,7 @@ public final class JiaguUnpackDialog {
         }, "jiagu-check").start();
     }
 
-    private static void run(io.github.abdurazaaqmohammed.ui.main.MainActivity context, File file, List<File> dexes, boolean autosign) {
+    private static void run(MainActivity context, File file, List<File> dexes, boolean autosign) {
         ProgressManager pm = new ProgressManager(context, true).show();
         APKLogger logger = pm.getLogger();
         new Thread(() -> {

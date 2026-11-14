@@ -1,15 +1,5 @@
 package io.github.abdurazaaqmohammed.mcp;
 
-import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
-
-import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
-
-import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
-
-import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
-
-import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 

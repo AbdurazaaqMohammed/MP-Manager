@@ -1,23 +1,14 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
 
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
-import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.FolderPins;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import android.app.Activity;
 import android.content.ClipData;
@@ -53,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -190,8 +182,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             } else {
                 File current = pane1 ? context.pane1Folder : context.pane2Folder;
                 File target = upFile;
-                if (io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.isBootInspectFolder(current)) {
-                    File resolved = io.github.abdurazaaqmohammed.feature.boot.BootInspectManager.getParentOrImageOrigin(current);
+                if (BootInspectManager.isBootInspectFolder(current)) {
+                    File resolved = BootInspectManager.getParentOrImageOrigin(current);
                     if (resolved != null) target = resolved;
                 }
                 if (target == null) return false;
@@ -243,11 +235,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
             File resolved = BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
-        } else if (io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.isMountedFolder(current)) {
-            File resolved = io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.getParentOrImageOrigin(current);
+        } else if (SystemImageMountManager.isMountedFolder(current)) {
+            File resolved = SystemImageMountManager.getParentOrImageOrigin(current);
             if (resolved != null && !resolved.equals(current.getParentFile())) {
                 target = resolved;
-                io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.checkUnmountOnExit(context, current);
+                SystemImageMountManager.checkUnmountOnExit(context, current);
             }
         }
         if (target == null && current != null) {
@@ -348,7 +340,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     static boolean isSymlink(File f) {
         if (f == null) return false;
         if (f instanceof ShizukuFile sf) return sf.isLink();
-        if (f instanceof io.github.abdurazaaqmohammed.privilege.impl.RootFile rf) return rf.isLink();
+        if (f instanceof RootFile rf) return rf.isLink();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 return Files.isSymbolicLink(f.toPath());
@@ -1178,7 +1170,7 @@ final View.OnClickListener originalClickListener;
                 // Long-press Copy/Move: copy or move the selection into the
                 // SAME pane — the user navigates folders there and pastes via
                 // the floating buttons. Tap keeps the classic opposite-pane flow.
-                java.util.function.Consumer<String> longPressAction = longPressId -> {
+                Consumer<String> longPressAction = longPressId -> {
                     if (isInZip || !(FileMenuOrder.COPY.equals(longPressId)
                             || FileMenuOrder.MOVE.equals(longPressId))) return;
                     List<Object> selection = new ArrayList<>();

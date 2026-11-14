@@ -8,6 +8,8 @@ import android.content.Context;
 import java.io.File;
 import java.util.List;
 
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+
 /**
  * Silent install / uninstall channel. Never null; readiness probes return
  * false instead of throwing when no backend is authorized.
@@ -24,7 +26,7 @@ public interface InstallerSession {
     boolean isPrivilegedSilentReady(Context context);
 
     void installAsync(Context context, List<File> apkFiles,
-                      io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller.Callback cb);
+                      PrivilegedInstaller.Callback cb);
 
     String installBlocking(Context context, List<File> apkFiles) throws Exception;
 

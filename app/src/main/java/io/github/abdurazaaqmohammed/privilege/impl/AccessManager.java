@@ -1,22 +1,5 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-
-import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
-import io.github.abdurazaaqmohammed.util.io.TransferControl;
-
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -45,7 +28,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 public final class AccessManager {
 
     public enum Backend { NONE, ROOT, SHIZUKU }
@@ -868,8 +854,8 @@ public final class AccessManager {
         return -1;
     }
 
-    public static java.util.Map<String, Long> dirSizeTree(Context context, String path) {
-        java.util.Map<String, Long> map = new java.util.HashMap<>();
+    public static Map<String, Long> dirSizeTree(Context context, String path) {
+        Map<String, Long> map = new HashMap<>();
         if (path == null || path.isEmpty()) return map;
         try {
             Backend backend = active(context);
@@ -906,7 +892,7 @@ public final class AccessManager {
                 }
             }
             if (map.isEmpty() && (backend == Backend.SHIZUKU || ShizukuManager.ready())) {
-                java.util.Map<String, Long> shizukuMap = ShizukuManager.dirSizeTree(context, path);
+                Map<String, Long> shizukuMap = ShizukuManager.dirSizeTree(context, path);
                 if (shizukuMap != null && !shizukuMap.isEmpty()) {
                     map.putAll(shizukuMap);
                 }

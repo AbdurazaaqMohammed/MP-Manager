@@ -1,19 +1,14 @@
 package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -23,7 +18,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -31,6 +25,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Locale;
 
 import java.io.File;
@@ -43,7 +40,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import net.lingala.zip4j.ZipFile;
+
 import net.lingala.zip4j.model.FileHeader;
 
 /**
@@ -95,7 +92,7 @@ public final class FlutterToolsDialog {
         TextView title = new TextView(context);
         title.setText(fileName + " (" + FileSize.getHumanReadableFileSize(apkFile.length()) + ")");
         title.setTextSize(15f);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTypeface(null, Typeface.BOLD);
         root.addView(title);
 
         TextView details = new TextView(context);
@@ -162,7 +159,7 @@ public final class FlutterToolsDialog {
         TextView title = new TextView(context);
         title.setText(fileName + " (" + FileSize.getHumanReadableFileSize(libFile.length()) + ")");
         title.setTextSize(15f);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTypeface(null, Typeface.BOLD);
         root.addView(title);
 
         TextView details = new TextView(context);
@@ -410,8 +407,8 @@ public final class FlutterToolsDialog {
                         File target = new File(outDir, rel);
                         File parent = target.getParentFile();
                         if (parent != null && !parent.exists()) parent.mkdirs();
-                        try (java.io.InputStream is = ZipCompat.openEntry(apkFile, name);
-                             java.io.OutputStream os = new java.io.FileOutputStream(target)) {
+                        try (InputStream is = ZipCompat.openEntry(apkFile, name);
+                             OutputStream os = new FileOutputStream(target)) {
                             byte[] buf = new byte[64 * 1024];
                             int n;
                             while ((n = is.read(buf)) != -1) os.write(buf, 0, n);

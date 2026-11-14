@@ -2,21 +2,8 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
-import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-
 
 import android.view.GestureDetector;
-import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -123,8 +110,8 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
                             if (touchView != null) {
-                                io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(touchView,
-                                        io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
+                                Haptics.perform(touchView,
+                                        Haptics.Event.LONG_PRESS);
                             }
                             originalLongClickListener.onLongClick(touchView);
                         }

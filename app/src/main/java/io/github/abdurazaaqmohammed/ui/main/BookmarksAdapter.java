@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
-
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
 import android.graphics.Color;

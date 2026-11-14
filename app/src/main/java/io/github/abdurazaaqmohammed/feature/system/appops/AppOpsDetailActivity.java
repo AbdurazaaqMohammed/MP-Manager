@@ -1,18 +1,19 @@
 package io.github.abdurazaaqmohammed.feature.system.appops;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.text.Editable;
 import android.text.TextUtils;
-import android.view.LayoutInflater;
+import android.text.TextWatcher;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -20,16 +21,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.widget.NestedScrollView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -48,7 +50,7 @@ public class AppOpsDetailActivity extends BaseActivity {
     private ProgressBar progressBar;
     private NestedScrollView scrollView;
     private FloatingActionButton fabScrollTop;
-    private com.google.android.material.textfield.TextInputEditText searchEdit;
+    private TextInputEditText searchEdit;
 
     // Battery & Network
     private TextView tvStandbyBucketValue;
@@ -112,7 +114,7 @@ public class AppOpsDetailActivity extends BaseActivity {
 
         searchEdit = findViewById(R.id.detail_search_edit);
         if (searchEdit != null) {
-            searchEdit.addTextChangedListener(new android.text.TextWatcher() {
+            searchEdit.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -122,7 +124,7 @@ public class AppOpsDetailActivity extends BaseActivity {
                 }
 
                 @Override
-                public void afterTextChanged(android.text.Editable s) {}
+                public void afterTextChanged(Editable s) {}
             });
         }
 
@@ -330,7 +332,7 @@ public class AppOpsDetailActivity extends BaseActivity {
      * something actionable ("Requires root or Shizuku", stderr detail) instead
      * of the operation failing silently as success.
      */
-    private CommandOutcome runChecked(java.util.concurrent.Callable<Boolean> action) {
+    private CommandOutcome runChecked(Callable<Boolean> action) {
         try {
             boolean ok = action.call();
             if (ok) return new CommandOutcome(true, "");
@@ -346,7 +348,7 @@ public class AppOpsDetailActivity extends BaseActivity {
     }
 
     /** Puts a switch back where it was after its action failed. */
-    private void revertSwitch(android.widget.CompoundButton btn, boolean attempted) {
+    private void revertSwitch(CompoundButton btn, boolean attempted) {
         btn.setChecked(!attempted);
         toastFailure(new CommandOutcome(false, AppOpsEngine.lastError()));
     }
@@ -443,7 +445,7 @@ public class AppOpsDetailActivity extends BaseActivity {
     private View createPermissionRow(AppOpsDetailData.PermissionEntry p, boolean isSpecialSystem) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(28, 22, 28, 22);
         row.setTag(p.label + " " + p.name + " " + p.opName);
 
@@ -565,10 +567,10 @@ public class AppOpsDetailActivity extends BaseActivity {
     private View createAppOpRow(AppOpsDetailData.AppOpEntry op) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(28, 20, 28, 20);
         row.setTag(op.label + " " + op.opName + " " + op.description);
-        android.util.TypedValue outValue = new android.util.TypedValue();
+        TypedValue outValue = new TypedValue();
         getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
         row.setBackgroundResource(outValue.resourceId);
 
@@ -607,7 +609,7 @@ public class AppOpsDetailActivity extends BaseActivity {
         // Mode badge & Chevron
         LinearLayout rightCol = new LinearLayout(this);
         rightCol.setOrientation(LinearLayout.HORIZONTAL);
-        rightCol.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        rightCol.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tvMode = new TextView(this);
         tvMode.setText(formatModeLabel(op.mode));

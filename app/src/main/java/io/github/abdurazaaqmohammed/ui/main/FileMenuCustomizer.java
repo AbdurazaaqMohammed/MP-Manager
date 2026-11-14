@@ -2,18 +2,6 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
-import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
-
 import android.app.Activity;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;

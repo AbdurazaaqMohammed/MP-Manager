@@ -1,27 +1,13 @@
 package io.github.abdurazaaqmohammed.data.prefs;
 
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
-import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-
 
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.text.TextUtils;
-
-import androidx.appcompat.app.AlertDialog;
+import android.widget.Toast;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -157,7 +143,7 @@ public final class MinimizedEditors {
                 if (manager == null) return;
                 for (ActivityManager.AppTask task : manager.getAppTasks()) {
                     ActivityManager.RecentTaskInfo info = task.getTaskInfo();
-                    int taskId = android.os.Build.VERSION.SDK_INT >= 29 ? info.taskId : info.id;
+                    int taskId = Build.VERSION.SDK_INT >= 29 ? info.taskId : info.id;
                     if (taskId == item.taskId) {
                         task.moveToFront();
                         unregister(live);
@@ -168,7 +154,7 @@ public final class MinimizedEditors {
                 context.startActivity(item.reopenIntent);
             }
         } catch (Exception error) {
-            android.widget.Toast.makeText(context, error.toString(), android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(context, error.toString(), Toast.LENGTH_LONG).show();
         }
     }
 

@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.widget.NestedScrollView;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -20,6 +21,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -128,7 +130,7 @@ final class NetworkConnectionsDialog implements AutoCloseable {
         ftp.ftpProfiles = ftpProfiles;
         ftp.refreshSaved();
         if (!ftp.dirty && ftp.savedName == null && !ftpProfiles.isEmpty()) {
-            int last = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity).getInt("lastSelectedClientProfile", 0);
+            int last = PreferenceManager.getDefaultSharedPreferences(activity).getInt("lastSelectedClientProfile", 0);
             ftp.load(ftpProfiles.get(Math.max(0, Math.min(ftpProfiles.size() - 1, last))));
         }
         controller.loadSaved(profiles -> {
@@ -153,7 +155,7 @@ final class NetworkConnectionsDialog implements AutoCloseable {
                 port = Integer.parseInt(form.port.getText().toString());
                 if (port < 1 || port > 65535) throw new NumberFormatException();
             } catch (NumberFormatException e) { form.port.setError(activity.getString(R.string.network_invalid_port)); return; }
-            try { new java.net.URI("ftp", null, host, port, "/", null, null); }
+            try { new URI("ftp", null, host, port, "/", null, null); }
             catch (Exception e) { form.address.setError(activity.getString(R.string.network_invalid_host)); return; }
             if (host.isEmpty() || host.contains("/") || host.contains("\\")) {
                 form.address.setError(activity.getString(R.string.network_invalid_host)); return;
@@ -385,7 +387,7 @@ final class NetworkConnectionsDialog implements AutoCloseable {
             pin.setChecked(SidebarPins.isPinned(activity, SidebarPins.FTP_PREFIX + profile.getName()));
             remember.setChecked(true);
             for (int i = 0; i < ftpProfiles.size(); i++) if (ftpProfiles.get(i).getName().equals(profile.getName())) {
-                androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity).edit().putInt("lastSelectedClientProfile", i).apply();
+                PreferenceManager.getDefaultSharedPreferences(activity).edit().putInt("lastSelectedClientProfile", i).apply();
                 break;
             }
             dirty = false; loading = false;

@@ -1,18 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
@@ -158,8 +146,8 @@ public class CompareTextActivity extends BaseActivity {
         String zip2 = intent.getStringExtra("zip2");
 
         progressBar.setVisibility(View.VISIBLE);
-        io.github.abdurazaaqmohammed.util.io.ProgressManager pm =
-                new io.github.abdurazaaqmohammed.util.io.ProgressManager(this, true);
+        ProgressManager pm =
+                new ProgressManager(this, true);
         pm.setText(getString(R.string.dex_comparing));
         pm.show();
 

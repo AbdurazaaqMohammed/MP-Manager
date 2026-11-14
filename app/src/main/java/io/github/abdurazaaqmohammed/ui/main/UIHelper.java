@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
-
 import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 
 import android.content.Intent;

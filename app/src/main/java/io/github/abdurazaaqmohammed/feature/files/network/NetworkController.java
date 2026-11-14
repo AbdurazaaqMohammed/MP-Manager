@@ -1,24 +1,35 @@
 package io.github.abdurazaaqmohammed.feature.files.network;
 
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.feature.ftp.FtpProfile;
+import io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.SystemClock;
 import android.widget.ProgressBar;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -44,11 +55,11 @@ public final class NetworkController {
     private NetworkConnectionsDialog connections;
     private final ConcurrentHashMap<String, RemoteSpace.Report> spaceReports = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> spaceCheckTimes = new ConcurrentHashMap<>();
-    private final androidx.activity.result.ActivityResultLauncher<String> localPermission;
+    private final ActivityResultLauncher<String> localPermission;
 
     public NetworkController(MainActivity activity) {
         this.activity = activity;
-        localPermission = activity.registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(), granted -> {
+        localPermission = activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
             Runnable pending = pendingConnection;
             pendingConnection = null;
             if (closed || activity.isDestroyed()) return;
@@ -70,8 +81,8 @@ public final class NetworkController {
 
     public void withLocalNetworkPermission(Runnable action) {
         if (closed) return;
-        if (android.os.Build.VERSION.SDK_INT >= 37 && androidx.core.content.ContextCompat.checkSelfPermission(activity,
-                NetworkAccess.PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(activity,
+                NetworkAccess.PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             boolean alreadyRequested = pendingConnection != null;
             pendingConnection = action;
             if (!alreadyRequested) localPermission.launch(NetworkAccess.PERMISSION);
@@ -81,8 +92,8 @@ public final class NetworkController {
     }
 
     public void withPermissionForAddress(String address, Runnable action) {
-        if (android.os.Build.VERSION.SDK_INT >= 37 && androidx.core.content.ContextCompat.checkSelfPermission(activity,
-                NetworkAccess.PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(activity,
+                NetworkAccess.PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             boolean[] local = {false};
             runOperation(activity.getString(R.string.connect), () -> local[0] = NetworkAccess.requiresPermission(address),
                     () -> { if (local[0]) withLocalNetworkPermission(action); else action.run(); });
@@ -146,7 +157,7 @@ public final class NetworkController {
     }
 
     public void editFtpProfile(String name) {
-        for (io.github.abdurazaaqmohammed.feature.ftp.FtpProfile profile : activity.getFtp().clientProfiles()) {
+        for (FtpProfile profile : activity.getFtp().clientProfiles()) {
             if (profile.getName().equals(name)) {
                 showConnectionDialog("ftp");
                 connections.loadFtpProfile(profile);
@@ -157,8 +168,8 @@ public final class NetworkController {
     }
 
     public void connect(NetworkProfile profile, boolean remember, boolean pin, boolean pane1) {
-        if (android.os.Build.VERSION.SDK_INT >= 37 && androidx.core.content.ContextCompat.checkSelfPermission(activity,
-                NetworkAccess.PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(activity,
+                NetworkAccess.PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             boolean[] local = {false};
             runOperation(activity.getString(R.string.connecting_to, profile.name),
                     () -> local[0] = NetworkAccess.requiresPermission(profile.canonicalAddress()), () -> {
@@ -204,7 +215,7 @@ public final class NetworkController {
     /** Refresh only live sessions, off-main and at most once a minute per connection. */
     public void refreshSpace(RemoteFile.Connection connection) {
         if (closed || connection.storageId == null) return;
-        long now = android.os.SystemClock.elapsedRealtime();
+        long now = SystemClock.elapsedRealtime();
         Long previous = spaceCheckTimes.putIfAbsent(connection.id, now);
         if (previous != null && (now - previous < 60_000 || !spaceCheckTimes.replace(connection.id, previous, now))) return;
         workers.execute(() -> {
@@ -251,8 +262,8 @@ public final class NetworkController {
         });
     }
 
-    private static void checkpoint() throws java.io.InterruptedIOException {
-        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Transfer cancelled");
+    private static void checkpoint() throws InterruptedIOException {
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Transfer cancelled");
     }
 
     public void create(RemoteFile folder, String name, boolean directory, boolean pane1) {
@@ -271,7 +282,7 @@ public final class NetworkController {
             for (Object item : items) {
                 checkpoint();
                 if (listener != null) listener.checkpoint();
-                if (!(item instanceof File) || item instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper)
+                if (!(item instanceof File) || item instanceof FTPFileWrapper)
                     throw new IOException("Extract archive entries to a local folder before uploading");
                 File source = (File) item;
                 uploadSource(source, destination.connection.client, destination.entry.path, listener);
@@ -286,7 +297,7 @@ public final class NetworkController {
                               FileUtils.TransferListener listener) throws IOException {
         checkpoint();
         if (listener != null) listener.checkpoint();
-        if (!(source instanceof SafFile) && java.nio.file.Files.isSymbolicLink(source.toPath()))
+        if (!(source instanceof SafFile) && Files.isSymbolicLink(source.toPath()))
             throw new IOException("Symbolic links cannot be uploaded");
         String path = RemotePath.child(parent, source.getName());
         if (destination.stat(path) != null) throw new IOException("Destination already exists: " + source.getName());
@@ -295,7 +306,7 @@ public final class NetworkController {
             if (source instanceof SafFile) children = SafFs.children((SafFile) source);
             else {
                 File[] listed = source.listFiles();
-                children = listed == null ? null : java.util.Arrays.asList(listed);
+                children = listed == null ? null : Arrays.asList(listed);
             }
             if (children == null) throw new IOException("Cannot read source folder: " + source.getName());
             destination.mkdir(path);
@@ -303,7 +314,7 @@ public final class NetworkController {
         } else {
             if (listener != null) listener.onFile(source, new File("/network/" + path));
             try (InputStream input = RootStaging.openInputStream(activity, source)) {
-                InputStream monitored = new java.io.FilterInputStream(input) {
+                InputStream monitored = new FilterInputStream(input) {
                     @Override public int read(byte[] buffer, int offset, int length) throws IOException {
                         if (listener != null) listener.checkpoint();
                         int count = super.read(buffer, offset, length);
@@ -326,11 +337,11 @@ public final class NetworkController {
     public void copyOut(RemoteFile source, boolean sourcePane1, boolean move) {
         File destination = sourcePane1 ? activity.pane2Folder : activity.pane1Folder;
         MainFilesArrayAdapter other = activity.paneFilesAdapter(!sourcePane1);
-        androidx.recyclerview.widget.RecyclerView opposite = activity.findViewById(sourcePane1 ? R.id.listViewPane2 : R.id.listViewPane1);
+        RecyclerView opposite = activity.findViewById(sourcePane1 ? R.id.listViewPane2 : R.id.listViewPane1);
         boolean supported = opposite.getAdapter() instanceof MainFilesArrayAdapter
-                || opposite.getAdapter() instanceof io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
+                || opposite.getAdapter() instanceof RemoteFilesArrayAdapter;
         runOperation(activity.getString(move ? R.string.move : android.R.string.copy), () -> {
-            if (!supported || destination == null || destination instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper
+            if (!supported || destination == null || destination instanceof FTPFileWrapper
                     || (other != null && other.isInZip))
                 throw new IOException("Choose a destination folder, not an archive");
             if (destination instanceof RemoteFile remote && remote.connection.address.equals(source.connection.address)
@@ -363,7 +374,7 @@ public final class NetworkController {
     public boolean canCopyOut(RemoteFile source, boolean sourcePane1) {
         File destination = sourcePane1 ? activity.pane2Folder : activity.pane1Folder;
         MainFilesArrayAdapter other = activity.paneFilesAdapter(!sourcePane1);
-        if (destination == null || destination instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper
+        if (destination == null || destination instanceof FTPFileWrapper
                 || (other != null && other.isInZip)) return false;
         if (destination instanceof RemoteFile remote) {
             return !remote.connection.address.equals(source.connection.address)
@@ -373,13 +384,13 @@ public final class NetworkController {
     }
 
     private File makeStagingFolder() throws IOException {
-        File staging = new File(activity.getCacheDir(), "network_" + java.util.UUID.randomUUID());
+        File staging = new File(activity.getCacheDir(), "network_" + UUID.randomUUID());
         if (!staging.mkdir()) throw new IOException("Cannot create download cache");
         return staging;
     }
 
     /** A downloaded copy is intentionally local; edits require explicitly copying it back. */
-    public void open(RemoteFile source, java.util.function.Consumer<File> opener) {
+    public void open(RemoteFile source, Consumer<File> opener) {
         File[] downloaded = {null};
         runOperation(activity.getString(R.string.network_downloading), () -> {
             File staging = makeStagingFolder();

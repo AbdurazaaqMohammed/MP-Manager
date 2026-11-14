@@ -7,12 +7,10 @@ package io.github.abdurazaaqmohammed.privilege.internal;
 import android.content.Context;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
-import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
-import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
 /** M2 file-ops session: delegates to AccessManager (backend routing inside). */
 public final class LegacyFileOpsSession implements FileOpsSession {
@@ -124,12 +122,12 @@ public final class LegacyFileOpsSession implements FileOpsSession {
     }
 
     @Override
-    public java.util.List<String> deleteAll(java.util.List<String> paths, boolean useElevated) throws IOException {
+    public List<String> deleteAll(List<String> paths, boolean useElevated) throws IOException {
         return AccessManager.deleteAll(context, paths, useElevated);
     }
 
     @Override
-    public void deleteTree(java.util.List<String> paths, boolean useElevated) throws IOException {
+    public void deleteTree(List<String> paths, boolean useElevated) throws IOException {
         AccessManager.deleteTree(context, paths, useElevated, null);
     }
 }

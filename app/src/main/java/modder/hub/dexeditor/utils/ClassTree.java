@@ -108,17 +108,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.smali.SmaliHelper;
 
 public class ClassTree {
-    public java.util.function.BiConsumer<Boolean, Boolean> saveStateListener = (changed, saved) -> {};
+    public BiConsumer<Boolean, Boolean> saveStateListener = (changed, saved) -> {};
 	
 	/*
 	Author @developer-krushna

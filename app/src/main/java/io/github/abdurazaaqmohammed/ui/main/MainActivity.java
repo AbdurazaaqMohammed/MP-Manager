@@ -1,28 +1,10 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine;
+import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
+import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
-import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
@@ -30,8 +12,6 @@ import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
-
-import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import static io.github.abdurazaaqmohammed.util.io.FileUtils.doesNotHaveStoragePerm;
@@ -62,7 +42,6 @@ import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
 import android.view.GestureDetector;
-import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -116,7 +95,6 @@ import io.github.abdurazaaqmohammed.feature.system.CacheCleaner;
 import io.github.abdurazaaqmohammed.feature.system.LogcatService;
 import io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.feature.files.SortFilterController;
 
 import androidx.appcompat.widget.Toolbar;
@@ -136,6 +114,7 @@ import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.lilincpp.github.libezftp.EZFtpFile;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.compile.BuildOptions;
 import com.reandroid.apkeditor.compile.Builder;
@@ -161,6 +140,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -1982,8 +1962,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         else { pane2Folder = folder; currentPane2Files = files; }
         if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(folder, false, null));
         FTPFileWrapper[] rows = new FTPFileWrapper[files.length + 1];
-        rows[0] = new FTPFileWrapper(folder.remotePath(), new com.lilincpp.github.libezftp.EZFtpFile("..",
-                folder.remotePath(), com.lilincpp.github.libezftp.EZFtpFile.TYPE_DIRECTORY, 0, null), folder.client, folder.connectionAddress());
+        rows[0] = new FTPFileWrapper(folder.remotePath(), new EZFtpFile("..",
+                folder.remotePath(), EZFtpFile.TYPE_DIRECTORY, 0, null), folder.client, folder.connectionAddress());
         System.arraycopy(files, 0, rows, 1, files.length);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         pane.setAdapter(new FtpFilesArrayAdapter(this, rows, pane1, folder.client));
@@ -2226,7 +2206,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = BootInspectManager.getParentOrImageOrigin(folder);
         if (parent == null || parent.equals(folder.getParentFile())) {
-            File imgParent = io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.getParentOrImageOrigin(folder);
+            File imgParent = SystemImageMountManager.getParentOrImageOrigin(folder);
             if (imgParent != null) parent = imgParent;
         }
         if (parent == null) parent = folder;
@@ -2680,7 +2660,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     private boolean showMsgOnLongPress(View v) {
-        io.github.abdurazaaqmohammed.ui.common.util.Haptics.perform(v, io.github.abdurazaaqmohammed.ui.common.util.Haptics.Event.LONG_PRESS);
+        Haptics.perform(v, Haptics.Event.LONG_PRESS);
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
@@ -2714,7 +2694,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) { }
         try {
             File currentFolder = pane1 ? pane1Folder : pane2Folder;
-            if (currentFolder != null && io.github.abdurazaaqmohammed.ui.main.FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
+            if (currentFolder != null && FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
                 DirSizeCache.invalidatePrefix(currentFolder);
             }
             RootManager.getInstance(this).invalidateListCache();
@@ -2943,9 +2923,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public static final int COLOR_DIFF_MODIFIED = 0xFFFFB300; // Amber / Yellow
     public static final int COLOR_DIFF_MISSING = 0xFFF44336;  // Red
 
-    private final java.util.Map<String, Integer> diffColors2 = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Integer> diffColors2 = new ConcurrentHashMap<>();
 
-    public void setDiffColorsPane2(java.util.Map<String, Integer> colors) {
+    public void setDiffColorsPane2(Map<String, Integer> colors) {
         diffColors2.clear();
         if (colors != null) diffColors2.putAll(colors);
         RecyclerView pane2 = findViewById(R.id.listViewPane2);
@@ -2973,20 +2953,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return;
         }
 
-        io.github.abdurazaaqmohammed.util.io.ProgressManager pm = new io.github.abdurazaaqmohammed.util.io.ProgressManager(this, true);
+        ProgressManager pm = new ProgressManager(this, true);
         pm.setText(getString(R.string.comparing_folders));
         pm.show();
 
         new Thread(() -> {
             try {
-                io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffResult res =
-                        io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.compare(baseDir, targetDir);
+                FolderDiffEngine.DiffResult res =
+                        FolderDiffEngine.compare(baseDir, targetDir);
 
-                java.util.Map<String, Integer> colorMap = new java.util.HashMap<>();
-                for (java.util.Map.Entry<String, io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus> entry : res.statusByName.entrySet()) {
-                    if (entry.getValue() == io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus.ADDED) {
+                Map<String, Integer> colorMap = new HashMap<>();
+                for (Map.Entry<String, FolderDiffEngine.DiffStatus> entry : res.statusByName.entrySet()) {
+                    if (entry.getValue() == FolderDiffEngine.DiffStatus.ADDED) {
                         colorMap.put(entry.getKey(), COLOR_DIFF_ADDED);
-                    } else if (entry.getValue() == io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus.MODIFIED) {
+                    } else if (entry.getValue() == FolderDiffEngine.DiffStatus.MODIFIED) {
                         colorMap.put(entry.getKey(), COLOR_DIFF_MODIFIED);
                     }
                 }
@@ -3000,7 +2980,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     pm.dismiss();
-                    new io.github.abdurazaaqmohammed.util.misc.ErrorUtil(MainActivity.this).showError(e);
+                    new ErrorUtil(MainActivity.this).showError(e);
                 });
             }
         }).start();
@@ -3370,7 +3350,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     Extensions.showMessage(this, rss.getString(R.string.cannot_open_item));
                 }
             }
-            String locate = getIntent() == null || getIntent().hasExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH)
+            String locate = getIntent() == null || getIntent().hasExtra(BookmarkShortcuts.EXTRA_PATH)
                     ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
@@ -3445,25 +3425,25 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private void openBookmarkShortcut() {
         Intent intent = getIntent();
-        if (intent == null || !io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.ACTION_OPEN.equals(intent.getAction())) return;
-        String path = intent.getStringExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH);
+        if (intent == null || !BookmarkShortcuts.ACTION_OPEN.equals(intent.getAction())) return;
+        String path = intent.getStringExtra(BookmarkShortcuts.EXTRA_PATH);
         if (path == null || path.isEmpty()) return;
-        boolean directory = intent.getBooleanExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_DIRECTORY, true);
-        intent.removeExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH);
+        boolean directory = intent.getBooleanExtra(BookmarkShortcuts.EXTRA_DIRECTORY, true);
+        intent.removeExtra(BookmarkShortcuts.EXTRA_PATH);
         intent.removeExtra("locatePath");
         new Thread(() -> {
             File target;
             try {
-                io.github.abdurazaaqmohammed.util.io.SafFs.init(this);
-                target = io.github.abdurazaaqmohammed.util.io.SafFs.isSafPath(path)
-                        ? io.github.abdurazaaqmohammed.util.io.SafFs.statWrap(path) : new File(path);
-                if (!io.github.abdurazaaqmohammed.util.io.SafFs.isSaf(target)
+                SafFs.init(this);
+                target = SafFs.isSafPath(path)
+                        ? SafFs.statWrap(path) : new File(path);
+                if (!SafFs.isSaf(target)
                         && !PrivilegeManager.Files.exists(this, target.getAbsolutePath())) {
                     handler.post(() -> Extensions.showMessage(this, R.string.cannot_open_item));
                     return;
                 }
-                if (!(target instanceof io.github.abdurazaaqmohammed.util.io.SafFile) && directory) {
-                    target = new io.github.abdurazaaqmohammed.privilege.impl.RootFile(path, true, true, false, 0, 0, "d");
+                if (!(target instanceof SafFile) && directory) {
+                    target = new RootFile(path, true, true, false, 0, 0, "d");
                 }
             } catch (Exception error) {
                 handler.post(() -> new ErrorUtil(this).showError(error));
