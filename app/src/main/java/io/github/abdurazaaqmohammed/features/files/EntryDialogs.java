@@ -47,6 +47,8 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.FileTreeStats;
+import io.github.abdurazaaqmohammed.utils.DirectoryStats;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
@@ -107,11 +109,17 @@ public class EntryDialogs {
         Object[] values = state.values();
         if (multi) {
             StringBuilder sb = new StringBuilder();
+            int displayed = 0;
             for (int i : state.selectedPositions()) {
                 if (i < 0 || i >= values.length) continue;
+                if (displayed++ >= 5) break;
                 sb.append(',').append(state.isInZip() ? ((ZipEntryInfo) values[i]).getName() : ((File) values[i]).getName());
             }
-            return sb.length() == 0 ? "" : sb.deleteCharAt(0);
+            if (sb.length() == 0) return "";
+            sb.deleteCharAt(0);
+            int remaining = state.selectedPositions().size() - Math.min(displayed, 5);
+            if (remaining > 0) sb.append(' ').append(context.getString(R.string.plus_n_more, remaining));
+            return sb;
         }
         if (position >= 0 && position < values.length) {
             return state.isInZip() ? ((ZipEntryInfo) values[position]).getName() : ((File) values[position]).getName();
@@ -360,222 +368,32 @@ public class EntryDialogs {
                             toBin = recycleCb != null && recycleCb.isChecked();
                             RecycleBin.setLastChoice(context, toBin);
                         }
-                        if (multi) {
-                            if (!isInZip) {
-                                List<File> selectedFiles = new ArrayList<>();
+                        if (!isInZip) {
+                            List<File> selectedFiles = new ArrayList<>();
+                            if (multi) {
                                 for (int i : state.selectedPositions()) {
-                                    File f = (File) values[i];
-                                    if (f != null) selectedFiles.add(f);
+                                    if (i > 0 && i < values.length && values[i] instanceof File f) selectedFiles.add(f);
                                 }
-                                List<String> selectedPaths = new ArrayList<>(selectedFiles.size());
-                                for (File f : selectedFiles) selectedPaths.add(f.getAbsolutePath());
-                                pm.setText(context.rss.getString(R.string.deleting, filesToDisplay));
-
-                                // Totals must come from the elevated backend when
-                                // it is on: the app cannot list a root-only tree,
-                                // so a plain walk reported "1 file" and the dialog
-                                // sat at 0% until the batch was already gone.
-                                // An elevated delete reports one step per directory
-                                // removed (plus one per path), so its unit is
-                                // directories rather than files.
-                                final int totalSelected;
-                                final int[] perItem = new int[selectedFiles.size()];
-                                if (useElevatedForDelete) {
-                                    int dirs = AccessManager.countDirsElevated(context, selectedPaths);
-                                    totalSelected = Math.max(1, selectedPaths.size() + dirs);
-                                } else {
-                                    int entries = 0;
-                                    for (int i = 0; i < selectedFiles.size(); i++) {
-                                        perItem[i] = FileUtils.measure(selectedFiles.get(i), 20000).entries();
-                                        entries += perItem[i];
-                                    }
-                                    totalSelected = Math.max(1, entries);
-                                }
-                                pm.setProgress(0, totalSelected);
-                                final int[] removed = {0};
-                                if (toBin) {
-                                    for (int i = 0; i < selectedFiles.size(); i++) {
-                                        File f = selectedFiles.get(i);
-                                        pm.setFile(f);
-                                        pm.setPaths(f.getAbsolutePath(), null);
-                                        if (RecycleBin.moveToBin(context, f)) {
-                                            // Staged in one step, so account for the
-                                            // whole item at once.
-                                            removed[0] += perItem[i];
-                                        } else {
-                                            // Bin staging failed: retry through the
-                                            // elevated backend before the plain walk,
-                                            // which cannot unlink inside Android/data
-                                            // anyway.
-                                            boolean gone = false;
-                                            if (useElevatedForDelete) {
-                                                try {
-                                                    List<String> one = new ArrayList<>(1);
-                                                    one.add(f.getAbsolutePath());
-                                                    AccessManager.deleteTree(context, one, true, null, pm.control());
-                                                    gone = !f.exists();
-                                                } catch (Exception ignored) {
-                                                }
-                                            }
-                                            if (gone) {
-                                                removed[0] += perItem[i];
-                                            } else {
-                                                FileUtils.deleteTree(f,
-                                                        countingDeleter(pm, removed, totalSelected));
-                                            }
-                                        }
-                                        pm.setProgress(Math.min(removed[0], totalSelected), totalSelected);
-                                    }
-                                } else if (useElevatedForDelete) {
-                                    // One shell process for the whole selection,
-                                    // but it reports after every directory it
-                                    // removes, so the dialog keeps moving.
-                                    try {
-                                        if (!selectedFiles.isEmpty()) {
-                                            pm.setFile(selectedFiles.get(0));
-                                            pm.setPaths(selectedFiles.get(0).getAbsolutePath(), null);
-                                        }
-                                        AccessManager.deleteTree(context, selectedPaths, true,
-                                                (done, bytesDone) ->
-                                                        pm.setProgress(Math.min(done, totalSelected), totalSelected),
-                                                pm.control());
-                                    } catch (Exception ignored) {
-                                        for (int i = 0; i < selectedFiles.size(); i++) {
-                                            File f = selectedFiles.get(i);
-                                            pm.setFile(f);
-                                            pm.setPaths(f.getAbsolutePath(), null);
-                                            boolean deleted = false;
-                                            try {
-                                                AccessManager.delete(context, f.getAbsolutePath(), true);
-                                                deleted = true;
-                                            } catch (Exception ignoredInner) {
-                                            }
-                                            if (deleted) {
-                                                removed[0] += perItem[i];
-                                            } else {
-                                                FileUtils.deleteTree(f,
-                                                        countingDeleter(pm, removed, totalSelected));
-                                            }
-                                            pm.setProgress(Math.min(removed[0], totalSelected), totalSelected);
-                                        }
-                                    }
-                                } else {
-                                    // Per-entry walk: this is the path that used to
-                                    // call Util.deleteDir once and report nothing
-                                    // until the whole tree was gone.
-                                    for (File f : selectedFiles) {
-                                        pm.setFile(f);
-                                        pm.setPaths(f.getAbsolutePath(), null);
-                                        FileUtils.deleteTree(f,
-                                                countingDeleter(pm, removed, totalSelected));
-                                    }
-                                }
-                                pm.setProgress(totalSelected, totalSelected);
-                                int failures = 0;
-                                File firstFailure = null;
-                                for (File f : selectedFiles) {
-                                    boolean gone;
-                                    try {
-                                        // Same elevated-authoritative rule as
-                                        // the single delete above.
-                                        gone = useElevatedForDelete
-                                                ? !AccessManager.elevatedExists(context, f.getAbsolutePath())
-                                                : !f.exists();
-                                    } catch (Exception e) {
-                                        gone = true;
-                                    }
-                                    if (!gone) {
-                                        failures++;
-                                        if (firstFailure == null) firstFailure = f;
-                                    }
-                                }
-                                if (failures > 0 && firstFailure != null) {
-                                    final int failedCount = failures;
-                                    final File failedFile = firstFailure;
-                                    String details = FileUtils.describeWriteProblem(context, failedFile);
-                                    context.handler.post(() -> Extensions.showMessage(context,
-                                            context.rss.getString(R.string.delete_failed_x, failedCount),
-                                            details));
-                                }
-                                context.handler.post(() -> {
-                                    state.clearSelection();
-                                    context.refreshPaneAfterChange(pane1, null);
-                                });
-                            } else {
-                                List<ZipEntryInfo> selected = new ArrayList<>();
-                                for (int i : state.selectedPositions()) selected.add((ZipEntryInfo) values[i]);
-                                pm.setProgress(0, Math.max(1, selected.size()));
-                                if (!selected.isEmpty()) {
-                                    pm.setFile(selected.get(0).getName());
-                                    pm.setPaths(zipFile != null ? zipFile.getAbsolutePath() : null,
-                                            selected.get(0).getFullPath());
-                                }
-                                fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
-                                pm.setProgress(Math.max(1, selected.size()), Math.max(1, selected.size()));
-                                if (sign[0]) wrapper[0].signApk(zipFile);
-                                File changedZip = zipFile != null ? zipFile
-                                        : (selected.isEmpty() ? null : selected.get(0).getZipFile());
-                                context.offerOuterUpdate(changedZip, pane1);
-                                context.handler.post(state::clearSelection);
+                            } else if (file != null) {
+                                selectedFiles.add(file);
                             }
-                        } else if (!isInZip) {
-                            List<String> one = new ArrayList<>(1);
-                            one.add(file.getAbsolutePath());
-                            final int total;
-                            if (useElevatedForDelete) {
-                                // One step per directory removed, plus the final
-                                // sweep of the path itself.
-                                total = Math.max(1, 1 + AccessManager.countDirsElevated(context, one));
-                            } else {
-                                total = Math.max(1, FileUtils.measure(file, 20000).entries());
+                            deletePlainFiles(pm, selectedFiles, toBin, useElevatedForDelete, filesToDisplay);
+                        } else if (multi) {
+                            List<ZipEntryInfo> selected = new ArrayList<>();
+                            for (int i : state.selectedPositions()) selected.add((ZipEntryInfo) values[i]);
+                            pm.setProgress(0, Math.max(1, selected.size()));
+                            if (!selected.isEmpty()) {
+                                pm.setFile(selected.get(0).getName());
+                                pm.setPaths(zipFile != null ? zipFile.getAbsolutePath() : null,
+                                        selected.get(0).getFullPath());
                             }
-                            pm.setProgress(0, total);
-                            pm.setFile(file);
-                            pm.setPaths(file.getAbsolutePath(), null);
-                            pm.setText(context.rss.getString(R.string.deleting, file.getName()));
-                            final int[] removed = {0};
-
-                            if (toBin && RecycleBin.moveToBin(context, file)) {
-                                // item is in the bin now
-                            } else if (useElevatedForDelete) {
-                                try {
-                                    AccessManager.deleteTree(context, one, true,
-                                            (done, bytesDone) ->
-                                            pm.setProgress(Math.min(done, total), total),
-                                            pm.control());
-                                } catch (Exception e) {
-                                    if (TransferCancelledException.isCancellation(e)) throw e;
-                                    FileUtils.deleteTree(file,
-                                            countingDeleter(pm, removed, total));
-                                }
-                            } else {
-                                FileUtils.deleteTree(file,
-                                        countingDeleter(pm, removed, total));
-                            }
-                            boolean stillThere;
-                            try {
-                                // When the elevated backend did the deleting,
-                                // only its own view is authoritative: the
-                                // app-uid FUSE view can cache the deleted
-                                // entry (root removed it via /data/media) and
-                                // File.exists() then still reports true.
-                                stillThere = useElevatedForDelete
-                                        ? AccessManager.elevatedExists(context, file.getAbsolutePath())
-                                        : file.exists();
-                            } catch (Exception e) {
-                                stillThere = false;
-                            }
-                            if (stillThere) {
-                                String details = FileUtils.describeWriteProblem(context, file);
-                                context.handler.post(() -> Extensions.showMessage(context,
-                                        context.rss.getString(R.string.delete_failed, file.getName()),
-                                        details));
-                            }
-                            pm.setProgress(total, total);
-                            context.handler.post(() -> {
-                                state.clearSelection();
-                                context.refreshPaneAfterChange(pane1, null);
-                            });
+                            fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                            pm.setProgress(Math.max(1, selected.size()), Math.max(1, selected.size()));
+                            if (sign[0]) wrapper[0].signApk(zipFile);
+                            File changedZip = zipFile != null ? zipFile
+                                    : (selected.isEmpty() ? null : selected.get(0).getZipFile());
+                            context.offerOuterUpdate(changedZip, pane1);
+                            context.handler.post(state::clearSelection);
                         } else {
                             pm.setProgress(0, 1);
                             pm.setFile(entry.getName());
@@ -597,14 +415,11 @@ public class EntryDialogs {
                         // A cancelled delete is the user's own choice, not a
                         // failure worth reporting. What was already removed
                         // still has to leave the list, so the pane is refreshed.
-                        if (TransferCancelledException.isCancellation(e)) {
-                            context.handler.post(() -> {
-                                state.clearSelection();
-                                context.refreshPaneAfterChange(pane1, null);
-                            });
-                        } else {
-                            new ErrorUtil(context).showError(e);
-                        }
+                        context.handler.post(() -> {
+                            state.clearSelection();
+                            context.refreshPaneAfterChange(pane1, null);
+                        });
+                        if (!TransferCancelledException.isCancellation(e)) new ErrorUtil(context).showError(e);
                     }
                 }).start();
             };
@@ -640,6 +455,76 @@ public class EntryDialogs {
         AlertDialog shownDelete = deleteDialog.create();
         dialogUtil.styleAlertDialog(shownDelete);
         appendDeleteSize(shownDelete, customMsgView, isInZip, multi, file, values);
+    }
+
+    private void deletePlainFiles(ProgressManager pm, List<File> files, boolean toBin,
+                                  boolean elevated, CharSequence names) throws java.io.IOException {
+        if (files.isEmpty()) return;
+        for (File file : files) {
+            if (!(file instanceof SafFile) && RootManager.isPathBlocked(file.getAbsolutePath()))
+                throw new java.io.IOException("Blocked: refusing to delete critical path: " + file.getAbsolutePath());
+        }
+        pm.setText(context.getString(R.string.calculating));
+        pm.setFile(files.get(0));
+        pm.setPaths(files.get(0).getAbsolutePath(), null);
+        int[] shares = new int[files.size()];
+        long entries = 0;
+        boolean exact = true;
+        AccessManager.Backend backend = AccessManager.active(context);
+        List<String> paths = new ArrayList<>();
+        for (File file : files) paths.add(file.getAbsolutePath());
+        boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
+        List<DirectoryStats> batch = allLocal && backend == AccessManager.Backend.ROOT
+                ? io.github.abdurazaaqmohammed.utils.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
+        for (int i = 0; i < files.size(); i++) {
+            pm.control().checkpoint();
+            File file = files.get(i);
+            DirectoryStats stats = batch != null ? batch.get(i) : FileTreeStats.read(context, file, pm.control(), 120_000);
+            shares[i] = (int) Math.min(Integer.MAX_VALUE, stats.entries());
+            entries += stats.entries();
+            exact &= stats.complete();
+        }
+        final int total = exact && entries > 0 && entries <= Integer.MAX_VALUE ? (int) entries : 0;
+        pm.setProgress(0, total);
+        pm.setText(context.getString(R.string.deleting, names));
+        int[] removed = {0};
+        // Shizuku's service is one opaque unlink operation per root. Do not
+        // pretend that its root counter is the native per-entry counter.
+        boolean entryProgress = backend != AccessManager.Backend.SHIZUKU;
+        if (toBin) {
+            for (int i = 0; i < files.size(); i++) {
+                pm.control().checkpoint();
+                File file = files.get(i);
+                pm.setFile(file);
+                pm.setPaths(file.getAbsolutePath(), null);
+                if (!RecycleBin.moveToBin(context, file)) {
+                    // Bin failure is not consent to permanently delete a file.
+                    throw new java.io.IOException(context.getString(R.string.recycle_bin_move_failed, file.getName()));
+                }
+                removed[0] += shares[i];
+                if (total > 0) pm.setProgress(Math.min(removed[0], total), total);
+            }
+        } else if (elevated && allLocal) {
+            AccessManager.deleteTree(context, paths, true, (done, bytes) -> {
+                if (entryProgress && total > 0) pm.setProgress(Math.min(done, total), total);
+            }, pm.control());
+        } else {
+            for (File file : files) {
+                pm.control().checkpoint();
+                if (file instanceof SafFile saf) {
+                    SafFs.delete(saf);
+                } else if (!FileUtils.deleteTree(file, countingDeleter(pm, removed, total))) {
+                    throw new java.io.IOException(context.getString(R.string.delete_failed, file.getName()));
+                }
+            }
+        }
+        // The delete APIs already verify unlink/rmdir/exit status. Checking
+        // 5000 paths again via su was the long unexplained wait at 100%.
+        if (total > 0) pm.setProgress(total, total);
+        context.handler.post(() -> {
+            state.clearSelection();
+            context.refreshPaneAfterChange(pane1, null);
+        });
     }
 
     public void showMoveDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
@@ -819,98 +704,37 @@ public class EntryDialogs {
         if (targets.isEmpty()) return;
         CharSequence base = target.getText();
         target.setText(base + "\n" + context.rss.getString(R.string.delete_size_calc));
+        io.github.abdurazaaqmohammed.utils.TransferControl scanControl = new io.github.abdurazaaqmohammed.utils.TransferControl();
+        shown.setOnDismissListener(d -> scanControl.cancel());
         new Thread(() -> {
-            long bytes = 0;
-            long items = 0;
-            long hidden = 0;
-            for (File t : targets) {
-                long[] st = dirStats(t);
-                bytes += st[0];
-                items += st[1];
-                hidden += st[2];
-            }
-            String info = context.rss.getString(R.string.delete_size_info,
-                    Formatter.formatFileSize(context, bytes), items, hidden);
-            context.handler.post(() -> {
-                try {
-                    target.setText(base + "\n" + info);
-                } catch (Exception ignored) {}
-            });
-        }).start();
-    }
-
-    private long[] dirStats(File root) {
-        long bytes = 0;
-        long items = 0;
-        long hidden = 0;
-        try {
-            if (root.isFile()) {
-                return new long[]{root.length(), 1, root.getName().startsWith(".") ? 1 : 0};
-            }
-            ArrayDeque<File> stack = new ArrayDeque<>();
-            HashSet<String> seen = new HashSet<>();
-            stack.add(root);
-            while (!stack.isEmpty()) {
-                File d = stack.poll();
-                if (d == null) continue;
-                String canon;
-                try {
-                    canon = d.getCanonicalPath();
-                } catch (Exception e) {
-                    continue;
+            try {
+                long bytes = 0;
+                long items = 0;
+                long hidden = 0;
+                List<String> paths = new ArrayList<>();
+                for (File t : targets) paths.add(t.getAbsolutePath());
+                boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
+                List<DirectoryStats> batch = local && AccessManager.active(context) == AccessManager.Backend.ROOT
+                        ? io.github.abdurazaaqmohammed.utils.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
+                boolean complete = true;
+                for (int i = 0; i < targets.size(); i++) {
+                    scanControl.checkpoint();
+                    File t = targets.get(i);
+                    DirectoryStats stats = batch != null ? batch.get(i) : FileTreeStats.read(context, t, scanControl, 10_000);
+                    bytes += stats.bytes();
+                    items += Math.max(0, stats.entries() - (t.isDirectory() ? 1 : 0));
+                    hidden += stats.hidden();
+                    complete &= stats.complete();
                 }
-                if (!seen.add(canon)) continue;
-                File[] kids;
-                try {
-                    kids = d.listFiles();
-                } catch (Exception e) {
-                    kids = null;
-                }
-                if (kids == null) {
-                    long[] du = duSize(d.getAbsolutePath());
-                    if (du != null) bytes += du[0];
-                    items++;
-                    continue;
-                }
-                if (d != root) {
-                    items++;
-                    if (d.getName().startsWith(".")) hidden++;
-                }
-                for (File k : kids) {
-                    if (k == null) continue;
-                    try {
-                        if (k.isFile()) {
-                            bytes += k.length();
-                            items++;
-                            if (k.getName().startsWith(".")) hidden++;
-                        } else {
-                            stack.add(k);
-                        }
-                    } catch (Exception ignored) {}
-                }
-            }
-        } catch (Exception ignored) {}
-        return new long[]{bytes, items, hidden};
-    }
-
-    private long[] duSize(String path) {
-        try {
-            if (!AccessManager.fileOpsOn(context)) return null;
-            String cmd = "du -sb " + RootManager.escapeShellArg(path);
-            String out = null;
-            if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
-                RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 15);
-                if (r != null && r.isSuccess()) out = r.output();
-            } else if (ShizukuManager.ready()) {
-                ShizukuShell.Result r =
-                        ShizukuShell.exec(cmd, 15);
-                if (r != null && r.success) out = r.stdout;
-            }
-            if (out == null) return null;
-            return new long[]{Long.parseLong(out.trim().split("\\s+")[0])};
-        } catch (Exception ignored) {
-            return null;
-        }
+                String info = context.rss.getString(R.string.delete_size_info,
+                        Formatter.formatFileSize(context, bytes), items, hidden)
+                        + (complete ? "" : context.getString(R.string.property_partial));
+                context.handler.post(() -> {
+                    if (scanControl.isCancelled()) return;
+                    try { target.setText(base + "\n" + info); } catch (Exception ignored) {}
+                });
+            } catch (TransferCancelledException ignored) {}
+        }, "delete-confirmation-stats").start();
     }
 
     public void showCompressDialog(File file, String fileName, boolean multi) {

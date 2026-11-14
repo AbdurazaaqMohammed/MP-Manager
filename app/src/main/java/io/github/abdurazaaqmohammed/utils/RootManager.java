@@ -271,11 +271,7 @@ public class RootManager {
     public static boolean isPathBlocked(String path) {
         if (path == null) return true;
         String normalized = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
-        if (BLOCKED_DELETE_PATHS.contains(normalized)) return true;
-        for (String blocked : BLOCKED_DELETE_PATHS) {
-            if (normalized.equals(blocked)) return true;
-        }
-        return false;
+        return BLOCKED_DELETE_PATHS.contains(normalized);
     }
 
     public static boolean isPathInKeyDirectory(String path) {
@@ -1173,7 +1169,7 @@ public class RootManager {
         List<String> remaining = new ArrayList<>();
         FileUtils.TransferListener listener = new FileUtils.TransferListener() {
             @Override public void onFile(File source, File destination) {
-                if (countDirs && source.isDirectory() && !FileUtils.isSymlink(source)) {
+                if (countDirs) {
                     if (progress != null) progress.onProgress(++done[0], 0L);
                     else done[0]++;
                 }
@@ -1188,8 +1184,10 @@ public class RootManager {
             if (control != null) control.checkpoint();
             File file = new File(path);
             if (SharedStorageCompat.canDeleteThroughApp(file) && FileUtils.deleteTree(file, listener)) {
-                if (progress != null) progress.onProgress(++done[0], 0L);
-                else done[0]++;
+                if (!countDirs) {
+                    if (progress != null) progress.onProgress(++done[0], 0L);
+                    else done[0]++;
+                }
             } else {
                 remaining.add(path);
             }
@@ -1200,14 +1198,12 @@ public class RootManager {
     /**
      * Deletes each path recursively, reporting progress as it goes.
      *
-     * <p>A single {@code rm -rf} is opaque: it is one command, so the dialog had
-     * nothing to show until it returned. Here the tree is walked deepest-first
-     * and one {@code rm -rf} runs per directory, with a marker after each. Each
-     * of those calls does real work (it takes a whole subtree with it), so the
-     * spawn count stays proportional to the number of <em>directories</em> — not
-     * files — while the dialog gets a counter that moves.
+     * <p>Fallback when mpio cannot start: count a root's entries, then delete
+     * that root in one rm invocation. Public storage stays in the app's FUSE
+     * view and reports each successful unlink. Counters use the same entry unit
+     * as mpio, without replaying successful roots or spawning rm per directory.
      *
-     * <p>Markers here carry a delta of one per directory; the relay turns them
+     * <p>Markers here carry the entry delta per root; the relay turns them
      * back into a running total for the caller.
      *
      * @return the paths that were removed.
@@ -1258,20 +1254,15 @@ public class RootManager {
             // Delete through the /data/media alias (see {@link #delete}): the
             // FUSE view often rejects even the root shell inside Android/data.
             String arg = escapeShellArg(emulatedAlias(path));
-            cmd.append(" ; find ").append(arg).append(" -depth -type d 2>/dev/null")
-                    .append(" | while IFS= read -r d; do rm -rf -- \"$d\" 2>/dev/null;")
-                    .append(" echo @@MPPROG 1 0; done");
-            // Whatever is left (the root itself, files at the top level) goes in
-            // one more call, and still reports, so the counter always lands on
-            // the value the dialog was sized with. The probe afterwards turns a
-            // silent rm failure (FUSE denial, namespace mismatch) into @@MPFAIL
-            // so the caller falls back / reports instead of assuming success.
-            cmd.append(" ; rm -rf -- ").append(arg)
-                    .append(" ; [ ! -e ").append(arg).append(" ] || echo ").append("@@MPFAIL")
-                    .append(" ; echo @@MPPROG 1 0");
+            // Count the entries once and unlink in one command. A per-directory
+            // rm process (and a final repeat sweep) was very slow for large trees.
+            cmd.append(" ; n=$(find ").append(arg).append(" 2>/dev/null | wc -l)")
+                    .append(" ; rm -rf -- ").append(arg)
+                    .append(" ; [ $? -eq 0 ] && [ ! -e ").append(arg).append(" ] && [ ! -L ").append(arg)
+                    .append(" ] && echo @@MPPROG \"$n\" 0 || echo @@MPFAIL");
         }
         ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay, control);
-        if (failed.get()) throw new IOException("delete failed: " + result.error);
+        if (failed.get() || !result.isSuccess()) throw new IOException("delete failed: " + result.error);
         invalidateListCache();
         return allTargets;
     }

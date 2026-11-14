@@ -1103,7 +1103,7 @@ public class FileSearchController {
         new Thread(() -> {
             List<ContentHit> hits = FileSearch.findInFiles(startDir, query, subfolders, matchCase, regex,
                     scanned -> {
-                        if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
+                        if (scanned % 50 == 0) {
                             pm.setText(scanned + " files…");
                         }
                     });
@@ -1180,7 +1180,7 @@ public class FileSearchController {
         new Thread(() -> {
             List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, searchSubfolders, matchCase, regex,
                     scanned -> {
-                        if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
+                        if (scanned % 50 == 0) {
                             pm.setText(scanned + " XML files…");
                         }
                     });

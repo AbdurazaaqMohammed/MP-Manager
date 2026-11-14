@@ -45,6 +45,12 @@ final class SharedStorageCompat {
 
     /** Public files should be unlinked through FUSE, even when root is enabled. */
     static boolean canDeleteThroughApp(File file) {
+        // Do not resolve canonical storage aliases or query StorageManager for
+        // every /data or /system item in a 5000+ root selection. These paths
+        // cannot be public FUSE paths in the first place.
+        String path = file.getAbsolutePath();
+        if (!(path.startsWith("/storage/") || path.equals("/sdcard") || path.startsWith("/sdcard/")
+                || path.startsWith("/mnt/sdcard/") || path.startsWith("/mnt/media_rw/"))) return false;
         if (Build.VERSION.SDK_INT < 30 || !Environment.isExternalStorageManager()) return false;
         try {
             File parent = file.getParentFile();

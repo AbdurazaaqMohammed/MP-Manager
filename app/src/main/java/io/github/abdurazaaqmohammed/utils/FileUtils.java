@@ -88,7 +88,7 @@ public class FileUtils {
 
         /** Every entry the walk will visit, which is what a delete removes. */
         public int entries() {
-            return files + dirs;
+            return (int) Math.min(Integer.MAX_VALUE, (long) files + dirs);
         }
     }
 
@@ -648,7 +648,6 @@ public class FileUtils {
         // The checkpoint sits before each entry, so a cancel stops the walk
         // before the next unlink rather than after the whole tree is gone.
         if (listener != null) listener.checkpoint();
-        if (listener != null) listener.onFile(root, null);
 
         // One lstat decides link/dir/file, so a large tree does not pay three
         // stat syscalls per entry just to be measured.
@@ -665,11 +664,14 @@ public class FileUtils {
                 kids = null;
             }
             if (kids != null) {
-                for (File kid : kids) deleteTree(kid, listener);
+                for (File kid : kids) if (!deleteTree(kid, listener)) return false;
+            } else {
+                return false;
             }
         }
         long size = isFile ? safeLength(root) : 0L;
         boolean gone = root.delete();
+        if (gone && listener != null) listener.onFile(root, null);
         if (gone && size > 0 && listener != null) listener.onBytes(size);
         return gone || !root.exists();
     }
