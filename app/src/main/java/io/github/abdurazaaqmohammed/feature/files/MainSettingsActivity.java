@@ -12,6 +12,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
@@ -23,11 +25,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.ui.common.util.AppFont;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
-public class MainSettingsActivity extends BaseActivity {
+public class MainSettingsActivity extends AppCompatActivity {
 
     /** One layout per bottom-navigation tab, in menu order. */
     private static final int[] PAGE_LAYOUTS = {
@@ -63,7 +67,14 @@ public class MainSettingsActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Theme must be set before super.onCreate so inflation uses it.
+        ThemeRegistry.applySaved(this);
+        // Stacked accent overlay (also before super.onCreate).
+        ThemeRegistry.applyAccent(this);
+        // Font factory must also wrap AppCompat's, so install before super.onCreate.
+        AppFont.installFactory(this);
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.dialog_settings);
 
         MaterialToolbar toolbar = findViewById(R.id.settingsToolbar);
