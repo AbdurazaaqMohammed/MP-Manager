@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
 import java.io.IOException;
 

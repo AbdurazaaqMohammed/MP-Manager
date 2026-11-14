@@ -81,7 +81,7 @@ import io.github.abdurazaaqmohammed.ui.main.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;

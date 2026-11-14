@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
@@ -59,7 +59,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -93,7 +93,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.RenameHelper;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;

@@ -80,8 +80,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

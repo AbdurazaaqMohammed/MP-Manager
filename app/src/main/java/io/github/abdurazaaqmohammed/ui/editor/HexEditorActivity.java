@@ -74,7 +74,7 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 

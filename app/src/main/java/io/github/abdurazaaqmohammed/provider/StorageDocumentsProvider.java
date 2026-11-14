@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /**

@@ -1,25 +1,25 @@
 package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
@@ -60,7 +60,7 @@ public final class FileTreeStats {
                 directory = entry.isDirectory();
                 regular = !directory;
                 length = entry.length();
-            } else if (entry instanceof io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile shizuku) {
+            } else if (entry instanceof io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile shizuku) {
                 directory = shizuku.isDirectory() && !shizuku.isLink();
                 regular = shizuku.isFile() && !shizuku.isLink();
                 length = shizuku.length();

@@ -1,17 +1,17 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -22,7 +22,7 @@ import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
@@ -83,7 +83,7 @@ import java.util.concurrent.CountDownLatch;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.dex.DexTools;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
@@ -93,12 +93,12 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyException;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
@@ -316,7 +316,7 @@ public class FileOperationsHelper {
 
         Map<String, FileUtils.Measure> byPath = new HashMap<>();
         if (!paths.isEmpty() && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.scan(context, paths);
+            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.scan(context, paths);
             if (nativeTotals != null) {
                 for (int i = 0; i < paths.size(); i++) byPath.put(paths.get(i), nativeTotals.each.get(i));
                 return new MeasureInfo(nativeTotals.total, byPath);

@@ -1,18 +1,18 @@
-package io.github.abdurazaaqmohammed.privilege.legacy.ipc;
+package io.github.abdurazaaqmohammed.privilege.impl.ipc;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
 
 import android.app.PendingIntent;

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 public class AppOpsEngine {

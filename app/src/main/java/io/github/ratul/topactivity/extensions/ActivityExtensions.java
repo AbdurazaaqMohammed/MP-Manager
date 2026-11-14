@@ -32,7 +32,7 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.ratul.topactivity.App;
 import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.utils.DatabaseUtil;

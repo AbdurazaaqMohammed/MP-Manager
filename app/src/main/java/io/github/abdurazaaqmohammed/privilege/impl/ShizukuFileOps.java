@@ -1,20 +1,20 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Context;

@@ -11,7 +11,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
@@ -20,7 +20,7 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import android.annotation.SuppressLint;

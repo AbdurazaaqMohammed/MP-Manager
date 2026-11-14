@@ -10,9 +10,9 @@ import java.io.IOException;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
 /** M2 shell session: delegates to the legacy Shizuku shell wrapper. */
 public class LegacyShellSession implements ShellSession {

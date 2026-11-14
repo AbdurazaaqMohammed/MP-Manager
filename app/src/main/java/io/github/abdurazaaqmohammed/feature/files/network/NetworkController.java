@@ -30,7 +30,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.codehasan.colorpicker.extensions.Extensions;

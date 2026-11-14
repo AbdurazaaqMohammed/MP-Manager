@@ -57,7 +57,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**

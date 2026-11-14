@@ -1,19 +1,19 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Context;
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuProcessFactory;
 import rikka.shizuku.ShizukuProvider;

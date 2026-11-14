@@ -1,22 +1,22 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 /**

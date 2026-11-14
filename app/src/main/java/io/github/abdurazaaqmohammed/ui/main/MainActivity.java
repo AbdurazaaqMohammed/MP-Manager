@@ -1,17 +1,17 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -19,7 +19,7 @@ import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
@@ -167,8 +167,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
@@ -183,8 +183,8 @@ import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
@@ -3463,7 +3463,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     return;
                 }
                 if (!(target instanceof io.github.abdurazaaqmohammed.util.io.SafFile) && directory) {
-                    target = new io.github.abdurazaaqmohammed.privilege.legacy.RootFile(path, true, true, false, 0, 0, "d");
+                    target = new io.github.abdurazaaqmohammed.privilege.impl.RootFile(path, true, true, false, 0, 0, "d");
                 }
             } catch (Exception error) {
                 handler.post(() -> new ErrorUtil(this).showError(error));

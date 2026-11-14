@@ -1,27 +1,27 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellBatchControl;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
@@ -46,10 +46,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
-import io.github.abdurazaaqmohammed.privilege.legacy.ipc.IFileService;
-import io.github.abdurazaaqmohammed.privilege.legacy.ipc.ShizukuConnection;
-import io.github.abdurazaaqmohammed.privilege.legacy.ipc.ShizukuFileService;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
+import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
+import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuFileService;
 import rikka.shizuku.Shizuku;
 
 public final class ShizukuManager {

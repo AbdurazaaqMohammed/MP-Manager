@@ -74,14 +74,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 public class FileIconLoader {
 

@@ -1,29 +1,29 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellBatchControl;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;

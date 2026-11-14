@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -74,9 +74,9 @@ import io.github.abdurazaaqmohammed.ui.editor.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.editor.CompareZipDialog;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
@@ -348,7 +348,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     static boolean isSymlink(File f) {
         if (f == null) return false;
         if (f instanceof ShizukuFile sf) return sf.isLink();
-        if (f instanceof io.github.abdurazaaqmohammed.privilege.legacy.RootFile rf) return rf.isLink();
+        if (f instanceof io.github.abdurazaaqmohammed.privilege.impl.RootFile rf) return rf.isLink();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 return Files.isSymbolicLink(f.toPath());

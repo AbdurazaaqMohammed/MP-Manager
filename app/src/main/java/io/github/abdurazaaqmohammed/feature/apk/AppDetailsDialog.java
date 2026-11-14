@@ -46,7 +46,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 import java.io.File;
 import java.util.List;

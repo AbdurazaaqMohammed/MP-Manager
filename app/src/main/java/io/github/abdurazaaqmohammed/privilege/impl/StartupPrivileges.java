@@ -1,21 +1,21 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
@@ -23,7 +23,7 @@ import android.os.Handler;
 import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import rikka.shizuku.Shizuku;
 

@@ -15,7 +15,7 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.internal.RootSessions;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.spi.FileOpsCap;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
 import io.github.abdurazaaqmohammed.privilege.spi.ShellCap;

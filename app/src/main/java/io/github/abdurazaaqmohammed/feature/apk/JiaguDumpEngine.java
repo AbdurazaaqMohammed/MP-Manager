@@ -9,9 +9,9 @@ import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackEngine;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackEngine;
 
 import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackEngine;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -41,7 +41,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 /**
  * Core of the root Jiagu Dumper: launch a protected app, let its stub unpack the

@@ -1,20 +1,20 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
@@ -239,7 +239,7 @@ public final class FileSorting {
                     == PrivilegeManager.Backend.ROOT) {
                 List<String> paths = new ArrayList<>();
                 for (File d : dirs) if (d != null && !isVirtualOrSpecialFs(pathOf(d))) paths.add(pathOf(d));
-                java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.sizes(ctx, paths, 30_000);
+                java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.sizes(ctx, paths, 30_000);
                 DirSizeCache.recordBatch(nativeSizes);
                 DIR_SIZE_CACHE.putAll(nativeSizes);
             }

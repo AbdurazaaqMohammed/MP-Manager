@@ -1,17 +1,17 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -25,7 +25,7 @@ import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
@@ -85,8 +85,8 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.util.io.RenameHelper;
 import io.github.abdurazaaqmohammed.util.io.RenameUtil;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
@@ -505,7 +505,7 @@ public class EntryDialogs {
         for (File file : files) paths.add(file.getAbsolutePath());
         boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
         List<DirectoryStats> batch = allLocal && backend == PrivilegeManager.Backend.ROOT
-                ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
+                ? io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
         for (int i = 0; i < files.size(); i++) {
             pm.control().checkpoint();
             File file = files.get(i);
@@ -745,7 +745,7 @@ public class EntryDialogs {
                 for (File t : targets) paths.add(t.getAbsolutePath());
                 boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
                 List<DirectoryStats> batch = local && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT
-                        ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
+                        ? io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
                 boolean complete = true;
                 for (int i = 0; i < targets.size(); i++) {
                     scanControl.checkpoint();

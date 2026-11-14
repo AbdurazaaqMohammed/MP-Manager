@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
 /**
  * Controls a batch that runs in an elevated shell.

@@ -9,11 +9,11 @@ import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
 
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Intent;
@@ -113,7 +113,7 @@ public class ToolsHubActivity extends BaseActivity {
         grid.setLayoutManager(layout);
         allTools = ToolRegistry.getTools(this);
         // The Frida console needs root (frida-inject via su) — hide it otherwise.
-        if (!io.github.abdurazaaqmohammed.privilege.legacy.RootManager.getInstance(this).isRootAvailable()) {
+        if (!io.github.abdurazaaqmohammed.privilege.impl.RootManager.getInstance(this).isRootAvailable()) {
             List<ToolRegistry.ToolItem> filtered = new java.util.ArrayList<>();
             for (ToolRegistry.ToolItem item : allTools) {
                 if (!"frida".equals(item.id()) && !"jiagudumper".equals(item.id())) filtered.add(item);

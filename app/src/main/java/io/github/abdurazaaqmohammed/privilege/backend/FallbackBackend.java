@@ -209,7 +209,7 @@ public final class FallbackBackend implements PrivilegeBackend, FileOpsCap, Inst
 
         @Override
         public void installAsync(Context context, List<File> apkFiles,
-                                 io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller.Callback cb) {
+                                 io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller.Callback cb) {
             if (cb != null) cb.onError(new IllegalStateException("No privilege backend authorized"));
         }
 

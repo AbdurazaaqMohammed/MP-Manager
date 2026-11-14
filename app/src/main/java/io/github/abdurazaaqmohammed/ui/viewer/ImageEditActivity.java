@@ -62,9 +62,9 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 
 public class ImageEditActivity extends BaseActivity {

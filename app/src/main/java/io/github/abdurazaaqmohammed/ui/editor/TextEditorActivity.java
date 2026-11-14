@@ -1,7 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -32,7 +32,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -77,8 +77,8 @@ import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 

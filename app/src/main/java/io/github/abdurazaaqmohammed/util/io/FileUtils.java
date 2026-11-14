@@ -1,7 +1,7 @@
 package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
 
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
@@ -53,8 +53,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
 
 public class FileUtils {
 

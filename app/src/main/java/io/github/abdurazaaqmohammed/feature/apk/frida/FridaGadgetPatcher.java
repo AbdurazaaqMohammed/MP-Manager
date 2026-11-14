@@ -67,7 +67,7 @@ import java.util.zip.ZipInputStream;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
 import com.reandroid.apk.APKLogger;
 
 /**

@@ -60,7 +60,7 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 /**
  * Full Command Shell Activity honoring Root and Shizuku modes,

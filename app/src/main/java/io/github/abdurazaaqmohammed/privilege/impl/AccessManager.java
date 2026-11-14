@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.legacy;
+package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
@@ -30,15 +30,15 @@ import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import androidx.preference.PreferenceManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeDeleteException;
-import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyException;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeDeleteException;
+import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 
 import java.io.File;
 import java.io.FileOutputStream;

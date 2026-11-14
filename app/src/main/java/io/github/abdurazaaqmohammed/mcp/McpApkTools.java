@@ -85,7 +85,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import com.reandroid.apk.ApkModule;
 import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;

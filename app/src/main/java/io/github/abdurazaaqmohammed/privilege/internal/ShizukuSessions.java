@@ -12,9 +12,9 @@ import java.io.IOException;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 
 public final class ShizukuSessions {
 

@@ -24,7 +24,7 @@ public interface InstallerSession {
     boolean isPrivilegedSilentReady(Context context);
 
     void installAsync(Context context, List<File> apkFiles,
-                      io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller.Callback cb);
+                      io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller.Callback cb);
 
     String installBlocking(Context context, List<File> apkFiles) throws Exception;
 

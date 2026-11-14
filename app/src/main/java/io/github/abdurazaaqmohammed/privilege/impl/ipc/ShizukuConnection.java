@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.legacy.ipc;
+package io.github.abdurazaaqmohammed.privilege.impl.ipc;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ipc.ShizukuFileService;
+import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuFileService;
 
 import android.content.ComponentName;
 import android.content.Context;
