@@ -129,6 +129,8 @@ public class CustomCompletionLayout implements CompletionLayout {
 		// Traditional click listener instead of lambda
 		listView.setOnItemClickListener((parent, view, position, id) -> {
             try {
+                io.github.abdurazaaqmohammed.utils.Haptics.perform(view,
+                        io.github.abdurazaaqmohammed.utils.Haptics.Event.ACTION);
                 editorAutoCompletion.select(position);
             } catch (Exception e) {
                 e.printStackTrace(System.err);
@@ -144,7 +146,7 @@ public class CustomCompletionLayout implements CompletionLayout {
 		GradientDrawable gd = new GradientDrawable();
 		gd.setCornerRadius(0);
 		gd.setStroke(1, colorScheme.getColor(EditorColorScheme.COMPLETION_WND_CORNER));
-		gd.setColor(Color.WHITE);
+		gd.setColor(colorScheme.getColor(EditorColorScheme.COMPLETION_WND_BACKGROUND));
 		rootView.setBackground(gd);
 		
 		setRootViewOutlineProvider(rootView);

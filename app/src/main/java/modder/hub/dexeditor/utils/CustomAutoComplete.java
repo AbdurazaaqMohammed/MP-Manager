@@ -89,7 +89,11 @@ public class CustomAutoComplete extends EmptyLanguage {
 	public CustomAutoComplete(CodeEditor editor, String[] gotoItems, Language language) {
 		mEditor = editor;
 		mLanguage = language;
-		editor.getComponent(EditorAutoCompletion.class).setMaxHeight(100);
+		if (!(editor.getComponent(EditorAutoCompletion.class) instanceof ImeAwareCompletion)) {
+			boolean enabled = editor.getComponent(EditorAutoCompletion.class).isEnabled();
+			editor.replaceComponent(EditorAutoCompletion.class, new ImeAwareCompletion(editor));
+			editor.getComponent(EditorAutoCompletion.class).setEnabled(enabled);
+		}
 		editor.getComponent(EditorAutoCompletion.class).setLayout(new CustomCompletionLayout());
 		editor.getComponent(EditorAutoCompletion.class).setAdapter(new CustomCompletionItemAdapter());
 

@@ -321,12 +321,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 return Unit.INSTANCE;
             });
 
-            ViewCompat.setOnApplyWindowInsetsListener(symbolInputView, (v, insets) -> {
-                Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-                v.setTranslationY(-ime.bottom);
-                return insets;
-            });
-            ViewCompat.requestApplyInsets(symbolInputView);
+            // BaseActivity resizes the whole editor above the IME. Moving only
+            // the symbol bar left completion geometry behind the keyboard and
+            // double-offset the bar on devices that already applied adjustResize.
+            symbolInputView.setTranslationY(0);
         }
 
         if (textviewLeft != null) textviewLeft.setText(!TextUtils.isEmpty(title) ? title : getString(R.string.ellipsis));

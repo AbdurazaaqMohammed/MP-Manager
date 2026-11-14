@@ -54,8 +54,8 @@ public final class CustomCompletionItemAdapter extends EditorCompletionAdapter {
 
     @Override
     public int getItemHeight() {
-        // 45 dp
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getContext().getResources().getDisplayMetrics());
+        // Match the layout's 35 dp label plus 2 dp padding at each edge.
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 39, getContext().getResources().getDisplayMetrics());
     }
 
     @Override

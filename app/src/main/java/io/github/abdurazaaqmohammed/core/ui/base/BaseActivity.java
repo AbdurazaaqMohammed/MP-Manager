@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowCompat;
 
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
@@ -37,14 +38,16 @@ public abstract class BaseActivity extends AppCompatActivity {
         AppFont.installFactory(this);
         appliedFontEpoch = AppFont.currentEpoch();
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         editorOwnerId = EditorTasks.bind(this, savedInstanceState);
         MinimizedEditors.rebind(this);
         View content = getWindow().getDecorView().findViewById(R.id.content);
         if (content != null){
             ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-                Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+                Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                        | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
                 v.setPadding(sys.left, sys.top, sys.right, sys.bottom);
-                return WindowInsetsCompat.CONSUMED;
+                return insets;
             });
             ViewCompat.requestApplyInsets(content);
         }
