@@ -41,7 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 /**

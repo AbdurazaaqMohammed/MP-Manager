@@ -30,7 +30,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -54,7 +54,7 @@ import com.reandroid.arsc.value.ValueType;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
-import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
+import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -74,7 +74,7 @@ import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.translation.TranslationExportDialog;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;

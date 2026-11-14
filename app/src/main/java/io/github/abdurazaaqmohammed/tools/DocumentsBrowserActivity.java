@@ -35,7 +35,7 @@ import android.content.Context;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

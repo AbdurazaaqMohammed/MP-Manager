@@ -39,7 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.features.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.features.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.features.apk.frida.FridaModuleDialog;

@@ -36,7 +36,7 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.ui.ColorWheelView;
+import io.github.abdurazaaqmohammed.ui.main.ColorWheelView;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.appcompat.app.AlertDialog;
@@ -67,9 +67,9 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;

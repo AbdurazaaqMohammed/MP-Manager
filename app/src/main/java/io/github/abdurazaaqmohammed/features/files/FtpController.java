@@ -43,7 +43,7 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
-import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.features.files.network.RemoteSpace;

@@ -27,7 +27,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginTop="8dp">
 
-        <io.github.abdurazaaqmohammed.player.ZoomableImageView
+        <io.github.abdurazaaqmohammed.ui.viewer.ZoomableImageView
             android:id="@+id/drawablePreviewImage"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

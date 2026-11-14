@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<io.github.abdurazaaqmohammed.ui.MyDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<io.github.abdurazaaqmohammed.ui.main.MyDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
@@ -142,4 +142,4 @@
             android:background="?attr/colorSurface" />
     </LinearLayout>
 
-</io.github.abdurazaaqmohammed.ui.MyDrawerLayout>
+</io.github.abdurazaaqmohammed.ui.main.MyDrawerLayout>

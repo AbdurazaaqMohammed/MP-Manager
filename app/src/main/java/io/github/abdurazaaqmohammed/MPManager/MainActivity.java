@@ -50,9 +50,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
 import io.github.abdurazaaqmohammed.boot.BootInspectManager;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
-import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
-import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.theme.BuiltInThemes;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
@@ -66,7 +66,7 @@ import io.github.abdurazaaqmohammed.features.files.FtpController;
 import io.github.abdurazaaqmohammed.features.files.network.NetworkController;
 import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.features.files.network.RemoteEntry;
-import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
 import io.github.abdurazaaqmohammed.features.files.SamePanePasteController;
@@ -77,7 +77,7 @@ import io.github.abdurazaaqmohammed.features.files.RightMenuController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
 import io.github.abdurazaaqmohammed.mcp.McpServerService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
-import io.github.abdurazaaqmohammed.player.MusicService;
+import io.github.abdurazaaqmohammed.ui.viewer.MusicService;
 import io.github.abdurazaaqmohammed.tools.CacheCleaner;
 import io.github.abdurazaaqmohammed.tools.LogcatService;
 import io.github.abdurazaaqmohammed.tools.ScreenCaptureService;
@@ -137,16 +137,16 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
+import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
-import io.github.abdurazaaqmohammed.player.MediaItem;
-import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
-import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
-import io.github.abdurazaaqmohammed.player.PlayerManager;
-import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.ui.viewer.MediaItem;
+import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.ui.viewer.MiniPlayerDialog;
+import io.github.abdurazaaqmohammed.ui.viewer.PlayerManager;
+import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -2687,7 +2687,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) { }
         try {
             File currentFolder = pane1 ? pane1Folder : pane2Folder;
-            if (currentFolder != null && io.github.abdurazaaqmohammed.adapters.main.FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
+            if (currentFolder != null && io.github.abdurazaaqmohammed.ui.main.FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
                 DirSizeCache.invalidatePrefix(currentFolder);
             }
             RootManager.getInstance(this).invalidateListCache();

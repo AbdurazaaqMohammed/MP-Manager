@@ -45,7 +45,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;

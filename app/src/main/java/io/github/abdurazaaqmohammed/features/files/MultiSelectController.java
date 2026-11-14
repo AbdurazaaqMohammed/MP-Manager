@@ -21,7 +21,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

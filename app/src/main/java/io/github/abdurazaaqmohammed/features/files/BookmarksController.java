@@ -31,8 +31,8 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
-import io.github.abdurazaaqmohammed.core.ui.util.ViewPagers;
+import io.github.abdurazaaqmohammed.ui.main.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.ui.common.util.ViewPagers;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;

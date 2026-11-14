@@ -30,7 +30,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.InputSource;
 
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 
 import net.lingala.zip4j.ZipFile;
 

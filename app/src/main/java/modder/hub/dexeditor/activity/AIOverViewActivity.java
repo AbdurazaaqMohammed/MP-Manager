@@ -67,9 +67,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
+import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 import modder.hub.dexeditor.fragment.SettingsFragment;

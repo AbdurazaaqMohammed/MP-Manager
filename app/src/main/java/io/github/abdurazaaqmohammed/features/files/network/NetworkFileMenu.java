@@ -7,8 +7,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
-import io.github.abdurazaaqmohammed.adapters.main.FileMenuDialog;
-import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
+import io.github.abdurazaaqmohammed.ui.main.FileMenuDialog;
+import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
 
 /** Use the normal file menu, but never dispatch real-path tools on remote entries. */
 public final class NetworkFileMenu {

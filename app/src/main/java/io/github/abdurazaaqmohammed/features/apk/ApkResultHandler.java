@@ -24,7 +24,7 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.ApkSignaturePreserver;
 import io.github.abdurazaaqmohammed.utils.ArchiveBackupUtil;

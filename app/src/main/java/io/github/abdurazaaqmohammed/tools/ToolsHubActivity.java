@@ -25,7 +25,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.widget.ImageViewCompat;
@@ -48,7 +48,7 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
-import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
+import io.github.abdurazaaqmohammed.ui.common.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
@@ -56,7 +56,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.plugins.res.PackRes;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ToolsHubActivity extends BaseActivity {

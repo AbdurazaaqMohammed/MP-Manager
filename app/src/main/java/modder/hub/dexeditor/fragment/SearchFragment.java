@@ -118,7 +118,7 @@ import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.utils.SmaliSearchText;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
-import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
 
 // Author : @developer-krushna
 // Got some LOGICS from AI but thought , idea other resources copied from mt manager interface

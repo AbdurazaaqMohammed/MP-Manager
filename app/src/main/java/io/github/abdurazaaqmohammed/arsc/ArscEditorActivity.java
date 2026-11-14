@@ -24,7 +24,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;

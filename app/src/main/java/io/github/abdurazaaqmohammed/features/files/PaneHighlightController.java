@@ -10,7 +10,7 @@ import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.PaneHighlightView;
+import io.github.abdurazaaqmohammed.ui.main.PaneHighlightView;
 
 /**
  * Hosts the sliding "selected pane" highlight in {@link MainActivity}: a fill

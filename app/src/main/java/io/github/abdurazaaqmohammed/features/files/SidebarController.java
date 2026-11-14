@@ -59,7 +59,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
+import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;

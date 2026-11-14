@@ -1,0 +1,123 @@
+package io.github.abdurazaaqmohammed.ui.main;
+
+import android.graphics.drawable.Drawable;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.color.MaterialColors;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+
+public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder> {
+
+    public interface OnItemClickListener {
+        void onItemClick(int position);
+    }
+
+    /** Optional: rows with a long-press action (e.g. same-pane copy/move). */
+    public interface OnItemLongClickListener {
+        void onItemLongClick(int position);
+    }
+
+    private final MainActivity context;
+    private final List<FileMenuOrder.MenuItem> items;
+    private final boolean isInZip;
+    private final boolean grid;
+    private final Set<String> disabledIds;
+    private final OnItemClickListener listener;
+    private OnItemLongClickListener longClickListener;
+
+    public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, OnItemClickListener listener) {
+        this(context, items, isInZip, false, Collections.emptySet(), listener);
+    }
+
+    public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, boolean grid, OnItemClickListener listener) {
+        this(context, items, isInZip, grid, Collections.emptySet(), listener);
+    }
+
+    public DialogAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean isInZip, boolean grid, Set<String> disabledIds, OnItemClickListener listener) {
+        this.context = context;
+        this.items = items;
+        this.isInZip = isInZip;
+        this.grid = grid;
+        this.disabledIds = disabledIds == null ? Collections.emptySet() : disabledIds;
+        this.listener = listener;
+    }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        return new ViewHolder(LayoutInflater.from(context).inflate(grid ? R.layout.item_file_menu_action_grid : R.layout.item_file_menu_action, parent, false));
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        FileMenuOrder.MenuItem item = items.get(position);
+        holder.label.setText(item.label());
+        Drawable drawable = ResourcesCompat.getDrawable(context.getResources(), FileMenuOrder.iconFor(context, item.id(), false, false), null);
+        if (drawable != null) {
+            int i = Extensions.dp2px(context, 24);
+            drawable.setBounds(0, 0, i, i);
+            DrawableCompat.setTint(drawable, MaterialColors.getColor(holder.label, android.R.attr.colorPrimary));
+        }
+        holder.label.setCompoundDrawablesRelative(drawable, null, null, null);
+        holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 8));
+
+        // disabledIds is computed off the UI thread (canonical path checks do
+        // filesystem I/O); the reference equality here is a free fallback.
+        // MOVE is never auto-disabled: when both panes show the same folder a
+        // plain tap does nothing, but a long-press starts the same-pane move.
+        boolean disabled = disabledIds.contains(item.id())
+                || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id()) || FileMenuOrder.CMD.equals(item.id())) && isInZip);
+        holder.itemView.setAlpha(disabled ? 0.38f : 1f);
+        holder.itemView.setEnabled(!disabled);
+        holder.itemView.setOnClickListener(disabled ? null : v -> {
+            if (listener == null) return;
+            io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.ACTION);
+            int pos = holder.getBindingAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) listener.onItemClick(pos);
+        });
+        if (longClickListener != null && !disabled) {
+            holder.itemView.setOnLongClickListener(v -> {
+                io.github.abdurazaaqmohammed.utils.Haptics.perform(v, io.github.abdurazaaqmohammed.utils.Haptics.Event.LONG_PRESS);
+                int pos = holder.getBindingAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) longClickListener.onItemLongClick(pos);
+                return true;
+            });
+        } else {
+            holder.itemView.setLongClickable(false);
+        }
+    }
+
+    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
+    @Override
+    public int getItemCount() {
+        return items == null ? 0 : items.size();
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final TextView label;
+
+        ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            label = itemView.findViewById(R.id.menuItemLabel);
+        }
+    }
+}

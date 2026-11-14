@@ -4,7 +4,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -96,8 +96,8 @@ import net.lingala.zip4j.model.enums.CompressionLevel;
 import org.apache.commons.collections4.Predicate;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.AppRecyclerViewAdapter;
-import io.github.abdurazaaqmohammed.adapters.ExtractOptionAdapter;
+import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
+import io.github.abdurazaaqmohammed.ui.main.ExtractOptionAdapter;
 import io.github.abdurazaaqmohammed.utils.CompareUtils;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;

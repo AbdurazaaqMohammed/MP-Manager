@@ -129,7 +129,7 @@ public class SamePanePasteController {
         }
         List<Object> payload = items;
         cancel();
-        io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter sourceAdapter =
+        io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter sourceAdapter =
                 activity.paneFilesAdapter(pane1);
         if (sourceAdapter == null) return;
         if (move) sourceAdapter.getFileOperations().moveItemsToFolder(payload, dest);

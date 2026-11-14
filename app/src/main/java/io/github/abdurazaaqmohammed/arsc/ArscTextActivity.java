@@ -16,7 +16,7 @@ import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -27,8 +27,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
-import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
+import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.MinimizedEditors;

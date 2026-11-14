@@ -20,17 +20,17 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
-import io.github.abdurazaaqmohammed.core.ui.util.PopupMenus;
+import io.github.abdurazaaqmohammed.ui.common.util.PopupMenus;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
+import io.github.abdurazaaqmohammed.ui.main.SortDirectionToggle;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;

@@ -38,7 +38,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor;
+import io.github.abdurazaaqmohammed.ui.main.ApkManifestEditor;
 import io.github.abdurazaaqmohammed.plugins.ext.ApkJob;
 import io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -100,9 +100,9 @@ import java.util.zip.ZipOutputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
@@ -122,7 +122,7 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
+import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 /**

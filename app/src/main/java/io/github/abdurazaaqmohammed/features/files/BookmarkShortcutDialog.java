@@ -37,11 +37,11 @@ import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
-import io.github.abdurazaaqmohammed.adapters.main.FileIconSpec;
-import io.github.abdurazaaqmohammed.ui.ColorWheelView;
+import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
+import io.github.abdurazaaqmohammed.ui.main.ColorWheelView;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.Haptics;
 import io.github.abdurazaaqmohammed.utils.SafFs;

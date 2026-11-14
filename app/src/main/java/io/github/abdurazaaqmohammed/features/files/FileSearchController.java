@@ -35,12 +35,12 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ContentHit;
 import io.github.abdurazaaqmohammed.domain.files.FileSearch;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
+import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;

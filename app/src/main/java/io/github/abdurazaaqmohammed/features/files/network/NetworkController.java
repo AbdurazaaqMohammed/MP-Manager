@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -322,7 +322,7 @@ public final class NetworkController {
         MainFilesArrayAdapter other = activity.paneFilesAdapter(!sourcePane1);
         androidx.recyclerview.widget.RecyclerView opposite = activity.findViewById(sourcePane1 ? R.id.listViewPane2 : R.id.listViewPane1);
         boolean supported = opposite.getAdapter() instanceof MainFilesArrayAdapter
-                || opposite.getAdapter() instanceof io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
+                || opposite.getAdapter() instanceof io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
         runOperation(activity.getString(move ? R.string.move : android.R.string.copy), () -> {
             if (!supported || destination == null || destination instanceof io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper
                     || (other != null && other.isInZip))

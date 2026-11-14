@@ -181,7 +181,7 @@
         <!-- Picker entry point: apps that ask the system for a file can choose
              MP Manager and browse with the app's own FilePickerDialog. -->
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.PickFileActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.PickFileActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:label="MP Manager"
             android:exported="true"
@@ -256,7 +256,7 @@
                 android:resource="@xml/cache_cleaner_service" />
         </service>
        <activity
-           android:name="io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity"
+           android:name="io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity"
            android:windowSoftInputMode="adjustResize|stateHidden"
            android:launchMode="singleTop"
            android:exported="false">
@@ -267,17 +267,17 @@
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity"
             android:exported="false">
         </activity>
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.HtmlViewerActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.HtmlViewerActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
@@ -300,13 +300,13 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.CompareTextActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity"
+            android:name="io.github.abdurazaaqmohammed.ui.editor.CompareDexActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustResize|stateHidden"
@@ -418,11 +418,11 @@
                 </intent-filter>
             </receiver>
              <activity
-                 android:name="io.github.abdurazaaqmohammed.player.ImageViewerActivity"
+                 android:name="io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity"
                  android:configChanges="orientation|screenSize|keyboardHidden"
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
              <activity
-                 android:name="io.github.abdurazaaqmohammed.player.ImageEditActivity"
+                 android:name="io.github.abdurazaaqmohammed.ui.viewer.ImageEditActivity"
                  android:exported="false"
                  android:label="@string/image_editor"
                  android:configChanges="orientation|screenSize|keyboardHidden"
@@ -430,7 +430,7 @@
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
              </activity>
               <activity
-                  android:name="io.github.abdurazaaqmohammed.player.SharedEntryActivity"
+                  android:name="io.github.abdurazaaqmohammed.ui.viewer.SharedEntryActivity"
                   android:exported="true"
                   android:excludeFromRecents="true"
                   android:noHistory="true"
@@ -447,7 +447,7 @@
                   </intent-filter>
               </activity>
             <activity
-                android:name="io.github.abdurazaaqmohammed.player.MediaPlayerActivity"
+                android:name="io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity"
                 android:configChanges="orientation|screenSize|keyboardHidden"
                 android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
             <activity
@@ -457,7 +457,7 @@
                 android:excludeFromRecents="true"
                 android:theme="@style/ClipboardCopyTheme" />
             <service
-                android:name="io.github.abdurazaaqmohammed.player.MusicService"
+                android:name="io.github.abdurazaaqmohammed.ui.viewer.MusicService"
                 android:foregroundServiceType="mediaPlayback"
                 android:exported="false" />
             <service

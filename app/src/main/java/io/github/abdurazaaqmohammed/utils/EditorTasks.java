@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 /** Gives each editor its own task without breaking activity-result callers. */
 public final class EditorTasks {
@@ -40,8 +40,8 @@ public final class EditorTasks {
     public static boolean isEditor(Activity activity) {
         if (activity == null) return false;
         String name = activity.getClass().getName();
-        return name.equals("io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity")
+        return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
                 || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity")
@@ -51,8 +51,8 @@ public final class EditorTasks {
     public static boolean isEditor(Intent intent) {
         if (intent.getComponent() == null) return false;
         String name = intent.getComponent().getClassName();
-        return name.equals("io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity")
+        return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
+                || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
                 || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorActivity")
                 || name.equals("io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity")

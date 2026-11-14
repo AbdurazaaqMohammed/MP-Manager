@@ -42,7 +42,7 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
@@ -70,8 +70,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
-import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.RootManager;

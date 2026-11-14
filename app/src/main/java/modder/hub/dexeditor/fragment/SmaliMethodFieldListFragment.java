@@ -111,7 +111,7 @@ import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
-import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
 
 /*
 Author @developer-krushna
