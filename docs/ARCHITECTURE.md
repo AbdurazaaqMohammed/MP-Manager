@@ -48,8 +48,19 @@ are leaf services usable by anyone, dependent on nothing business-related:
 - Some `feature/` subpackages still contain Activities/Services/Views
   (`feature/system` tools screens, `feature/freestyle` canvas). Splitting
   UI out of them is deferred; do not add new UI to `feature/`.
-- `modder.hub.dexeditor`, `com.apk.axml`, `apkkit`, and other vendored
-  trees are out of scope.
+- `privilege/impl/` (RootManager, AccessManager, Shizuku*, Native*, ipc)
+  is implementation, but ~30 feature/ui files still call it directly
+  (mostly `RootManager`'s instance API). New code must go through
+  `PrivilegeManager`; migrating the remaining call sites onto the session
+  interfaces is the open remainder of plan stage M5.
+- `rikka/shizuku/ShizukuProcessFactory` stays in `rikka.shizuku` — it
+  exists to reach a package-private ShizukuRemoteProcess constructor
+  there and cannot move.
+- Vendored trees out of scope: `modder.hub.dexeditor`, `com.apk.axml`,
+  `apkkit`, `sdk` module (`io.github.abdurazaaqmohammed.ui` /
+  `io.github.abdurazaaqmohammed.utils` there are sdk-owned), `packs/*`.
+- `sdk` keeps its own `ui`/`utils`/`domain` packages; they belong to the
+  plugin SDK, not the app layers above.
 
 ## Move mapping (per stage)
 
@@ -107,16 +118,20 @@ is: **`util/` contains no business logic and no privilege code.**
 
 See [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md) Problem 1 for the
 `privilege/` tree, session interfaces and registry rules. Backend
-selection order: `DHIZUKU > SHIZUKU > ROOT > NONE`, with the user able
-to pin a mode manually in settings.
+selection order: `DHIZUKU > SHIZUKU > ROOT > NONE` (registered in
+`App.onCreate`; registry-driven selection is exposed as
+`PrivilegeManager.preferredBackend`, default routing unchanged).
 
 | from | to |
 |---|---|
-| `utils/` privilege classes: `RootManager`, `RootFile`, `RootPermissionHelper`, `RootStaging`, `ShellProcess`, `ShellBatchControl`, `ShellProgress`, `NativeRootManager`, `NativeProcess`, `NativeToolManager`, `PrivilegedInstaller`, `StartupPrivileges`, `ShizukuManager` | `privilege/legacy/` |
-| `rikka/shizuku/ShizukuProcessFactory` | `privilege/legacy/` |
-| `shizuku/` (`ShizukuConnection`, `ShizukuFileService`, aidl) | `privilege/legacy/ipc/` |
-| `MPManager/shizuku/` (`ShizukuShell`, `ShizukuFile`, `ShizukuFileOps`) | `privilege/legacy/` |
+| `utils/` privilege classes (17 — RootManager, RootFile, RootPermissionHelper, RootStaging, ShellProcess, ShellBatchControl, ShellProgress, NativeRootManager, NativeProcess, NativeToolManager, PrivilegedInstaller, StartupPrivileges, ShizukuManager + the native-copy engine quartet) | `privilege/legacy/` → renamed `privilege/impl/` in M5 |
+| `utils/AccessManager` | `privilege/impl/` |
+| `shizuku/` (`ShizukuConnection`, `ShizukuFileService`) + `IFileService.aidl` | `privilege/impl/ipc/` |
+| `MPManager/shizuku/` (`ShizukuShell`, `ShizukuFile`, `ShizukuFileOps`) | `privilege/impl/` |
+| `rikka/shizuku/ShizukuProcessFactory` | stays (see deviations) |
 | M2: new `PrivilegeManager`, `ShellSession`, `FileOpsSession`, `InstallerSession` | `privilege/api/` |
 | M3: `RootBackend`, `ShizukuBackend`, `FallbackBackend`, `Registry`, capabilities | `privilege/spi/`, `privilege/backend/`, `privilege/internal/` |
-| M4: `DhizukuBackend` | `privilege/backend/` |
-| M5: delete `privilege/legacy/` + `WorkingMode` shim | — |
+| M4: `DhizukuBackend` + `io.github.iamr0s:Dhizuku-API` | `privilege/backend/` |
+| M5: `privilege/legacy/` dissolved into `privilege/impl/`; unit tests relocated | — |
+
+The old top-level `utils/`, `shizuku/` and `MPManager/` packages are gone.

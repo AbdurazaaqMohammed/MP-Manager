@@ -184,17 +184,33 @@ always one revert away.
 
 ## Execution checklist
 
-Check off as stages land (one PR per stage, linked from here):
+Check off as stages land (one commit per stage on `main`, 2026-11-14
+session; each stage verified by `compileFullDebugJavaWithJavac` +
+`compileLiteDebugJavaWithJavac` unless noted):
 
-- [ ] **A0** — `docs/ARCHITECTURE.md` (target structure + move mapping)
-- [ ] **A1** — UI five-into-one
-- [ ] **A2** — domain packages absorbed into `feature/`
-- [ ] **A3** — `utils/` split (privilege classes → `privilege/`)
-- [ ] **A4** — `data/` consolidation + `MPManager` package rename
-- [ ] **M1** — `privilege/legacy/` assembly move
-- [ ] **M2** — facade (`PrivilegeManager` + sessions) over legacy
-- [ ] **M3** — Root backend, then Shizuku backend, behind the facade
-- [ ] **M4** — `DhizukuBackend` (new capability)
-- [ ] **M5** — delete `legacy/` + `WorkingMode` shim
-- [ ] **B**  — (optional) Gradle library module extraction
-- [ ] **C**  — (redundant with M4; kept as the independent checklist entry)
+- [x] **A0** — `docs/ARCHITECTURE.md` (target structure + move mapping) — 27797330
+- [x] **A1** — UI five-into-one — 32ea5915
+- [x] **A2** — domain packages absorbed into `feature/` — ee47d415; plus the
+      follow-up `features/` → `feature/` rename (A2b 642576cd / 3e843a86 /
+      6898fdf7) that the target tree implies
+- [x] **A3** — `utils/` split — 29dddef6 (privilege → `privilege/legacy`),
+      f2250080 (io/archive/hash/text/net), 7f5b2a2e (apk → `feature/apk`,
+      UI helpers → `ui/`, misc → `util/misc`)
+- [x] **A4** — `data/` consolidation + `MPManager` package rename — 8037f88a
+      (prefs holders → `data/prefs`; the uppercase `MPManager/` package
+      emptied by the M1 move below)
+- [x] **M1** — `privilege/legacy/` assembly move — 3b2ccd3a
+- [x] **M2** — facade (`PrivilegeManager` + sessions) over legacy — 7703d049
+- [x] **M3** — Root backend, then Shizuku backend, behind the facade —
+      21d22de1 (backends *adapt* the legacy engines; a line-by-line
+      re-implementation of the 2,600-line `RootManager` is follow-up)
+- [x] **M4** — `DhizukuBackend` (new capability) — 83dacd09 (needs on-device
+      testing against a device-owner Dhizuku install)
+- [x] **M5** — delete `legacy/` + `WorkingMode` shim — *structural core done*:
+      97d12e2e dissolves `legacy/` into `privilege/impl/` and ce95f301
+      relocates the unit tests. ~30 feature/ui files still call
+      `RootManager`'s instance API and sibling implementation classes
+      directly; migrating them onto `PrivilegeManager` sessions is the
+      remaining gap (tracked in `docs/ARCHITECTURE.md` deviations)
+- [ ] **B**  — (optional) Gradle library module extraction — not started
+- [x] **C**  — redundant with M4; satisfied by 83dacd09
