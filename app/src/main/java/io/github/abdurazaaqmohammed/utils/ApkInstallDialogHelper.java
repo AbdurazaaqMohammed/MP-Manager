@@ -20,8 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.faith.apkinstaller.APKInstallService;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis;
-import io.github.abdurazaaqmohammed.features.apk.InstallInfoDialog;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
+import io.github.abdurazaaqmohammed.feature.apk.InstallInfoDialog;
 
 import java.io.File;
 import java.io.FileInputStream;

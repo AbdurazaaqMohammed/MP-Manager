@@ -29,7 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.features.apk.ApkInstallAnalysis;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
 import io.github.abdurazaaqmohammed.shizuku.IFileService;
 import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
 

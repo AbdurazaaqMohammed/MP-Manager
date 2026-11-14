@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.apk.flutter;
+package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
 import java.io.BufferedInputStream;
 import java.io.File;

@@ -19,7 +19,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
+import io.github.abdurazaaqmohammed.feature.files.NavigationHistoryEntry;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 
 public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
@@ -53,7 +53,7 @@ public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
         File file = entry.file();
         String fileName = file.getName();
         String path = file.getPath();
-        if (file instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile remote) path = remote.displayPath();
+        if (file instanceof io.github.abdurazaaqmohammed.feature.files.network.RemoteFile remote) path = remote.displayPath();
         if (entry.isZip() && !TextUtils.isEmpty(entry.zipPath())) {
             fileName = new File(entry.zipPath()).getName() + " (" + fileName + ")";
             path = path + "!/" + entry.zipPath();

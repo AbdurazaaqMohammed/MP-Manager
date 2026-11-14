@@ -28,13 +28,13 @@ import io.github.abdurazaaqmohammed.feature.ftp.FtpProfile;
 import io.github.abdurazaaqmohammed.feature.ftp.ProfileManager;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import com.lilincpp.github.libezftp.EZFtpFile;
-import io.github.abdurazaaqmohammed.features.files.network.*;
+import io.github.abdurazaaqmohammed.feature.files.network.*;
 import okhttp3.mockwebserver.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
-import io.github.abdurazaaqmohammed.features.files.network.NetworkProfile;
-import io.github.abdurazaaqmohammed.features.files.network.NetworkProfileStore;
+import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfile;
+import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfileStore;
 import static org.junit.Assert.*;
 
 /** Exercises real Android Keystore, not JVM substitutes. Use the isolated test build. */

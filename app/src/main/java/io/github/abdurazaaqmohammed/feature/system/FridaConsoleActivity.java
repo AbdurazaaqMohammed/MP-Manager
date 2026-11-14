@@ -40,9 +40,9 @@ import java.util.Map;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.features.apk.frida.FridaConfig;
-import io.github.abdurazaaqmohammed.features.apk.frida.FridaGadgetPatcher;
-import io.github.abdurazaaqmohammed.features.apk.frida.FridaModuleDialog;
+import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
+import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
+import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;

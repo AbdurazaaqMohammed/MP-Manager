@@ -22,10 +22,10 @@ import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.ui.main.FileRowStyle;
-import io.github.abdurazaaqmohammed.features.files.FileOpener;
-import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
-import io.github.abdurazaaqmohammed.features.files.network.RemotePath;
-import io.github.abdurazaaqmohammed.features.files.network.NetworkFileMenu;
+import io.github.abdurazaaqmohammed.feature.files.FileOpener;
+import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
+import io.github.abdurazaaqmohammed.feature.files.network.RemotePath;
+import io.github.abdurazaaqmohammed.feature.files.network.NetworkFileMenu;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.apk;
+package io.github.abdurazaaqmohammed.feature.apk;
 
 import android.text.TextUtils;
 import android.text.format.Formatter;

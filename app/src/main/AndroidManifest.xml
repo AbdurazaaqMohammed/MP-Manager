@@ -94,7 +94,7 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.features.sqlite.SqliteViewerActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity"
             android:exported="false"
             android:label="SQLite Viewer">
         </activity>
@@ -262,7 +262,7 @@
            android:exported="false">
        </activity>
         <activity
-            android:name="io.github.abdurazaaqmohammed.features.files.MainSettingsActivity"
+            android:name="io.github.abdurazaaqmohammed.feature.files.MainSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden" />

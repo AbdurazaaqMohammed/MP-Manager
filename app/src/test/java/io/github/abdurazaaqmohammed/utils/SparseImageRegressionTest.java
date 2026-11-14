@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.features.system.SystemImageEngine;
+import io.github.abdurazaaqmohammed.feature.system.SystemImageEngine;
 import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;

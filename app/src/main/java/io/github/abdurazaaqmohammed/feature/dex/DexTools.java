@@ -1,0 +1,1009 @@
+package io.github.abdurazaaqmohammed.feature.dex;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.text.TextUtils;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
+
+import io.github.abdurazaaqmohammed.utils.DexRepairEngine;
+import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
+
+import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
+import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
+import com.android.tools.smali.baksmali.BaksmaliOptions;
+import com.android.tools.smali.dexlib2.DexFileFactory;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.VersionMap;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import io.github.abdurazaaqmohammed.ui.main.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
+import io.github.abdurazaaqmohammed.ui.editor.DrawablePreviewDialog;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
+import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
+import io.github.abdurazaaqmohammed.utils.DexStringUtil;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+import modder.hub.dexeditor.activity.DexEditorActivity;
+import modder.hub.dexeditor.activity.TranslationModeActivity;
+
+/**
+ * DEX/ARSC toolkit extracted from FileOperationsHelper.
+ */
+public class DexTools {
+
+    /** Opens a staged file with the Open-With dialog. */
+    public interface OpenWith {
+        void open(File file, String fileName);
+
+        /**
+         * Zip-aware variant used for files staged out of an archive. The default
+         * keeps existing callers working; the host implements it so the built-in
+         * text editor can offer to add the edited file back to the archive.
+         */
+        default void open(File file, String fileName, File zipFile, String zipEntryPath) {
+            open(file, fileName);
+        }
+    }
+
+    private final MainActivity context;
+    private final DialogUtil dialogUtil;
+    private final boolean pane1;
+    private final OpenWith openWith;
+
+    public DexTools(MainActivity context,
+                    DialogUtil dialogUtil, boolean pane1, OpenWith openWith) {
+        this.context = context;
+        this.dialogUtil = dialogUtil;
+        this.pane1 = pane1;
+        this.openWith = openWith;
+    }
+    private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
+        String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
+        String[] modes = {
+                ArscEditorPlusActivity.MODE_PLUS,
+                ArscEditorPlusActivity.MODE_EDITOR,
+                ArscEditorPlusActivity.MODE_TRANSLATE,
+                ArscEditorPlusActivity.MODE_QUERIER};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.open_with))
+                .setSingleChoiceItems(options, -1, (dialog, which) -> {
+                    dialog.dismiss();
+                    // Simple MT-style "ARSC Editor" lives in its own activity;
+                    // Plus / Translation / Querier stay in ArscEditorPlusActivity.
+                    Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
+                            ? ArscEditorActivity.class
+                            : ArscEditorPlusActivity.class;
+                    Intent arscIntent = new Intent(context, target)
+                            .putExtra("path", arscFile.getAbsolutePath())
+                            .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
+                            .putExtra("zipEntryPath", entryPath)
+                            .putExtra("arscMode", modes[which]);
+                    // Inside an archive the editor only edits the extracted copy and
+                    // returns it via setResult(757); MainActivity then shows the
+                    // "APK/ZIP updated" prompt and injects the file itself.
+                    if (zipFile != null) context.startActivityForResult(arscIntent, 757);
+                    else context.startActivity(arscIntent);
+                }).create());
+    }
+
+    public void showDexOptionsDialog(File dexFile, File zipFile, String entryPath, String displayName) {
+        String[] options = {
+                context.rss.getString(R.string.dex_editor_plus),
+                context.rss.getString(R.string.repair_dex),
+                context.rss.getString(R.string.dex_properties),
+                context.rss.getString(R.string.dex_to_smali),
+                context.rss.getString(R.string.translation_mode),
+                context.rss.getString(R.string.dex_replace_strings),
+                context.rss.getString(R.string.dex_decrypt_strings),
+                context.rss.getString(R.string.dex_merge)};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(displayName)
+                .setSingleChoiceItems(options, -1, (dialog, which) -> {
+                    dialog.dismiss();
+                    if (which == 1) {
+                        repairDex(dexFile, zipFile);
+                    } else if (which == 2) {
+                        showDexProperties(dexFile);
+                    } else if (which == 3) {
+                        dexToSmali(dexFile, zipFile);
+                    } else if (which == 5) {
+                        showDexStringReplaceDialog(dexFile, zipFile);
+                    } else if (which == 6) {
+                        showDexStringDecryptDialog(dexFile, zipFile);
+                    } else if (which == 7) {
+                        mergeDexOption(dexFile, zipFile);
+                    } else if (which == 4) {
+                        // MT-style standalone translation mode (multidex dialog
+                        // first when the dex comes from an archive).
+                        if (zipFile != null) {
+                            openDexPlusInZip(zipFile, dexFile.getName(), 3);
+                        } else {
+                            openTranslationActivity(singleDexList(dexFile), null, null);
+                        }
+                    } else if (zipFile != null) {
+                        openDexPlusInZip(zipFile, dexFile.getName(), null);
+                    } else {
+                        openDexPlusFiles(singleDexList(dexFile), null);
+                    }
+                }).create());
+    }
+
+    private static ArrayList<String> singleDexList(File dexFile) {
+        ArrayList<String> single = new ArrayList<>();
+        single.add(dexFile.getPath());
+        return single;
+    }
+
+    private void openDexPlusFiles(ArrayList<String> paths, Integer openTab) {
+        openDexPlusFiles(paths, openTab, null, null);
+    }
+
+    /**
+     * @param zipFile   archive the dex files were extracted from, or null for a
+     *                  plain folder
+     * @param entryPath first entry name, used for the "update the archive?"
+     *                  prompt's title
+     *
+     * <p>The extras matter: {@code MainActivity.onActivityResult} only routes
+     * the result to {@code handleModifiedFileResult} (which asks whether to
+     * write the dex back into the APK/ZIP) when the intent carries them.
+     * Without them the editor's result was just highlighted in the pane and
+     * the archive was silently left untouched.</p>
+     */
+    private void openDexPlusFiles(ArrayList<String> paths, Integer openTab,
+                                  File zipFile, String entryPath) {
+        Intent intent = new Intent(context, DexEditorActivity.class)
+                .putExtra("theme", context.theme)
+                .putStringArrayListExtra("SelectedDexFiles", paths);
+        if (openTab != null) intent.putExtra("openTab", openTab);
+        if (zipFile != null) {
+            intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
+            if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
+        }
+        context.startActivityForResult(intent, 757);
+    }
+
+    private static final Map<String, DexPreExtract> dexPreExtracts = new LinkedHashMap<>();
+
+    private static class DexPreExtract {
+        final File zipFile;
+        final File outputDir;
+        final List<String> dexNames = new ArrayList<>();
+        final CountDownLatch done = new CountDownLatch(1);
+        volatile String error;
+        volatile int extracted;
+        volatile int total;
+
+        DexPreExtract(File zipFile, File outputDir) {
+            this.zipFile = zipFile;
+            this.outputDir = outputDir;
+        }
+    }
+
+    /**
+     * The archive a pre-extracted (staged) file came from, or null when the path
+     * is not one of ours.
+     *
+     * <p>Lets the caller recover the "update the archive?" prompt for any editor
+     * that returns nothing but the staged file path — the extras are the fast
+     * path, this is the fallback when they are missing or the pane moved on.</p>
+     */
+    public static File archiveForStagedFile(String stagedPath) {
+        if (stagedPath == null) return null;
+        List<DexPreExtract> sessions;
+        synchronized (DexTools.class) {
+            sessions = new ArrayList<>(dexPreExtracts.values());
+        }
+        for (DexPreExtract session : sessions) {
+            if (session == null || session.zipFile == null || session.outputDir == null) continue;
+            String dir = session.outputDir.getAbsolutePath();
+            if (stagedPath.startsWith(dir + File.separator)) return session.zipFile;
+        }
+        return null;
+    }
+
+    private static synchronized DexPreExtract preExtractAllDex(Context ctx, File zipFile, boolean force) {
+        String key = zipFile.getAbsolutePath();
+        DexPreExtract existing = dexPreExtracts.get(key);
+        if (!force && existing != null && existing.error == null) return existing;
+        if (existing != null) {
+            dexPreExtracts.remove(key);
+            deleteQuietly(existing.outputDir);
+        }
+        DexPreExtract session = new DexPreExtract(zipFile, new File(ctx.getFilesDir(), "dexwork_" + UUID.randomUUID()));
+        //noinspection ResultOfMethodCallIgnored
+        session.outputDir.mkdirs();
+        dexPreExtracts.put(key, session);
+        new Thread(() -> {
+            // Extracted with the platform ZipFile instead of zip4j: zip4j
+            // applies stored permissions/timestamps to every extracted entry
+            // through the desugared java.nio.file, whose POSIX attribute view
+            // throws a bare UnsupportedOperationException on old Android
+            // (API 24/25), failing the whole extraction. Plain stream copy
+            // keeps only what matters here: the bytes.
+            try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+                ZipEntry fh = zf.getEntry("classes.dex");
+                int i = 2;
+                while (fh != null) {
+                    session.dexNames.add(fh.getName());
+                    fh = zf.getEntry("classes" + i + ".dex");
+                    i++;
+                }
+                session.total = session.dexNames.size();
+                byte[] buf = new byte[65536];
+                for (int j = 0; j < session.dexNames.size(); j++) {
+                    String name = session.dexNames.get(j);
+                    ZipEntry entry = zf.getEntry(name);
+                    if (entry == null) throw new IOException("Entry vanished: " + name);
+                    File out = new File(session.outputDir, name);
+                    long expected = entry.getSize();
+                    try (InputStream is = zf.getInputStream(entry);
+                         FileOutputStream fos = new FileOutputStream(out)) {
+                        int read;
+                        while ((read = is.read(buf)) != -1) fos.write(buf, 0, read);
+                    }
+                    if (!out.isFile() || (expected > 0 && out.length() != expected)) {
+                        throw new IOException("Extract failed: " + out.getAbsolutePath());
+                    }
+                    session.extracted = j + 1;
+                }
+            } catch (Exception e) {
+                // Full trace rather than getMessage(): wrappers like zip4j's
+                // ZipException only carry the cause's toString() as message.
+                session.error = Log.getStackTraceString(e);
+            } finally {
+                session.done.countDown();
+            }
+        }).start();
+        return session;
+    }
+
+    private static void deleteQuietly(File f) {
+        try {
+            if (f == null || !f.exists()) return;
+            if (f.isDirectory()) {
+                File[] kids = f.listFiles();
+                if (kids != null) for (File k : kids) deleteQuietly(k);
+            }
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static List<String> listAllDexNames(File zipFile) throws IOException {
+        List<String> dexNames = new ArrayList<>();
+        try (ZipFile zf = new ZipFile(zipFile)) {
+            FileHeader fh = zf.getFileHeader("classes.dex");
+            int i = 2;
+            while (fh != null) {
+                dexNames.add(fh.getFileName());
+                fh = zf.getFileHeader("classes" + i + ".dex");
+                i++;
+            }
+        }
+        return dexNames;
+    }
+
+    private void openDexPlusInZip(File zipFile, String preselected) {
+        openDexPlusInZip(zipFile, preselected, null);
+    }
+
+    private void openDexPlusInZip(File zipFile, String preselected, Integer openTab) {
+        DexPreExtract session = preExtractAllDex(context, zipFile, false);
+        List<String> dexFiles;
+        try {
+            dexFiles = listAllDexNames(zipFile);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return;
+        }
+        if (dexFiles.isEmpty()) {
+            Extensions.showMessage(context, R.string.no_files_found);
+            return;
+        }
+        if (dexFiles.size() == 1) {
+            proceedWithSelectedDex(zipFile, session, dexFiles, openTab);
+            return;
+        }
+        File tempFolder = session.outputDir;
+        List<String> dexNames = new ArrayList<>(dexFiles);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle(context.rss.getString(R.string.fo_multidex));
+        CharSequence[] fileNames = new CharSequence[dexNames.size()];
+        for (int j = 0; j < dexNames.size(); j++) fileNames[j] = dexNames.get(j);
+        boolean[] selectedItems = new boolean[dexNames.size()];
+        String classesNo = preselected == null ? "" : preselected.replace("classes", "").replace(".dex", "");
+        try {
+            int initialIndex = TextUtils.isEmpty(classesNo) ? 0 : (Integer.parseInt(classesNo) - 1);
+            if (initialIndex >= 0 && initialIndex < selectedItems.length) selectedItems[initialIndex] = true;
+        } catch (NumberFormatException ignored) { }
+        builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
+        builder.setNeutralButton(context.rss.getString(android.R.string.selectAll), null).setPositiveButton(android.R.string.ok, (dialog, which) -> {
+            List<String> selectedNames = new ArrayList<>();
+            for (int k = 0; k < selectedItems.length; k++) {
+                if (selectedItems[k]) selectedNames.add(dexNames.get(k));
+            }
+            if (selectedNames.isEmpty()) return;
+            proceedWithSelectedDex(zipFile, session, selectedNames, openTab);
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        AlertDialog dialog = builder.create();
+        dialog.setOnShowListener(dialogInterface -> {
+            Button invertButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            invertButton.setOnClickListener(v -> {
+                String buttonText = invertButton.getText().toString();
+                if (buttonText.equals(context.rss.getString(android.R.string.selectAll))) {
+                    for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                        selectedItems[i1] = true;
+                        dialog.getListView().setItemChecked(i1, true);
+                    }
+                    invertButton.setText(R.string.invert_selection);
+                } else {
+                    for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                        selectedItems[i1] = !selectedItems[i1];
+                        dialog.getListView().setItemChecked(i1, selectedItems[i1]);
+                    }
+                }
+            });
+        });
+        dialog.show();
+        DialogUtil.keepButtonsHorizontal(dialog);
+    }
+
+    private void proceedWithSelectedDex(File zipFile, DexPreExtract session, List<String> selectedNames) {
+        proceedWithSelectedDex(zipFile, session, selectedNames, null);
+    }
+
+    private void proceedWithSelectedDex(File zipFile, DexPreExtract session, List<String> selectedNames, Integer openTab) {
+        DexPreExtract useSession = session;
+        boolean allThere = useSession.error == null;
+        if (allThere) {
+            for (String n : selectedNames) {
+                if (!new File(useSession.outputDir, n).isFile()) {
+                    allThere = false;
+                    break;
+                }
+            }
+        }
+        if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
+        final DexPreExtract waitSession = useSession;
+        if (waitSession.done.getCount() == 0 && waitSession.error == null) {
+            openExtractedDex(waitSession, selectedNames, openTab);
+            return;
+        }
+        ProgressManager pm = new ProgressManager(context, false);
+        pm.show();
+        int total = Math.max(1, selectedNames.size());
+        pm.setProgress(0, total);
+        pm.setText(context.rss.getString(R.string.extracting, selectedNames.get(0)));
+        new Thread(() -> {
+            while (waitSession.done.getCount() > 0) {
+                int done = Math.min(waitSession.extracted, total);
+                context.handler.post(() -> {
+                    pm.setProgress(done, total);
+                    pm.setText(context.rss.getString(R.string.extracting, done + "/" + total));
+                });
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException ignored) {
+                    break;
+                }
+            }
+            context.handler.post(() -> {
+                pm.dismiss();
+                if (waitSession.error != null) {
+                    new ErrorUtil(context).showError(new Exception(waitSession.error));
+                    return;
+                }
+                openExtractedDex(waitSession, selectedNames);
+            });
+        }).start();
+    }
+
+    private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
+        openExtractedDex(session, selectedNames, null);
+    }
+
+    private void openTranslationActivity(ArrayList<String> paths, File zipFile, String entryPath) {
+        Intent intent = new Intent(context, TranslationModeActivity.class)
+                .putExtra("theme", context.theme)
+                .putStringArrayListExtra("SelectedDexFiles", paths);
+        if (zipFile != null) {
+            intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
+            if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
+        }
+        context.startActivityForResult(intent, 757);
+    }
+
+    private void openExtractedDex(DexPreExtract session, List<String> selectedNames, Integer openTab) {
+        ArrayList<String> selectedPaths = new ArrayList<>();
+        String missing = null;
+        String firstEntry = null;
+        for (String n : selectedNames) {
+            File f = new File(session.outputDir, n);
+            if (f.isFile() && f.length() > 0) {
+                selectedPaths.add(f.getPath());
+                if (firstEntry == null) firstEntry = n;
+            } else if (missing == null) {
+                missing = f.getAbsolutePath();
+            }
+        }
+        if (selectedPaths.isEmpty()) {
+            Extensions.showMessage(context, missing != null ? missing : context.rss.getString(R.string.file_no_longer_available));
+            return;
+        }
+        if (openTab != null && openTab == 3) {
+            // openTab 3 == translation mode -> standalone activity.
+            openTranslationActivity(selectedPaths, session.zipFile, firstEntry);
+            return;
+        }
+        openDexPlusFiles(selectedPaths, openTab, session.zipFile, firstEntry);
+    }
+
+    private void repairDex(File dexFile, File zipFile) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                if (zipFile == null) {
+                    if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
+                }
+                // Pre-repair corrupted/zeroed headers and recalculate checksums if needed
+                DexRepairEngine.repairHeader(dexFile);
+                DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
+                com.android.tools.smali.dexlib2.writer.pool.DexPool pool = new com.android.tools.smali.dexlib2.writer.pool.DexPool(dex.getOpcodes());
+                for (ClassDef cd : dex.getClasses()) {
+                    pool.internClass(io.github.abdurazaaqmohammed.utils.DexDebugStripper.strip(cd));
+                }
+                com.android.tools.smali.dexlib2.writer.io.MemoryDataStore store = new com.android.tools.smali.dexlib2.writer.io.MemoryDataStore();
+                pool.writeTo(store);
+                try (OutputStream os = new FileOutputStream(dexFile)) {
+                    os.write(store.getData(), 0, store.getSize());
+                }
+                pm.dismiss();
+                if (zipFile != null) {
+                    context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(dexFile)));
+                } else {
+                    context.handler.post(() -> {
+                        Extensions.showMessage(context, context.rss.getString(R.string.repaired_to, dexFile.getName()));
+                        context.loadFolderInPane(dexFile.getParentFile(), pane1);
+                    });
+                }
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showDexProperties(File dexFile) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                byte[] head = new byte[64];
+                try (FileInputStream fis = new FileInputStream(dexFile)) {
+                    int n = fis.read(head);
+                    if (n < 32) throw new IOException(context.rss.getString(R.string.dex_not_dex));
+                }
+                String version = new String(head, 4, 3, StandardCharsets.US_ASCII);
+                int api;
+                try {
+                    api = VersionMap.mapDexVersionToApi(Integer.parseInt(version));
+                } catch (Exception e) {
+                    api = -1;
+                }
+                long checksum = ((head[8] & 0xFFL) | ((head[9] & 0xFFL) << 8) | ((head[10] & 0xFFL) << 16) | ((head[11] & 0xFFL) << 24));
+                StringBuilder sig = new StringBuilder();
+                for (int i = 12; i < 32; i++) sig.append(String.format(Locale.US, "%02x", head[i]));
+                DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
+                int strings = dex.getStringReferences().size();
+                int types = dex.getTypeReferences().size();
+                int classes = dex.getClasses().size();
+                int methods = 0;
+                int fields = 0;
+                for (ClassDef c : dex.getClasses()) {
+                    if (c instanceof DexBackedClassDef bc) {
+                        for (Object ignored : bc.getMethods()) methods++;
+                        for (Object ignored : bc.getFields()) fields++;
+                    }
+                }
+                String info = "Version: dex " + version + (api > 0 ? " (API " + api + ")" : "")
+                        + "\nSize: " + dexFile.length() + " bytes"
+                        + "\nChecksum: " + String.format(Locale.US, "%08x", checksum)
+                        + "\nSignature: " + sig
+                        + "\nStrings: " + strings
+                        + "\nTypes: " + types
+                        + "\nClasses: " + classes
+                        + "\nMethods: " + methods
+                        + "\nFields: " + fields;
+                pm.dismiss();
+                String title = dexFile.getName();
+                context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle(title)
+                        .setMessage(info)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create()));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void dexToSmali(File dexFile, File zipFile) {
+        File base = zipFile != null ? zipFile.getParentFile() : dexFile.getParentFile();
+        String dexBaseName = dexFile.getName().replaceFirst("\\.[^.]+$", "");
+        File outZip = FileUtils.getUnusedFile(new File(base, dexBaseName + "_smali.zip"));
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                byte[] bytes;
+                try (FileInputStream fis = new FileInputStream(dexFile);
+                     ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = fis.read(buf)) != -1) bos.write(buf, 0, n);
+                    bytes = bos.toByteArray();
+                }
+                int version = HeaderItem.getVersion(bytes, 0);
+                int api = VersionMap.mapDexVersionToApi(version);
+                BaksmaliOptions options = new BaksmaliOptions();
+                options.apiLevel = api;
+                DexBackedDexFile dex = new DexBackedDexFile(Opcodes.forApi(api), bytes);
+
+                List<? extends ClassDef> classDefs = new ArrayList<>(dex.getClasses());
+                int totalClasses = classDefs.size();
+                int jobs = Math.max(1, Runtime.getRuntime().availableProcessors());
+                ExecutorService executor = Executors.newFixedThreadPool(jobs);
+                BlockingQueue<FastSmaliEntry> queue = new LinkedBlockingQueue<>(512);
+
+                Thread writerThread = new Thread(() -> {
+                    try (ZipOutputStream zos = new ZipOutputStream(
+                            new BufferedOutputStream(new FileOutputStream(outZip), 131072))) {
+                        zos.setLevel(1);
+                        while (true) {
+                            FastSmaliEntry entry = queue.take();
+                            if (entry == FastSmaliEntry.POISON) break;
+                            ZipEntry ze = new ZipEntry(entry.path);
+                            ze.setTime(0);
+                            zos.putNextEntry(ze);
+                            zos.write(entry.bytes);
+                            zos.closeEntry();
+                        }
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+                writerThread.start();
+
+                for (ClassDef cd : classDefs) {
+                    executor.submit(() -> {
+                        try {
+                            String desc = cd.getType();
+                            if (desc.charAt(0) != 'L' || desc.charAt(desc.length() - 1) != ';') return;
+                            String path = desc.substring(1, desc.length() - 1) + ".smali";
+                            ByteArrayOutputStream bos = new ByteArrayOutputStream(2048);
+                            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(bos, StandardCharsets.UTF_8), 2048);
+                            BaksmaliWriter bwWriter =
+                                    new BaksmaliWriter(bw, options.implicitReferences ? cd.getType() : null);
+                            new ClassDefinition(options, cd).writeTo(bwWriter);
+                            bwWriter.close();
+                            queue.put(new FastSmaliEntry(path, bos.toByteArray()));
+                        } catch (Exception ignored) {
+                        }
+                    });
+                }
+
+                executor.shutdown();
+                executor.awaitTermination(1, TimeUnit.HOURS);
+                queue.put(FastSmaliEntry.POISON);
+                writerThread.join();
+
+                pm.dismiss();
+                context.handler.post(() -> {
+                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outZip.getName()));
+                    context.loadFolderInPane(outZip.getParentFile(), pane1);
+                    if (context.pane1Folder != null && context.pane1Folder.equals(context.pane2Folder)) {
+                        context.loadFolderInPane(outZip.getParentFile(), !pane1);
+                    }
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private static class FastSmaliEntry {
+        static final FastSmaliEntry POISON = new FastSmaliEntry(null, null);
+        final String path;
+        final byte[] bytes;
+        FastSmaliEntry(String path, byte[] bytes) {
+            this.path = path;
+            this.bytes = bytes;
+        }
+    }
+
+    public void handleZipEntryClick(ZipEntryInfo zipEntry) {        File zipFile = zipEntry.getZipFile();
+        String fullPath = zipEntry.getFullPath();
+        if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
+        else new Thread(() -> {
+            try {
+            final String name = zipEntry.getName();
+            String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
+            File tempFolder = new File(outputDir);
+            tempFolder.mkdir();
+            File tempFile = new File(tempFolder, name);
+            tempFile.createNewFile();
+            // One generic stage covers every browsable archive format; the
+            // special cases below work on the staged copy.
+            ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
+            if(name.endsWith(".dex")) {
+                if (ArchiveBrowseUtil.isZipLike(zipFile))
+                    preExtractAllDex(context, zipFile, false);
+                context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
+            } else if (name.endsWith(".xml")) {
+                if (ApkDrawableRenderer.isDrawableXmlEntry(zipFile, fullPath)) {
+                    // res/drawable* / res/mipmap* / res/color* XMLs are
+                    // pictures, not documents: show the rendered preview and
+                    // keep the AXML editor one button away.
+                    context.handler.post(() -> DrawablePreviewDialog.show(
+                            context, zipFile, fullPath,
+                            () -> openXmlInEditor(tempFile, zipFile, fullPath)));
+                } else {
+                    openXmlInEditor(tempFile, zipFile, fullPath);
+                }
+            } else if (name.endsWith(".smali")) {
+                context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("path", tempFile.getPath()), 757);
+            } else if (name.equals("resources.arsc")) {
+                context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
+            } else {
+                context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
+            }
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+        }
+        }).start();
+    }
+
+    /**
+     * Opens an XML entry in the text editor, staging resources.arsc next to it
+     * when it is binary AXML so the editor can resolve/decompile it and save
+     * edits back into the archive. Shared by the normal click path and the
+     * "XML source" button of the drawable preview.
+     */
+    private void openXmlInEditor(File tempFile, File zipFile, String fullPath) {
+        new Thread(() -> {
+            boolean isAxml;
+            try (InputStream is = new FileInputStream(tempFile)) {
+                isAxml = FileUtils.isAxml(is);
+            } catch (Exception e) {
+                isAxml = false;
+            }
+            File tmpRss = null;
+            if (isAxml) {
+                try {
+                    tmpRss = File.createTempFile("rss_", ".arsc", context.getCacheDir());
+                    ArchiveBrowseUtil.extractEntry(zipFile, "resources.arsc", tmpRss);
+                } catch (Exception rssFailure) {
+                    // No resources.arsc alongside the binary xml: fall back
+                    // to the plain text editor instead of failing the click.
+                    if (tmpRss != null) //noinspection ResultOfMethodCallIgnored
+                        tmpRss.delete();
+                    tmpRss = null;
+                }
+            }
+            final String rssPath = tmpRss == null ? null : tmpRss.getPath();
+            context.handler.post(() -> {
+                Intent intent = new Intent(context, TextEditorActivity.class)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("path", tempFile.getPath());
+                if (rssPath != null) {
+                    intent.putExtra("rssPath", rssPath).putExtra("axml", true);
+                }
+                context.startActivityForResult(intent, 757);
+            });
+        }, "xml-editor-stage").start();
+    }
+
+    private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {
+        EditText findInput = new EditText(context);
+        findInput.setHint(context.rss.getString(R.string.find));
+        findInput.setSingleLine(true);
+        EditText replaceInput = new EditText(context);
+        replaceInput.setHint(context.rss.getString(R.string.replace_with));
+        replaceInput.setSingleLine(true);
+        CheckBox matchCase = new CheckBox(context);
+        matchCase.setText(context.rss.getString(R.string.match_case));
+        matchCase.setChecked(true);
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        layout.addView(findInput);
+        layout.addView(replaceInput);
+        layout.addView(matchCase);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(dexFile.getName())
+                .setView(layout)
+                .setPositiveButton(context.rss.getString(R.string.replace), (d, w) -> {
+                    String find = findInput.getText().toString();
+                    String replacement = replaceInput.getText().toString();
+                    boolean cs = matchCase.isChecked();
+                    if (find.isEmpty()) {
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_enter_find));
+                        return;
+                    }
+                    runDexStringReplace(dexFile, zipFileOrNull, find, replacement, cs);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
+    private void runDexStringReplace(File dexFile, File zipFileOrNull, String find, String replacement, boolean matchCase) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                File tmpOut = File.createTempFile("dexstr", ".dex", context.getCacheDir());
+                int count = DexStringUtil.replaceStrings(dexFile, tmpOut, find, replacement, matchCase);
+                pm.dismiss();
+                context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setMessage(context.rss.getString(R.string.fo_replacements_apply, count))
+                        .setPositiveButton(context.rss.getString(R.string.apply), (d2, w2) -> applyDexStringReplace(dexFile, zipFileOrNull, tmpOut))
+                        .setNegativeButton(android.R.string.cancel, (d2, w2) -> tmpOut.delete())
+                        .create()));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void applyDexStringReplace(File dexFile, File zipFileOrNull, File tmpOut) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                if (zipFileOrNull != null) {
+                    FileUtils.copyFile(tmpOut, dexFile);
+                    tmpOut.delete();
+                    pm.dismiss();
+                    context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(dexFile)));
+                } else {
+                    if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
+                    FileUtils.copyFile(tmpOut, dexFile);
+                    tmpOut.delete();
+                    pm.dismiss();
+                    context.handler.post(() -> {
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_replaced, dexFile.getName()));
+                        context.loadFolderInPane(dexFile.getParentFile(), pane1);
+                    });
+                }
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showDexStringDecryptDialog(File dexFile, File zipFileOrNull) {
+        EditText methodInput = new EditText(context);
+        methodInput.setHint("Custom method or signature (optional)");
+        methodInput.setSingleLine(true);
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        TextView desc = new TextView(context);
+        desc.setText("Scans and decrypts static encrypted strings (Base64, XOR, Caesar, or custom decryptor) and replaces them with plaintext const-strings.");
+        desc.setPadding(0, 0, 0, pad / 2);
+        layout.addView(desc);
+        layout.addView(methodInput);
+
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.dex_decrypt_strings))
+                .setView(layout)
+                .setPositiveButton("Decrypt", (d, w) -> {
+                    String custom = methodInput.getText().toString().trim();
+                    runDexStringDecrypt(dexFile, zipFileOrNull, custom);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
+    private void runDexStringDecrypt(File dexFile, File zipFileOrNull, String customSig) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                File tmpOut = File.createTempFile("dexdec", ".dex", context.getCacheDir());
+                int count = DexStringDecryptor.decryptDexStrings(dexFile, tmpOut, customSig);
+                pm.dismiss();
+                if (count == 0) {
+                    tmpOut.delete();
+                    context.handler.post(() -> Extensions.showMessage(context, context.rss.getString(R.string.dex_no_strings_decrypted)));
+                    return;
+                }
+                context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setMessage(context.rss.getString(R.string.dex_decrypted_n, count, dexFile.getName()))
+                        .setPositiveButton(context.rss.getString(R.string.apply), (d2, w2) -> applyDexStringReplace(dexFile, zipFileOrNull, tmpOut))
+                        .setNegativeButton(android.R.string.cancel, (d2, w2) -> tmpOut.delete())
+                        .create()));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void mergeDexOption(File dexFile, File zipFile) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                if (zipFile != null) {
+                    File tmpDir = new File(context.getCacheDir(), "dexmerge" + UUID.randomUUID());
+                    tmpDir.mkdirs();
+                    List<File> inputs = new ArrayList<>();
+                    try (ZipFile zf = new ZipFile(zipFile)) {
+                        List<String> names = new ArrayList<>();
+                        for (FileHeader fh : zf.getFileHeaders()) {
+                            String n = fh.getFileName();
+                            if (n != null && n.matches("classes(\\d*)\\.dex")) {
+                                names.add(n);
+                            }
+                        }
+                        Collections.sort(names, (a, b) -> Integer.compare(dexNameNumber(a), dexNameNumber(b)));
+                        if (names.size() > 20) {
+                            names = names.subList(0, 20);
+                        }
+                        if (names.size() < 2) {
+                            pm.dismiss();
+                            context.handler.post(() -> Extensions.showMessage(context, context.rss.getString(R.string.fo_need_dex)));
+                            return;
+                        }
+                        for (String n : names) {
+                            File out0 = new File(tmpDir, n);
+                            try (InputStream is = zf.getInputStream(zf.getFileHeader(n))) {
+                                FileUtils.copyFile(is, out0);
+                            }
+                            inputs.add(out0);
+                        }
+                    }
+                    int api = detectDexApi(inputs.get(0));
+                    File outDir = new File(context.getCacheDir(), "dexmergeout" + UUID.randomUUID());
+                    outDir.mkdirs();
+                    File merged = new File(outDir, "classes_merged.dex");
+                    List<File> generated = DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    pm.dismiss();
+                    context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(generated.get(0))));
+                } else {
+                    File dir = dexFile.getParentFile();
+                    File[] found = dir.listFiles((d, name) -> name.matches("classes(\\d*)\\.dex"));
+                    List<File> inputs = new ArrayList<>();
+                    if (found != null) {
+                        Arrays.sort(found, (a, b) -> Integer.compare(dexNameNumber(a.getName()), dexNameNumber(b.getName())));
+                        for (int i = 0; i < found.length && inputs.size() < 20; i++) {
+                            inputs.add(found[i]);
+                        }
+                    }
+                    if (inputs.size() < 2) {
+                        pm.dismiss();
+                        context.handler.post(() -> Extensions.showMessage(context, "Need at least 2 dex files to merge"));
+                        return;
+                    }
+                    int api = detectDexApi(inputs.get(0));
+                    File merged = FileUtils.getUnusedFile(new File(dir, "classes_merged.dex"));
+                    List<File> generated = DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    pm.dismiss();
+                    context.handler.post(() -> {
+                        String msg = generated.size() > 1
+                                ? context.rss.getString(R.string.fo_merged_n, inputs.size()) + " (" + generated.size() + " DEX)"
+                                : context.rss.getString(R.string.fo_merged_n, inputs.size());
+                        Extensions.showMessage(context, msg);
+                        context.loadFolderInPane(dir, pane1);
+                    });
+                }
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private int detectDexApi(File dexFile) {
+        try (FileInputStream fis = new FileInputStream(dexFile)) {
+            byte[] magic = new byte[8];
+            int read = 0;
+            while (read < 8) {
+                int n = fis.read(magic, read, 8 - read);
+                if (n < 0) {
+                    break;
+                }
+                read += n;
+            }
+            if (read >= 7) {
+                int version = HeaderItem.getVersion(magic, 0);
+                int api = VersionMap.mapDexVersionToApi(version);
+                if (api > 0) {
+                    return api;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return 28;
+    }
+
+    private int dexNameNumber(String name) {
+        if ("classes.dex".equals(name)) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(name.substring(7, name.length() - 4));
+        } catch (Exception e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+}

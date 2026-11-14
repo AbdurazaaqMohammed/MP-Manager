@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.apk;
+package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import android.content.Intent;

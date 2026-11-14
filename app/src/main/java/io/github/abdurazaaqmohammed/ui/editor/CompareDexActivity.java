@@ -62,7 +62,7 @@ import java.util.zip.ZipOutputStream;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
-import io.github.abdurazaaqmohammed.features.dex.DexCompareEngine;
+import io.github.abdurazaaqmohammed.feature.dex.DexCompareEngine;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;

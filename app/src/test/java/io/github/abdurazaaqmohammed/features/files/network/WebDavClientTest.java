@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.files.network;
+package io.github.abdurazaaqmohammed.feature.files.network;
 
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;

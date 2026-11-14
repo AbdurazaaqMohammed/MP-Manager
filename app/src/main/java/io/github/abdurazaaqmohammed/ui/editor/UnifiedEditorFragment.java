@@ -27,8 +27,8 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.features.editor.ColorPreviewHelper;
-import io.github.abdurazaaqmohammed.features.editor.ColorPreviewLanguageWrapper;
+import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewHelper;
+import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewLanguageWrapper;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;

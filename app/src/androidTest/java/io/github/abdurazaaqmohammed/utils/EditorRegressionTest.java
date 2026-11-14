@@ -347,14 +347,14 @@ public class EditorRegressionTest {
         android.content.res.Configuration original = new android.content.res.Configuration(resources.getConfiguration());
         android.content.res.Resources.Theme originalTheme = resources.newTheme();
         originalTheme.setTo(main.getTheme());
-        Method browse = io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.class.getDeclaredMethod(
+        Method browse = io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog.class.getDeclaredMethod(
                 "browse", androidx.appcompat.app.AppCompatActivity.class, List.class, String.class);
         browse.setAccessible(true);
         var items = List.of(
-                new io.github.abdurazaaqmohammed.features.dumper.PartitionItem("boot_a", "boot", "", "/dev/block/by-name/boot_a", "sda1", 64L * 1024 * 1024,
-                        io.github.abdurazaaqmohammed.features.dumper.PartitionItem.Slot.A, true, false, "boot_a.img", io.github.abdurazaaqmohammed.features.dumper.PartitionItem.Group.COMMON),
-                new io.github.abdurazaaqmohammed.features.dumper.PartitionItem("boot_b", "boot", "", "/dev/block/by-name/boot_b", "sda2", 64L * 1024 * 1024,
-                        io.github.abdurazaaqmohammed.features.dumper.PartitionItem.Slot.B, false, false, "boot_b.img", io.github.abdurazaaqmohammed.features.dumper.PartitionItem.Group.COMMON));
+                new io.github.abdurazaaqmohammed.feature.dumper.PartitionItem("boot_a", "boot", "", "/dev/block/by-name/boot_a", "sda1", 64L * 1024 * 1024,
+                        io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Slot.A, true, false, "boot_a.img", io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Group.COMMON),
+                new io.github.abdurazaaqmohammed.feature.dumper.PartitionItem("boot_b", "boot", "", "/dev/block/by-name/boot_b", "sda2", 64L * 1024 * 1024,
+                        io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Slot.B, false, false, "boot_b.img", io.github.abdurazaaqmohammed.feature.dumper.PartitionItem.Group.COMMON));
         File screenshotDirectory = new File(android.os.Environment.getExternalStoragePublicDirectory(
                 android.os.Environment.DIRECTORY_DOWNLOADS), "mp-editor-regression-" + java.util.UUID.randomUUID());
         screenshotDirectory.mkdirs();

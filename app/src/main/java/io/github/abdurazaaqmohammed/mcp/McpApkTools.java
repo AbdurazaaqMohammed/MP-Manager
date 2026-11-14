@@ -749,7 +749,7 @@ public final class McpApkTools {
      */
     public JsonObject jiaguDump(JsonObject args) throws McpJson.McpToolException {
         String pkg = McpJson.reqStr(args, "package");
-        if (!io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.isValidPackage(pkg)) {
+        if (!io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.isValidPackage(pkg)) {
             throw new McpJson.McpToolException("Invalid package name: " + pkg);
         }
         RootManager rm = RootManager.getInstance(ctx.context);
@@ -761,10 +761,10 @@ public final class McpApkTools {
         }
         int waitSec = McpJson.intVal(args, "wait_seconds", 15);
         final com.google.gson.JsonArray logLines = new com.google.gson.JsonArray();
-        io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
+        io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
         File outDir;
         try {
-            outDir = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.dump(ctx.context, pkg, waitSec, sink);
+            outDir = io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.dump(ctx.context, pkg, waitSec, sink);
         } catch (Exception e) {
             JsonObject err = new JsonObject();
             err.addProperty("error", String.valueOf(e.getMessage()));
@@ -786,7 +786,7 @@ public final class McpApkTools {
             File apk = resolvePath(apkPath, true);
             if (!apk.isFile()) throw new McpJson.McpToolException("APK not found: " + apk);
             try {
-                File rebuilt = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.rebuild(ctx.context, apk, outDir, sink);
+                File rebuilt = io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.rebuild(ctx.context, apk, outDir, sink);
                 result.addProperty("rebuilt", rebuilt.getPath());
             } catch (Exception e) {
                 result.addProperty("rebuild_error", String.valueOf(e.getMessage()));
@@ -816,16 +816,16 @@ public final class McpApkTools {
             } catch (Exception e) {
                 throw new McpJson.McpToolException("Cannot read APK: " + e.getMessage());
             }
-            dumpDir = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.latestDump(ctx.context, pkg);
+            dumpDir = io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.latestDump(ctx.context, pkg);
         }
         if (dumpDir == null || !dumpDir.isDirectory()) {
             throw new McpJson.McpToolException("No dump folder found - run mp_apk_jiagu_dump or the Tools Hub dumper first");
         }
         final com.google.gson.JsonArray logLines = new com.google.gson.JsonArray();
-        io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
+        io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.LogSink sink = line -> logLines.add(String.valueOf(line));
         File rebuilt;
         try {
-            rebuilt = io.github.abdurazaaqmohammed.features.apk.JiaguDumpEngine.rebuild(ctx.context, apk, dumpDir, sink, outDir);
+            rebuilt = io.github.abdurazaaqmohammed.feature.apk.JiaguDumpEngine.rebuild(ctx.context, apk, dumpDir, sink, outDir);
         } catch (Exception e) {
             JsonObject err = new JsonObject();
             err.addProperty("error", String.valueOf(e.getMessage()));

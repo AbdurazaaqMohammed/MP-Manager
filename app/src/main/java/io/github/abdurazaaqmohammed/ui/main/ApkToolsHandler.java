@@ -4,10 +4,10 @@ import java.io.File;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
-import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
-import io.github.abdurazaaqmohammed.features.apk.ApkInfoDialogs;
-import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
-import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
+import io.github.abdurazaaqmohammed.feature.apk.ApkBatchTools;
+import io.github.abdurazaaqmohammed.feature.apk.ApkInfoDialogs;
+import io.github.abdurazaaqmohammed.feature.apk.ApkOverlayTools;
+import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 

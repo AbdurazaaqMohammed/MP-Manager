@@ -27,7 +27,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
-import io.github.abdurazaaqmohammed.features.apk.SignatureInfoDialog;
+import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;

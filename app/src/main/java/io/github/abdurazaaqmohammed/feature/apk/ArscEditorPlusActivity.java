@@ -72,7 +72,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.features.translation.TranslationExportDialog;
+import io.github.abdurazaaqmohammed.feature.translation.TranslationExportDialog;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;

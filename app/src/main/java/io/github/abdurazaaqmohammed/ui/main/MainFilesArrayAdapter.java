@@ -63,11 +63,11 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
-import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
-import io.github.abdurazaaqmohammed.features.files.FileOpener;
-import io.github.abdurazaaqmohammed.features.files.SplitDialog;
+import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
+import io.github.abdurazaaqmohammed.feature.files.FileOpener;
+import io.github.abdurazaaqmohammed.feature.files.SplitDialog;
 import io.github.abdurazaaqmohammed.utils.SplitArchiveUtil;
-import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
+import io.github.abdurazaaqmohammed.feature.media.BatchImageTools;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
@@ -232,11 +232,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             BootInspectManager.checkAndRepackIfNeeded(context, current, pane1);
             File resolved = BootInspectManager.getParentOrImageOrigin(current);
             if (resolved != null) target = resolved;
-        } else if (io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.isMountedFolder(current)) {
-            File resolved = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(current);
+        } else if (io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.isMountedFolder(current)) {
+            File resolved = io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.getParentOrImageOrigin(current);
             if (resolved != null && !resolved.equals(current.getParentFile())) {
                 target = resolved;
-                io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.checkUnmountOnExit(context, current);
+                io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.checkUnmountOnExit(context, current);
             }
         }
         if (target == null && current != null) {

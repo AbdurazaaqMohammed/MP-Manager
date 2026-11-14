@@ -59,23 +59,23 @@ import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
-import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
-import io.github.abdurazaaqmohammed.features.dex.DexTools;
-import io.github.abdurazaaqmohammed.features.files.BookmarksController;
-import io.github.abdurazaaqmohammed.features.files.FileSearchController;
-import io.github.abdurazaaqmohammed.features.files.FtpController;
-import io.github.abdurazaaqmohammed.features.files.network.NetworkController;
-import io.github.abdurazaaqmohammed.features.files.network.RemoteFile;
-import io.github.abdurazaaqmohammed.features.files.network.RemoteEntry;
+import io.github.abdurazaaqmohammed.feature.apk.ApkResultHandler;
+import io.github.abdurazaaqmohammed.feature.dex.DexTools;
+import io.github.abdurazaaqmohammed.feature.files.BookmarksController;
+import io.github.abdurazaaqmohammed.feature.files.FileSearchController;
+import io.github.abdurazaaqmohammed.feature.files.FtpController;
+import io.github.abdurazaaqmohammed.feature.files.network.NetworkController;
+import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
+import io.github.abdurazaaqmohammed.feature.files.network.RemoteEntry;
 import io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
-import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
-import io.github.abdurazaaqmohammed.features.files.SamePanePasteController;
-import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
-import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
-import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
-import io.github.abdurazaaqmohammed.features.files.RightMenuController;
-import io.github.abdurazaaqmohammed.features.files.SidebarController;
+import io.github.abdurazaaqmohammed.feature.files.MultiSelectController;
+import io.github.abdurazaaqmohammed.feature.files.MainSettingsActivity;
+import io.github.abdurazaaqmohammed.feature.files.SamePanePasteController;
+import io.github.abdurazaaqmohammed.feature.files.NavigationHistoryEntry;
+import io.github.abdurazaaqmohammed.feature.files.PaneHighlightController;
+import io.github.abdurazaaqmohammed.feature.files.PaneNavigationController;
+import io.github.abdurazaaqmohammed.feature.files.RightMenuController;
+import io.github.abdurazaaqmohammed.feature.files.SidebarController;
 import io.github.abdurazaaqmohammed.mcp.McpServerService;
 import io.github.abdurazaaqmohammed.feature.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.ui.viewer.MusicService;
@@ -85,7 +85,7 @@ import io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.StartupPrivileges;
-import io.github.abdurazaaqmohammed.features.files.SortFilterController;
+import io.github.abdurazaaqmohammed.feature.files.SortFilterController;
 
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GestureDetectorCompat;
@@ -2200,7 +2200,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = BootInspectManager.getParentOrImageOrigin(folder);
         if (parent == null || parent.equals(folder.getParentFile())) {
-            File imgParent = io.github.abdurazaaqmohammed.features.system.SystemImageMountManager.getParentOrImageOrigin(folder);
+            File imgParent = io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager.getParentOrImageOrigin(folder);
             if (imgParent != null) parent = imgParent;
         }
         if (parent == null) parent = folder;
@@ -2953,14 +2953,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         new Thread(() -> {
             try {
-                io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffResult res =
-                        io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.compare(baseDir, targetDir);
+                io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffResult res =
+                        io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.compare(baseDir, targetDir);
 
                 java.util.Map<String, Integer> colorMap = new java.util.HashMap<>();
-                for (java.util.Map.Entry<String, io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus> entry : res.statusByName.entrySet()) {
-                    if (entry.getValue() == io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus.ADDED) {
+                for (java.util.Map.Entry<String, io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus> entry : res.statusByName.entrySet()) {
+                    if (entry.getValue() == io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus.ADDED) {
                         colorMap.put(entry.getKey(), COLOR_DIFF_ADDED);
-                    } else if (entry.getValue() == io.github.abdurazaaqmohammed.features.diff.FolderDiffEngine.DiffStatus.MODIFIED) {
+                    } else if (entry.getValue() == io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine.DiffStatus.MODIFIED) {
                         colorMap.put(entry.getKey(), COLOR_DIFF_MODIFIED);
                     }
                 }
@@ -3344,7 +3344,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     Extensions.showMessage(this, rss.getString(R.string.cannot_open_item));
                 }
             }
-            String locate = getIntent() == null || getIntent().hasExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH)
+            String locate = getIntent() == null || getIntent().hasExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH)
                     ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
@@ -3419,11 +3419,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     private void openBookmarkShortcut() {
         Intent intent = getIntent();
-        if (intent == null || !io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.ACTION_OPEN.equals(intent.getAction())) return;
-        String path = intent.getStringExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH);
+        if (intent == null || !io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.ACTION_OPEN.equals(intent.getAction())) return;
+        String path = intent.getStringExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH);
         if (path == null || path.isEmpty()) return;
-        boolean directory = intent.getBooleanExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_DIRECTORY, true);
-        intent.removeExtra(io.github.abdurazaaqmohammed.features.files.BookmarkShortcuts.EXTRA_PATH);
+        boolean directory = intent.getBooleanExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_DIRECTORY, true);
+        intent.removeExtra(io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts.EXTRA_PATH);
         intent.removeExtra("locatePath");
         new Thread(() -> {
             File target;

@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.features.dex.DexCompareEngine;
+import io.github.abdurazaaqmohammed.feature.dex.DexCompareEngine;
 import io.github.abdurazaaqmohammed.ui.editor.CompareDexActivity;
 
 /**

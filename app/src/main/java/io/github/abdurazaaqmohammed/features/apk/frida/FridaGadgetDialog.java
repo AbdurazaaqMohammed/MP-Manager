@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.apk.frida;
+package io.github.abdurazaaqmohammed.feature.apk.frida;
 
 import android.view.LayoutInflater;
 import android.view.View;

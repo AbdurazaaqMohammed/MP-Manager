@@ -505,7 +505,7 @@ public class ToolsHubActivity extends BaseActivity {
         } else if ("documents".equals(item.id())) {
             startActivity(new Intent(this, DocumentsBrowserActivity.class));
         } else if ("partitiondumper".equals(item.id())) {
-            io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(this);
+            io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog.show(this);
         } else if ("app_ops".equals(item.id())) {
             startActivity(new Intent(this, io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity.class));
         } else if ("commandshell".equals(item.id())) {
@@ -513,7 +513,7 @@ public class ToolsHubActivity extends BaseActivity {
         } else if ("setedit".equals(item.id())) {
             startActivity(new Intent(this, SetEditActivity.class));
         } else if ("jiagudumper".equals(item.id())) {
-            io.github.abdurazaaqmohammed.features.apk.JiaguDumpDialog.show(this);
+            io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog.show(this);
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());

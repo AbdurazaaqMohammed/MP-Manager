@@ -33,9 +33,9 @@ import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.ui.main.FileRowStyle;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.features.files.network.NetworkFileMenu;
+import io.github.abdurazaaqmohammed.feature.files.network.NetworkFileMenu;
 import io.github.abdurazaaqmohammed.utils.SafFile;
-import io.github.abdurazaaqmohammed.features.files.FileOpener;
+import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -167,7 +167,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         MainFilesArrayAdapter adapter = context.paneFilesAdapter(!pane1);
         return adapter != null && !adapter.isInZip && folder != null
                 && !(folder instanceof SafFile) && !(folder instanceof FTPFileWrapper)
-                && !(folder instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile);
+                && !(folder instanceof io.github.abdurazaaqmohammed.feature.files.network.RemoteFile);
     }
 
     private void showRenameDialog(FTPFileWrapper file) {
@@ -179,7 +179,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {
-                        try { io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(newName); }
+                        try { io.github.abdurazaaqmohammed.feature.files.network.RemotePath.validateName(newName); }
                         catch (IllegalArgumentException e) { new io.github.abdurazaaqmohammed.utils.ErrorUtil(context).showError(e); return; }
                         String oldPath = file.remotePath();
                         String newPath = file.remoteParent() + (file.remoteParent().endsWith("/") ? "" : "/") + newName;
@@ -250,7 +250,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
     private void downloadAndOpen(FTPFileWrapper file) {
         File[] opened = {null};
         context.getNetwork().runOperation(context.getString(R.string.network_downloading), () -> {
-            io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(file.getName());
+            io.github.abdurazaaqmohammed.feature.files.network.RemotePath.validateName(file.getName());
             File dir = new File(context.getCacheDir(), "ftp_" + java.util.UUID.randomUUID());
             if (!dir.mkdir()) throw new IOException("Cannot create download cache");
             opened[0] = new File(dir, file.getName());
@@ -263,7 +263,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         if (file.isDirectory() || !hasLocalDestination()) return;
         File destFolder = pane1 ? context.pane2Folder : context.pane1Folder;
         context.getNetwork().runOperation(context.getString(isMove ? R.string.move : android.R.string.copy), () -> {
-            io.github.abdurazaaqmohammed.features.files.network.RemotePath.validateName(file.getName());
+            io.github.abdurazaaqmohammed.feature.files.network.RemotePath.validateName(file.getName());
             File destination = new File(destFolder, file.getName());
             if (destination.exists()) throw new IOException("Destination already exists");
             File part = File.createTempFile(".ftp-", ".part", destFolder);

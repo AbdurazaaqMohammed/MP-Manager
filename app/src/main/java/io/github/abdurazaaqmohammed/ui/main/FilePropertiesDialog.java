@@ -428,8 +428,8 @@ public class FilePropertiesDialog {
                     ownerView.setText(finalOwner);
                 });
 
-                io.github.abdurazaaqmohammed.features.system.SystemImageEngine.ImageIdentity identity =
-                        io.github.abdurazaaqmohammed.features.system.SystemImageEngine.identifyImage(file);
+                io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.ImageIdentity identity =
+                        io.github.abdurazaaqmohammed.feature.system.SystemImageEngine.identifyImage(file);
                 if (identity != null && !"unknown".equals(identity.typeKey)) {
                     context.handler.post(() -> {
                         boolean isAr = java.util.Locale.getDefault().getLanguage().startsWith("ar");

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.features.apk.flutter;
+package io.github.abdurazaaqmohammed.feature.apk.flutter;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;

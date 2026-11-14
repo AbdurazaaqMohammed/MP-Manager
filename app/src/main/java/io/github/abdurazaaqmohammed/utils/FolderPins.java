@@ -13,7 +13,7 @@ public final class FolderPins {
     private FolderPins() {}
 
     public static String key(File file) {
-        if (file instanceof io.github.abdurazaaqmohammed.features.files.network.RemoteFile remote)
+        if (file instanceof io.github.abdurazaaqmohammed.feature.files.network.RemoteFile remote)
             return remote.displayPath();
         if (file instanceof io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper ftp)
             return ftp.displayPath();

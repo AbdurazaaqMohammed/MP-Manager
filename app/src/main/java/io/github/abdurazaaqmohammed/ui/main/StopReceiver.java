@@ -5,7 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import io.github.abdurazaaqmohammed.features.files.FtpController;
+import io.github.abdurazaaqmohammed.feature.files.FtpController;
 
 public class StopReceiver extends BroadcastReceiver {
     @Override
