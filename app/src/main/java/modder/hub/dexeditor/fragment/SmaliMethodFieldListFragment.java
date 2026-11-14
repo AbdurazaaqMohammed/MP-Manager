@@ -147,6 +147,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private boolean isFirstLoad = true;
+    private final Handler loadHandler = new Handler(Looper.getMainLooper());
+    private int loadGeneration;
+    private Thread loadThread;
 
     // Update the UI with the smali file path, class name, editor line number, and dex version
     public void updateUi(String smaliFilePath, String className, int editorLineNumber, int dexVersion) {
@@ -156,7 +159,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         this.dexVersion = dexVersion;
         this.isFirstLoad = true; // Always mark as first load to trigger data refresh from file
 
-        if (isAdded()) {
+        if (isAdded() && methodRecyclerView != null && stringsRecyclerView != null) {
             // Refresh data if already showing
             new LoadDataRunnable().run();
         }
@@ -231,9 +234,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 			});
 		}
         if (isFirstLoad) {
-            final Handler handler = new Handler(Looper.getMainLooper());
             final Runnable loadDataRunnable = new LoadDataRunnable();
-            handler.postDelayed(loadDataRunnable, 200L);
+            loadHandler.postDelayed(loadDataRunnable, 200L);
             isFirstLoad = false;
         } else {
             // Restore adapters without reloading
@@ -294,17 +296,21 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private void saveCurrentState() {
+        if (!(getActivity() instanceof DexEditorActivity activity)
+                || methodRecyclerView == null || stringsRecyclerView == null) return;
         // Save RecyclerView scroll states
-        if (methodRecyclerView.getLayoutManager() != null) {
-            ((DexEditorActivity) requireActivity()).methodRecyclerViewState = methodRecyclerView.getLayoutManager().onSaveInstanceState();
+        if (methodRecyclerView.getAdapter() != null && methodRecyclerView.getLayoutManager() != null) {
+            activity.methodRecyclerViewState = methodRecyclerView.getLayoutManager().onSaveInstanceState();
         }
-        if (stringsRecyclerView.getLayoutManager() != null) {
-            ((DexEditorActivity) requireActivity()).stringsRecyclerViewState = stringsRecyclerView.getLayoutManager().onSaveInstanceState();
+        if (stringsRecyclerView.getAdapter() != null && stringsRecyclerView.getLayoutManager() != null) {
+            activity.stringsRecyclerViewState = stringsRecyclerView.getLayoutManager().onSaveInstanceState();
         }
-        ((DexEditorActivity) requireActivity()).wasStringsVisible = stringsRecyclerView.getVisibility() == View.VISIBLE;
+        if (methodRecyclerView.getAdapter() != null)
+            activity.wasStringsVisible = stringsRecyclerView.getVisibility() == View.VISIBLE;
     }
 
     public void restorePreviousState(Parcelable methodState, Parcelable stringsState, boolean wasStringsVisible) {
+        if (!isAdded() || toolbar == null || methodRecyclerView == null || stringsRecyclerView == null) return;
         // Restore visibility
         MenuItem item = toolbar.getMenu().findItem(R.id.strings_list);
         if (wasStringsVisible) {
@@ -331,18 +337,27 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private void restoreRecyclerViewState() {
-        DexEditorActivity activity = (DexEditorActivity) requireActivity();
+        if (!(getActivity() instanceof DexEditorActivity activity) || !isAdded()) return;
         restorePreviousState(activity.methodRecyclerViewState, activity.stringsRecyclerViewState, activity.wasStringsVisible);
     }
 
     @Override
     public void onDestroyView() {
-        super.onDestroyView();
         saveCurrentState(); // Save state when dialog is dismissed
+        ++loadGeneration;
+        loadHandler.removeCallbacksAndMessages(null);
+        if (loadThread != null) loadThread.interrupt();
+        loadThread = null;
+        methodRecyclerView = null;
+        stringsRecyclerView = null;
+        toolbar = null;
+        isFirstLoad = true;
+        super.onDestroyView();
     }
 
     @SuppressLint("NotifyDataSetChanged")
     public void performSearch(final String _charSeq) {
+        if (methodRecyclerView == null || !isAdded()) return;
         try {
             methodOrFieldInfo.clear();
             methodOrFieldInfo = new Gson().fromJson(savedMethodData, new TypeToken<ArrayList<HashMap<String, Object>>>() {
@@ -369,6 +384,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
     @SuppressLint("NotifyDataSetChanged")
     public void performStringsSearch(final String _charSeq) {
+        if (stringsRecyclerView == null || !isAdded()) return;
         try {
             stringListInfo.clear();
             stringListInfo = new Gson().fromJson(savedStringsData, new TypeToken<ArrayList<HashMap<String, Object>>>() {
@@ -763,20 +779,27 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private class LoadDataRunnable implements Runnable {
         @Override
         public void run() {
+            Activity activity = getActivity();
+            if (!isAdded() || activity == null || activity.isFinishing() || activity.isDestroyed()
+                    || methodRecyclerView == null || stringsRecyclerView == null) return;
             saveCurrentState(); // Save current scroll position before reloading data
+            if (loadThread != null) loadThread.interrupt();
             new LoadDataTask().execute();
         }
     }
 
     @SuppressLint("StaticFieldLeak")
     private class LoadDataTask {
-        private final Handler mainHandler = new Handler(Looper.getMainLooper());
+        private final int generation = ++loadGeneration;
+        private final String sourcePath = smaliFilePath;
+        private String parsedClassName = fullClassName;
 
         void execute() {
-            new Thread(() -> {
+            loadThread = new Thread(() -> {
                 final Map<String, List<HashMap<String, Object>>> results = doInBackground();
-                mainHandler.post(() -> onPostExecute(results));
-            }).start();
+                if (!Thread.currentThread().isInterrupted()) loadHandler.post(() -> onPostExecute(results));
+            }, "smali-navigation-load");
+            loadThread.start();
         }
 
         protected Map<String, List<HashMap<String, Object>>> doInBackground() {
@@ -786,7 +809,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             List<HashMap<String, Object>> classInfoList = new ArrayList<>();
             List<HashMap<String, Object>> stringList = new ArrayList<>();
 
-            try (BufferedReader smaliFileReader = new BufferedReader(new FileReader(smaliFilePath))) {
+            try (BufferedReader smaliFileReader = new BufferedReader(new FileReader(sourcePath))) {
                 // Open the smali file for reading
                 String currentLine;
                 int currentLineNumber = 0;
@@ -800,6 +823,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 // Read the smali file line by line
                 while (true) {
+                    if (Thread.currentThread().isInterrupted()) return null;
                     if (pendingLine != null) {
                         currentLine = pendingLine;
                         pendingLine = null;
@@ -879,7 +903,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                     // Check if the line defines a class
                     else if (tokens[0].equals(".class") && trimmedLine.endsWith(";")) {
                         String className = tokens[tokens.length - 1]; // Last token is the class name
-                        fullClassName = className;
+                        parsedClassName = className;
                         // Read the next line to check for the superclass
                         String nextLine = smaliFileReader.readLine();
                         if (nextLine != null && nextLine.trim().startsWith(".super")) {
@@ -920,7 +944,12 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         @SuppressLint("NotifyDataSetChanged")
         protected void onPostExecute(Map<String, List<HashMap<String, Object>>> parsedDataMap) {
+            Activity activity = getActivity();
+            if (generation != loadGeneration || !isAdded() || activity == null
+                    || activity.isFinishing() || activity.isDestroyed()
+                    || methodRecyclerView == null || stringsRecyclerView == null) return;
             if (parsedDataMap != null && !parsedDataMap.isEmpty()) {
+                fullClassName = parsedClassName;
                 methodOrFieldInfo.clear();
                 stringListInfo.clear();
 
