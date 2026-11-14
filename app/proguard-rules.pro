@@ -30,7 +30,7 @@
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 -keep class io.github.abdurazaaqmohammed.feature.ftp.FtpProfile { *; }
--keep class io.github.abdurazaaqmohammed.features.files.network.NetworkProfile { *; }
+-keep class io.github.abdurazaaqmohammed.feature.files.network.NetworkProfile { *; }
 
 # SMBJ uses MBassador's annotation-based event subscriptions. EL filters are an
 # optional desktop-only feature; SMBJ never uses them and Android has no javax.el.
@@ -38,8 +38,8 @@
     @net.engio.mbassy.listener.Handler <methods>;
 }
 -dontwarn javax.el.**
--keep class io.github.abdurazaaqmohammed.utils.DnsManager$DnsProfile { *; }
--keep class io.github.abdurazaaqmohammed.utils.RecycleBin$Meta { *; }
+-keep class io.github.abdurazaaqmohammed.util.net.DnsManager$DnsProfile { *; }
+-keep class io.github.abdurazaaqmohammed.util.io.RecycleBin$Meta { *; }
 -keep class io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil$ToastOptions { *; }
 -keep class io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil$DialogOptions { *; }
 -keep class io.github.abdurazaaqmohammed.data.prefs.** { *; }
