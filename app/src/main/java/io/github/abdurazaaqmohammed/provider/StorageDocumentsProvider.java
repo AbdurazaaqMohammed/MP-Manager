@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.provider;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 
@@ -30,7 +30,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /**
  * MP Manager as a {@link DocumentsProvider}.
@@ -150,8 +150,8 @@ public class StorageDocumentsProvider extends DocumentsProvider {
     /** Android/{data,obb,media} is only listable as root or as the shell user. */
     private static boolean androidDataReachable(Context context) {
         try {
-            if (AccessManager.fileOpsConfigured(context)) return true;
-            return ShizukuManager.ready();
+            if (PrivilegeManager.Files.fileOpsConfigured(context)) return true;
+            return PrivilegeManager.Shizuku.ready();
         } catch (Throwable e) {
             return false;
         }
@@ -240,7 +240,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         }
         Context context = getContext();
         try {
-            return AccessManager.openReadFd(context, file.getAbsolutePath());
+            return PrivilegeManager.Files.openReadFd(context, file.getAbsolutePath());
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to open " + documentId + ": " + e.getMessage());
         }
@@ -252,12 +252,12 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         Context context = getContext();
         File parent = fileForDocId(parentDocumentId);
         File target = new File(parent, displayName);
-        boolean elevated = AccessManager.needsShellAccess(context, parent.getAbsolutePath());
+        boolean elevated = PrivilegeManager.Files.needsShellAccess(context, parent.getAbsolutePath());
         try {
             if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
-                AccessManager.mkdir(context, target.getAbsolutePath(), elevated);
+                PrivilegeManager.Files.mkdir(context, target.getAbsolutePath(), elevated);
             } else {
-                AccessManager.touch(context, target.getAbsolutePath(), elevated);
+                PrivilegeManager.Files.touch(context, target.getAbsolutePath(), elevated);
             }
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to create " + displayName + ": " + e.getMessage());
@@ -272,9 +272,9 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         if (isExportedBase(file)) {
             throw new FileNotFoundException("Refusing to delete a provider root: " + documentId);
         }
-        boolean elevated = AccessManager.needsShellAccess(context, file.getAbsolutePath());
+        boolean elevated = PrivilegeManager.Files.needsShellAccess(context, file.getAbsolutePath());
         try {
-            AccessManager.deleteTree(context, Collections.singletonList(documentId),
+            PrivilegeManager.Files.deleteTree(context, Collections.singletonList(documentId),
                     elevated, null);
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to delete " + documentId + ": " + e.getMessage());
@@ -286,9 +286,9 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         Context context = getContext();
         File file = fileForDocId(documentId);
         File target = new File(file.getParentFile(), displayName);
-        boolean elevated = AccessManager.needsShellAccess(context, file.getAbsolutePath());
+        boolean elevated = PrivilegeManager.Files.needsShellAccess(context, file.getAbsolutePath());
         try {
-            AccessManager.rename(context, documentId, target.getAbsolutePath(), elevated);
+            PrivilegeManager.Files.rename(context, documentId, target.getAbsolutePath(), elevated);
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to rename " + documentId + ": " + e.getMessage());
         }
@@ -362,7 +362,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         }
         if (children == null || children.length == 0) {
             try {
-                File[] elevated = AccessManager.listWithStat(getContext(), path);
+                File[] elevated = PrivilegeManager.Files.listWithStat(getContext(), path);
                 if (elevated != null && elevated.length > 0) children = elevated;
             } catch (Throwable ignored) {
             }

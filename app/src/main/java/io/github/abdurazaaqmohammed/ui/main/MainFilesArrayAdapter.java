@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
@@ -77,7 +77,7 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.feature.files.SplitDialog;
@@ -375,12 +375,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (f instanceof SafFile) return f.isDirectory();
         try {
             String path = f.getAbsolutePath();
-            AccessManager.Backend backend = AccessManager.active(context);
-            if (backend == AccessManager.Backend.ROOT || RootManager.getInstance(context).isRootAvailable()) {
+            PrivilegeManager.Backend backend = PrivilegeManager.Files.active(context);
+            if (backend == PrivilegeManager.Backend.ROOT || RootManager.getInstance(context).isRootAvailable()) {
                 return RootManager.getInstance(context).isDirectory(path);
             }
-            if (backend == AccessManager.Backend.SHIZUKU) {
-                return ShizukuManager.isDirectory(context, path);
+            if (backend == PrivilegeManager.Backend.SHIZUKU) {
+                return PrivilegeManager.Shizuku.isDirectory(context, path);
             }
         } catch (Exception ignored) {
         }
@@ -424,7 +424,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     context.setSelectedPane(pane1 ? 1 : 2);
                     if (dir) {
                         context.loadFolderInPaneAsync(f, pane1);
-                    } else if (f.isFile() || AccessManager.isFile(context, path)) {
+                    } else if (f.isFile() || PrivilegeManager.Files.isFile(context, path)) {
                         if (!isSearchResultsMode) {
                             context.setCurrentFolder(f.getParentFile(), getOldValues());
                         }

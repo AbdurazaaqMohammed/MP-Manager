@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
@@ -153,8 +155,8 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -1605,7 +1607,7 @@ public class FileOpener {
                             new StreamResult(fos));
                 }
                 if (!readable.getAbsolutePath().equals(original.getAbsolutePath())) {
-                    AccessManager.copyFile(context, out.getAbsolutePath(), original.getAbsolutePath(), true);
+                    PrivilegeManager.Files.copyFile(context, out.getAbsolutePath(), original.getAbsolutePath(), true);
                 } else {
                     FileUtils.copyFile(out, readable);
                 }
@@ -2110,14 +2112,14 @@ public class FileOpener {
 
     private long getRootFolderSize(String path) {
         try {
-            if (!AccessManager.fileOpsOn(context)) return 0;
+            if (!PrivilegeManager.Files.fileOpsOn(context)) return 0;
             String cmd = "du -sb " + RootManager.escapeShellArg(path);
             String out = null;
-            if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
+            if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
                 RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);
                 if (r != null && r.isSuccess()) out = r.output();
-            } else if (ShizukuManager.ready()) {
-                ShizukuShell.Result r = ShizukuShell.exec(cmd, 5);
+            } else if (PrivilegeManager.Shizuku.ready()) {
+                ShellSession.Result r = PrivilegeManager.shizuku().exec(cmd, 5);
                 if (r != null && r.success) out = r.stdout;
             }
             if (out != null) {
@@ -2216,7 +2218,7 @@ public class FileOpener {
                     stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
                     stagedDir.mkdirs();
                     sourceToCompress = new File(stagedDir, folder.getName());
-                    AccessManager.stageTree(context, folder.getAbsolutePath(), sourceToCompress);
+                    PrivilegeManager.Files.stageTree(context, folder.getAbsolutePath(), sourceToCompress);
                 }
 
                 ZipParameters params = new ZipParameters();
@@ -2297,8 +2299,8 @@ public class FileOpener {
                                 stagedDir.mkdirs();
                             }
                             source = new File(stagedDir, f.getName());
-                            if (f.isDirectory()) AccessManager.stageTree(context, f.getAbsolutePath(), source);
-                            else AccessManager.stageFile(context, f.getAbsolutePath(), source);
+                            if (f.isDirectory()) PrivilegeManager.Files.stageTree(context, f.getAbsolutePath(), source);
+                            else PrivilegeManager.Files.stageFile(context, f.getAbsolutePath(), source);
                         }
                         if (source.isDirectory()) zf.addFolder(source, params);
                         else zf.addFile(source, params);
@@ -2377,7 +2379,7 @@ public class FileOpener {
                                 stagedDir.mkdirs();
                             }
                             source = new File(stagedDir, f.getName());
-                            AccessManager.stageTree(context, f.getAbsolutePath(), source);
+                            PrivilegeManager.Files.stageTree(context, f.getAbsolutePath(), source);
                         }
                         if (source.isDirectory()) zf.addFolder(source, params);
                         else zf.addFile(source, params);
@@ -2391,7 +2393,7 @@ public class FileOpener {
                     for (File sf : plainFiles) {
                         File readableFile = sf;
                         if (SafFs.isSaf(sf) || !(sf.exists() && sf.canRead() && appReadable(sf))) {
-                            if (AccessManager.fileOpsOn(context)) {
+                            if (PrivilegeManager.Files.fileOpsOn(context)) {
                                 readableFile = RootStaging.stageForRead(context, sf.getAbsolutePath());
                             }
                         }
@@ -2601,7 +2603,7 @@ public class FileOpener {
             new ErrorUtil(context).showError(e);
             return;
         }
-        if (!AccessManager.fileOpsOn(context)) {
+        if (!PrivilegeManager.Files.fileOpsOn(context)) {
             Extensions.showMessage(context, R.string.cannot_open_permission_denied);
             return;
         }
@@ -2716,15 +2718,15 @@ public class FileOpener {
     private void restoreBakRootAware(File bakFile, File origFile, String fileName) {
         String bakPath = bakFile.getPath();
         String origPath = origFile.getPath();
-        boolean useElevated = AccessManager.fileOpsOn(context)
+        boolean useElevated = PrivilegeManager.Files.fileOpsOn(context)
                 && (RootStaging.needsStaging(context, bakPath) || RootStaging.needsStaging(context, origPath));
         if (useElevated) {
             new Thread(() -> {
                 try {
-                    boolean origExists = AccessManager.exists(context, origPath) || origFile.exists();
-                    if (origExists) AccessManager.rename(context, origPath, origPath + "_tmp_.bak", true);
-                    AccessManager.rename(context, bakPath, origPath, true);
-                    if (origExists) AccessManager.rename(context, origPath + "_tmp_.bak", bakPath, true);
+                    boolean origExists = PrivilegeManager.Files.exists(context, origPath) || origFile.exists();
+                    if (origExists) PrivilegeManager.Files.rename(context, origPath, origPath + "_tmp_.bak", true);
+                    PrivilegeManager.Files.rename(context, bakPath, origPath, true);
+                    if (origExists) PrivilegeManager.Files.rename(context, origPath + "_tmp_.bak", bakPath, true);
                     context.handler.post(() -> context.loadFolderInPane(
                             bakFile.getParentFile() != null ? bakFile.getParentFile() : new File("/"), pane1));
                 } catch (Exception e) {

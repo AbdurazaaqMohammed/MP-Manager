@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
@@ -177,7 +177,7 @@ public final class BookmarkShortcutDialog {
             boolean resolved = directory;
             try {
                 resolved = SafFs.isSaf(file) ? SafFs.statWrap(file.getPath()).isDirectory()
-                        : AccessManager.isDirectory(activity, file.getAbsolutePath());
+                        : PrivilegeManager.Files.isDirectory(activity, file.getAbsolutePath());
             } catch (Exception ignored) {}
             boolean result = resolved;
             handler.post(() -> {

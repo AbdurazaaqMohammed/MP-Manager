@@ -83,7 +83,7 @@ import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -1088,8 +1088,8 @@ public class SettingsController {
         } else workingModeTv.setText(labelNonRoot, false);
 
         Runnable refreshShizukuRow = () -> {
-            boolean running = shizukuSupported && ShizukuManager.isRunning();
-            boolean granted = running && ShizukuManager.hasPermission();
+            boolean running = shizukuSupported && PrivilegeManager.Shizuku.isRunning();
+            boolean granted = running && PrivilegeManager.Shizuku.hasPermission();
             grantShizukuBtn.setVisibility(
                     rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
                             && running && !granted ? View.VISIBLE : View.GONE);
@@ -1100,8 +1100,8 @@ public class SettingsController {
             boolean isRoot = mode == RootManager.WorkingMode.ROOT;
             boolean isSh = mode == RootManager.WorkingMode.SHIZUKU && shizukuSupported;
             boolean rootOk = isRoot && rootManager.isRootAvailable();
-            boolean shizukuRunning = isSh && ShizukuManager.isRunning();
-            boolean shizukuReady = shizukuRunning && ShizukuManager.hasPermission();
+            boolean shizukuRunning = isSh && PrivilegeManager.Shizuku.isRunning();
+            boolean shizukuReady = shizukuRunning && PrivilegeManager.Shizuku.hasPermission();
 
             // Status is shown in the mode field itself; the separate status switches only
             // duplicated what the dropdown already says.
@@ -1111,15 +1111,15 @@ public class SettingsController {
                         ? activity.getString(R.string.elevated_status_available)
                         : activity.getString(R.string.elevated_status_unavailable));
             } else if (isSh) {
-                status = labelShizuku + " - " + shizukuStatus(shizukuSupported, ShizukuManager.isRunning(),
-                        ShizukuManager.hasPermission());
+                status = labelShizuku + " - " + shizukuStatus(shizukuSupported, PrivilegeManager.Shizuku.isRunning(),
+                        PrivilegeManager.Shizuku.hasPermission());
             } else {
                 status = labelNonRoot;
             }
             workingModeTv.setText(status, false);
 
             groupRoot.setVisibility(rootOk ? View.VISIBLE : View.GONE);
-            groupShizuku.setVisibility(isSh && ShizukuManager.isRunning() ? View.VISIBLE : View.GONE);
+            groupShizuku.setVisibility(isSh && PrivilegeManager.Shizuku.isRunning() ? View.VISIBLE : View.GONE);
             groupShizukuOptions.setVisibility(shizukuReady ? View.VISIBLE : View.GONE);
             // Silent installing and the install flags need root or Shizuku;
             // hide the whole install section in non-root mode.
@@ -1157,15 +1157,15 @@ public class SettingsController {
                 return;
             }
             if (picked.equals(labelShizuku)) {
-                if (!shizukuSupported || !ShizukuManager.isRunning()) {
+                if (!shizukuSupported || !PrivilegeManager.Shizuku.isRunning()) {
                     Extensions.showMessage(activity, R.string.shizuku_not_running);
                     workingModeTv.setText(labelNonRoot, false);
                     return;
                 }
                 rootManager.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
                 applyModeUi.run();
-                new Thread(() -> ShizukuManager.warmUp(activity)).start();
-                if (!ShizukuManager.hasPermission()) {
+                new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
+                if (!PrivilegeManager.Shizuku.hasPermission()) {
                     requestShizukuPerm(applyModeUi);
                 }
                 return;
@@ -1182,7 +1182,7 @@ public class SettingsController {
         shizukuSilentToggle.setChecked(settings.getBoolean("shizuku_silent_install", false));
         shizukuSilentToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_silent_install", checked).apply();
-            if (checked) new Thread(() -> ShizukuManager.warmUp(activity)).start();
+            if (checked) new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
         });
 
         String labelSelf = activity.getString(R.string.installer_source_self);
@@ -1268,7 +1268,7 @@ public class SettingsController {
         shizukuFileOpsToggle.setChecked(settings.getBoolean("shizuku_file_ops", false));
         shizukuFileOpsToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_file_ops", checked).apply();
-            if (checked) new Thread(() -> ShizukuManager.warmUp(activity)).start();
+            if (checked) new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
         });
 
         rootExtractorToggle.setChecked(settings.getBoolean("root_extractor", false));
@@ -1288,17 +1288,17 @@ public class SettingsController {
         final Shizuku.OnRequestPermissionResultListener[] holder =
                 new Shizuku.OnRequestPermissionResultListener[1];
         holder[0] = (code, result) -> {
-            ShizukuManager.removePermissionListener(holder[0]);
+            PrivilegeManager.Shizuku.removePermissionListener(holder[0]);
             handler.post(() -> {
                 if (result == PackageManager.PERMISSION_GRANTED) {
-                    new Thread(() -> ShizukuManager.warmUp(activity)).start();
+                    new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
                 } else {
                     Extensions.showMessage(activity, R.string.shizuku_running_no_perm);
                 }
                 onResult.run();
             });
         };
-        ShizukuManager.requestPermission(activity, holder[0]);
+        PrivilegeManager.Shizuku.requestPermission(activity, holder[0]);
     }
 
     private void saveSuCommand(ViewFinder root) {

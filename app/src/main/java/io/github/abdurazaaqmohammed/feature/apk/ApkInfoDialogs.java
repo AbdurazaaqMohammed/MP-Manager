@@ -1,7 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
 
@@ -79,7 +79,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.activity.result.ActivityResult;
@@ -1312,7 +1312,7 @@ public class ApkInfoDialogs {
         final boolean[] rootInfoLoaded = {false};
 
         RootManager rm = RootManager.getInstance(context);
-        boolean elevatedFileOps = AccessManager.fileOpsOn(context);
+        boolean elevatedFileOps = PrivilegeManager.Files.fileOpsOn(context);
         if (elevatedFileOps) {
             rootInfoSection.setVisibility(View.VISIBLE);
             rootInfoHeader.setOnClickListener(v -> {
@@ -1660,7 +1660,7 @@ public class ApkInfoDialogs {
                 boolean exists = false;
                 boolean isFile = false;
                 try {
-                    exists = AccessManager.exists(context, tapPath)
+                    exists = PrivilegeManager.Files.exists(context, tapPath)
                             || new File(tapPath).exists();
                 } catch (Exception ignored) {}
                 if (!exists) {
@@ -1668,9 +1668,9 @@ public class ApkInfoDialogs {
                     return;
                 }
                 try {
-                    if (AccessManager.active(context) == AccessManager.Backend.SHIZUKU) {
-                        isFile = ShizukuManager.isFile(context, tapPath);
-                    } else if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
+                    if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.SHIZUKU) {
+                        isFile = PrivilegeManager.Shizuku.isFile(context, tapPath);
+                    } else if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
                         RootManager rootMgr = RootManager.getInstance(context);
                         isFile = rootMgr.isFile(tapPath);
                         if (!isFile && !rootMgr.isDirectory(tapPath)) {

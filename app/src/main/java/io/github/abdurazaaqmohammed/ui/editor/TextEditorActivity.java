@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 
 
@@ -33,7 +33,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
@@ -861,7 +861,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private long originalSize(EditorTab tab) {
         try {
-            return AccessManager.getSize(this, tab.rootOriginalPath);
+            return PrivilegeManager.Files.getSize(this, tab.rootOriginalPath);
         } catch (Exception e) {
             return -1;
         }
@@ -1132,15 +1132,15 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
      * @return true when the elevated write succeeded
      */
     private boolean handleSaveFailureElevated(EditorTab tab, String text, Runnable onDone, Exception cause) {
-        if (tab.file == null || !AccessManager.fileOpsOn(this)) return false;
+        if (tab.file == null || !PrivilegeManager.Files.fileOpsOn(this)) return false;
         try {
             File tmp = new File(getCacheDir(), "editor_save_" + System.currentTimeMillis() + ".tmp");
             try (OutputStream os = FileUtils.getOutputStream(tmp)) {
                 writeTabPayload(tab, text, os);
             }
             try {
-                AccessManager.copyFile(this, tmp.getPath(), tab.file.getAbsolutePath(), true);
-                if (!AccessManager.exists(this, tab.file.getAbsolutePath())) throw new IOException("copy failed");
+                PrivilegeManager.Files.copyFile(this, tmp.getPath(), tab.file.getAbsolutePath(), true);
+                if (!PrivilegeManager.Files.exists(this, tab.file.getAbsolutePath())) throw new IOException("copy failed");
             } finally {
                 //noinspection ResultOfMethodCallIgnored
                 tmp.delete();
@@ -1177,7 +1177,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             rootAvailable = RootManager.getInstance(this).isRootAvailable() && tab.file != null;
         } catch (Exception ignored) {
         }
-        boolean shizukuUsable = ShizukuShell.isGranted()
+        boolean shizukuUsable = PrivilegeManager.shizuku().isGranted()
                 && tab.file != null
                 && ShizukuFile.isAndroidDataPath(tab.file);
 
@@ -1349,7 +1349,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 File f = tab.file;
                 return f != null && f.isFile() && f.length() > 0;
             }
-            return AccessManager.getSize(this, tab.rootOriginalPath) > 0;
+            return PrivilegeManager.Files.getSize(this, tab.rootOriginalPath) > 0;
         } catch (Exception e) {
             return false;
         }
@@ -1624,11 +1624,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         try {
             if (!UiPrefs.genBackup(this)) return;
             if (rootOriginal != null) {
-                if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginal)) {
+                if (PrivilegeManager.Files.fileOpsOn(this) && PrivilegeManager.Files.exists(this, rootOriginal)) {
                     File bak = new File(rootOriginal + ".bak");
-                    if (!bak.exists() && !AccessManager.exists(this, rootOriginal + ".bak")) {
-                        AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
-                        AccessManager.preserveTime(this, rootOriginal, rootOriginal + ".bak");
+                    if (!bak.exists() && !PrivilegeManager.Files.exists(this, rootOriginal + ".bak")) {
+                        PrivilegeManager.Files.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
+                        PrivilegeManager.Files.preserveTime(this, rootOriginal, rootOriginal + ".bak");
                     }
                 }
             } else if (directFile != null && directFile.isFile()) {

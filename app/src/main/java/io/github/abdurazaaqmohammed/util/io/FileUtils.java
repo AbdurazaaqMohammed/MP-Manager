@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
 
@@ -448,7 +448,7 @@ public class FileUtils {
                 sb.append("\nParent exists: ").append(parent.exists());
                 sb.append("\nParent writable: ").append(parent.canWrite());
             }
-            sb.append("\nElevated access available: ").append(AccessManager.fileOpsOn(context));
+            sb.append("\nElevated access available: ").append(PrivilegeManager.Files.fileOpsOn(context));
         } catch (Exception ignored) {
         }
         if (isOnSecondaryVolume(target)) {

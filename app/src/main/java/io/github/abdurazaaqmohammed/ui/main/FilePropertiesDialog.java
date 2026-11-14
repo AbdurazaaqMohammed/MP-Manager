@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
@@ -58,7 +60,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.color.MaterialColors;
@@ -256,7 +258,7 @@ public class FilePropertiesDialog {
                 new Thread(() -> {
                     long m = 0;
                     try {
-                        m = AccessManager.getMtime(context, file.getAbsolutePath());
+                        m = PrivilegeManager.Files.getMtime(context, file.getAbsolutePath());
                     } catch (Exception ignored) {
                     }
                     if (m <= 0 && isImage) {
@@ -699,8 +701,8 @@ public class FilePropertiesDialog {
         try {
             long m = file.lastModified();
             if (m > 0) return m;
-            if (AccessManager.fileOpsOn(context)) {
-                long em = AccessManager.getMtime(context, file.getAbsolutePath());
+            if (PrivilegeManager.Files.fileOpsOn(context)) {
+                long em = PrivilegeManager.Files.getMtime(context, file.getAbsolutePath());
                 if (em > 0) return em;
             }
         } catch (Exception ignored) {
@@ -720,7 +722,7 @@ public class FilePropertiesDialog {
                     } catch (Exception ignored) {}
                 }
                 try {
-                    if (AccessManager.touchMtime(context, file.getAbsolutePath(), newTime)) {
+                    if (PrivilegeManager.Files.touchMtime(context, file.getAbsolutePath(), newTime)) {
                         successCount++;
                     }
                 } catch (Exception ignored) {}
@@ -822,7 +824,7 @@ public class FilePropertiesDialog {
                     long originalMtime = file.lastModified();
                     if (originalMtime <= 0) {
                         try {
-                            originalMtime = AccessManager.getMtime(context, file.getAbsolutePath());
+                            originalMtime = PrivilegeManager.Files.getMtime(context, file.getAbsolutePath());
                         } catch (Exception ignored) {}
                     }
                     String accessiblePath = resolveAccessiblePath(file.getAbsolutePath());
@@ -838,9 +840,9 @@ public class FilePropertiesDialog {
                     exif.saveAttributes();
                     if (originalMtime > 0) {
                         try {
-                            AccessManager.touchMtime(context, file.getAbsolutePath(), originalMtime);
+                            PrivilegeManager.Files.touchMtime(context, file.getAbsolutePath(), originalMtime);
                             if (!accessiblePath.equals(file.getAbsolutePath())) {
-                                AccessManager.touchMtime(context, accessiblePath, originalMtime);
+                                PrivilegeManager.Files.touchMtime(context, accessiblePath, originalMtime);
                             }
                         } catch (Exception ignored) {}
                     }
@@ -1061,9 +1063,9 @@ public class FilePropertiesDialog {
         if (file instanceof ShizukuFile sf) {
             if (sf.isLink()) {
                 try {
-                    if (ShizukuShell.isGranted()) {
-                        ShizukuShell.Result res =
-                                ShizukuShell.exec(
+                    if (PrivilegeManager.shizuku().isGranted()) {
+                        ShellSession.Result res =
+                                PrivilegeManager.shizuku().exec(
                                         "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
                         if (res.success && res.stdout != null && !res.stdout.trim().isEmpty()) {
                             return res.stdout.trim();
@@ -1137,10 +1139,10 @@ public class FilePropertiesDialog {
                         }
                         if (!updated) {
                             try {
-                                if (ShizukuShell.isGranted()) {
+                                if (PrivilegeManager.shizuku().isGranted()) {
                                     String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
-                                    ShizukuShell.Result res =
-                                            ShizukuShell.exec(cmd, 10);
+                                    ShellSession.Result res =
+                                            PrivilegeManager.shizuku().exec(cmd, 10);
                                     if (res.success) {
                                         updated = true;
                                     }
@@ -1185,11 +1187,11 @@ public class FilePropertiesDialog {
         boolean isPane1 = context.lastPaneSelected == 1;
         String fullPath = targetFile.getAbsolutePath();
 
-        boolean isDir = AccessManager.isDirectory(context, fullPath);
-        boolean isFile = !isDir && (AccessManager.isFile(context, fullPath) || targetFile.getParentFile() != null);
+        boolean isDir = PrivilegeManager.Files.isDirectory(context, fullPath);
+        boolean isFile = !isDir && (PrivilegeManager.Files.isFile(context, fullPath) || targetFile.getParentFile() != null);
         File folder = isFile ? targetFile.getParentFile() : targetFile;
 
-        if (folder != null && (folder.exists() || AccessManager.exists(context, folder.getAbsolutePath()))) {
+        if (folder != null && (folder.exists() || PrivilegeManager.Files.exists(context, folder.getAbsolutePath()))) {
             context.loadFolderInPane(folder, isPane1);
             if (isFile) {
                 final String itemName = targetFile.getName();

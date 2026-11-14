@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
@@ -1658,10 +1658,10 @@ public class HexEditorActivity extends BaseActivity {
         try {
             if (!UiPrefs.genBackup(this)) return;
             if (rootOriginalPath != null) {
-                if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginalPath)) {
-                    if (!AccessManager.exists(this, rootOriginalPath + ".bak")) {
-                        AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
-                        AccessManager.preserveTime(this, rootOriginalPath, rootOriginalPath + ".bak");
+                if (PrivilegeManager.Files.fileOpsOn(this) && PrivilegeManager.Files.exists(this, rootOriginalPath)) {
+                    if (!PrivilegeManager.Files.exists(this, rootOriginalPath + ".bak")) {
+                        PrivilegeManager.Files.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
+                        PrivilegeManager.Files.preserveTime(this, rootOriginalPath, rootOriginalPath + ".bak");
                     }
                 }
             } else if (file != null && file.isFile()) {

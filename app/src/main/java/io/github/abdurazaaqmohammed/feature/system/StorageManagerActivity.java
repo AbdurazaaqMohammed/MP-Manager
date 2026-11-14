@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
@@ -931,7 +931,7 @@ public class StorageManagerActivity extends BaseActivity {
 
     private boolean deleteOneFile(File file) {
         try {
-            AccessManager.delete(StorageManagerActivity.this, file.getAbsolutePath(), true);
+            PrivilegeManager.Files.delete(StorageManagerActivity.this, file.getAbsolutePath(), true);
         } catch (Exception ignored) {
         }
         if (file.exists()) {

@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
@@ -75,11 +75,11 @@ public class StorageUtil {
                         String uuid = vol.getUuid();
                         if (uuid != null && !uuid.isEmpty()) {
                             File candidate = new File("/storage/" + uuid);
-                            if (candidate.exists() || (AccessManager.fileOpsOn(ctx) && AccessManager.exists(ctx, candidate.getAbsolutePath()))) {
+                            if (candidate.exists() || (PrivilegeManager.Files.fileOpsOn(ctx) && PrivilegeManager.Files.exists(ctx, candidate.getAbsolutePath()))) {
                                 dir = candidate;
                             } else {
                                 File mediaRw = new File("/mnt/media_rw/" + uuid);
-                                if (mediaRw.exists() || (AccessManager.fileOpsOn(ctx) && AccessManager.exists(ctx, mediaRw.getAbsolutePath()))) {
+                                if (mediaRw.exists() || (PrivilegeManager.Files.fileOpsOn(ctx) && PrivilegeManager.Files.exists(ctx, mediaRw.getAbsolutePath()))) {
                                     dir = mediaRw;
                                 }
                             }
@@ -146,9 +146,9 @@ public class StorageUtil {
         }
 
         try {
-            if (AccessManager.fileOpsOn(ctx)) {
+            if (PrivilegeManager.Files.fileOpsOn(ctx)) {
                 // Discover additional OTG mounts under /mnt/media_rw directly via root
-                File[] mediaRwList = AccessManager.listWithStat(ctx, "/mnt/media_rw");
+                File[] mediaRwList = PrivilegeManager.Files.listWithStat(ctx, "/mnt/media_rw");
                 if (mediaRwList != null) {
                     for (File m : mediaRwList) {
                         String mName = m.getName();
@@ -169,7 +169,7 @@ public class StorageUtil {
                             otg.name = "USB Storage (" + mName + ")";
                             // Prefer standard /storage/[UUID] if it exists/can be resolved
                             File storageCandidate = new File("/storage/" + mName);
-                            if (storageCandidate.exists() || AccessManager.exists(ctx, storageCandidate.getAbsolutePath())) {
+                            if (storageCandidate.exists() || PrivilegeManager.Files.exists(ctx, storageCandidate.getAbsolutePath())) {
                                 otg.path = storageCandidate.getAbsolutePath();
                             } else {
                                 otg.path = mPath;
@@ -209,7 +209,7 @@ public class StorageUtil {
         }
 
         // Fallback for root-protected paths like /mnt/media_rw/... or /
-        if (AccessManager.fileOpsOn(ctx)) {
+        if (PrivilegeManager.Files.fileOpsOn(ctx)) {
             try {
                 RootManager rm = RootManager.getInstance(ctx);
                 if (rm != null && rm.isRootMode()) {

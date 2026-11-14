@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 
@@ -51,9 +51,9 @@ public final class RenameHelper {
     }
 
     public static boolean renameFile(Context context, File from, File to) {
-        if (AccessManager.fileOpsOn(context)) {
+        if (PrivilegeManager.Files.fileOpsOn(context)) {
             try {
-                AccessManager.rename(context, from.getAbsolutePath(), to.getAbsolutePath(), true);
+                PrivilegeManager.Files.rename(context, from.getAbsolutePath(), to.getAbsolutePath(), true);
                 return true;
             } catch (Exception ignored) {}
         }

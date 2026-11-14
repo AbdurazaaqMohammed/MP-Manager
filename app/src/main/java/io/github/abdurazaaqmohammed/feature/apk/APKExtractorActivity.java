@@ -1,7 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 
@@ -30,7 +32,7 @@ import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import android.content.ComponentName;
@@ -73,7 +75,7 @@ import android.widget.EditText;
 import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
@@ -1114,7 +1116,7 @@ public class APKExtractorActivity extends BaseActivity {
         try {
             RootManager rm = RootManager.getInstance(this);
             if (rm.isRootMode() && rm.isRootAvailable()) return true;
-            return rm.isShizukuMode() && ShizukuManager.ready();
+            return rm.isShizukuMode() && PrivilegeManager.Shizuku.ready();
         } catch (Exception e) {
             return false;
         }
@@ -1129,8 +1131,8 @@ public class APKExtractorActivity extends BaseActivity {
             RootManager.ShellResult r = rm.execute(cmd, 30);
             if (!r.isSuccess()) throw new IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
         } else {
-            ShizukuShell.Result r =
-                    ShizukuShell.exec(cmd, 30);
+            ShellSession.Result r =
+                    PrivilegeManager.shizuku().exec(cmd, 30);
             if (!r.success) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : "failed");
         }
     }
@@ -1143,8 +1145,8 @@ public class APKExtractorActivity extends BaseActivity {
             rm.uninstallSilent(packageName);
             return;
         }
-        ShizukuShell.Result r =
-                ShizukuShell.exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
+        ShellSession.Result r =
+                PrivilegeManager.shizuku().exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
         if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
     }
 

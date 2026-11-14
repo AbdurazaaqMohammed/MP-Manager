@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 
@@ -583,7 +583,7 @@ public class SqliteViewerActivity extends BaseActivity {
         // If staged from root / protected path, sync back to original location
         if (!TextUtils.isEmpty(originalPath) && !originalPath.equals(dbPath)) {
             try {
-                AccessManager.uploadFile(this, new File(dbPath), originalPath);
+                PrivilegeManager.Files.uploadFile(this, new File(dbPath), originalPath);
             } catch (Exception e) {
                 // Staged fallback
             }

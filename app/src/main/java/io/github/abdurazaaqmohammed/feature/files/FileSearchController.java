@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -348,12 +348,12 @@ public class FileSearchController {
                     mCase, regex, textInside, minSize, maxSize,
                     dir -> {
                         try {
-                            if (AccessManager.fileOpsOn(activity)
+                            if (PrivilegeManager.Files.fileOpsOn(activity)
                                     && !TextUtils.isEmpty(textInside)) {
                                 return null;
                             }
-                            if (AccessManager.fileOpsOn(activity)) {
-                                return AccessManager.listWithStat(activity, dir.getAbsolutePath());
+                            if (PrivilegeManager.Files.fileOpsOn(activity)) {
+                                return PrivilegeManager.Files.listWithStat(activity, dir.getAbsolutePath());
                             }
                         } catch (Exception ignored) {
                         }

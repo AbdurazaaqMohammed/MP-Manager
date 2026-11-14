@@ -1,20 +1,20 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
@@ -138,10 +138,10 @@ public class ApkInstallDialogHelper {
     }
 
     private void installPrivilegedOrFallback(List<File> apkFiles, String appName, File firstApk) {
-        if (PrivilegedInstaller.isPrivilegedSilentReady(activity)) {
+        if (PrivilegeManager.Installer.isPrivilegedSilentReady(activity)) {
             String installer = InstallerConfig.resolveInstallerPackageName(activity);
             ProgressManager pm = showProgress("Installing " + appName + " (as " + installer + ")...");
-            PrivilegedInstaller.installAsync(activity, apkFiles, new PrivilegedInstaller.Callback() {
+            PrivilegeManager.Installer.installAsync(activity, apkFiles, new PrivilegeManager.Installer.Callback() {
                 @Override
                 public void onSuccess(String recorded) {
                     String pkg = firstApk != null ? getPackageNameForApk(firstApk) : null;
@@ -187,7 +187,7 @@ public class ApkInstallDialogHelper {
         new Thread(() -> {
             String recorded = fallback;
             for (int i = 0; i < 20; i++) {
-                String now = PrivilegedInstaller.readRecordedInstaller(activity, packageName);
+                String now = PrivilegeManager.Installer.readRecordedInstaller(activity, packageName);
                 if (now != null && !"?".equals(now)) {
                     recorded = now;
                     if (now.equals(requestedInstaller)) break;
@@ -209,7 +209,7 @@ public class ApkInstallDialogHelper {
         String message = appName + "\nInstaller: " + recorded;
         String requested = InstallerConfig.resolveInstallerPackageName(activity);
         if (requested != null && !requested.equals(recorded)) {
-            String trace = PrivilegedInstaller.lastTrace();
+            String trace = PrivilegeManager.Installer.lastTrace();
             message += "\nSpoof: " + (trace.isEmpty() ? "system installer" : trace);
         }
         showInstallCompleteDialog(message, firstApk);
@@ -271,8 +271,8 @@ public class ApkInstallDialogHelper {
             for (File f : apkFiles) totalSize += f.length();
             String targetPkg = getPackageNameForApk(firstApk);
             String installerPkg = InstallerConfig.resolveInstallerPackageName(activity);
-            sessionId = PrivilegedInstaller.createSessionWithMetadata(activity, pi,
-                    targetPkg, totalSize, installerPkg, PrivilegedInstaller.collectFlags(activity));
+            sessionId = PrivilegeManager.Installer.createSessionWithMetadata(activity, pi,
+                    targetPkg, totalSize, installerPkg, PrivilegeManager.Installer.collectFlags(activity));
             try (PackageInstaller.Session session = pi.openSession(sessionId)) {
                 for (Map.Entry<String, File> split : nameSplits(apkFiles).entrySet()) {
                     File apkFile = split.getValue();

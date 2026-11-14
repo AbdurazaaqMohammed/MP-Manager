@@ -1,7 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
@@ -31,7 +33,7 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.UUID;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /**
  * Uninstalls a package so an APK signed with a different key can take its
@@ -261,8 +263,8 @@ public final class AppReinstaller {
             }
             if (!done) {
                 try {
-                    if (ShizukuShell.isGranted()) {
-                        ShizukuShell.Result r = ShizukuShell.exec(
+                    if (PrivilegeManager.shizuku().isGranted()) {
+                        ShellSession.Result r = PrivilegeManager.shizuku().exec(
                                 "pm uninstall --user 0 " + RootManager.escapeShellArg(packageName), 120);
                         if (r != null && r.success && r.stdout != null
                                 && r.stdout.toLowerCase(Locale.ROOT).contains("success")) {

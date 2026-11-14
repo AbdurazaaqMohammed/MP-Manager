@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -73,7 +73,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.CopyConflictDialog;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
@@ -89,7 +89,7 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
@@ -386,7 +386,7 @@ public class EntryDialogs {
                         if (isInZip) {
                             if (UiPrefs.genBackup(context)) FileUtils.backupOnce(zipFile);
                         }
-                        boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
+                        boolean useElevatedForDelete = PrivilegeManager.Files.fileOpsOn(context);
                         // Recycle bin covers plain-file deletes (root/Shizuku
                         // paths included - the bin stages them through the
                         // elevated backend). In-archive deletes are permanent.
@@ -500,11 +500,11 @@ public class EntryDialogs {
         int[] shares = new int[files.size()];
         long entries = 0;
         boolean exact = true;
-        AccessManager.Backend backend = AccessManager.active(context);
+        PrivilegeManager.Backend backend = PrivilegeManager.Files.active(context);
         List<String> paths = new ArrayList<>();
         for (File file : files) paths.add(file.getAbsolutePath());
         boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
-        List<DirectoryStats> batch = allLocal && backend == AccessManager.Backend.ROOT
+        List<DirectoryStats> batch = allLocal && backend == PrivilegeManager.Backend.ROOT
                 ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
         for (int i = 0; i < files.size(); i++) {
             pm.control().checkpoint();
@@ -520,7 +520,7 @@ public class EntryDialogs {
         int[] removed = {0};
         // Shizuku's service is one opaque unlink operation per root. Do not
         // pretend that its root counter is the native per-entry counter.
-        boolean entryProgress = backend != AccessManager.Backend.SHIZUKU;
+        boolean entryProgress = backend != PrivilegeManager.Backend.SHIZUKU;
         if (toBin) {
             for (int i = 0; i < files.size(); i++) {
                 pm.control().checkpoint();
@@ -535,7 +535,7 @@ public class EntryDialogs {
                 if (total > 0) pm.setProgress(Math.min(removed[0], total), total);
             }
         } else if (elevated && allLocal) {
-            AccessManager.deleteTree(context, paths, true, (done, bytes) -> {
+            PrivilegeManager.Files.deleteTree(context, paths, true, (done, bytes) -> {
                 if (entryProgress && total > 0) pm.setProgress(Math.min(done, total), total);
             }, pm.control());
         } else {
@@ -631,7 +631,7 @@ public class EntryDialogs {
             boolean applyToAll = false;
             int rememberedAction = -1;
             boolean anyRenamed = false;
-            boolean useElevated = AccessManager.fileOpsOn(context);
+            boolean useElevated = PrivilegeManager.Files.fileOpsOn(context);
 
             for (File src : targets) {
                 File parent = src.getParentFile();
@@ -674,7 +674,7 @@ public class EntryDialogs {
                         if (!dest.delete()) {
                             if (useElevated) {
                                 try {
-                                    AccessManager.delete(context, dest.getAbsolutePath(), true);
+                                    PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
                                 } catch (Exception ignored) {}
                             }
                         }
@@ -744,7 +744,7 @@ public class EntryDialogs {
                 List<String> paths = new ArrayList<>();
                 for (File t : targets) paths.add(t.getAbsolutePath());
                 boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
-                List<DirectoryStats> batch = local && AccessManager.active(context) == AccessManager.Backend.ROOT
+                List<DirectoryStats> batch = local && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT
                         ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
                 boolean complete = true;
                 for (int i = 0; i < targets.size(); i++) {
@@ -865,10 +865,10 @@ public class EntryDialogs {
                 // Sources may live under /data and be invisible to the app, so
                 // the totals have to come from the shell in that case.
                 FileUtils.Measure measuredTotal = null;
-                if (AccessManager.fileOpsOn(context)) {
+                if (PrivilegeManager.Files.fileOpsOn(context)) {
                     List<String> sourcePaths = new ArrayList<>(sources.size());
                     for (File s : sources) sourcePaths.add(s.getAbsolutePath());
-                    FileUtils.MeasureSet set = AccessManager.measureSetElevated(context, sourcePaths);
+                    FileUtils.MeasureSet set = PrivilegeManager.Files.measureSetElevated(context, sourcePaths);
                     if (set != null && set.total.files > 1) measuredTotal = set.total;
                 }
                 final FileUtils.Measure measure = measuredTotal != null
@@ -885,7 +885,7 @@ public class EntryDialogs {
                 }
                 final FileUtils.TransferListener listener = pm.listener();
 
-                boolean compressElevated = AccessManager.fileOpsOn(context);
+                boolean compressElevated = PrivilegeManager.Files.fileOpsOn(context);
                 File compressStageTmp = null;
                 List<File> readableSources = sources;
                 File effectiveOutput = outputZip;
@@ -907,8 +907,8 @@ public class EntryDialogs {
                             for (File s : sources) {
                                 if (RootStaging.needsStaging(context, s)) {
                                     File stagedChild = new File(compressStageTmp, s.getName());
-                                    if (s.isDirectory()) AccessManager.stageTree(context, s.getAbsolutePath(), stagedChild);
-                                    else AccessManager.stageFile(context, s.getAbsolutePath(), stagedChild);
+                                    if (s.isDirectory()) PrivilegeManager.Files.stageTree(context, s.getAbsolutePath(), stagedChild);
+                                    else PrivilegeManager.Files.stageFile(context, s.getAbsolutePath(), stagedChild);
                                     readableSources.add(stagedChild);
                                 } else readableSources.add(s);
                             }
@@ -920,7 +920,7 @@ public class EntryDialogs {
                     }
                     File outParent = outputZip.getParentFile();
                     if (outParent != null && !outParent.canWrite()
-                            && AccessManager.exists(context, outParent.getAbsolutePath())) {
+                            && PrivilegeManager.Files.exists(context, outParent.getAbsolutePath())) {
                         outputToRoot = true;
                         if (compressStageTmp == null) {
                             compressStageTmp = new File(context.getCacheDir(),
@@ -987,7 +987,7 @@ public class EntryDialogs {
                             pm.setProgress(Math.min(compressed, totalSources), totalSources);
                         }
                         if (pm.control().isCancelled()) throw new TransferCancelledException();
-                        if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        if (finalToRoot) PrivilegeManager.Files.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), "application/zip");
                         pm.setProgress(totalSources, totalSources);
                         pm.setBytes(totalBytes, totalBytes);
@@ -1020,7 +1020,7 @@ public class EntryDialogs {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources, listener);
                         if (pm.control().isCancelled()) throw new TransferCancelledException();
-                        if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        if (finalToRoot) PrivilegeManager.Files.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         else if (finalToSaf) SafFs.copyFrom(finalOutput, (SafFile) outputZip.getParentFile(), null);
                         pm.setProgress(totalSources, totalSources);
                         pm.setBytes(totalBytes, totalBytes);

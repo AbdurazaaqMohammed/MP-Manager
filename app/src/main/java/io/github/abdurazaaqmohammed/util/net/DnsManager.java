@@ -11,11 +11,11 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -218,11 +218,11 @@ public class DnsManager {
 
     private static boolean runShizukuSettingsPut(Context context, String key, String value) {
         try {
-            if (!ShizukuManager.ready()) return false;
+            if (!PrivilegeManager.Shizuku.ready()) return false;
             if (!"private_dns_mode".equals(key) && !"private_dns_specifier".equals(key)) return false;
             String checked = "private_dns_mode".equals(key) ? validDnsMode(value) : validDnsHostname(value);
             if (checked == null) return false;
-            return ShizukuManager.shellOk(context, "settings put global " + key + " " + RootManager.quoteForSh(checked), 10);
+            return PrivilegeManager.Shizuku.shellOk(context, "settings put global " + key + " " + RootManager.quoteForSh(checked), 10);
         } catch (Exception e) {
             return false;
         }

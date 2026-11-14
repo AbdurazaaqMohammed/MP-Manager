@@ -1,21 +1,21 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
@@ -204,7 +204,7 @@ public class FileIconLoader {
         this.folderSizeMode = mode;
         boolean elevated = false;
         try {
-            elevated = !metadataOnly && AccessManager.fileOpsOn(context);
+            elevated = !metadataOnly && PrivilegeManager.Files.fileOpsOn(context);
         } catch (Exception ignored) {
         }
         this.elevatedFileOps = elevated;
@@ -490,10 +490,10 @@ public class FileIconLoader {
             long size = -1;
             long mtime = 0;
             try {
-                size = AccessManager.getSize(context, tag);
+                size = PrivilegeManager.Files.getSize(context, tag);
             } catch (Exception ignored) {}
             try {
-                mtime = AccessManager.getMtime(context, tag);
+                mtime = PrivilegeManager.Files.getMtime(context, tag);
             } catch (Exception ignored) {}
             releasePending(tag);
             sizeCache.put(tag, size);
@@ -573,7 +573,7 @@ public class FileIconLoader {
 
         boolean canElevate = elevatedFileOps
                 || (context != null && RootManager.getInstance(context).isRootAvailable())
-                || io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager.ready();
+                || PrivilegeManager.Shizuku.ready();
 
         if (!canElevate) {
             fileDateView.setTag(null);
@@ -594,7 +594,7 @@ public class FileIconLoader {
             }
             long m = 0;
             try {
-                m = AccessManager.getMtime(context, tag);
+                m = PrivilegeManager.Files.getMtime(context, tag);
             } catch (Exception ignored) {}
             releasePending(tag);
             mtimeCache.put(tag, m);
@@ -693,7 +693,7 @@ public class FileIconLoader {
         }
         if (!isUserStorage(path)) {
             try {
-                long du = AccessManager.dirSize(ctx, path);
+                long du = PrivilegeManager.Files.dirSize(ctx, path);
                 if (du >= 0) return du;
             } catch (Exception ignored) {}
             // Outside user storage, if directory is not readable by normal Java IO,
@@ -773,7 +773,7 @@ public class FileIconLoader {
                             return cPkg;
                         }
                     }
-                } else if (AccessManager.fileOpsOn(context)) {
+                } else if (PrivilegeManager.Files.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
                         RootManager.ShellResult r =

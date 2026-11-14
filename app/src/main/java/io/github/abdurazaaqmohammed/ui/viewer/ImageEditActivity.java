@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -949,7 +949,7 @@ public class ImageEditActivity extends BaseActivity {
         if (mtimeToPreserve > 0) {
             try {
                 original.setLastModified(mtimeToPreserve);
-                AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
+                PrivilegeManager.Files.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
             } catch (Exception ignored) {
             }
         }
@@ -1047,7 +1047,7 @@ public class ImageEditActivity extends BaseActivity {
                 curMtime = new File(originalPath).lastModified();
                 if (curMtime <= 0) {
                     try {
-                        curMtime = AccessManager.getMtime(this, originalPath);
+                        curMtime = PrivilegeManager.Files.getMtime(this, originalPath);
                     } catch (Exception ignored) {}
                 }
             }
@@ -1119,7 +1119,7 @@ public class ImageEditActivity extends BaseActivity {
                                 if (originalPath != null) {
                                     new File(originalPath).setLastModified(parsedMtime);
                                     try {
-                                        AccessManager.touchMtime(ImageEditActivity.this, originalPath, parsedMtime);
+                                        PrivilegeManager.Files.touchMtime(ImageEditActivity.this, originalPath, parsedMtime);
                                     } catch (Exception ignored) {}
                                 }
                             }
@@ -1327,7 +1327,7 @@ public class ImageEditActivity extends BaseActivity {
                 if (mtimeToPreserve > 0) {
                     try {
                         original.setLastModified(mtimeToPreserve);
-                        AccessManager.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
+                        PrivilegeManager.Files.touchMtime(ImageEditActivity.this, originalPath, mtimeToPreserve);
                     } catch (Exception ignored) {
                     }
                 }
@@ -1438,7 +1438,7 @@ public class ImageEditActivity extends BaseActivity {
 
     private void copyFile(File src, File dst) throws Exception {
         try {
-            AccessManager.copyFile(this, src.getAbsolutePath(), dst.getAbsolutePath(), AccessManager.needsElevated(this, src.getAbsolutePath()) || AccessManager.needsElevated(this, dst.getAbsolutePath()));
+            PrivilegeManager.Files.copyFile(this, src.getAbsolutePath(), dst.getAbsolutePath(), PrivilegeManager.Files.needsElevated(this, src.getAbsolutePath()) || PrivilegeManager.Files.needsElevated(this, dst.getAbsolutePath()));
             return;
         } catch (Exception e) {
             // Fall back to direct stream or executeFs

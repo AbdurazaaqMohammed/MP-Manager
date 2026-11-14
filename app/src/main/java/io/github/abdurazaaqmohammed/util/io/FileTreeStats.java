@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 
@@ -13,7 +13,7 @@ import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
@@ -21,7 +21,7 @@ import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
@@ -41,7 +41,7 @@ public final class FileTreeStats {
 
     public static DirectoryStats read(Context context, File root, TransferControl control, long timeoutMs) {
         if (root == null) return new DirectoryStats(0, 0, 0, 0, 1);
-        if (!(root instanceof SafFile) && AccessManager.active(context) == AccessManager.Backend.ROOT) {
+        if (!(root instanceof SafFile) && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
             DirectoryStats nativeStats = NativeRootManager.stats(context, root.getAbsolutePath(), control, timeoutMs);
             if (nativeStats != null) return nativeStats;
         }
@@ -71,11 +71,11 @@ public final class FileTreeStats {
                     regular = OsConstants.S_ISREG(stat.st_mode);
                     length = stat.st_size;
                 } catch (Exception unavailable) {
-                    if (AccessManager.active(context) == AccessManager.Backend.SHIZUKU) {
-                        directory = AccessManager.isDirectory(context, entry.getAbsolutePath());
-                        regular = !directory && AccessManager.isFile(context, entry.getAbsolutePath());
+                    if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.SHIZUKU) {
+                        directory = PrivilegeManager.Files.isDirectory(context, entry.getAbsolutePath());
+                        regular = !directory && PrivilegeManager.Files.isFile(context, entry.getAbsolutePath());
                         if (!directory && !regular) { errors++; continue; }
-                        length = regular ? AccessManager.getSize(context, entry.getAbsolutePath()) : 0;
+                        length = regular ? PrivilegeManager.Files.getSize(context, entry.getAbsolutePath()) : 0;
                     } else { errors++; continue; }
                 }
             }
@@ -84,8 +84,8 @@ public final class FileTreeStats {
                 folders++;
                 if (virtualFilesystem(entry.getAbsolutePath())) continue;
                 File[] children = entry.listFiles();
-                if (children == null && AccessManager.active(context) == AccessManager.Backend.SHIZUKU)
-                    children = ShizukuManager.listWithStat(context, entry.getAbsolutePath());
+                if (children == null && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.SHIZUKU)
+                    children = PrivilegeManager.Shizuku.listWithStat(context, entry.getAbsolutePath());
                 if (children == null) { errors++; continue; }
                 for (File child : children) pending.push(child);
             } else {

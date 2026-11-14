@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
@@ -670,7 +670,7 @@ public final class SharedPathResolver {
         if (name == null || name.isEmpty()) return null;
         boolean elevated;
         try {
-            elevated = AccessManager.fileOpsOn(ctx);
+            elevated = PrivilegeManager.Files.fileOpsOn(ctx);
         } catch (Exception e) {
             elevated = false;
         }
@@ -691,7 +691,7 @@ public final class SharedPathResolver {
             if (isCancelled(cancel) || System.currentTimeMillis() > deadline) return null;
             boolean reachable;
             try {
-                reachable = new File(base).isDirectory() || AccessManager.exists(ctx, base);
+                reachable = new File(base).isDirectory() || PrivilegeManager.Files.exists(ctx, base);
             } catch (Exception e) {
                 reachable = false;
             }
@@ -758,12 +758,12 @@ public final class SharedPathResolver {
         try {
             File[] plain = new File(dir).listFiles();
             if (plain != null && plain.length > 0) return plain;
-            File[] elevated = AccessManager.listWithStat(ctx, dir);
+            File[] elevated = PrivilegeManager.Files.listWithStat(ctx, dir);
             if (elevated != null && elevated.length > 0) return elevated;
             return plain != null ? plain : elevated;
         } catch (Exception e) {
             try {
-                return AccessManager.listWithStat(ctx, dir);
+                return PrivilegeManager.Files.listWithStat(ctx, dir);
             } catch (Exception ignored) {
                 return null;
             }
@@ -962,7 +962,7 @@ public final class SharedPathResolver {
         } catch (Exception ignored) {
         }
         try {
-            if (AccessManager.exists(ctx, path)) {
+            if (PrivilegeManager.Files.exists(ctx, path)) {
                 r.path = path;
                 r.needsElevated = true;
                 r.inaccessible = false;
@@ -973,7 +973,7 @@ public final class SharedPathResolver {
         if (isProtected(path)) {
             boolean elevated;
             try {
-                elevated = AccessManager.fileOpsOn(ctx);
+                elevated = PrivilegeManager.Files.fileOpsOn(ctx);
             } catch (Exception e) {
                 elevated = false;
             }

@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.util.io;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -271,10 +271,10 @@ public final class RecycleBin {
                 return record(context, file, target, reason, origLastMod);
             }
             // Plain I/O failed (root-only path): stage through the elevated backend.
-            if (AccessManager.fileOpsOn(context)) {
+            if (PrivilegeManager.Files.fileOpsOn(context)) {
                 try {
-                    AccessManager.copyFile(context, file.getAbsolutePath(), target.getAbsolutePath(), true);
-                    AccessManager.delete(context, file.getAbsolutePath(), true);
+                    PrivilegeManager.Files.copyFile(context, file.getAbsolutePath(), target.getAbsolutePath(), true);
+                    PrivilegeManager.Files.delete(context, file.getAbsolutePath(), true);
                     target.setLastModified(origLastMod);
                     return record(context, file, target, reason, origLastMod);
                 } catch (Exception ignored) {
@@ -334,7 +334,7 @@ public final class RecycleBin {
         if (parent == null) return null;
         try {
             if (!parent.isDirectory() && !parent.mkdirs()
-                    && !AccessManager.fileOpsOn(context)) return null;
+                    && !PrivilegeManager.Files.fileOpsOn(context)) return null;
         } catch (Exception ignored) {
         }
         File target = original;
@@ -360,10 +360,10 @@ public final class RecycleBin {
                 forget(context, entry, target);
                 return new RestoreResult(target, wasRenamed);
             }
-            if (AccessManager.fileOpsOn(context)) {
+            if (PrivilegeManager.Files.fileOpsOn(context)) {
                 try {
-                    AccessManager.copyFile(context, entry.file.getAbsolutePath(), target.getAbsolutePath(), true);
-                    AccessManager.delete(context, entry.file.getAbsolutePath(), true);
+                    PrivilegeManager.Files.copyFile(context, entry.file.getAbsolutePath(), target.getAbsolutePath(), true);
+                    PrivilegeManager.Files.delete(context, entry.file.getAbsolutePath(), true);
                     target.setLastModified(restoreTime);
                     forget(context, entry, target);
                     return new RestoreResult(target, wasRenamed);
@@ -448,8 +448,8 @@ public final class RecycleBin {
             }
         }
         try {
-            if (AccessManager.fileOpsOn(context)) {
-                AccessManager.delete(context, f.getAbsolutePath(), true);
+            if (PrivilegeManager.Files.fileOpsOn(context)) {
+                PrivilegeManager.Files.delete(context, f.getAbsolutePath(), true);
                 return !f.exists();
             }
         } catch (Exception ignored) {

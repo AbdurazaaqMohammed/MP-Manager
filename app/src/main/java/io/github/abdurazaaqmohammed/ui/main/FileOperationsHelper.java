@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -315,7 +315,7 @@ public class FileOperationsHelper {
         }
 
         Map<String, FileUtils.Measure> byPath = new HashMap<>();
-        if (!paths.isEmpty() && AccessManager.active(context) == AccessManager.Backend.ROOT) {
+        if (!paths.isEmpty() && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
             FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.scan(context, paths);
             if (nativeTotals != null) {
                 for (int i = 0; i < paths.size(); i++) byPath.put(paths.get(i), nativeTotals.each.get(i));
@@ -334,8 +334,8 @@ public class FileOperationsHelper {
         }
         FileUtils.Measure local = new FileUtils.Measure(Math.max(1, files), bytes);
 
-        if ((blind || local.bytes == 0) && AccessManager.fileOpsOn(context)) {
-            FileUtils.MeasureSet elevated = AccessManager.measureSetElevated(context, paths);
+        if ((blind || local.bytes == 0) && PrivilegeManager.Files.fileOpsOn(context)) {
+            FileUtils.MeasureSet elevated = PrivilegeManager.Files.measureSetElevated(context, paths);
             if (elevated != null && elevated.total.files > 0
                     && (elevated.total.files > local.files || elevated.total.bytes > local.bytes)) {
                 Map<String, FileUtils.Measure> mapped = new HashMap<>();
@@ -549,7 +549,7 @@ public class FileOperationsHelper {
             return true;
         }
 
-        boolean useElevated = AccessManager.fileOpsOn(context);
+        boolean useElevated = PrivilegeManager.Files.fileOpsOn(context);
         int done = 0;
         final MeasureInfo info = measureInfo(items);
         final int totalFiles = info.total.files;
@@ -634,7 +634,7 @@ public class FileOperationsHelper {
                     // same filesystem, so the move no longer streams every
                     // byte the way copy+delete did. The batch reports its own
                     // counters through the marker stream.
-                    AccessManager.moveAll(context, ops,
+                    PrivilegeManager.Files.moveAll(context, ops,
                             shellProgress(ops, totalFiles, totalBytes, poller), transferControl());
                     batchDone.addAll(opItems);
                     done += opFiles;
@@ -665,10 +665,10 @@ public class FileOperationsHelper {
                 // logic below must not run, it would recycle the good copy
                 // and then fail to re-copy from the vanished source.
                 boolean srcGone = useElevated
-                        ? !AccessManager.exists(context, f.getAbsolutePath())
+                        ? !PrivilegeManager.Files.exists(context, f.getAbsolutePath())
                         : !f.exists();
                 boolean destThere = useElevated
-                        ? AccessManager.exists(context, dest.getAbsolutePath())
+                        ? PrivilegeManager.Files.exists(context, dest.getAbsolutePath())
                         : dest.exists();
                 if (srcGone && destThere) {
                     done += itemTotal;
@@ -683,7 +683,7 @@ public class FileOperationsHelper {
                         // rename on the same filesystem; it only streams bytes
                         // across filesystems, which is exactly move semantics.
                         if (listener != null) listener.onFile(f, dest);
-                        AccessManager.move(context, f.getAbsolutePath(), dest.getAbsolutePath(), true, transferControl());
+                        PrivilegeManager.Files.move(context, f.getAbsolutePath(), dest.getAbsolutePath(), true, transferControl());
                         done += itemTotal;
                         advanceActiveProgress(done, totalFiles);
                         if (listener != null) listener.onBytes(itemBytes);
@@ -717,7 +717,7 @@ public class FileOperationsHelper {
                 if (f.isDirectory()) {
                     if (useElevated) {
                         try {
-                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
+                            PrivilegeManager.Files.mkdir(context, dest.getAbsolutePath(), true);
                         } catch (Exception ignored) {
                             //noinspection ResultOfMethodCallIgnored
                             dest.mkdir();
@@ -727,10 +727,10 @@ public class FileOperationsHelper {
                         dest.mkdir();
                     }
                     FileUtils.copyFolder(f, dest, listener);
-                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    PrivilegeManager.Files.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                 } else {
                     FileUtils.copyFile(f, dest, listener);
-                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    PrivilegeManager.Files.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                 }
                 if (copySize(f) != copySize(dest)) {
                     throw new IOException("Move failed, copy mismatch: " + f.getName());
@@ -785,8 +785,8 @@ public class FileOperationsHelper {
                 RecycleBin.moveToBin(context, dest, "overwrite");
             }
             if (useElevated) {
-                if (!AccessManager.exists(context, dest.getAbsolutePath())) return;
-                AccessManager.delete(context, dest.getAbsolutePath(), true);
+                if (!PrivilegeManager.Files.exists(context, dest.getAbsolutePath())) return;
+                PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
                 return;
             }
             if (!dest.exists()) return;
@@ -843,8 +843,8 @@ public class FileOperationsHelper {
         // Shell copies of Android/data paths need the same answer as elevated
         // ones: with the file-ops toggle off the shell still does the copy, so
         // an existing directory destination must be detected before cp runs.
-        final boolean elevated = AccessManager.fileOpsOn(context)
-                || AccessManager.shellCopyOn(context);
+        final boolean elevated = PrivilegeManager.Files.fileOpsOn(context)
+                || PrivilegeManager.Files.shellCopyOn(context);
         if (!elevated) return false;
         // When the app can list the folder itself, a missing name really is
         // missing: no su/Shizuku round trip needed. Only folders the uid
@@ -861,7 +861,7 @@ public class FileOperationsHelper {
         String[] names = dirListingCache.get(key);
         if (names == null) {
             try {
-                File[] listed = AccessManager.listWithStat(context, key);
+                File[] listed = PrivilegeManager.Files.listWithStat(context, key);
                 if (listed != null) {
                     names = new String[listed.length];
                     for (int i = 0; i < listed.length; i++) names[i] = listed[i].getName();
@@ -871,7 +871,7 @@ public class FileOperationsHelper {
                 }
             } catch (Exception ignored) {
             }
-            return AccessManager.exists(context, new File(dir, name).getAbsolutePath());
+            return PrivilegeManager.Files.exists(context, new File(dir, name).getAbsolutePath());
         }
         for (String n : names) if (n.equals(name)) return true;
         return false;
@@ -883,14 +883,14 @@ public class FileOperationsHelper {
 
     private void syncDirTimes(File srcDir, File dstDir) {
         try {
-            AccessManager.preserveTime(context, srcDir.getAbsolutePath(), dstDir.getAbsolutePath());
+            PrivilegeManager.Files.preserveTime(context, srcDir.getAbsolutePath(), dstDir.getAbsolutePath());
             File[] kids = srcDir.listFiles();
             if (kids == null) return;
             for (File k : kids) {
                 File d = new File(dstDir, k.getName());
                 if (!d.exists()) continue;
                 if (k.isDirectory()) syncDirTimes(k, d);
-                else AccessManager.preserveTime(context, k.getAbsolutePath(), d.getAbsolutePath());
+                else PrivilegeManager.Files.preserveTime(context, k.getAbsolutePath(), d.getAbsolutePath());
             }
         } catch (Exception ignored) {
         }
@@ -1102,13 +1102,13 @@ public class FileOperationsHelper {
     }
 
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
-        boolean useElevated = AccessManager.fileOpsOn(context);
+        boolean useElevated = PrivilegeManager.Files.fileOpsOn(context);
         // Android/data is only reachable as the shell user. With the file-ops
         // toggle off those items used to fall through to a Java copy that staged
         // every file in the cache first, so a batch cost one shell process per
         // file and crossed the pipe twice. Hand them to the shell batch instead:
         // one process, native cp speed.
-        boolean shellBatch = !useElevated && AccessManager.shellCopyOn(context);
+        boolean shellBatch = !useElevated && PrivilegeManager.Files.shellCopyOn(context);
         Map<Object, File> plan = planCopies(items, destinationFolder, useElevated || shellBatch);
         if (plan == null) return true;
 
@@ -1131,7 +1131,7 @@ public class FileOperationsHelper {
                     batchDone.add(item);
                     continue;
                 }
-                if (!useElevated && !AccessManager.needsShellCopy(context, f, dest)) continue;
+                if (!useElevated && !PrivilegeManager.Files.needsShellCopy(context, f, dest)) continue;
                 FileUtils.Measure im = info.of(f);
                 ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),
@@ -1143,7 +1143,7 @@ public class FileOperationsHelper {
                 // mpio already reports every written chunk. Sampling a raw
                 // /data/media copy through FUSE can return stale sizes and race
                 // those counters, making the bar jump backwards.
-                DestSizePoller poller = useElevated && AccessManager.active(context) == AccessManager.Backend.ROOT
+                DestSizePoller poller = useElevated && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT
                         ? null : newPoller(totalBytes);
                 try {
                     if (listener != null) {
@@ -1152,7 +1152,7 @@ public class FileOperationsHelper {
                     if (poller != null) poller.watch(new File(ops.get(0).dest), 0L);
                     // One shell process still does the whole batch, but it now
                     // echoes a counter after every item.
-                    AccessManager.copyAllPreserving(context, ops,
+                    PrivilegeManager.Files.copyAllPreserving(context, ops,
                             shellProgress(ops, totalFiles, totalBytes, poller), transferControl());
                     batchDone.addAll(opItems);
                     done += opFiles;
@@ -1177,13 +1177,13 @@ public class FileOperationsHelper {
             FileUtils.Measure im = info.of(f);
             int itemTotal = im.files;
             long itemBytes = im.bytes;
-            boolean itemNeedsElevated = useElevated && (AccessManager.needsElevated(context, f.getAbsolutePath())
-                    || AccessManager.needsElevated(context, dest.getAbsolutePath())
-                    || AccessManager.needsShellCopy(context, f, dest));
+            boolean itemNeedsElevated = useElevated && (PrivilegeManager.Files.needsElevated(context, f.getAbsolutePath())
+                    || PrivilegeManager.Files.needsElevated(context, dest.getAbsolutePath())
+                    || PrivilegeManager.Files.needsShellCopy(context, f, dest));
             if (itemNeedsElevated) {
                 try {
                     if (listener != null) listener.onFile(f, dest);
-                    AccessManager.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
+                    PrivilegeManager.Files.copyPreserving(context, f.getAbsolutePath(), dest.getAbsolutePath(),
                             f.isDirectory(), true);
                     done += itemTotal;
                     advanceActiveProgress(done, totalFiles);
@@ -1211,7 +1211,7 @@ public class FileOperationsHelper {
             if (f.isDirectory()) {
                 if (useElevated) {
                     try {
-                        AccessManager.mkdir(context, dest.getAbsolutePath(), true);
+                        PrivilegeManager.Files.mkdir(context, dest.getAbsolutePath(), true);
                     } catch (Exception ignored) {
                         //noinspection ResultOfMethodCallIgnored
                         dest.mkdir();
@@ -1221,10 +1221,10 @@ public class FileOperationsHelper {
                     dest.mkdir();
                 }
                 FileUtils.copyFolder(f, dest, listener);
-                AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                PrivilegeManager.Files.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
             } else {
                 FileUtils.copyFile(f, dest, listener);
-                AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                PrivilegeManager.Files.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
             }
             done += itemTotal;
             advanceActiveProgress(done, totalFiles);
@@ -1477,7 +1477,7 @@ public class FileOperationsHelper {
     }
 
     private String getDuplicateName(String fileName, File destinationFolder) {
-        return getDuplicateName(fileName, destinationFolder, AccessManager.fileOpsOn(context));
+        return getDuplicateName(fileName, destinationFolder, PrivilegeManager.Files.fileOpsOn(context));
     }
 
     private String getDuplicateName(String fileName, File destinationFolder, boolean useElevated) {

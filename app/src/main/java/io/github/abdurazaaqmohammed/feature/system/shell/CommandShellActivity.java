@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.system.shell;
 
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -56,7 +58,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
@@ -540,7 +542,7 @@ public class CommandShellActivity extends BaseActivity {
             RootManager rm = RootManager.getInstance(this);
             boolean rootAvailable = rm.isRootAvailable();
             boolean rootMode = rm.isRootMode();
-            boolean shizukuAvailable = ShizukuShell.isAvailable();
+            boolean shizukuAvailable = PrivilegeManager.shizuku().isAvailable();
             boolean shizukuMode = rm.isShizukuMode();
 
             try {
@@ -589,7 +591,7 @@ public class CommandShellActivity extends BaseActivity {
     }
 
     private void executeShizukuCommand(String cmd) {
-        ShizukuShell.Result result = ShizukuShell.exec(cmd, 300);
+        ShellSession.Result result = PrivilegeManager.shizuku().exec(cmd, 300);
         if (result != null) {
             if (!TextUtils.isEmpty(result.stdout)) {
                 String[] lines = result.stdout.split("\n");
@@ -674,7 +676,7 @@ public class CommandShellActivity extends BaseActivity {
                 .setTitle(R.string.command_shell)
                 .setMessage(getString(R.string.shell_mode_status, currentMode) + "\n\n" +
                         "Root Available: " + rm.isRootAvailable() + "\n" +
-                        "Shizuku Available: " + ShizukuShell.isAvailable())
+                        "Shizuku Available: " + PrivilegeManager.shizuku().isAvailable())
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }

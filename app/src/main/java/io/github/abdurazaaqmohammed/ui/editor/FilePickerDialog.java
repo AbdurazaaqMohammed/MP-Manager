@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
 
@@ -235,7 +235,7 @@ public class FilePickerDialog {
             // borrow the root/Shizuku backend so the picker browses exactly the
             // folders the file manager does.
             try {
-                files = AccessManager.listWithStat(context, dir.getAbsolutePath());
+                files = PrivilegeManager.Files.listWithStat(context, dir.getAbsolutePath());
             } catch (Exception ignored) {
             }
         }

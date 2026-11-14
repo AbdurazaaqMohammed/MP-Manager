@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.system.appops;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -21,9 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 public class AppOpsEngine {
 
@@ -68,8 +70,8 @@ public class AppOpsEngine {
                     result = rm.execute(cmd, timeoutSeconds);
                 }
             } else if (mode == RootManager.WorkingMode.SHIZUKU) {
-                ShizukuShell.warmUp(context);
-                ShizukuShell.Result r = ShizukuShell.exec(cmd, timeoutSeconds);
+                PrivilegeManager.shizuku().warmUp(context);
+                ShellSession.Result r = PrivilegeManager.shizuku().exec(cmd, timeoutSeconds);
                 result = new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr);
             } else {
                 result = new RootManager.ShellResult(-1, "", "Requires root or Shizuku");
@@ -89,7 +91,7 @@ public class AppOpsEngine {
             RootManager rm = RootManager.getInstance(context);
             RootManager.WorkingMode mode = rm.getWorkingMode();
             if (mode == RootManager.WorkingMode.ROOT) return rm.isRootAvailable();
-            if (mode == RootManager.WorkingMode.SHIZUKU) return ShizukuManager.ready();
+            if (mode == RootManager.WorkingMode.SHIZUKU) return PrivilegeManager.Shizuku.ready();
         } catch (Exception ignored) {
         }
         return false;
