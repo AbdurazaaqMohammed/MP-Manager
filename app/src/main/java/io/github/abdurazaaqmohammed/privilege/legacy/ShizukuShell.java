@@ -1,4 +1,6 @@
-package io.github.abdurazaaqmohammed.MPManager.shizuku;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 

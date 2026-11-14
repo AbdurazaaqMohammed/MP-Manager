@@ -8,6 +8,8 @@ import io.github.abdurazaaqmohammed.feature.apk.deepopt.ReferenceExtractor;
 
 import io.github.abdurazaaqmohammed.feature.apk.deepopt.ReferenceExtractor;
 
+import io.github.abdurazaaqmohammed.feature.apk.deepopt.ReferenceExtractor;
+
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;

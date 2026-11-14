@@ -9,6 +9,8 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
@@ -21,7 +23,7 @@ import android.os.Handler;
 import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import rikka.shizuku.Shizuku;
 

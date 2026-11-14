@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -25,7 +28,6 @@ import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -71,7 +73,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.main.CopyConflictDialog;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;

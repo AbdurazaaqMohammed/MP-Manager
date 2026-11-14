@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -12,7 +15,6 @@ import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
@@ -233,8 +235,8 @@ public final class FileSorting {
         if (ctx != null) {
             // Root mode: measure all sibling directories with one mpio process,
             // including app-readable system folders, before any Java walk.
-            if (io.github.abdurazaaqmohammed.utils.AccessManager.active(ctx)
-                    == io.github.abdurazaaqmohammed.utils.AccessManager.Backend.ROOT) {
+            if (io.github.abdurazaaqmohammed.privilege.legacy.AccessManager.active(ctx)
+                    == io.github.abdurazaaqmohammed.privilege.legacy.AccessManager.Backend.ROOT) {
                 List<String> paths = new ArrayList<>();
                 for (File d : dirs) if (d != null && !isVirtualOrSpecialFs(pathOf(d))) paths.add(pathOf(d));
                 java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.sizes(ctx, paths, 30_000);
@@ -246,7 +248,7 @@ public final class FileSorting {
                     File parent = d.getParentFile();
                     if (parent != null) {
                         try {
-                            java.util.Map<String, Long> tree = io.github.abdurazaaqmohammed.utils.AccessManager.dirSizeTree(ctx, parent.getAbsolutePath());
+                            java.util.Map<String, Long> tree = io.github.abdurazaaqmohammed.privilege.legacy.AccessManager.dirSizeTree(ctx, parent.getAbsolutePath());
                             if (tree != null && !tree.isEmpty()) {
                                 DirSizeCache.recordBatch(tree);
                                 for (java.util.Map.Entry<String, Long> entry : tree.entrySet()) {
@@ -299,7 +301,7 @@ public final class FileSorting {
             android.content.Context ctx = DirSizeCache.getContext();
             if (ctx != null) {
                 try {
-                    long du = io.github.abdurazaaqmohammed.utils.AccessManager.dirSize(ctx, key);
+                    long du = io.github.abdurazaaqmohammed.privilege.legacy.AccessManager.dirSize(ctx, key);
                     if (du >= 0) {
                         DIR_SIZE_CACHE.put(key, du);
                         DirSizeCache.record(dir, du);

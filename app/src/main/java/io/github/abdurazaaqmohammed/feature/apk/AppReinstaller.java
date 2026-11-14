@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
@@ -28,7 +31,7 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.UUID;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 
 /**
  * Uninstalls a package so an APK signed with a different key can take its

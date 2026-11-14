@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
@@ -15,7 +18,6 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
@@ -72,7 +74,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;

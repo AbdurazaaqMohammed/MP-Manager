@@ -12,6 +12,8 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
 
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;

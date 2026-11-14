@@ -8,6 +8,8 @@ import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 
+import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;

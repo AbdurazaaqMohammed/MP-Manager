@@ -1,16 +1,12 @@
 package io.github.abdurazaaqmohammed.provider;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 
 import android.content.Context;
 import android.database.Cursor;

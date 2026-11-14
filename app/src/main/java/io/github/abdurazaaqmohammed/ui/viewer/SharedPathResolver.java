@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
@@ -9,9 +10,9 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
 
 
 import android.content.ContentUris;

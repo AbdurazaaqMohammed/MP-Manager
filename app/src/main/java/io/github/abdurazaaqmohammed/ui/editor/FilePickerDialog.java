@@ -1,16 +1,12 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 
 import android.app.Activity;
 import android.content.ClipboardManager;

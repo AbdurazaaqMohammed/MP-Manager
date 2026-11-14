@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+
+import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuCustomizer;
 
@@ -16,9 +19,7 @@ import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.feature.apk.ApkOptimizer;

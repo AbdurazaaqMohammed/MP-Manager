@@ -1,16 +1,12 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 
 import android.content.ClipData;
 import android.content.ClipboardManager;

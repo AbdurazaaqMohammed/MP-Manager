@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.util.io;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
+
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
 
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
@@ -16,9 +20,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.util.io.FileChannelCopy;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
@@ -51,8 +53,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
 
 public class FileUtils {
 

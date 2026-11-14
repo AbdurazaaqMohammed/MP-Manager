@@ -1,10 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import android.annotation.TargetApi;
 import android.app.ProgressDialog;

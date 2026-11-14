@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.util.io;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -16,7 +20,6 @@ import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
@@ -57,7 +60,7 @@ public final class FileTreeStats {
                 directory = entry.isDirectory();
                 regular = !directory;
                 length = entry.length();
-            } else if (entry instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile shizuku) {
+            } else if (entry instanceof io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile shizuku) {
                 directory = shizuku.isDirectory() && !shizuku.isLink();
                 regular = shizuku.isFile() && !shizuku.isLink();
                 length = shizuku.length();

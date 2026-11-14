@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
@@ -20,7 +23,6 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
@@ -165,9 +167,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;

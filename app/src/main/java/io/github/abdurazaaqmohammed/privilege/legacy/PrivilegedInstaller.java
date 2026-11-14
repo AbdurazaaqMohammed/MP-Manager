@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.privilege.legacy;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
@@ -42,10 +45,10 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
-import io.github.abdurazaaqmohammed.shizuku.IFileService;
-import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
+import io.github.abdurazaaqmohammed.privilege.legacy.ipc.IFileService;
+import io.github.abdurazaaqmohammed.privilege.legacy.ipc.ShizukuConnection;
 
 import com.faith.apkinstaller.APKInstallService;
 

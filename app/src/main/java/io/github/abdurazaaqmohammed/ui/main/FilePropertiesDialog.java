@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
+
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
@@ -20,7 +24,6 @@ import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
@@ -54,8 +57,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.color.MaterialColors;

@@ -1,9 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.util.io.SafFs;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
 
-import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import android.graphics.Bitmap;

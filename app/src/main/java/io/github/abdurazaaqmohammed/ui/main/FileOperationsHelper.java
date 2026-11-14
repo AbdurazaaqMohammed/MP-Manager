@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
@@ -23,7 +26,6 @@ import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
@@ -81,7 +83,7 @@ import java.util.concurrent.CountDownLatch;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.dex.DexTools;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;

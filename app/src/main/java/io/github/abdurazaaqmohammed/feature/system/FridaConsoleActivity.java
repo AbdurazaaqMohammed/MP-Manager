@@ -12,6 +12,8 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
+import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;

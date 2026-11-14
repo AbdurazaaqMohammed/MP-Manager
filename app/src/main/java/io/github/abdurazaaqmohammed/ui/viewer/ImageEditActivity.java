@@ -1,11 +1,12 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -13,7 +15,6 @@ import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
@@ -131,7 +132,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
@@ -153,7 +154,7 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
 import io.github.codehasan.colorpicker.extensions.Extensions;

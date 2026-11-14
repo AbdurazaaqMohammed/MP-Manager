@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.system.appops;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -19,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 

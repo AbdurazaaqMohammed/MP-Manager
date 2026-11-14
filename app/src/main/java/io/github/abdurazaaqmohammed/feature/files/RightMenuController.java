@@ -11,6 +11,8 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 

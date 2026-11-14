@@ -8,6 +8,8 @@ import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;

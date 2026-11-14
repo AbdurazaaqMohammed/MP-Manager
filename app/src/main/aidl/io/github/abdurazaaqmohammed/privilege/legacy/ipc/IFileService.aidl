@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.shizuku;
+package io.github.abdurazaaqmohammed.privilege.legacy.ipc;
 
 import android.content.IntentSender;
 import android.os.ParcelFileDescriptor;

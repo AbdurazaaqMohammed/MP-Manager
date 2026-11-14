@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -7,7 +10,6 @@ import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 
 import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
@@ -30,8 +32,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;

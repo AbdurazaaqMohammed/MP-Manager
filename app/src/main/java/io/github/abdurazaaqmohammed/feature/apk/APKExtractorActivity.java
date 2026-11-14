@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
+
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 
@@ -27,7 +30,7 @@ import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 
-import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuShell;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import android.content.ComponentName;

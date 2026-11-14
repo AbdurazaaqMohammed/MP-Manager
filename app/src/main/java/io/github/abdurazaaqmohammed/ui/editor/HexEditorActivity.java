@@ -1,12 +1,13 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.AccessManager;
+
 
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.misc.HexPageCache;
 import io.github.abdurazaaqmohammed.util.misc.HexViewport;
