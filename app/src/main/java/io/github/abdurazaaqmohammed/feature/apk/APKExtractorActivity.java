@@ -3,6 +3,10 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
+
+import io.github.abdurazaaqmohammed.feature.apk.AppDetailsConfig;
 import io.github.abdurazaaqmohammed.feature.apk.AppDetailsDialog;
 import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
 import io.github.abdurazaaqmohammed.feature.apk.ExtractedApksIndex;
@@ -18,7 +22,7 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;

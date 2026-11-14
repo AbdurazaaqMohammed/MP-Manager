@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.dex;
 
+
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -12,7 +13,7 @@ import io.github.abdurazaaqmohammed.feature.apk.DexStringDecryptor;
 import io.github.abdurazaaqmohammed.feature.apk.DexStringUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
 import android.content.Context;

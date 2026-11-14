@@ -3,6 +3,10 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 import io.github.abdurazaaqmohammed.feature.apk.ArscQuerier;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTreeAdapter;
@@ -12,9 +16,9 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;

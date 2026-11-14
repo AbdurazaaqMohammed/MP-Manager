@@ -1,12 +1,15 @@
 package io.github.abdurazaaqmohammed.util.misc;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
+
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
+
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
 import android.content.Context;

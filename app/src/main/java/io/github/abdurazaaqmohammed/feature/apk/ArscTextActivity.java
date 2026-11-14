@@ -4,11 +4,15 @@ import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;

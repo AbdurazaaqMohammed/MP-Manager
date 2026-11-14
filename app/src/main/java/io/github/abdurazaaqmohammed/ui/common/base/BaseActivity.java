@@ -1,10 +1,11 @@
 package io.github.abdurazaaqmohammed.ui.common.base;
 
+
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
 
 import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 
 import android.R;
 import android.content.Intent;

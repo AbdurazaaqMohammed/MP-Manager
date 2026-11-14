@@ -3,13 +3,17 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 
 import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
+
+import io.github.abdurazaaqmohammed.feature.apk.ArscData;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 
 import android.content.Intent;
 import android.content.SharedPreferences;

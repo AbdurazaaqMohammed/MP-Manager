@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -21,7 +22,7 @@ import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
 import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
 import android.content.ClipData;

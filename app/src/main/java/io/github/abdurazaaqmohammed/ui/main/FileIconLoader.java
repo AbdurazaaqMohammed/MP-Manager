@@ -5,6 +5,10 @@ import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
@@ -14,7 +18,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
 import android.content.Context;

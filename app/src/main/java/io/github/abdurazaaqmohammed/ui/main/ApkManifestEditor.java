@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
@@ -10,7 +11,7 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.MergeUtil;
 import io.github.abdurazaaqmohammed.util.misc.RunUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;

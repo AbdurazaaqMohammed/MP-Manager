@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
@@ -12,10 +13,10 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FolderPins;
+import io.github.abdurazaaqmohammed.data.prefs.FolderPins;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import android.app.Activity;
 import android.content.ClipData;

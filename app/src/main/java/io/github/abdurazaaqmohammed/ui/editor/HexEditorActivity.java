@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -9,8 +10,8 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.misc.HexPageCache;
 import io.github.abdurazaaqmohammed.util.misc.HexViewport;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;

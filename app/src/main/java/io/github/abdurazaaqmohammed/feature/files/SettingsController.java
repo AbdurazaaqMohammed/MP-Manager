@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
@@ -9,7 +10,7 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 import io.github.abdurazaaqmohammed.util.misc.SettingsBackupHelper;
 import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 

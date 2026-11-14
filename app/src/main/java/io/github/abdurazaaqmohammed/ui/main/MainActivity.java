@@ -5,6 +5,10 @@ import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 
 import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -22,7 +26,7 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 import io.github.abdurazaaqmohammed.util.text.CollectionsUtils;

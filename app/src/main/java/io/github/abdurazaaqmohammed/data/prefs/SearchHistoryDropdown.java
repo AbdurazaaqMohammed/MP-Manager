@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.data.prefs;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
@@ -7,7 +7,11 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
 
 
 import android.content.Context;

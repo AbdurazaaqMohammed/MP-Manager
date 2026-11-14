@@ -1,4 +1,8 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.data.prefs;
+
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+
+import io.github.abdurazaaqmohammed.util.io.SafFs;
 
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 

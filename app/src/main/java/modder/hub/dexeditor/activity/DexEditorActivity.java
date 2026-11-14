@@ -112,7 +112,7 @@ import java.util.Objects;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.rosemoe.sora.text.Content;
@@ -2399,21 +2399,21 @@ public class DexEditorActivity extends BaseActivity {
         filterBox.setEndIconDrawable(R.drawable.baseline_arrow_drop_down_24);
         filterBox.setEndIconContentDescription(R.string.history);
         filterBox.setEndIconOnClickListener(v -> {
-            var history = io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this,
-                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER);
+            var history = io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.load(this,
+                    io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER);
             if (history.isEmpty()) {
                 Extensions.showMessage(this, R.string.history_empty);
                 return;
             }
-            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(this, filterBox, history,
-                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+            io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown.show(this, filterBox, history,
+                    new io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown.Listener() {
                         @Override public void onSelect(String query) {
                             editText.setText(query);
                             editText.setSelection(editText.length());
                         }
-                        @Override public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
-                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(DexEditorActivity.this,
-                                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, items);
+                        @Override public void onChanged(java.util.List<io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.save(DexEditorActivity.this,
+                                    io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, items);
                         }
                     });
         });
@@ -2425,8 +2425,8 @@ public class DexEditorActivity extends BaseActivity {
                 .setPositiveButton(R.string.apply, (d, w) -> {
                     String filter = editText.getText().toString();
                     adapter.setFilter(filter);
-                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(this,
-                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, filter);
+                    io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.push(this,
+                            io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, filter);
                 })
                 .setNegativeButton(R.string.clear, (d, w) -> adapter.setFilter(null))
                 .setNeutralButton(android.R.string.cancel, null)

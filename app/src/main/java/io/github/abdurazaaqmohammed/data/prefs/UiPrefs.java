@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.data.prefs;
 
 import android.content.Context;
 import android.content.SharedPreferences;

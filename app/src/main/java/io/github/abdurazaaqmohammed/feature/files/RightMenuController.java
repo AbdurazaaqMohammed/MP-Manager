@@ -7,8 +7,12 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+
+import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
 import android.content.SharedPreferences;

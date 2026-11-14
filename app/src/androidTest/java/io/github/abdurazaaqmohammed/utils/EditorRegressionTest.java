@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import io.github.abdurazaaqmohammed.utils.MinimizedEditors;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 
 import android.app.Activity;
 import android.app.Application;

@@ -1,11 +1,12 @@
 package io.github.abdurazaaqmohammed.util.io;
 
+
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;

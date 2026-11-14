@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBackupUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -10,7 +11,7 @@ import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.feature.apk.ApkSignaturePreserver;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 import android.content.SharedPreferences;
 import android.net.Uri;
