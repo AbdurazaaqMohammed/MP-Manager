@@ -7,6 +7,17 @@ Xposed modules baked in (embedded-modules mode), so the result runs standalone
 without a manager app. The engine runs **in-process** on-device, exactly as its
 own manager app would.
 
+> **`LSPatch-master/` is not included in this repository.** Only the prebuilt
+> artifacts are tracked (`app/libs/lspatch-patcher.jar`,
+> `app/libs/patcher-common.jar`, `app/src/full/assets/lspatch/…`). To rebuild
+> them, fetch the source yourself first:
+>
+> ```bash
+> git clone --recursive https://github.com/JingMatrix/LSPatch LSPatch-master
+> ```
+>
+> `tools/build-lspatch-artifacts.sh` fails immediately if the tree is missing.
+
 The NPatch engine that used to ship alongside LSPatch has been removed: the
 `top/nkbe/npatch/**` classes, its loader assets (`assets/npatch/`,
 `npatch.key`, `fpa_app.key`, `mtprovider.dex`) and `tools/build-npatch-artifacts.sh`
@@ -65,13 +76,12 @@ the dialog picks the newest and normalizes the name (dedup with `_2`, `_3`…).
 
 ## 3. Updating LSPatch when it updates
 
-`LSPatch-master` is a source drop without git metadata, so:
+The source tree is fetched separately (see the notice at the top) and is not
+tracked by this repo:
 
 ```bash
-# refresh the source (replace files or make it a git clone of JingMatrix/LSPatch)
-cd LSPatch-master/core
-git fetch origin && git checkout origin/master -- . # or re-clone at the desired commit
-git submodule update --init --recursive --depth 1   # commons-lang3, manifest-editor, lsplant, …
+# fetch or refresh the source, including core's own submodules
+git clone --recursive https://github.com/JingMatrix/LSPatch LSPatch-master
 ```
 
 If you re-clone `core`, remember its own submodules (the build fails with

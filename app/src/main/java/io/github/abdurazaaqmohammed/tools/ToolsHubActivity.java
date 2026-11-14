@@ -508,6 +508,8 @@ public class ToolsHubActivity extends BaseActivity {
             io.github.abdurazaaqmohammed.features.dumper.PartitionDumperDialog.show(this);
         } else if ("app_ops".equals(item.id())) {
             startActivity(new Intent(this, io.github.abdurazaaqmohammed.tools.appops.AppOpsActivity.class));
+        } else if ("commandshell".equals(item.id())) {
+            startActivity(new Intent(this, io.github.abdurazaaqmohammed.tools.shell.CommandShellActivity.class));
         } else if ("setedit".equals(item.id())) {
             startActivity(new Intent(this, SetEditActivity.class));
         } else if ("jiagudumper".equals(item.id())) {
