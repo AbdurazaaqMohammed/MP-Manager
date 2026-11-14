@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;

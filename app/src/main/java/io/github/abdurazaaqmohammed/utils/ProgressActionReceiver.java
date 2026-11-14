@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;

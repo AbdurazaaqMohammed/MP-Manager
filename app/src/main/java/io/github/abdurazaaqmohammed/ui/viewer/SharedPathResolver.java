@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
@@ -19,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**
  * Fast replacement for the old LocateActivity path search.

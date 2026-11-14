@@ -70,8 +70,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.DnsManager;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

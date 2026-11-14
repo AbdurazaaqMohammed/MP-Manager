@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;

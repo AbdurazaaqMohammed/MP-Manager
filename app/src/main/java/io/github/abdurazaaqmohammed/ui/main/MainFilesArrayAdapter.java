@@ -59,10 +59,10 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.SafFile;
-import io.github.abdurazaaqmohammed.utils.RootFile;
-import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.feature.files.SplitDialog;
@@ -337,7 +337,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     static boolean isSymlink(File f) {
         if (f == null) return false;
         if (f instanceof ShizukuFile sf) return sf.isLink();
-        if (f instanceof io.github.abdurazaaqmohammed.utils.RootFile rf) return rf.isLink();
+        if (f instanceof io.github.abdurazaaqmohammed.privilege.legacy.RootFile rf) return rf.isLink();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 return Files.isSymbolicLink(f.toPath());

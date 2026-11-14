@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.utils.TransferControl;
+
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -53,11 +56,11 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
-import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -475,7 +478,7 @@ public class EntryDialogs {
         for (File file : files) paths.add(file.getAbsolutePath());
         boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
         List<DirectoryStats> batch = allLocal && backend == AccessManager.Backend.ROOT
-                ? io.github.abdurazaaqmohammed.utils.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
+                ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
         for (int i = 0; i < files.size(); i++) {
             pm.control().checkpoint();
             File file = files.get(i);
@@ -715,7 +718,7 @@ public class EntryDialogs {
                 for (File t : targets) paths.add(t.getAbsolutePath());
                 boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
                 List<DirectoryStats> batch = local && AccessManager.active(context) == AccessManager.Backend.ROOT
-                        ? io.github.abdurazaaqmohammed.utils.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
+                        ? io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
                 boolean complete = true;
                 for (int i = 0; i < targets.size(); i++) {
                     scanControl.checkpoint();

@@ -1,4 +1,8 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 
 import android.app.Activity;
 import android.content.Context;

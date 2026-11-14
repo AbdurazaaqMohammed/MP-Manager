@@ -55,9 +55,9 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.utils.JpegtranJni;
-import io.github.abdurazaaqmohammed.utils.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 
 public class ImageEditActivity extends BaseActivity {

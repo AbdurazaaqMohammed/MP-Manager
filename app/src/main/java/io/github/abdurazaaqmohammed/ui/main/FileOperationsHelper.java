@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.utils.RecycleBin;
+
 import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.InputType;
@@ -65,13 +68,13 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.NativeCopyException;
-import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeCopyException;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
 import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
 import io.github.abdurazaaqmohammed.utils.TransferControl;
 import io.github.abdurazaaqmohammed.utils.ZipCompat;
@@ -289,7 +292,7 @@ public class FileOperationsHelper {
 
         Map<String, FileUtils.Measure> byPath = new HashMap<>();
         if (!paths.isEmpty() && AccessManager.active(context) == AccessManager.Backend.ROOT) {
-            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.utils.NativeRootManager.scan(context, paths);
+            FileUtils.MeasureSet nativeTotals = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.scan(context, paths);
             if (nativeTotals != null) {
                 for (int i = 0; i < paths.size(); i++) byPath.put(paths.get(i), nativeTotals.each.get(i));
                 return new MeasureInfo(nativeTotals.total, byPath);

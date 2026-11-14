@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.utils.CollectionsUtils;
+import io.github.abdurazaaqmohammed.utils.Haptics;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
 
@@ -84,7 +88,7 @@ import io.github.abdurazaaqmohammed.feature.system.LogcatService;
 import io.github.abdurazaaqmohammed.feature.system.ScreenCaptureService;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RecycleBin;
-import io.github.abdurazaaqmohammed.utils.StartupPrivileges;
+import io.github.abdurazaaqmohammed.privilege.legacy.StartupPrivileges;
 import io.github.abdurazaaqmohammed.feature.files.SortFilterController;
 
 import androidx.appcompat.widget.Toolbar;
@@ -154,8 +158,8 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.SafFile;
 import io.github.abdurazaaqmohammed.utils.SafFs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -3437,7 +3441,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     return;
                 }
                 if (!(target instanceof io.github.abdurazaaqmohammed.utils.SafFile) && directory) {
-                    target = new io.github.abdurazaaqmohammed.utils.RootFile(path, true, true, false, 0, 0, "d");
+                    target = new io.github.abdurazaaqmohammed.privilege.legacy.RootFile(path, true, true, false, 0, 0, "d");
                 }
             } catch (Exception error) {
                 handler.post(() -> new ErrorUtil(this).showError(error));

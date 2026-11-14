@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;

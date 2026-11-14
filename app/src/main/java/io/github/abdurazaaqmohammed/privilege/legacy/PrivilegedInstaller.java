@@ -1,4 +1,7 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
@@ -222,7 +225,7 @@ public final class PrivilegedInstaller {
 
     // ---- flags ----
 
-    static int collectFlags(Context context) {
+    public static int collectFlags(Context context) {
         int flags = FLAG_REPLACE_EXISTING; // InstallerX always forces replace
         if (InstallerConfig.allowTest(context)) flags |= FLAG_ALLOW_TEST;
         if (InstallerConfig.allowDowngrade(context)) flags |= FLAG_REQUEST_DOWNGRADE;

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.data.prefs;
 
+import io.github.abdurazaaqmohammed.utils.AppGson;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;

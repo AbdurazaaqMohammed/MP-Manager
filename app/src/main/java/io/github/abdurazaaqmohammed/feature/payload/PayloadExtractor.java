@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.payload;
 
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.tukaani.xz.XZInputStream;
 

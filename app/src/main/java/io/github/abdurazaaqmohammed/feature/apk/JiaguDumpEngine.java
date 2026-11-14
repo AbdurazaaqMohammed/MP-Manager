@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -25,7 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**
  * Core of the root Jiagu Dumper: launch a protected app, let its stub unpack the

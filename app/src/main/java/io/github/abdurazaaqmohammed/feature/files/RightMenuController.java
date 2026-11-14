@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
+import io.github.abdurazaaqmohammed.utils.Haptics;
+
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;

@@ -74,8 +74,8 @@ import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileSize;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

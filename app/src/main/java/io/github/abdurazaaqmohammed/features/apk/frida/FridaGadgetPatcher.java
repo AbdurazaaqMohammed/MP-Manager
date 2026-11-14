@@ -63,7 +63,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
 import com.reandroid.apk.APKLogger;
 
 /**

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 

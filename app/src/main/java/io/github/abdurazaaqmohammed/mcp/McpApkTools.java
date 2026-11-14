@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import io.github.abdurazaaqmohammed.utils.ApkSignatureInfo;
+
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -66,7 +68,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.HashUtil;
 import com.reandroid.apk.ApkModule;
 import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;

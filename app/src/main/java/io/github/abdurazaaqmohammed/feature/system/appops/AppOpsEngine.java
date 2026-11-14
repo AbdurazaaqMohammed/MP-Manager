@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
 
 public class AppOpsEngine {
 

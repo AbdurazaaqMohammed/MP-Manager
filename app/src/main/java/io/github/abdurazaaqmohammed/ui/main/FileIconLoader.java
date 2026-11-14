@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -57,10 +59,10 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
-import io.github.abdurazaaqmohammed.utils.RootFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.StickerUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
@@ -554,7 +556,7 @@ public class FileIconLoader {
 
         boolean canElevate = elevatedFileOps
                 || (context != null && RootManager.getInstance(context).isRootAvailable())
-                || io.github.abdurazaaqmohammed.utils.ShizukuManager.ready();
+                || io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager.ready();
 
         if (!canElevate) {
             fileDateView.setTag(null);

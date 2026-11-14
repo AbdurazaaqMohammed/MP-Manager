@@ -30,7 +30,7 @@ import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import java.io.File;
 import java.util.List;

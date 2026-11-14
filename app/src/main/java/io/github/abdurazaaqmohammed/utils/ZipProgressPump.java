@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+
 import net.lingala.zip4j.progress.ProgressMonitor;
 
 import java.util.function.Consumer;

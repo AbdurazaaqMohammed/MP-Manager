@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;

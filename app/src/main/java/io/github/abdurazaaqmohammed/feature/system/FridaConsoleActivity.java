@@ -44,7 +44,7 @@ import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**

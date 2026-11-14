@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;

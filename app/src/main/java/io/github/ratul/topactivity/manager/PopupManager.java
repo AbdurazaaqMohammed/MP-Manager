@@ -34,7 +34,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import io.github.ratul.topactivity.App;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootPermissionHelper;
 import io.github.ratul.topactivity.extensions.GenericExtensions;
 import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.repository.ServiceState;

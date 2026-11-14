@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.ViewGroup;

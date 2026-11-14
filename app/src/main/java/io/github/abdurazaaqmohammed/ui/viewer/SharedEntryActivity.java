@@ -41,7 +41,7 @@ import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.InstallerConfig;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**

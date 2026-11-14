@@ -1,4 +1,6 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 import java.io.File;
 import java.io.FileFilter;

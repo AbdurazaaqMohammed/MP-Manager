@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.boot;
 
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+
 import android.os.Handler;
 import android.os.Looper;
 

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.apk.frida;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -135,7 +137,7 @@ public final class FridaGadgetDialog {
         // APKs without native libraries can take a gadget for any ABI —
         // default to this device's so the patched build runs here.
         boolean noLibs = !FridaGadgetPatcher.hasNativeLibDir(apkFile);
-        String deviceAbi = io.github.abdurazaaqmohammed.utils.NativeToolManager.deviceAbi();
+        String deviceAbi = io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager.deviceAbi();
         for (String abi : abis) {
             MaterialCheckBox cb = new MaterialCheckBox(context);
             cb.setText(abi);

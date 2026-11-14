@@ -66,7 +66,7 @@ import io.github.abdurazaaqmohammed.utils.HexPageCache;
 import io.github.abdurazaaqmohammed.utils.HexViewport;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 

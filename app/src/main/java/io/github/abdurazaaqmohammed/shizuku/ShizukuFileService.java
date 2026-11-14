@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.shizuku;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -30,7 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.utils.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
 
 public class ShizukuFileService extends IFileService.Stub {
 

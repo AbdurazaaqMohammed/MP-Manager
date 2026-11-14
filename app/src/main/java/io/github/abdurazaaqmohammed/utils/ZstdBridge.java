@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.MpZstdInputStream;
+import io.github.abdurazaaqmohammed.utils.MpZstdOutputStream;
+
 /**
  * JNI entry points into the vendored zstd library (libmp_zstd.so). Streaming
  * API: whole chunks cross the boundary, memory stays flat regardless of file

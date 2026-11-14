@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.mcp;
 
+import io.github.abdurazaaqmohammed.utils.HashUtil;
+
 import android.os.Environment;
 import android.util.Base64;
 

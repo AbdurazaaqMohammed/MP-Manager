@@ -1,4 +1,15 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootFile;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShizukuManager;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.SharedStorageCompat;
+import io.github.abdurazaaqmohammed.utils.TransferCancelledException;
+import io.github.abdurazaaqmohammed.utils.TransferControl;
 
 import android.content.Context;
 import android.content.SharedPreferences;

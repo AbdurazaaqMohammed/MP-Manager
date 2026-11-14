@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
@@ -20,7 +22,7 @@ import java.util.Locale;
 import io.github.ratul.topactivity.App;
 
 /** Keeps app-uid shared-storage I/O consistent with Android's FUSE view. */
-final class SharedStorageCompat {
+final public class SharedStorageCompat {
     private SharedStorageCompat() {
     }
 
@@ -44,7 +46,7 @@ final class SharedStorageCompat {
     }
 
     /** Public files should be unlinked through FUSE, even when root is enabled. */
-    static boolean canDeleteThroughApp(File file) {
+    public static boolean canDeleteThroughApp(File file) {
         // Do not resolve canonical storage aliases or query StorageManager for
         // every /data or /system item in a 5000+ root selection. These paths
         // cannot be public FUSE paths in the first place.

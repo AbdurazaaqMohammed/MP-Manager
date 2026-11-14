@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.MPManager.shizuku;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
+
 import android.content.Context;
 
 import java.io.File;
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 
 /**
  * A java.io.File wrapper that performs its filesystem operations through Shizuku (shell uid).

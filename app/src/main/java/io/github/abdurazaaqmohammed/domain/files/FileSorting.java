@@ -1,5 +1,9 @@
 package io.github.abdurazaaqmohammed.domain.files;
 
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -221,7 +225,7 @@ public final class FileSorting {
                     == io.github.abdurazaaqmohammed.utils.AccessManager.Backend.ROOT) {
                 List<String> paths = new ArrayList<>();
                 for (File d : dirs) if (d != null && !isVirtualOrSpecialFs(pathOf(d))) paths.add(pathOf(d));
-                java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.utils.NativeRootManager.sizes(ctx, paths, 30_000);
+                java.util.Map<String, Long> nativeSizes = io.github.abdurazaaqmohammed.privilege.legacy.NativeRootManager.sizes(ctx, paths, 30_000);
                 DirSizeCache.recordBatch(nativeSizes);
                 DIR_SIZE_CACHE.putAll(nativeSizes);
             }

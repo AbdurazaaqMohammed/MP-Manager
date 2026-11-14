@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.utils.ArchiveBrowseUtil;
+
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.media.MediaScannerConnection;
@@ -65,7 +67,7 @@ import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.KeyboardUtil;
 import io.github.abdurazaaqmohammed.utils.RenameHelper;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.RootManager;
 import io.github.abdurazaaqmohammed.utils.DirectoryStats;
 import io.github.abdurazaaqmohammed.utils.FileTreeStats;
 import io.github.abdurazaaqmohammed.utils.TransferControl;

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.ZstdBridge;
+
 import java.io.IOException;
 import java.io.InputStream;
 

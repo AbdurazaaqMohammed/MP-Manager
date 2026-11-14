@@ -1,4 +1,8 @@
-package io.github.abdurazaaqmohammed.utils;
+package io.github.abdurazaaqmohammed.privilege.legacy;
+
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.legacy.ShellProgress;
+import io.github.abdurazaaqmohammed.utils.TransferControl;
 
 /**
  * Drives an elevated shell batch from a {@link TransferControl}.

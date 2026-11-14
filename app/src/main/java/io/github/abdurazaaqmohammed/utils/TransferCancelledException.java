@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import io.github.abdurazaaqmohammed.utils.TransferControl;
+
 /**
  * Thrown when the user cancels an operation that is running under a
  * {@link TransferControl}.

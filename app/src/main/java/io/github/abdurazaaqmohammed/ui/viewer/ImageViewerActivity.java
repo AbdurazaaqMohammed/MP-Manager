@@ -46,7 +46,7 @@ import java.util.Set;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.JpegtranJni;
-import io.github.abdurazaaqmohammed.utils.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.legacy.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
