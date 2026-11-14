@@ -50,6 +50,19 @@ public final class PrivilegeManager {
         return Backend.NONE;
     }
 
+    /**
+     * Registry-driven backend preference (DHIZUKU > SHIZUKU > ROOT > NONE):
+     * the highest-priority backend that is present and authorized, or the
+     * FallbackBackend when none is. New code should prefer this over
+     * {@link #active(Context)} once backends are wired into settings.
+     */
+    public static io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend preferredBackend(Context context) {
+        io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend backend =
+                io.github.abdurazaaqmohammed.privilege.internal.Registry.forCapability(
+                        context, io.github.abdurazaaqmohammed.privilege.spi.Capability.class);
+        return backend != null ? backend : io.github.abdurazaaqmohammed.privilege.backend.FallbackBackend.get();
+    }
+
     /** Sessions (M3 contract, legacy-backed in M2). */
     public static ShellSession shell() {
         return LegacyShellSession.INSTANCE;
