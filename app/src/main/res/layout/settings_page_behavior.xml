@@ -14,6 +14,65 @@
         android:paddingTop="8dp"
         android:paddingBottom="16dp">
 
+<com.google.android.material.card.MaterialCardView
+            android:id="@id/sectionHapticCard"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8.0dip"
+            android:outlineSpotShadowColor="@android:color/transparent"
+            app:cardCornerRadius="8.0dip"
+            app:cardElevation="0.0dip">
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="16.0dip"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:textSize="16.0sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8.0dip"
+                    android:text="@string/haptic" />
+                
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:textSize="14.0sp"
+                    android:id="@id/hapticsEnabled"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/haptics_enabled" />
+                
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:textSize="14.0sp"
+                    android:id="@id/hapticsSelection"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/haptics_selection" />
+                
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:textSize="14.0sp"
+                    android:id="@id/hapticsActions"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/haptics_actions" />
+                
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:textSize="14.0sp"
+                    android:id="@id/hapticsNavigation"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/haptics_navigation" />
+                
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:textSize="14.0sp"
+                    android:id="@id/hapticsCompletion"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/haptics_completion" />
+                
+                </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/sectionBehaviorCard"
             android:layout_width="match_parent"
@@ -36,37 +95,7 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/hapticsEnabled"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:text="@string/haptics_enabled" />
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/hapticsSelection"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:text="@string/haptics_selection" />
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/hapticsActions"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:text="@string/haptics_actions" />
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/hapticsNavigation"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:text="@string/haptics_navigation" />
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/hapticsCompletion"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:text="@string/haptics_completion" />
+                
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/logToggle"
                     android:layout_width="match_parent"
