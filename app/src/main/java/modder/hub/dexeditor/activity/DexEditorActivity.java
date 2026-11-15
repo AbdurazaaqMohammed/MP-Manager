@@ -319,11 +319,22 @@ public class DexEditorActivity extends BaseActivity {
             }
         }
 
-        if (anyModified || isChanged || isCompilationOptionsActive()) {
+        if (anyModified || isChanged) {
             showExitConfirmation();
             return;
         }
 
+        if (isCompilationOptionsActive()) {
+            // Active stripping options are only unsaved work when they would actually
+            // change the dexes - a dex with no debug info to strip needs no prompt.
+            confirmExitIfOptionsEffective();
+            return;
+        }
+
+        promptDoublePressExit();
+    }
+
+    private void promptDoublePressExit() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
             exitActivity();
@@ -331,6 +342,60 @@ public class DexEditorActivity extends BaseActivity {
             lastBackPressTime = currentTime;
             Extensions.showMessage(this, "Press back again to exit");
         }
+    }
+
+    /** Cache of the last no-op scan: key serializes the options the verdict belongs to. */
+    private String optionsEffectCacheKey;
+    private boolean optionsEffectCacheValue;
+
+    private String optionsEffectKey() {
+        ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        return options.dexVersion + "|" + options.removeAllDebug + "|" + options.removeDebugSource
+                + "|" + options.removeDebugLine + "|" + options.removeDebugParam
+                + "|" + options.removeDebugPrologue + "|" + options.removeDebugLocal;
+    }
+
+    /**
+     * Decides whether the exit prompt is needed while compilation options are active but no
+     * tab was edited: scans the loaded dexes for debug info the options would strip, so a
+     * dex that has nothing to remove exits without the "Unsaved changes" dialog. The scan
+     * runs off the UI thread (large dexes) and its verdict is cached per options state.
+     */
+    private void confirmExitIfOptionsEffective() {
+        String key = optionsEffectKey();
+        if (key.equals(optionsEffectCacheKey)) {
+            if (optionsEffectCacheValue) showExitConfirmation();
+            else promptDoublePressExit();
+            return;
+        }
+
+        AlertProgress progress = new AlertProgress(this);
+        progress.setMessage(getString(R.string.processing));
+        progress.setCancelable(false);
+        progress.setCanceledOnTouchOutside(false);
+        progress.show();
+
+        final ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        final ClassTree tree = classTree;
+        new Thread(() -> {
+            // Fail safe: any scan trouble falls back to prompting.
+            boolean effective = true;
+            try {
+                effective = tree != null && tree.optionsWouldChangeOutput(options);
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+            final boolean finalEffective = effective;
+            runOnUiThread(() -> {
+                progress.dismiss();
+                optionsEffectCacheKey = key;
+                optionsEffectCacheValue = finalEffective;
+                if (finalEffective) showExitConfirmation();
+                else promptDoublePressExit();
+            });
+        }, "dex-options-check").start();
     }
 
 
@@ -1512,9 +1577,17 @@ public class DexEditorActivity extends BaseActivity {
             // Apply immediately: option changes recompile every dex, and the background
             // compiler turns that into an instant save. Both are no-ops when unchanged.
             if (classTree != null) {
-                classTree.setCompilationOptions(sessionOptions);
+                // A copy, never the sessionOptions reference: setCompilationOptions()
+                // compares fields, so handing back the reference it already holds would
+                // make every change here look like a no-op and the save would skip
+                // recompiling with the new options.
+                classTree.setCompilationOptions(ClassTree.copyOf(sessionOptions));
                 classTree.setAutoSaveEnabled(autoSave);
             }
+
+            // "Remember" off means one-shot: the switches go back to the defaults the
+            // next time this dialog opens instead of keeping the last chosen values.
+            if (!remember) resetSessionCompilationOptions();
         });
         builder.setNegativeButton(android.R.string.cancel, null);
         AlertDialog dialog = builder.create();
@@ -1537,8 +1610,20 @@ public class DexEditorActivity extends BaseActivity {
             sessionOptions.removeDebugPrologue = dexPref.getBoolean("compile_remove_debug_prologue", sessionOptions.removeDebugPrologue);
             sessionOptions.removeDebugLocal = dexPref.getBoolean("compile_remove_debug_local", sessionOptions.removeDebugLocal);
         }
-        classTree.setCompilationOptions(sessionOptions);
+        classTree.setCompilationOptions(ClassTree.copyOf(sessionOptions));
         classTree.setAutoSaveEnabled(dexPref.getBoolean("compile_autosave_background", false));
+    }
+
+    /** Restores the out-of-the-box compilation options. */
+    private void resetSessionCompilationOptions() {
+        sessionOptions.dexVersion = "Keep the same";
+        sessionOptions.removeAllDebug = true;
+        sessionOptions.removeDebugSource = false;
+        sessionOptions.removeDebugLine = false;
+        sessionOptions.removeDebugParam = false;
+        sessionOptions.removeDebugPrologue = false;
+        sessionOptions.removeDebugLocal = false;
+        optionsEffectCacheKey = null;
     }
 
     public void showSmaliNavigation(String tempSmaliPath, String title, int lineNo) {
@@ -1597,7 +1682,9 @@ public class DexEditorActivity extends BaseActivity {
         for (int i = tabs.size() - 1; i >= 0; i--) {
             String tabClass = tabs.get(i).className;
             if (isDirectory) {
-                if (tabClass.startsWith(name)) {
+                // Match children only: a bare startsWith(name) would also close tabs of
+                // unrelated classes that merely share the prefix (com/foo vs com/foobar).
+                if (tabClass.startsWith(name + "/")) {
                     removeTab(i);
                 }
             } else {
@@ -1609,10 +1696,14 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     private boolean isCompilationOptionsActive() {
-        return sessionOptions.removeAllDebug || sessionOptions.removeDebugSource ||
-                sessionOptions.removeDebugLine || sessionOptions.removeDebugParam ||
-                sessionOptions.removeDebugPrologue || sessionOptions.removeDebugLocal ||
-                !sessionOptions.dexVersion.equals("Keep the same");
+        // Read what a save will actually use - the classTree's options - not the
+        // session holder, which resets when "Remember" is off.
+        ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        return options.removeAllDebug || options.removeDebugSource ||
+                options.removeDebugLine || options.removeDebugParam ||
+                options.removeDebugPrologue || options.removeDebugLocal ||
+                !options.dexVersion.equals("Keep the same");
     }
 
 
@@ -2166,7 +2257,10 @@ public class DexEditorActivity extends BaseActivity {
                         public void onNodeDeleted(TreeNode node) {
                             activity.clearPositionSaving(node.getFullName());
                             activity.removeTabsForClass(node.getFullName(), node.isDirectory());
-                            activity.classTree.removeClass(node.getFullName());
+                            // Folder nodes carry no trailing slash, but ClassTree only treats
+                            // names ending in '/' as folder deletions; without it nothing is
+                            // recorded and every class inside survives the save.
+                            activity.classTree.removeClass(node.getFullName() + (node.isDirectory() ? "/" : ""));
                             activity.isChanged = true;
                             activity.needsModifiedTreeRebuild = true;
                             activity.needsExplorerRefresh = true;
@@ -2830,8 +2924,9 @@ public class DexEditorActivity extends BaseActivity {
             alertProgress.setOnCancelListener(() -> isStopped = true);
             alertProgress.show();
 
-            // Set compilation options
-            classTree.setCompilationOptions(sessionOptions);
+            // Compilation options are already live on the classTree (applied when the
+            // session started and whenever the options dialog is OKed); re-applying
+            // sessionOptions here could clobber them with stale/reset values.
 
             new Thread() {
                 @Override
