@@ -221,10 +221,17 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 if (t.modified || untitledWithText) {
                     Content content = i == currentIndex && f != null && f.getEditor() != null
                             ? f.getEditor().getText() : t.document;
-                    if (content != null) {
+                    if (content == null && t.pendingDecoded != null) content = new Content(t.pendingDecoded);
+                    // A tab that has not finished loading has no real buffer yet;
+                    // persisting the empty placeholder capture here is what came
+                    // back as a blank file on the next launch. Only a loaded tab
+                    // may record empty content (deleting every character).
+                    if (content != null && (t.loaded || content.length() > 0)) {
                         contentRecords.add(o);
                         snapshots.add(content.copyTextShallow());
-                    } else o.put("content", t.content == null ? "" : t.content);
+                    } else if (t.content != null && !t.content.isEmpty()) {
+                        o.put("content", t.content);
+                    }
                 }
                 if (i == currentIndex) savedCurrent = arr.length();
                 arr.put(o);
@@ -287,12 +294,20 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 t.readOnly = o.optBoolean("readOnly", false);
                 t.lightweight = o.optBoolean("lightweight", false);
                 t.pendingArchiveUpdate = o.optBoolean("pendingArchive", false);
-                if (o.has("content")) {
-                    t.content = o.getString("content");
-                    t.loaded = true;
+                String savedContent = o.optString("content", null);
+                if (savedContent != null && !savedContent.isEmpty()) {
+                    // Keep the unsaved text as pendingDecoded and let the normal
+                    // async load apply it once the editor exists. Marking the tab
+                    // loaded here and setting the text during onCreate was wiped
+                    // by the fragment's deferred init, which left the tab
+                    // permanently blank and never re-read the file from disk.
+                    t.pendingDecoded = savedContent;
                 } else if (t.file == null && t.fileUri == null) {
                     continue; // nothing restorable for this tab
                 }
+                // An empty content record ("") is dropped on purpose: it only
+                // comes from an interrupted capture, and the tab then stays
+                // unloaded so the file is re-read from disk.
                 tabs.add(t);
             }
             if (!tabs.isEmpty()) {
@@ -729,9 +744,19 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     applyLoadedText(tab, tab.pendingDecoded, token);
                     return;
                 }
-                File cachedFile = tab.file != null
+                File cacheCandidate = tab.file != null
                         ? new File(getCacheDir(), tab.file.getPath().replace(File.separator, ".")) : null;
-                if (cachedFile != null && cachedFile.exists() && cachedFile.length() != tab.file.length()) {
+                // A recovery write that failed midway leaves a 0-byte cache;
+                // accepting the restore dialog's OK used to overwrite the real
+                // file with it. Drop such a cache and read the file instead.
+                if (cacheCandidate != null && cacheCandidate.exists() && cacheCandidate.length() == 0) {
+                    //noinspection ResultOfMethodCallIgnored
+                    cacheCandidate.delete();
+                    cacheCandidate = null;
+                }
+                final File cachedFile = cacheCandidate != null && cacheCandidate.exists()
+                        && cacheCandidate.length() != tab.file.length() ? cacheCandidate : null;
+                if (cachedFile != null) {
                     final Content fileText = readTabText(tab, token);
                     if (fileText == null) {
                         markLoadFailed(tab, null, token);
@@ -941,6 +966,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             tab.loaded = false;
             tab.content = null;
             tab.document = null;
+            // The buffer is gone; keeping a stale modified flag would make the
+            // session persist an empty snapshot for a tab with no content.
+            tab.modified = false;
             updateTabsList();
             if (getCurrentTab() != tab) return;
             String message = error == null || error.getMessage() == null
@@ -1378,6 +1406,20 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         if (idx >= 0) removeTab(idx);
     }
 
+    /**
+     * The user chose "don't save": drop the unsaved snapshot, otherwise
+     * onStop() re-persists the tab with {@code modified: true} plus its stale
+     * buffer and the next launch restores that instead of reading the file.
+     */
+    private void discardTabChanges(EditorTab t) {
+        if (t == null) return;
+        t.modified = false;
+        t.loaded = false;
+        t.content = null;
+        t.document = null;
+        t.pendingDecoded = null;
+    }
+
     private void removeTab(int position) {
         if (position < 0 || position >= tabs.size()) return;
         boolean closingCurrent = position == currentIndex;
@@ -1460,7 +1502,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         t.loaded = false;
         t.content = null;
         t.document = null;
+        // A restored unsaved snapshot must not short-circuit the reload.
+        t.pendingDecoded = null;
         t.loading = false;
+        t.modified = false; // reloading discards the in-editor changes
         loadTabContent(t);
     }
 
@@ -1509,6 +1554,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         });
                     })
                     .setNegativeButton(R.string.dont_save, (dialog, which) -> {
+                        discardTabChanges(t);
                         manualFinish = true;
                         finish();
                     })
@@ -1552,10 +1598,26 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             EditorTab t = getCurrentTab();
             if (!manualFinish && t != null && t.modified && t.exportedCopyPath == null) {
                 boolean isFromFile = currentFile != null;
-                if (isFromFile) try (OutputStream os = FileUtils.getOutputStream(
-                        new File(getCacheDir(), currentFile.getPath().replace(File.separator, ".")))) {
-                    ContentIO.writeTo(f.getEditor().getText(), os, StandardCharsets.UTF_8, false);
-                } catch (Exception ignored) { }
+                if (isFromFile) {
+                    // Write to a temporary first and only then rename: the cache
+                    // is offered as a restore candidate on the next open, and a
+                    // write interrupted midway must not leave a truncated copy
+                    // that could later replace the real file's content.
+                    File cache = new File(getCacheDir(), currentFile.getPath().replace(File.separator, "."));
+                    File temporary = new File(cache.getPath() + ".tmp");
+                    boolean written = false;
+                    try (OutputStream os = FileUtils.getOutputStream(temporary)) {
+                        ContentIO.writeTo(f.getEditor().getText(), os, StandardCharsets.UTF_8, false);
+                        written = true;
+                    } catch (Exception ignored) { }
+                    if (written) {
+                        if (!temporary.renameTo(cache)) {
+                            try { FileUtils.copyFile(temporary, cache); written = true; } catch (Exception ignored) { }
+                        }
+                    }
+                    //noinspection ResultOfMethodCallIgnored
+                    if (!written) temporary.delete();
+                }
             }
             f.getEditor().release();
         }
@@ -1608,6 +1670,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         });
                     })
                     .setNegativeButton(R.string.dont_save, (dialog, which) -> {
+                        discardTabChanges(t);
                         manualFinish = true;
                         finish();
                     })
