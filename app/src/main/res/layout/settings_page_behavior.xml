@@ -14,7 +14,7 @@
         android:paddingTop="8dp"
         android:paddingBottom="16dp">
 
-<com.google.android.material.card.MaterialCardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/sectionHapticCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
