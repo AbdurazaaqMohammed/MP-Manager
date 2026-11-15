@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<resources>
+    <string-array name="font_style_values">
+        <item>Normal</item>
+        <item>Sabit Genişlikli</item>
+    </string-array>
+    <string-array name="font_styles">
+        <item>Normal</item>
+        <item>Sabit Genişlikli</item>
+    </string-array>
+    <string-array name="install_locations">
+        <item>Otomatik</item>
+        <item>Yalnızca Dahili</item>
+        <item>Tercihen Harici</item>
+        <item>Varsayılan</item>
+    </string-array>
+    <string-array name="pref_capture_range_entries">
+        <item>Büyük</item>
+        <item>Orta</item>
+        <item>Küçük</item>
+    </string-array>
+    <string-array name="pref_capture_range_values">
+        <item>Büyük</item>
+        <item>Orta</item>
+        <item>Küçük</item>
+    </string-array>
+    <string-array name="pref_capture_speed_entries">
+        <item>Hızlı</item>
+        <item>Normal</item>
+        <item>Yavaş</item>
+    </string-array>
+    <string-array name="pref_capture_speed_values">
+        <item>Hızlı</item>
+        <item>Normal</item>
+        <item>Yavaş</item>
+    </string-array>
+    <string-array name="pref_magnifier_size_entries">
+        <item>Büyük</item>
+        <item>Orta</item>
+        <item>Küçük</item>
+    </string-array>
+    <string-array name="pref_magnifier_size_values">
+        <item>Büyük</item>
+        <item>Orta</item>
+        <item>Küçük</item>
+    </string-array>
+</resources>
