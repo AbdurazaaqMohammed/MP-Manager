@@ -321,6 +321,27 @@ public class ClassTree {
 
     private volatile CompilationOptions compilationOptions = new CompilationOptions();
 
+    /** The options a save will actually use. Callers must mutate a copy, never this object:
+     *  setCompilationOptions() detects changes by field comparison, and passing the same
+     *  reference back would make every change look like a no-op. */
+    public CompilationOptions getCompilationOptions() {
+        return compilationOptions;
+    }
+
+    public static CompilationOptions copyOf(CompilationOptions src) {
+        CompilationOptions copy = new CompilationOptions();
+        if (src != null) {
+            copy.dexVersion = src.dexVersion;
+            copy.removeAllDebug = src.removeAllDebug;
+            copy.removeDebugSource = src.removeDebugSource;
+            copy.removeDebugLine = src.removeDebugLine;
+            copy.removeDebugParam = src.removeDebugParam;
+            copy.removeDebugPrologue = src.removeDebugPrologue;
+            copy.removeDebugLocal = src.removeDebugLocal;
+        }
+        return copy;
+    }
+
     public void setCompilationOptions(CompilationOptions options) {
         CompilationOptions old = this.compilationOptions;
         this.compilationOptions = options;
@@ -345,6 +366,76 @@ public class ClassTree {
                 || a.removeDebugPrologue != b.removeDebugPrologue
                 || a.removeDebugLocal != b.removeDebugLocal
                 || !a.dexVersion.equals(b.dexVersion);
+    }
+
+    /**
+     * Whether saving with the given options would actually change the dex files.
+     *
+     * <p>A version change always rewrites. Stripping options only matter when the
+     * dexes carry the debug info they remove - when there is nothing to strip,
+     * recompiling reproduces the same content and there is no unsaved work to
+     * prompt about. Scanned against the originally loaded dex bytes, so the check
+     * stays valid even after a background pass has already posted stripped
+     * definitions back into {@link #classMap}.</p>
+     */
+    public boolean optionsWouldChangeOutput(CompilationOptions options) {
+        if (options == null) return false;
+        int target = this.dexVersion;
+        if (!options.dexVersion.equals("Keep the same")) {
+            try {
+                target = Integer.parseInt(options.dexVersion);
+            } catch (Exception ignored) {}
+        }
+        if (target != this.dexVersion) return true;
+        boolean stripping = options.removeAllDebug || options.removeDebugSource ||
+                options.removeDebugLine || options.removeDebugParam ||
+                options.removeDebugPrologue || options.removeDebugLocal;
+        if (!stripping || dexFiles == null) return false;
+        for (DexBackedDexFile dex : dexFiles) {
+            if (dex == null) continue;
+            for (ClassDef classDef : dex.getClasses()) {
+                if (hasStrippableDebug(classDef, options)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** Mirrors exactly what {@link DebugInfoStripper} would remove, stopping at the first hit. */
+    private static boolean hasStrippableDebug(ClassDef classDef, CompilationOptions options) {
+        if ((options.removeDebugSource || options.removeAllDebug) && classDef.getSourceFile() != null) {
+            return true;
+        }
+        for (Method method : classDef.getMethods()) {
+            if (options.removeDebugParam || options.removeAllDebug) {
+                for (MethodParameter parameter : method.getParameters()) {
+                    if (parameter.getName() != null) return true;
+                }
+            }
+            MethodImplementation impl = method.getImplementation();
+            if (impl == null) continue;
+            for (DebugItem item : impl.getDebugItems()) {
+                switch (item.getDebugItemType()) {
+                    case DebugItemType.SET_SOURCE_FILE:
+                        if (options.removeDebugSource || options.removeAllDebug) return true;
+                        break;
+                    case DebugItemType.LINE_NUMBER:
+                        if (options.removeDebugLine || options.removeAllDebug) return true;
+                        break;
+                    case DebugItemType.PROLOGUE_END:
+                    case DebugItemType.EPILOGUE_BEGIN:
+                        // The stripper also drops these alongside line-number removal.
+                        if (options.removeDebugPrologue || options.removeDebugLine || options.removeAllDebug) return true;
+                        break;
+                    case DebugItemType.START_LOCAL:
+                    case DebugItemType.END_LOCAL:
+                    case DebugItemType.RESTART_LOCAL:
+                    case DebugItemType.START_LOCAL_EXTENDED:
+                        if (options.removeDebugLocal || options.removeAllDebug) return true;
+                        break;
+                }
+            }
+        }
+        return false;
     }
 
     public ClassTree(List<String> mPaths, String cacheDir) throws Exception {
