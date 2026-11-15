@@ -13,7 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
@@ -75,6 +78,16 @@ public class MainSettingsActivity extends AppCompatActivity {
         AppFont.installFactory(this);
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        View content = getWindow().getDecorView().findViewById(android.R.id.content);
+        if (content != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                        | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
+                v.setPadding(sys.left, sys.top, sys.right, 0);
+                return insets;
+            });
+            ViewCompat.requestApplyInsets(content);
+        }
         setContentView(R.layout.dialog_settings);
 
         MaterialToolbar toolbar = findViewById(R.id.settingsToolbar);

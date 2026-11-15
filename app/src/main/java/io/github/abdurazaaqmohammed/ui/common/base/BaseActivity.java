@@ -44,7 +44,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         editorOwnerId = EditorTasks.bind(this, savedInstanceState);
         MinimizedEditors.rebind(this);
         View content = getWindow().getDecorView().findViewById(R.id.content);
-        if (content != null){
+        if (content != null) {
             ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
                 Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()
                         | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
