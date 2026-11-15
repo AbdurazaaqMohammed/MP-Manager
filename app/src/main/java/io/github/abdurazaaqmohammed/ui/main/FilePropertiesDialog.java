@@ -72,6 +72,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.RenameHelper;
+import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
@@ -104,7 +105,7 @@ public class FilePropertiesDialog {
             if (isInZip) {
                 pathToCopy = (entry != null && entry.getFullPath() != null) ? entry.getFullPath() : fileName;
             } else if (file != null) {
-                pathToCopy = file.getAbsolutePath();
+                pathToCopy = SafFile.displayPathOf(file);
             } else {
                 pathToCopy = displayName;
             }
@@ -149,7 +150,7 @@ public class FilePropertiesDialog {
             nameHolder[0] = addPropertyRow(propRows, context.getString(R.string.name), displayName);
         }
         if (!isInZip && file.getParentFile() != null) {
-            String parentPath = file.getParentFile().getAbsolutePath();
+            String parentPath = SafFile.displayPathOf(file.getParentFile());
             if (!parentPath.endsWith("/")) parentPath += "/";
             addPropertyRow(propRows, context.getString(R.string.parent), parentPath);
         }

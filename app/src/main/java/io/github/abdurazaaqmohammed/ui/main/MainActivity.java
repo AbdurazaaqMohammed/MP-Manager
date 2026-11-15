@@ -3243,7 +3243,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 // would otherwise blank the header when the pane is selected.
                 File zipFile = pane == 1 ? pane1Folder : pane2Folder;
                 String inner = adapter.currentZipPath == null ? "" : adapter.currentZipPath;
-                String display = zipFile == null ? inner : zipFile.getPath() + "!" + inner;
+                String display = zipFile == null ? inner : SafFile.displayPathOf(zipFile) + "!" + inner;
                 setCurrentFolder(display, Arrays.asList(adapter.values));
             } else {
                 File curr = pane == 1 ? pane1Folder : pane2Folder;
@@ -3294,7 +3294,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void setCurrentFolderFromSelected(File curr, Set<File> files) {
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
-        currentFolderPath.setText(curr.getPath());
+        currentFolderPath.setText(SafFile.displayPathOf(curr));
         uiHelper.scrollTextView(currentFolderPath);
         int foldersCount = 0;
         for (File file : files)
@@ -3370,7 +3370,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         highlightAndFocusItem(true, itemName);
                         handler.postDelayed(() -> highlightAndFocusItem(true, itemName), 350);
                     }
-                    Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
+                    Extensions.showMessage(this, rss.getString(R.string.loaded_X, SafFile.displayPathOf(SafFs.wrap(target))));
                 }
             }
         } catch (Exception ignored) {

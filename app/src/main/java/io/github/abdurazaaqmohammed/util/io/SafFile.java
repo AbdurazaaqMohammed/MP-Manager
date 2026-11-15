@@ -76,7 +76,40 @@ public class SafFile extends File {
      */
     public String getDisplayPath() {
         if (docId != null && docId.startsWith("/")) return docId;
+        // Tree-granted providers whose ids are not bare paths (e.g. Termux
+        // hands out absolute paths through a tree): show the granted tree's
+        // own document path plus the relative id, decoded - never the
+        // percent-encoded synthetic path.
+        String treePath = treeDisplayPath(treeUri);
+        if (docId != null && treePath != null) {
+            if (docId.startsWith(treePath + "/") || docId.equals(treePath)) return docId;
+            if (docId.startsWith("/")) return docId;
+            return treePath + "/" + docId;
+        }
         return authority + ":" + (docId == null ? "" : docId);
+    }
+
+    /** Absolute path carried by a tree URI whose document id is path-shaped, or null. */
+    private static String treeDisplayPath(String treeUri) {
+        if (treeUri == null) return null;
+        try {
+            String treeId = android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(treeUri));
+            return treeId != null && treeId.startsWith("/") ? treeId : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Display form of a file's location for UI text (history rows, search
+     * result subtitles, headers): decoded document path for SAF documents,
+     * the raw path for everything else. Never show a {@link SafFile}'s
+     * synthetic {@code saf:...} path - it is an internal encoding full of
+     * percent escapes, not something a user can read or reuse.
+     */
+    public static String displayPathOf(File file) {
+        if (file instanceof SafFile) return ((SafFile) file).getDisplayPath();
+        return file == null ? null : file.getPath();
     }
 
     /** Content URI for this document, usable with {@link android.content.ContentResolver}. */

@@ -713,7 +713,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 holder.fileDateView.setTag(null);
             } else if (isSearchResultsMode) {
                 holder.fileDateView.setVisibility(View.VISIBLE);
-                holder.fileDateView.setText(file.getParent() != null ? file.getParent() : "");
+                // getParent() of a SafFile is the percent-encoded synthetic path;
+                // show the decoded document location instead.
+                File parentFile = file.getParentFile();
+                holder.fileDateView.setText(parentFile != null ? SafFile.displayPathOf(parentFile) : "");
                 if (holder.appBadgeView != null) {
                     holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
                     holder.appBadgeView.setVisibility(View.VISIBLE);

@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 
+import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
 import android.graphics.Color;
@@ -55,7 +56,7 @@ public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
 
         File file = entry.file();
         String fileName = file.getName();
-        String path = file.getPath();
+        String path = SafFile.displayPathOf(file);
         if (file instanceof RemoteFile remote) path = remote.displayPath();
         if (entry.isZip() && !TextUtils.isEmpty(entry.zipPath())) {
             fileName = new File(entry.zipPath()).getName() + " (" + fileName + ")";
