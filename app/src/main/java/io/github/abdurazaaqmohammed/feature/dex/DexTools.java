@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -116,6 +117,7 @@ public class DexTools {
         this.dialogUtil = dialogUtil;
         this.pane1 = pane1;
         this.openWith = openWith;
+        cleanupDexWorkDirs(context);
     }
     private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
         String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
@@ -263,6 +265,7 @@ public class DexTools {
     }
 
     private static synchronized DexPreExtract preExtractAllDex(Context ctx, File zipFile, boolean force) {
+        cleanupDexWorkDirs(ctx);
         String key = zipFile.getAbsolutePath();
         DexPreExtract existing = dexPreExtracts.get(key);
         if (!force && existing != null && existing.error == null) return existing;
@@ -270,10 +273,13 @@ public class DexTools {
             dexPreExtracts.remove(key);
             deleteQuietly(existing.outputDir);
         }
-        DexPreExtract session = new DexPreExtract(zipFile, new File(ctx.getFilesDir(), "dexwork_" + UUID.randomUUID()));
+        // Cache dir, not filesDir: these are throwaway staging copies of the archive's
+        // dexes, so the OS is free to reclaim them and app data must not balloon.
+        DexPreExtract session = new DexPreExtract(zipFile, new File(ctx.getCacheDir(), "dexwork_" + UUID.randomUUID()));
         //noinspection ResultOfMethodCallIgnored
         session.outputDir.mkdirs();
         dexPreExtracts.put(key, session);
+        pruneDexPreExtracts();
         new Thread(() -> {
             // Extracted with the platform ZipFile instead of zip4j: zip4j
             // applies stored permissions/timestamps to every extracted entry
@@ -328,6 +334,60 @@ public class DexTools {
             //noinspection ResultOfMethodCallIgnored
             f.delete();
         } catch (Exception ignored) {
+        }
+    }
+
+    /** Sessions kept alive at once; older ones are deleted when a new archive is staged. */
+    private static final int MAX_DEX_PRE_EXTRACTS = 6;
+
+    /**
+     * Deletes stale {@code dexwork_*} session dirs. Every dir this app ever created for
+     * staging extracted dexes used to land in {@code getFilesDir()} and was never removed,
+     * so app data kept growing with each APK browsed. Now they live in the cache dir, and
+     * this pass clears:
+     *
+     * <ul>
+     *   <li>the legacy {@code filesDir} copies from older app versions - except the one a
+     *       still-open (e.g. minimized) editor is saving into, tracked by {@link #dexPreExtracts},
+     *       which survives as long as the process does, just like those editors do</li>
+     *   <li>orphaned {@code cacheDir} copies left behind by a crashed or killed process</li>
+     * </ul>
+     */
+    static synchronized void cleanupDexWorkDirs(Context ctx) {
+        List<File> liveDirs = new ArrayList<>();
+        synchronized (DexTools.class) {
+            for (DexPreExtract session : dexPreExtracts.values()) {
+                if (session != null && session.outputDir != null) liveDirs.add(session.outputDir);
+            }
+        }
+        purgeDexWorkRoots(ctx.getFilesDir(), liveDirs);
+        purgeDexWorkRoots(ctx.getCacheDir(), liveDirs);
+    }
+
+    private static void purgeDexWorkRoots(File root, List<File> liveDirs) {
+        File[] dirs = root.listFiles();
+        if (dirs == null) return;
+        for (File dir : dirs) {
+            if (!dir.isDirectory() || !dir.getName().startsWith("dexwork_")) continue;
+            String path = dir.getAbsolutePath();
+            boolean live = false;
+            for (File liveDir : liveDirs) {
+                if (liveDir.getAbsolutePath().equals(path)) {
+                    live = true;
+                    break;
+                }
+            }
+            if (!live) deleteQuietly(dir);
+        }
+    }
+
+    /** Caps the number of staged archives, deleting the oldest sessions' dirs first. */
+    private static void pruneDexPreExtracts() {
+        while (dexPreExtracts.size() > MAX_DEX_PRE_EXTRACTS) {
+            Iterator<String> it = dexPreExtracts.keySet().iterator();
+            String oldestKey = it.next();
+            DexPreExtract oldest = dexPreExtracts.remove(oldestKey);
+            deleteQuietly(oldest == null ? null : oldest.outputDir);
         }
     }
 
