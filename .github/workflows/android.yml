@@ -9,6 +9,9 @@ name: Build MP-Manager APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +24,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: gradle
 
       - name: Grant execute permission
@@ -56,3 +59,12 @@ jobs:
           name: MP-Manager-APK
           path: app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+
+      - name: Publish Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest -y --cleanup-tag || true
+          gh release create latest app/build/outputs/apk/**/*.apk \
+            --title "MP-Manager (MT Parity Build)" \
+            --notes "Automated release of MP-Manager with MT Manager feature parity (string decryption heuristics, ABI pruning, privilege migration facade)."
