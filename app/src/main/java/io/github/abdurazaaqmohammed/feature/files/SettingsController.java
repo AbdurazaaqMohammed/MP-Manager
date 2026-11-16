@@ -299,6 +299,13 @@ public class SettingsController {
             refreshSidebar();
         });
 
+        CompoundButton showRestoreDialogToggle = settingsDialog.findViewById(R.id.showRestoreDialogToggle);
+        if (showRestoreDialogToggle != null) {
+            showRestoreDialogToggle.setChecked(UiPrefs.showRestoreDialog(activity));
+            showRestoreDialogToggle.setOnCheckedChangeListener((buttonView, isChecked) ->
+                    settings.edit().putBoolean(UiPrefs.SHOW_RESTORE_DIALOG_KEY, isChecked).apply());
+        }
+
         EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
         if (searchHistoryLimitEt != null) {
             int limit = settings.getInt("search_history_limit", 50);

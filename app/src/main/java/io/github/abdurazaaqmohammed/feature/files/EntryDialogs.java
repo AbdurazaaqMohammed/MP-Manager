@@ -584,6 +584,10 @@ public class EntryDialogs {
     }
 
     public void showRestoreDialog(int position, File file, boolean multi) {
+        if (!multi && file != null && file.getName().toLowerCase(Locale.ROOT).endsWith(".bak")) {
+            showBackupRestoreDialog(context, dialogUtil, pane1, file);
+            return;
+        }
         Object[] values = state.values();
         List<File> targets = new ArrayList<>();
         if (multi) {
@@ -616,7 +620,7 @@ public class EntryDialogs {
                     if (applyToAll && rememberedAction != -1) {
                         action = rememberedAction;
                     } else {
-                        String suggestedName = getDuplicateRestoreName(destName, parent, useElevated);
+                        String suggestedName = getDuplicateRestoreName(context, destName, parent, useElevated);
                         CopyConflictDialog.Conflict conflict = new CopyConflictDialog.Conflict(
                                 src, srcName, src.length(), src.lastModified(),
                                 dest.getName(), dest.length(), dest.lastModified(),
@@ -639,7 +643,7 @@ public class EntryDialogs {
                     } else if (action == CopyConflictDialog.ACTION_SKIP) {
                         continue;
                     } else if (action == CopyConflictDialog.ACTION_KEEP_BOTH) {
-                        String newName = getDuplicateRestoreName(destName, parent, useElevated);
+                        String newName = getDuplicateRestoreName(context, destName, parent, useElevated);
                         dest = new File(parent, newName);
                     } else if (action == CopyConflictDialog.ACTION_REPLACE) {
                         if (!dest.delete()) {
@@ -666,7 +670,7 @@ public class EntryDialogs {
         }).start();
     }
 
-    private String getDuplicateRestoreName(String fileName, File destinationFolder, boolean useElevated) {
+    private static String getDuplicateRestoreName(Context context, String fileName, File destinationFolder, boolean useElevated) {
         String base = FilenameUtils.getBaseName(fileName);
         String ext = FilenameUtils.getExtension(fileName);
         int i = 1;
@@ -674,19 +678,154 @@ public class EntryDialogs {
         do {
             candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
             i++;
-        } while (dirHasEntry(destinationFolder, candidate, useElevated));
+        } while (dirHasEntry(context, destinationFolder, candidate, useElevated));
         return candidate;
     }
 
-    private boolean dirHasEntry(File dir, String name, boolean useElevated) {
+    private static boolean dirHasEntry(Context context, File dir, String name, boolean useElevated) {
+        if (dir instanceof SafFile) {
+            File[] children = dir.listFiles();
+            if (children != null) for (File child : children) if (name.equals(child.getName())) return true;
+            return false;
+        }
         File f = new File(dir, name);
         if (f.exists()) return true;
         if (useElevated) {
             try {
-                return RootManager.getInstance(context).exists(f.getAbsolutePath());
+                return PrivilegeManager.Files.exists(context, f.getAbsolutePath());
             } catch (Exception ignored) {}
         }
         return false;
+    }
+
+    /**
+     * True when the typed name is a safe destination for a restored backup:
+     * non-empty, a plain entry name (no path separators) and not a relative
+     * path fragment. Restores are always resolved against the backup's own
+     * folder, so this is what keeps a restore inside that folder.
+     */
+    static boolean isValidRestoreName(String name) {
+        if (name == null) return false;
+        String trimmed = name.trim();
+        if (trimmed.isEmpty() || ".".equals(trimmed) || "..".equals(trimmed)) return false;
+        return trimmed.indexOf('/') < 0 && trimmed.indexOf('\\') < 0 && trimmed.indexOf('\0') < 0;
+    }
+
+    /** The bulk restore's destination rule: the backup name minus its last ".bak". */
+    static String defaultRestoreName(String backupName) {
+        if (backupName == null) return "";
+        String lower = backupName.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".bak") ? backupName.substring(0, backupName.length() - 4) : backupName;
+    }
+
+    /**
+     * Rename-style restore dialog for one .bak file, exposed for the Restore
+     * menu and any other caller that wants the same flow. Prefilled with the
+     * default destination (the backup name minus its last ".bak") and offering
+     * Restore/Cancel. Tapping Restore only validates the name first — nothing
+     * on disk changes there; when the name is taken, the replacement is
+     * confirmed through {@link CopyConflictDialog} and failures are reported
+     * instead of being swallowed.
+     */
+    public static void showBackupRestoreDialog(MainActivity context, DialogUtil dialogUtil, boolean pane1, File file) {
+        if (context == null || dialogUtil == null || file == null) return;
+        String backupName = file.getName();
+        if (!backupName.toLowerCase(Locale.ROOT).endsWith(".bak")) return;
+        File parent = file.getParentFile();
+        if (parent == null) return;
+
+        MaterialAlertDialogBuilder restoreDialog = dialogUtil.getDialogBuilder();
+        View view = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+        EditText input = view.findViewById(R.id.m_et_edittext);
+        input.setText(defaultRestoreName(backupName));
+        restoreDialog
+                .setTitle(context.rss.getString(R.string.restore_backup))
+                .setView(view)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(context.rss.getString(R.string.restore), null);
+        AlertDialog ad = restoreDialog.create();
+        ad.setOnShowListener(d -> {
+            input.requestFocus();
+            RenameHelper.selectBaseName(input, true);
+        });
+        if (ad.getWindow() != null) {
+            try {
+                ad.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            } catch (Exception ignored) {}
+        }
+        dialogUtil.styleAlertDialog(ad);
+        // The positive button is overridden instead of using the builder
+        // callback so the dialog stays open when the typed name fails
+        // validation, letting the user fix it rather than reopening.
+        // styleAlertDialog() shows the dialog synchronously only when already
+        // on the UI thread, so the hookup goes through the main handler to
+        // guarantee the buttons exist by then.
+        context.handler.post(() -> ad.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = input.getText() == null ? "" : input.getText().toString().trim();
+            if (!isValidRestoreName(name)) {
+                Extensions.showMessage(context, context.rss.getString(R.string.restore_invalid_name));
+                return;
+            }
+            ad.dismiss();
+            // The conflict-checked rename runs off the UI thread like the
+            // rest of the restore code.
+            new Thread(() -> restoreSingleBackup(context, dialogUtil, pane1, file, new File(parent, name))).start();
+        }));
+    }
+
+    /**
+     * Renames one backup onto {@code dest} on the caller's worker thread,
+     * asking through {@link CopyConflictDialog} before replacing an existing
+     * file. Mirrors the bulk restore's per-file handling.
+     */
+    private static void restoreSingleBackup(MainActivity context, DialogUtil dialogUtil, boolean pane1, File src, File dest) {
+        try {
+            if (!src.exists()) throw new java.io.IOException("Backup no longer exists: " + src.getName());
+            File parent = src.getParentFile();
+            if (parent instanceof SafFile) {
+                File[] children = parent.listFiles();
+                if (children != null) for (File child : children) {
+                    if (dest.getName().equals(child.getName())) {
+                        dest = child;
+                        break;
+                    }
+                }
+            }
+            boolean useElevated = PrivilegeManager.Files.fileOpsOn(context);
+            if (dirHasEntry(context, parent, dest.getName(), useElevated) && !RenameHelper.sameFile(src, dest)) {
+                CopyConflictDialog.Conflict conflict = new CopyConflictDialog.Conflict(
+                        src, src.getName(), src.length(), src.lastModified(),
+                        dest.getName(), dest.length(), dest.lastModified(),
+                        getDuplicateRestoreName(context, dest.getName(), parent, useElevated)
+                );
+                int action = CopyConflictDialog.askSingle(context, dialogUtil, conflict, null);
+                if (action == CopyConflictDialog.ACTION_CANCEL || action == CopyConflictDialog.ACTION_SKIP) return;
+                if (action == CopyConflictDialog.ACTION_KEEP_BOTH) {
+                    dest = new File(parent, getDuplicateRestoreName(context, dest.getName(), parent, useElevated));
+                } else if (action == CopyConflictDialog.ACTION_REPLACE) {
+                    if (!dest.delete() && useElevated) {
+                        PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
+                    }
+                    if (dirHasEntry(context, parent, dest.getName(), useElevated)) {
+                        throw new java.io.IOException("Cannot replace " + dest.getName());
+                    }
+                }
+            }
+            String restoredName = dest.getName();
+            File destination = dest;
+            if (RenameHelper.renameFile(context, src, destination)) {
+                context.handler.post(() -> {
+                    context.refreshPaneAfterChange(pane1, restoredName);
+                    context.flashPaneItem(pane1, restoredName);
+                });
+            } else {
+                context.handler.post(() -> Extensions.showMessage(context,
+                        context.rss.getString(R.string.failed_to_renamex, src.getName()),
+                        FileUtils.describeWriteProblem(context, destination)));
+            }
+        } catch (Exception e) {
+            context.handler.post(() -> new ErrorUtil(context).showError(e));
+        }
     }
 
     private void appendDeleteSize(AlertDialog shown, TextView customMsg, boolean isInZip,

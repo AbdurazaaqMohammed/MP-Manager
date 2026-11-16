@@ -21,6 +21,23 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 
 public class MimeUtil {
 
+    /**
+     * The semantic display name of a file for MIME purposes. When the caller
+     * dispatches {@code foo.pdf.bak} under its stripped name, MIME probing
+     * should see {@code foo.pdf} - never a default keyed off the {@code .bak}
+     * suffix. A lone {@code foo.bak} (nothing meaningful under the suffix)
+     * keeps its full name.
+     */
+    public static String logicalDisplayName(String fileName) {
+        if (fileName == null) return null;
+        String bak = ".bak";
+        if (fileName.toLowerCase(Locale.ROOT).endsWith(bak)) {
+            String stripped = fileName.substring(0, fileName.length() - bak.length());
+            if (!FilenameUtils.getExtension(stripped).isEmpty()) return stripped;
+        }
+        return fileName;
+    }
+
     private static final byte[] ZIP_MAGIC = {'P', 'K', 3, 4};
     private static final byte[] RAR_MAGIC = {'R', 'a', 'r', '!', 0x1A};
     private static final byte[] SEVENZ_MAGIC = {'7', 'z', (byte) 0xBC, (byte) 0xAF, 0x27, 0x1C};
@@ -45,7 +62,7 @@ public class MimeUtil {
     public static String getReportedMimeType(Context context, Object fileOrZipEntry) {
         try {
             if (fileOrZipEntry instanceof ZipEntryInfo entry) return guessFromExtension(entry.getName());
-            return context.getContentResolver().getType(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", (File) fileOrZipEntry));
+            return context.getContentResolver().getType(FileProvider.getUriForFile(context, context.getPackageName() + ".provider", (File) fileOrZipEntry));
         } catch (Exception e) {
             return null;
         }
