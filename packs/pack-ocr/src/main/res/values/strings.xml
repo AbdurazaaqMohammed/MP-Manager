@@ -1,0 +1,4 @@
+<resources>
+    <string name="title_screen_ocr">Copy text on screen</string>
+    <string name="subtitle_screen_ocr">Offline OCR for screens and images</string>
+</resources>

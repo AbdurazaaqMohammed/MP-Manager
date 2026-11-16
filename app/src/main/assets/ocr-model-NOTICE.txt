@@ -1,0 +1,10 @@
+PaddleOCR PP-OCRv5 mobile models
+Copyright Baidu / applicable PaddleOCR rights holders.
+Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+Converted ONNX model distribution: RapidOCR Authors.
+Apache License 2.0.
+
+Models are offered as optional downloads, not bundled in MP Manager.
+The model registry's release URLs and SHA-256 pins are recorded in OcrModels.java.
+https://github.com/RapidAI/RapidOCR/blob/main/MODEL_LICENSES.md
+https://github.com/RapidAI/RapidOCR/blob/main/python/rapidocr/default_models.yaml

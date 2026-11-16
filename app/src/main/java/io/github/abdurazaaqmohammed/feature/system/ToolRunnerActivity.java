@@ -27,6 +27,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
+import io.github.abdurazaaqmohammed.feature.system.ocr.ScreenOcrActivity;
 
 /**
  * Thin host for toolkit screens.
@@ -41,6 +42,11 @@ public class ToolRunnerActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         String toolId = getIntent().getStringExtra("tool_id");
+        if ("screen_ocr".equals(toolId)) {
+            startActivity(new Intent(this, ScreenOcrActivity.class));
+            finish();
+            return;
+        }
         String toolTitle = getIntent().getStringExtra("tool_title");
         if (toolTitle == null || toolTitle.isEmpty()) {
             ToolRegistry.ToolItem found = ToolRegistry.findById(this, toolId);

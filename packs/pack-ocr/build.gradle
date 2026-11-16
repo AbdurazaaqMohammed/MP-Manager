@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.packs.ocr'
+    compileSdk 37
+
+    defaultConfig {
+        applicationId 'io.github.abdurazaaqmohammed.packs.ocr'
+        minSdk 24
+        targetSdk 37
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // The host accepts only first-party, same-signer packs in release builds.
+    signingConfigs {
+        release {
+            storeFile rootProject.file('app/release.keystore')
+            storePassword '000000'
+            keyAlias 'mido'
+            keyPassword '000000'
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    // ART loads JNI straight from this downloaded APK. AGP aligns the entries
+    // for 16 KB pages; there is no extraction or native dependency in :app.
+    packaging {
+        jniLibs.useLegacyPackaging = false
+    }
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'
+            universalApk true
+        }
+    }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+}
+
+dependencies {
+    compileOnly project(':sdk')
+    // A mature, pinned release with 16 KB page support. MIT licensed.
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.23.2'
+    testImplementation 'junit:junit:4.13.2'
+}

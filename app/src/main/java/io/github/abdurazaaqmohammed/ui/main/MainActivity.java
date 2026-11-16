@@ -4,6 +4,7 @@ import io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine;
 import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
+import io.github.abdurazaaqmohammed.feature.system.ToolLauncher;
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -689,6 +690,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             sidebar.refreshSidebarAsync(sectionOrder != null ? sectionOrder : getSidebarSectionOrder());
         } catch (Exception ignored) {
         }
+    }
+
+    public boolean openBuiltInSidebarTool(String id) {
+        return sidebar.openBuiltInTool(id);
     }
 
     /** Sidebar shortcut: screen color picker service. Called by SidebarController. */
@@ -3421,6 +3426,17 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
         openBookmarkShortcut();
+        Intent toolIntent = getIntent();
+        String requestedTool = toolIntent == null ? null : toolIntent.getStringExtra(
+                ToolLauncher.EXTRA_MAIN_TOOL);
+        if (requestedTool != null) {
+            toolIntent.removeExtra(ToolLauncher.EXTRA_MAIN_TOOL);
+            handler.post(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    ToolLauncher.open(this, requestedTool);
+                }
+            });
+        }
     }
 
     private void openBookmarkShortcut() {

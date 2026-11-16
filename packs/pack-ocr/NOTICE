@@ -1,0 +1,16 @@
+OCR Pack
+
+Includes ONNX Runtime 1.23.2 (MIT), copyright Microsoft Corporation and
+contributors, including the Java API copyright Oracle and/or its affiliates.
+See src/main/assets/ONNX-Runtime-LICENSE.txt and the upstream ThirdPartyNotices:
+https://github.com/microsoft/onnxruntime/blob/v1.23.2/ThirdPartyNotices.txt
+
+Model preprocessing, greedy CTC decoding and DB rotated-box expansion follow
+the PaddleOCR / RapidOCR algorithms. PaddleOCR: copyright 2020 PaddlePaddle
+Authors. RapidOCR: copyright RapidOCR Authors. Licensed under Apache-2.0.
+
+The model weights are not included in this pack. The host offers explicit,
+SHA-256-verified downloads of PP-OCRv5 mobile models distributed by RapidOCR
+and derived from PaddleOCR. Upstream weights copyright Baidu / the applicable
+PaddleOCR rights holders; Apache License 2.0.
+https://github.com/RapidAI/RapidOCR/blob/main/MODEL_LICENSES.md

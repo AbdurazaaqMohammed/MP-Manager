@@ -2,6 +2,37 @@
     "catalogVersion":  1,
     "packs":  [
                   {
+                      "id": "ocr",
+                      "title": "OCR Pack",
+                      "description": "Open-source PaddleOCR runtime for copying text from screens and images. Language models download separately and recognition stays offline.",
+                      "category": "Text & Security",
+                      "version": 1,
+                      "versionName": "1.0",
+                      "minSdk": 24,
+                      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-ocr.apk",
+                      "sha256": "3c6703561e1e665c1619572566b5813102f99bfd72db59971382522aa2be9065",
+                      "abiDownloads": {
+                          "arm64-v8a": {
+                              "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-ocr-arm64-v8a.apk",
+                              "sha256": "b1d0ee93cb88fbf86e39a4d176a5a108d5682b82df9caf8a8529694e67ca80f3"
+                          },
+                          "armeabi-v7a": {
+                              "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-ocr-armeabi-v7a.apk",
+                              "sha256": "5710a89a87d9f341e40044d44b148ca5b349ac4c28d7f47f29bdec3176148bd1"
+                          },
+                          "x86_64": {
+                              "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-ocr-x86_64.apk",
+                              "sha256": "4b7ded4ac66d3e1d2f0c23d3bd64c99f799f29bf68c0db7c35e52c2604a87578"
+                          },
+                          "x86": {
+                              "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-ocr-x86.apk",
+                              "sha256": "1fe80369de46513d8cd9cc7bf5b2d8dd6db5c64c3c87a92276cf928870b0e31b"
+                          }
+                      },
+                      "entryClass": "io.github.abdurazaaqmohammed.packs.ocr.OcrPack",
+                      "tools": [{"id": "screen_ocr", "title": "Copy text on screen", "subtitle": "Offline OCR for screens and images"}]
+                  },
+                  {
                       "id":  "media",
                       "title":  "Media Pack",
                       "description":  "Tone generator, metronome, recorder and text to speech.",

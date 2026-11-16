@@ -7,6 +7,9 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Build;
+import android.os.Process;
+import android.system.Os;
 
 import dalvik.system.DexClassLoader;
 
@@ -131,6 +134,9 @@ public final class PackManager {
     public static synchronized List<String> loadPack(Context context, File apk, String entryClass, String packId) {
         List<String> loaded = new ArrayList<>();
         if (apk == null || !apk.exists() || entryClass == null || entryClass.isEmpty()) return loaded;
+        if (packId != null && LOADED.containsKey(packId)) {
+            return new ArrayList<>(LOADED.get(packId));
+        }
         // Same-signer gate: in-process code inherits every host permission
         // (root, Shizuku, all files, network), so only first-party packs may
         // load here. Third-party code must ship as an external plugin.
@@ -152,7 +158,7 @@ public final class PackManager {
             DexClassLoader loader = new DexClassLoader(
                     apk.getAbsolutePath(),
                     codeCacheDir(context).getAbsolutePath(),
-                    null,
+                    nativeLibraryPath(context, apk),
                     context.getClassLoader());
             Class<?> clazz = Class.forName(entryClass, true, loader);
             Object instance = clazz.getDeclaredConstructor().newInstance();
@@ -192,6 +198,25 @@ public final class PackManager {
         return loaded;
     }
 
+    /**
+     * Native packs store page-aligned, uncompressed libraries in their signed APK.
+     * ART/linker can load these directly, without another copy in the host APK or
+     * writable extracted .so files. Restrict the search to the current process ABI.
+     */
+    private static String nativeLibraryPath(Context context, File apk) {
+        StringBuilder paths = new StringBuilder();
+        boolean is64Bit = Process.is64Bit();
+        for (String abi : Build.SUPPORTED_ABIS) {
+            boolean abi64 = abi.contains("64");
+            if (abi64 != is64Bit) continue;
+            if (paths.length() > 0) paths.append(File.pathSeparator);
+            paths.append(apk.getAbsolutePath()).append("!/lib/").append(abi);
+        }
+        String hostLibraries = context.getApplicationInfo().nativeLibraryDir;
+        if (hostLibraries != null) paths.append(File.pathSeparator).append(hostLibraries);
+        return paths.toString();
+    }
+
     /** Why the last loadPack failed; consumed by the installer for its error. */
     static synchronized String takeLoadError() {
         String r = sLoadError;
@@ -206,10 +231,13 @@ public final class PackManager {
      * Returns the download id, or -1 when the URL is empty.
      */
     public static long enqueueDownload(Context context, PackDescriptor pack) {
-        if (pack == null || pack.apkUrl == null || pack.apkUrl.isEmpty()) return -1;
+        if (pack == null || pack.download().url().isEmpty()) return -1;
         try {
+            // A failed previous download must not make DownloadManager fail with
+            // ERROR_FILE_ALREADY_EXISTS on the next explicit retry.
+            downloadOutput(context, pack.id).delete();
             DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(pack.apkUrl));
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(pack.download().url()));
             req.setTitle(pack.title);
             req.setDescription("Tool pack download");
             req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
@@ -248,18 +276,24 @@ public final class PackManager {
         if (pack == null || downloaded == null || !downloaded.exists()) {
             return "Downloaded file is missing";
         }
+        if (!pack.supportsDevice()) return "This pack requires Android API " + pack.minSdk() + " or newer";
         if (requireChecksum && !pack.hasChecksum()) {
             return "Pack has no checksum; refusing install."
                     + " The catalog entry must pin a SHA-256.";
         }
         if (pack.hasChecksum()) {
             String actual = sha256(downloaded);
-            if (actual == null || !actual.equalsIgnoreCase(pack.sha256.trim())) {
+            // The universal APK remains supported for local sideloads; remote
+            // installs normally carry the smaller, separately pinned ABI APK.
+            String variantHash = pack.download().sha256();
+            if (actual == null || !actual.equalsIgnoreCase(pack.sha256.trim())
+                    && !actual.equalsIgnoreCase(variantHash.trim())) {
                 return "Checksum mismatch, pack rejected";
             }
         }
         File dest = packFile(context, pack.id);
         File backup = new File(dest.getParentFile(), pack.id + ".apk.bak");
+        File replacement = null;
         boolean hadPrevious = dest.exists();
         int previousVersion = installedVersion(context, pack.id);
         String previousEntry = installedEntry(context, pack.id);
@@ -270,15 +304,14 @@ public final class PackManager {
                 copy(dest, backup);
                 if (mtime > 0) backup.setLastModified(mtime);
             }
-            // The runtime refuses to load a dex from a file the app can still
-            // write to ("Writable dex file ... is not allowed"), so the
-            // installed APK has to end up read-only. Grant write back first:
-            // the previous APK is already read-only and would not be
-            // overwriteable.
-            if (hadPrevious && !dest.setWritable(true)) dest.delete();
-            copy(downloaded, dest);
-            dest.setWritable(false);
-            dest.setReadable(true, false);
+            // Never truncate an APK whose JNI libraries may still be mmap'ed
+            // by ART. Atomic replacement preserves the old inode for running
+            // code, and leaves the new dex immutable before loading it.
+            replacement = File.createTempFile(pack.id + "-", ".apk", dest.getParentFile());
+            copy(downloaded, replacement);
+            if (!replacement.setWritable(false)) throw new IllegalStateException("Cannot make pack code read-only");
+            replacement.setReadable(true, true);
+            Os.rename(replacement.getAbsolutePath(), dest.getAbsolutePath());
             prefs(context).edit()
                     .putInt(KEY_PREFIX + pack.id + "_version", pack.version)
                     .putString(KEY_PREFIX + pack.id + "_entry", pack.entryClass)
@@ -324,8 +357,14 @@ public final class PackManager {
             }
             if (hadPrevious && backup.exists()) {
                 try {
-                    copy(backup, dest);
-                    dest.setWritable(false);
+                    File rollback = File.createTempFile(pack.id + "-rollback-", ".apk", dest.getParentFile());
+                    try {
+                        copy(backup, rollback);
+                        rollback.setWritable(false);
+                        Os.rename(rollback.getAbsolutePath(), dest.getAbsolutePath());
+                    } finally {
+                        rollback.delete();
+                    }
                     prefs(context).edit()
                             .putInt(KEY_PREFIX + pack.id + "_version", previousVersion)
                             .putString(KEY_PREFIX + pack.id + "_entry", previousEntry)
@@ -349,6 +388,8 @@ public final class PackManager {
             } catch (Exception ignored) {
             }
             return e.getMessage() != null ? e.getMessage() : e.toString();
+        } finally {
+            if (replacement != null) replacement.delete();
         }
     }
 
@@ -359,7 +400,18 @@ public final class PackManager {
      */
     public static String installFromFile(Context context, PackDescriptor pack, File picked) {
         boolean requireChecksum = !PackSignatures.isDebuggable(context);
-        return installDownloadedPack(context, pack, picked, requireChecksum);
+        File staging = null;
+        try {
+            // installDownloadedPack consumes its input on success. Never delete
+            // a user-selected APK: use a private staging copy for sideloads.
+            staging = File.createTempFile("pack-sideload-", ".apk", codeCacheDir(context));
+            copy(picked, staging);
+            return installDownloadedPack(context, pack, staging, requireChecksum);
+        } catch (Exception error) {
+            return error.getMessage() == null ? error.toString() : error.getMessage();
+        } finally {
+            if (staging != null) staging.delete();
+        }
     }
 
     public static synchronized void uninstallPack(Context context, String packId) {

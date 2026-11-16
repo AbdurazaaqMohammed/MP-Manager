@@ -19,6 +19,8 @@ import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Pack catalog: bundled assets/packs.json, optionally refreshed from the
@@ -49,9 +51,18 @@ public final class PackCatalog {
     }
 
     public static List<PackDescriptor> load(Context context) {
-        List<PackDescriptor> out = loadFile(cachedFile(context));
-        if (!out.isEmpty()) return out;
-        return loadAsset(context);
+        return merge(loadAsset(context), loadFile(cachedFile(context)));
+    }
+
+    /** A cached older catalog must not hide packs added by a newer host update. */
+    static List<PackDescriptor> merge(List<PackDescriptor> bundled, List<PackDescriptor> cached) {
+        Map<String, PackDescriptor> byId = new LinkedHashMap<>();
+        for (PackDescriptor pack : bundled) byId.put(pack.id, pack);
+        for (PackDescriptor pack : cached) {
+            PackDescriptor existing = byId.get(pack.id);
+            if (existing == null || pack.version >= existing.version) byId.put(pack.id, pack);
+        }
+        return new ArrayList<>(byId.values());
     }
 
     public static List<PackDescriptor> loadAsset(Context context) {
