@@ -72,7 +72,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import com.reandroid.apk.ApkModule;
 import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
@@ -757,11 +757,10 @@ public final class McpApkTools {
         if (!JiaguDumpEngine.isValidPackage(pkg)) {
             throw new McpJson.McpToolException("Invalid package name: " + pkg);
         }
-        RootManager rm = RootManager.getInstance(ctx.context);
-        if (!rm.isRootAvailable()) {
+        if (!PrivilegeManager.Root.isRootAvailable(ctx.context)) {
             throw new McpJson.McpToolException("Root is required for the Jiagu Dumper");
         }
-        if (!rm.isRootMode()) {
+        if (!PrivilegeManager.Root.isRootMode(ctx.context)) {
             throw new McpJson.McpToolException("Root mode is disabled: switch the app's working mode to Root first");
         }
         int waitSec = McpJson.intVal(args, "wait_seconds", 15);

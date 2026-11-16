@@ -361,4 +361,77 @@ public final class PrivilegeManager {
         public static void apply(Activity activity, Handler handler, Runnable refreshSidebar) { StartupPrivileges.apply(activity, handler, refreshSidebar); }
 
     }
+
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.RootManager}, the legacy implementation it delegates to. */
+    public static final class Root {
+
+        public static RootManager getInstance(Context context) {
+            return RootManager.getInstance(context);
+        }
+
+        public static RootManager getInstance() {
+            return RootManager.getInstance();
+        }
+
+        public static boolean isRootAvailable(Context context) {
+            try {
+                return RootManager.getInstance(context).isRootAvailable();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        public static boolean isRootGiven(Context context) {
+            try {
+                return RootManager.getInstance(context).isRootGiven();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        public static boolean isRootMode(Context context) {
+            try {
+                return RootManager.getInstance(context).isRootMode();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        public static String suBinary(Context context) {
+            return RootManager.getInstance(context).suBinary();
+        }
+
+        public static RootManager.ShellResult execute(Context context, String command, int timeoutSeconds) {
+            return RootManager.getInstance(context).execute(command, timeoutSeconds);
+        }
+
+        public static RootManager.ShellResult execute(String command, int timeoutSeconds) {
+            return RootManager.getInstance().execute(command, timeoutSeconds);
+        }
+
+        public static RootManager.ShellResult executeFs(Context context, String command, int timeoutSeconds) {
+            return RootManager.getInstance(context).executeFs(command, timeoutSeconds);
+        }
+
+        public static RootManager.ShellResult executeFs(String command, int timeoutSeconds) {
+            return RootManager.getInstance().executeFs(command, timeoutSeconds);
+        }
+
+        public static String escapeShellArg(String arg) {
+            return RootManager.escapeShellArg(arg);
+        }
+
+        public static String quoteForSh(String arg) {
+            return RootManager.quoteForSh(arg);
+        }
+
+        public static File[] listRootFilesWithStat(Context context, String dirPath) {
+            return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
+        }
+
+        public static void invalidateListCache(Context context) {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm != null) rm.invalidateListCache();
+        }
+    }
 }

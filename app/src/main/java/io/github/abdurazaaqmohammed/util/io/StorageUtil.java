@@ -2,8 +2,6 @@ package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 
 import android.content.Context;
@@ -199,9 +197,8 @@ public class StorageUtil {
         // Fallback for root-protected paths like /mnt/media_rw/... or /
         if (PrivilegeManager.Files.fileOpsOn(ctx)) {
             try {
-                RootManager rm = RootManager.getInstance(ctx);
-                if (rm != null && rm.isRootMode()) {
-                    RootManager.ShellResult r = rm.execute("toybox stat -f -c '%b %a %s' " + RootManager.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + RootManager.escapeShellArg(si.path) + " 2>/dev/null", 5);
+                if (PrivilegeManager.Root.isRootMode(ctx)) {
+                    io.github.abdurazaaqmohammed.privilege.impl.RootManager.ShellResult r = PrivilegeManager.Root.execute(ctx, "toybox stat -f -c '%b %a %s' " + PrivilegeManager.Root.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + PrivilegeManager.Root.escapeShellArg(si.path) + " 2>/dev/null", 5);
                     if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                         String[] parts = r.output().trim().split("\\s+");
                         if (parts.length >= 3) {
