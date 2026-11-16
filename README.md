@@ -88,9 +88,9 @@ Files received from other apps can be saved from the share menu. Unknown files c
 
 Archives and backups can be browsed directly, including nested archives spanned across folders.
 
-PDF files open in a built-in viewer.
+PDF files open in a built-in viewer unless an external default has been set. The viewer also has an **Open with** button for choosing another app.
 
-MIUI and Android backup (.bak) archives are supported, and .bak files are handled by their original extension.
+Tapping an editor backup such as `example.txt.bak` shows a **Restore** dialog by default. In **Settings → Behavior**, disable **Show restore dialog for .bak files** to open backups with their original file type instead. MIUI and Android backup (.bak) archives continue to open as archives.
 <p align="center">
   <img width="200" alt="shared" src="https://github.com/user-attachments/assets/abdc4653-5af8-4030-8a53-bdcb70357de6" />
   <br>
