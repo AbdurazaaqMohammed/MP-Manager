@@ -87,6 +87,8 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.activity.TranslationModeActivity;
 
+import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
+
 /**
  * DEX/ARSC toolkit extracted from FileOperationsHelper.
  */
@@ -103,6 +105,10 @@ public class DexTools {
          */
         default void open(File file, String fileName, File zipFile, String zipEntryPath) {
             open(file, fileName);
+        }
+
+        default void openWithDefaults(File file, String name, File archive, String entry, Runnable fallback) {
+            fallback.run();
         }
     }
 
@@ -222,10 +228,23 @@ public class DexTools {
             intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
             if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
         }
-        context.startActivityForResult(intent, 757);
+        startDexActivity(intent, paths);
+    }
+
+    private void startDexActivity(Intent intent, List<String> paths) {
+        // Android may create the editor after another pane starts staging an archive.
+        // Keep its inputs leased through that handoff, then let the session own them.
+        for (String path : paths) DexWorkspaceStore.keepForResult(new File(path));
+        try {
+            context.startActivityForResult(intent, 757);
+        } catch (RuntimeException e) {
+            for (String path : paths) DexWorkspaceStore.finishResult(new File(path));
+            throw e;
+        }
     }
 
     private static final Map<String, DexPreExtract> dexPreExtracts = new LinkedHashMap<>();
+    private static final List<DexPreExtract> retiredDexPreExtracts = new ArrayList<>();
 
     private static class DexPreExtract {
         final File zipFile;
@@ -255,29 +274,46 @@ public class DexTools {
         List<DexPreExtract> sessions;
         synchronized (DexTools.class) {
             sessions = new ArrayList<>(dexPreExtracts.values());
+            sessions.addAll(retiredDexPreExtracts);
         }
         for (DexPreExtract session : sessions) {
             if (session == null || session.zipFile == null || session.outputDir == null) continue;
             String dir = session.outputDir.getAbsolutePath();
             if (stagedPath.startsWith(dir + File.separator)) return session.zipFile;
         }
-        return null;
+        return DexWorkspaceStore.archiveFor(new File(stagedPath));
     }
 
     private static synchronized DexPreExtract preExtractAllDex(Context ctx, File zipFile, boolean force) {
         cleanupDexWorkDirs(ctx);
         String key = zipFile.getAbsolutePath();
         DexPreExtract existing = dexPreExtracts.get(key);
-        if (!force && existing != null && existing.error == null) return existing;
+        if (!force && existing != null && existing.error == null && existing.outputDir.isDirectory()) return existing;
         if (existing != null) {
             dexPreExtracts.remove(key);
-            deleteQuietly(existing.outputDir);
+            retiredDexPreExtracts.add(existing);
         }
-        // Cache dir, not filesDir: these are throwaway staging copies of the archive's
-        // dexes, so the OS is free to reclaim them and app data must not balloon.
-        DexPreExtract session = new DexPreExtract(zipFile, new File(ctx.getCacheDir(), "dexwork_" + UUID.randomUUID()));
-        //noinspection ResultOfMethodCallIgnored
-        session.outputDir.mkdirs();
+        DexWorkspaceStore.Lease extraction;
+        try {
+            extraction = DexWorkspaceStore.create(ctx.getFilesDir(), DexWorkspaceStore.EXTRACT_PREFIX);
+        } catch (IOException e) {
+            DexPreExtract failed = new DexPreExtract(zipFile, new File(ctx.getFilesDir(), "unavailable_dex_workspace"));
+            failed.error = Log.getStackTraceString(e);
+            failed.done.countDown();
+            return failed;
+        }
+        try {
+            DexWorkspaceStore.recordArchive(extraction.directory, zipFile);
+        } catch (IOException e) {
+            DexWorkspaceStore.deleteWhenUnused(extraction.directory);
+            extraction.close();
+            DexPreExtract failed = new DexPreExtract(zipFile, extraction.directory);
+            failed.error = Log.getStackTraceString(e);
+            failed.done.countDown();
+            return failed;
+        }
+        // These bytes remain essential until the editor and archive update have both finished.
+        DexPreExtract session = new DexPreExtract(zipFile, extraction.directory);
         dexPreExtracts.put(key, session);
         pruneDexPreExtracts();
         new Thread(() -> {
@@ -319,75 +355,40 @@ public class DexTools {
                 session.error = Log.getStackTraceString(e);
             } finally {
                 session.done.countDown();
+                extraction.close();
             }
         }).start();
         return session;
     }
 
-    private static void deleteQuietly(File f) {
-        try {
-            if (f == null || !f.exists()) return;
-            if (f.isDirectory()) {
-                File[] kids = f.listFiles();
-                if (kids != null) for (File k : kids) deleteQuietly(k);
-            }
-            //noinspection ResultOfMethodCallIgnored
-            f.delete();
-        } catch (Exception ignored) {
-        }
-    }
-
-    /** Sessions kept alive at once; older ones are deleted when a new archive is staged. */
+    /** Only unused pre-extractions count toward the warm-cache limit. */
     private static final int MAX_DEX_PRE_EXTRACTS = 6;
 
-    /**
-     * Deletes stale {@code dexwork_*} session dirs. Every dir this app ever created for
-     * staging extracted dexes used to land in {@code getFilesDir()} and was never removed,
-     * so app data kept growing with each APK browsed. Now they live in the cache dir, and
-     * this pass clears:
-     *
-     * <ul>
-     *   <li>the legacy {@code filesDir} copies from older app versions - except the one a
-     *       still-open (e.g. minimized) editor is saving into, tracked by {@link #dexPreExtracts},
-     *       which survives as long as the process does, just like those editors do</li>
-     *   <li>orphaned {@code cacheDir} copies left behind by a crashed or killed process</li>
-     * </ul>
-     */
     static synchronized void cleanupDexWorkDirs(Context ctx) {
-        List<File> liveDirs = new ArrayList<>();
-        synchronized (DexTools.class) {
-            for (DexPreExtract session : dexPreExtracts.values()) {
-                if (session != null && session.outputDir != null) liveDirs.add(session.outputDir);
-            }
-        }
-        purgeDexWorkRoots(ctx.getFilesDir(), liveDirs);
-        purgeDexWorkRoots(ctx.getCacheDir(), liveDirs);
+        pruneDexPreExtracts();
+        DexWorkspaceStore.cleanup(ctx.getFilesDir(), ctx.getCacheDir());
+        dexPreExtracts.values().removeIf(session -> session.done.getCount() == 0 && !session.outputDir.isDirectory());
     }
 
-    private static void purgeDexWorkRoots(File root, List<File> liveDirs) {
-        File[] dirs = root.listFiles();
-        if (dirs == null) return;
-        for (File dir : dirs) {
-            if (!dir.isDirectory() || !dir.getName().startsWith("dexwork_")) continue;
-            String path = dir.getAbsolutePath();
-            boolean live = false;
-            for (File liveDir : liveDirs) {
-                if (liveDir.getAbsolutePath().equals(path)) {
-                    live = true;
-                    break;
-                }
-            }
-            if (!live) deleteQuietly(dir);
-        }
-    }
-
-    /** Caps the number of staged archives, deleting the oldest sessions' dirs first. */
     private static void pruneDexPreExtracts() {
-        while (dexPreExtracts.size() > MAX_DEX_PRE_EXTRACTS) {
-            Iterator<String> it = dexPreExtracts.keySet().iterator();
-            String oldestKey = it.next();
-            DexPreExtract oldest = dexPreExtracts.remove(oldestKey);
-            deleteQuietly(oldest == null ? null : oldest.outputDir);
+        Iterator<DexPreExtract> retired = retiredDexPreExtracts.iterator();
+        while (retired.hasNext()) {
+            DexPreExtract session = retired.next();
+            if (session.done.getCount() != 0 || DexWorkspaceStore.isInUse(session.outputDir)) continue;
+            DexWorkspaceStore.deleteWhenUnused(session.outputDir);
+            retired.remove();
+        }
+        int unused = 0;
+        for (DexPreExtract session : dexPreExtracts.values()) {
+            if (session.done.getCount() == 0 && !DexWorkspaceStore.isInUse(session.outputDir)) unused++;
+        }
+        Iterator<DexPreExtract> sessions = dexPreExtracts.values().iterator();
+        while (unused > MAX_DEX_PRE_EXTRACTS && sessions.hasNext()) {
+            DexPreExtract session = sessions.next();
+            if (session.done.getCount() != 0 || DexWorkspaceStore.isInUse(session.outputDir)) continue;
+            sessions.remove();
+            DexWorkspaceStore.deleteWhenUnused(session.outputDir);
+            unused--;
         }
     }
 
@@ -467,6 +468,8 @@ public class DexTools {
                 }
             });
         });
+        DexWorkspaceStore.Lease selectionLease = DexWorkspaceStore.retain(session.outputDir);
+        dialog.setOnDismissListener(d -> selectionLease.close());
         dialog.show();
         DialogUtil.keepButtonsHorizontal(dialog);
     }
@@ -488,8 +491,13 @@ public class DexTools {
         }
         if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
         final DexPreExtract waitSession = useSession;
+        final DexWorkspaceStore.Lease launchLease = DexWorkspaceStore.retain(waitSession.outputDir);
         if (waitSession.done.getCount() == 0 && waitSession.error == null) {
-            openExtractedDex(waitSession, selectedNames, openTab);
+            try {
+                openExtractedDex(waitSession, selectedNames, openTab);
+            } finally {
+                launchLease.close();
+            }
             return;
         }
         ProgressManager pm = new ProgressManager(context, false);
@@ -512,11 +520,15 @@ public class DexTools {
             }
             context.handler.post(() -> {
                 pm.dismiss();
-                if (waitSession.error != null) {
-                    new ErrorUtil(context).showError(new Exception(waitSession.error));
-                    return;
+                try {
+                    if (waitSession.error != null) {
+                        new ErrorUtil(context).showError(new Exception(waitSession.error));
+                        return;
+                    }
+                    openExtractedDex(waitSession, selectedNames, openTab);
+                } finally {
+                    launchLease.close();
                 }
-                openExtractedDex(waitSession, selectedNames);
             });
         }).start();
     }
@@ -533,7 +545,7 @@ public class DexTools {
             intent.putExtra("zipFilePath", zipFile.getAbsolutePath());
             if (entryPath != null) intent.putExtra("zipEntryPath", entryPath);
         }
-        context.startActivityForResult(intent, 757);
+        startDexActivity(intent, paths);
     }
 
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames, Integer openTab) {
@@ -549,7 +561,7 @@ public class DexTools {
                 missing = f.getAbsolutePath();
             }
         }
-        if (selectedPaths.isEmpty()) {
+        if (missing != null || selectedPaths.isEmpty()) {
             Extensions.showMessage(context, missing != null ? missing : context.rss.getString(R.string.file_no_longer_available));
             return;
         }
@@ -761,6 +773,7 @@ public class DexTools {
             // One generic stage covers every browsable archive format; the
             // special cases below work on the staged copy.
             ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
+            context.handler.post(() -> openWith.openWithDefaults(tempFile, name, zipFile, fullPath, () -> {
             if(name.endsWith(".dex")) {
                 if (ArchiveBrowseUtil.isZipLike(zipFile))
                     preExtractAllDex(context, zipFile, false);
@@ -784,8 +797,9 @@ public class DexTools {
             } else if (name.equals("resources.arsc")) {
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
             } else {
-                context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
+                openWith.open(tempFile, name, zipFile, fullPath);
             }
+            }));
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
         }
