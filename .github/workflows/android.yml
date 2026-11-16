@@ -64,7 +64,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest -y --cleanup-tag || true
-          gh release create latest app/build/outputs/apk/**/*.apk \
-            --title "MP-Manager (MT Parity Build)" \
-            --notes "Automated release of MP-Manager with MT Manager feature parity (string decryption heuristics, ABI pruning, privilege migration facade)."
+          shopt -s globstar nullglob
+          apk_files=(app/build/outputs/apk/**/*.apk)
+          gh release delete continuous -y --cleanup-tag || true
+          gh release create continuous "${apk_files[@]}" \
+            --title "MP-Manager (Continuous Build)" \
+            --notes "Continuous build of MP-Manager with MT Manager feature parity (string decryption heuristics, ABI pruning, privilege migration facade)."
