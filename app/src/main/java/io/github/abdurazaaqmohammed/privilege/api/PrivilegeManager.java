@@ -383,7 +383,7 @@ public final class PrivilegeManager {
 
         public static boolean isRootGiven(Context context) {
             try {
-                return RootManager.getInstance(context).isRootGiven();
+                return RootManager.getInstance(context).isRootAvailable();
             } catch (Exception e) {
                 return false;
             }
