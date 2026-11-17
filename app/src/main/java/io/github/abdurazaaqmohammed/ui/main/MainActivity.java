@@ -3157,23 +3157,34 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             if (pane == null) return;
             RecyclerView.Adapter<?> adapter = pane.getAdapter();
+            // The reload below rebuilds the adapter from the raw listing; if a
+            // filter is active it must be re-applied once the new adapter is
+            // bound, otherwise the filter box keeps its text but nothing is
+            // filtered (seen after returning to the app from another one).
+            Runnable afterBind = () -> {
+                if (saved != null) restorePaneScroll(pane1, saved);
+                try {
+                    sortFilter.applyFilterToPaneIfAny(pane1);
+                } catch (Exception ignored) {
+                }
+            };
             if (adapter instanceof MainFilesArrayAdapter filesAdapter) {
                 if (filesAdapter.isInZip) {
                     File zipFile = pane1 ? pane1Folder : pane2Folder;
                     if (zipFile == null) return;
                     String zipPath = filesAdapter.currentZipPath == null ? "" : filesAdapter.currentZipPath;
-                    loadZipFolderInPane(zipFile, zipPath, pane1, false,
-                            saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+                    loadZipFolderInPane(zipFile, zipPath, pane1, false, afterBind);
                     return;
                 }
                 File folder = pane1 ? pane1Folder : pane2Folder;
                 if (folder == null) return;
-                loadFolderInPaneAsync(folder, pane1, false,
-                        saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+                loadFolderInPaneAsync(folder, pane1, false, afterBind);
             } else if (adapter instanceof RemoteFilesArrayAdapter remote) {
                 loadFolderInPane(remote.folder, pane1, false);
+                sortFilter.applyFilterToPaneIfAny(pane1);
             } else if (adapter instanceof FtpFilesArrayAdapter) {
                 reloadPane(pane1, preserveScroll);
+                sortFilter.applyFilterToPaneIfAny(pane1);
             }
             // No adapter yet (cold start): nothing to refresh.
         } catch (Exception ignored) {
