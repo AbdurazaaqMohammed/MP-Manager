@@ -122,7 +122,18 @@ public final class PrivacyBytecodeEngine {
                     int reg = ((OneRegisterInstruction) inst).getRegisterA();
                     Object ref = ((ReferenceInstruction) inst).getReference();
                     if (ref instanceof StringReference) {
-                        stringRegisters.put(reg, ((StringReference) ref).getString());
+                        String sVal = ((StringReference) ref).getString();
+                        stringRegisters.put(reg, sVal);
+                        if (options.sinkholeTelemetryDomains && DomainSinkholer.isTelemetryEndpoint(sVal)) {
+                            mutable.replaceInstruction(i, new BuilderInstruction21c(
+                                    Opcode.CONST_STRING,
+                                    reg,
+                                    new ImmutableStringReference(DomainSinkholer.SINKHOLE_DESTINATION)
+                            ));
+                            stats.adIdsNeutralized++;
+                            modified = true;
+                            stringRegisters.put(reg, DomainSinkholer.SINKHOLE_DESTINATION);
+                        }
                     }
                 }
             } else if (op == Opcode.MOVE_OBJECT || op == Opcode.MOVE_OBJECT_16 || op == Opcode.MOVE_OBJECT_FROM16) {

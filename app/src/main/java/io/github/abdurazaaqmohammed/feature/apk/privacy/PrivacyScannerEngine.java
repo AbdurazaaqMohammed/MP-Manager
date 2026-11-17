@@ -92,6 +92,7 @@ public final class PrivacyScannerEngine {
             scanDexInternal(dex, report);
         }
 
+        NativeLibAuditor.auditNativeLibs(module, report);
         report.computeScores();
         return report;
     }

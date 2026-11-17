@@ -179,6 +179,7 @@ public final class PrivacyAuditDialog {
         options.emptyTelephonyIds = isAnySelected(report.threats, DetectedThreat.Category.HARDWARE_FINGERPRINT);
         options.neutralizeAdIds = isAnySelected(report.threats, DetectedThreat.Category.HARDWARE_FINGERPRINT);
         options.maskDeveloperMode = isAnySelected(report.threats, DetectedThreat.Category.SURVEILLANCE);
+        options.sinkholeTelemetryDomains = isAnySelected(report.threats, DetectedThreat.Category.TRACKER_SDK);
 
         File outFile = FileUtils.getUnusedFile(new File(apkFile.getParentFile(),
                 FilenameUtils.getBaseName(apkFile.getName()) + "_sanitized.apk"));
