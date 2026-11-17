@@ -2650,4 +2650,14 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="run_script">Run script</string>
     <string name="run_script_confirm">Do you want to run this script?\n\n%s</string>
     <string name="shell_mode_status">Working Mode: %s</string>
+    <string name="privacy_audit_title">Privacy &amp; Invasiveness Audit</string>
+    <string name="privacy_audit_desc">Scan and excise tracking SDKs, hardware IDs, and surveillance probes</string>
+    <string name="privacy_score_label">Invasiveness Risk Score: %1$d/100 (%2$s)</string>
+    <string name="privacy_sanitize_btn">Sanitize &amp; Patch</string>
+    <string name="privacy_done">APK sanitized! %1$d privacy mutations applied.</string>
+    <string name="privacy_no_threats">No invasive privacy threats or tracking calls were found.</string>
+    <string name="privacy_hw_score">Hardware Fingerprinting: %d/100</string>
+    <string name="privacy_track_score">Tracking &amp; Telemetry: %d/100</string>
+    <string name="privacy_surv_score">Surveillance &amp; Probes: %d/100</string>
+    <string name="privacy_log_score">Debug Log Leaks: %d/100</string>
 </resources>
