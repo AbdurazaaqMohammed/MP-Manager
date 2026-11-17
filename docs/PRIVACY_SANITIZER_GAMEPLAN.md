@@ -100,9 +100,9 @@ The engine selects the minimal valid instruction format matching the register in
 
 ## Verification & Staging Matrix
 
-| Stage | Unit Tests | Build Command | Output Release Artifact |
-| :--- | :--- | :--- | :--- |
-| **Stage 1** | `PrivacyBytecodeEngineTest` | `./gradlew assembleFullRelease` | `app-stage1-release.apk` |
-| **Stage 2** | `PrivacyScannerEngineTest` | `./gradlew assembleFullRelease` | `app-stage2-release.apk` |
-| **Stage 3** | `PrivacyAuditUiTest` | `./gradlew assembleFullRelease` | `app-stage3-release.apk` |
-| **Stage 4** | `DomainSinkholeTest` | `./gradlew assembleFullRelease` | `app-stage4-release.apk` |
+| Stage | Unit Tests | Build Command | Output Release Artifact | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Stage 1** | `PrivacyBytecodeEngineTest` | `./gradlew :app:testFullDebugUnitTest` | [`stage-1` Release](https://github.com/1456319/MP-Manager/releases/tag/stage-1) | **Released** |
+| **Stage 2** | `PrivacyScannerEngineTest` | `./gradlew :app:testFullDebugUnitTest` | [`stage-2` Release](https://github.com/1456319/MP-Manager/releases/tag/stage-2) | **Released** |
+| **Stage 3** | `PrivacyBytecodeEngineTest` | `./gradlew :app:testFullDebugUnitTest` | [`stage-3` Release](https://github.com/1456319/MP-Manager/releases/tag/stage-3) | **Released** |
+| **Stage 4** | `DomainSinkholeTest` | `./gradlew :app:testFullDebugUnitTest` | [`stage-4` Release](https://github.com/1456319/MP-Manager/releases/tag/stage-4) | **Building in CI** |
