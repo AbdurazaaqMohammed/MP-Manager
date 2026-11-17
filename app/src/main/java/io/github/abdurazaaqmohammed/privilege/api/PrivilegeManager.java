@@ -407,6 +407,12 @@ public final class PrivilegeManager {
 
         public static boolean isRootFileOpsEnabled(Context context) { return RootManager.getInstance(context).isRootFileOpsEnabled(); }
 
+        public static boolean isSilentInstallEnabled(Context context) { return RootManager.getInstance(context).isSilentInstallEnabled(); }
+
+        public static boolean isRootExtractorEnabled(Context context) { return RootManager.getInstance(context).isRootExtractorEnabled(); }
+
+        public static boolean autoEnableRootIfAvailable(Context context) { return RootManager.getInstance(context).autoEnableRootIfAvailable(); }
+
         public static String suBinary(Context context) { return RootManager.getInstance(context).suBinary(); }
 
         public static ShellSession.ShellResult execute(Context context, String command) { return RootManager.getInstance(context).execute(command); }
@@ -430,6 +436,30 @@ public final class PrivilegeManager {
         public static File[] listRootFilesWithStat(Context context, String dirPath) { return RootManager.getInstance(context).listRootFilesWithStat(dirPath); }
 
         public static void invalidateListCache(Context context) { RootManager.getInstance(context).invalidateListCache(); }
+
+        public static void refreshRootCache(Context context) { RootManager.getInstance(context).refreshRootCache(); }
+
+        public static boolean exists(Context context, String path) { return RootManager.getInstance(context).exists(path); }
+
+        public static void deleteFile(Context context, String path) throws IOException { RootManager.getInstance(context).deleteFile(path); }
+
+        public static void chmodFs(Context context, String path, String mode) throws IOException { RootManager.getInstance(context).chmodFs(path, mode); }
+
+        public static void copyFile(Context context, String src, String dest) throws IOException { RootManager.getInstance(context).copyFile(src, dest); }
+
+        public static void clearAppData(Context context, String packageName) throws IOException { RootManager.getInstance(context).clearAppData(packageName); }
+
+        public static void forceStopApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).forceStopApp(packageName); }
+
+        public static void enableApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).enableApp(packageName); }
+
+        public static void disableApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).disableApp(packageName); }
+
+        public static String getAppUid(Context context, String packageName) { return RootManager.getInstance(context).getAppUid(packageName); }
+
+        public static List<String> getAppApkPaths(Context context, String packageName) { return RootManager.getInstance(context).getAppApkPaths(packageName); }
+
+        public static List<String> getAppDataDirs(Context context, String packageName) { return RootManager.getInstance(context).getAppDataDirs(packageName); }
 
         public static long streamFromRoot(Context context, String srcPath, OutputStream out, long maxBytes) throws IOException { return RootManager.getInstance(context).streamFromRoot(srcPath, out, maxBytes); }
 
@@ -500,6 +530,16 @@ public final class PrivilegeManager {
         public static List<DirectoryStats> stats(Context context, List<String> paths, TransferControl control, long timeoutMs) { return NativeRootManager.stats(context, paths, control, timeoutMs); }
 
         public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) { return NativeRootManager.sizes(context, paths, timeoutMs); }
+
+        public static FileUtils.Measure scan(Context context, String path) { return NativeRootManager.scan(context, path); }
+
+        public static FileUtils.MeasureSet scan(Context context, List<String> paths) { return NativeRootManager.scan(context, paths); }
+
+        public static File jpegtranBinary(Context context) { return NativeToolManager.jpegtranBinary(context); }
+
+        public static String diagnoseExec(Context context) { return NativeToolManager.diagnoseExec(context); }
+
+        public static boolean setExecutableChecked(File f) { return NativeToolManager.setExecutableChecked(f); }
 
     }
 }
