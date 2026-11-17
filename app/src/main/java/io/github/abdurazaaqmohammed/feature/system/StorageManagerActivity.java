@@ -78,6 +78,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class StorageManagerActivity extends BaseActivity {
@@ -462,7 +463,7 @@ public class StorageManagerActivity extends BaseActivity {
             };
             StringBuilder script = new StringBuilder("rm -rf");
             for (String dir : dirs) {
-                script.append(' ').append(RootManager.escapeShellArg(dir));
+                script.append(' ').append(ShellQuote.escapeShellArg(dir));
             }
             script.append(" 2>/dev/null; ec=$?; echo RM_EXIT=$ec");
             RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
@@ -1184,11 +1185,11 @@ public class StorageManagerActivity extends BaseActivity {
                             };
                             StringBuilder script = new StringBuilder("rm -rf");
                             for (String dir : dirs) {
-                                script.append(' ').append(RootManager.escapeShellArg(dir));
+                                script.append(' ').append(ShellQuote.escapeShellArg(dir));
                             }
                             script.append(" 2>/dev/null; ec=$?; ");
                             for (String dir : dirs) {
-                                script.append("if [ -e ").append(RootManager.escapeShellArg(dir)).append(" ] || [ -L ").append(RootManager.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(RootManager.escapeShellArg(dir)).append("; fi; ");
+                                script.append("if [ -e ").append(ShellQuote.escapeShellArg(dir)).append(" ] || [ -L ").append(ShellQuote.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(ShellQuote.escapeShellArg(dir)).append("; fi; ");
                             }
                             script.append("echo RM_EXIT=$ec");
                             RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
@@ -1214,7 +1215,7 @@ public class StorageManagerActivity extends BaseActivity {
                     }
                     if (!failures.isEmpty()) {
                         try {
-                            RootManager.ShellResult diag = rm.executeFs("id; ls -ld " + RootManager.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
+                            RootManager.ShellResult diag = rm.executeFs("id; ls -ld " + ShellQuote.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
                             String extra = diag.output() == null ? "" : diag.output().trim();
                             String derr = diag.error() == null ? "" : diag.error().trim();
                             if (!derr.isEmpty()) extra = (extra + " " + derr).trim();

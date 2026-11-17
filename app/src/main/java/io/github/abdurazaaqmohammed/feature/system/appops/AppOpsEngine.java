@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 public class AppOpsEngine {
 
@@ -220,12 +222,12 @@ public class AppOpsEngine {
         // Query Exact Runtime Permissions via dumpsys package (also carries the
         // app's own primaryCpuAbi, which is what "Primary ABI" should show —
         // Build.SUPPORTED_ABIS[0] is the device ABI, not the app's)
-        String dumpsysPkg = execElevated(context, "dumpsys package " + RootManager.escapeShellArg(packageName)).output();
+        String dumpsysPkg = execElevated(context, "dumpsys package " + ShellQuote.escapeShellArg(packageName)).output();
         Map<String, Boolean> dumpsysPerms = parseDumpsysPermissions(dumpsysPkg);
         data.primaryAbi = parsePrimaryAbi(dumpsysPkg);
 
         // Query Battery & Standby bucket via shell
-        String bucketOut = execElevated(context, "am get-standby-bucket " + RootManager.escapeShellArg(packageName)).output().trim();
+        String bucketOut = execElevated(context, "am get-standby-bucket " + ShellQuote.escapeShellArg(packageName)).output().trim();
         data.standbyBucket = parseStandbyBucket(bucketOut);
 
         String whiteListOut = execElevated(context, "dumpsys deviceidle whitelist").output();
@@ -236,13 +238,13 @@ public class AppOpsEngine {
         data.isNetworkBlocked = isUidInNetPolicyList(netPolicyOut, data.uid);
 
         // Query Real AppOps via shell (cmd appops get)
-        Map<String, String[]> opsMap = parseAppOpsOutput(execElevated(context, "cmd appops get " + RootManager.escapeShellArg(packageName)).output());
+        Map<String, String[]> opsMap = parseAppOpsOutput(execElevated(context, "cmd appops get " + ShellQuote.escapeShellArg(packageName)).output());
 
         // Query Kernel/Uid AppOps via dumpsys appops (The Real Hidden Layer!)
         // Scoped to this package: the unscoped dump is megabytes on real
         // devices, and the scoped one lists only this app's ops.
         Map<String, String> uidOpsMap = parseUidOpsFromDumpsys(
-                execElevated(context, "dumpsys appops " + RootManager.escapeShellArg(packageName)).output(), data.uid);
+                execElevated(context, "dumpsys appops " + ShellQuote.escapeShellArg(packageName)).output(), data.uid);
 
         // System Permissions (Special access)
         addSystemSpecialPermissions(data, packageName, opsMap, uidOpsMap);
@@ -681,8 +683,8 @@ public class AppOpsEngine {
 
     public static boolean setAppOpMode(Context context, String packageName, String opName, String mode, boolean applyUidMode) {
         if (!isPackageNameValid(packageName) || TextUtils.isEmpty(opName) || TextUtils.isEmpty(mode)) return false;
-        String pkg = RootManager.escapeShellArg(packageName);
-        String op = RootManager.escapeShellArg(opName);
+        String pkg = ShellQuote.escapeShellArg(packageName);
+        String op = ShellQuote.escapeShellArg(opName);
         String m = mode.toLowerCase();
         RootManager.ShellResult r = execElevated(context,
                 "cmd appops set " + pkg + " " + op + " " + m, WRITE_TIMEOUT_SECONDS);
@@ -699,14 +701,14 @@ public class AppOpsEngine {
         if (!isPackageNameValid(packageName) || TextUtils.isEmpty(permName)) return false;
         String action = grant ? "pm grant " : "pm revoke ";
         return execElevated(context,
-                action + RootManager.escapeShellArg(packageName) + " " + RootManager.escapeShellArg(permName),
+                action + ShellQuote.escapeShellArg(packageName) + " " + ShellQuote.escapeShellArg(permName),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
     public static boolean setStandbyBucket(Context context, String packageName, String bucket) {
         if (!isPackageNameValid(packageName) || TextUtils.isEmpty(bucket)) return false;
         return execElevated(context,
-                "am set-standby-bucket " + RootManager.escapeShellArg(packageName) + " " + bucket.toLowerCase(),
+                "am set-standby-bucket " + ShellQuote.escapeShellArg(packageName) + " " + bucket.toLowerCase(),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
@@ -714,7 +716,7 @@ public class AppOpsEngine {
         if (!isPackageNameValid(packageName)) return false;
         String sign = ignore ? "+" : "-";
         return execElevated(context,
-                "dumpsys deviceidle whitelist " + sign + RootManager.escapeShellArg(packageName),
+                "dumpsys deviceidle whitelist " + sign + ShellQuote.escapeShellArg(packageName),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
@@ -729,30 +731,30 @@ public class AppOpsEngine {
     public static boolean forceStopApp(Context context, String packageName) {
         if (!isPackageNameValid(packageName)) return false;
         return execElevated(context,
-                "am force-stop " + RootManager.escapeShellArg(packageName),
+                "am force-stop " + ShellQuote.escapeShellArg(packageName),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
     public static boolean suspendApp(Context context, String packageName, boolean suspend) {
-        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
         String flag = suspend ? "--suspend " : "--unsuspend ";
         return execElevated(context,
-                "pm suspend " + flag + RootManager.escapeShellArg(packageName),
+                "pm suspend " + flag + ShellQuote.escapeShellArg(packageName),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
     public static boolean enableDisableApp(Context context, String packageName, boolean enable) {
-        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
         String action = enable ? "enable " : "disable-user --user 0 ";
         return execElevated(context,
-                "pm " + action + RootManager.escapeShellArg(packageName),
+                "pm " + action + ShellQuote.escapeShellArg(packageName),
                 WRITE_TIMEOUT_SECONDS).isSuccess();
     }
 
     public static boolean clearAppData(Context context, String packageName) {
-        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
         RootManager.ShellResult r = execElevated(context,
-                "pm clear " + RootManager.escapeShellArg(packageName), 120);
+                "pm clear " + ShellQuote.escapeShellArg(packageName), 120);
         return r.isSuccess() && r.output().toLowerCase().contains("success");
     }
 
@@ -762,9 +764,9 @@ public class AppOpsEngine {
      * for other users, and reporting success then makes the button a placebo.
      */
     public static boolean uninstallApp(Context context, String packageName) {
-        if (!isPackageNameValid(packageName) || RootManager.isCriticalPackage(packageName)) return false;
+        if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
         RootManager.ShellResult r = execElevated(context,
-                "pm uninstall " + RootManager.escapeShellArg(packageName), 120);
+                "pm uninstall " + ShellQuote.escapeShellArg(packageName), 120);
         if (!r.isSuccess()) return false;
         String out = r.output().toLowerCase();
         if (out.contains("failure")) return false;
@@ -781,6 +783,6 @@ public class AppOpsEngine {
     }
 
     private static boolean isPackageNameValid(String packageName) {
-        return RootManager.isPackageNameValid(packageName);
+        return PackageGuards.isPackageNameValid(packageName);
     }
 }

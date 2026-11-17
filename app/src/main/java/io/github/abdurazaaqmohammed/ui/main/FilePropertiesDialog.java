@@ -78,6 +78,7 @@ import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 public class FilePropertiesDialog {
 
@@ -480,7 +481,7 @@ public class FilePropertiesDialog {
             if (parent != null) {
                 try {
                     // Query available owners/groups in this directory using stat
-                    RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + RootManager.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
+                    RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + ShellQuote.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
                     if (result.isSuccess() && result.output() != null) {
                         for (String line : result.output().split("\\r?\\n")) {
                             line = line.trim();
@@ -512,7 +513,7 @@ public class FilePropertiesDialog {
                                 String selectedOwner = ownerList.get(checkedItem[0]);
                                 new Thread(() -> {
                                     try {
-                                        rm.executeFs("chown " + selectedOwner + " " + RootManager.escapeShellArg(file.getAbsolutePath()), 30);
+                                        rm.executeFs("chown " + selectedOwner + " " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 30);
                                         rm.invalidateListCache();
                                         context.handler.post(() -> {
                                             if (ownerView != null) ownerView.setText(selectedOwner);
@@ -1046,7 +1047,7 @@ public class FilePropertiesDialog {
                     if (PrivilegeManager.shizuku().isGranted()) {
                         ShellSession.Result res =
                                 PrivilegeManager.shizuku().exec(
-                                        "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+                                        "readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
                         if (res.success && res.stdout != null && !res.stdout.trim().isEmpty()) {
                             return res.stdout.trim();
                         }
@@ -1066,7 +1067,7 @@ public class FilePropertiesDialog {
         try {
             RootManager rm = RootManager.getInstance();
             if (rm != null && rm.isRootAvailable()) {
-                RootManager.ShellResult res = rm.executeFs("readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+                RootManager.ShellResult res = rm.executeFs("readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
                 if (res.isSuccess() && res.output() != null) {
                     String out = res.output().trim();
                     if (!out.isEmpty()) return out;
@@ -1108,7 +1109,7 @@ public class FilePropertiesDialog {
                             try {
                                 RootManager rm = RootManager.getInstance();
                                 if (rm != null && rm.isRootAvailable()) {
-                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
+                                    String cmd = "ln -snf " + ShellQuote.escapeShellArg(newTarget) + " " + ShellQuote.escapeShellArg(file.getAbsolutePath());
                                     RootManager.ShellResult res = rm.executeFs(cmd, 10);
                                     if (res.isSuccess()) {
                                         rm.invalidateListCache();
@@ -1120,7 +1121,7 @@ public class FilePropertiesDialog {
                         if (!updated) {
                             try {
                                 if (PrivilegeManager.shizuku().isGranted()) {
-                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
+                                    String cmd = "ln -snf " + ShellQuote.escapeShellArg(newTarget) + " " + ShellQuote.escapeShellArg(file.getAbsolutePath());
                                     ShellSession.Result res =
                                             PrivilegeManager.shizuku().exec(cmd, 10);
                                     if (res.success) {

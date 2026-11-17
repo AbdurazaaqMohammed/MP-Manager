@@ -50,6 +50,7 @@ import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -446,7 +447,7 @@ public class FridaConsoleActivity extends BaseActivity {
         File runSh = buildRunScript(pkg, script);
         appendConsole("$ su -c sh " + runSh.getAbsolutePath() + "\n");
         process = new ProcessBuilder(RootManager.getInstance(this).suBinary(), "-c",
-                "sh " + RootManager.quoteForSh(runSh.getAbsolutePath()))
+                "sh " + ShellQuote.quoteForSh(runSh.getAbsolutePath()))
                 .redirectErrorStream(true)
                 .start();
         setRunning(true);
@@ -497,11 +498,11 @@ public class FridaConsoleActivity extends BaseActivity {
         StringBuilder sb = new StringBuilder();
         sb.append("#!/system/bin/sh\n")
                 .append("mkdir -p ").append(REMOTE_DIR).append('\n')
-                .append("cp ").append(RootManager.quoteForSh(
+                .append("cp ").append(ShellQuote.quoteForSh(
                         FridaGadgetPatcher.injectBinary(this).getAbsolutePath()))
                 .append(' ').append(REMOTE_DIR).append("/inject\n")
                 .append("chmod 755 ").append(REMOTE_DIR).append("/inject\n")
-                .append("cp ").append(RootManager.quoteForSh(script.getAbsolutePath()))
+                .append("cp ").append(ShellQuote.quoteForSh(script.getAbsolutePath()))
                 .append(' ').append(REMOTE_DIR).append("/script.js\n");
         // pidof plus a ps fallback for ROMs without toybox pidof.
         sb.append("PID=$(pidof ").append(pkg).append(" 2>/dev/null)\n")

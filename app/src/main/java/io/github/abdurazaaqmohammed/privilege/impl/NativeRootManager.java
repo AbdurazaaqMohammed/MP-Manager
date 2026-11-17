@@ -11,6 +11,8 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 import android.content.Context;
 import android.os.Build;
@@ -178,8 +180,8 @@ public final class NativeRootManager {
         try {
             if (control != null) control.checkpoint();
             list = writePaths(context, paths);
-            String cmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(getMpioPath(context))
-                    + " scan --list " + RootManager.escapeShellArg(list.getPath());
+            String cmd = "echo MPIO_PID $$; exec " + ShellQuote.escapeShellArg(getMpioPath(context))
+                    + " scan --list " + ShellQuote.escapeShellArg(list.getPath());
             process = new ProcessBuilder(RootManager.suCommandForFs(context, cmd)).redirectErrorStream(true).start();
             Process running = process;
             watcher = new Thread(() -> {
@@ -247,8 +249,8 @@ public final class NativeRootManager {
                                ProgressCallback callback, TransferControl control) throws IOException {
         if (control != null) control.checkpoint();
         String mpio = getMpioPath(context);
-        String shellCmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(mpio)
-                + " copy " + RootManager.escapeShellArg(src) + " " + RootManager.escapeShellArg(dest);
+        String shellCmd = "echo MPIO_PID $$; exec " + ShellQuote.escapeShellArg(mpio)
+                + " copy " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest);
         String[] cmd = RootManager.suCommandForFs(context, shellCmd);
         Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
         return NativeCopyProcess.run(process, callback == null ? null : callback::onProgress, control,
@@ -274,7 +276,7 @@ public final class NativeRootManager {
                                  ProgressCallback callback, TransferControl control) throws IOException {
         List<String> nativePaths = new ArrayList<>();
         for (String path : paths) {
-            if (RootManager.isPathBlocked(path)) throw new NativeDeleteException("Blocked: refusing to delete " + path);
+            if (PathGuards.isPathBlocked(path)) throw new NativeDeleteException("Blocked: refusing to delete " + path);
         }
         final long[] done = {0L};
         for (String path : paths) {
@@ -302,8 +304,8 @@ public final class NativeRootManager {
         File list = null;
         try {
             list = writePaths(context, nativePaths);
-            String shellCmd = "echo MPIO_PID $$; exec " + RootManager.escapeShellArg(getMpioPath(context))
-                    + " delete --list " + RootManager.escapeShellArg(list.getPath());
+            String shellCmd = "echo MPIO_PID $$; exec " + ShellQuote.escapeShellArg(getMpioPath(context))
+                    + " delete --list " + ShellQuote.escapeShellArg(list.getPath());
             Process process = new ProcessBuilder(RootManager.suCommandForFs(context, shellCmd)).redirectErrorStream(true).start();
             long base = done[0];
             return NativeCopyProcess.runDelete(process, callback == null ? null

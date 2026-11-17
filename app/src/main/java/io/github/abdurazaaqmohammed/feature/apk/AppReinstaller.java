@@ -21,6 +21,8 @@ import java.util.Locale;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 /**
  * Uninstalls a package so an APK signed with a different key can take its
@@ -59,7 +61,7 @@ public final class AppReinstaller {
      */
     @NonNull
     public static String backupDataOrThrow(Context context, String packageName) throws IOException {
-        if (packageName == null || RootManager.isPathBlocked(packageName)) {
+        if (packageName == null || PathGuards.isPathBlocked(packageName)) {
             throw new IOException("Package name is null or blocked: " + packageName);
         }
         RootManager rm;
@@ -77,7 +79,7 @@ public final class AppReinstaller {
         String archive = "/data/local/tmp/" + tag + ".tar";
 
         // Force-stop app first to release sqlite and file locks
-        rm.executeFs("am force-stop " + RootManager.escapeShellArg(packageName), 15);
+        rm.executeFs("am force-stop " + ShellQuote.escapeShellArg(packageName), 15);
 
         // Check if data directory exists using filesystem root check (supports global namespace)
         String baseDir = "/data/user/0";
@@ -87,7 +89,7 @@ public final class AppReinstaller {
             dir = baseDir + "/" + packageName;
             if (!rm.isDirectory(dir)) {
                 // If isDirectory returned false, run a final direct shell probe before aborting
-                RootManager.ShellResult probe = rm.executeFs("( [ -e " + RootManager.escapeShellArg(dir) + " ] || ls -d " + RootManager.escapeShellArg(dir) + " ) 2>/dev/null", 15);
+                RootManager.ShellResult probe = rm.executeFs("( [ -e " + ShellQuote.escapeShellArg(dir) + " ] || ls -d " + ShellQuote.escapeShellArg(dir) + " ) 2>/dev/null", 15);
                 if (!probe.isSuccess() || probe.output() == null || probe.output().trim().isEmpty()) {
                     String err = "Data directory does not exist or cannot be accessed: " + dir;
                     Log.e(TAG, "backupData dir check failed: " + err);
@@ -98,11 +100,11 @@ public final class AppReinstaller {
 
         // Exclude cache and code_cache to prevent locks on transient files and avoid out-of-space errors
         String tarCmd = "tar -C " + baseDir + " --exclude cache --exclude code_cache -cf "
-                + RootManager.escapeShellArg(archive) + " " + RootManager.escapeShellArg(packageName);
+                + ShellQuote.escapeShellArg(archive) + " " + ShellQuote.escapeShellArg(packageName);
         RootManager.ShellResult result = rm.executeFs(tarCmd, 180);
         
         // Check if archive was successfully created and is non-empty
-        RootManager.ShellResult checkArchive = rm.executeFs("test -s " + RootManager.escapeShellArg(archive), 15);
+        RootManager.ShellResult checkArchive = rm.executeFs("test -s " + ShellQuote.escapeShellArg(archive), 15);
         if (!checkArchive.isSuccess()) {
             String err = result.error().isEmpty() ? (result.output().isEmpty() ? "tar exited with code " + result.exitCode() : result.output()) : result.error();
             Log.e(TAG, "backupData tar command failed: " + err + " (exit: " + result.exitCode() + ")");
@@ -138,10 +140,10 @@ public final class AppReinstaller {
                 return null;
             }
             RootManager.ShellResult r = rm.executeFs(
-                    "stat -c %u:%g /data/user/0/" + RootManager.escapeShellArg(packageName), 20);
+                    "stat -c %u:%g /data/user/0/" + ShellQuote.escapeShellArg(packageName), 20);
             if (!r.isSuccess() || r.output() == null) {
                 // Try fallback to /data/data
-                r = rm.executeFs("stat -c %u:%g /data/data/" + RootManager.escapeShellArg(packageName), 20);
+                r = rm.executeFs("stat -c %u:%g /data/data/" + ShellQuote.escapeShellArg(packageName), 20);
                 if (!r.isSuccess() || r.output() == null) {
                     Log.w(TAG, "readDataOwner stat failed: " + r.error() + " (exit: " + r.exitCode() + ")");
                     return null;
@@ -177,14 +179,14 @@ public final class AppReinstaller {
         }
 
         StringBuilder cmd = new StringBuilder();
-        cmd.append("am force-stop ").append(RootManager.escapeShellArg(packageName)).append(" ; ");
-        cmd.append("tar -C /data/user/0 -xf ").append(RootManager.escapeShellArg(archive))
-                .append(" ").append(RootManager.escapeShellArg(packageName)).append(" ; ");
+        cmd.append("am force-stop ").append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
+        cmd.append("tar -C /data/user/0 -xf ").append(ShellQuote.escapeShellArg(archive))
+                .append(" ").append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
         if (owner != null && owner.contains(":")) {
             cmd.append("chown -R ").append(owner).append(" /data/user/0/")
-                    .append(RootManager.escapeShellArg(packageName)).append(" ; ");
+                    .append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
         }
-        cmd.append("restorecon -RF /data/user/0/").append(RootManager.escapeShellArg(packageName));
+        cmd.append("restorecon -RF /data/user/0/").append(ShellQuote.escapeShellArg(packageName));
 
         RootManager.ShellResult r = rm.executeFs(cmd.toString(), 300);
         if (!r.isSuccess()) {
@@ -209,7 +211,7 @@ public final class AppReinstaller {
     public static void deleteBackup(Context context, String archive) {
         if (archive == null) return;
         try {
-            RootManager.getInstance(context).execute("rm -f " + RootManager.escapeShellArg(archive), 30);
+            RootManager.getInstance(context).execute("rm -f " + ShellQuote.escapeShellArg(archive), 30);
         } catch (Throwable t) {
             Log.w(TAG, "deleteBackup failed to remove: " + archive, t);
         }
@@ -229,14 +231,14 @@ public final class AppReinstaller {
                 if (rm.isRootAvailable()) {
                     // Try full uninstall first to clear package signature completely across system
                     RootManager.ShellResult r = rm.execute(
-                            "pm uninstall " + RootManager.escapeShellArg(packageName), 120);
+                            "pm uninstall " + ShellQuote.escapeShellArg(packageName), 120);
                     String out = r.output();
                     if (r.isSuccess() && out != null && out.toLowerCase(Locale.ROOT).contains("success")) {
                         done = true;
                     } else {
                         // Fallback to --user 0 if multi-user or system restrictions require it
                         RootManager.ShellResult rUser0 = rm.execute(
-                                "pm uninstall --user 0 " + RootManager.escapeShellArg(packageName), 120);
+                                "pm uninstall --user 0 " + ShellQuote.escapeShellArg(packageName), 120);
                         String outUser0 = rUser0.output();
                         if (rUser0.isSuccess() && outUser0 != null && outUser0.toLowerCase(Locale.ROOT).contains("success")) {
                             done = true;
@@ -252,7 +254,7 @@ public final class AppReinstaller {
                 try {
                     if (PrivilegeManager.shizuku().isGranted()) {
                         ShellSession.Result r = PrivilegeManager.shizuku().exec(
-                                "pm uninstall --user 0 " + RootManager.escapeShellArg(packageName), 120);
+                                "pm uninstall --user 0 " + ShellQuote.escapeShellArg(packageName), 120);
                         if (r != null && r.success && r.stdout != null
                                 && r.stdout.toLowerCase(Locale.ROOT).contains("success")) {
                             done = true;

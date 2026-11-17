@@ -36,6 +36,8 @@ import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 import com.faith.apkinstaller.APKInstallService;
 
@@ -253,8 +255,8 @@ public final class PrivilegedInstaller {
                 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             sb.append(" --bypass-low-target-sdk-block");
         }
-        if (installerPkg != null && RootManager.isPackageNameValid(installerPkg)) {
-            sb.append(" -i ").append(RootManager.escapeShellArg(installerPkg));
+        if (installerPkg != null && PackageGuards.isPackageNameValid(installerPkg)) {
+            sb.append(" -i ").append(ShellQuote.escapeShellArg(installerPkg));
         }
         // Sessions default to installLocation INTERNAL_ONLY, which makes
         // PackageManager reject the create at once with "Requested internal
@@ -356,8 +358,8 @@ public final class PrivilegedInstaller {
                 // 1) push staged files where pm can read them
                 StringBuilder push = new StringBuilder();
                 for (int k = 0; k < stagedPaths.size(); k++) {
-                    push.append("cp ").append(RootManager.escapeShellArg(stagedPaths.get(k)))
-                            .append(" ").append(RootManager.escapeShellArg(tmpPaths.get(k)))
+                    push.append("cp ").append(ShellQuote.escapeShellArg(stagedPaths.get(k)))
+                            .append(" ").append(ShellQuote.escapeShellArg(tmpPaths.get(k)))
                             .append(" ; ");
                 }
                 ShizukuShell.Result pushRes = ShizukuShell.exec(push.toString(), 120);
@@ -409,7 +411,7 @@ public final class PrivilegedInstaller {
                 for (int k = 0; k < staged.size(); k++) {
                     String write = "pm install-write -S " + staged.get(k).length()
                             + " " + session + " " + staged.get(k).getName() + " "
-                            + RootManager.escapeShellArg(tmpPaths.get(k));
+                            + ShellQuote.escapeShellArg(tmpPaths.get(k));
                     ShizukuShell.Result w = ShizukuShell.exec(write, 120);
                     if (!w.success) {
                         ShizukuShell.exec("pm install-abandon " + session, 15);
@@ -423,7 +425,7 @@ public final class PrivilegedInstaller {
                 // Always clear /data/local/tmp, even when a write or commit failed.
                 StringBuilder cleanup = new StringBuilder();
                 for (String tmp : tmpPaths)
-                    cleanup.append("rm -f ").append(RootManager.escapeShellArg(tmp)).append(" ; ");
+                    cleanup.append("rm -f ").append(ShellQuote.escapeShellArg(tmp)).append(" ; ");
                 ShizukuShell.exec(cleanup.toString(), 15);
             }
         } finally {
@@ -491,7 +493,7 @@ public final class PrivilegedInstaller {
             params.setSize(totalSize);
         }
         if (targetPackage != null && !targetPackage.trim().isEmpty()
-                && RootManager.isPackageNameValid(targetPackage)) {
+                && PackageGuards.isPackageNameValid(targetPackage)) {
             try {
                 params.setAppPackageName(targetPackage);
             } catch (Exception ignored) {
@@ -526,7 +528,7 @@ public final class PrivilegedInstaller {
                     new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
             retry.setSize(totalSize);
             if (targetPackage != null && !targetPackage.trim().isEmpty()
-                    && RootManager.isPackageNameValid(targetPackage)) {
+                    && PackageGuards.isPackageNameValid(targetPackage)) {
                 try {
                     retry.setAppPackageName(targetPackage);
                 } catch (Exception ignored) {

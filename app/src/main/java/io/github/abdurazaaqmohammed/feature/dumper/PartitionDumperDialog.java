@@ -55,7 +55,7 @@ import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /** Themed partition browser; destructive operations are always separately confirmed. */
@@ -330,7 +330,7 @@ public final class PartitionDumperDialog {
                     output = FileUtils.getUnusedFile(new File(directory, filename != null ? filename : item.outputFileName));
                     while (!output.createNewFile()) output = FileUtils.getUnusedFile(output);
                     reserved = true;
-                    process = root("cat " + RootManager.escapeShellArg(item.blockPath));
+                    process = root("cat " + ShellQuote.escapeShellArg(item.blockPath));
                     StringBuilder errors = new StringBuilder();
                     Thread drain = drainErrors(process, errors);
                     long copied = 0;
@@ -478,7 +478,7 @@ public final class PartitionDumperDialog {
                 if (image.length() != length || image.lastModified() != modified)
                     throw new IOException(activity.getString(R.string.partition_image_changed));
                 for (PartitionItem target : targets) {
-                    Process process = root("dd of=" + RootManager.escapeShellArg(target.blockPath) + " bs=1048576 conv=fsync");
+                    Process process = root("dd of=" + ShellQuote.escapeShellArg(target.blockPath) + " bs=1048576 conv=fsync");
                     try {
                         StringBuilder errors = new StringBuilder();
                         Thread drain = drainErrors(process, errors);

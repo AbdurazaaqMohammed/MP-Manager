@@ -170,6 +170,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -2002,7 +2003,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
-        boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
+        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath);
         if (rootListingPath && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT && PrivilegeManager.Files.fileOpsOn(this)) {
             files = PrivilegeManager.Files.listWithStat(this, folder.getAbsolutePath());
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);

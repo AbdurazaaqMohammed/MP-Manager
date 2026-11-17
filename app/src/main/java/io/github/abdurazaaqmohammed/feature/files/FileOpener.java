@@ -149,6 +149,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -1674,7 +1675,7 @@ public class FileOpener {
             try {
                 if (asRoot) {
                     RootManager.ShellResult r = RootManager.getInstance(context).execute(
-                            "sh " + RootManager.escapeShellArg(script.getAbsolutePath()), 120);
+                            "sh " + ShellQuote.escapeShellArg(script.getAbsolutePath()), 120);
                     exitCode = r.exitCode();
                     out = r.output();
                     err = r.error();
@@ -2103,7 +2104,7 @@ public class FileOpener {
     private long getRootFolderSize(String path) {
         try {
             if (!PrivilegeManager.Files.fileOpsOn(context)) return 0;
-            String cmd = "du -sb " + RootManager.escapeShellArg(path);
+            String cmd = "du -sb " + ShellQuote.escapeShellArg(path);
             String out = null;
             if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
                 RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);

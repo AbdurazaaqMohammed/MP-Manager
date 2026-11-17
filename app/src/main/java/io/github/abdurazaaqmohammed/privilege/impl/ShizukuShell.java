@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Context;
@@ -19,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuProcessFactory;
 import rikka.shizuku.ShizukuProvider;
@@ -140,7 +140,7 @@ public final class ShizukuShell {
 
     /**
      * Run a command via Shizuku's shell process. Arguments must already be escaped
-     * (see {@link RootManager#escapeShellArg}).
+     * (see {@link ShellQuote#escapeShellArg}).
      */
     public static Result exec(String command) {
         return exec(command, DEFAULT_TIMEOUT_SECONDS);

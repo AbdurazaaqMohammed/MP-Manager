@@ -35,6 +35,8 @@ import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuFileService;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import rikka.shizuku.Shizuku;
 
 public final class ShizukuManager {
@@ -181,7 +183,7 @@ public final class ShizukuManager {
     }
 
     private static String shellArg(String path) {
-        return RootManager.escapeShellArg(path);
+        return ShellQuote.escapeShellArg(path);
     }
 
     /** Directory listing over the shell, in the same shape {@link #listWithStat} returns. */
@@ -239,7 +241,7 @@ public final class ShizukuManager {
     private static boolean deleteViaShell(String path) {
         try {
             if (!ready()) return false;
-            if (RootManager.isPathBlocked(path)) return false;
+            if (PathGuards.isPathBlocked(path)) return false;
             String arg = shellArg(path);
             // rm followed by an existence probe, so a silent FUSE refusal is
             // not reported as success (rm -rf exits 0 when nothing matched).
@@ -393,7 +395,7 @@ public final class ShizukuManager {
     private static boolean shellTest(String path, String op) {
         try {
             if (!ShizukuShell.isGranted()) return false;
-            return ShizukuShell.exec("[ " + op + " " + RootManager.escapeShellArg(path) + " ]", 15).success;
+            return ShizukuShell.exec("[ " + op + " " + ShellQuote.escapeShellArg(path) + " ]", 15).success;
         } catch (Throwable e) {
             return false;
         }
@@ -402,7 +404,7 @@ public final class ShizukuManager {
     private static long shellStat(String path, String format) {
         try {
             if (!ShizukuShell.isGranted()) return -1;
-            ShizukuShell.Result r = ShizukuShell.exec("stat -c " + format + " " + RootManager.escapeShellArg(path), 15);
+            ShizukuShell.Result r = ShizukuShell.exec("stat -c " + format + " " + ShellQuote.escapeShellArg(path), 15);
             if (r == null || !r.success || r.stdout == null) return -1;
             return Long.parseLong(r.stdout.trim().split("\\s+")[0]);
         } catch (Throwable e) {
@@ -412,9 +414,9 @@ public final class ShizukuManager {
 
     public static boolean touchMtimeShell(String path, long millis) {
         try {
-            if (RootManager.isPathBlocked(path)) return false;
+            if (PathGuards.isPathBlocked(path)) return false;
             long secs = millis / 1000L;
-            return ShizukuShell.exec("touch -d @" + secs + " " + RootManager.escapeShellArg(path), 15).success;
+            return ShizukuShell.exec("touch -d @" + secs + " " + ShellQuote.escapeShellArg(path), 15).success;
         } catch (Throwable e) {
             return false;
         }
@@ -422,7 +424,7 @@ public final class ShizukuManager {
 
     public static long streamFromShell(String srcPath, OutputStream out, long maxBytes) throws IOException {
         if (srcPath == null || srcPath.isEmpty()) throw new IOException("No source path");
-        String arg = RootManager.escapeShellArg(srcPath);
+        String arg = ShellQuote.escapeShellArg(srcPath);
         // `-e` only tests the directory entry, not read access: a path the shell
         // can stat but not read (many /vendor and /odm files) used to fail later
         // as an opaque "exit 1" from cat.
@@ -453,10 +455,10 @@ public final class ShizukuManager {
         if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
             throw new IOException("Staged file unreadable");
         }
-        if (RootManager.isPathBlocked(dstPath)) throw new IOException("Blocked: refusing to write critical path");
+        if (PathGuards.isPathBlocked(dstPath)) throw new IOException("Blocked: refusing to write critical path");
         ShizukuShell.Result r = ShizukuShell.exec(
-                "cat " + RootManager.escapeShellArg(localSrc.getAbsolutePath())
-                        + " > " + RootManager.escapeShellArg(dstPath), 120);
+                "cat " + ShellQuote.escapeShellArg(localSrc.getAbsolutePath())
+                        + " > " + ShellQuote.escapeShellArg(dstPath), 120);
         if (r == null || !r.success) {
             String err = r == null ? "failed" : (r.stderr == null || r.stderr.isEmpty() ? r.stdout : r.stderr);
             throw new IOException(err == null || err.isEmpty() ? "Shell write failed" : err.trim());
@@ -764,12 +766,12 @@ public final class ShizukuManager {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
-            if (RootManager.isPathBlocked(src)) {
+            if (PathGuards.isPathBlocked(src)) {
                 throw new IOException("Refusing to move protected path");
             }
             if (useShell(src) || useShell(dest)) {
                 shell.append(" && ");
-                if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
+                if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
                     shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
                 }
                 File destParent = new File(dest).getParentFile();
@@ -852,7 +854,7 @@ public final class ShizukuManager {
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
             if (useShell(src) || useShell(dest)) {
                 shell.append(" && ");
-                if (op.destExists && op.directory && !RootManager.isPathBlocked(dest)) {
+                if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
                     shell.append("rm -rf ").append(shellArg(dest)).append(" && ");
                 }
                 File destParent = new File(dest).getParentFile();
@@ -928,7 +930,7 @@ public final class ShizukuManager {
 
     public static void delete(Context context, String path) throws IOException {
         if (useShell(path)) {
-            if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+            if (PathGuards.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
             throwIfShellFails("rm -rf " + shellArg(path), "delete", 120);
             return;
         }
@@ -972,7 +974,7 @@ public final class ShizukuManager {
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
             if (useShell(path)) {
-                if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+                if (PathGuards.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
                 shellPaths.add(path);
             } else {
                 requireAllowed(path);
@@ -1058,7 +1060,7 @@ public final class ShizukuManager {
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
             if (useShell(path)) {
-                if (RootManager.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
+                if (PathGuards.isPathBlocked(path)) throw new IOException("Blocked: refusing to delete critical path");
                 shellPaths.add(path);
             } else {
                 requireAllowed(path);

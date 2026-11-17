@@ -8,9 +8,12 @@ import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -29,15 +32,12 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.nio.charset.StandardCharsets;
@@ -55,76 +55,8 @@ public class RootManager {
     private BufferedReader suStdout;
     private final Object lock = new Object();
 
-    private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-:]+$");
     /** Shared with {@link ShizukuManager}, whose shell fallback parses the same output. */
     static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
-
-    // Directories that should never be deleted (absolute block)
-    private static final Set<String> BLOCKED_DELETE_PATHS = new HashSet<>(Arrays.asList(
-            "/", "/system", "/system_ext", "/vendor", "/product", "/odm", "/oem",
-            "/boot", "/recovery", "/sbin", "/proc", "/sys", "/dev",
-            "/cache", "/tmp", "/mnt", "/storage",
-            "/data", "/data/data", "/data/user", "/data/user_de",
-            "/data/system", "/data/app", "/data/dalvik-cache",
-            "/sdcard"
-    ));
-
-    // Key directories: deletion is allowed but requires extra confirmation
-    private static final Set<String> KEY_DIRECTORIES = new HashSet<>(Arrays.asList(
-            "/data/data", "/data/user", "/data/user_de",
-            "/data/system", "/data/system/packages.xml",
-            "/system/build.prop", "/system/etc/hosts"
-    ));
-
-    // System-critical apps that must not be uninstalled
-    private static final Set<String> CRITICAL_PACKAGES = new HashSet<>(Arrays.asList(
-            "com.android.systemui",
-            "com.android.settings",
-            "com.android.providers.settings",
-            "com.android.providers.media",
-            "com.android.providers.telephony",
-            "com.android.phone",
-            "com.android.server.telecom",
-            "com.android.dialer",
-            "com.android.launcher3",
-            "com.android.launcher",
-            "com.android.inputmethod.latin",
-            "com.android.keychain",
-            "com.android.packageinstaller",
-            "com.android.permissioncontroller",
-            "com.android.vending",
-            "com.android.gms",
-            "com.google.android.gms",
-            "com.google.android.gsf",
-            "com.google.android.gsf.login",
-            "com.android.shell",
-            "com.android.providers.downloads",
-            "com.android.documentsui",
-            "com.android.nfc",
-            "com.android.bluetooth",
-            "com.android.bluetoothideoserver",
-            "com.android.wifi",
-            "com.android.connectivitymanager",
-            "com.android.networkstack",
-            "com.android.networkstack.tethering",
-            "android",
-            "com.android.captiveportallogin",
-            "com.android.storagemanager",
-            "com.android.emergency",
-            "com.android.apps.tag",
-            "com.android.se",
-            "com.android.wallpaperbackup",
-            "com.android.wallpapercropper",
-            "com.android.printspooler",
-            "com.android.managedprovisioning",
-            "com.android.hotspot2.osulolauncher",
-            "com.android.internal.systemui.navbar.gestural",
-            "com.android.internal.systemui.navbar.threebutton",
-            "com.android.internal.systemui.navbar.twobutton",
-            "com.android.internal.systemui.navbar.gestural_wide_back",
-            "com.android.internal.systemui.navbar.gestural_narrow_back",
-            "com.android.internal.systemui.navbar.gestural_extra_wide_back"
-    ));
 
     private RootManager(Context context) {
         this.context = context.getApplicationContext();
@@ -272,39 +204,6 @@ public class RootManager {
         } finally {
             if (process != null) process.destroy();
         }
-    }
-
-    public static String escapeShellArg(String arg) {
-        if (arg == null) return "";
-        if (SAFE_ARG.matcher(arg).matches()) return arg;
-        return "'" + arg.replace("'", "'\\''") + "'";
-    }
-
-    public static boolean isPathBlocked(String path) {
-        if (path == null) return true;
-        String normalized = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
-        return BLOCKED_DELETE_PATHS.contains(normalized);
-    }
-
-    public static boolean isPathInKeyDirectory(String path) {
-        if (path == null) return false;
-        String normalized = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
-        for (String key : KEY_DIRECTORIES) {
-            if (normalized.equals(key) || normalized.startsWith(key + "/")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static boolean isCriticalPackage(String packageName) {
-        if (packageName == null) return true;
-        return CRITICAL_PACKAGES.contains(packageName);
-    }
-
-    public static boolean isPackageNameValid(String packageName) {
-        if (packageName == null || packageName.isEmpty()) return false;
-        return packageName.matches("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)*$");
     }
 
     public static boolean isChmodModeValid(String mode) {
@@ -473,11 +372,6 @@ public class RootManager {
         }
     }
 
-    public static String quoteForSh(String s) {
-        if (s == null) return "''";
-        return "'" + s.replace("'", "'\\''") + "'";
-    }
-
     public static String[] suCommandForFs(Context context, String shellCommand) {
         boolean global = false;
         try {
@@ -487,7 +381,7 @@ public class RootManager {
         String su = getInstance(context).suBinary();
         if (global) {
             return new String[]{su, "-c",
-                    "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(shellCommand)};
+                    "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh(shellCommand)};
         }
         return new String[]{su, "-c", shellCommand};
     }
@@ -512,7 +406,7 @@ public class RootManager {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
-        String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(command);
+        String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh(command);
         return spawnSu(wrapped, timeoutSeconds, progress, control);
     }
 
@@ -551,7 +445,7 @@ public class RootManager {
         try {
             ShellResult plain = spawnSu("ls -1A -- /data/data 2>/dev/null | wc -l", 10);
             int plainCount = parseCount(plain);
-            ShellResult global = spawnSu("nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh("ls -1A -- /data/data 2>/dev/null | wc -l"), 10);
+            ShellResult global = spawnSu("nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh("ls -1A -- /data/data 2>/dev/null | wc -l"), 10);
             int globalCount = parseCount(global);
             if (globalCount > plainCount && globalCount > 1) return true;
         } catch (Exception ignored) {
@@ -659,7 +553,7 @@ public class RootManager {
 
     
     public List<String> listFiles(String path) throws IOException {
-        ShellResult result = executeFs("ls -1 " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("ls -1 " + ShellQuote.escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
         List<String> files = new ArrayList<>();
         for (String line : result.output.split("\n")) {
@@ -669,7 +563,7 @@ public class RootManager {
     }
 
     public List<String> listFilesDetailed(String path) throws IOException {
-        ShellResult result = executeFs("ls -la " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("ls -la " + ShellQuote.escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
         List<String> entries = new ArrayList<>();
         for (String line : result.output.split("\n")) {
@@ -679,7 +573,7 @@ public class RootManager {
     }
 
     public boolean exists(String path) {
-        ShellResult result = executeFs("test -e " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
+        ShellResult result = executeFs("test -e " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
@@ -690,17 +584,17 @@ public class RootManager {
             if (f.exists() && f.isDirectory()) return true;
         } catch (Exception ignored) {}
         if (!isRootAvailable()) return false;
-        ShellResult result = executeFs("( [ -d " + escapeShellArg(path) + " ] || [ -d " + escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
+        ShellResult result = executeFs("( [ -d " + ShellQuote.escapeShellArg(path) + " ] || [ -d " + ShellQuote.escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
         return result.isSuccess() && result.output != null && result.output.trim().equals("yes");
     }
 
     public boolean isFile(String path) {
-        ShellResult result = executeFs("test -f " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
+        ShellResult result = executeFs("test -f " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public long getFileSize(String path) {
-        ShellResult result = executeFs("stat -c %s " + escapeShellArg(emulatedAlias(path)), 30);
+        ShellResult result = executeFs("stat -c %s " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (result.isSuccess()) {
             try {
                 return Long.parseLong(result.output.trim());
@@ -721,20 +615,20 @@ public class RootManager {
     }
 
     public String getPermissions(String path) {
-        ShellResult result = executeFs("stat -c %a " + escapeShellArg(emulatedAlias(path)), 30);
+        ShellResult result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (!result.isSuccess() && !path.equals(emulatedAlias(path))) {
-            result = executeFs("stat -c %a " + escapeShellArg(path), 30);
+            result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(path), 30);
         }
         return result.isSuccess() ? result.output.trim() : null;
     }
 
     public String getOwner(String path) {
-        ShellResult result = executeFs("stat -c %U:%G " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("stat -c %U:%G " + ShellQuote.escapeShellArg(path), 30);
         return result.isSuccess() ? result.output.trim() : null;
     }
 
     public File[] listRootFiles(String path) {
-        ShellResult result = executeFs("ls -1a " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("ls -1a " + ShellQuote.escapeShellArg(path), 30);
         if (!result.isSuccess() || result.output == null) return null;
 
         String[] names = result.output.split("\\r?\\n");
@@ -751,7 +645,7 @@ public class RootManager {
         if (!isChmodModeValid(mode)) {
             throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
         }
-        ShellResult result = execute("chmod " + mode + " " + escapeShellArg(path));
+        ShellResult result = execute("chmod " + mode + " " + ShellQuote.escapeShellArg(path));
         if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
     }
 
@@ -765,10 +659,10 @@ public class RootManager {
         if (!isChmodModeValid(mode)) {
             throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
         }
-        ShellResult result = executeFs("chmod " + mode + " -- " + escapeShellArg(emulatedAlias(path)), 30);
+        ShellResult result = executeFs("chmod " + mode + " -- " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (!result.isSuccess()) {
             // Retry without the namespace and alias in case the probe is wrong here.
-            result = execute("chmod " + mode + " -- " + escapeShellArg(path), 30);
+            result = execute("chmod " + mode + " -- " + ShellQuote.escapeShellArg(path), 30);
             if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
         }
         invalidateListCache();
@@ -787,12 +681,12 @@ public class RootManager {
             }
             arg = owner;
         }
-        ShellResult result = execute("chown " + arg + " " + escapeShellArg(path));
+        ShellResult result = execute("chown " + arg + " " + ShellQuote.escapeShellArg(path));
         if (!result.isSuccess()) throw new IOException("chown failed: " + result.error);
     }
 
     public void mkdir(String path) throws IOException {
-        ShellResult result = executeFs("mkdir -p " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("mkdir -p " + ShellQuote.escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("mkdir failed: " + result.error);
         invalidateListCache();
     }
@@ -801,7 +695,7 @@ public class RootManager {
         if (path == null || path.isEmpty()) {
             throw new IOException("Refusing to delete empty path");
         }
-        if (isPathBlocked(path)) {
+        if (PathGuards.isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
         File file = new File(path);
@@ -829,7 +723,7 @@ public class RootManager {
         if (path == null || path.isEmpty()) {
             throw new IOException("Refusing to delete empty path");
         }
-        if (isPathBlocked(path)) {
+        if (PathGuards.isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
         File file = new File(path);
@@ -857,7 +751,7 @@ public class RootManager {
     private String rmProbe(String rmKind, String target, int timeoutSeconds) {
         AtomicBoolean probeFailed =
                 new AtomicBoolean(false);
-        String arg = escapeShellArg(target);
+        String arg = ShellQuote.escapeShellArg(target);
         ShellResult result = executeFs(rmKind + " -- " + arg
                 + " ; [ ! -e " + arg + " ] || echo @@MPFAIL", timeoutSeconds,
                 new ShellProgress.Listener() {
@@ -890,7 +784,7 @@ public class RootManager {
      * not a failure: the filesystem is the truth, not the exit code.
      */
     public void rename(String oldPath, String newPath, TransferControl control) throws IOException {
-        ShellResult result = executeFs("mv " + escapeShellArg(oldPath) + " " + escapeShellArg(newPath),
+        ShellResult result = executeFs("mv " + ShellQuote.escapeShellArg(oldPath) + " " + ShellQuote.escapeShellArg(newPath),
                 3600, null, control);
         if (!result.isSuccess() && !(isGone(oldPath) && exists(newPath))) {
             throw new IOException("rename failed: " + result.error);
@@ -904,7 +798,7 @@ public class RootManager {
     }
 
     public void copyFile(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -f " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
+        ShellResult result = executeFs("cp -f " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -915,19 +809,19 @@ public class RootManager {
      * file, which dominates the runtime for small and empty files.
      */
     public void copyFilePreserving(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -pf " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
+        ShellResult result = executeFs("cp -pf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
 
     public void copyDir(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
+        ShellResult result = executeFs("cp -rf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
 
     public void copyDirPreserving(String src, String dest) throws IOException {
-        ShellResult result = executeFs("cp -rpf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
+        ShellResult result = executeFs("cp -rpf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
         invalidateListCache();
     }
@@ -991,17 +885,17 @@ public class RootManager {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
-            if (op.destExists && op.directory && !isPathBlocked(dest)) {
-                cmd.append(" && rm -rf -- ").append(escapeShellArg(dest));
+            if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
+                cmd.append(" && rm -rf -- ").append(ShellQuote.escapeShellArg(dest));
             } else if (cmd.length() > 0) {
                 cmd.append(" && ");
             }
             String parent = new File(dest).getParent();
-            if (parent != null) cmd.append(" && mkdir -p ").append(escapeShellArg(parent));
+            if (parent != null) cmd.append(" && mkdir -p ").append(ShellQuote.escapeShellArg(parent));
             if (op.directory) {
-                cmd.append(" && cp -rpf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+                cmd.append(" && cp -rpf -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
             } else {
-                cmd.append(" && cp -pf -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+                cmd.append(" && cp -pf -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
             }
             filesDone += Math.max(0, op.files);
             bytesDone += Math.max(0L, op.bytes);
@@ -1047,16 +941,16 @@ public class RootManager {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
-            if (isPathBlocked(src)) {
+            if (PathGuards.isPathBlocked(src)) {
                 throw new IOException("Blocked: refusing to move critical path: " + src);
             }
             cmd.append(" && ");
-            if (op.destExists && op.directory && !isPathBlocked(dest)) {
-                cmd.append("rm -rf -- ").append(escapeShellArg(dest)).append(" && ");
+            if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
+                cmd.append("rm -rf -- ").append(ShellQuote.escapeShellArg(dest)).append(" && ");
             }
             String parent = new File(dest).getParent();
-            if (parent != null) cmd.append("mkdir -p ").append(escapeShellArg(parent)).append(" && ");
-            cmd.append("mv -f -- ").append(escapeShellArg(src)).append(' ').append(escapeShellArg(dest));
+            if (parent != null) cmd.append("mkdir -p ").append(ShellQuote.escapeShellArg(parent)).append(" && ");
+            cmd.append("mv -f -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
             filesDone += Math.max(0, op.files);
             bytesDone += Math.max(0L, op.bytes);
             cmd.append(ShellProgress.report(filesDone, bytesDone));
@@ -1130,7 +1024,7 @@ public class RootManager {
         List<String> targets = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
-            if (isPathBlocked(path))
+            if (PathGuards.isPathBlocked(path))
                 throw new IOException("Blocked: refusing to delete critical path: " + path);
             targets.add(path);
         }
@@ -1165,7 +1059,7 @@ public class RootManager {
         for (int i = 0; i < targets.size(); i += chunk) {
             int end = Math.min(targets.size(), i + chunk);
             cmd.append(" ; rm -rf --");
-            for (int j = i; j < end; j++) cmd.append(' ').append(escapeShellArg(targets.get(j)));
+            for (int j = i; j < end; j++) cmd.append(' ').append(ShellQuote.escapeShellArg(targets.get(j)));
             cmd.append(ShellProgress.reportFailure());
             done = sharedDone[0] + end;
             cmd.append(ShellProgress.reportAlways(done, 0L));
@@ -1235,7 +1129,7 @@ public class RootManager {
         List<String> targets = new ArrayList<>();
         for (String path : paths) {
             if (path == null || path.isEmpty()) continue;
-            if (isPathBlocked(path))
+            if (PathGuards.isPathBlocked(path))
                 throw new IOException("Blocked: refusing to delete critical path: " + path);
             targets.add(path);
         }
@@ -1268,7 +1162,7 @@ public class RootManager {
         for (String path : targets) {
             // Delete through the /data/media alias (see {@link #delete}): the
             // FUSE view often rejects even the root shell inside Android/data.
-            String arg = escapeShellArg(emulatedAlias(path));
+            String arg = ShellQuote.escapeShellArg(emulatedAlias(path));
             // Count the entries once and unlink in one command. A per-directory
             // rm process (and a final repeat sweep) was very slow for large trees.
             cmd.append(" ; n=$(find ").append(arg).append(" 2>/dev/null | wc -l)")
@@ -1292,7 +1186,7 @@ public class RootManager {
         cmd.append("find");
         // Same alias {@link #deleteTree} walks, so the dialog is sized by the
         // same tree the delete actually sees.
-        for (String p : paths) cmd.append(' ').append(escapeShellArg(emulatedAlias(p)));
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(emulatedAlias(p)));
         cmd.append(" -type d 2>/dev/null | wc -l)");
         ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
         return parseCountMarker(r, "@@MPDIRS");
@@ -1338,13 +1232,13 @@ public class RootManager {
         }
         StringBuilder cmd = new StringBuilder("echo @@MPM $(");
         cmd.append("du -sk");
-        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(p));
         cmd.append(" 2>/dev/null | awk '{s+=$1} END {print s*1024+0}') $(");
         cmd.append("find");
-        for (String p : paths) cmd.append(' ').append(escapeShellArg(p));
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(p));
         cmd.append(" -type f 2>/dev/null | wc -l)\n");
         for (int i = 0; i < paths.size(); i++) {
-            String a = escapeShellArg(paths.get(i));
+            String a = ShellQuote.escapeShellArg(paths.get(i));
             cmd.append("echo @@MPI ").append(i)
                     .append(" $(du -sk ").append(a).append(" 2>/dev/null | awk '{print $1*1024+0}')")
                     .append(" $(find ").append(a).append(" -type f 2>/dev/null | wc -l)\n");
@@ -1406,19 +1300,19 @@ public class RootManager {
     }
 
     public void touch(String path) throws IOException {
-        ShellResult result = executeFs("touch " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("touch " + ShellQuote.escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("touch failed: " + result.error);
         invalidateListCache();
     }
 
     public void ln(String target, String link) throws IOException {
-        ShellResult result = executeFs("ln -sf " + escapeShellArg(target) + " " + escapeShellArg(link), 30);
+        ShellResult result = executeFs("ln -sf " + ShellQuote.escapeShellArg(target) + " " + ShellQuote.escapeShellArg(link), 30);
         if (!result.isSuccess()) throw new IOException("ln failed: " + result.error);
         invalidateListCache();
     }
 
     public String readFile(String path) throws IOException {
-        ShellResult result = execute("cat " + escapeShellArg(path));
+        ShellResult result = execute("cat " + ShellQuote.escapeShellArg(path));
         if (!result.isSuccess()) throw new IOException("read failed: " + result.error);
         return result.output;
     }
@@ -1435,7 +1329,7 @@ public class RootManager {
                 if (content == null) content = "";
                 // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
                 // characters that writeBytes would truncate (see executeWithInput).
-                stdin.write(("cat > " + escapeShellArg(path) + " << '" + delimiter + "'\n")
+                stdin.write(("cat > " + ShellQuote.escapeShellArg(path) + " << '" + delimiter + "'\n")
                         .getBytes(StandardCharsets.UTF_8));
                 stdin.write(content.getBytes(StandardCharsets.UTF_8));
                 stdin.writeBytes("\n" + delimiter + "\n");
@@ -1477,7 +1371,7 @@ public class RootManager {
                 if (content == null) content = "";
                 // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
                 // characters that writeBytes would truncate (see executeWithInput).
-                stdin.write(("cat >> " + escapeShellArg(path) + " << '" + delimiter + "'\n")
+                stdin.write(("cat >> " + ShellQuote.escapeShellArg(path) + " << '" + delimiter + "'\n")
                         .getBytes(StandardCharsets.UTF_8));
                 stdin.write(content.getBytes(StandardCharsets.UTF_8));
                 stdin.writeBytes("\n" + delimiter + "\n");
@@ -1508,7 +1402,7 @@ public class RootManager {
     }
 
     public void copyToRoot(File localSource, String rootPath) throws IOException {
-        ShellResult result = executeFs("cp " + escapeShellArg(localSource.getAbsolutePath()) + " " + escapeShellArg(rootPath), 60);
+        ShellResult result = executeFs("cp " + ShellQuote.escapeShellArg(localSource.getAbsolutePath()) + " " + ShellQuote.escapeShellArg(rootPath), 60);
         if (!result.isSuccess()) throw new IOException("copy to root failed: " + result.error);
         invalidateListCache();
     }
@@ -1525,14 +1419,14 @@ public class RootManager {
      */
     public void installWithInstaller(List<String> apkPaths, String installerPkg, int flags) throws IOException {
         if (apkPaths == null || apkPaths.isEmpty()) throw new IOException("No APKs to install");
-        if (installerPkg != null && !installerPkg.isEmpty() && !isPackageNameValid(installerPkg)) {
+        if (installerPkg != null && !installerPkg.isEmpty() && !PackageGuards.isPackageNameValid(installerPkg)) {
             throw new IOException("Invalid installer package: " + installerPkg);
         }
         String tag = "_mp" + (System.currentTimeMillis() % 100000);
         StringBuilder copyCmd = new StringBuilder();
         for (int i = 0; i < apkPaths.size(); i++) {
             String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
-            copyCmd.append("cp ").append(escapeShellArg(apkPaths.get(i))).append(" ").append(escapeShellArg(tmpPath)).append(" ; ");
+            copyCmd.append("cp ").append(ShellQuote.escapeShellArg(apkPaths.get(i))).append(" ").append(ShellQuote.escapeShellArg(tmpPath)).append(" ; ");
         }
 
         long totalSize = 0;
@@ -1563,7 +1457,7 @@ public class RootManager {
             for (int i = 0; i < apkPaths.size(); i++) {
                 String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
                 long size = new File(apkPaths.get(i)).length();
-                String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " " + escapeShellArg(tmpPath);
+                String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " " + ShellQuote.escapeShellArg(tmpPath);
                 ShellResult writeResult = execute(writeCmd);
                 if (!writeResult.isSuccess()) {
                     execute("pm install-abandon " + sessionId);
@@ -1583,7 +1477,7 @@ public class RootManager {
     private void cleanupInstallTag(String tag, int count) {
         StringBuilder cleanup = new StringBuilder();
         for (int i = 0; i < count; i++) {
-            cleanup.append("rm -f ").append(escapeShellArg("/data/local/tmp/" + tag + "_" + i + ".apk")).append(";");
+            cleanup.append("rm -f ").append(ShellQuote.escapeShellArg("/data/local/tmp/" + tag + "_" + i + ".apk")).append(";");
         }
         cleanup.append("rm -f '/data/local/tmp/_split_").append(0).append(".apk';");
         cleanup.append("rm -f '/data/local/tmp/_install.apk'");
@@ -1607,56 +1501,56 @@ public class RootManager {
     }
 
     public void uninstallSilent(String packageName) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        if (isCriticalPackage(packageName)) {
+        if (PackageGuards.isCriticalPackage(packageName)) {
             throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
         }
-        ShellResult result = executeWithInput("pm uninstall " + escapeShellArg(packageName), null);
+        ShellResult result = executeWithInput("pm uninstall " + ShellQuote.escapeShellArg(packageName), null);
         if (!result.isSuccess() || !result.output.contains("Success")) {
             throw new IOException("Uninstall failed: " + result.error + " " + result.output);
         }
     }
 
     public void clearAppData(String packageName) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        if (isCriticalPackage(packageName)) {
+        if (PackageGuards.isCriticalPackage(packageName)) {
             throw new IOException("Blocked: refusing to clear data of critical system app: " + packageName);
         }
-        ShellResult result = execute("pm clear " + escapeShellArg(packageName));
+        ShellResult result = execute("pm clear " + ShellQuote.escapeShellArg(packageName));
         if (!result.isSuccess()) throw new IOException("clear data failed: " + result.error);
     }
 
     public void forceStopApp(String packageName) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        if (isCriticalPackage(packageName)) {
+        if (PackageGuards.isCriticalPackage(packageName)) {
             throw new IOException("Blocked: refusing to force stop critical system app: " + packageName);
         }
-        ShellResult result = execute("am force-stop " + escapeShellArg(packageName));
+        ShellResult result = execute("am force-stop " + ShellQuote.escapeShellArg(packageName));
         if (!result.isSuccess()) throw new IOException("force stop failed: " + result.error);
     }
 
     public void enableApp(String packageName) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        ShellResult result = execute("pm enable " + escapeShellArg(packageName));
+        ShellResult result = execute("pm enable " + ShellQuote.escapeShellArg(packageName));
         if (!result.isSuccess()) throw new IOException("enable failed: " + result.error);
     }
 
     public void disableApp(String packageName) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        if (isCriticalPackage(packageName)) {
+        if (PackageGuards.isCriticalPackage(packageName)) {
             throw new IOException("Blocked: refusing to disable critical system app: " + packageName);
         }
-        ShellResult result = execute("pm disable-user --user 0 " + escapeShellArg(packageName));
+        ShellResult result = execute("pm disable-user --user 0 " + ShellQuote.escapeShellArg(packageName));
         if (!result.isSuccess()) throw new IOException("disable failed: " + result.error);
     }
 
@@ -1667,8 +1561,8 @@ public class RootManager {
 
     public List<String> getAppApkPaths(String packageName) {
         List<String> out = new ArrayList<>();
-        if (!isPackageNameValid(packageName)) return out;
-        ShellResult result = executeFs("pm path " + escapeShellArg(packageName), 30);
+        if (!PackageGuards.isPackageNameValid(packageName)) return out;
+        ShellResult result = executeFs("pm path " + ShellQuote.escapeShellArg(packageName), 30);
         if (result != null && result.isSuccess() && result.output != null) {
             String output = result.output;
             int start = 0;
@@ -1687,13 +1581,13 @@ public class RootManager {
     }
 
     public String getAppUid(String packageName) {
-        if (!isPackageNameValid(packageName)) return null;
-        ShellResult dump = executeFs("pm dump " + escapeShellArg(packageName), 30);
+        if (!PackageGuards.isPackageNameValid(packageName)) return null;
+        ShellResult dump = executeFs("pm dump " + ShellQuote.escapeShellArg(packageName), 30);
         if (dump != null && dump.isSuccess() && dump.output != null) {
             String uid = findUidInDump(dump.output);
             if (uid != null) return uid;
         }
-        ShellResult statResult = executeFs("stat -c %u " + escapeShellArg("/data/data/" + packageName), 30);
+        ShellResult statResult = executeFs("stat -c %u " + ShellQuote.escapeShellArg("/data/data/" + packageName), 30);
         if (statResult != null && statResult.isSuccess() && statResult.output != null) {
             String t = statResult.output.trim();
             if (!t.isEmpty()) return t;
@@ -1720,7 +1614,7 @@ public class RootManager {
 
     public List<String> getAppDataDirs(String packageName) {
         List<String> dirs = new ArrayList<>();
-        if (!isPackageNameValid(packageName)) return dirs;
+        if (!PackageGuards.isPackageNameValid(packageName)) return dirs;
         // /data/data, /data/user/0 and /data/user_de/0 are the same dir seen
         // through different mount views (likewise /sdcard vs
         // /storage/emulated/0), so return at most one per group to avoid
@@ -1738,7 +1632,7 @@ public class RootManager {
         };
         for (String[] candidates : groups) {
             for (String path : candidates) {
-                ShellResult result = executeFs("test -d " + escapeShellArg(path) + " && echo exists", 30);
+                ShellResult result = executeFs("test -d " + ShellQuote.escapeShellArg(path) + " && echo exists", 30);
                 if (result != null && result.isSuccess() && result.output != null
                         && "exists".equals(result.output.trim())) {
                     dirs.add(path);
@@ -1802,18 +1696,18 @@ public class RootManager {
     }
 
     public void backupAppData(String packageName, String outputPath) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        ShellResult result = execute("tar -cf " + escapeShellArg(outputPath) + " -C /data/data " + escapeShellArg(packageName), 120);
+        ShellResult result = execute("tar -cf " + ShellQuote.escapeShellArg(outputPath) + " -C /data/data " + ShellQuote.escapeShellArg(packageName), 120);
         if (!result.isSuccess()) throw new IOException("backup failed: " + result.error);
     }
 
     public void restoreAppData(String packageName, String archivePath) throws IOException {
-        if (!isPackageNameValid(packageName)) {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
         }
-        ShellResult listResult = execute("tar -tf " + escapeShellArg(archivePath) + " 2>/dev/null", 60);
+        ShellResult listResult = execute("tar -tf " + ShellQuote.escapeShellArg(archivePath) + " 2>/dev/null", 60);
         if (!listResult.isSuccess()) {
             throw new IOException("Cannot list archive: " + listResult.error);
         }
@@ -1829,38 +1723,21 @@ public class RootManager {
                 }
             }
         }
-        ShellResult result = execute("tar -xf " + escapeShellArg(archivePath) + " -C /data/data", 120);
+        ShellResult result = execute("tar -xf " + ShellQuote.escapeShellArg(archivePath) + " -C /data/data", 120);
         if (!result.isSuccess()) throw new IOException("restore failed: " + result.error);
         String dataPath = "/data/data/" + packageName;
-        ShellResult existsCheck = execute("test -d " + escapeShellArg(dataPath) + " && echo yes || echo no");
+        ShellResult existsCheck = execute("test -d " + ShellQuote.escapeShellArg(dataPath) + " && echo yes || echo no");
         if (existsCheck.isSuccess() && "yes".equals(existsCheck.output.trim())) {
-            execute("chmod -R 771 " + escapeShellArg(dataPath));
-            execute("chown -R $(stat -c %U:%G " + escapeShellArg(dataPath) + " 2>/dev/null || echo system:system) " + escapeShellArg(dataPath));
+            execute("chmod -R 771 " + ShellQuote.escapeShellArg(dataPath));
+            execute("chown -R $(stat -c %U:%G " + ShellQuote.escapeShellArg(dataPath) + " 2>/dev/null || echo system:system) " + ShellQuote.escapeShellArg(dataPath));
         }
     }
 
 
     public static final long MAX_STAGE_BYTES = 1024L * 1024L * 1024L; // 1 GB for large APKs/archives
 
-    private static final String[] ROOT_ONLY_PREFIXES = {
-            "/data", "/metadata", "/linkerconfig", "/bootstrap-apex",
-            "/apex", "/config", "/cust", "/acct", "/dev",
-            "/data_mirror", "/debug_ramdisk", "/mi_ext", "/root",
-            "/mnt", "/mnt/media_rw"
-    };
-
     public record RootEntry(String path, boolean exists, boolean isDirectory, boolean isFile,
                             long length, long lastModified, String mode) {
-    }
-
-    public static boolean isRootOnlyPath(String path) {
-        if (path == null) return false;
-        String normalized = path.endsWith("/") && path.length() > 1
-                ? path.substring(0, path.length() - 1) : path;
-        for (String prefix : ROOT_ONLY_PREFIXES) {
-            if (normalized.equals(prefix) || normalized.startsWith(prefix + "/")) return true;
-        }
-        return false;
     }
 
     public boolean needsRootFor(String path) {
@@ -1884,7 +1761,7 @@ public class RootManager {
         }
         try {
             ShellResult r = executeFs("stat -L -c '%n\037%F\037%s\037%Y\037%a' "
-                    + escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
+                    + ShellQuote.escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
             if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
                 String line = r.output.split("\\r?\\n")[0];
                 String[] parts = line.split("\037", -1);
@@ -2027,7 +1904,7 @@ public class RootManager {
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
-        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(listTarget) + " 2>/dev/null", 15);
+        ShellResult result = executeFs("LC_ALL=C ls -la -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();
@@ -2062,7 +1939,7 @@ public class RootManager {
             StringBuilder cmd = new StringBuilder();
             for (int i = 0; i < linkNames.size(); i++) {
                 if (i > 0) cmd.append(' ');
-                String p = escapeShellArg(cleanPath.equals("/") ? "/" + linkNames.get(i) : cleanPath + "/" + linkNames.get(i));
+                String p = ShellQuote.escapeShellArg(cleanPath.equals("/") ? "/" + linkNames.get(i) : cleanPath + "/" + linkNames.get(i));
                 cmd.append("if [ -d ").append(p).append(" ] || [ -d ").append(p).append("/ ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
             }
             try {
@@ -2218,7 +2095,7 @@ public class RootManager {
                     context.getPackageManager().getInstalledApplications(0);
             if (apps != null) {
                 for (ApplicationInfo app : apps) {
-                    if (app != null && isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
+                    if (app != null && PackageGuards.isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
                 }
             }
         } catch (Exception e) {
@@ -2230,7 +2107,7 @@ public class RootManager {
             int end = Math.min(i + 150, pkgs.size());
             StringBuilder script = new StringBuilder("for p in");
             for (int j = i; j < end; j++) {
-                script.append(" ").append(escapeShellArg(base + "/" + pkgs.get(j)));
+                script.append(" ").append(ShellQuote.escapeShellArg(base + "/" + pkgs.get(j)));
             }
             script.append("; do [ -e \"$p\" ] || [ -L \"$p\" ] || continue; ");
             script.append("if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$p\" 2>/dev/null); then :; ");
@@ -2286,9 +2163,9 @@ public class RootManager {
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
-        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(listTarget) + " 2>/dev/null", 30);
+        ShellResult result = executeFs("ls -1ALp -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
         if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
-            result = executeFs("ls -1Ap -- " + escapeShellArg(listTarget) + " 2>/dev/null", 30);
+            result = executeFs("ls -1Ap -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
         }
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
@@ -2308,7 +2185,7 @@ public class RootManager {
         if (dirPath == null || dirPath.isEmpty()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
-        String script = "d=" + escapeShellArg(cleanPath) + "; "
+        String script = "d=" + ShellQuote.escapeShellArg(cleanPath) + "; "
                 + "for f in \"$d\"/* \"$d\"/.*; do "
                 + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
                 + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
@@ -2345,7 +2222,7 @@ public class RootManager {
         }
         final Process process;
         try {
-            process = Runtime.getRuntime().exec(suCommandForFs("cat -- " + escapeShellArg(srcPath)));
+            process = Runtime.getRuntime().exec(suCommandForFs("cat -- " + ShellQuote.escapeShellArg(srcPath)));
         } catch (IOException e) {
             closeQuietly(pipe[0]);
             closeQuietly(pipe[1]);
@@ -2385,7 +2262,7 @@ public class RootManager {
         // spawn per read, and the cap is enforced while streaming below.
         Process process = null;
         try {
-            process = Runtime.getRuntime().exec(suCommandForFs("cat " + escapeShellArg(srcPath)));
+            process = Runtime.getRuntime().exec(suCommandForFs("cat " + ShellQuote.escapeShellArg(srcPath)));
             InputStream stdout = process.getInputStream();
             byte[] buf = new byte[262144];
             long total = 0;
@@ -2442,7 +2319,7 @@ public class RootManager {
         if (dstPath == null || !dstPath.startsWith("/")) {
             throw new IOException("Refusing to write non-absolute path");
         }
-        if (isPathBlocked(dstPath)) {
+        if (PathGuards.isPathBlocked(dstPath)) {
             throw new IOException("Blocked: refusing to write critical path: " + dstPath);
         }
         if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
@@ -2453,8 +2330,8 @@ public class RootManager {
         }
         Process process = null;
         try {
-            String cmd = "cat " + escapeShellArg(localSrc.getAbsolutePath())
-                    + " > " + escapeShellArg(dstPath);
+            String cmd = "cat " + ShellQuote.escapeShellArg(localSrc.getAbsolutePath())
+                    + " > " + ShellQuote.escapeShellArg(dstPath);
             process = Runtime.getRuntime().exec(suCommandForFs(cmd));
             boolean finished = process.waitFor(300, TimeUnit.SECONDS);
             if (!finished) {
@@ -2502,7 +2379,7 @@ public class RootManager {
         };
         for (String[] cmd : paths) {
             try {
-                ShellResult r = execute("cat " + escapeShellArg(cmd[0]) + " 2>/dev/null");
+                ShellResult r = execute("cat " + ShellQuote.escapeShellArg(cmd[0]) + " 2>/dev/null");
                 if (r.isSuccess() && !r.output.trim().isEmpty()) {
                     parsePasswd(r.output, users);
                     if (!users.isEmpty()) return users;
@@ -2546,7 +2423,7 @@ public class RootManager {
         };
         for (String path : paths) {
             try {
-                ShellResult r = execute("cat " + escapeShellArg(path) + " 2>/dev/null");
+                ShellResult r = execute("cat " + ShellQuote.escapeShellArg(path) + " 2>/dev/null");
                 if (r.isSuccess() && !r.output.trim().isEmpty()) {
                     parseGroup(r.output, groups);
                     if (!groups.isEmpty()) return groups;

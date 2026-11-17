@@ -2,8 +2,9 @@ package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Context;
@@ -54,7 +55,7 @@ public final class ShizukuFileOps {
         if (!ShizukuShell.isGranted()) return null;
         File dest = new File(destFolder, name);
         if (dest.equals(src)) return dest;
-        String cmd = "cp -r " + RootManager.escapeShellArg(src.getAbsolutePath()) + " " + RootManager.escapeShellArg(dest.getAbsolutePath());
+        String cmd = "cp -r " + ShellQuote.escapeShellArg(src.getAbsolutePath()) + " " + ShellQuote.escapeShellArg(dest.getAbsolutePath());
         return ShizukuShell.exec(cmd).success ? new ShizukuFile(dest.getAbsolutePath(), src.isDirectory(), src.length()) : null;
     }
 
@@ -63,8 +64,8 @@ public final class ShizukuFileOps {
         if (!ShizukuShell.isGranted()) return false;
         File dest = new File(destFolder, name);
         if (dest.equals(src)) return true;
-        if (RootManager.isPathBlocked(src.getAbsolutePath())) return false;
-        String cmd = "mv " + RootManager.escapeShellArg(src.getAbsolutePath()) + " " + RootManager.escapeShellArg(dest.getAbsolutePath());
+        if (PathGuards.isPathBlocked(src.getAbsolutePath())) return false;
+        String cmd = "mv " + ShellQuote.escapeShellArg(src.getAbsolutePath()) + " " + ShellQuote.escapeShellArg(dest.getAbsolutePath());
         return ShizukuShell.exec(cmd).success;
     }
 }

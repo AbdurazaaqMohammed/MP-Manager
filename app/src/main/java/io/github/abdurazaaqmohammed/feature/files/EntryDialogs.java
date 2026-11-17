@@ -66,6 +66,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -428,7 +429,7 @@ public class EntryDialogs {
                 boolean inKeyDir = false;
                 if (!isInZip && file != null) {
                     String path = file.getAbsolutePath();
-                    if (RootManager.isPathInKeyDirectory(path)) {
+                    if (PathGuards.isPathInKeyDirectory(path)) {
                         inKeyDir = true;
                     }
                 }
@@ -462,7 +463,7 @@ public class EntryDialogs {
                                   boolean elevated, CharSequence names) throws IOException {
         if (files.isEmpty()) return;
         for (File file : files) {
-            if (!(file instanceof SafFile) && RootManager.isPathBlocked(file.getAbsolutePath()))
+            if (!(file instanceof SafFile) && PathGuards.isPathBlocked(file.getAbsolutePath()))
                 throw new IOException("Blocked: refusing to delete critical path: " + file.getAbsolutePath());
         }
         pm.setText(context.getString(R.string.calculating));

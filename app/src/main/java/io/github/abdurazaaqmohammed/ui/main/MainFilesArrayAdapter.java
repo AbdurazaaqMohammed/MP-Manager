@@ -77,6 +77,7 @@ import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
 import io.github.abdurazaaqmohammed.feature.media.BatchImageTools;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
@@ -402,7 +403,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             return;
         }
         String path = f.getAbsolutePath();
-        if ("/".equals(path) || RootManager.isRootOnlyPath(path) || ShizukuFile.isAndroidDataPath(f)) {
+        if ("/".equals(path) || PathGuards.isRootOnlyPath(path) || ShizukuFile.isAndroidDataPath(f)) {
             context.clearGreen(pane1);
             context.setSelectedPane(pane1 ? 1 : 2);
             context.loadFolderInPaneAsync(f, pane1);

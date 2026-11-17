@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class DnsManager {
@@ -181,8 +182,8 @@ public class DnsManager {
                 String mode = validDnsMode(profile.mode);
                 String host = validDnsHostname(profile.hostname);
                 if (mode == null || host == null) return false;
-                RootManager.ShellResult r1 = rm.execute("settings put global private_dns_mode " + RootManager.quoteForSh(mode), 10);
-                RootManager.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + RootManager.quoteForSh(host), 10);
+                RootManager.ShellResult r1 = rm.execute("settings put global private_dns_mode " + ShellQuote.quoteForSh(mode), 10);
+                RootManager.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + ShellQuote.quoteForSh(host), 10);
                 if (r1.isSuccess() && r2.isSuccess()) {
                     rememberActive(context, profile.id);
                     requestTileRefresh(context);
@@ -209,7 +210,7 @@ public class DnsManager {
             if (!"private_dns_mode".equals(key) && !"private_dns_specifier".equals(key)) return false;
             String checked = "private_dns_mode".equals(key) ? validDnsMode(value) : validDnsHostname(value);
             if (checked == null) return false;
-            return PrivilegeManager.Shizuku.shellOk(context, "settings put global " + key + " " + RootManager.quoteForSh(checked), 10);
+            return PrivilegeManager.Shizuku.shellOk(context, "settings put global " + key + " " + ShellQuote.quoteForSh(checked), 10);
         } catch (Exception e) {
             return false;
         }

@@ -4,6 +4,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 import android.app.AppOpsManager;
 import android.content.ComponentName;
@@ -168,7 +169,7 @@ public class RootPermissionHelper {
                 }
             }
             if (!found) updated = TextUtils.isEmpty(current) ? flat : current + ":" + flat;
-            boolean ok1 = grantViaRoot(context, "settings put secure enabled_accessibility_services " + RootManager.quoteForSh(updated));
+            boolean ok1 = grantViaRoot(context, "settings put secure enabled_accessibility_services " + ShellQuote.quoteForSh(updated));
             boolean ok2 = grantViaRoot(context, "settings put secure accessibility_enabled 1");
             return ok1 && ok2;
         } catch (Exception e) {

@@ -1,8 +1,9 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 
 import android.content.Context;
@@ -69,7 +70,7 @@ public class ShizukuFile extends File {
         } catch (Exception ignored) {
         }
         if (ShizukuShell.isGranted()) {
-            return ShizukuShell.exec("[ -d " + RootManager.escapeShellArg(path) + " ]").success;
+            return ShizukuShell.exec("[ -d " + ShellQuote.escapeShellArg(path) + " ]").success;
         }
         return false;
     }
@@ -114,8 +115,8 @@ public class ShizukuFile extends File {
         // file itself, which used to become a phantom child "<file>/<file>"
         // (tapping it then failed with "cat: .../build.prop/build.prop:
         // Not a directory"). Bail out so callers show an error instead.
-        ShizukuShell.Result r = ShizukuShell.exec("test -d " + RootManager.escapeShellArg(path)
-                + " || exit 4; LC_ALL=C ls -lAH " + RootManager.escapeShellArg(path));
+        ShizukuShell.Result r = ShizukuShell.exec("test -d " + ShellQuote.escapeShellArg(path)
+                + " || exit 4; LC_ALL=C ls -lAH " + ShellQuote.escapeShellArg(path));
         if (!r.success) return null;
         List<ShizukuFile> links = new ArrayList<>();
         for (String line : r.stdout.split("\n")) {
@@ -145,7 +146,7 @@ public class ShizukuFile extends File {
             StringBuilder cmd = new StringBuilder();
             for (int i = 0; i < links.size(); i++) {
                 if (i > 0) cmd.append(' ');
-                String p = RootManager.escapeShellArg(links.get(i).getAbsolutePath());
+                String p = ShellQuote.escapeShellArg(links.get(i).getAbsolutePath());
                 cmd.append("if [ -d ").append(p).append(" ]; then echo LINK_DIR_").append(i)
                         .append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p)
                         .append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
@@ -327,7 +328,7 @@ public class ShizukuFile extends File {
 
     @Override
     public boolean exists() {
-        return ShizukuShell.exec("[ -e " + RootManager.escapeShellArg(getAbsolutePath()) + " ]").success;
+        return ShizukuShell.exec("[ -e " + ShellQuote.escapeShellArg(getAbsolutePath()) + " ]").success;
     }
 
     @Override
@@ -397,24 +398,24 @@ public class ShizukuFile extends File {
 
     @Override
     public boolean mkdir() {
-        return ShizukuShell.exec("mkdir " + RootManager.escapeShellArg(getAbsolutePath())).success;
+        return ShizukuShell.exec("mkdir " + ShellQuote.escapeShellArg(getAbsolutePath())).success;
     }
 
     @Override
     public boolean mkdirs() {
-        return ShizukuShell.exec("mkdir -p " + RootManager.escapeShellArg(getAbsolutePath())).success;
+        return ShizukuShell.exec("mkdir -p " + ShellQuote.escapeShellArg(getAbsolutePath())).success;
     }
 
     @Override
     public boolean delete() {
-        if (RootManager.isPathBlocked(getAbsolutePath())) return false;
-        return ShizukuShell.exec("rm -rf " + RootManager.escapeShellArg(getAbsolutePath())).success;
+        if (PathGuards.isPathBlocked(getAbsolutePath())) return false;
+        return ShizukuShell.exec("rm -rf " + ShellQuote.escapeShellArg(getAbsolutePath())).success;
     }
 
     @Override
     public boolean renameTo(File dest) {
-        if (RootManager.isPathBlocked(getAbsolutePath())) return false;
-        return ShizukuShell.exec("mv " + RootManager.escapeShellArg(getAbsolutePath()) + " " + RootManager.escapeShellArg(dest.getAbsolutePath())).success;
+        if (PathGuards.isPathBlocked(getAbsolutePath())) return false;
+        return ShizukuShell.exec("mv " + ShellQuote.escapeShellArg(getAbsolutePath()) + " " + ShellQuote.escapeShellArg(dest.getAbsolutePath())).success;
     }
 
     /**
@@ -428,7 +429,7 @@ public class ShizukuFile extends File {
         cacheDir.mkdirs();
         // cp rather than "cat > ...": one kernel-side copy instead of the bytes
         // crossing a shell pipe, and the mode is preserved as a side effect.
-        ShizukuShell.Result r = ShizukuShell.exec("cp -pf -- " + RootManager.escapeShellArg(getAbsolutePath()) + " " + RootManager.escapeShellArg(out.getAbsolutePath()));
+        ShizukuShell.Result r = ShizukuShell.exec("cp -pf -- " + ShellQuote.escapeShellArg(getAbsolutePath()) + " " + ShellQuote.escapeShellArg(out.getAbsolutePath()));
         if (!r.success) throw new IOException("Shizuku copy failed: " + r.stderr);
         return out;
     }

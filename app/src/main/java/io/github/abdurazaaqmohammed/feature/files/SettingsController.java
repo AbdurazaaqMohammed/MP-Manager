@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -1217,7 +1218,7 @@ public class SettingsController {
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
             @Override public void afterTextChanged(Editable s) {
                 String v = s == null ? "" : s.toString().trim();
-                if (!v.isEmpty() && !RootManager.isPackageNameValid(v)) {
+                if (!v.isEmpty() && !PackageGuards.isPackageNameValid(v)) {
                     installerCustomPkgEt.setError("Invalid package name");
                     return;
                 }

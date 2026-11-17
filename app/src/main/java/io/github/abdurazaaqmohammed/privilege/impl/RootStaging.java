@@ -6,6 +6,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 
 import android.content.Context;
 
@@ -96,7 +97,7 @@ public final class RootStaging {
     }
 
     public static boolean needsWriteConfirm(String absPath) {
-        return RootManager.isPathInKeyDirectory(absPath);
+        return PathGuards.isPathInKeyDirectory(absPath);
     }
 
     public static File stageDir(Context context) throws IOException {

@@ -22,6 +22,8 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -810,7 +812,7 @@ public final class AccessManager {
             if (backend == Backend.ROOT) {
                 long secs = millis / 1000L;
                 return RootManager.getInstance(context)
-                        .execute("touch -d @" + secs + " " + RootManager.escapeShellArg(path), 10)
+                        .execute("touch -d @" + secs + " " + ShellQuote.escapeShellArg(path), 10)
                         .isSuccess();
             }
             if (backend == Backend.SHIZUKU) {
@@ -833,7 +835,7 @@ public final class AccessManager {
                 DirectoryStats nativeStats = NativeRootManager.stats(context, path, null, 5000);
                 if (nativeStats != null && nativeStats.complete()) return nativeStats.bytes();
                 RootManager rm = RootManager.getInstance(context);
-                String safeCmd = "timeout 5 du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null";
+                String safeCmd = "timeout 5 du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
                 RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
                     r = rm.execute(safeCmd, 5);
@@ -868,7 +870,7 @@ public final class AccessManager {
                     if (!map.isEmpty()) return map;
                 }
                 RootManager rm = RootManager.getInstance(context);
-                String safeCmd = "timeout 5 du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + RootManager.escapeShellArg(path) + " 2>/dev/null";
+                String safeCmd = "timeout 5 du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
                 RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
                     r = rm.execute(safeCmd, 5);
@@ -932,7 +934,7 @@ public final class AccessManager {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             copyFile(context, srcAbs, dst.getAbsolutePath(), true);
-            execute(context, "chmod a+r " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
+            execute(context, "chmod a+r " + ShellQuote.escapeShellArg(dst.getAbsolutePath()), 30);
             preserveTime(context, srcAbs, dst.getAbsolutePath());
             return;
         }
@@ -959,7 +961,7 @@ public final class AccessManager {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             copyDir(context, srcAbs, dst.getAbsolutePath(), true);
-            execute(context, "chmod -R a+rX " + RootManager.escapeShellArg(dst.getAbsolutePath()), 30);
+            execute(context, "chmod -R a+rX " + ShellQuote.escapeShellArg(dst.getAbsolutePath()), 30);
             return;
         }
         if (backend == Backend.SHIZUKU) {
@@ -1037,7 +1039,7 @@ public final class AccessManager {
         if (f == null) return false;
         try {
             if (ShizukuFile.isShizukuPath(f)) return true;
-            return RootManager.isRootOnlyPath(f.getAbsolutePath());
+            return PathGuards.isRootOnlyPath(f.getAbsolutePath());
         } catch (Exception e) {
             return false;
         }
@@ -1125,7 +1127,7 @@ public final class AccessManager {
             if (backend == Backend.ROOT) {
                 RootManager rm = RootManager.getInstance(context);
                 long secs = t / 1000L;
-                rm.execute("touch -d @" + secs + " " + RootManager.escapeShellArg(dstAbs), 10);
+                rm.execute("touch -d @" + secs + " " + ShellQuote.escapeShellArg(dstAbs), 10);
             } else if (backend == Backend.SHIZUKU) {
                 ShizukuManager.touchMtime(context, dstAbs, t);
             }

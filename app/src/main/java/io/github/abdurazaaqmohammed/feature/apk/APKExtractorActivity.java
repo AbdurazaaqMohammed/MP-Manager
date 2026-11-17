@@ -110,6 +110,8 @@ import io.github.abdurazaaqmohammed.ui.main.ExtractOptionAdapter;
 import io.github.abdurazaaqmohammed.util.text.CompareUtils;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 public class APKExtractorActivity extends BaseActivity {
     private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
@@ -1108,9 +1110,9 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     private void elevatedExec(String baseCmd, String packageName, boolean guardCritical) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
-        if (guardCritical && RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to modify critical system app: " + packageName);
-        String cmd = baseCmd + " " + RootManager.escapeShellArg(packageName);
+        if (!PackageGuards.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (guardCritical && PackageGuards.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to modify critical system app: " + packageName);
+        String cmd = baseCmd + " " + ShellQuote.escapeShellArg(packageName);
         RootManager rm = RootManager.getInstance(this);
         if (rm.isRootMode() && rm.isRootAvailable()) {
             RootManager.ShellResult r = rm.execute(cmd, 30);
@@ -1123,15 +1125,15 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     private void elevatedUninstall(String packageName) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
-        if (RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
+        if (!PackageGuards.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (PackageGuards.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
         RootManager rm = RootManager.getInstance(this);
         if (rm.isRootMode() && rm.isRootAvailable()) {
             rm.uninstallSilent(packageName);
             return;
         }
         ShellSession.Result r =
-                PrivilegeManager.shizuku().exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
+                PrivilegeManager.shizuku().exec("pm uninstall " + ShellQuote.escapeShellArg(packageName), 30);
         if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
     }
 
