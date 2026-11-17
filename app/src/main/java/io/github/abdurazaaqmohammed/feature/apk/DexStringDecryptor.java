@@ -306,8 +306,9 @@ public final class DexStringDecryptor {
         char[] chars = ciphertext.toCharArray();
         int key = initialKey;
         for (int i = 0; i < chars.length; i++) {
-            chars[i] = (char) (chars[i] ^ (key & 0xffff));
-            key = (key * 31 + chars[i]) & 0xffff;
+            char cipherChar = chars[i];
+            chars[i] = (char) (cipherChar ^ (key & 0xffff));
+            key = (key * 31 + cipherChar) & 0xffff;
         }
         return new String(chars);
     }
