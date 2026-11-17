@@ -38,7 +38,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import java.io.File;
 import java.util.List;
@@ -425,8 +425,8 @@ public final class AppDetailsDialog {
 
         // Skip root actions if root not available
         if (actionId >= 200 && actionId <= 204) {
-            RootManager rm = RootManager.getInstance(act);
-            if (!rm.isRootExtractorEnabled() || !rm.isRootAvailable()) return;
+            if (!PrivilegeManager.Root.isRootExtractorEnabled(act)
+                    || !PrivilegeManager.Root.isRootAvailable(act)) return;
         }
 
         // Special split condition

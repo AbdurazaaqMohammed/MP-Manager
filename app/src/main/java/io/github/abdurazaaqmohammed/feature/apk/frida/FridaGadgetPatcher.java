@@ -74,7 +74,7 @@ import java.util.zip.ZipInputStream;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import com.reandroid.apk.APKLogger;
 
 /**
@@ -232,7 +232,7 @@ public final class FridaGadgetPatcher {
 
     /** Downloaded frida-inject binary for this device's ABI (Path C). */
     public static File injectBinary(Context context) {
-        return new File(fridaDir(context), "frida-inject-" + NativeToolManager.deviceAbi());
+        return new File(fridaDir(context), "frida-inject-" + PrivilegeManager.Native.deviceAbi());
     }
 
     public static boolean isInjectReady(Context context) {
@@ -354,7 +354,7 @@ public final class FridaGadgetPatcher {
             return;
         }
         ensureBundle(activity, () -> {
-            String arch = fridaArchForAbi(NativeToolManager.deviceAbi());
+            String arch = fridaArchForAbi(PrivilegeManager.Native.deviceAbi());
             if (arch == null) arch = "android-arm64";
             String name = "frida-inject-" + FRIDA_VERSION + "-" + arch + ".xz";
             String url = "https://github.com/frida/frida/releases/download/"
@@ -365,7 +365,7 @@ public final class FridaGadgetPatcher {
                         fridaDir(activity).mkdirs();
                         xzDecompress(file, dest);
                         file.delete();
-                        NativeToolManager.setExecutableChecked(dest);
+                        PrivilegeManager.Native.setExecutableChecked(dest);
                         if (!dest.isFile() || dest.length() == 0) {
                             throw new IOException("frida-inject download failed");
                         }
