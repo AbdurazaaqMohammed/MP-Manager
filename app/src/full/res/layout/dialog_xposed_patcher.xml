@@ -17,21 +17,6 @@
             android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/lspatch_mode"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/lspatch_integrated_mode" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/lspatch_open_manager"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/lspatch_manager" />
-
-        <com.google.android.material.button.MaterialButton
             android:id="@+id/npatch_profiles"
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="fill_parent"

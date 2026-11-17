@@ -3,10 +3,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url 'https://api.xposed.info/'
-            content { includeGroup 'de.robv.android.xposed' }
-        }
     }
 }
 rootProject.name = "MP Manager"
@@ -23,10 +19,3 @@ include ':packs:pack-ocr'
 include ':samples:plugin-sample'
 include ':apkkit'
 include ':zero-symbol-input-view'
-include ':patchers:lspatch-runtime'
-if (providers.gradleProperty('patcherRegressionFixtures').orNull == 'true') {
-    include ':patchers:fixture-target'
-    include ':patchers:fixture-split'
-    include ':patchers:fixture-legacy'
-    include ':patchers:fixture-modern'
-}

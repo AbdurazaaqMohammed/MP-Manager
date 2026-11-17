@@ -10,7 +10,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
-import io.github.abdurazaaqmohammed.feature.apk.XposedPatcherLauncher;
 import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.feature.freestyle.FreeStylePickerActivity;
 import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
@@ -38,10 +37,6 @@ public final class ToolLauncher {
             return true;
         }
         if (activity instanceof AppCompatActivity host) {
-            if ("lspatch_manager".equals(id)) {
-                XposedPatcherLauncher.openManager(host);
-                return true;
-            }
             if ("partition_dumper".equals(id)) {
                 PartitionDumperDialog.show(host);
                 return true;
@@ -80,7 +75,7 @@ public final class ToolLauncher {
             case "app_ops" -> AppOpsActivity.class;
             case "set_edit" -> SetEditActivity.class;
             case "free_style" -> FreeStylePickerActivity.class;
-            case "tools", "partition_dumper", "jiagu_dumper", "lspatch_manager" -> ToolsHubActivity.class;
+            case "tools", "partition_dumper", "jiagu_dumper" -> ToolsHubActivity.class;
             case "recycle_bin", "ftp_server", "network_client", "layout", "color_picker" -> MainActivity.class;
             default -> null;
         };

@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -16,7 +15,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -25,6 +23,8 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import java.io.File;
 import java.io.PrintWriter;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.function.IntConsumer;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
@@ -52,19 +51,16 @@ import org.lsposed.lspatch.share.Constants;
 import org.lsposed.patch.ApkPatcher;
 import org.lsposed.patch.LSPatch;
 import org.lsposed.patch.util.Logger;
-import io.github.abdurazaaqmohammed.feature.apk.xposed.LSPatchManagerActivity;
-import io.github.abdurazaaqmohammed.feature.apk.xposed.LSPatchModuleRepository;
-import io.github.abdurazaaqmohammed.feature.apk.xposed.LSPatchRemoteServices;
-import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 
 /**
- * Xposed-patcher UI: patches an APK with embedded modules or binds it to
- * MP Manager's module service, using the
+ * Xposed-patcher UI (integrated mode): patches an APK with Xposed modules
+ * embedded so the result runs standalone without a manager app, using the
  * vendored JingMatrix LSPatch fork (org.lsposed.patch). See
  * docs/XPOSED_PATCHER.md.
  *
- * Auto Sign hands the user's key to the engine; otherwise its built-in key is
- * used. The multiplexed output is never re-serialized after signing.
+ * The output is always re-signed with the user's MP-Manager signing key
+ * (Sign Settings); the engine's built-in signature only carries the
+ * intermediate APK until that happens.
  */
 public class XposedPatcherDialogs {
 
@@ -85,11 +81,11 @@ public class XposedPatcherDialogs {
     private static final String BKS_PASSWORD = "npatch-bks";
     private static final String BKS_ALIAS = "mpkey";
 
-    private final AppCompatActivity context;
+    private final MainActivity context;
     private final DialogUtil dialogUtil;
     private final boolean pane1;
 
-    public XposedPatcherDialogs(AppCompatActivity context, DialogUtil dialogUtil, boolean pane1) {
+    public XposedPatcherDialogs(MainActivity context, DialogUtil dialogUtil, boolean pane1) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.pane1 = pane1;
@@ -97,8 +93,6 @@ public class XposedPatcherDialogs {
 
     private static class Options {
         final List<String> modules = new ArrayList<>();
-        final List<String> managerModules = new ArrayList<>();
-        boolean useManager;
         int sigBypassLevel = 2;
         boolean debuggable = false;
         boolean injectDex = false;
@@ -117,17 +111,9 @@ public class XposedPatcherDialogs {
     }
 
     public void showDialog(File file, String fileName) {
-        if (Build.VERSION.SDK_INT < 28) {
-            new MaterialAlertDialogBuilder(context).setTitle(R.string.lspatch_manager)
-                    .setMessage(R.string.lspatch_min_android).setPositiveButton(android.R.string.ok, null).show();
-            return;
-        }
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         Options options = new Options();
-        var inputInfo = context.getPackageManager().getPackageArchiveInfo(file.getPath(), 0);
-        if (inputInfo != null) options.managerModules.addAll(new LSPatchModuleRepository(context).scope(inputInfo.packageName));
-        options.useManager = settings.getBoolean("lspatch_use_manager", false);
-        options.sigBypassLevel = Math.max(0, Math.min(3, settings.getInt(PREF_SIGBYPASS, 2)));
+        options.sigBypassLevel = settings.getInt(PREF_SIGBYPASS, 2);
         options.debuggable = settings.getBoolean(PREF_DEBUGGABLE, false);
         options.injectDex = settings.getBoolean(PREF_INJECT_DEX, false);
         options.usesCleartextTraffic = settings.getBoolean(PREF_CLEARTEXT, false);
@@ -142,20 +128,6 @@ public class XposedPatcherDialogs {
         options.labelOverride = settings.getString(PREF_LABEL, "");
         View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_xposed_patcher, null, false);
 
-        MaterialButton modeButton = dialogView.findViewById(R.id.lspatch_mode);
-        modeButton.setText(options.useManager ? R.string.lspatch_manager_mode : R.string.lspatch_integrated_mode);
-        modeButton.setOnClickListener(view -> new MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.lspatch_mode).setSingleChoiceItems(new String[]{
-                        context.getString(R.string.lspatch_integrated_mode), context.getString(R.string.lspatch_manager_mode)},
-                        options.useManager ? 1 : 0, (dialog, which) -> {
-                            options.useManager = which == 1;
-                            settings.edit().putBoolean("lspatch_use_manager", options.useManager).apply();
-                            modeButton.setText(options.useManager ? R.string.lspatch_manager_mode : R.string.lspatch_integrated_mode);
-                            updateModulesLabel(dialogView, options);
-                            dialog.dismiss();
-                        }).setNegativeButton(android.R.string.cancel, null).show());
-        dialogView.findViewById(R.id.lspatch_open_manager).setOnClickListener(view -> XposedPatcherLauncher.openManager(context));
-
         MaterialButton bypassBtn = dialogView.findViewById(R.id.npatch_sigbypass);
         Runnable updateBypassLabel = () -> {
             String[] names = bypassNames();
@@ -167,17 +139,11 @@ public class XposedPatcherDialogs {
                 .setOnClickListener(v -> showProfilesDialog(settings, options, dialogView));
 
         MaterialButton modulesBtn = dialogView.findViewById(R.id.npatch_modules);
-        Runnable updateModulesLabel = () -> updateModulesLabel(dialogView, options);
+        Runnable updateModulesLabel = () -> modulesBtn.setText(options.modules.isEmpty()
+                ? context.getString(R.string.npatch_embed_modules_zero)
+                : context.getString(R.string.npatch_embed_modules, options.modules.size()));
         updateModulesLabel.run();
         modulesBtn.setOnClickListener(v -> {
-            if (options.useManager) {
-                LSPatchManagerActivity.selectModules(context, new LinkedHashSet<>(options.managerModules), selected -> {
-                    options.managerModules.clear();
-                    options.managerModules.addAll(selected);
-                    updateModulesLabel.run();
-                });
-                return;
-            }
             FilePickerDialog.Properties props = new FilePickerDialog.Properties();
             props.selection_mode = FilePickerDialog.MULTI_MODE;
             props.selection_type = FilePickerDialog.FILE_SELECT;
@@ -271,7 +237,8 @@ public class XposedPatcherDialogs {
             }
         });
 
-        // Same Auto Sign pattern as Optimize: the engine receives the user's key;
+        // Same Auto Sign pattern as the Optimize dialog: when checked the output
+        // is re-signed with the user's key (layout-preserving, see SignWrapper);
         // when unchecked the engine's built-in signature is kept.
         CheckBox autoSignBox = dialogView.findViewById(R.id.autosign);
         autoSignBox.setChecked(options.autoSign = settings.getBoolean("autosign", true));
@@ -280,14 +247,14 @@ public class XposedPatcherDialogs {
             settings.edit().putBoolean("autosign", isChecked).apply();
         });
         dialogView.findViewById(R.id.sign_settings)
-                .setOnClickListener(new UIHelper(context).showSignSettingsDialog());
+                .setOnClickListener(context.uiHelper.showSignSettingsDialog());
 
         dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.npatch_title, fileName))
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.npatch_patch, (d, w) -> {
-                    for (String module : options.useManager ? java.util.Collections.<String>emptyList() : options.modules) {
+                    for (String module : options.modules) {
                         if (!new File(module).isFile()) {
                             Extensions.showMessage(context, context.getString(R.string.npatch_module_missing, module));
                             return;
@@ -301,8 +268,6 @@ public class XposedPatcherDialogs {
     /** A named snapshot of every patch option, persisted as JSON in prefs. */
     public static class Profile {
         List<String> modules = new ArrayList<>();
-        List<String> managerModules = new ArrayList<>();
-        boolean useManager;
         int sigBypassLevel = 2;
         boolean debuggable;
         boolean injectDex;
@@ -320,8 +285,6 @@ public class XposedPatcherDialogs {
         static Profile of(Options o) {
             Profile p = new Profile();
             p.modules = new ArrayList<>(o.modules);
-            p.managerModules = new ArrayList<>(o.managerModules);
-            p.useManager = o.useManager;
             p.sigBypassLevel = o.sigBypassLevel;
             p.debuggable = o.debuggable;
             p.injectDex = o.injectDex;
@@ -340,11 +303,8 @@ public class XposedPatcherDialogs {
 
         void into(Options o) {
             o.modules.clear();
-            if (modules != null) o.modules.addAll(modules);
-            o.managerModules.clear();
-            if (managerModules != null) o.managerModules.addAll(managerModules);
-            o.useManager = useManager;
-            o.sigBypassLevel = Math.max(0, Math.min(3, sigBypassLevel));
+            o.modules.addAll(modules);
+            o.sigBypassLevel = sigBypassLevel;
             o.debuggable = debuggable;
             o.injectDex = injectDex;
             o.usesCleartextTraffic = usesCleartextTraffic;
@@ -461,9 +421,6 @@ public class XposedPatcherDialogs {
      * {@code options} ends up mirroring the profile.
      */
     private void applyLoadedProfile(View dialogView, Options options) {
-        ((MaterialButton) dialogView.findViewById(R.id.lspatch_mode)).setText(
-                options.useManager ? R.string.lspatch_manager_mode : R.string.lspatch_integrated_mode);
-        updateModulesLabel(dialogView, options);
         bindSwitchSilently(dialogView, R.id.npatch_debuggable, options.debuggable);
         bindSwitchSilently(dialogView, R.id.npatch_injectdex, options.injectDex);
         bindSwitchSilently(dialogView, R.id.npatch_cleartext, options.usesCleartextTraffic);
@@ -483,14 +440,6 @@ public class XposedPatcherDialogs {
         MaterialButton bypassBtn = dialogView.findViewById(R.id.npatch_sigbypass);
         String[] names = bypassNames();
         bypassBtn.setText(names[Math.min(options.sigBypassLevel, names.length - 1)]);
-    }
-
-    private void updateModulesLabel(View dialogView, Options options) {
-        MaterialButton modules = dialogView.findViewById(R.id.npatch_modules);
-        modules.setText(options.useManager
-                ? context.getString(R.string.lspatch_manager_modules, options.managerModules.size())
-                : options.modules.isEmpty() ? context.getString(R.string.npatch_embed_modules_zero)
-                : context.getString(R.string.npatch_embed_modules, options.modules.size()));
     }
 
     private String[] bypassNames() {
@@ -550,72 +499,87 @@ public class XposedPatcherDialogs {
     }
 
     private void startPatch(File file, Options options) {
-        PatcherSigning.initialize();
         ProgressManager pm = new ProgressManager(context, true).show();
         LsBridgeLogger logger = new LsBridgeLogger(pm);
+        final File[] resultHolder = new File[1];
+        Runnable finish = () -> {
+            File produced = resultHolder[0];
+            context.handler.post(() -> {
+                Extensions.showMessage(context, context.getString(R.string.npatch_done, produced.getName()));
+                context.loadFolderInPane(file.getParentFile(), pane1, false);
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.npatch_done_title)
+                        .setMessage(context.getString(R.string.npatch_install_prompt, produced.getName()))
+                        .setPositiveButton(R.string.install, (d2, w2) ->
+                                InstallUtil.installApkWithDialog(context, produced))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            });
+        };
         if (options.autoSign) {
             // Resolve (and possibly password-prompt) the user's key up front on
             // the UI thread, then hand it to the engine (-k). The engine signs
             // its data-multiplexed output in place with the user's key; a
             // post-hoc apksig pass would re-serialize the zip and materialize
             // the entry links, roughly doubling the file size.
-            SignWrapper.requireAuth(context, sw -> patchInBackground(file, options, logger, pm, sw), pm::dismiss);
-        } else {
-            patchInBackground(file, options, logger, pm, null);
-        }
-    }
-
-    private void patchInBackground(File file, Options options, Logger logger, ProgressManager pm, SignWrapper signing) {
-        new Thread(() -> {
-            try (PatcherFiles.Work work = new PatcherFiles.Work(context, "lspatch-")) {
-                if (signing != null) exportUserKeys(signing, options, work.directory);
-                File produced = runLSPatch(file, options, logger, work.directory);
-                if (options.useManager) {
-                    var info = context.getPackageManager().getPackageArchiveInfo(produced.getPath(), 0);
-                    if (info == null) throw new IllegalStateException("Patched APK could not be parsed");
-                    new LSPatchModuleRepository(context).setScope(info.packageName, new LinkedHashSet<>(options.managerModules));
-                    LSPatchRemoteServices.get(context).push(options.managerModules);
+            SignWrapper.requireAuth(context, sw -> new Thread(() -> {
+                try {
+                    exportUserKeys(sw, options);
+                    File produced = runLSPatch(file, options, logger);
+                    resultHolder[0] = produced;
+                    pm.dismiss();
+                    finish.run();
+                } catch (Throwable t) {
+                    logger.e(rootCauseMessage(t));
+                    try {
+                        PrintWriter pw = new PrintWriter(
+                                new File(context.getCacheDir(), "xposed-patcher-last-error.txt"), "UTF-8");
+                        pw.print(rootCauseMessage(t));
+                        for (Throwable c = t; c != null; c = c.getCause()) {
+                            for (StackTraceElement el : c.getStackTrace()) pw.println("    at " + el);
+                        }
+                        pw.close();
+                    } catch (Exception ignored) {
+                    }
+                    pm.dismiss();
+                    context.handler.post(() -> new ErrorUtil(context).showError(rootCauseMessage(t)));
                 }
-                context.runOnUiThread(() -> {
-                    if (context.isFinishing() || context.isDestroyed()) return;
-                    Extensions.showMessage(context, context.getString(R.string.npatch_done, produced.getName()));
-                    if (context instanceof MainActivity main) main.loadFolderInPane(produced.getParentFile(), pane1, false);
-                    new MaterialAlertDialogBuilder(context).setTitle(R.string.npatch_done_title)
-                            .setMessage(context.getString(options.useManager ? R.string.lspatch_manager_install_prompt
-                                    : R.string.npatch_install_prompt, produced.getName()))
-                            .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, produced))
-                            .setNegativeButton(android.R.string.cancel, null).show();
-                });
-            } catch (Throwable error) {
-                logger.e(rootCauseMessage(error));
-                try (PrintWriter writer = new PrintWriter(new File(context.getCacheDir(), "xposed-patcher-last-error.txt"), "UTF-8")) {
-                    error.printStackTrace(writer);
-                } catch (Exception ignored) { }
-                context.runOnUiThread(() -> {
-                    if (!context.isFinishing() && !context.isDestroyed()) new ErrorUtil(context).showError(error);
-                });
-            } finally { options.userKeyStore = null; pm.dismiss(); }
-        }, "XposedPatcher").start();
+            }, "XposedPatcher").start());
+        } else {
+            new Thread(() -> {
+                try {
+                    File produced = runLSPatch(file, options, logger);
+                    resultHolder[0] = produced;
+                    pm.dismiss();
+                    finish.run();
+                } catch (Throwable t) {
+                    logger.e(t.getMessage() == null ? t.toString() : t.getMessage());
+                    pm.dismiss();
+                    context.handler.post(() -> new ErrorUtil(context).showError(t));
+                }
+            }, "XposedPatcher").start();
+        }
     }
 
     /**
      * Writes the user's configured signing key into an engine-readable
-     * keystore in the app-private cache (deleted when the run finishes). LSPatch reads
+     * keystore in the app-private cache (deleted on exit). LSPatch reads
      * KeyStore.getDefaultType(), which is JKS on some Android versions and
      * BKS on others; if that type cannot hold the key, the BKS format is
      * produced instead.
      */
-    private void exportUserKeys(SignWrapper sw, Options options, File directory) throws Exception {
+    private void exportUserKeys(SignWrapper sw, Options options) throws Exception {
         String defaultType = KeyStore.getDefaultType();
-        File keystore = new File(directory, "xposed-user-key."
+        File keystore = new File(context.getCacheDir(), "xposed-user-key."
                 + defaultType.toLowerCase(Locale.ROOT));
         try {
             sw.exportKey(keystore, defaultType, BKS_PASSWORD, BKS_ALIAS);
         } catch (Exception e) {
-            keystore = new File(directory, "xposed-user-key.bks");
+            keystore = new File(context.getCacheDir(), "xposed-user-key.bks");
             sw.exportKey(keystore, "BKS", BKS_PASSWORD, BKS_ALIAS);
         }
         options.userKeyStore = keystore;
+        keystore.deleteOnExit();
     }
 
     private static String rootCauseMessage(Throwable t) {
@@ -636,16 +600,13 @@ public class XposedPatcherDialogs {
      * PatchException with an actionable message. Its built-in keystore
      * signature is likewise replaced right after by the caller's Auto Sign key.
      */
-    private File runLSPatch(File srcApk, Options options, Logger logger, File outputDir) throws Exception {
+    private File runLSPatch(File srcApk, Options options, Logger logger) throws Exception {
+        File outputDir = outputDir(srcApk);
         final String baseName = baseName(srcApk);
         List<String> args = new ArrayList<>();
         args.add("-o");
         args.add(outputDir.getAbsolutePath());
-        if (options.useManager) {
-            args.add("--manager");
-            args.add("--manager-package");
-            args.add(context.getPackageName());
-        }
+        args.add("--force");
         if (options.debuggable) args.add("-d");
         args.add("-l");
         args.add(String.valueOf(options.sigBypassLevel));
@@ -658,7 +619,7 @@ public class XposedPatcherDialogs {
             args.add("--target-sdk");
             args.add(String.valueOf(options.targetSdkValue));
         }
-        for (String module : options.useManager ? java.util.Collections.<String>emptyList() : options.modules) {
+        for (String module : options.modules) {
             args.add("-m");
             args.add(module);
         }
@@ -684,10 +645,12 @@ public class XposedPatcherDialogs {
         args.add(srcApk.getAbsolutePath());
 
         LSPatch cli = new LSPatch(args.toArray(new String[0]));
-        List<File> outputs = new ApkPatcher(logger, cli.toSpec()).patch();
-        if (outputs.size() != 1 || !outputs.get(0).isFile()) throw new IllegalStateException("Patcher produced no output APK");
-        return PatcherFiles.publish(outputs.get(0), new File(PatcherFiles.outputDirectory(context, srcApk),
-                baseName + Constants.PATCH_FILE_SUFFIX));
+        new ApkPatcher(logger, cli.toSpec()).patch();
+        return normalizeOutput(outputDir, baseName, Constants.PATCH_FILE_SUFFIX);
+    }
+
+    private File outputDir(File srcApk) {
+        return srcApk.getParentFile() != null ? srcApk.getParentFile() : context.getCacheDir();
     }
 
     private static String baseName(File srcApk) {
@@ -696,6 +659,43 @@ public class XposedPatcherDialogs {
             base = base.substring(0, base.length() - 4);
         }
         return base;
+    }
+
+    /**
+     * The engine writes {@code <base>-<verCode><suffix>} into the output dir;
+     * pick the newest and normalize to {@code <base><suffix>} (with _2, _3…
+     * dedup suffixes).
+     */
+    private static File normalizeOutput(File outputDir, String baseName, String suffix)
+            throws Exception {
+        File[] candidates = outputDir.listFiles((dir, name) ->
+                name.startsWith(baseName) && name.endsWith(suffix));
+        File produced = null;
+        if (candidates != null) {
+            long best = -1;
+            for (File c : candidates) {
+                if (c.lastModified() > best) {
+                    best = c.lastModified();
+                    produced = c;
+                }
+            }
+        }
+        if (produced == null) {
+            throw new IllegalStateException("Patcher produced no output APK");
+        }
+        File renamed = new File(outputDir, baseName + suffix);
+        if (renamed.exists()) {
+            int i = 1;
+            while (renamed.exists()) {
+                renamed = new File(outputDir, baseName + "_" + (++i) + suffix);
+            }
+        }
+        if (!renamed.equals(produced) && !produced.renameTo(renamed)) {
+            Files.copy(produced.toPath(), renamed.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING);
+            produced.delete();
+        }
+        return renamed;
     }
 
     /** Bridges LSPatch's Logger to the progress dialog. */

@@ -150,21 +150,27 @@ public final class ApkMoreMenuOrder {
 
     public static int iconFor(String id) {
         if (id == null) return R.drawable.baseline_info_24;
-        return switch (id) {
-            case SIGN -> R.drawable.baseline_check_circle_24;
-            case OPT -> R.drawable.gavel_24px;
-            case DECOMPILE -> R.drawable.code_24px;
-            case REFACTOR -> R.drawable.baseline_drive_file_rename_outline_24;
-            case PROTECT -> R.drawable.lock_24px;
-            case CLONE -> R.drawable.control_point_duplicate_24px;
-            case ADD_TOAST -> R.drawable.add_24px;
-            case REMOVE_TOASTS -> R.drawable.baseline_remove_circle_24;
-            case REMOVE_SIG -> R.drawable.lock_open_24px;
-            case MANIFEST_TOGGLES -> R.drawable.baseline_settings_24;
-            case XPOSED_PATCH, PATCH_LIBS, FLUTTER -> R.drawable.tools_24px;
-            case MULTIPLEX -> R.drawable.stacks_24px;
-            case IL2CPP, FRIDA, JIAGU -> R.drawable.terminal_24px;
-            default -> R.drawable.baseline_info_24;
-        };
+        switch (id) {
+            case SIGN: return R.drawable.baseline_check_circle_24;
+            case OPT: return R.drawable.gavel_24px;
+            case DECOMPILE: return R.drawable.code_24px;
+            case REFACTOR: return R.drawable.baseline_drive_file_rename_outline_24;
+            case PROTECT: return R.drawable.lock_24px;
+            case CLONE: return R.drawable.control_point_duplicate_24px;
+            case ADD_TOAST: return R.drawable.add_24px;
+            case REMOVE_TOASTS: return R.drawable.baseline_remove_circle_24;
+            case REMOVE_SIG: return R.drawable.lock_open_24px;
+            case SIG_HEALTH: return R.drawable.baseline_info_24;
+            case MANIFEST_TOGGLES: return R.drawable.baseline_settings_24;
+            case PERMISSIONS: return R.drawable.baseline_info_24;
+            case XPOSED_PATCH: return R.drawable.tools_24px;
+            case MULTIPLEX: return R.drawable.stacks_24px;
+            case IL2CPP: return R.drawable.terminal_24px;
+            case PATCH_LIBS: return R.drawable.tools_24px;
+            case FLUTTER: return R.drawable.tools_24px;
+            case FRIDA: return R.drawable.terminal_24px;
+            case JIAGU: return R.drawable.terminal_24px;
+            default: return R.drawable.baseline_info_24;
+        }
     }
 }
