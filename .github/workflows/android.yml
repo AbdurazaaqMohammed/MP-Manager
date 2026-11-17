@@ -53,7 +53,7 @@ jobs:
           PY
 
       - name: Run Unit Tests
-        run: ./gradlew testFullReleaseUnitTest
+        run: ./gradlew test
 
       - name: Upload Test Report
         uses: actions/upload-artifact@v4
