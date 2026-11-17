@@ -68,7 +68,6 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
@@ -1533,7 +1532,7 @@ public class HexEditorActivity extends BaseActivity {
             else finish();
             return;
         }
-        if (RootStaging.needsWriteConfirm(rootOriginalPath)) {
+        if (PrivilegeManager.Staging.needsWriteConfirm(rootOriginalPath)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.editor_write_system))
                     .setMessage(getString(R.string.editor_write_system_msg, rootOriginalPath))
@@ -1569,7 +1568,7 @@ public class HexEditorActivity extends BaseActivity {
                 }
             }
             localCommitted = true;
-            if (rootOriginalPath != null) RootStaging.writeBack(this, file, rootOriginalPath);
+            if (rootOriginalPath != null) PrivilegeManager.Staging.writeBack(this, file, rootOriginalPath);
             pageCache.clear();
             runOnUiThread(() -> {
                 busy = false;

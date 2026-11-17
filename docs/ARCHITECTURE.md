@@ -53,6 +53,14 @@ are leaf services usable by anyone, dependent on nothing business-related:
   (mostly `RootManager`'s instance API). New code must go through
   `PrivilegeManager`; migrating the remaining call sites onto the session
   interfaces is the open remainder of plan stage M5.
+- **S4–S6 (this branch) resolved the M5 call-site gap**: external
+  `privilege.impl` imports are down to 6 files, and only for the
+  `RootFile` / `ShizukuFile` `File` subclasses used with
+  `instanceof` / casts / `new` in UI/util code (a type-level usage that
+  requires moving the classes themselves or introducing a tag interface
+  — deferred as its own change). Everything else goes through
+  `PrivilegeManager` mirrors (`Root`, `Files`, `Shizuku`, `Staging`,
+  `Permissions`, `Native`, `Installer`, `Startup`).
 - `rikka/shizuku/ShizukuProcessFactory` stays in `rikka.shizuku` — it
   exists to reach a package-private ShizukuRemoteProcess constructor
   there and cannot move.

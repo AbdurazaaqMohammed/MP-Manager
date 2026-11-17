@@ -210,13 +210,19 @@ session; each stage verified by `compileFullDebugJavaWithJavac` +
       testing against a device-owner Dhizuku install)
 - [x] **M5** — delete `legacy/` + `WorkingMode` shim — *structural core done*:
       97d12e2e dissolves `legacy/` into `privilege/impl/` and ce95f301
-      relocates the unit tests. ~30 feature/ui files still call
-      `RootManager`'s instance API and sibling implementation classes
-      directly; migrating them onto `PrivilegeManager` sessions is the
-      remaining gap (tracked in `docs/ARCHITECTURE.md` deviations)
+      relocates the unit tests. Call-site migration onto
+      `PrivilegeManager` mirrors landed later as S4–S6 on the
+      `privilege/backend-coexist` branch; the only remaining external
+      impl imports are the `RootFile`/`ShizukuFile` instanceof deviation
+      (tracked in `docs/ARCHITECTURE.md`).
 - [ ] **B**  — (optional) Gradle library module extraction — not started
 - [x] **C**  — redundant with M4; satisfied by 83dacd09
 - [x] **S1** — per-capability backend priority: SHIZUKU/DHIZUKU coexist as
       parallel domains (SHIZUKU: shell/file-ops, DHIZUKU: device-owner),
       ROOT last-resort fallback — `priorityFor(Class<? extends Capability>)`
       replaces the global `priority()`
+- [x] **S4–S6** — the remaining M5 gap: ~40 feature/ui/mcp/util files
+      migrated off `privilege.impl` onto `PrivilegeManager` mirrors
+      (Root/Files/Shizuku/Staging/Permissions/Native/Installer/Startup);
+      external impl imports now only the `RootFile`/`ShizukuFile`
+      instanceof deviation (6 files)

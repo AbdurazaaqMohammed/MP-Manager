@@ -1,7 +1,5 @@
 package io.github.abdurazaaqmohammed.util.net;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 import android.app.Activity;
@@ -175,17 +173,16 @@ public class DnsManager {
             }
         }
         try {
-            RootManager rm = RootManager.getInstance(context);
             try {
-                rm.autoEnableRootIfAvailable();
+                PrivilegeManager.Root.autoEnableRootIfAvailable(context);
             } catch (Exception ignored) {
             }
-            if (rm.isRootAvailable() && rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
+            if (PrivilegeManager.Root.isRootAvailable(context) && WorkingModePrefs.get(context) == WorkingModePrefs.WorkingMode.ROOT) {
                 String mode = validDnsMode(profile.mode);
                 String host = validDnsHostname(profile.hostname);
                 if (mode == null || host == null) return false;
-                ShellSession.ShellResult r1 = rm.execute("settings put global private_dns_mode " + ShellQuote.quoteForSh(mode), 10);
-                ShellSession.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + ShellQuote.quoteForSh(host), 10);
+                ShellSession.ShellResult r1 = PrivilegeManager.Root.execute(context, "settings put global private_dns_mode " + ShellQuote.quoteForSh(mode), 10);
+                ShellSession.ShellResult r2 = PrivilegeManager.Root.execute(context, "settings put global private_dns_specifier " + ShellQuote.quoteForSh(host), 10);
                 if (r1.isSuccess() && r2.isSuccess()) {
                     rememberActive(context, profile.id);
                     requestTileRefresh(context);

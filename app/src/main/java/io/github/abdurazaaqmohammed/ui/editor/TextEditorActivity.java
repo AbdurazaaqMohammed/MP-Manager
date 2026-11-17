@@ -24,7 +24,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
@@ -75,8 +74,6 @@ import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.util.text.AbxUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
@@ -872,7 +869,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private boolean restage(EditorTab tab) {
         try {
-            File staged = RootStaging.stageForRead(TextEditorActivity.this, tab.rootOriginalPath);
+            File staged = PrivilegeManager.Staging.stageForRead(TextEditorActivity.this, tab.rootOriginalPath);
             if (staged == null || !staged.isFile()) return false;
             tab.file = staged;
             tab.fileUri = Uri.fromFile(staged);
@@ -1058,7 +1055,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         // Root-staged tab: confirm before touching key system paths, then
         // write the staged copy locally and push bytes back via su.
         if (tab.file != null && tab.rootOriginalPath != null) {
-            if (RootStaging.needsWriteConfirm(tab.rootOriginalPath)) {
+            if (PrivilegeManager.Staging.needsWriteConfirm(tab.rootOriginalPath)) {
                 String target = tab.rootOriginalPath;
                 new MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.editor_write_system))
@@ -1200,12 +1197,12 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
         boolean rootAvailable = false;
         try {
-            rootAvailable = RootManager.getInstance(this).isRootAvailable() && tab.file != null;
+            rootAvailable = PrivilegeManager.Root.isRootAvailable(this) && tab.file != null;
         } catch (Exception ignored) {
         }
         boolean shizukuUsable = PrivilegeManager.shizuku().isGranted()
                 && tab.file != null
-                && ShizukuFile.isAndroidDataPath(tab.file);
+                && PrivilegeManager.Shizuku.isAndroidDataPath(tab.file);
 
         MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.save_denied_title)
@@ -1387,7 +1384,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private void doRootWriteBack(EditorTab tab, String text, Runnable onDone) {
         try {
-            RootStaging.writeBack(this, tab.file, tab.rootOriginalPath);
+            PrivilegeManager.Staging.writeBack(this, tab.file, tab.rootOriginalPath);
             runOnUiThread(() -> {
                 tab.modified = false;
                 tab.exportedCopyPath = null;

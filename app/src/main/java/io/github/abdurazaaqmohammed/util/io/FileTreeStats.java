@@ -2,8 +2,6 @@ package io.github.abdurazaaqmohammed.util.io;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
@@ -26,7 +24,7 @@ public final class FileTreeStats {
     public static DirectoryStats read(Context context, File root, TransferControl control, long timeoutMs) {
         if (root == null) return new DirectoryStats(0, 0, 0, 0, 1);
         if (!(root instanceof SafFile) && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-            DirectoryStats nativeStats = NativeRootManager.stats(context, root.getAbsolutePath(), control, timeoutMs);
+            DirectoryStats nativeStats = PrivilegeManager.Native.stats(context, root.getAbsolutePath(), control, timeoutMs);
             if (nativeStats != null) return nativeStats;
         }
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /**
@@ -152,14 +151,10 @@ public class StorageDocumentsProvider extends DocumentsProvider {
 
     private static boolean rootReachable(Context context) {
         try {
-            RootManager rm = RootManager.getInstance(context);
-            // Only the setting decides whether the root entry is listed. The
-            // live `su -c id` probe is cached and can be stale (root granted after
-            // the app first started, or a prompt the user answered later), and
             // running it inside queryRoots held the whole picker up for seconds -
             // which is exactly how the root entry ended up missing. If su really
             // is unavailable the listing comes back empty instead.
-            return rm.isRootFileOpsEnabled();
+            return PrivilegeManager.Root.isRootFileOpsEnabled(context);
         } catch (Throwable e) {
             return false;
         }

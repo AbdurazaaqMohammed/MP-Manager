@@ -34,7 +34,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import io.github.ratul.topactivity.App;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.ratul.topactivity.extensions.GenericExtensions;
 import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.repository.ServiceState;
@@ -64,7 +64,7 @@ public class PopupManager {
     public void show() {
         if (baseView != null) return;
         AccessibilityMonitoringService accessibilityService = AccessibilityMonitoringService.getInstance();
-        if (accessibilityService == null && !RootPermissionHelper.hasAccessibility(context)) {
+        if (accessibilityService == null && !PrivilegeManager.Permissions.hasAccessibility(context)) {
             //hide();
             PermissionUtil.requestAccessibilityPermission((AppCompatActivity) context);
             //      return;
@@ -113,7 +113,7 @@ public class PopupManager {
 
         inspectBtn.setOnClickListener(v -> {
             if (AccessibilityMonitoringService.getInstance() == null
-                    && !RootPermissionHelper.hasAccessibility(context)) {
+                    && !PrivilegeManager.Permissions.hasAccessibility(context)) {
                 //hide();
                 PermissionUtil.requestAccessibilityPermission((AppCompatActivity) context);
                 //      return;
