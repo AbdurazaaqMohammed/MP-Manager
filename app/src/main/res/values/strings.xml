@@ -809,6 +809,10 @@ Layout Inspector
     <string name="sidebar_collapse">Collapse section</string>
     <string name="sidebar_expand">Expand section</string>
     <string name="organize_sidebar">Organize sidebar</string>
+    <string name="sidebar_add_tool">Add to sidebar</string>
+    <string name="sidebar_remove_tool">Remove from sidebar</string>
+    <string name="sidebar_tool_added">Added to sidebar</string>
+    <string name="sidebar_tool_removed">Removed from sidebar</string>
     <string name="done_organizing_sidebar">Done organizing</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="restore_sidebar_item">Restore sidebar item</string>
