@@ -125,7 +125,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
@@ -143,8 +142,6 @@ import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
@@ -1618,7 +1615,7 @@ public class FileOpener {
     private void showShellScriptDialog(File readable, File original, String fileName) {
         boolean rootMode = false;
         try {
-            rootMode = RootManager.getInstance(context).isRootMode();
+            rootMode = PrivilegeManager.Root.isRootMode(context);
         } catch (Exception ignored) {
         }
         LinearLayout root = new LinearLayout(context);
@@ -1655,7 +1652,7 @@ public class FileOpener {
     private void executeShellScript(File script, boolean asRoot) {
         boolean rootMode = false;
         try {
-            rootMode = RootManager.getInstance(context).isRootMode();
+            rootMode = PrivilegeManager.Root.isRootMode(context);
         } catch (Exception ignored) {
         }
         if (asRoot && !rootMode) {
@@ -1674,7 +1671,7 @@ public class FileOpener {
             String err = "";
             try {
                 if (asRoot) {
-                    ShellSession.ShellResult r = RootManager.getInstance(context).execute(
+                    ShellSession.ShellResult r = PrivilegeManager.Root.execute(context,
                             "sh " + ShellQuote.escapeShellArg(script.getAbsolutePath()), 120);
                     exitCode = r.exitCode();
                     out = r.output();
@@ -2107,7 +2104,7 @@ public class FileOpener {
             String cmd = "du -sb " + ShellQuote.escapeShellArg(path);
             String out = null;
             if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-                ShellSession.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);
+                ShellSession.ShellResult r = PrivilegeManager.Root.execute(context, cmd, 5);
                 if (r != null && r.isSuccess()) out = r.output();
             } else if (PrivilegeManager.Shizuku.ready()) {
                 ShellSession.Result r = PrivilegeManager.shizuku().exec(cmd, 5);
@@ -2205,7 +2202,7 @@ public class FileOpener {
                 if (zipFile.exists()) zipFile.delete();
 
                 File sourceToCompress = folder;
-                if (RootStaging.needsStaging(context, folder)) {
+                if (PrivilegeManager.Staging.needsStaging(context, folder)) {
                     stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
                     stagedDir.mkdirs();
                     sourceToCompress = new File(stagedDir, folder.getName());
@@ -2284,7 +2281,7 @@ public class FileOpener {
                 try (ZipFile zf = new ZipFile(zipFile)) {
                     for (File f : files) {
                         File source = f;
-                        if (RootStaging.needsStaging(context, f)) {
+                        if (PrivilegeManager.Staging.needsStaging(context, f)) {
                             if (stagedDir == null) {
                                 stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
                                 stagedDir.mkdirs();
@@ -2364,7 +2361,7 @@ public class FileOpener {
                 try (ZipFile zf = new ZipFile(zipFile)) {
                     for (File f : folders) {
                         File source = f;
-                        if (RootStaging.needsStaging(context, f)) {
+                        if (PrivilegeManager.Staging.needsStaging(context, f)) {
                             if (stagedDir == null) {
                                 stagedDir = new File(context.getCacheDir(), "stage_share_" + System.currentTimeMillis());
                                 stagedDir.mkdirs();
@@ -2385,7 +2382,7 @@ public class FileOpener {
                         File readableFile = sf;
                         if (SafFs.isSaf(sf) || !(sf.exists() && sf.canRead() && appReadable(sf))) {
                             if (PrivilegeManager.Files.fileOpsOn(context)) {
-                                readableFile = RootStaging.stageForRead(context, sf.getAbsolutePath());
+                                readableFile = PrivilegeManager.Staging.stageForRead(context, sf.getAbsolutePath());
                             }
                         }
                         if (readableFile != null && readableFile.exists()) {
@@ -2540,7 +2537,7 @@ public class FileOpener {
 
     private static boolean appReadable(File file) {
         try {
-            if (file instanceof ShizukuFile)
+            if (PrivilegeManager.Shizuku.isAndroidDataPath(file))
                 return new File(file.getAbsolutePath()).canRead();
             return true;
         } catch (Exception e) {
@@ -2559,7 +2556,7 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.reading_from_provider);
             new Thread(() -> {
                 try {
-                    File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                    File staged = PrivilegeManager.Staging.stageForRead(context, file.getAbsolutePath());
                     context.handler.post(() -> {
                         try {
                             cb.onReady(staged);
@@ -2601,7 +2598,7 @@ public class FileOpener {
         Extensions.showMessage(context, R.string.reading_with_elevated_access);
         new Thread(() -> {
             try {
-                File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                File staged = PrivilegeManager.Staging.stageForRead(context, file.getAbsolutePath());
                 context.handler.post(() -> {
                     try {
                         cb.onReady(staged);
@@ -2620,7 +2617,7 @@ public class FileOpener {
         if (readable != null && original != null
                 && !readable.getAbsolutePath().equals(original.getAbsolutePath())) {
             i.putExtra("rootOriginalPath", original.getAbsolutePath());
-            // The editor saves through RootStaging.writeBack, which streams a
+            // The editor saves through PrivilegeManager.Staging.writeBack, which streams a
             // provider path back into its document; say so instead of "root".
             Extensions.showMessage(context, SafFs.isSaf(original)
                     ? R.string.opened_from_provider : R.string.opened_with_root);
@@ -2710,7 +2707,7 @@ public class FileOpener {
         String bakPath = bakFile.getPath();
         String origPath = origFile.getPath();
         boolean useElevated = PrivilegeManager.Files.fileOpsOn(context)
-                && (RootStaging.needsStaging(context, bakPath) || RootStaging.needsStaging(context, origPath));
+                && (PrivilegeManager.Staging.needsStaging(context, bakPath) || PrivilegeManager.Staging.needsStaging(context, origPath));
         if (useElevated) {
             new Thread(() -> {
                 try {

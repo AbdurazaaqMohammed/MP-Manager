@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /** Built-in tool metadata shared by the hub, sidebar and launcher shortcuts. */
 public final class ToolRegistry {
@@ -71,7 +71,7 @@ public final class ToolRegistry {
     }
 
     public static List<ToolItem> visibleTools(Context context) {
-        boolean root = RootManager.getInstance(context).isRootAvailable();
+        boolean root = PrivilegeManager.Root.isRootAvailable(context);
         List<ToolItem> tools = new ArrayList<>();
         for (Definition definition : DEFINITIONS) {
             if (!definition.rootOnly || root) tools.add(definition.localize(context));
@@ -101,7 +101,7 @@ public final class ToolRegistry {
         String canonical = canonicalId(id);
         for (Definition definition : DEFINITIONS) {
             if (definition.id.equals(canonical)) {
-                return !definition.rootOnly || RootManager.getInstance(context).isRootAvailable();
+                return !definition.rootOnly || PrivilegeManager.Root.isRootAvailable(context);
             }
         }
         return false;

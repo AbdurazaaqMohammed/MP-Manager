@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
@@ -57,8 +56,9 @@ public class AppOpsEngine {
      * {@code su}/{@code rish} pipeline that discarded the exit code.
      *
      * <p>The working mode decides the backend: root mode goes through
-     * {@link RootManager#execute} (custom su binary, availability gate, timeout,
-     * stderr draining) and Shizuku mode through {@link ShizukuShell#exec}.
+     * {@code PrivilegeManager.Root.execute} (custom su binary, availability gate,
+     * timeout, stderr draining) and Shizuku mode through
+     * {@code PrivilegeManager.shizuku().exec}.
      * With neither backend configured the command is never run and the failure
      * is reported, so callers cannot mistake silence for success.
      */
@@ -70,13 +70,12 @@ public class AppOpsEngine {
         lastError = "";
         ShellSession.ShellResult result;
         try {
-            RootManager rm = RootManager.getInstance(context);
-            WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
+            WorkingModePrefs.WorkingMode mode = WorkingModePrefs.get(context);
             if (mode == WorkingModePrefs.WorkingMode.ROOT) {
-                if (!rm.isRootAvailable()) {
+                if (!PrivilegeManager.Root.isRootAvailable(context)) {
                     result = new ShellSession.ShellResult(-1, "", "Root is not available");
                 } else {
-                    result = rm.execute(cmd, timeoutSeconds);
+                    result = PrivilegeManager.Root.execute(context, cmd, timeoutSeconds);
                 }
             } else if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) {
                 PrivilegeManager.shizuku().warmUp(context);
@@ -97,9 +96,8 @@ public class AppOpsEngine {
     /** True when the current working mode has an elevated backend ready to run commands. */
     public static boolean hasElevatedBackend(Context context) {
         try {
-            RootManager rm = RootManager.getInstance(context);
-            WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
-            if (mode == WorkingModePrefs.WorkingMode.ROOT) return rm.isRootAvailable();
+            WorkingModePrefs.WorkingMode mode = WorkingModePrefs.get(context);
+            if (mode == WorkingModePrefs.WorkingMode.ROOT) return PrivilegeManager.Root.isRootAvailable(context);
             if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) return PrivilegeManager.Shizuku.ready();
         } catch (Exception ignored) {
         }

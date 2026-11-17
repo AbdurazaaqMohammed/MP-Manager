@@ -49,7 +49,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -83,8 +83,7 @@ public class FridaConsoleActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        RootManager rootManager = RootManager.getInstance(this);
-        if (!rootManager.isRootAvailable()) {
+        if (!PrivilegeManager.Root.isRootAvailable(this)) {
             Extensions.showMessage(this, getString(R.string.frida_root_required));
             finish();
             return;
@@ -446,7 +445,7 @@ public class FridaConsoleActivity extends BaseActivity {
         File script = buildScriptFile();
         File runSh = buildRunScript(pkg, script);
         appendConsole("$ su -c sh " + runSh.getAbsolutePath() + "\n");
-        process = new ProcessBuilder(RootManager.getInstance(this).suBinary(), "-c",
+        process = new ProcessBuilder(PrivilegeManager.Root.suBinary(this), "-c",
                 "sh " + ShellQuote.quoteForSh(runSh.getAbsolutePath()))
                 .redirectErrorStream(true)
                 .start();
@@ -547,7 +546,7 @@ public class FridaConsoleActivity extends BaseActivity {
             // frida-inject runs as root: our destroy() only kills the su shell.
             try {
                 Process pkill = Runtime.getRuntime().exec(new String[]{
-                        RootManager.getInstance(this).suBinary(), "-c",
+                        PrivilegeManager.Root.suBinary(this), "-c",
                         "pkill -f " + REMOTE_DIR + "/inject"});
                 pkill.waitFor();
             } catch (Exception ignored) {
