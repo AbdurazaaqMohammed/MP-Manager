@@ -66,7 +66,6 @@ import io.github.abdurazaaqmohammed.ui.editor.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.editor.CompareZipDialog;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
@@ -322,7 +321,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * {@link File} wrapping e.g. {@code /data/data/...} reports neither
      * directory nor file (the app uid cannot stat it), which previously made
      * the ".." entry fall into the open-as-file branch and fail in
-     * {@code RootManager.streamFromRoot}. Ask the elevated backend instead.
+     * {@code PrivilegeManager.Root.streamFromRoot}. Ask the elevated backend instead.
      */
     private boolean isDir(File f) {
         if (f instanceof RootFile rf) return rf.isDirectory();
@@ -369,8 +368,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         try {
             String path = f.getAbsolutePath();
             PrivilegeManager.Backend backend = PrivilegeManager.Files.active(context);
-            if (backend == PrivilegeManager.Backend.ROOT || RootManager.getInstance(context).isRootAvailable()) {
-                return RootManager.getInstance(context).isDirectory(path);
+            if (backend == PrivilegeManager.Backend.ROOT || PrivilegeManager.Root.isRootAvailable(context)) {
+                return PrivilegeManager.Files.isDirectory(context, path);
             }
             if (backend == PrivilegeManager.Backend.SHIZUKU) {
                 return PrivilegeManager.Shizuku.isDirectory(context, path);
@@ -403,7 +402,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             return;
         }
         String path = f.getAbsolutePath();
-        if ("/".equals(path) || PathGuards.isRootOnlyPath(path) || ShizukuFile.isAndroidDataPath(f)) {
+        if ("/".equals(path) || PathGuards.isRootOnlyPath(path) || PrivilegeManager.Shizuku.isAndroidDataPath(f)) {
             context.clearGreen(pane1);
             context.setSelectedPane(pane1 ? 1 : 2);
             context.loadFolderInPaneAsync(f, pane1);
