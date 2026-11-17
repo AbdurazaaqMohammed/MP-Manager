@@ -2045,8 +2045,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="restored">Restored</string>
     <string name="failed">Failed</string>
 
-    <!-- NPatch integrated mode -->
-    <string name="npatch_integrated">Signature killer &amp; xposed</string>
+    <string name="npatch_integrated">LSPatch</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
     <string name="npatch_hint">Patches the APK with LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_bypass_lsp_0">Bypass: None</string>
@@ -2170,7 +2169,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
+    <string name="xposed_patcher_lite_title">LSPatch</string>
     <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
@@ -2419,6 +2418,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="frida_download_message">The Frida Hook Engine bundle (%1$s MB) needs to be downloaded once and is cached in the app.\n\nSource: github.com/muhammadrizwan87/frida-hook-engine</string>
     <string name="frida_downloading_engine">Downloading Frida engine bundle</string>
     <string name="frida_downloading_inject">Downloading frida-inject</string>
+    <string name="frida_download_failed">Download failed: %1$s\n\nThe host (%2$s) must be reachable — check your internet connection/VPN and try again.</string>
     <string name="frida_gadget_title">Frida Gadget</string>
     <string name="frida_gadget_desc">Embeds the Frida Hook Engine into this APK: adds libfrida-gadget.so, a generated libfrida-gadget.config.so and libfrida-gadget.script.so to the native libraries and loads the gadget from the app\'s Application onCreate(). The patched app installs and runs without root.</string>
     <string name="frida_target_label">Injection point (loadLibrary call)</string>

@@ -2001,7 +2001,7 @@
     <string name="renamed">Đã đổi tên</string>
     <string name="restored">Đã khôi phục</string>
     <string name="failed">Thất bại</string>
-    <string name="npatch_integrated">Signature killer &amp; xposed</string>
+    <string name="npatch_integrated">LSPatch</string>
     <string name="npatch_title">Patch với Xposed: %1$s</string>
     <string name="npatch_hint">Chế độ tích hợp nhúng các module và chạy độc lập. Chế độ Manager nạp framework cùng các module đã cài do MP Manager Full chọn, nên thay đổi module không cần patch lại. Auto Sign dùng khóa trong Sign Settings; nếu không sẽ dùng khóa tích hợp sẵn của engine. Một APK mới sẽ được tạo.</string>
     <string name="npatch_bypass_lsp_0">Bypass: Không</string>
@@ -2119,7 +2119,7 @@
     <string name="npatch_done_title">Patch hoàn tất</string>
     <string name="npatch_done">Đã patch: %1$s</string>
     <string name="npatch_install_prompt">Đã tạo %1$s. Các module được nhúng — ứng dụng chạy độc lập. Cài đặt ngay?</string>
-    <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
+    <string name="xposed_patcher_lite_title">LSPatch</string>
     <string name="xposed_patcher_lite_message">LSPatch và các dịch vụ trình quản lý của nó không được đóng gói trong MP Manager Lite. Cài bản Full để patch APK ở chế độ Integrated hoặc Manager và quản lý các module của chúng. Hãy giữ bản Full khi sử dụng các ứng dụng gắn với MP Manager.</string>
     <string name="op_copying">SAO CHÉP</string>
     <string name="op_moving">DI CHUYỂN</string>

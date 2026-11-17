@@ -29,6 +29,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
@@ -234,6 +235,33 @@ public class HexEditorActivity extends BaseActivity {
     };
 
     // Search panel state
+    private void closeSearchPanel() {
+        View focus = getCurrentFocus();
+        if (focus != null) focus.clearFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null && focus != null) imm.hideSoftInputFromWindow(focus.getWindowToken(), 0);
+        searchPanel.setVisibility(View.GONE);
+    }
+
+    /** Tap anywhere outside an open side panel dismisses it along with the keyboard. */
+    private static boolean isTouchInside(View view, MotionEvent ev) {
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        view.getGlobalVisibleRect(bounds);
+        return bounds.contains((int) ev.getRawX(), (int) ev.getRawY());
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN && searchPanel != null && inspectorPanel != null) {
+            if (searchPanel.getVisibility() == View.VISIBLE && !isTouchInside(searchPanel, event)) {
+                closeSearchPanel();
+            } else if (inspectorPanel.getVisibility() == View.VISIBLE && !isTouchInside(inspectorPanel, event)) {
+                inspectorPanel.setVisibility(View.GONE);
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
     private View searchPanel, inspectorPanel;
     private EditText searchValue, replaceValue;
     private AutoCompleteTextView searchType, replaceType;
@@ -416,7 +444,7 @@ public class HexEditorActivity extends BaseActivity {
             replaceBigEndian.setEnabled(endianApplies(idx));
         });
 
-        searchPanel.findViewById(R.id.btnCloseSearch).setOnClickListener(v -> searchPanel.setVisibility(View.GONE));
+        searchPanel.findViewById(R.id.btnCloseSearch).setOnClickListener(v -> closeSearchPanel());
         searchPanel.findViewById(R.id.btnSearchNext).setOnClickListener(v -> findNext());
         searchPanel.findViewById(R.id.btnSearchPrev).setOnClickListener(v -> findPrev());
         searchPanel.findViewById(R.id.btnDoReplace).setOnClickListener(v -> replaceCurrentMatch());
@@ -1754,7 +1782,7 @@ public class HexEditorActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if(inspectorPanel.getVisibility() == View.VISIBLE) inspectorPanel.setVisibility(View.GONE);
-        else if(searchPanel.getVisibility() == View.VISIBLE) searchPanel.setVisibility(View.GONE);
+        else if(searchPanel.getVisibility() == View.VISIBLE) closeSearchPanel();
         else confirmDiscardAndFinish();
     }
 
@@ -1790,7 +1818,8 @@ public class HexEditorActivity extends BaseActivity {
         else if (id == R.id.action_goto) showGotoDialog();
         else if (id == R.id.action_revert) revertChanges();
         else if (id == R.id.action_search) {
-            searchPanel.setVisibility(searchPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+            if (searchPanel.getVisibility() == View.VISIBLE) closeSearchPanel();
+            else searchPanel.setVisibility(View.VISIBLE);
             inspectorPanel.setVisibility(View.GONE);
         } else if (id == R.id.action_inspector) {
             inspectorPanel.setVisibility(inspectorPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
