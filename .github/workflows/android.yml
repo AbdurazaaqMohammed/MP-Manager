@@ -7,6 +7,8 @@
 name: Build MP-Manager APK
 
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -50,6 +52,17 @@ jobs:
           print(f"Total replacements: {count}")
           PY
 
+      - name: Run Unit Tests
+        run: ./gradlew testFullReleaseUnitTest
+
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Unit-Test-Report
+          path: '**/build/reports/tests/**'
+          if-no-files-found: ignore
+
       - name: Build APK
         run: ./gradlew assembleFullRelease
 
@@ -72,4 +85,4 @@ jobs:
           gh release delete continuous -y --cleanup-tag || true
           gh release create continuous "${apk_files[@]}" \
             --title "MP-Manager (Continuous Build)" \
-            --notes "Continuous build of MP-Manager with MT Manager feature parity (string decryption heuristics, ABI pruning, privilege migration facade)."
+            --notes "Continuous build of MP-Manager with MT Manager feature parity. All automated unit tests passed successfully."
