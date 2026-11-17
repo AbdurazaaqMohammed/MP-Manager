@@ -14,12 +14,12 @@ import android.os.ParcelFileDescriptor;
 import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyException;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeDeleteException;
+import io.github.abdurazaaqmohammed.privilege.api.NativeCopyException;
+import io.github.abdurazaaqmohammed.privilege.api.NativeDeleteException;
 import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;

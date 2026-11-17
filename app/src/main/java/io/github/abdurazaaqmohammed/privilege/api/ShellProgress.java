@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.api;
 
 /**
  * Marker protocol that lets one long elevated shell process report numeric

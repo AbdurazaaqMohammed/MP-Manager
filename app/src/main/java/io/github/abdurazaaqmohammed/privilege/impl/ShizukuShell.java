@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuProcessFactory;

@@ -8,7 +8,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;

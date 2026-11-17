@@ -4,7 +4,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
