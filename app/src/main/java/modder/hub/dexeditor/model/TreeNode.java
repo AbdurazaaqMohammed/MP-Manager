@@ -49,6 +49,9 @@ public class TreeNode {
     private boolean isChecked;
     private int lineNumber = -1;
     private boolean isSnippet = false;
+    private String subtitle;
+    private String enclosingMethod;
+    private int methodLineNumber = -1;
     private TreeNode parent;
     private List<TreeNode> children = new ArrayList<>();
     private CharSequence cachedSpannedName;
@@ -83,6 +86,30 @@ public class TreeNode {
 
     public void setSnippet(boolean snippet) {
         isSnippet = snippet;
+    }
+
+    public String getSubtitle() {
+        return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle = subtitle;
+    }
+
+    public String getEnclosingMethod() {
+        return enclosingMethod;
+    }
+
+    public void setEnclosingMethod(String enclosingMethod) {
+        this.enclosingMethod = enclosingMethod;
+    }
+
+    public int getMethodLineNumber() {
+        return methodLineNumber;
+    }
+
+    public void setMethodLineNumber(int methodLineNumber) {
+        this.methodLineNumber = methodLineNumber;
     }
 
     private boolean isVisited = false;

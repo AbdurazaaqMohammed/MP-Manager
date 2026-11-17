@@ -19,6 +19,11 @@ public class SmaliSearchTextTest {
         assertEquals("\nStrategy=\"quoted\"\\end", hits.get(1).value());
         assertEquals("\nStrategy=", hits.get(3).value());
         assertEquals("Strategy=", hits.get(4).value());
+        assertNull(hits.get(0).enclosingMethod());
+        assertEquals("z()V", hits.get(2).enclosingMethod());
+        assertEquals(9, hits.get(2).methodStartLine());
+        assertEquals("a()V", hits.get(4).enclosingMethod());
+        assertEquals(15, hits.get(4).methodStartLine());
     }
 
     @Test public void declarationLookupDoesNotConfuseOverloadsOrUsages() {

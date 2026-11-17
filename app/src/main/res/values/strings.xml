@@ -1850,6 +1850,10 @@ Strings are sent to the external service you configured.</string>
     <string name="sh_executing">Executing script…</string>
     <string name="overriding_methods_found">%1$d overriding methods found. Do you want to search for usages of the overriding methods?</string>
     <string name="only_this_method">Only this method</string>
+    <string name="trace_to_method">Trace to method</string>
+    <string name="trace_method_callers">Trace method callers</string>
+    <string name="decompile_method_java">Decompile method to Java</string>
+    <string name="trace_string_usages">Trace string usages across project</string>
     <string name="clearing_method">Clearing method…</string>
     <string name="search_resources">Search resources</string>
     <string name="pick_a_search_type">Pick a search type</string>

@@ -103,6 +103,7 @@ import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
+import modder.hub.dexeditor.utils.SmaliSearchText;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
@@ -294,6 +295,43 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         linearHeader = view.findViewById(R.id.linear_header);
         textviewLineNo = view.findViewById(R.id.textview_lineNo);
         methodName = view.findViewById(R.id.methodName);
+        if (methodName != null) {
+            methodName.setOnClickListener(v -> {
+                if (editor == null || editor.getText() == null) return;
+                int cursorLine = editor.getCursor().getLeftLine();
+                SmaliCursorUtils.MethodInfo info = SmaliCursorUtils.getMethodInfo(editor.getText(), cursorLine);
+                if (info == null || info.startLine < 0) return;
+                PopupMenu popup = new PopupMenu(requireContext(), v);
+                Menu m = popup.getMenu();
+                String mName = info.name != null ? info.name : "method";
+                m.add(0, 1, 0, getString(R.string.trace_to_method) + " (" + mName + ")");
+                m.add(0, 2, 1, getString(R.string.trace_method_callers));
+                m.add(0, 3, 2, getString(R.string.decompile_method_java));
+                popup.setOnMenuItemClickListener(item -> {
+                    Activity act = getActivity();
+                    if (!(act instanceof DexEditorActivity activity)) return false;
+                    switch (item.getItemId()) {
+                        case 1:
+                            editor.jumpToLine(info.startLine + 1);
+                            editor.setSelection(info.startLine, 0);
+                            break;
+                        case 2:
+                            if (info.name != null) {
+                                String proto = extractProto(info.signature);
+                                activity.searchMethodUsages(className, info.name, proto, false);
+                            }
+                            break;
+                        case 3:
+                            if (info.name != null) {
+                                activity.decompileMethodToJava(className, info.name);
+                            }
+                            break;
+                    }
+                    return true;
+                });
+                popup.show();
+            });
+        }
         textviewLeft = view.findViewById(R.id.textview_left);
 
         positionManager = EditorPositionManager.getInstance(requireContext());
@@ -1781,11 +1819,61 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         public void onClickGoTo(View view, String text) {
             if (text.startsWith(":")) {
                 showLabelsCompletion(text.replace("}", ""));
+            } else if (text.startsWith("\"") && text.endsWith("\"") && text.length() >= 2) {
+                handleTraceStringClick(view, text, currentClassName);
             } else {
                 Activity activity = getActivity();
                 if (activity instanceof DexEditorActivity)
                     ((DexEditorActivity) activity).goTo(text, currentClassName);
             }
+        }
+
+        private void handleTraceStringClick(View view, String text, String currentClassName) {
+            Activity act = getActivity();
+            if (!(act instanceof DexEditorActivity activity)) return;
+
+            String rawString = text.length() >= 2 ? SmaliSearchText.unescape(text.substring(1, text.length() - 1)) : text;
+            int cursorLine = editor != null && editor.getCursor() != null ? editor.getCursor().getLeftLine() : -1;
+            SmaliCursorUtils.MethodInfo methodInfo = (editor != null && cursorLine >= 0)
+                    ? SmaliCursorUtils.getMethodInfo(editor.getText(), cursorLine) : null;
+
+            PopupMenu popup = new PopupMenu(requireContext(), view);
+            Menu m = popup.getMenu();
+
+            if (methodInfo != null && methodInfo.startLine >= 0) {
+                String mName = methodInfo.name != null ? methodInfo.name : "method";
+                m.add(0, 1, 0, getString(R.string.trace_to_method) + " (" + mName + ")");
+                m.add(0, 2, 1, getString(R.string.trace_method_callers));
+                m.add(0, 3, 2, getString(R.string.decompile_method_java));
+            }
+            m.add(0, 4, 3, getString(R.string.trace_string_usages));
+
+            popup.setOnMenuItemClickListener(item -> {
+                switch (item.getItemId()) {
+                    case 1:
+                        if (methodInfo != null && methodInfo.startLine >= 0) {
+                            editor.jumpToLine(methodInfo.startLine + 1);
+                            editor.setSelection(methodInfo.startLine, 0);
+                        }
+                        break;
+                    case 2:
+                        if (methodInfo != null && methodInfo.name != null) {
+                            String proto = extractProto(methodInfo.signature);
+                            activity.searchMethodUsages(currentClassName, methodInfo.name, proto, false);
+                        }
+                        break;
+                    case 3:
+                        if (methodInfo != null && methodInfo.name != null) {
+                            activity.decompileMethodToJava(currentClassName, methodInfo.name);
+                        }
+                        break;
+                    case 4:
+                        activity.searchStringInClasses(rawString);
+                        break;
+                }
+                return true;
+            });
+            popup.show();
         }
 
         @Override
@@ -1814,6 +1902,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
         @Override
         public void onLongClickTranslate(View view) { showAvailableTranslationDlg(); }
+    }
+
+    private static String extractProto(String signature) {
+        if (signature == null) return "()V";
+        int p = signature.indexOf('(');
+        return p != -1 ? signature.substring(p).trim() : "()V";
     }
 
     private void showLabelsCompletion(final String query) {

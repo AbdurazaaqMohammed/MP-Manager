@@ -687,10 +687,36 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 				extractedText = extractSmaliLabel(lineText, column);
 			}
 		}
+
+		if ("NotAvailable".equals(extractedText)) {
+			extractedText = extractStringLiteral(lineText, column);
+		}
+
+		if ("NotAvailable".equals(extractedText) && codeEditor.getCursor().isSelected()) {
+			int start = codeEditor.getCursor().getLeft();
+			int end = codeEditor.getCursor().getRight();
+			String sel = getSelectedText(codeEditor.getText(), start, end);
+			if (sel != null) {
+				String trimmedSel = sel.trim();
+				if (trimmedSel.startsWith("\"") && trimmedSel.endsWith("\"") && trimmedSel.length() >= 2) {
+					extractedText = trimmedSel;
+				} else if (!trimmedSel.isEmpty() && !trimmedSel.contains("\n") && trimmedSel.length() <= 200) {
+					extractedText = "\"" + trimmedSel + "\"";
+				}
+			}
+		}
 		this.extractedTextWithLAndSemiColon = extractedText;
         
 		if (gotoButton != null) {
-			gotoButton.setVisibility("NotAvailable".equals(extractedText) ? View.GONE : View.VISIBLE);
+			boolean available = !"NotAvailable".equals(extractedText);
+			gotoButton.setVisibility(available ? View.VISIBLE : View.GONE);
+			if (available) {
+				if (extractedText.startsWith("\"")) {
+					setTooltipText(gotoButton, codeEditor.getContext().getString(R.string.trace_to_method));
+				} else {
+					setTooltipText(gotoButton, codeEditor.getContext().getString(R.string.go_to));
+				}
+			}
 		}
 	}
 	
@@ -1016,6 +1042,31 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		return "NotAvailable";
 	}
 	
+	public static String extractStringLiteral(String lineText, int position) {
+		if (lineText == null || lineText.isEmpty() || position < 0 || position > lineText.length()) {
+			return "NotAvailable";
+		}
+		int quote1 = -1;
+		for (int i = 0; i < lineText.length(); i++) {
+			char c = lineText.charAt(i);
+			if (c == '\\' && i + 1 < lineText.length()) {
+				i++;
+				continue;
+			}
+			if (c == '"') {
+				if (quote1 == -1) {
+					quote1 = i;
+				} else {
+					if (position >= quote1 && position <= i + 1) {
+						return lineText.substring(quote1, i + 1);
+					}
+					quote1 = -1;
+				}
+			}
+		}
+		return "NotAvailable";
+	}
+
 	public static String extractSmaliLabel(String text, int position) {
 		if (text == null || text.isEmpty() || position < 0 || position >= text.length()) {
 			return "NotAvailable";

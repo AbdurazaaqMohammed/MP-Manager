@@ -10,17 +10,34 @@ import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 public final class SmaliSearchText {
     private SmaliSearchText() {}
 
-    public record Literal(int line, int column, String source, String value) {}
+    public record Literal(int line, int column, String source, String value, String enclosingMethod, int methodStartLine) {
+        public Literal(int line, int column, String source, String value) {
+            this(line, column, source, value, null, -1);
+        }
+    }
 
     public static List<Literal> literals(String smali) {
         List<Literal> out = new ArrayList<>();
         if (smali == null) return out;
         int start = 0, line = 0, annotationDepth = 0;
+        String currentMethod = null;
+        int currentMethodStartLine = -1;
         while (start < smali.length()) {
             int end = smali.indexOf('\n', start);
             if (end < 0) end = smali.length();
             String source = smali.substring(start, end);
             String trimmed = source.trim();
+            if (tokenAt(trimmed, 0, ".method")) {
+                currentMethod = declaredSignature(trimmed, ".method");
+                if (currentMethod == null) {
+                    int p = trimmed.lastIndexOf(' ');
+                    currentMethod = p != -1 ? trimmed.substring(p + 1) : trimmed;
+                }
+                currentMethodStartLine = line;
+            } else if (endDirective(trimmed, "method")) {
+                currentMethod = null;
+                currentMethodStartLine = -1;
+            }
             if (tokenAt(trimmed, 0, ".annotation") || tokenAt(trimmed, 0, ".subannotation")
                     || (annotationDepth > 0 && subannotationValue(trimmed))) annotationDepth++;
             if (annotationDepth > 0 || tokenAt(trimmed, 0, "const-string")
@@ -35,7 +52,7 @@ public final class SmaliSearchText {
                     if (c == '"') {
                         if (quote < 0) quote = i;
                         else {
-                            out.add(new Literal(line, quote + 1, source.trim(), unescape(source.substring(quote + 1, i))));
+                            out.add(new Literal(line, quote + 1, source.trim(), unescape(source.substring(quote + 1, i)), currentMethod, currentMethodStartLine));
                             quote = -1;
                         }
                     }
