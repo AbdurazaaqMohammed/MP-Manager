@@ -9,6 +9,7 @@ name: Build MP-Manager APK
 on:
   push:
     branches: [ "main" ]
+    tags: [ "stage-*" ]
   workflow_dispatch:
 
 permissions:
@@ -85,4 +86,12 @@ jobs:
           gh release delete continuous -y --cleanup-tag || true
           gh release create continuous "${apk_files[@]}" \
             --title "MP-Manager (Continuous Build)" \
-            --notes "Continuous build of MP-Manager with MT Manager feature parity. All automated unit tests passed successfully."
+            --notes "Continuous build of MP-Manager. All automated unit tests passed successfully."
+
+          if [[ "${{ github.ref }}" == refs/tags/stage-* ]]; then
+            STAGE_TAG="${{ github.ref_name }}"
+            gh release delete "$STAGE_TAG" -y --cleanup-tag || true
+            gh release create "$STAGE_TAG" "${apk_files[@]}" \
+              --title "MP-Manager $STAGE_TAG: Privacy Engine Build" \
+              --notes "Automated release build for $STAGE_TAG. Verified unit tests and packaging passed."
+          fi

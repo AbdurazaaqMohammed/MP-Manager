@@ -1,0 +1,531 @@
+package io.github.abdurazaaqmohammed.feature.apk.privacy;
+
+import com.android.tools.smali.dexlib2.DexFileFactory;
+import com.android.tools.smali.dexlib2.Opcode;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.builder.BuilderInstruction;
+import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11n;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21c;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21s;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction31i;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction51l;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
+import com.android.tools.smali.dexlib2.iface.reference.StringReference;
+import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
+import com.reandroid.apk.APKLogger;
+import com.reandroid.apk.ApkModule;
+import com.reandroid.archive.ByteInputSource;
+import com.reandroid.archive.InputSource;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper;
+import io.github.abdurazaaqmohammed.feature.apk.DexRepairEngine;
+
+/**
+ * High-performance in-memory Dalvik bytecode mutation engine for privacy hardening.
+ * Applies surgical opcode transformations to strip telemetry, blank hardware identifiers,
+ * neutralize ad tracking, and mask developer/root environment checks without requiring device root.
+ */
+public final class PrivacyBytecodeEngine {
+
+    private PrivacyBytecodeEngine() {}
+
+    private static final String LOG_CLASS = "Landroid/util/Log;";
+    private static final Set<String> LOG_METHODS = new HashSet<>(Arrays.asList(
+            "v", "d", "i", "w", "e", "wtf", "println"
+    ));
+
+    private static final String TELEPHONY_MANAGER = "Landroid/telephony/TelephonyManager;";
+    private static final Set<String> TELEPHONY_GETTERS = new HashSet<>(Arrays.asList(
+            "getDeviceId", "getImei", "getMeid", "getSubscriberId",
+            "getLine1Number", "getSimSerialNumber", "getDeviceSoftwareVersion"
+    ));
+
+    private static final String ADVERTISING_INFO = "Lcom/google/android/gms/ads/identifier/AdvertisingIdClient$Info;";
+    private static final String SETTINGS_SECURE = "Landroid/provider/Settings$Secure;";
+    private static final String SETTINGS_GLOBAL = "Landroid/provider/Settings$Global;";
+    private static final String SETTINGS_SYSTEM = "Landroid/provider/Settings$System;";
+    private static final String SYSTEM_PROPERTIES = "Landroid/os/SystemProperties;";
+
+    private static final Set<String> ADB_SETTINGS_KEYS = new HashSet<>(Arrays.asList(
+            "adb_enabled", "development_settings_enabled", "adb_wifi_enabled", "wireless_debugging_enabled"
+    ));
+
+    private static final Set<String> ADB_PROPERTY_KEYS = new HashSet<>(Arrays.asList(
+            "ro.debuggable", "service.adb.root"
+    ));
+
+    public static class MethodTransformationResult {
+        public final boolean modified;
+        public final PrivacyStats stats;
+        public final Method method;
+
+        public MethodTransformationResult(boolean modified, PrivacyStats stats, Method method) {
+            this.modified = modified;
+            this.stats = stats;
+            this.method = method;
+        }
+    }
+
+    /**
+     * Sanitizes a single MethodImplementation according to the supplied PrivacyOptions.
+     */
+    public static MethodTransformationResult sanitizeMethod(Method method, PrivacyOptions options) {
+        if (options == null) options = PrivacyOptions.all();
+        MethodImplementation impl = method.getImplementation();
+        if (impl == null) {
+            return new MethodTransformationResult(false, new PrivacyStats(), method);
+        }
+
+        MutableMethodImplementation mutable = new MutableMethodImplementation(impl);
+        List<BuilderInstruction> instructions = mutable.getInstructions();
+        PrivacyStats stats = new PrivacyStats();
+        boolean modified = false;
+
+        Map<Integer, String> stringRegisters = new HashMap<>();
+
+        for (int i = 0; i < instructions.size(); i++) {
+            Instruction inst = instructions.get(i);
+            Opcode op = inst.getOpcode();
+
+            // Track string registers for key-matching
+            if (op == Opcode.CONST_STRING || op == Opcode.CONST_STRING_JUMBO) {
+                if (inst instanceof OneRegisterInstruction && inst instanceof ReferenceInstruction) {
+                    int reg = ((OneRegisterInstruction) inst).getRegisterA();
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof StringReference) {
+                        stringRegisters.put(reg, ((StringReference) ref).getString());
+                    }
+                }
+            } else if (op == Opcode.MOVE_OBJECT || op == Opcode.MOVE_OBJECT_16 || op == Opcode.MOVE_OBJECT_FROM16) {
+                if (inst instanceof TwoRegisterInstruction) {
+                    int dest = ((TwoRegisterInstruction) inst).getRegisterA();
+                    int src = ((TwoRegisterInstruction) inst).getRegisterB();
+                    if (stringRegisters.containsKey(src)) {
+                        stringRegisters.put(dest, stringRegisters.get(src));
+                    } else {
+                        stringRegisters.remove(dest);
+                    }
+                }
+            }
+
+            // 1. Log Stripping (android.util.Log)
+            if (options.stripLogging && isInvokeStatic(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (LOG_CLASS.equals(mr.getDefiningClass()) && LOG_METHODS.contains(mr.getName()) && "I".equals(mr.getReturnType())) {
+                            mutable.replaceInstruction(i, new BuilderInstruction10x(Opcode.NOP));
+                            stats.logCallsStripped++;
+                            modified = true;
+
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, createConstInt(resReg, 0));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Empty Telephony Identifiers (IMEI, SIM serial, Phone number)
+            if (options.emptyTelephonyIds && isInvokeVirtualOrInterface(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (TELEPHONY_MANAGER.equals(mr.getDefiningClass())
+                                && TELEPHONY_GETTERS.contains(mr.getName())
+                                && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                            Opcode.CONST_STRING,
+                                            resReg,
+                                            new ImmutableStringReference("")
+                                    ));
+                                    stats.telephonyGettersBlanked++;
+                                    modified = true;
+                                    stringRegisters.put(resReg, "");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Neutralize Advertising & Device Identifiers
+            if (options.neutralizeAdIds) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        // AdvertisingIdClient$Info.getId() -> ""
+                        if (ADVERTISING_INFO.equals(mr.getDefiningClass()) && "getId".equals(mr.getName()) && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                            Opcode.CONST_STRING,
+                                            resReg,
+                                            new ImmutableStringReference("")
+                                    ));
+                                    stats.adIdsNeutralized++;
+                                    modified = true;
+                                    stringRegisters.put(resReg, "");
+                                }
+                            }
+                        }
+                        // AdvertisingIdClient$Info.isLimitAdTrackingEnabled() -> 1 (true)
+                        else if (ADVERTISING_INFO.equals(mr.getDefiningClass()) && "isLimitAdTrackingEnabled".equals(mr.getName()) && "Z".equals(mr.getReturnType())) {
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, createConstInt(resReg, 1));
+                                    stats.adIdsNeutralized++;
+                                    modified = true;
+                                }
+                            }
+                        }
+                        // Settings.Secure.getString(..., "android_id") -> ""
+                        else if (SETTINGS_SECURE.equals(mr.getDefiningClass())
+                                && ("getString".equals(mr.getName()) || "getStringForUser".equals(mr.getName()))
+                                && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            int keyReg = getArgumentRegister(inst, 1);
+                            if (keyReg >= 0) {
+                                String key = resolveKeyString(instructions, i, keyReg, stringRegisters);
+                                if ("android_id".equalsIgnoreCase(key)) {
+                                    if (i + 1 < instructions.size()) {
+                                        Instruction next = instructions.get(i + 1);
+                                        if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                            int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                            mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                                    Opcode.CONST_STRING,
+                                                    resReg,
+                                                    new ImmutableStringReference("")
+                                            ));
+                                            stats.adIdsNeutralized++;
+                                            modified = true;
+                                            stringRegisters.put(resReg, "");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Developer Mode & ADB Masker
+            if (options.maskDeveloperMode) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        String defClass = mr.getDefiningClass();
+
+                        // Settings.Global/Secure/System.getInt/getLong
+                        if (SETTINGS_GLOBAL.equals(defClass) || SETTINGS_SECURE.equals(defClass) || SETTINGS_SYSTEM.equals(defClass)) {
+                            if ("getInt".equals(mr.getName()) || "getLong".equals(mr.getName())) {
+                                int keyReg = getArgumentRegister(inst, 1);
+                                if (keyReg >= 0) {
+                                    String key = resolveKeyString(instructions, i, keyReg, stringRegisters);
+                                    if (key != null && ADB_SETTINGS_KEYS.contains(key)) {
+                                        if (i + 1 < instructions.size()) {
+                                            Instruction next = instructions.get(i + 1);
+                                            if (next.getOpcode() == Opcode.MOVE_RESULT && next instanceof OneRegisterInstruction) {
+                                                int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                                mutable.replaceInstruction(i + 1, createConstInt(resReg, 0));
+                                                stats.devModeChecksMasked++;
+                                                modified = true;
+                                            } else if (next.getOpcode() == Opcode.MOVE_RESULT_WIDE && next instanceof OneRegisterInstruction) {
+                                                int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                                mutable.replaceInstruction(i + 1, createConstWide(resReg, 0L));
+                                                stats.devModeChecksMasked++;
+                                                modified = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // SystemProperties.get("ro.debuggable" | "service.adb.root") -> "0"
+                        else if (SYSTEM_PROPERTIES.equals(defClass) && "get".equals(mr.getName()) && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            int keyReg = getArgumentRegister(inst, 0);
+                            if (keyReg >= 0) {
+                                String key = resolveKeyString(instructions, i, keyReg, stringRegisters);
+                                if (key != null && ADB_PROPERTY_KEYS.contains(key)) {
+                                    if (i + 1 < instructions.size()) {
+                                        Instruction next = instructions.get(i + 1);
+                                        if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                            int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                            mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                                    Opcode.CONST_STRING,
+                                                    resReg,
+                                                    new ImmutableStringReference("0")
+                                            ));
+                                            stats.devModeChecksMasked++;
+                                            modified = true;
+                                            stringRegisters.put(resReg, "0");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (modified) {
+            Method transformed = new ImmutableMethod(
+                    method.getDefiningClass(),
+                    method.getName(),
+                    method.getParameters(),
+                    method.getReturnType(),
+                    method.getAccessFlags(),
+                    method.getAnnotations(),
+                    method.getHiddenApiRestrictions(),
+                    mutable
+            );
+            return new MethodTransformationResult(true, stats, transformed);
+        }
+
+        return new MethodTransformationResult(false, stats, method);
+    }
+
+    /**
+     * Sanitizes all direct and virtual methods in a ClassDef.
+     */
+    public static ClassDef sanitizeClass(ClassDef classDef, PrivacyOptions options, PrivacyStats outStats) {
+        List<Method> directMethods = new ArrayList<>();
+        List<Method> virtualMethods = new ArrayList<>();
+        boolean classModified = false;
+
+        for (Method m : classDef.getDirectMethods()) {
+            MethodTransformationResult result = sanitizeMethod(m, options);
+            if (result.modified) {
+                classModified = true;
+                if (outStats != null) outStats.merge(result.stats);
+                directMethods.add(result.method);
+            } else {
+                directMethods.add(m);
+            }
+        }
+
+        for (Method m : classDef.getVirtualMethods()) {
+            MethodTransformationResult result = sanitizeMethod(m, options);
+            if (result.modified) {
+                classModified = true;
+                if (outStats != null) outStats.merge(result.stats);
+                virtualMethods.add(result.method);
+            } else {
+                virtualMethods.add(m);
+            }
+        }
+
+        if (classModified) {
+            if (outStats != null) outStats.classesModified++;
+            return new ImmutableClassDef(
+                    classDef.getType(),
+                    classDef.getAccessFlags(),
+                    classDef.getSuperclass(),
+                    classDef.getInterfaces(),
+                    classDef.getSourceFile(),
+                    classDef.getAnnotations(),
+                    classDef.getStaticFields(),
+                    classDef.getInstanceFields(),
+                    directMethods,
+                    virtualMethods
+            );
+        }
+
+        return classDef;
+    }
+
+    /**
+     * Sanitizes an entire DEX file in-place or to a new destination.
+     */
+    public static PrivacyStats sanitizeDex(File dexIn, File dexOut, PrivacyOptions options) throws Exception {
+        DexRepairEngine.repairHeader(dexIn);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexIn, null);
+        DexPool pool = new DexPool(dex.getOpcodes());
+        PrivacyStats stats = new PrivacyStats();
+
+        for (ClassDef classDef : dex.getClasses()) {
+            ClassDef sanitized = sanitizeClass(classDef, options, stats);
+            pool.internClass(DexDebugStripper.strip(sanitized));
+        }
+
+        if (stats.totalMutations() > 0) {
+            MemoryDataStore store = new MemoryDataStore();
+            pool.writeTo(store);
+            byte[] data = Arrays.copyOf(store.getData(), store.getSize());
+            File parent = dexOut.getParentFile();
+            if (parent != null) parent.mkdirs();
+            try (OutputStream os = new FileOutputStream(dexOut)) {
+                os.write(data);
+            }
+        }
+
+        return stats;
+    }
+
+    /**
+     * Sanitizes all classes*.dex entries inside an APK, writing to a new output APK.
+     */
+    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, APKLogger logger) throws Exception {
+        ApkModule module = ApkModule.loadApkFile(apkIn);
+        module.setLoadDefaultFramework(false);
+        PrivacyStats totalStats = new PrivacyStats();
+
+        for (InputSource source : module.getInputSources()) {
+            String name = source.getName();
+            if (!name.matches("classes\\d*\\.dex")) continue;
+
+            byte[] dexBytes = readAll(source.openStream());
+            DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+            DexPool pool = new DexPool(dex.getOpcodes());
+            PrivacyStats dexStats = new PrivacyStats();
+
+            for (ClassDef classDef : dex.getClasses()) {
+                ClassDef sanitized = sanitizeClass(classDef, options, dexStats);
+                pool.internClass(DexDebugStripper.strip(sanitized));
+            }
+
+            if (dexStats.totalMutations() > 0) {
+                MemoryDataStore store = new MemoryDataStore();
+                pool.writeTo(store);
+                module.add(new ByteInputSource(Arrays.copyOf(store.getData(), store.getSize()), name));
+                totalStats.merge(dexStats);
+                if (logger != null) {
+                    logger.logMessage("Sanitized " + name + ": " + dexStats.totalMutations() + " privacy mutations");
+                }
+            }
+        }
+
+        if (totalStats.totalMutations() > 0) {
+            File parent = apkOut.getParentFile();
+            if (parent != null) parent.mkdirs();
+            module.writeApk(apkOut);
+        }
+
+        return totalStats;
+    }
+
+    // --- Helper Utilities ---
+
+    public static BuilderInstruction createConstInt(int reg, int value) {
+        if (reg <= 15 && value >= -8 && value <= 7) {
+            return new BuilderInstruction11n(Opcode.CONST_4, reg, value);
+        } else if (reg <= 255 && value >= -32768 && value <= 32767) {
+            return new BuilderInstruction21s(Opcode.CONST_16, reg, value);
+        } else {
+            return new BuilderInstruction31i(Opcode.CONST, reg, value);
+        }
+    }
+
+    public static BuilderInstruction createConstWide(int reg, long value) {
+        if (reg <= 255 && value >= -32768 && value <= 32767) {
+            return new BuilderInstruction21s(Opcode.CONST_WIDE_16, reg, (int) value);
+        } else {
+            return new BuilderInstruction51l(Opcode.CONST_WIDE, reg, value);
+        }
+    }
+
+    private static boolean isInvokeStatic(Opcode op) {
+        return op == Opcode.INVOKE_STATIC || op == Opcode.INVOKE_STATIC_RANGE;
+    }
+
+    private static boolean isInvokeVirtualOrInterface(Opcode op) {
+        return op == Opcode.INVOKE_VIRTUAL || op == Opcode.INVOKE_VIRTUAL_RANGE
+                || op == Opcode.INVOKE_INTERFACE || op == Opcode.INVOKE_INTERFACE_RANGE;
+    }
+
+    private static int getArgumentRegister(Instruction inst, int argIndex) {
+        if (inst instanceof FiveRegisterInstruction) {
+            FiveRegisterInstruction fri = (FiveRegisterInstruction) inst;
+            return switch (argIndex) {
+                case 0 -> fri.getRegisterC();
+                case 1 -> fri.getRegisterD();
+                case 2 -> fri.getRegisterE();
+                case 3 -> fri.getRegisterF();
+                case 4 -> fri.getRegisterG();
+                default -> -1;
+            };
+        } else if (inst instanceof RegisterRangeInstruction) {
+            RegisterRangeInstruction rri = (RegisterRangeInstruction) inst;
+            if (argIndex < rri.getRegisterCount()) {
+                return rri.getStartRegister() + argIndex;
+            }
+        }
+        return -1;
+    }
+
+    private static String resolveKeyString(List<BuilderInstruction> instructions, int invokeIdx, int keyReg, Map<Integer, String> stringRegisters) {
+        if (stringRegisters.containsKey(keyReg)) {
+            return stringRegisters.get(keyReg);
+        }
+        int start = Math.max(0, invokeIdx - 10);
+        for (int j = invokeIdx - 1; j >= start; j--) {
+            Instruction prev = instructions.get(j);
+            Opcode op = prev.getOpcode();
+            if (op == Opcode.CONST_STRING || op == Opcode.CONST_STRING_JUMBO) {
+                if (prev instanceof OneRegisterInstruction && prev instanceof ReferenceInstruction) {
+                    if (((OneRegisterInstruction) prev).getRegisterA() == keyReg) {
+                        Object ref = ((ReferenceInstruction) prev).getReference();
+                        if (ref instanceof StringReference) {
+                            return ((StringReference) ref).getString();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static byte[] readAll(InputStream is) throws Exception {
+        try (is; ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
+            return bos.toByteArray();
+        }
+    }
+}
