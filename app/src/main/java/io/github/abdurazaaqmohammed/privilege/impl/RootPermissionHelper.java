@@ -5,6 +5,8 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 
 import android.app.AppOpsManager;
 import android.content.ComponentName;
@@ -79,7 +81,7 @@ public class RootPermissionHelper {
                 rm.autoEnableRootIfAvailable();
             } catch (Exception ignored) {
             }
-            return rm.isRootAvailable() && rm.getWorkingMode() == RootManager.WorkingMode.ROOT;
+            return rm.isRootAvailable() && rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT;
         } catch (Exception e) {
             return false;
         }
@@ -90,7 +92,7 @@ public class RootPermissionHelper {
             RootManager rm = RootManager.getInstance(context);
             boolean fileOps = false;
             try {
-                fileOps = rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU;
+                fileOps = rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU;
             } catch (Exception ignored) {
             }
             return (fileOps || !isRootShellReady(context)) && ShizukuManager.ready();
@@ -110,7 +112,7 @@ public class RootPermissionHelper {
     public static boolean grantViaRoot(Context context, String command) {
         if (!isRootShellReady(context)) return shizukuGrant(context, command);
         try {
-            RootManager.ShellResult r = RootManager.getInstance(context).execute(command, 15);
+            ShellSession.ShellResult r = RootManager.getInstance(context).execute(command, 15);
             if (r.isSuccess()) return true;
         } catch (Exception ignored) {
         }

@@ -1674,7 +1674,7 @@ public class FileOpener {
             String err = "";
             try {
                 if (asRoot) {
-                    RootManager.ShellResult r = RootManager.getInstance(context).execute(
+                    ShellSession.ShellResult r = RootManager.getInstance(context).execute(
                             "sh " + ShellQuote.escapeShellArg(script.getAbsolutePath()), 120);
                     exitCode = r.exitCode();
                     out = r.output();
@@ -2107,7 +2107,7 @@ public class FileOpener {
             String cmd = "du -sb " + ShellQuote.escapeShellArg(path);
             String out = null;
             if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-                RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);
+                ShellSession.ShellResult r = RootManager.getInstance(context).execute(cmd, 5);
                 if (r != null && r.isSuccess()) out = r.output();
             } else if (PrivilegeManager.Shizuku.ready()) {
                 ShellSession.Result r = PrivilegeManager.shizuku().exec(cmd, 5);

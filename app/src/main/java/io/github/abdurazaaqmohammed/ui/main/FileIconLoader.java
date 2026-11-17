@@ -60,6 +60,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class FileIconLoader {
 
@@ -754,7 +755,7 @@ public class FileIconLoader {
                 } else if (PrivilegeManager.Files.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
-                        RootManager.ShellResult r =
+                        ShellSession.ShellResult r =
                                 RootManager.getInstance(context)
                                         .executeFs("ls -1 -- " + ShellQuote.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
                         if (r != null && r.isSuccess() && r.output() != null) {

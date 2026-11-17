@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 /**
  * Core of the root Jiagu Dumper: launch a protected app, let its stub unpack the
@@ -107,7 +108,7 @@ public final class JiaguDumpEngine {
         long pid = 0;
         long deadline = SystemClock.elapsedRealtime() + waitSec * 1000L;
         while (SystemClock.elapsedRealtime() < deadline) {
-            RootManager.ShellResult res = rm.execute("pidof " + pkg, 15);
+            ShellSession.ShellResult res = rm.execute("pidof " + pkg, 15);
             String p = res.output() == null ? "" : res.output().trim();
             if (!p.isEmpty() && p.matches("\\d+.*")) {
                 pid = Long.parseLong(p.split("\\s+")[0]);
@@ -118,7 +119,7 @@ public final class JiaguDumpEngine {
         if (pid <= 0) throw new IOException("Process not running (pidof " + pkg + " failed)");
         sink.log("pid=" + pid);
 
-        RootManager.ShellResult mapsRes = rm.execute("cat /proc/" + pid + "/maps", 30);
+        ShellSession.ShellResult mapsRes = rm.execute("cat /proc/" + pid + "/maps", 30);
         if (mapsRes.output() == null || mapsRes.output().isEmpty()) {
             throw new IOException("Cannot read /proc/" + pid + "/maps: " + mapsRes.error());
         }

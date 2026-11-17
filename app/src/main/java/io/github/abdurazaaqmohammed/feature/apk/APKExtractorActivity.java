@@ -1115,7 +1115,7 @@ public class APKExtractorActivity extends BaseActivity {
         String cmd = baseCmd + " " + ShellQuote.escapeShellArg(packageName);
         RootManager rm = RootManager.getInstance(this);
         if (rm.isRootMode() && rm.isRootAvailable()) {
-            RootManager.ShellResult r = rm.execute(cmd, 30);
+            ShellSession.ShellResult r = rm.execute(cmd, 30);
             if (!r.isSuccess()) throw new IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
         } else {
             ShellSession.Result r =

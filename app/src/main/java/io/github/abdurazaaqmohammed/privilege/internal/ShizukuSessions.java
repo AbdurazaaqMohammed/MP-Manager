@@ -13,8 +13,8 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
 public final class ShizukuSessions {
 
@@ -95,7 +95,7 @@ public final class ShizukuSessions {
 
         @Override
         public void move(String src, String dest, boolean useElevated) throws IOException {
-            ShizukuManager.moveAll(context, List.of(new RootManager.CopyOp(src, dest, false, false)), null);
+            ShizukuManager.moveAll(context, List.of(new CopyOp(src, dest, false, false)), null);
         }
 
         @Override

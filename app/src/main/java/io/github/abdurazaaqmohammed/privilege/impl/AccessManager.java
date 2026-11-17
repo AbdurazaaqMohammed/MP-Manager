@@ -24,6 +24,9 @@ import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,9 +46,9 @@ public final class AccessManager {
 
     public static Backend active(Context context) {
         if (context == null) return Backend.NONE;
-        RootManager.WorkingMode mode = RootManager.getInstance(context).getWorkingMode();
-        if (mode == RootManager.WorkingMode.ROOT) return Backend.ROOT;
-        if (mode == RootManager.WorkingMode.SHIZUKU
+        WorkingModePrefs.WorkingMode mode = RootManager.getInstance(context).getWorkingMode();
+        if (mode == WorkingModePrefs.WorkingMode.ROOT) return Backend.ROOT;
+        if (mode == WorkingModePrefs.WorkingMode.SHIZUKU
                 && Build.VERSION.SDK_INT >= 23) return Backend.SHIZUKU;
         return Backend.NONE;
     }
@@ -53,10 +56,10 @@ public final class AccessManager {
     public static boolean fileOpsOn(Context context) {
         if (context == null) return false;
         RootManager rm = RootManager.getInstance(context);
-        if (rm.getWorkingMode() == RootManager.WorkingMode.ROOT) {
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
             return rm.isRootFileOpsEnabled() && rm.isRootAvailable();
         }
-        if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU) {
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU) {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
             return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
         }
@@ -66,7 +69,7 @@ public final class AccessManager {
     public static boolean extractorOn(Context context) {
         if (context == null) return false;
         RootManager rm = RootManager.getInstance(context);
-        if (rm.getWorkingMode() == RootManager.WorkingMode.ROOT) return rm.isRootExtractorEnabled();
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) return rm.isRootExtractorEnabled();
         return false;
     }
 
@@ -449,7 +452,7 @@ public final class AccessManager {
      * Moves a whole selection with {@code mv}, one shell round trip per
      * backend. See {@link #move} for why this is not copy+delete.
      */
-    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+    public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException {
         moveAll(context, ops, progress, null);
     }
@@ -457,7 +460,7 @@ public final class AccessManager {
     /**
      * Moves a whole selection, with a pause / cancel token attached.
      */
-    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+    public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
@@ -470,7 +473,7 @@ public final class AccessManager {
             ShizukuManager.moveAll(context, ops, progress, control);
             return;
         }
-        for (RootManager.CopyOp op : ops) {
+        for (CopyOp op : ops) {
             move(context, op.src, op.dest, false);
             if (progress != null) progress.onProgress(Math.max(0, op.files), Math.max(0L, op.bytes));
         }
@@ -509,7 +512,7 @@ public final class AccessManager {
      * backend gets one shell process (root) or one command (shizuku shell
      * paths) for the entire selection instead of one per item.
      */
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+    public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException {
         copyAllPreserving(context, ops, null);
     }
 
@@ -520,7 +523,7 @@ public final class AccessManager {
      *
      * @param progress receives per-item counters streamed out of that process
      */
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException {
         copyAllPreserving(context, ops, progress, null);
     }
@@ -531,7 +534,7 @@ public final class AccessManager {
      *
      * @param progress receives per-item counters streamed out of that process
      */
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
@@ -542,7 +545,7 @@ public final class AccessManager {
             long completedBytes = 0L;
             int completedOps = 0;
             try {
-                for (RootManager.CopyOp op : ops) {
+                for (CopyOp op : ops) {
                     if (control != null) control.checkpoint();
                     final int baseFiles = completedFiles;
                     final long baseBytes = completedBytes;
@@ -590,7 +593,7 @@ public final class AccessManager {
         }
         int files = 0;
         long bytes = 0L;
-        for (RootManager.CopyOp op : ops) {
+        for (CopyOp op : ops) {
             if (op.directory) FileUtils.copyFolder(new File(op.src), new File(op.dest));
             else FileUtils.copyFile(new File(op.src), new File(op.dest));
             preserveTime(context, op.src, op.dest);
@@ -796,10 +799,10 @@ public final class AccessManager {
         if (!FileUtils.createNewFile(f) && !f.exists()) throw new IOException("touch failed");
     }
 
-    public static RootManager.ShellResult execute(Context context, String command, int timeout) {
+    public static ShellSession.ShellResult execute(Context context, String command, int timeout) {
         Backend backend = active(context);
         if (backend == Backend.ROOT) return RootManager.getInstance(context).execute(command, timeout);
-        return new RootManager.ShellResult(-1, "", "No shell backend enabled");
+        return new ShellSession.ShellResult(-1, "", "No shell backend enabled");
     }
 
     public static boolean touchMtime(Context context, String path, long millis) {
@@ -836,7 +839,7 @@ public final class AccessManager {
                 if (nativeStats != null && nativeStats.complete()) return nativeStats.bytes();
                 RootManager rm = RootManager.getInstance(context);
                 String safeCmd = "timeout 5 du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
-                RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
+                ShellSession.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
                     r = rm.execute(safeCmd, 5);
                 }
@@ -871,7 +874,7 @@ public final class AccessManager {
                 }
                 RootManager rm = RootManager.getInstance(context);
                 String safeCmd = "timeout 5 du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
-                RootManager.ShellResult r = rm.executeFs(safeCmd, 5);
+                ShellSession.ShellResult r = rm.executeFs(safeCmd, 5);
                 if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
                     r = rm.execute(safeCmd, 5);
                 }
@@ -1002,10 +1005,10 @@ public final class AccessManager {
     public static boolean fileOpsConfigured(Context context) {
         if (context == null) return false;
         RootManager rm = RootManager.getInstance(context);
-        RootManager.WorkingMode mode = rm.getWorkingMode();
+        WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        if (mode == RootManager.WorkingMode.ROOT) return prefs.getBoolean("root_file_ops", false);
-        if (mode == RootManager.WorkingMode.SHIZUKU) {
+        if (mode == WorkingModePrefs.WorkingMode.ROOT) return prefs.getBoolean("root_file_ops", false);
+        if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) {
             return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
         }
         return false;
@@ -1022,10 +1025,10 @@ public final class AccessManager {
         if (context == null) return false;
         try {
             RootManager rm = RootManager.getInstance(context);
-            if (rm.getWorkingMode() == RootManager.WorkingMode.ROOT) {
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
                 return rm.isRootAvailable();
             }
-            if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU) {
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU) {
                 return ShizukuManager.ready() && ShizukuShell.isGranted();
             }
             return false;
@@ -1064,7 +1067,7 @@ public final class AccessManager {
         if (needsElevated(context, absPath)) return true;
         try {
             RootManager rm = RootManager.getInstance(context);
-            if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU
                     && ShizukuFile.isAndroidDataPath(absPath)) {
                 return ShizukuManager.ready();
             }

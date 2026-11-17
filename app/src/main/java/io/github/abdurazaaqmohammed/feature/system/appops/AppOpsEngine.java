@@ -34,6 +34,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 
 public class AppOpsEngine {
 
@@ -61,31 +62,31 @@ public class AppOpsEngine {
      * With neither backend configured the command is never run and the failure
      * is reported, so callers cannot mistake silence for success.
      */
-    public static RootManager.ShellResult execElevated(Context context, String cmd) {
+    public static ShellSession.ShellResult execElevated(Context context, String cmd) {
         return execElevated(context, cmd, READ_TIMEOUT_SECONDS);
     }
 
-    public static RootManager.ShellResult execElevated(Context context, String cmd, int timeoutSeconds) {
+    public static ShellSession.ShellResult execElevated(Context context, String cmd, int timeoutSeconds) {
         lastError = "";
-        RootManager.ShellResult result;
+        ShellSession.ShellResult result;
         try {
             RootManager rm = RootManager.getInstance(context);
-            RootManager.WorkingMode mode = rm.getWorkingMode();
-            if (mode == RootManager.WorkingMode.ROOT) {
+            WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
+            if (mode == WorkingModePrefs.WorkingMode.ROOT) {
                 if (!rm.isRootAvailable()) {
-                    result = new RootManager.ShellResult(-1, "", "Root is not available");
+                    result = new ShellSession.ShellResult(-1, "", "Root is not available");
                 } else {
                     result = rm.execute(cmd, timeoutSeconds);
                 }
-            } else if (mode == RootManager.WorkingMode.SHIZUKU) {
+            } else if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) {
                 PrivilegeManager.shizuku().warmUp(context);
                 ShellSession.Result r = PrivilegeManager.shizuku().exec(cmd, timeoutSeconds);
-                result = new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr);
+                result = new ShellSession.ShellResult(r.exitCode, r.stdout, r.stderr);
             } else {
-                result = new RootManager.ShellResult(-1, "", "Requires root or Shizuku");
+                result = new ShellSession.ShellResult(-1, "", "Requires root or Shizuku");
             }
         } catch (Exception e) {
-            result = new RootManager.ShellResult(-1, "", e.getMessage() == null ? "Command failed" : e.getMessage());
+            result = new ShellSession.ShellResult(-1, "", e.getMessage() == null ? "Command failed" : e.getMessage());
         }
         if (!result.isSuccess()) {
             lastError = result.error() == null || result.error().isEmpty() ? "Command failed (exit " + result.exitCode() + ")" : result.error();
@@ -97,9 +98,9 @@ public class AppOpsEngine {
     public static boolean hasElevatedBackend(Context context) {
         try {
             RootManager rm = RootManager.getInstance(context);
-            RootManager.WorkingMode mode = rm.getWorkingMode();
-            if (mode == RootManager.WorkingMode.ROOT) return rm.isRootAvailable();
-            if (mode == RootManager.WorkingMode.SHIZUKU) return PrivilegeManager.Shizuku.ready();
+            WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
+            if (mode == WorkingModePrefs.WorkingMode.ROOT) return rm.isRootAvailable();
+            if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) return PrivilegeManager.Shizuku.ready();
         } catch (Exception ignored) {
         }
         return false;
@@ -686,7 +687,7 @@ public class AppOpsEngine {
         String pkg = ShellQuote.escapeShellArg(packageName);
         String op = ShellQuote.escapeShellArg(opName);
         String m = mode.toLowerCase();
-        RootManager.ShellResult r = execElevated(context,
+        ShellSession.ShellResult r = execElevated(context,
                 "cmd appops set " + pkg + " " + op + " " + m, WRITE_TIMEOUT_SECONDS);
         if (!r.isSuccess()) return false;
         if (applyUidMode) {
@@ -753,7 +754,7 @@ public class AppOpsEngine {
 
     public static boolean clearAppData(Context context, String packageName) {
         if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
-        RootManager.ShellResult r = execElevated(context,
+        ShellSession.ShellResult r = execElevated(context,
                 "pm clear " + ShellQuote.escapeShellArg(packageName), 120);
         return r.isSuccess() && r.output().toLowerCase().contains("success");
     }
@@ -765,7 +766,7 @@ public class AppOpsEngine {
      */
     public static boolean uninstallApp(Context context, String packageName) {
         if (!isPackageNameValid(packageName) || PackageGuards.isCriticalPackage(packageName)) return false;
-        RootManager.ShellResult r = execElevated(context,
+        ShellSession.ShellResult r = execElevated(context,
                 "pm uninstall " + ShellQuote.escapeShellArg(packageName), 120);
         if (!r.isSuccess()) return false;
         String out = r.output().toLowerCase();

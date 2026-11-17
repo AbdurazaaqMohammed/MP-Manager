@@ -70,7 +70,6 @@ import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.io.DestSizePoller;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyException;
 import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
@@ -80,6 +79,7 @@ import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class FileOperationsHelper {
@@ -335,7 +335,7 @@ public class FileOperationsHelper {
      * @param poller optional sampler that fills in the bytes of the item in
      *               flight, between markers
      */
-    private ShellProgress.Listener shellProgress(List<RootManager.CopyOp> ops,
+    private ShellProgress.Listener shellProgress(List<CopyOp> ops,
                                                  int totalFiles, long totalBytes,
                                                  DestSizePoller poller) {
         ProgressManager pm = activeProgress;
@@ -346,7 +346,7 @@ public class FileOperationsHelper {
         int batchFiles = 0;
         long batchBytes = 0L;
         if (ops != null) {
-            for (RootManager.CopyOp op : ops) {
+            for (CopyOp op : ops) {
                 batchFiles += Math.max(0, op.files);
                 batchBytes += Math.max(0L, op.bytes);
             }
@@ -369,7 +369,7 @@ public class FileOperationsHelper {
                 }
                 if (show == current) return;
                 current = show;
-                RootManager.CopyOp op = ops.get(show);
+                CopyOp op = ops.get(show);
                 pm.setPaths(op.src, op.dest);
                 pm.setFile(new File(op.dest));
                 if (poller != null) {
@@ -574,7 +574,7 @@ public class FileOperationsHelper {
         }
 
         if (useElevated) {
-            List<RootManager.CopyOp> ops = new ArrayList<>();
+            List<CopyOp> ops = new ArrayList<>();
             List<Object> opItems = new ArrayList<>();
             long opFiles = 0;
             for (Map.Entry<Object, File> planned : plan.entrySet()) {
@@ -595,7 +595,7 @@ public class FileOperationsHelper {
                 FileUtils.Measure im = info.of(f);
                 // The batch already removes replaced destinations, so the per-item
                 // clear below must not run for the items it handled.
-                ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
+                ops.add(new CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), destExists, im.files, im.bytes));
                 opItems.add(item);
                 opFiles += im.files;
@@ -1097,7 +1097,7 @@ public class FileOperationsHelper {
 
         Set<Object> batchDone = new HashSet<>();
         if (useElevated || shellBatch) {
-            List<RootManager.CopyOp> ops = new ArrayList<>();
+            List<CopyOp> ops = new ArrayList<>();
             List<Object> opItems = new ArrayList<>();
             long opFiles = 0;
             for (Map.Entry<Object, File> entry : plan.entrySet()) {
@@ -1110,7 +1110,7 @@ public class FileOperationsHelper {
                 }
                 if (!useElevated && !PrivilegeManager.Files.needsShellCopy(context, f, dest)) continue;
                 FileUtils.Measure im = info.of(f);
-                ops.add(new RootManager.CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
+                ops.add(new CopyOp(f.getAbsolutePath(), dest.getAbsolutePath(),
                         f.isDirectory(), dirHasEntry(destinationFolder, dest.getName()),
                         im.files, im.bytes));
                 opItems.add(item);

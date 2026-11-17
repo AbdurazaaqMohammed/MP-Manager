@@ -61,6 +61,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class ImageEditActivity extends BaseActivity {
 
@@ -126,7 +127,7 @@ public class ImageEditActivity extends BaseActivity {
         try {
             RootManager rm = RootManager.getInstance(this);
             if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                RootManager.ShellResult r = rm.execute("test -f " + ShellQuote.escapeShellArg(path), 5);
+                ShellSession.ShellResult r = rm.execute("test -f " + ShellQuote.escapeShellArg(path), 5);
                 return r.isSuccess();
             }
         } catch (Exception ignored) {}

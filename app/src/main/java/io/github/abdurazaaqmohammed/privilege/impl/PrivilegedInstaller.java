@@ -38,6 +38,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 
 import com.faith.apkinstaller.APKInstallService;
 
@@ -119,7 +120,7 @@ public final class PrivilegedInstaller {
     public static boolean isShizukuSilentReady(Context context) {
         try {
             RootManager rm = RootManager.getInstance(context);
-            return rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+            return rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU
                     && InstallerConfig.isShizukuSilentEnabled(context)
                     && ShizukuShell.isGranted();
         } catch (Exception ignored) {

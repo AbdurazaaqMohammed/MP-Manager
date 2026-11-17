@@ -28,6 +28,8 @@ import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class DnsManager {
@@ -178,12 +180,12 @@ public class DnsManager {
                 rm.autoEnableRootIfAvailable();
             } catch (Exception ignored) {
             }
-            if (rm.isRootAvailable() && rm.getWorkingMode() == RootManager.WorkingMode.ROOT) {
+            if (rm.isRootAvailable() && rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
                 String mode = validDnsMode(profile.mode);
                 String host = validDnsHostname(profile.hostname);
                 if (mode == null || host == null) return false;
-                RootManager.ShellResult r1 = rm.execute("settings put global private_dns_mode " + ShellQuote.quoteForSh(mode), 10);
-                RootManager.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + ShellQuote.quoteForSh(host), 10);
+                ShellSession.ShellResult r1 = rm.execute("settings put global private_dns_mode " + ShellQuote.quoteForSh(mode), 10);
+                ShellSession.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + ShellQuote.quoteForSh(host), 10);
                 if (r1.isSuccess() && r2.isSuccess()) {
                     rememberActive(context, profile.id);
                     requestTileRefresh(context);

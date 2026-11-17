@@ -481,7 +481,7 @@ public class FilePropertiesDialog {
             if (parent != null) {
                 try {
                     // Query available owners/groups in this directory using stat
-                    RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + ShellQuote.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
+                    ShellSession.ShellResult result = rm.executeFs("stat -c '%U:%G' " + ShellQuote.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
                     if (result.isSuccess() && result.output() != null) {
                         for (String line : result.output().split("\\r?\\n")) {
                             line = line.trim();
@@ -1067,7 +1067,7 @@ public class FilePropertiesDialog {
         try {
             RootManager rm = RootManager.getInstance();
             if (rm != null && rm.isRootAvailable()) {
-                RootManager.ShellResult res = rm.executeFs("readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
+                ShellSession.ShellResult res = rm.executeFs("readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
                 if (res.isSuccess() && res.output() != null) {
                     String out = res.output().trim();
                     if (!out.isEmpty()) return out;
@@ -1110,7 +1110,7 @@ public class FilePropertiesDialog {
                                 RootManager rm = RootManager.getInstance();
                                 if (rm != null && rm.isRootAvailable()) {
                                     String cmd = "ln -snf " + ShellQuote.escapeShellArg(newTarget) + " " + ShellQuote.escapeShellArg(file.getAbsolutePath());
-                                    RootManager.ShellResult res = rm.executeFs(cmd, 10);
+                                    ShellSession.ShellResult res = rm.executeFs(cmd, 10);
                                     if (res.isSuccess()) {
                                         rm.invalidateListCache();
                                         updated = true;

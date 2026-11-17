@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class StorageManagerActivity extends BaseActivity {
@@ -290,7 +291,7 @@ public class StorageManagerActivity extends BaseActivity {
         refreshVolumes();
     }
 
-    private String safeErr(RootManager.ShellResult r) {
+    private String safeErr(ShellSession.ShellResult r) {
         try {
             if (r == null || r.error() == null) return "";
             String e = r.error().trim().replace("\n", " ");
@@ -466,7 +467,7 @@ public class StorageManagerActivity extends BaseActivity {
                 script.append(' ').append(ShellQuote.escapeShellArg(dir));
             }
             script.append(" 2>/dev/null; ec=$?; echo RM_EXIT=$ec");
-            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+            ShellSession.ShellResult r = rm.executeFs(script.toString(), 60);
             boolean ok = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0");
             if (!ok) {
                 String err = r.error() == null ? "" : r.error().trim();
@@ -1103,7 +1104,7 @@ public class StorageManagerActivity extends BaseActivity {
         Map<String, Long> out = new HashMap<>();
         try {
             RootManager rm = RootManager.getInstance(this);
-            RootManager.ShellResult r = rm.executeFs("du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
+            ShellSession.ShellResult r = rm.executeFs("du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
             if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                 parseDuOutput(r.output(), 1024L, out);
             }
@@ -1192,7 +1193,7 @@ public class StorageManagerActivity extends BaseActivity {
                                 script.append("if [ -e ").append(ShellQuote.escapeShellArg(dir)).append(" ] || [ -L ").append(ShellQuote.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(ShellQuote.escapeShellArg(dir)).append("; fi; ");
                             }
                             script.append("echo RM_EXIT=$ec");
-                            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+                            ShellSession.ShellResult r = rm.executeFs(script.toString(), 60);
                             boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0") && !r.output().contains("LEFT:");
                             if (clearedOk) {
                                 ok++;
@@ -1215,7 +1216,7 @@ public class StorageManagerActivity extends BaseActivity {
                     }
                     if (!failures.isEmpty()) {
                         try {
-                            RootManager.ShellResult diag = rm.executeFs("id; ls -ld " + ShellQuote.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
+                            ShellSession.ShellResult diag = rm.executeFs("id; ls -ld " + ShellQuote.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
                             String extra = diag.output() == null ? "" : diag.output().trim();
                             String derr = diag.error() == null ? "" : diag.error().trim();
                             if (!derr.isEmpty()) extra = (extra + " " + derr).trim();

@@ -38,7 +38,7 @@ public final class RootSessions {
 
         @Override
         public Result exec(String command, long timeoutSeconds) {
-            RootManager.ShellResult r = RootManager.getInstance(null).execute(command, (int) timeoutSeconds);
+            ShellSession.ShellResult r = RootManager.getInstance(null).execute(command, (int) timeoutSeconds);
             return new Result(r.exitCode() == 0, r.output(), r.error(), r.exitCode());
         }
 

@@ -37,6 +37,8 @@ import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
 import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuFileService;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 import rikka.shizuku.Shizuku;
 
 public final class ShizukuManager {
@@ -264,10 +266,10 @@ public final class ShizukuManager {
      * instead of a flat per-item count that a multi-gigabyte copy blows
      * through while it is still making progress.
      */
-    private static int batchTimeout(List<RootManager.CopyOp> ops) {
+    private static int batchTimeout(List<CopyOp> ops) {
         int timeout = 60;
         if (ops != null) {
-            for (RootManager.CopyOp op : ops) {
+            for (CopyOp op : ops) {
                 if (op.src == null || op.dest == null) continue;
                 timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
             }
@@ -280,9 +282,9 @@ public final class ShizukuManager {
      * every destination is present. See the matching check in
      * {@link RootManager#moveAll} for why the exit code alone cannot be trusted.
      */
-    private static boolean moveCompletedDespiteError(Context context, List<RootManager.CopyOp> ops) {
+    private static boolean moveCompletedDespiteError(Context context, List<CopyOp> ops) {
         if (ops == null || ops.isEmpty()) return false;
-        for (RootManager.CopyOp op : ops) {
+        for (CopyOp op : ops) {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
@@ -745,7 +747,7 @@ public final class ShizukuManager {
      * a move costs nothing regardless of size, and a copy+unlink only when the
      * two paths really are on different filesystems.
      */
-    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+    public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException {
         moveAll(context, ops, progress, null);
     }
@@ -753,7 +755,7 @@ public final class ShizukuManager {
     /**
      * Moves every item, with a pause / cancel token attached.
      */
-    public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+    public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
@@ -761,8 +763,8 @@ public final class ShizukuManager {
         int shellOps = 0;
         int filesDone = 0;
         long bytesDone = 0L;
-        List<RootManager.CopyOp> service = new ArrayList<>();
-        for (RootManager.CopyOp op : ops) {
+        List<CopyOp> service = new ArrayList<>();
+        for (CopyOp op : ops) {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
@@ -798,7 +800,7 @@ public final class ShizukuManager {
         }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
-        for (RootManager.CopyOp op : service) {
+        for (CopyOp op : service) {
             try {
                 // Same guards the single rename uses: the binder path must not
                 // be talked into touching protected top-level locations.
@@ -817,7 +819,7 @@ public final class ShizukuManager {
         }
     }
 
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException {
+    public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException {
         copyAllPreserving(context, ops, null);
     }
 
@@ -830,7 +832,7 @@ public final class ShizukuManager {
      * stays one process while still reporting numbers; binder work reports after
      * each round trip.
      */
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException {
         copyAllPreserving(context, ops, progress, null);
     }
@@ -838,7 +840,7 @@ public final class ShizukuManager {
     /**
      * Copies every item, with a pause / cancel token attached.
      */
-    public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException {
         if (ops == null || ops.isEmpty()) return;
@@ -847,8 +849,8 @@ public final class ShizukuManager {
         int shellOps = 0;
         int filesDone = 0;
         long bytesDone = 0L;
-        List<RootManager.CopyOp> service = new ArrayList<>();
-        for (RootManager.CopyOp op : ops) {
+        List<CopyOp> service = new ArrayList<>();
+        for (CopyOp op : ops) {
             String src = op.src;
             String dest = op.dest;
             if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
@@ -877,7 +879,7 @@ public final class ShizukuManager {
         }
         if (service.isEmpty()) return;
         IFileService s = serviceSync(context);
-        for (RootManager.CopyOp op : service) {
+        for (CopyOp op : service) {
             requireAllowed(op.src);
             requireAllowed(op.dest);
             if (isTopLevel(op.src) || isTopLevel(op.dest)) throw new IOException("Refusing protected top-level path");
@@ -1122,7 +1124,7 @@ public final class ShizukuManager {
         cmd.append(" -type d 2>/dev/null | wc -l)");
         ShizukuShell.Result r = ShizukuShell.exec(cmd.toString(), Math.max(30, paths.size() * 20));
         return RootManager.parseCountMarker(
-                new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr), "@@MPDIRS");
+                new ShellSession.ShellResult(r.exitCode, r.stdout, r.stderr), "@@MPDIRS");
     }
 
     /**
@@ -1152,7 +1154,7 @@ public final class ShizukuManager {
         }
         ShizukuShell.Result r = ShizukuShell.exec(cmd.toString(), Math.max(30, paths.size() * 20));
         FileUtils.MeasureSet parsed = RootManager.parseMeasureSet(
-                new RootManager.ShellResult(r.exitCode, r.stdout, r.stderr), paths.size());
+                new ShellSession.ShellResult(r.exitCode, r.stdout, r.stderr), paths.size());
         return parsed != null ? parsed : new FileUtils.MeasureSet(empty, new ArrayList<>());
     }
 
@@ -1162,7 +1164,7 @@ public final class ShizukuManager {
                 throwIfShellFails("mv " + shellArg(oldPath) + " " + shellArg(newPath), "rename", 120);
             } catch (IOException e) {
                 if (!moveCompletedDespiteError(context,
-                        Collections.singletonList(new RootManager.CopyOp(oldPath, newPath, false, false, 1, 0L)))) throw e;
+                        Collections.singletonList(new CopyOp(oldPath, newPath, false, false, 1, 0L)))) throw e;
             }
             return;
         }

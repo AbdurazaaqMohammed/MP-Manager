@@ -31,6 +31,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class StorageUtil {
 
@@ -202,7 +203,7 @@ public class StorageUtil {
             try {
                 RootManager rm = RootManager.getInstance(ctx);
                 if (rm != null && rm.isRootMode()) {
-                    RootManager.ShellResult r = rm.execute("toybox stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null", 5);
+                    ShellSession.ShellResult r = rm.execute("toybox stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null", 5);
                     if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                         String[] parts = r.output().trim().split("\\s+");
                         if (parts.length >= 3) {

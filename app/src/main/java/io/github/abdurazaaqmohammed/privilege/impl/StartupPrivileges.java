@@ -11,6 +11,7 @@ import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import rikka.shizuku.Shizuku;
 
@@ -66,11 +67,11 @@ public final class StartupPrivileges {
         if (!gotRoot) {
             if (reqShell) {
                 if (ShizukuManager.hasPermission() || Shizuku.pingBinder()) {
-                    rm.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                    rm.setWorkingMode(WorkingModePrefs.WorkingMode.SHIZUKU);
                     handler.post(refreshSidebar);
                 }
             } else {
-                rm.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+                rm.setWorkingMode(WorkingModePrefs.WorkingMode.NON_ROOT);
             }
         }
         try {

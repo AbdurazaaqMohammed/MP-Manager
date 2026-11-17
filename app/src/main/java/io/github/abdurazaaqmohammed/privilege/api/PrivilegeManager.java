@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
 import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
@@ -41,6 +40,7 @@ import io.github.abdurazaaqmohammed.privilege.internal.LegacyFileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyInstallerSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyShellSession;
 import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
 public final class PrivilegeManager {
 
@@ -128,22 +128,22 @@ public final class PrivilegeManager {
         public static void move(Context context, String src, String dest, boolean useElevated,
                             TransferControl control) throws IOException { AccessManager.move(context, src, dest, useElevated, control); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException { AccessManager.moveAll(context, ops, progress); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException { AccessManager.moveAll(context, ops, progress, control); }
 
         public static void copyPreserving(Context context, String src, String dest, boolean directory,
                                       boolean useElevated) throws IOException { AccessManager.copyPreserving(context, src, dest, directory, useElevated); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException { AccessManager.copyAllPreserving(context, ops); }
+        public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException { AccessManager.copyAllPreserving(context, ops); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException { AccessManager.copyAllPreserving(context, ops, progress); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException { AccessManager.copyAllPreserving(context, ops, progress, control); }
 
@@ -171,7 +171,7 @@ public final class PrivilegeManager {
 
         public static void touch(Context context, String path, boolean useElevated) throws IOException { AccessManager.touch(context, path, useElevated); }
 
-        public static RootManager.ShellResult execute(Context context, String command, int timeout) { return AccessManager.execute(context, command, timeout); }
+        public static ShellSession.ShellResult execute(Context context, String command, int timeout) { return AccessManager.execute(context, command, timeout); }
 
         public static boolean touchMtime(Context context, String path, long millis) { return AccessManager.touchMtime(context, path, millis); }
 
@@ -259,19 +259,19 @@ public final class PrivilegeManager {
 
         public static void copyDir(Context context, String src, String dest) throws IOException { ShizukuManager.copyDir(context, src, dest); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException { ShizukuManager.moveAll(context, ops, progress); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException { ShizukuManager.moveAll(context, ops, progress, control); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException { ShizukuManager.copyAllPreserving(context, ops); }
+        public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException { ShizukuManager.copyAllPreserving(context, ops); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException { ShizukuManager.copyAllPreserving(context, ops, progress); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException { ShizukuManager.copyAllPreserving(context, ops, progress, control); }
 

@@ -18,6 +18,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -129,7 +130,7 @@ public final class SystemImageMountManager {
 
                 RootManager rm = RootManager.getInstance(context);
                 // Execute mount via executeFs (which uses global ns if preferred) and try executeGlobalNs explicitly
-                RootManager.ShellResult res = rm.executeFs(mntCmd, 15);
+                ShellSession.ShellResult res = rm.executeFs(mntCmd, 15);
                 if (!res.isSuccess()) {
                     res = rm.executeGlobalNs(mntCmd, 15);
                 }

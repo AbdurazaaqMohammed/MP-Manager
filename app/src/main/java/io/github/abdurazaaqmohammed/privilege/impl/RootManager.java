@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.privilege.impl;
 
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession.ShellResult;
 import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
 
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
@@ -77,33 +80,12 @@ public class RootManager {
         return instance;
     }
 
-    public enum WorkingMode {
-        NON_ROOT("non_root", "Non-root"),
-        ROOT("root", "Root"),
-        SHIZUKU("shizuku", "Shizuku");
-
-        public final String key;
-        public final String label;
-
-        WorkingMode(String key, String label) {
-            this.key = key;
-            this.label = label;
-        }
+    public WorkingModePrefs.WorkingMode getWorkingMode() {
+        return WorkingModePrefs.get(context);
     }
 
-    public WorkingMode getWorkingMode() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        String mode = prefs.getString("working_mode", WorkingMode.NON_ROOT.key);
-        if (WorkingMode.ROOT.key.equals(mode)) return WorkingMode.ROOT;
-        if (WorkingMode.SHIZUKU.key.equals(mode)) return WorkingMode.SHIZUKU;
-        return WorkingMode.NON_ROOT;
-    }
-
-    public void setWorkingMode(WorkingMode mode) {
-        PreferenceManager.getDefaultSharedPreferences(context)
-                .edit()
-                .putString("working_mode", mode.key)
-                .apply();
+    public void setWorkingMode(WorkingModePrefs.WorkingMode mode) {
+        WorkingModePrefs.set(context, mode);
     }
 
     public boolean autoEnableRootIfAvailable() {
@@ -116,7 +98,7 @@ public class RootManager {
             if (!isRootAvailable()) return false;
             boolean changed = false;
             if (!modeTouched) {
-                setWorkingMode(WorkingMode.ROOT);
+                setWorkingMode(WorkingModePrefs.WorkingMode.ROOT);
                 changed = true;
             }
             if (!opsTouched) {
@@ -130,11 +112,11 @@ public class RootManager {
     }
 
     public boolean isRootMode() {
-        return getWorkingMode() == WorkingMode.ROOT;
+        return getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT;
     }
 
     public boolean isShizukuMode() {
-        return getWorkingMode() == WorkingMode.SHIZUKU;
+        return getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU;
     }
 
     public String suBinary() {
@@ -455,7 +437,7 @@ public class RootManager {
 
     private static int parseCount(ShellResult r) {
         try {
-            if (r != null && r.isSuccess() && r.output != null) return Integer.parseInt(r.output.trim());
+            if (r != null && r.isSuccess() && r.output() != null) return Integer.parseInt(r.output().trim());
         } catch (Exception ignored) {
         }
         return -1;
@@ -554,9 +536,9 @@ public class RootManager {
     
     public List<String> listFiles(String path) throws IOException {
         ShellResult result = executeFs("ls -1 " + ShellQuote.escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
+        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error());
         List<String> files = new ArrayList<>();
-        for (String line : result.output.split("\n")) {
+        for (String line : result.output().split("\n")) {
             if (!line.trim().isEmpty()) files.add(line.trim());
         }
         return files;
@@ -564,9 +546,9 @@ public class RootManager {
 
     public List<String> listFilesDetailed(String path) throws IOException {
         ShellResult result = executeFs("ls -la " + ShellQuote.escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
+        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error());
         List<String> entries = new ArrayList<>();
-        for (String line : result.output.split("\n")) {
+        for (String line : result.output().split("\n")) {
             if (!line.trim().isEmpty()) entries.add(line);
         }
         return entries;
@@ -574,7 +556,7 @@ public class RootManager {
 
     public boolean exists(String path) {
         ShellResult result = executeFs("test -e " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
-        return result.isSuccess() && result.output.trim().equals("yes");
+        return result.isSuccess() && result.output().trim().equals("yes");
     }
 
     public boolean isDirectory(String path) {
@@ -585,19 +567,19 @@ public class RootManager {
         } catch (Exception ignored) {}
         if (!isRootAvailable()) return false;
         ShellResult result = executeFs("( [ -d " + ShellQuote.escapeShellArg(path) + " ] || [ -d " + ShellQuote.escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
-        return result.isSuccess() && result.output != null && result.output.trim().equals("yes");
+        return result.isSuccess() && result.output() != null && result.output().trim().equals("yes");
     }
 
     public boolean isFile(String path) {
         ShellResult result = executeFs("test -f " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
-        return result.isSuccess() && result.output.trim().equals("yes");
+        return result.isSuccess() && result.output().trim().equals("yes");
     }
 
     public long getFileSize(String path) {
         ShellResult result = executeFs("stat -c %s " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (result.isSuccess()) {
             try {
-                return Long.parseLong(result.output.trim());
+                return Long.parseLong(result.output().trim());
             } catch (NumberFormatException e) {
                 return -1;
             }
@@ -619,19 +601,19 @@ public class RootManager {
         if (!result.isSuccess() && !path.equals(emulatedAlias(path))) {
             result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(path), 30);
         }
-        return result.isSuccess() ? result.output.trim() : null;
+        return result.isSuccess() ? result.output().trim() : null;
     }
 
     public String getOwner(String path) {
         ShellResult result = executeFs("stat -c %U:%G " + ShellQuote.escapeShellArg(path), 30);
-        return result.isSuccess() ? result.output.trim() : null;
+        return result.isSuccess() ? result.output().trim() : null;
     }
 
     public File[] listRootFiles(String path) {
         ShellResult result = executeFs("ls -1a " + ShellQuote.escapeShellArg(path), 30);
-        if (!result.isSuccess() || result.output == null) return null;
+        if (!result.isSuccess() || result.output() == null) return null;
 
-        String[] names = result.output.split("\\r?\\n");
+        String[] names = result.output().split("\\r?\\n");
         List<File> files = new ArrayList<>();
         for (String name : names) {
             String trimmed = name.trim();
@@ -646,7 +628,7 @@ public class RootManager {
             throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
         }
         ShellResult result = execute("chmod " + mode + " " + ShellQuote.escapeShellArg(path));
-        if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error());
     }
 
     /**
@@ -663,7 +645,7 @@ public class RootManager {
         if (!result.isSuccess()) {
             // Retry without the namespace and alias in case the probe is wrong here.
             result = execute("chmod " + mode + " -- " + ShellQuote.escapeShellArg(path), 30);
-            if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
+            if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error());
         }
         invalidateListCache();
     }
@@ -682,12 +664,12 @@ public class RootManager {
             arg = owner;
         }
         ShellResult result = execute("chown " + arg + " " + ShellQuote.escapeShellArg(path));
-        if (!result.isSuccess()) throw new IOException("chown failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("chown failed: " + result.error());
     }
 
     public void mkdir(String path) throws IOException {
         ShellResult result = executeFs("mkdir -p " + ShellQuote.escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("mkdir failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("mkdir failed: " + result.error());
         invalidateListCache();
     }
 
@@ -765,7 +747,7 @@ public class RootManager {
                     }
                 });
         if (!result.isSuccess() || probeFailed.get()) {
-            return result.error == null || result.error.isEmpty() ? "path still exists" : result.error;
+            return result.error() == null || result.error().isEmpty() ? "path still exists" : result.error();
         }
         return null;
     }
@@ -787,7 +769,7 @@ public class RootManager {
         ShellResult result = executeFs("mv " + ShellQuote.escapeShellArg(oldPath) + " " + ShellQuote.escapeShellArg(newPath),
                 3600, null, control);
         if (!result.isSuccess() && !(isGone(oldPath) && exists(newPath))) {
-            throw new IOException("rename failed: " + result.error);
+            throw new IOException("rename failed: " + result.error());
         }
         invalidateListCache();
     }
@@ -799,7 +781,7 @@ public class RootManager {
 
     public void copyFile(String src, String dest) throws IOException {
         ShellResult result = executeFs("cp -f " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
-        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
         invalidateListCache();
     }
 
@@ -810,45 +792,20 @@ public class RootManager {
      */
     public void copyFilePreserving(String src, String dest) throws IOException {
         ShellResult result = executeFs("cp -pf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
-        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
         invalidateListCache();
     }
 
     public void copyDir(String src, String dest) throws IOException {
         ShellResult result = executeFs("cp -rf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
-        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
         invalidateListCache();
     }
 
     public void copyDirPreserving(String src, String dest) throws IOException {
         ShellResult result = executeFs("cp -rpf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
-        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
         invalidateListCache();
-    }
-
-    public static final class CopyOp {
-        public final String src;
-        public final String dest;
-        public final boolean directory;
-        public final boolean destExists;
-        /** Files this op moves, for progress accounting (0 when unknown). */
-        public final int files;
-        /** Bytes this op moves, for progress accounting (0 when unknown). */
-        public final long bytes;
-
-        public CopyOp(String src, String dest, boolean directory, boolean destExists) {
-            this(src, dest, directory, destExists, 0, 0L);
-        }
-
-        public CopyOp(String src, String dest, boolean directory, boolean destExists,
-                      int files, long bytes) {
-            this.src = src;
-            this.dest = dest;
-            this.directory = directory;
-            this.destExists = destExists;
-            this.files = files;
-            this.bytes = bytes;
-        }
     }
 
     /**
@@ -908,7 +865,7 @@ public class RootManager {
         }
         if (count == 0) return;
         ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
-        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
         invalidateListCache();
     }
 
@@ -963,7 +920,7 @@ public class RootManager {
         if (count == 0) return;
         ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
         if (!result.isSuccess() && !moveCompletedDespiteError(ops)) {
-            throw new IOException("move failed: " + result.error);
+            throw new IOException("move failed: " + result.error());
         }
         invalidateListCache();
     }
@@ -1066,7 +1023,7 @@ public class RootManager {
         }
         ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30), relay, control);
         if (failed.get() || !result.isSuccess()) {
-            throw new IOException("delete failed: " + result.error);
+            throw new IOException("delete failed: " + result.error());
         }
         invalidateListCache();
         return allTargets;
@@ -1171,7 +1128,7 @@ public class RootManager {
                     .append(" ] && echo @@MPPROG \"$n\" 0 || echo @@MPFAIL");
         }
         ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay, control);
-        if (failed.get() || !result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        if (failed.get() || !result.isSuccess()) throw new IOException("delete failed: " + result.error());
         invalidateListCache();
         return allTargets;
     }
@@ -1194,8 +1151,8 @@ public class RootManager {
 
     /** Reads an {@code @@NAME <n>} line out of a shell result. */
     static int parseCountMarker(ShellResult r, String marker) {
-        if (r == null || r.output == null) return 0;
-        for (String line : r.output.split("\n")) {
+        if (r == null || r.output() == null) return 0;
+        for (String line : r.output().split("\n")) {
             String t = line.trim();
             if (!t.startsWith(marker)) continue;
             try {
@@ -1256,12 +1213,12 @@ public class RootManager {
      * {@link #measureSet}.
      */
     static FileUtils.MeasureSet parseMeasureSet(ShellResult r, int expected) {
-        if (r == null || r.output == null) return null;
+        if (r == null || r.output() == null) return null;
         FileUtils.Measure total = null;
         List<FileUtils.Measure> each = new ArrayList<>();
         for (int i = 0; i < expected; i++) each.add(new FileUtils.Measure(0, 0L));
         boolean sawAny = false;
-        for (String line : r.output.split("\n")) {
+        for (String line : r.output().split("\n")) {
             String t = line.trim();
             if (t.startsWith("@@MPM ")) {
                 String[] parts = t.substring(6).trim().split("\\s+");
@@ -1301,20 +1258,20 @@ public class RootManager {
 
     public void touch(String path) throws IOException {
         ShellResult result = executeFs("touch " + ShellQuote.escapeShellArg(path), 30);
-        if (!result.isSuccess()) throw new IOException("touch failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("touch failed: " + result.error());
         invalidateListCache();
     }
 
     public void ln(String target, String link) throws IOException {
         ShellResult result = executeFs("ln -sf " + ShellQuote.escapeShellArg(target) + " " + ShellQuote.escapeShellArg(link), 30);
-        if (!result.isSuccess()) throw new IOException("ln failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("ln failed: " + result.error());
         invalidateListCache();
     }
 
     public String readFile(String path) throws IOException {
         ShellResult result = execute("cat " + ShellQuote.escapeShellArg(path));
-        if (!result.isSuccess()) throw new IOException("read failed: " + result.error);
-        return result.output;
+        if (!result.isSuccess()) throw new IOException("read failed: " + result.error());
+        return result.output();
     }
 
     public void writeFile(String path, String content) throws IOException {
@@ -1403,7 +1360,7 @@ public class RootManager {
 
     public void copyToRoot(File localSource, String rootPath) throws IOException {
         ShellResult result = executeFs("cp " + ShellQuote.escapeShellArg(localSource.getAbsolutePath()) + " " + ShellQuote.escapeShellArg(rootPath), 60);
-        if (!result.isSuccess()) throw new IOException("copy to root failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("copy to root failed: " + result.error());
         invalidateListCache();
     }
 
@@ -1436,21 +1393,21 @@ public class RootManager {
 
         ShellResult copyResult = executeWithInput(copyCmd.toString(), null);
         if (!copyResult.isSuccess()) {
-            throw new IOException("Failed to copy APKs: " + copyResult.error);
+            throw new IOException("Failed to copy APKs: " + copyResult.error());
         }
 
         ShellResult createResult = execute(createCmd);
         for (int attempt = 0; attempt < 2 && !createResult.isSuccess(); attempt++) {
             String retry = PrivilegedInstaller.downgradeCreateCommand(createCmd,
-                    PrivilegedInstaller.combinedOutput(createResult.output, createResult.error));
+                    PrivilegedInstaller.combinedOutput(createResult.output(), createResult.error()));
             if (retry == null) break;
             createCmd = retry;
             createResult = execute(createCmd);
         }
-        String sessionId = parseSessionId(createResult.output);
+        String sessionId = parseSessionId(createResult.output());
         if (!createResult.isSuccess() || sessionId == null) {
             cleanupInstallTag(tag, apkPaths.size());
-            throw new IOException("Failed to create install session: " + createResult.error + " " + createResult.output);
+            throw new IOException("Failed to create install session: " + createResult.error() + " " + createResult.output());
         }
 
         try {
@@ -1461,13 +1418,13 @@ public class RootManager {
                 ShellResult writeResult = execute(writeCmd);
                 if (!writeResult.isSuccess()) {
                     execute("pm install-abandon " + sessionId);
-                    throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error + " " + writeResult.output);
+                    throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error() + " " + writeResult.output());
                 }
             }
 
             ShellResult commitResult = execute("pm install-commit " + sessionId);
-            if (!commitResult.isSuccess() || (!commitResult.output.contains("Success") && !commitResult.output.contains("Session"))) {
-                throw new IOException("Install failed: " + commitResult.error + " " + commitResult.output);
+            if (!commitResult.isSuccess() || (!commitResult.output().contains("Success") && !commitResult.output().contains("Session"))) {
+                throw new IOException("Install failed: " + commitResult.error() + " " + commitResult.output());
             }
         } finally {
             cleanupInstallTag(tag, apkPaths.size());
@@ -1508,8 +1465,8 @@ public class RootManager {
             throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
         }
         ShellResult result = executeWithInput("pm uninstall " + ShellQuote.escapeShellArg(packageName), null);
-        if (!result.isSuccess() || !result.output.contains("Success")) {
-            throw new IOException("Uninstall failed: " + result.error + " " + result.output);
+        if (!result.isSuccess() || !result.output().contains("Success")) {
+            throw new IOException("Uninstall failed: " + result.error() + " " + result.output());
         }
     }
 
@@ -1521,7 +1478,7 @@ public class RootManager {
             throw new IOException("Blocked: refusing to clear data of critical system app: " + packageName);
         }
         ShellResult result = execute("pm clear " + ShellQuote.escapeShellArg(packageName));
-        if (!result.isSuccess()) throw new IOException("clear data failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("clear data failed: " + result.error());
     }
 
     public void forceStopApp(String packageName) throws IOException {
@@ -1532,7 +1489,7 @@ public class RootManager {
             throw new IOException("Blocked: refusing to force stop critical system app: " + packageName);
         }
         ShellResult result = execute("am force-stop " + ShellQuote.escapeShellArg(packageName));
-        if (!result.isSuccess()) throw new IOException("force stop failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("force stop failed: " + result.error());
     }
 
     public void enableApp(String packageName) throws IOException {
@@ -1540,7 +1497,7 @@ public class RootManager {
             throw new IOException("Invalid package name: " + packageName);
         }
         ShellResult result = execute("pm enable " + ShellQuote.escapeShellArg(packageName));
-        if (!result.isSuccess()) throw new IOException("enable failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("enable failed: " + result.error());
     }
 
     public void disableApp(String packageName) throws IOException {
@@ -1551,7 +1508,7 @@ public class RootManager {
             throw new IOException("Blocked: refusing to disable critical system app: " + packageName);
         }
         ShellResult result = execute("pm disable-user --user 0 " + ShellQuote.escapeShellArg(packageName));
-        if (!result.isSuccess()) throw new IOException("disable failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("disable failed: " + result.error());
     }
 
     public String getAppApkPath(String packageName) throws IOException {
@@ -1563,8 +1520,8 @@ public class RootManager {
         List<String> out = new ArrayList<>();
         if (!PackageGuards.isPackageNameValid(packageName)) return out;
         ShellResult result = executeFs("pm path " + ShellQuote.escapeShellArg(packageName), 30);
-        if (result != null && result.isSuccess() && result.output != null) {
-            String output = result.output;
+        if (result != null && result.isSuccess() && result.output() != null) {
+            String output = result.output();
             int start = 0;
             while (start <= output.length()) {
                 int nl = output.indexOf((char) 10, start);
@@ -1583,13 +1540,13 @@ public class RootManager {
     public String getAppUid(String packageName) {
         if (!PackageGuards.isPackageNameValid(packageName)) return null;
         ShellResult dump = executeFs("pm dump " + ShellQuote.escapeShellArg(packageName), 30);
-        if (dump != null && dump.isSuccess() && dump.output != null) {
-            String uid = findUidInDump(dump.output);
+        if (dump != null && dump.isSuccess() && dump.output() != null) {
+            String uid = findUidInDump(dump.output());
             if (uid != null) return uid;
         }
         ShellResult statResult = executeFs("stat -c %u " + ShellQuote.escapeShellArg("/data/data/" + packageName), 30);
-        if (statResult != null && statResult.isSuccess() && statResult.output != null) {
-            String t = statResult.output.trim();
+        if (statResult != null && statResult.isSuccess() && statResult.output() != null) {
+            String t = statResult.output().trim();
             if (!t.isEmpty()) return t;
         }
         return null;
@@ -1633,8 +1590,8 @@ public class RootManager {
         for (String[] candidates : groups) {
             for (String path : candidates) {
                 ShellResult result = executeFs("test -d " + ShellQuote.escapeShellArg(path) + " && echo exists", 30);
-                if (result != null && result.isSuccess() && result.output != null
-                        && "exists".equals(result.output.trim())) {
+                if (result != null && result.isSuccess() && result.output() != null
+                        && "exists".equals(result.output().trim())) {
                     dirs.add(path);
                     break;
                 }
@@ -1645,9 +1602,9 @@ public class RootManager {
 
     public List<String> getInstalledPackages() throws IOException {
         ShellResult result = execute("pm list packages -f");
-        if (!result.isSuccess()) throw new IOException("list packages failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("list packages failed: " + result.error());
         List<String> packages = new ArrayList<>();
-        for (String line : result.output.split("\n")) {
+        for (String line : result.output().split("\n")) {
             if (line.startsWith("package:")) {
                 packages.add(line.substring(8).trim());
             }
@@ -1659,7 +1616,7 @@ public class RootManager {
     public void remountSystem(boolean rw) throws IOException {
         String cmd = rw ? "mount -o remount,rw /system" : "mount -o remount,ro /system";
         ShellResult result = execute(cmd);
-        if (!result.isSuccess()) throw new IOException("remount failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("remount failed: " + result.error());
     }
 
     public void reboot(String mode) throws IOException {
@@ -1673,14 +1630,14 @@ public class RootManager {
             cmd = "reboot " + mode;
         }
         ShellResult result = execute(cmd);
-        if (!result.isSuccess()) throw new IOException("reboot failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("reboot failed: " + result.error());
     }
 
     public List<String> getRunningProcesses() throws IOException {
         ShellResult result = execute("ps -A -o PID,USER,NAME");
-        if (!result.isSuccess()) throw new IOException("ps failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("ps failed: " + result.error());
         List<String> processes = new ArrayList<>();
-        for (String line : result.output.split("\n")) {
+        for (String line : result.output().split("\n")) {
             if (!line.trim().isEmpty()) processes.add(line.trim());
         }
         return processes;
@@ -1692,7 +1649,7 @@ public class RootManager {
 
     public boolean isSystemRemountedRW() {
         ShellResult result = execute("mount | grep ' /system '");
-        return result.isSuccess() && result.output.contains("rw");
+        return result.isSuccess() && result.output().contains("rw");
     }
 
     public void backupAppData(String packageName, String outputPath) throws IOException {
@@ -1700,7 +1657,7 @@ public class RootManager {
             throw new IOException("Invalid package name: " + packageName);
         }
         ShellResult result = execute("tar -cf " + ShellQuote.escapeShellArg(outputPath) + " -C /data/data " + ShellQuote.escapeShellArg(packageName), 120);
-        if (!result.isSuccess()) throw new IOException("backup failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("backup failed: " + result.error());
     }
 
     public void restoreAppData(String packageName, String archivePath) throws IOException {
@@ -1709,9 +1666,9 @@ public class RootManager {
         }
         ShellResult listResult = execute("tar -tf " + ShellQuote.escapeShellArg(archivePath) + " 2>/dev/null", 60);
         if (!listResult.isSuccess()) {
-            throw new IOException("Cannot list archive: " + listResult.error);
+            throw new IOException("Cannot list archive: " + listResult.error());
         }
-        for (String member : listResult.output.split("\n")) {
+        for (String member : listResult.output().split("\n")) {
             String m = member.trim();
             if (m.isEmpty() || m.equals(".") || m.equals("./")) continue;
             if (m.startsWith("/")) {
@@ -1724,10 +1681,10 @@ public class RootManager {
             }
         }
         ShellResult result = execute("tar -xf " + ShellQuote.escapeShellArg(archivePath) + " -C /data/data", 120);
-        if (!result.isSuccess()) throw new IOException("restore failed: " + result.error);
+        if (!result.isSuccess()) throw new IOException("restore failed: " + result.error());
         String dataPath = "/data/data/" + packageName;
         ShellResult existsCheck = execute("test -d " + ShellQuote.escapeShellArg(dataPath) + " && echo yes || echo no");
-        if (existsCheck.isSuccess() && "yes".equals(existsCheck.output.trim())) {
+        if (existsCheck.isSuccess() && "yes".equals(existsCheck.output().trim())) {
             execute("chmod -R 771 " + ShellQuote.escapeShellArg(dataPath));
             execute("chown -R $(stat -c %U:%G " + ShellQuote.escapeShellArg(dataPath) + " 2>/dev/null || echo system:system) " + ShellQuote.escapeShellArg(dataPath));
         }
@@ -1762,8 +1719,8 @@ public class RootManager {
         try {
             ShellResult r = executeFs("stat -L -c '%n\037%F\037%s\037%Y\037%a' "
                     + ShellQuote.escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
-            if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
-                String line = r.output.split("\\r?\\n")[0];
+            if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                String line = r.output().split("\\r?\\n")[0];
                 String[] parts = line.split("\037", -1);
                 if (parts.length >= 5) {
                     String type = parts[1].trim();
@@ -1905,11 +1862,11 @@ public class RootManager {
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
         ShellResult result = executeFs("LC_ALL=C ls -la -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 15);
-        if (!result.isSuccess() || result.output == null) return null;
+        if (!result.isSuccess() || result.output() == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();
         List<String> linkNames = new ArrayList<>();
-        for (String line : result.output.split("\\r?\\n")) {
+        for (String line : result.output().split("\\r?\\n")) {
             String trimmed = line.trim();
             if (trimmed.isEmpty() || trimmed.startsWith("total ")) continue;
             Matcher matcher = LS_LONG_LINE.matcher(line);
@@ -1944,14 +1901,14 @@ public class RootManager {
             }
             try {
                 ShellResult r = executeFs(cmd.toString(), 15);
-                if (r.isSuccess() && r.output != null) {
+                if (r.isSuccess() && r.output() != null) {
                     List<Boolean> linkIsDir = new ArrayList<>();
                     List<Boolean> linkIsFile = new ArrayList<>();
                     for (int i = 0; i < linkNames.size(); i++) {
                         linkIsDir.add(Boolean.FALSE);
                         linkIsFile.add(Boolean.FALSE);
                     }
-                    for (String l : r.output.split("\\r?\\n")) {
+                    for (String l : r.output().split("\\r?\\n")) {
                         String t = l.trim();
                         if (t.startsWith("LINK_DIR_")) {
                             linkIsDir.set(Integer.parseInt(t.substring("LINK_DIR_".length())), Boolean.TRUE);
@@ -2116,7 +2073,7 @@ public class RootManager {
             script.append("else printf '%s\0370\\n' \"$s\"; fi; done");
             try {
                 ShellResult r = executeFs(script.toString(), 30);
-                if (r.isSuccess() && r.output != null) parseStatLines(out, r.output, base);
+                if (r.isSuccess() && r.output() != null) parseStatLines(out, r.output(), base);
             } catch (Exception ignored) {
             }
         }
@@ -2164,12 +2121,12 @@ public class RootManager {
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
         ShellResult result = executeFs("ls -1ALp -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
-        if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
+        if (result == null || !result.isSuccess() || result.output() == null || result.output().trim().isEmpty()) {
             result = executeFs("ls -1Ap -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
         }
-        if (!result.isSuccess() || result.output == null) return null;
+        if (!result.isSuccess() || result.output() == null) return null;
         List<File> files = new ArrayList<>();
-        for (String line : result.output.split("\\r?\\n")) {
+        for (String line : result.output().split("\\r?\\n")) {
             if (line.isEmpty()) continue;
             boolean dir = line.endsWith("/");
             String name = dir ? line.substring(0, line.length() - 1) : line;
@@ -2195,9 +2152,9 @@ public class RootManager {
                 + "else printf '%s\0370\\n' \"$s\"; fi; "
                 + "done";
         ShellResult result = executeFs(script, 30);
-        if (!result.isSuccess() || result.output == null) return null;
+        if (!result.isSuccess() || result.output() == null) return null;
         List<File> files = new ArrayList<>();
-        parseStatLines(files, result.output, cleanPath);
+        parseStatLines(files, result.output(), cleanPath);
         return files.toArray(new File[0]);
     }
 
@@ -2361,12 +2318,12 @@ public class RootManager {
     
     public String getMountInfo() throws IOException {
         ShellResult result = execute("mount");
-        return result.isSuccess() ? result.output : "";
+        return result.isSuccess() ? result.output() : "";
     }
 
     public boolean isMountedRW(String mountPoint) {
         ShellResult result = execute("mount | grep ' " + mountPoint + " '");
-        return result.isSuccess() && result.output.contains("rw");
+        return result.isSuccess() && result.output().contains("rw");
     }
 
     public List<String> listUsers() throws IOException {
@@ -2380,8 +2337,8 @@ public class RootManager {
         for (String[] cmd : paths) {
             try {
                 ShellResult r = execute("cat " + ShellQuote.escapeShellArg(cmd[0]) + " 2>/dev/null");
-                if (r.isSuccess() && !r.output.trim().isEmpty()) {
-                    parsePasswd(r.output, users);
+                if (r.isSuccess() && !r.output().trim().isEmpty()) {
+                    parsePasswd(r.output(), users);
                     if (!users.isEmpty()) return users;
                 }
             } catch (Exception ignored) {}
@@ -2424,15 +2381,15 @@ public class RootManager {
         for (String path : paths) {
             try {
                 ShellResult r = execute("cat " + ShellQuote.escapeShellArg(path) + " 2>/dev/null");
-                if (r.isSuccess() && !r.output.trim().isEmpty()) {
-                    parseGroup(r.output, groups);
+                if (r.isSuccess() && !r.output().trim().isEmpty()) {
+                    parseGroup(r.output(), groups);
                     if (!groups.isEmpty()) return groups;
                 }
             } catch (Exception ignored) {}
         }
         ShellResult idResult = execute("id 2>/dev/null");
-        if (idResult.isSuccess() && !idResult.output.trim().isEmpty()) {
-            String output = idResult.output;
+        if (idResult.isSuccess() && !idResult.output().trim().isEmpty()) {
+            String output = idResult.output();
             int gidsStart = output.indexOf("groups=");
             if (gidsStart > 0) {
                 String gidsStr = output.substring(gidsStart + 7);
@@ -2481,16 +2438,4 @@ public class RootManager {
             }
         }
     }
-
-    public record ShellResult(int exitCode, String output, String error) {
-            public ShellResult(int exitCode, String output, String error) {
-                this.exitCode = exitCode;
-                this.output = output != null ? output : "";
-                this.error = error != null ? error : "";
-            }
-
-            public boolean isSuccess() {
-                return exitCode == 0;
-            }
-        }
 }

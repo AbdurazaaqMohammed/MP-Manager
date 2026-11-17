@@ -80,6 +80,7 @@ import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -1077,9 +1078,9 @@ public class SettingsController {
         if (shizukuSupported) modeLabels.add(labelShizuku);
         workingModeTv.setAdapter(dropdownAdapter(modeLabels));
 
-        RootManager.WorkingMode current = rootManager.getWorkingMode();
-        if (current == RootManager.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
-        else if (current == RootManager.WorkingMode.SHIZUKU && shizukuSupported) {
+        WorkingModePrefs.WorkingMode current = rootManager.getWorkingMode();
+        if (current == WorkingModePrefs.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
+        else if (current == WorkingModePrefs.WorkingMode.SHIZUKU && shizukuSupported) {
             workingModeTv.setText(labelShizuku, false);
         } else workingModeTv.setText(labelNonRoot, false);
 
@@ -1087,14 +1088,14 @@ public class SettingsController {
             boolean running = shizukuSupported && PrivilegeManager.Shizuku.isRunning();
             boolean granted = running && PrivilegeManager.Shizuku.hasPermission();
             grantShizukuBtn.setVisibility(
-                    rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                    rootManager.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU
                             && running && !granted ? View.VISIBLE : View.GONE);
         };
 
         Runnable applyModeUi = () -> {
-            RootManager.WorkingMode mode = rootManager.getWorkingMode();
-            boolean isRoot = mode == RootManager.WorkingMode.ROOT;
-            boolean isSh = mode == RootManager.WorkingMode.SHIZUKU && shizukuSupported;
+            WorkingModePrefs.WorkingMode mode = rootManager.getWorkingMode();
+            boolean isRoot = mode == WorkingModePrefs.WorkingMode.ROOT;
+            boolean isSh = mode == WorkingModePrefs.WorkingMode.SHIZUKU && shizukuSupported;
             boolean rootOk = isRoot && rootManager.isRootAvailable();
             boolean shizukuRunning = isSh && PrivilegeManager.Shizuku.isRunning();
             boolean shizukuReady = shizukuRunning && PrivilegeManager.Shizuku.hasPermission();
@@ -1141,10 +1142,10 @@ public class SettingsController {
                     boolean ok = rootManager.isRootAvailable();
                     handler.post(() -> {
                         if (ok) {
-                            rootManager.setWorkingMode(RootManager.WorkingMode.ROOT);
+                            rootManager.setWorkingMode(WorkingModePrefs.WorkingMode.ROOT);
                         } else {
                             Extensions.showMessage(activity, R.string.root_denied_msg);
-                            workingModeTv.setText(rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                            workingModeTv.setText(rootManager.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU
                                     ? labelShizuku : labelNonRoot, false);
                         }
                         applyModeUi.run();
@@ -1158,7 +1159,7 @@ public class SettingsController {
                     workingModeTv.setText(labelNonRoot, false);
                     return;
                 }
-                rootManager.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                rootManager.setWorkingMode(WorkingModePrefs.WorkingMode.SHIZUKU);
                 applyModeUi.run();
                 new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
                 if (!PrivilegeManager.Shizuku.hasPermission()) {
@@ -1166,7 +1167,7 @@ public class SettingsController {
                 }
                 return;
             }
-            rootManager.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+            rootManager.setWorkingMode(WorkingModePrefs.WorkingMode.NON_ROOT);
             applyModeUi.run();
         });
 
