@@ -25,6 +25,8 @@ public final class ToolRegistry {
                     R.drawable.screen_ocr_24px, R.string.cat_text, "tools", false),
             new Definition("extract", R.string.sidebar_extract, R.string.tool_extract_subtitle,
                     R.drawable.apk_document_24px, R.string.cat_storage, "tools", false),
+            new Definition("lspatch_manager", R.string.lspatch_manager, R.string.lspatch_manager_subtitle,
+                    R.drawable.tools_24px, R.string.cat_storage, null, false),
             new Definition("documents", R.string.docs_tool_title, R.string.docs_tool_subtitle,
                     R.drawable.folder_24px, R.string.cat_storage, "tools", false),
             new Definition("recycle_bin", R.string.recycle_bin, R.string.tool_recycle_subtitle,

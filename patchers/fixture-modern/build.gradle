@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.patcherfixture.modern'
+    compileSdk 37
+    defaultConfig {
+        applicationId 'io.github.abdurazaaqmohammed.patcherfixture.modern'
+        minSdk 28
+        targetSdk 31
+        versionCode 1
+        versionName '1.0'
+    }
+}
+
+dependencies { compileOnly 'io.github.libxposed:api:102.0.0' }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- API 23 remains usable; the launchers gate these features before loading them. -->
+    <uses-sdk tools:overrideLibrary="io.github.abdurazaaqmohammed.lspatch.runtime" />
+    <application>
+        <activity android:name="io.github.abdurazaaqmohammed.feature.apk.xposed.LSPatchManagerActivity"
+            android:exported="false" android:label="@string/lspatch_manager"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <service android:name="org.lsposed.lspatch.manager.ModuleService"
+            android:exported="true" />
+        <service android:name="org.lsposed.lspatch.manager.XposedPullService" android:exported="true">
+            <intent-filter>
+                <action android:name="org.lsposed.lspatch.action.REQUEST_PUSH" />
+            </intent-filter>
+        </service>
+        <receiver android:name="io.github.abdurazaaqmohammed.feature.apk.xposed.LSPatchPackageReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

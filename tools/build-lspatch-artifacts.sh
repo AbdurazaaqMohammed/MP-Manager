@@ -110,3 +110,4 @@ unzip -p "$FAT_JAR_ABS" "assets/keystore" > "$APP_ASSETS/keystore"
 echo
 echo "Done. Artifacts refreshed:"
 ls -la "$OUT_JAR" "$APP_ASSETS/lspatch/loader.dex" "$APP_ASSETS/lspatch/so/arm64-v8a/liblspatch.so"
+python "$REPO_DIR/tools/sync-lspatch-runtime.py" --source "$LSPATCH_DIR"

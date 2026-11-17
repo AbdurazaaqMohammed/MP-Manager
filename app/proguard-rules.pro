@@ -126,6 +126,9 @@
 -keep class com.beust.jcommander.** { *; }
 -keep class com.android.tools.smali.util.jcommander.** { *; }
 -keep class org.lsposed.patch.** { *; }
+-keep class org.lsposed.lspatch.share.** { *; }
+-keep class org.matrix.vector.ipc.** { *; }
+-keep class io.github.libxposed.service.** { *; }
 
 # 9) Signing with the default debug.keystore (desktop JKS) on SDK 24:
 #    MainActivity registers JavaKeyStoreProvider, whose KeyStore.JKS impl

@@ -2048,7 +2048,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <!-- NPatch integrated mode -->
     <string name="npatch_integrated">Signature killer &amp; xposed</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
-    <string name="npatch_hint">Patches the APK with LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
+    <string name="npatch_hint">Integrated mode embeds modules and runs standalone. Manager mode loads its framework and selected installed modules from MP Manager Full, so module changes do not require re-patching. Auto Sign uses the key under Sign Settings; otherwise the engine’s built-in key is used. A new APK is created.</string>
     <string name="npatch_bypass_lsp_0">Bypass: None</string>
     <string name="npatch_bypass_lsp_1">Bypass: PM</string>
     <string name="npatch_bypass_lsp_2">Bypass: PM + OpenAT</string>
@@ -2171,7 +2171,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
     <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
+    <string name="xposed_patcher_lite_message">LSPatch and its manager services are not bundled in MP Manager Lite. Install Full to patch APKs in Integrated or Manager mode and manage their modules. Keep Full installed while using apps bound to MP Manager.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">COPY</string>

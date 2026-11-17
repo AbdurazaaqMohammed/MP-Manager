@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.BuildConfig;
 import io.github.abdurazaaqmohammed.ui.common.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
@@ -665,8 +666,9 @@ public class ToolsHubActivity extends BaseActivity {
                 h.subtitle.setText(item.subtitle());
                 boolean needsPack = "screen_ocr".equals(item.id())
                         && !PackManager.isInstalled(ToolsHubActivity.this, "ocr");
-                h.badge.setText(R.string.tools_hub_download_badge);
-                h.badge.setVisibility(needsPack ? View.VISIBLE : View.GONE);
+                boolean fullOnly = "lite".equals(BuildConfig.FLAVOR) && ("lspatch_manager".equals(item.id()));
+                h.badge.setText(fullOnly ? R.string.patcher_full_badge : R.string.tools_hub_download_badge);
+                h.badge.setVisibility(needsPack || fullOnly ? View.VISIBLE : View.GONE);
                 h.card.setOnClickListener(v -> openTool(item));
                 h.card.setOnLongClickListener(v -> {
                     showToolMenu(v, () -> ToolShortcuts.pin(ToolsHubActivity.this, item));

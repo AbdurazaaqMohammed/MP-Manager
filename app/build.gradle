@@ -88,6 +88,10 @@ android {
         resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
     }
+    androidResources {
+        // Manager-mode LSPatch mmaps these directly from this APK.
+        noCompress += ['so']
+    }
 }
 
 dependencies {
@@ -152,7 +156,7 @@ dependencies {
     implementation files('libs/commons-net-3.11.1.jar')
     // SMB2/3 client; no legacy SMB1 or native binaries.
     implementation 'com.hierynomus:smbj:0.14.0'
-    // LSPatch (JingMatrix fork) integrated-mode patcher engine (vendored, see
+    // LSPatch (JingMatrix fork) patcher and manager runtime (vendored, see
     // docs/XPOSED_PATCHER.md) — full flavor only — plus the vendored classes it
     // links against: the aXML manifest editor (com.wind.meditor, pxb.android)
     // and the NeoApk raw-file V2/V3 signer used by APK multiplexing
@@ -161,6 +165,7 @@ dependencies {
     // stdlib must be >= 2.4.20.
     fullImplementation files('libs/lspatch-patcher.jar')
     fullImplementation files('libs/patcher-common.jar')
+    fullImplementation project(':patchers:lspatch-runtime')
     fullImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("io.github.iamr0s:Dhizuku-API:2.6.0")

@@ -3,8 +3,6 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import android.content.Intent;
-import android.net.Uri;
 
 import java.io.File;
 
@@ -14,14 +12,14 @@ public final class XposedPatcherLauncher {
     private XposedPatcherLauncher() {
     }
 
+    public static void openManager(androidx.appcompat.app.AppCompatActivity activity) {
+        FullPatcherNotice.show(activity, R.string.lspatch_manager, R.string.xposed_patcher_lite_message);
+    }
+
     public static void open(io.github.abdurazaaqmohammed.ui.main.MainActivity context,
                             io.github.abdurazaaqmohammed.ui.common.util.DialogUtil dialogUtil,
                             boolean pane1, File file, String fileName) {
-        context.handler.post(() -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.xposed_patcher_lite_title)
-                .setMessage(R.string.xposed_patcher_lite_message)
-                .setPositiveButton(R.string.download, (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/MP-Manager/releases"))))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show());
+        context.handler.post(() -> FullPatcherNotice.show(context,
+                R.string.xposed_patcher_lite_title, R.string.xposed_patcher_lite_message));
     }
 }

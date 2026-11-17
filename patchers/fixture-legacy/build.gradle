@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.patcherfixture.legacy'
+    compileSdk 37
+    defaultConfig {
+        applicationId 'io.github.abdurazaaqmohammed.patcherfixture.legacy'
+        minSdk 28
+        targetSdk 31
+        versionCode 1
+        versionName '1.0'
+    }
+}
+
+dependencies { compileOnly 'de.robv.android.xposed:api:82' }

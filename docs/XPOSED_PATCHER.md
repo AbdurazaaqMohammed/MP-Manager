@@ -1,11 +1,38 @@
-# Xposed Patcher Integration (LSPatch, Integrated Mode)
+# Xposed Patcher Integration (LSPatch, Integrated and Manager Modes)
 
 MP-Manager embeds the [JingMatrix/LSPatch](https://github.com/JingMatrix/LSPatch)
-fork (`LSPatch-master/`) as its integrated-mode Xposed patcher engine,
+fork (`LSPatch-master/`) as its Xposed patcher engine,
 reachable from the APK dialog's "Xposed patcher" entry. It patches an APK with
 Xposed modules baked in (embedded-modules mode), so the result runs standalone
 without a manager app. The engine runs **in-process** on-device, exactly as its
 own manager app would.
+
+The options dialog now also offers **Manager mode**. It writes `useManager=true`
+and `managerPackageName=context.getPackageName()` into the patched app. The
+unchanged upstream metaloader reads the loader and native library from MP Manager
+Full's APK; the framework binds the exact upstream component
+`org.lsposed.lspatch.manager.ModuleService` inside MP Manager.
+
+Open **Tools → LSPatch manager** to select installed legacy or libxposed API 101+
+modules for each managed app. Scope and module updates apply on the next process
+restart without re-patching. Compatible modern modules can hot-reload through
+their attached process channels. Remote preferences/files are owned by the
+manager and shared with module companion apps. Keep MP Manager Full installed;
+replacing it with Lite removes the runtime manager-mode apps require.
+
+Manager implementation: `app/src/full/java/.../feature/apk/xposed/` and the fixed
+service component under `app/src/full/java/org/lsposed/lspatch/manager/`.
+`patchers/lspatch-runtime/` vendors upstream AIDL and shared module/remote-service
+sources byte-for-byte. `python tools/sync-lspatch-runtime.py --check` verifies them
+against the local checkout; the artifact build script refreshes them automatically.
+UID checks at Binder transaction boundaries prevent callers from receiving other
+apps' scopes or writing another module's remote settings. The service is bound
+on demand rather than starting a foreground service for each target launch.
+
+**Packaging requirement:** Full sets `androidResources.noCompress += ['so']`.
+The manager's `assets/lspatch/so/<abi>/liblspatch.so` entries must be stored and
+4096-aligned because the metaloader calls `System.load` on their APK paths.
+`python tools/verify-patcher-apks.py` verifies all four ABIs and Lite's exclusions.
 
 > **`LSPatch-master/` is not included in this repository.** Only the prebuilt
 > artifacts are tracked (`app/libs/lspatch-patcher.jar`,
@@ -48,7 +75,7 @@ when upstream LSPatch updates**.
 | `app/libs/patcher-common.jar` | Shared vendored classes the engine links against: `com/wind/meditor/**` + `pxb/android/**` (aXML manifest editor, byte-identical copies originally built from the NPatch tree) and `top/nkbe/nza/**` (NeoApk raw-file V2/V3 signer used by APK multiplexing). gson / jcommander / commons-io / bcprov come from MP-Manager; kotlin-stdlib is pinned in `app/build.gradle` because NeoApk is Kotlin 2.4.20 bytecode. |
 | `app/src/full/assets/lspatch/…` | LSPatch loader runtime: `loader.dex` (no R8 — the module ships unminified), `metaloader.dex`, `so/{armeabi-v7a,arm64-v8a,x86,x86_64}/liblspatch.so` (4 ABIs). LSPatch's built-in signing keystore goes to the zip root as `assets/keystore` (`app/src/full/assets/keystore`), matching `KeystoreSpec.builtIn()`. |
 | `app/src/full/assets/public.xml` | Android framework attribute-ID table used by the vendored manifest editor (`com.wind.meditor`). Without it, injected manifest attributes can get resource-id `-1` and patched APKs fail to parse on Android 9/10+ package parsers ("There was a problem parsing the package"). |
-| `app/src/full/java/io/github/abdurazaaqmohammed/features/apk/XposedPatcherDialogs.java` | UI. "Xposed patcher" entry in the APK info dialog's "More" list (`ApkInfoDialogs.java`, menu id `"npatch"` in `ApkMoreMenuOrder` — the id is persisted in user prefs, so it stays). |
+| `app/src/full/java/io/github/abdurazaaqmohammed/feature/apk/XposedPatcherDialogs.java` | UI. "Xposed patcher" entry in the APK info dialog's "More" list (`ApkInfoDialogs.java`, menu id `"npatch"` in `ApkMoreMenuOrder` — the id is persisted in user prefs, so it stays). |
 | `app/src/full/res/layout/dialog_xposed_patcher.xml` | Options dialog (Material 3). |
 | `tools/build-lspatch-artifacts.sh` | Rebuilds the LSPatch artifacts from `LSPatch-master`. |
 
@@ -65,14 +92,17 @@ cache (`SignWrapper.exportKey`, default keystore type with a BKS fallback),
 then on a worker thread runs the engine with `-k <exported keystore>`. The
 engine signs in place (V2 via its apkzlib `SigningExtension`), preserving the
 multiplexed layout. The exported keystore lives in the app-private cache and
-is deleted on exit.
+is deleted when the worker finishes or fails.
 
 `new LSPatch(args).toSpec()` → `new ApkPatcher(logger, spec).patch()` — the
 engine's own CLI front end and spec builder. Output:
 `<name>-lspatched.apk`.
 
-The engine writes `<name>-<verCode>-lspatched.apk` into the output directory;
-the dialog picks the newest and normalizes the name (dedup with `_2`, `_3`…).
+The engine writes into a private per-run cache directory and returns the exact
+output path. The host publishes it as `<name>-lspatched.apk` (`_2`, `_3`… on
+conflict). A failed run never selects an old output. Exported signing keys are
+removed with the run's cache directory on completion, failure or cancellation
+of authentication.
 
 ## 3. Updating LSPatch when it updates
 
@@ -183,9 +213,10 @@ product flavors:
 
 Builds: `./gradlew :app:assembleFullDebug` / `:app:assembleLiteDebug`
 (release: `assembleFullRelease` / `assembleLiteRelease`). The seam between
-flavors is `features/apk/XposedPatcherLauncher`, which exists in both
-`src/full` and `src/lite` with the same signature; everything else lives in
-`src/main` untouched.
+flavors is `feature/apk/XposedPatcherLauncher`, which exists in both
+`src/full` and `src/lite` with matching patch/manager launch methods. Shared
+Tools/APK menu entries call these launchers; the engine UI and services remain
+in `src/full`.
 
 ## 6. Build environment requirements
 
@@ -201,8 +232,8 @@ flavors is `features/apk/XposedPatcherLauncher`, which exists in both
 - Patched apps require **Android 9+** (the manifest gets `minSdkVersion=28`).
   Installing an output on Android <9 fails — on some OEM installers this
   surfaces as "problem parsing the package". Matches upstream.
-- Integrated mode only: no manager mode, no keystore choice — the final
-  signature always comes from MP-Manager's Sign Settings.
+- Integrated and Manager modes are selectable. Auto Sign uses MP Manager's
+  authenticated Sign Settings key; unchecked uses the engine's built-in key.
 - Signature bypass levels 0–3 (level 3 instruments raw syscalls and can be
   detected — LSPatch docs recommend 2).
 - The engine loads `assets/public.xml`, the keystore and the loader assets via
@@ -217,4 +248,5 @@ flavors is `features/apk/XposedPatcherLauncher`, which exists in both
 - Key format quirk: `KeyStore.getDefaultType()` is **JKS** on some Android
   versions and **BKS** on others — the key is exported in the default type,
   falling back to BKS if that fails.
-- Output naming: `<basename>-lspatched.apk` next to the source APK.
+- Output naming: `<basename>-lspatched.apk` next to a writable source, otherwise
+  Downloads/MP Manager. Existing outputs get numeric suffixes.

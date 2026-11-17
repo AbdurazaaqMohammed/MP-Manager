@@ -295,7 +295,7 @@ ARSC Editor Plus also provides a translation mode for editing values side by sid
 
 <details><summary>Xposed patcher</summary>
 
-Patch an APK with [LSPatch](https://github.com/JingMatrix/LSPatch) in integrated mode: an Xposed loader is embedded so the selected modules run standalone without a manager app. Embed module APKs, choose a signature bypass level, configure options (DocumentsProvider injection, fake-signature, GMS replacement, forcing cleartext traffic, overriding target SDK or version code and more), and save/load patch profiles. The output is signed with the key configured under Sign Settings.
+Patch an APK with [LSPatch](https://github.com/JingMatrix/LSPatch) in **Integrated** mode (embedded modules, standalone) or **Manager** mode (bound to MP Manager Full). **Tools → LSPatch manager** manages installed legacy and modern modules and per-app scopes, without re-patching when modules change. Modern modules support shared remote settings and compatible hot reload. Existing signature bypass, manifest options and patch profiles remain available. Auto Sign uses Sign Settings; unchecked uses the engine’s key. Full only; Lite shows an explanation. See [LSPatch integration](docs/XPOSED_PATCHER.md).
 
 <!-- TODO: Add screenshots/videos -->
 </details>
