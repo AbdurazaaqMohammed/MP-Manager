@@ -81,9 +81,11 @@ Rules:
    authorized they return the `FallbackBackend`'s explicit-error
    implementation, so callers carry zero if-else.
 
-Backend selection order (proposal, maintainer's call):
-`DHIZUKU > SHIZUKU > ROOT > NONE` — persistent delegation preferred over
-interactive authorization; the user may pin a mode manually in settings.
+Backend selection is per capability, not a global ladder (landed S1):
+SHIZUKU and DHIZUKU coexist as parallel privilege domains — SHIZUKU owns
+shell/file-ops (minimal privilege escalation first), DHIZUKU owns
+device-owner operations, ROOT is the last-resort fallback; the user may
+pin a mode manually in settings.
 
 ### Old vs. new — cost of adding Dhizuku
 
@@ -214,3 +216,7 @@ session; each stage verified by `compileFullDebugJavaWithJavac` +
       remaining gap (tracked in `docs/ARCHITECTURE.md` deviations)
 - [ ] **B**  — (optional) Gradle library module extraction — not started
 - [x] **C**  — redundant with M4; satisfied by 83dacd09
+- [x] **S1** — per-capability backend priority: SHIZUKU/DHIZUKU coexist as
+      parallel domains (SHIZUKU: shell/file-ops, DHIZUKU: device-owner),
+      ROOT last-resort fallback — `priorityFor(Class<? extends Capability>)`
+      replaces the global `priority()`

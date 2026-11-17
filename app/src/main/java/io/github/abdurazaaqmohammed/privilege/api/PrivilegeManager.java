@@ -58,10 +58,12 @@ public final class PrivilegeManager {
     }
 
     /**
-     * Registry-driven backend preference (DHIZUKU > SHIZUKU > ROOT > NONE):
-     * the highest-priority backend that is present and authorized, or the
-     * FallbackBackend when none is. New code should prefer this over
-     * {@link #active(Context)} once backends are wired into settings.
+     * Registry-driven backend preference (SHIZUKU > DHIZUKU > ROOT > NONE):
+     * the highest-priority authorized backend for the base capability, i.e.
+     * the general preference across domains — SHIZUKU and DHIZUKU coexist
+     * and are chosen per capability, ROOT is the last-resort fallback.
+     * New code should prefer this over {@link #active(Context)} once
+     * backends are wired into settings.
      */
     public static PrivilegeBackend preferredBackend(Context context) {
         PrivilegeBackend backend =

@@ -118,7 +118,10 @@ is: **`util/` contains no business logic and no privilege code.**
 
 See [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md) Problem 1 for the
 `privilege/` tree, session interfaces and registry rules. Backend
-selection order: `DHIZUKU > SHIZUKU > ROOT > NONE` (registered in
+selection is per capability, not a global ladder: SHIZUKU and DHIZUKU
+coexist as parallel privilege domains — SHIZUKU owns shell/file-ops
+(minimal privilege first), DHIZUKU owns device-owner operations, ROOT is
+the last-resort fallback, NONE the terminal fallback (registered in
 `App.onCreate`; registry-driven selection is exposed as
 `PrivilegeManager.preferredBackend`, default routing unchanged).
 

@@ -20,8 +20,13 @@ public interface PrivilegeBackend {
     /** Human-readable label for settings UI. */
     String label();
 
-    /** Higher wins when several backends are authorized (DHIZUKU > SHIZUKU > ROOT). */
-    int priority();
+    /**
+     * Higher wins when several authorized backends support the requested
+     * capability (per-capability routing: SHIZUKU and DHIZUKU coexist as
+     * parallel domains, ROOT is the last-resort fallback). Backends that
+     * do not implement the capability are never asked.
+     */
+    int priorityFor(Class<? extends Capability> capability);
 
     /** Installed / present on this device (no user action implied). */
     boolean isAvailable(Context context);
