@@ -89,6 +89,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModel;
 
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -114,6 +116,7 @@ import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
+import io.github.abdurazaaqmohammed.ui.editor.DexEditorSession;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -148,7 +151,6 @@ import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 import java.util.LinkedHashMap;
-import java.util.Random;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -165,6 +167,8 @@ public class DexEditorActivity extends BaseActivity {
 
     // --- Constants and Static State ---
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
+    private DexEditorSession session;
+    private EditorViewState retainedView;
     public volatile ClassTree classTree;
     public boolean isChanged;
     public boolean isSaved;
@@ -232,8 +236,15 @@ public class DexEditorActivity extends BaseActivity {
         setContentView(R.layout.dex_editor);
 
         initialize(savedInstanceState);
-
-        initializeLogic();
+        session = new ViewModelProvider(this).get(DexEditorSession.class);
+        retainedView = new ViewModelProvider(this).get(EditorViewState.class);
+        try {
+            session.initialize(this, getIntent(), savedInstanceState);
+            initializeLogic();
+        } catch (Exception e) {
+            showErrorDialog(e.getMessage());
+            finish();
+        }
     }
 
     /**
@@ -280,9 +291,44 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle state) {
+        retainViewState();
+        if (session != null) session.saveWorkspace(state);
+        super.onSaveInstanceState(state);
+    }
+
+    @Override
     protected void onDestroy() {
+        if (session != null) session.setFinishedCleanly(isFinishing());
+        if (!isFinishing()) retainViewState();
+        if (isFinishing() && classTree != null) classTree.saveStateListener = (changed, saved) -> {};
         super.onDestroy();
         UnifiedEditorFragment.clearCache();
+    }
+
+    private void retainViewState() {
+        if (retainedView == null || tabsAdapter == null) return;
+        retainedView.tabs.clear();
+        retainedView.tabs.addAll(tabs);
+        retainedView.history.clear();
+        retainedView.history.addAll(historyNodes);
+        retainedView.selectedTab = currentTabIndex;
+        retainedView.explorerTab = explorerViewPager.getCurrentItem();
+        retainedView.editorVisible = viewPager.getVisibility() == View.VISIBLE;
+        retainedView.changed = isChanged;
+        retainedView.saved = isSaved;
+        retainedView.initialized = true;
+    }
+
+    public static class EditorViewState extends ViewModel {
+        final List<EditorTab> tabs = new ArrayList<>();
+        final List<TreeNode> history = new ArrayList<>();
+        int selectedTab = -1;
+        int explorerTab;
+        boolean editorVisible;
+        boolean changed;
+        boolean saved;
+        boolean initialized;
     }
 
     @SuppressLint("MissingSuperCall")
@@ -598,15 +644,15 @@ public class DexEditorActivity extends BaseActivity {
 
         EditorPositionManager.getInstance(this).clear();
 
-        File[] cacheFiles = getCacheDir().listFiles();
-        if (cacheFiles != null) {
-            for (File file : cacheFiles) {
-                if (file.isDirectory() && file.getName().startsWith("dex_editor_")
-                        && !ClassTree.isWorkDirClaimed(file.getAbsolutePath())) {
-                    deleteRecursive(file);
-                }
-            }
+        if (retainedView.initialized) {
+            tabs.addAll(retainedView.tabs);
+            historyNodes.addAll(retainedView.history);
+            isChanged = retainedView.changed;
+            isSaved = retainedView.saved;
+            explorerViewPager.setCurrentItem(retainedView.explorerTab, false);
         }
+        tabAdapter.notifyDataSetChanged();
+        tabsAdapter.notifyDataSetChanged();
 
         List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
         setTitle(R.string.dex_editor_plus);
@@ -617,11 +663,8 @@ public class DexEditorActivity extends BaseActivity {
         } else fabDelete.setColorFilter(new LightingColorFilter(Color.BLACK, 0xFFFFFFFF));
         fabDelete.hide();
 
-        String uniqueId = System.currentTimeMillis() + "_" + System.nanoTime() + "_" + (new Random().nextInt(9000) + 1000);
-        File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
-
         if (dexPaths != null && !dexPaths.isEmpty()) {
-            new LoadDexThread(dexPaths, cacheDir.getAbsolutePath()).start();
+            new LoadDexThread().start();
         } else {
             showErrorDialog("No DEX files provided");
             finish();
@@ -1851,10 +1894,8 @@ public class DexEditorActivity extends BaseActivity {
         tabs.clear();
         tabNavigationHistory.clear();
         currentTabIndex = -1;
-        if (classTree != null) {
-            classTree.clearAll();
-            classTree = null;
-        }
+        if (classTree != null) classTree.saveStateListener = (changed, saved) -> {};
+        classTree = null;
 
         // Clear navigation statics to prevent state leakage
         smaliMethodsFieldsStringsFragment = null;
@@ -2835,21 +2876,25 @@ public class DexEditorActivity extends BaseActivity {
 
     // Thread to load DEX file
     private class LoadDexThread extends Thread {
-        private final List<String> paths;
-        private final String cachePath;
-
-        public LoadDexThread(List<String> paths, String cachePath) {
-            this.paths = paths;
-            this.cachePath = cachePath;
-        }
-
         @Override
         public void run() {
-            ClassTree.claimWorkDir(cachePath);
             try {
-                classTree = new ClassTree(paths, cachePath);
+                boolean firstLoad = session.tree() == null;
+                ClassTree loaded = session.load();
+                if (isDestroyed() || session.isClosed()) return;
+                classTree = loaded;
                 classTree.saveStateListener = (changed, saved) -> { isChanged = changed; isSaved = saved; };
-                applyPersistedCompilationOptions();
+                if (firstLoad) applyPersistedCompilationOptions();
+                else {
+                    ClassTree.CompilationOptions options = classTree.getCompilationOptions();
+                    sessionOptions.dexVersion = options.dexVersion;
+                    sessionOptions.removeAllDebug = options.removeAllDebug;
+                    sessionOptions.removeDebugSource = options.removeDebugSource;
+                    sessionOptions.removeDebugLine = options.removeDebugLine;
+                    sessionOptions.removeDebugParam = options.removeDebugParam;
+                    sessionOptions.removeDebugPrologue = options.removeDebugPrologue;
+                    sessionOptions.removeDebugLocal = options.removeDebugLocal;
+                }
                 // Pre-build trees in background to avoid UI lag
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
@@ -2863,6 +2908,7 @@ public class DexEditorActivity extends BaseActivity {
                 final int finalVer = loadedDexVer > 0 ? loadedDexVer : 35;
 
                 runOnUiThread(() -> {
+                    if (isDestroyed() || session.isClosed()) return;
                     try {
                         dexVersion = finalVer;
                         treeRoots.clear();
@@ -2881,7 +2927,9 @@ public class DexEditorActivity extends BaseActivity {
                         // e.g. entered via the "openTab" extra, whose tab
                         // callback ran before the class tree existed.
                         if (explorerViewPager.getCurrentItem() == 3 && stringList.isEmpty()) loadStrings();
-                        if (openTabRequested < 0) showTreeView();
+                        if (retainedView.editorVisible && retainedView.selectedTab >= 0
+                                && retainedView.selectedTab < tabs.size()) showEditor(retainedView.selectedTab);
+                        else if (openTabRequested < 0) showTreeView();
                     } catch (Exception e) {
                         handleUiThreadError(e);
                     }
@@ -2890,8 +2938,7 @@ public class DexEditorActivity extends BaseActivity {
                 showProcessingProgress(false);
                 runOnUiThread(() -> showErrorDialog(e));
             } finally {
-                ClassTree.releaseWorkDir(cachePath);
-                showProcessingProgress(false);
+                if (!isDestroyed()) showProcessingProgress(false);
             }
         }
 
@@ -2974,6 +3021,7 @@ public class DexEditorActivity extends BaseActivity {
                                 if (zf != null) resultIntent.putExtra("zipFilePath", zf);
                                 if (ze != null) resultIntent.putExtra("zipEntryPath", ze);
                             }
+                            session.keepResult();
                             setEditorResult(757, resultIntent);
                             finish();
                         });

@@ -4,6 +4,7 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 
 
 import android.net.Uri;
+import android.provider.DocumentsContract;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,7 +94,7 @@ public class SafFile extends File {
     private static String treeDisplayPath(String treeUri) {
         if (treeUri == null) return null;
         try {
-            String treeId = android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(treeUri));
+            String treeId = DocumentsContract.getTreeDocumentId(Uri.parse(treeUri));
             return treeId != null && treeId.startsWith("/") ? treeId : null;
         } catch (Exception e) {
             return null;

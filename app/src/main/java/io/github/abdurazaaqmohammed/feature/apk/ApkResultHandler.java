@@ -6,6 +6,7 @@ import io.github.abdurazaaqmohammed.feature.apk.ApkSignaturePreserver;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
+import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -76,6 +77,18 @@ public class ApkResultHandler {
     }
 
     public void handleModifiedFileResult(Uri uri, String entryPath, String zipFileExtra) {
+        File output = uri == null || uri.getPath() == null ? null : new File(uri.getPath());
+        DexWorkspaceStore.Lease resultLease = DexWorkspaceStore.takeResult(output);
+        try {
+            offerModifiedFileResult(uri, entryPath, zipFileExtra, resultLease);
+        } catch (RuntimeException e) {
+            resultLease.close();
+            throw e;
+        }
+    }
+
+    private void offerModifiedFileResult(Uri uri, String entryPath, String zipFileExtra,
+                                         DexWorkspaceStore.Lease resultLease) {
         boolean pane1 = activity.lastPaneSelected == 1;
         String path = uri == null ? null : uri.getPath();
         File resolvedZip = null;
@@ -87,9 +100,11 @@ public class ApkResultHandler {
         final File zipFile = resolvedZip;
         if (path == null) {
             Log.w(TAG, "modified file result without a path; nothing to offer");
+            resultLease.close();
             return;
         }
-        boolean inAppPrivateDir = path.startsWith(activity.getCacheDir().getPath());
+        boolean inAppPrivateDir = DexWorkspaceStore.workspaceFor(new File(path)) != null
+                || path.startsWith(activity.getCacheDir().getPath());
         try {
             inAppPrivateDir = inAppPrivateDir || path.startsWith(activity.getFilesDir().getPath());
         } catch (Exception ignored) {
@@ -97,12 +112,14 @@ public class ApkResultHandler {
         if (!inAppPrivateDir) {
             // A real file edited in place: the archive never owned it.
             Log.d(TAG, "not a staged file, no archive prompt: " + path);
+            resultLease.close();
             return;
         }
         if (zipFile == null || !zipFile.isFile()) {
             Log.w(TAG, "no archive to write back to for " + path
                     + " (zip=" + (zipFile == null ? "null" : zipFile.getAbsolutePath()) + ")");
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
+            resultLease.close();
             return;
         }
         // Save-back rewrites the archive in place, which only zip-family
@@ -110,6 +127,7 @@ public class ApkResultHandler {
         if (!ArchiveBrowseUtil.isZipLike(zipFile)) {
             Log.w(TAG, "archive is not writable in place: " + zipFile.getAbsolutePath());
             Extensions.showMessage(activity, R.string.archive_not_editable);
+            resultLease.close();
             return;
         }
         Log.d(TAG, "offering archive update: " + path + " -> " + zipFile.getName()
@@ -149,11 +167,13 @@ public class ApkResultHandler {
                             Runnable doWork = () -> {
                                 if (!zipFile.isFile() || !new File(path).isFile()) {
                                     Extensions.showMessage(activity, R.string.file_no_longer_available);
+                                    resultLease.close();
                                     return;
                                 }
                                 ProgressManager pm = new ProgressManager(activity, true).show();
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
+                                    try (DexWorkspaceStore.Lease writeLease = DexWorkspaceStore.retain(new File(path))) {
                                     List<String> addedNames = new ArrayList<>();
                                     byte[] preservedSigBlock = isApk ? ApkSignaturePreserver.extractSigningBlock(zipFile) : null;
                                     try (ZipFile zf = new ZipFile(zipFile)) {
@@ -246,13 +266,17 @@ public class ApkResultHandler {
                                         pm.dismiss();
                                         new ErrorUtil(activity).showError(e);
                                     }
+                                    } finally {
+                                        resultLease.close();
+                                    }
                                 }).start();
                             };
                             if (sign[0]) SignWrapper.requireAuth(activity, sw -> {
                                 wrapper[0] = sw;
                                 doWork.run();
-                            }); else doWork.run();
-                        }).setNegativeButton(activity.rss.getString(android.R.string.cancel), null).show();
+                            }, resultLease::close); else doWork.run();
+                        }).setNegativeButton(activity.rss.getString(android.R.string.cancel), (dialog, which) -> resultLease.close())
+                        .setOnCancelListener(dialog -> resultLease.close()).show();
     }
 
     public void offerOuterUpdate(File innerZip, boolean pane1) {

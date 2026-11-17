@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">البحث في الأدوات والحزم</string>
+    <string name="tools_hub_hint">كل أدواتك في مكان واحد. اضغط مطولاً على أداة لإنشاء اختصار على الشاشة الرئيسية.</string>
+    <string name="tools_hub_summary_compact">%1$d أداة · %2$d حزمة مثبتة</string>
+    <string name="tools_hub_no_results">لا توجد أدوات تطابق بحثك</string>
+    <string name="tools_hub_download_badge">تنزيل</string>
+    <string name="tools_hub_ready_badge">جاهزة</string>
+    <string name="tools_hub_pack_metadata">%1$d أداة · الإصدار %2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">مثبتة</string>
+    <string name="tools_hub_pack_available">تنزيل اختياري</string>
+    <string name="tools_hub_pack_update_available">يتوفر تحديث</string>
+    <string name="tools_hub_min_sdk">يتطلب أندرويد API %1$d أو أحدث</string>
+    <string name="tools_hub_install_apk">تثبيت الحزمة من ملف APK</string>
+    <string name="tools_hub_advanced_plugins">الأدوات المتقدمة والإضافات</string>
+    <string name="tool_requires_root">تتطلب هذه الأداة صلاحيات الروت.</string>
+    <string name="tool_extract_subtitle">استعراض التطبيقات واستخراج ملفات APK</string>
+    <string name="tool_recycle_subtitle">استعادة الملفات المحذوفة أو إزالتها</string>
+    <string name="tool_ftp_subtitle">مشاركة الملفات عبر الشبكة المحلية</string>
+    <string name="tool_network_subtitle">اتصالات FTP وWebDAV وSMB</string>
+    <string name="tool_layout_subtitle">فحص التطبيق والتخطيط على الشاشة</string>
+    <string name="tool_color_subtitle">التقاط الألوان من أي شاشة</string>
+    <string name="tool_freestyle_subtitle">إنشاء التصاميم المرئية وتحريرها</string>
+    <string name="screen_ocr_title">نسخ النص من الشاشة</string>
+    <string name="screen_ocr_subtitle">التعرف على نصوص الشاشات والصور دون اتصال</string>
+</resources>

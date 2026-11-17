@@ -209,6 +209,7 @@ public class ClassTree {
     private final ConcurrentHashMap<String, AutosavedDex> autosavedDexes = new ConcurrentHashMap<>();
 
     private volatile boolean autoSaveEnabled = false;
+    private volatile boolean closed;
 
     /** Debounce: coalesces bursts of edits (typing, batch replace) into one background pass. */
     private static final long AUTO_SAVE_DEBOUNCE_MS = 1500;
@@ -293,20 +294,6 @@ public class ClassTree {
         long maxBytes = Runtime.getRuntime().maxMemory();
         long budgetBytes = Math.min(256L * 1024 * 1024, Math.max(8L * 1024 * 1024, maxBytes / 3));
         return budgetBytes / 2; // one char of smali text costs 2 bytes on ART
-    }
-
-    private static final Set<String> activeWorkDirs = new HashSet<>();
-
-    public static synchronized void claimWorkDir(String workDir) {
-        if (workDir != null) activeWorkDirs.add(workDir);
-    }
-
-    public static synchronized void releaseWorkDir(String workDir) {
-        if (workDir != null) activeWorkDirs.remove(workDir);
-    }
-
-    public static synchronized boolean isWorkDirClaimed(String workDir) {
-        return workDir != null && activeWorkDirs.contains(workDir);
     }
 
     public static class CompilationOptions {
@@ -965,6 +952,7 @@ public class ClassTree {
         try {
             dexSaveProgress.onMessage("Finishing background save...");
             synchronized (saveCoordinator) {
+                if (closed) throw new SaveCancelledException();
                 saveAllDexFilesLocked(dexSaveProgress, false);
             }
         } finally {
@@ -981,10 +969,10 @@ public class ClassTree {
 
     /** Runs one background pass: compiles dirty dexes into autosave files. Never touches UI state. */
     private void runAutoSavePass() {
-        if (!autoSaveEnabled || foregroundWaiting) return;
+        if (closed || !autoSaveEnabled || foregroundWaiting) return;
         try {
             synchronized (saveCoordinator) {
-                if (!autoSaveEnabled || foregroundWaiting) return;
+                if (closed || !autoSaveEnabled || foregroundWaiting) return;
                 saveAllDexFilesLocked(SILENT_PROGRESS, true);
             }
         } catch (Throwable t) {
@@ -1022,7 +1010,7 @@ public class ClassTree {
     }
 
     private void scheduleAutoSave(long delayMs) {
-        if (!autoSaveEnabled) return;
+        if (closed || !autoSaveEnabled) return;
         if (autoSaveScheduled.getAndSet(true)) return;
         try {
             autoSaveExecutor.schedule(() -> {
@@ -1071,7 +1059,7 @@ public class ClassTree {
             String fileName = entry.getKey();
 
             // A background pass yields as soon as the user asks for the real save.
-            if (background && foregroundWaiting) break;
+            if (closed || (background && foregroundWaiting)) break;
 
             long gen = dexGen(fileName).get();
             // persistedGenerations tracks what is in the REAL dex file; an autosave file is
@@ -1544,43 +1532,31 @@ public class ClassTree {
     }
 
     public void clearAll() {
+        closed = true;
+        autoSaveEnabled = false;
         try {
             autoSaveExecutor.shutdownNow();
         } catch (Exception ignored) {
         }
-        foregroundWaiting = false;
-        if (classMap != null) classMap.clear();
-        classMap = null;
-        path = null;
-        dexFile = null;
-        curClassDef = null;
-        tree = null;
-        curFile = null;
-        pureSmaliCache.clear();
-        classDefIndex.clear();
-        dexFileByName.clear();
-        // Pending text and dirty flags outlive a session otherwise, so the next
-        // load would re-apply edits from the previous one on save.
-        pendingSmaliMap.clear();
-        editedClassMap.clear();
-        deletedClassJson.clear();
-        classDefList.clear();
-        
-        // Clean up cache directory (never while a load is still using it)
-        if (workDir != null && !isWorkDirClaimed(workDir)) {
-            deleteRecursive(new File(workDir));
+        synchronized (saveCoordinator) {
+            foregroundWaiting = false;
+            if (classMap != null) classMap.clear();
+            classMap = null;
+            path = null;
+            dexFile = null;
+            curClassDef = null;
+            tree = null;
+            curFile = null;
+            pureSmaliCache.clear();
+            classDefIndex.clear();
+            dexFileByName.clear();
+            pendingSmaliMap.clear();
+            editedClassMap.clear();
+            deletedClassJson.clear();
+            classDefList.clear();
+            autosavedDexes.clear();
+            // The session owner deletes workDir after releasing its file leases.
         }
-        
-        System.gc();
-    }
-
-    private void deleteRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            for (File child : Objects.requireNonNull(fileOrDirectory.listFiles())) {
-                deleteRecursive(child);
-            }
-        }
-        fileOrDirectory.delete();
     }
 
     public byte[] read(String fileName) throws IOException {

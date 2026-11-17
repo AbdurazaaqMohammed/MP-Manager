@@ -6,40 +6,54 @@
     android:layout_margin="6dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    app:cardCornerRadius="20dp"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutlineVariant">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
+        android:gravity="start"
+        android:minHeight="144dp"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <ImageView
             android:id="@+id/tool_icon"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_gravity="center" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:importantForAccessibility="no" />
 
         <TextView
             android:id="@+id/tool_title"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:gravity="center"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:layout_marginTop="12dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
             android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:id="@+id/tool_subtitle"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:maxLines="1"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/tool_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorPrimary"
+            android:visibility="gone" />
 
     </LinearLayout>
 

@@ -429,6 +429,9 @@
     <string name="invalid_password">كلمة المرور غير صالحة</string>
     <string name="restore_backup">استعادة النسخة الاحتياطية</string>
     <string name="restore">استعادة</string>
+    <string name="show_restore_dialog">إظهار مربع الاستعادة لملفات .bak</string>
+    <string name="show_restore_dialog_desc">عند التفعيل، يؤدي الضغط على نسخة احتياطية للمحرر إلى طلب استعادتها. أوقف الخيار لفتح النسخة وفق نوع الملف الأصلي بدلًا من ذلك. تظل أرشيفات النسخ الاحتياطية لـ MIUI وأندرويد تُفتح كالمعتاد.</string>
+    <string name="restore_invalid_name">اسم ملف الاستعادة غير صالح</string>
     <string name="image_properties">خصائص الصورة</string>
     <string name="player_settings">إعدادات المشغل</string>
     <string name="keep_screen_on">إبقاء الشاشة قيد التشغيل: %1$s</string>

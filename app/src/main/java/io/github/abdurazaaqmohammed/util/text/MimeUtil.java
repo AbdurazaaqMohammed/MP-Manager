@@ -21,6 +21,33 @@ import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 
 public class MimeUtil {
 
+    /**
+     * Preference key for the user's external default app (Open with →
+     * long-press → Set as default) for one MIME type. The key stays
+     * MIME-scoped on purpose: one saved default per MIME, no per-extension
+     * aliases, so existing keys keep working.
+     */
+    public static String defaultAppKey(String mime) {
+        return "openwith_default_" + mime.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
+    }
+
+    /**
+     * The semantic display name of a file for MIME purposes. When the caller
+     * dispatches {@code foo.pdf.bak} under its stripped name, MIME probing
+     * should see {@code foo.pdf} - never a default keyed off the {@code .bak}
+     * suffix. A lone {@code foo.bak} (nothing meaningful under the suffix)
+     * keeps its full name.
+     */
+    public static String logicalDisplayName(String fileName) {
+        if (fileName == null) return null;
+        String bak = ".bak";
+        if (fileName.toLowerCase(Locale.ROOT).endsWith(bak)) {
+            String stripped = fileName.substring(0, fileName.length() - bak.length());
+            if (!FilenameUtils.getExtension(stripped).isEmpty()) return stripped;
+        }
+        return fileName;
+    }
+
     private static final byte[] ZIP_MAGIC = {'P', 'K', 3, 4};
     private static final byte[] RAR_MAGIC = {'R', 'a', 'r', '!', 0x1A};
     private static final byte[] SEVENZ_MAGIC = {'7', 'z', (byte) 0xBC, (byte) 0xAF, 0x27, 0x1C};
@@ -45,10 +72,25 @@ public class MimeUtil {
     public static String getReportedMimeType(Context context, Object fileOrZipEntry) {
         try {
             if (fileOrZipEntry instanceof ZipEntryInfo entry) return guessFromExtension(entry.getName());
-            return context.getContentResolver().getType(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", (File) fileOrZipEntry));
+            return context.getContentResolver().getType(FileProvider.getUriForFile(context, context.getPackageName() + ".provider", (File) fileOrZipEntry));
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Reported MIME type with an explicit logical name. When the on-disk name
+     * differs from the name the user clicked (a staged {@code foo.pdf.bak}
+     * copy, a renamed cache entry), the extension of {@code logicalName} wins
+     * before any probing of the physical file, so the saved default for the
+     * semantic type still applies.
+     */
+    public static String getReportedMimeType(Context context, Object fileOrZipEntry, String logicalName) {
+        if (logicalName != null) {
+            String byName = getMimeTypeFromExtension(logicalName);
+            if (byName != null) return byName;
+        }
+        return getReportedMimeType(context, fileOrZipEntry);
     }
 
     public static String getRealMimeType(File file) {
@@ -121,6 +163,20 @@ public class MimeUtil {
         return real != null ? real : reported;
     }
 
+    /**
+     * MIME to dispatch on, with the logical (clicked) name overriding the
+     * physical file name for reported probing; the real-bytes probe below is
+     * unchanged, so a genuinely different payload still wins under the
+     * fix_mime_type setting.
+     */
+    public static String getMimeTypeForAction(Context context, File file, String logicalName) {
+        String reported = getReportedMimeType(context, file, logicalName);
+        if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("fix_mime_type", false))
+            return reported;
+        String real = getRealMimeType(file);
+        return real != null ? real : reported;
+    }
+
     private static String zipFamilyMimeType(String ext) {
         return switch (ext) {
             case "apk", "apks", "xapk", "apkm" -> "application/vnd.android.package-archive";
@@ -140,6 +196,11 @@ public class MimeUtil {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** Public extension-to-MIME lookup used by the saved-default fast path. */
+    public static String getMimeTypeFromExtension(String fileNameOrExt) {
+        return guessFromExtension(fileNameOrExt);
     }
 
     private static boolean isBinaryXml(File file) {

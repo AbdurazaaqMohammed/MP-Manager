@@ -38,6 +38,7 @@ import androidx.core.app.NotificationManagerCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.app.ServiceLocator;
+import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 import io.github.abdurazaaqmohammed.util.misc.AppLogs;
 import io.github.ratul.topactivity.manager.NotificationUiManager;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
@@ -71,6 +72,10 @@ public class App extends Application {
         super.onCreate();
         instance = this;
         ServiceLocator.init(this);
+        try {
+            DexWorkspaceStore.initialize(getFilesDir());
+        } catch (java.io.IOException ignored) {
+        }
         // Privilege layer (M3/M4): register the available backends. Selection
         // order lives in Registry: DHIZUKU > SHIZUKU > ROOT > NONE.
         Registry.register(DhizukuBackend.get());
@@ -88,6 +93,15 @@ public class App extends Application {
             } catch (Exception ignored) {
             }
         }, "packs-load").start();
+        new Thread(() -> {
+            try {
+                // Allow a restored task to claim its existing workspace before orphan cleanup.
+                Thread.sleep(60_000);
+                DexWorkspaceStore.cleanup(getFilesDir(), getCacheDir());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "dex-workspace-cleanup").start();
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

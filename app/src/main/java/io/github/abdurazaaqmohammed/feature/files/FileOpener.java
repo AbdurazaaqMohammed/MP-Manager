@@ -18,6 +18,7 @@ import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
 
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
@@ -406,7 +407,8 @@ public class FileOpener {
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName)
                 .setView(content)
-                .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> withReadableCopy(file, readable -> showAppsForMime(readable, fileName, useActualSwitch.isChecked())))
+                .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> withReadableCopy(file,
+                        readable -> showAppsForMime(readable, fileName, useActualSwitch.isChecked())))
                 .create();
 
         gridView.setOnItemClickListener((parent1, view1, position1, id1) -> {
@@ -438,7 +440,7 @@ public class FileOpener {
     }
 
     private static String defaultAppKey(String mime) {
-        return "openwith_default_" + mime.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
+        return MimeUtil.defaultAppKey(mime);
     }
 
     private static final String BUILTIN_TEXT = "text";
@@ -585,6 +587,11 @@ public class FileOpener {
     }
 
     private boolean tryRunBuiltinDefault(File file, String fileName) {
+        return tryRunBuiltinDefault(file, fileName, null, null);
+    }
+
+    /** Built-in extension overrides keep the archive context for editor write-back. */
+    private boolean tryRunBuiltinDefault(File file, String fileName, File zipFile, String zipEntryPath) {
         if (file == null || fileName == null) return false;
         String key = builtinDefaultKey(fileName);
         String def = PreferenceManager.getDefaultSharedPreferences(context).getString(key, null);
@@ -604,7 +611,7 @@ public class FileOpener {
             case BUILTIN_SIG:
             case BUILTIN_DRAWABLE:
             case BUILTIN_SQLITE:
-                runBuiltinTool(def, file, fileName, null, null);
+                runBuiltinTool(def, file, fileName, zipFile, zipEntryPath);
                 return true;
             default:
                 PreferenceManager.getDefaultSharedPreferences(context).edit().remove(key).apply();
@@ -616,49 +623,148 @@ public class FileOpener {
         Intent intent = new Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, mime)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
         intent.setClassName(info.activityInfo.packageName, info.activityInfo.name);
         context.startActivity(intent);
     }
 
+    /**
+     * Launches the user's saved external default (Open with → long-press →
+     * Set as default) for {@code mime} straight on its saved component, with
+     * the read grant and ClipData the target needs for the content URI. Only
+     * a genuinely unavailable target (uninstalled app or a malformed entry)
+     * clears the stale default; any unrelated launch failure keeps it and
+     * lets the caller fall back safely.
+     */
     private boolean tryLaunchDefaultApp(Uri uri, String mime) {
-        if (mime == null) return false;
+        if (mime == null || uri == null) return false;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String def = prefs.getString(defaultAppKey(mime), null);
         if (def == null) return false;
         ComponentName cn = ComponentName.unflattenFromString(def);
-        if (cn == null) return false;
-        PackageManager pm = context.getPackageManager();
-        try {
-            pm.getActivityInfo(cn, 0);
-            Intent probe = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime);
-            probe.setComponent(cn);
-            List<ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
-            if (!stillThere.isEmpty()) {
-                probe.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                context.startActivity(probe);
-                return true;
-            }
-        } catch (Exception ignored) {
+        if (cn == null) {
+            prefs.edit().remove(defaultAppKey(mime)).apply();
+            return false;
         }
-        prefs.edit().remove(defaultAppKey(mime)).apply();
-        return false;
+        try {
+            Intent launch = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, mime)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .setComponent(cn);
+            launch.setClipData(ClipData.newRawUri(uri.toString(), uri));
+            context.startActivity(launch);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            prefs.edit().remove(defaultAppKey(mime)).apply();
+            return false;
+        } catch (Exception e) {
+            // SecurityException and friends: the default may still be valid in
+            // another context, so keep it and fall back.
+            return false;
+        }
     }
 
     /**
      * Probes the MIME types the external default app could be registered under
      * (the app-reported one, then the sniffed and content-detected ones) and
      * launches the user's external default (Open with → More → long-press →
-     * Set as default), if any. Returns true when one matched and was launched.
+     * Set as default), if any. {@code logicalName} is the name the user
+     * clicked, which may differ from the staged copy's name (a
+     * {@code foo.pdf.bak} dispatch probes {@code foo.pdf}). Returns true when
+     * one matched and was launched.
      */
-    private boolean tryLaunchExternalDefault(Uri uri, File readable) {
-        String actionMime = MimeUtil.getMimeTypeForAction(context, readable);
+    private boolean tryLaunchExternalDefault(Uri uri, File readable, String logicalName) {
+        String actionMime = MimeUtil.getMimeTypeForAction(context, readable, logicalName);
         if (actionMime == null) actionMime = "application/octet-stream";
         if (tryLaunchDefaultApp(uri, actionMime)) return true;
         try {
             String real = MimeUtil.getRealMimeType(readable);
             if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return true;
-            String reported = MimeUtil.getReportedMimeType(context, readable);
+            String reported = MimeUtil.getReportedMimeType(context, readable, logicalName);
             if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    /** Content URI through the app's FileProvider, or null when unusable. */
+    private Uri fileProviderUri(File file) {
+        try {
+            return FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Shared automatic-open path used by the normal file click and by archive
+     * entry taps (via {@link #openZipEntryWithDefault}): the built-in
+     * extension override wins first (run with the archive context when one is
+     * given), then a saved external MIME default is launched from a readable
+     * staged copy, and only when neither applies does {@code fallback} run the
+     * ordinary dispatch. When no saved external default exists for any of the
+     * file's MIME candidates, no staged copy is made at all, so plain local
+     * files dispatch exactly as they did before. The fallback keeps the
+     * original {@code file} reference so writeback context is preserved.
+     */
+    public void openWithSavedDefaults(File file, String fileName,
+                                      File zipFile, String zipEntryPath, Runnable fallback) {
+        if (file == null || fileName == null) {
+            if (fallback != null) fallback.run();
+            return;
+        }
+        if (tryRunBuiltinDefault(file, fileName, zipFile, zipEntryPath)) return;
+        if (!hasSavedExternalDefault(file, fileName)) {
+            if (fallback != null) fallback.run();
+            return;
+        }
+        withReadableCopy(file, readable -> {
+            Uri uri = fileProviderUri(readable);
+            if (uri == null || !tryLaunchExternalDefault(uri, readable, MimeUtil.logicalDisplayName(fileName))) {
+                if (fallback != null) fallback.run();
+            }
+        });
+    }
+
+    public void openWithSavedDefaults(File file, String fileName, Runnable fallback) {
+        openWithSavedDefaults(file, fileName, null, null, fallback);
+    }
+
+    /**
+     * Automatic saved-default handling for an archive entry tap, callable from
+     * DexTools: resolves the built-in default with the archive context, then
+     * the saved external MIME default for {@code name}, and only then runs
+     * {@code fallback} (the caller's own open-with dispatch).
+     */
+    public void openZipEntryWithDefault(File staged, String name, File archive, String entry, Runnable fallback) {
+        openWithSavedDefaults(staged, name, archive, entry, fallback);
+    }
+
+    /**
+     * Cheap gate before the expensive staged copy: only stage and read the
+     * file when a saved external default could actually apply to one of the
+     * MIME types this file resolves under (its extension-derived type, its
+     * sniffed type, or the unknown-type catch-all).
+     */
+    private boolean hasSavedExternalDefault(File file, String fileName) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean anyDefault = false;
+        for (String key : prefs.getAll().keySet()) {
+            if (key.startsWith("openwith_default_")) {
+                anyDefault = true;
+                break;
+            }
+        }
+        if (!anyDefault) return false;
+        String byName = MimeUtil.getMimeTypeFromExtension(MimeUtil.logicalDisplayName(fileName));
+        if (byName != null && prefs.contains(defaultAppKey(byName))) return true;
+        if (prefs.contains(defaultAppKey("application/octet-stream"))) return true;
+        if (SafFs.isSaf(file) || !file.canRead()) return true;
+        String reported = MimeUtil.getReportedMimeType(context, file, MimeUtil.logicalDisplayName(fileName));
+        if (reported != null && prefs.contains(defaultAppKey(reported))) return true;
+        try {
+            String real = MimeUtil.getRealMimeType(file);
+            if (real != null && prefs.contains(defaultAppKey(real))) return true;
         } catch (Exception ignored) {
         }
         return false;
@@ -679,12 +785,8 @@ public class FileOpener {
             } catch (Exception e) {
                 staged = true;
             }
-            Uri uri = null;
-            try {
-                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-            } catch (Exception ignored) {
-            }
-            if (uri != null && tryLaunchExternalDefault(uri, readable)) return;
+            Uri uri = fileProviderUri(readable);
+            if (uri != null && tryLaunchExternalDefault(uri, readable, fileName)) return;
             if (staged || !ArchiveBrowseUtil.isBrowsable(readable)) {
                 openWithDefaultOrDialog(readable, fileName);
                 return;
@@ -694,17 +796,14 @@ public class FileOpener {
     }
 
     public void openWithDefaultOrDialog(File file, String fileName) {
-        if (tryRunBuiltinDefault(file, fileName)) return;
-        withReadableCopy(file, readable -> {
-            Uri uri;
-            try {
-                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-            } catch (Exception e) {
-                showOpenWithDialog(readable, fileName);
-                return;
-            }
-            if (tryLaunchExternalDefault(uri, readable)) return;
-            showOpenWithDialog(readable, fileName, null, null, file);
+        openWithSavedDefaults(file, fileName, null, null, () -> {
+            withReadableCopy(file, readable -> {
+                if (fileProviderUri(readable) == null) {
+                    showOpenWithDialog(readable, fileName);
+                    return;
+                }
+                showOpenWithDialog(readable, fileName, null, null, file);
+            });
         });
     }
 
@@ -734,17 +833,20 @@ public class FileOpener {
     }
 
     private void showAppsForMime(File file, String fileName, boolean useActual) {
+        String mime = useActual ? MimeUtil.getRealMimeType(file) : null;
+        if (mime == null) mime = MimeUtil.getReportedMimeType(context, file);
+        if (mime == null) mime = "application/octet-stream";
+        showAppsForMime(file, fileName, mime);
+    }
+
+    private void showAppsForMime(File file, String fileName, String chosenMime) {
         Uri uri;
         try {
-            uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+            uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
             return;
         }
-        String mime = useActual ? MimeUtil.getRealMimeType(file) : null;
-        if (mime == null) mime = MimeUtil.getReportedMimeType(context, file);
-        if (mime == null) mime = "application/octet-stream";
-        final String chosenMime = mime;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PackageManager pm = context.getPackageManager();
         List<ResolveInfo> apps = pm.queryIntentActivities(
@@ -829,7 +931,11 @@ public class FileOpener {
                     }
                     popup.setOnMenuItemClickListener(item -> {
                         if (isDef) prefs.edit().remove(defaultAppKey(chosenMime)).apply();
-                        else prefs.edit().putString(defaultAppKey(chosenMime), flat).apply();
+                        // An external default only takes effect when it is not
+                        // shadowed by the built-in extension override (which
+                        // is checked first on every click), so clear it.
+                        else prefs.edit().putString(defaultAppKey(chosenMime), flat)
+                                .remove(builtinDefaultKey(fileName)).apply();
                         notifyDataSetChanged();
                         return true;
                     });
@@ -1021,6 +1127,7 @@ public class FileOpener {
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(fileName)
                         .setView(scroll)
+                        .setNeutralButton(R.string.open_with, (d, which) -> showAppsForMime(readable, fileName, "application/pdf"))
                         .setPositiveButton(android.R.string.ok, null)
                         .create();
 
@@ -1782,11 +1889,56 @@ public class FileOpener {
         }).start();
     }
 
+    /** Backup safety first, then explicit defaults and ordinary dispatch on the original file. */
     public void handleFileClick(File file, String fileName) {
         try {
             context.clearGreen(pane1);
         } catch (Exception ignored) {}
-        if (tryRunBuiltinDefault(file, fileName)) return;
+        if (BackupOpenPolicy.isBackupName(fileName)) {
+            handleBackupClick(file, fileName);
+            return;
+        }
+        openWithSavedDefaults(file, fileName, null, null,
+                () -> dispatchFileClick(file, fileName));
+    }
+
+    private void handleBackupClick(File file, String fileName) {
+        // Read only a header to recognize a native container; never restore a staged copy.
+        new Thread(() -> {
+            boolean nativeBackup = BackupOpenPolicy.isNativeBackup(file, fileName);
+            boolean needsReadable = SafFs.isSaf(file) || !file.canRead();
+            context.handler.post(() -> {
+                if (needsReadable) {
+                    withReadableCopy(file, readable -> completeBackupClick(file, readable, fileName));
+                } else {
+                    completeBackupClick(file, nativeBackup, fileName);
+                }
+            });
+        }, "backup-open").start();
+    }
+
+    private void completeBackupClick(File file, File readable, String name) {
+        if (BackupOpenPolicy.isNativeBackup(readable, name)) {
+            openArchiveOrDefault(file, name);
+        } else {
+            completeBackupClick(file, false, name);
+        }
+    }
+
+    private void completeBackupClick(File file, boolean nativeBackup, String fileName) {
+        if (nativeBackup) {
+            openArchiveOrDefault(file, fileName);
+        } else if (UiPrefs.showRestoreDialog(context)) {
+            EntryDialogs.showBackupRestoreDialog(context, dialogUtil, pane1, file);
+        } else {
+            String originalName = BackupOpenPolicy.originalName(fileName);
+            if (originalName == null || originalName.isEmpty()) showOpenWithDialog(file, fileName);
+            else handleFileClick(file, originalName);
+        }
+    }
+
+    /** Ordinary dispatch after explicit defaults and backup routing have been resolved. */
+    private void dispatchFileClick(File file, String fileName) {
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
         if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)
             || fileName.endsWith(".txt") || fileName.endsWith(".json")
@@ -1849,16 +2001,7 @@ public class FileOpener {
                 else openWithDefaultOrDialog(readable, fileName);
             });
         } else {
-            String bak = ".bak";
-            if (ext.equals(bak)) {
-                String nameWithoutBak = fileName.substring(0, fileName.length() - bak.length());
-                String innerExt = FilenameUtils.getExtension(nameWithoutBak);
-                if (!innerExt.isEmpty()) {
-                    handleFileClick(file, nameWithoutBak);
-                } else {
-                    openArchiveSafe(file);
-                }
-            } else if (fileName.endsWith(".arsc")) {
+            if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
                 // Extension says archive: honor the user's default app first,
@@ -1983,7 +2126,7 @@ public class FileOpener {
                 File staged = stageZipEntry((ZipEntryInfo) item);
                 context.handler.post(() -> {
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged);
+                        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", staged);
                         String shareMime = MimeUtil.getMimeTypeForAction(context, staged);
                         context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
                     } catch (Exception e) {
@@ -2005,7 +2148,7 @@ public class FileOpener {
                 if (entry == null || entry.isDirectory()) continue;
                 try {
                     File staged = stageZipEntry(entry);
-                    uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged));
+                    uris.add(FileProvider.getUriForFile(context, context.getPackageName() + ".provider", staged));
                 } catch (IOException e) {
                     if (failure == null) failure = e;
                 }
@@ -2222,7 +2365,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -2301,7 +2444,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -2377,7 +2520,7 @@ public class FileOpener {
                 }
 
                 List<Uri> uris = new ArrayList<>();
-                uris.add(FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", zipFile));
+                uris.add(FileProvider.getUriForFile(context, context.getPackageName() + ".provider", zipFile));
 
                 if (plainFiles != null) {
                     for (File sf : plainFiles) {
@@ -2389,7 +2532,7 @@ public class FileOpener {
                         }
                         if (readableFile != null && readableFile.exists()) {
                             try {
-                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readableFile);
+                                Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", readableFile);
                                 uris.add(uri);
                             } catch (Exception ignored) {}
                         }
@@ -2512,7 +2655,7 @@ public class FileOpener {
                 context.handler.post(() -> {
                     pm.dismiss();
                     try {
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", finalZip);
+                        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", finalZip);
                         Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("application/zip");
                         intent.putExtra(Intent.EXTRA_STREAM, uri);

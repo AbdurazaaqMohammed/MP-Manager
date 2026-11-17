@@ -1,0 +1,23 @@
+OCR Pack
+
+ONNX Runtime 1.23.2
+Copyright (c) Microsoft Corporation
+Java API: Copyright (c) Oracle and/or its affiliates
+MIT License: see ONNX-Runtime-LICENSE.txt
+Source: https://github.com/microsoft/onnxruntime/tree/v1.23.2
+Full upstream notices (including optional components not used on Android):
+https://github.com/microsoft/onnxruntime/blob/v1.23.2/ThirdPartyNotices.txt
+
+PaddleOCR / RapidOCR
+Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+Copyright (c) 2021 RapidOCR Authors. All Rights Reserved.
+Model weights: Copyright Baidu / applicable PaddleOCR rights holders.
+Apache License 2.0: see Apache-2.0-LICENSE.txt
+Source and model provenance:
+https://github.com/PaddlePaddle/PaddleOCR
+https://github.com/RapidAI/RapidOCR/blob/main/MODEL_LICENSES.md
+
+The Java postprocessing in this pack was implemented for MP Manager in
+November 2026, following the published preprocessing/DB/CTC algorithms. It is
+not the unmodified RapidOCR Python package. Model weights are separate,
+explicit downloads and are not embedded in the pack or the main app.

@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Search tools and packs</string>
+    <string name="tools_hub_hint">All your tools in one place. Long-press a tool to create a home screen shortcut.</string>
+    <string name="tools_hub_summary_compact">%1$d tools · %2$d packs installed</string>
+    <string name="tools_hub_no_results">No tools match your search</string>
+    <string name="tools_hub_download_badge">Download</string>
+    <string name="tools_hub_ready_badge">Ready</string>
+    <string name="tools_hub_pack_metadata">%1$d tools · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Installed</string>
+    <string name="tools_hub_pack_available">Optional download</string>
+    <string name="tools_hub_pack_update_available">Update available</string>
+    <string name="tools_hub_min_sdk">Requires Android API %1$d or newer</string>
+    <string name="tools_hub_install_apk">Install pack from APK</string>
+    <string name="tools_hub_advanced_plugins">Advanced tools &amp; plugins</string>
+    <string name="tool_requires_root">This tool requires root access.</string>
+    <string name="tool_extract_subtitle">Browse apps and extract APK files</string>
+    <string name="tool_recycle_subtitle">Restore or remove deleted files</string>
+    <string name="tool_ftp_subtitle">Share files over your local network</string>
+    <string name="tool_network_subtitle">FTP, WebDAV and SMB connections</string>
+    <string name="tool_layout_subtitle">Inspect the app and layout on screen</string>
+    <string name="tool_color_subtitle">Pick colors from any screen</string>
+    <string name="tool_freestyle_subtitle">Create and edit visual compositions</string>
+    <string name="screen_ocr_title">Copy text on screen</string>
+    <string name="screen_ocr_subtitle">Offline OCR for screens and images</string>
+</resources>

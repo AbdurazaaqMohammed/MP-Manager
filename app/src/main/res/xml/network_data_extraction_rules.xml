@@ -2,8 +2,10 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="network_profiles.xml" />
+        <exclude domain="file" path="dex_workspaces/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="network_profiles.xml" />
+        <exclude domain="file" path="dex_workspaces/" />
     </device-transfer>
 </data-extraction-rules>

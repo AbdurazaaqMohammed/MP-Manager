@@ -42,8 +42,8 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
+import io.github.abdurazaaqmohammed.feature.system.ToolRegistry;
 
 public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
@@ -249,7 +249,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private String sectionTitle(String section) {
         if ("storage".equals(section)) return context.getString(R.string.storage);
         if ("bookmarks".equals(section)) return context.getString(R.string.bookmarks);
-        if ("plugins".equals(section)) return context.getString(R.string.sidebar_plugins);
+        if ("plugins".equals(section)) return context.getString(R.string.tools_hub_advanced_plugins);
         if (section.startsWith(BOOKMARK_GROUP_PREFIX)) return section.substring(BOOKMARK_GROUP_PREFIX.length());
         return context.getString(R.string.tools_section);
     }
@@ -281,37 +281,16 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private void addPluginsAndTools() {
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (isPluginsSectionTool(id) && !order.contains(id)) order.add(id);
-        for (String id : PLUGINS_SECTION_TOOLS) if (!order.contains(id)) order.add(id);
+        for (String id : ToolRegistry.sidebarIds("plugins")) if (!order.contains(id)) order.add(id);
         for (String id : order) {
-            switch (id) {
-                case "mcp_server": addToolTo("plugins", id, R.string.mcp_server, R.drawable.code_24px); break;
-                case "logcat": addToolTo("plugins", id, R.string.sidebar_logcat, R.drawable.terminal_24px); break;
-                case "color_picker": addToolTo("plugins", id, R.string.color_picker, R.drawable.colorize_24px); break;
-                case "layout": addToolTo("plugins", id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
-                case "wifi": addToolTo("plugins", id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
-                case "free_style": addToolTo("plugins", id, R.string.free_style, R.drawable.image_24px); break;
-                case "frida_console":
-                    // Root-only: the console drives frida-inject through su.
-                    if (RootManager.getInstance(context).isRootAvailable()) {
-                        addToolTo("plugins", id, R.string.frida_console, R.drawable.terminal_24px);
-                    }
-                    break;
-                case "command_shell":
-                    addToolTo("plugins", id, R.string.command_shell, R.drawable.terminal_24px);
-                    break;
-            }
+            addRegisteredTool("plugins", id);
         }
         addPluginGroups();
         addExternalPluginActions();
     }
 
-    /** Built-in tools that live in the Plugins/Tools section. */
-    private static final String[] PLUGINS_SECTION_TOOLS =
-            {"command_shell", "mcp_server", "logcat", "color_picker", "layout", "wifi", "free_style", "frida_console"};
-
     private static boolean isPluginsSectionTool(String id) {
-        for (String tool : PLUGINS_SECTION_TOOLS) if (tool.equals(id)) return true;
-        return false;
+        return ToolRegistry.isInSidebarSection(id, "plugins");
     }
 
     /**
@@ -328,6 +307,8 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (PluginRegistry.PackTools pack : packs) {
             for (ToolPlugin tool : pack.tools) {
                 if (tool == null || tool.id() == null) continue;
+                // OCR has a discoverable host entry even before its runtime is installed.
+                if (ToolRegistry.findById(context, tool.id()) != null) continue;
                 byId.put(PACK_TOOL_PREFIX + pack.packId + "." + tool.id(), tool);
             }
         }
@@ -353,33 +334,28 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     /**
      * Core file-manager tools; the main Tools section of the sidebar.
      *
-     * <p>The advanced system tools (App Ops, SetEdit) sit at the bottom of the
-     * section with Tools Hub closing it; Partition Dumper is not offered here
-     * at all — it lives in the Tools Hub. A saved custom order still wins, but
-     * unknown ids (partition_dumper) simply render nothing.
+     * A saved custom order still wins. Metadata comes from the same registry
+     * as the hub, so adding a tool can never leave one entry point behind.
      */
     private void addTools() {
-        String[] defaults = {"extract", "documents", "recycle_bin", "ftp_server", "network_client", "partition_dumper", "app_ops", "set_edit", "tools"};
         List<String> order = new ArrayList<>();
         for (String savedId : toolOrder) {
-            String id = savedId.equals("ftp_client") || savedId.equals("webdav_client") || savedId.equals("smb_client")
-                    ? "network_client" : savedId;
+            String id = ToolRegistry.canonicalId(savedId);
             if (!order.contains(id)) order.add(id);
         }
-        for (String id : defaults) if (!order.contains(id)) order.add(id);
+        for (String id : ToolRegistry.sidebarIds("tools")) if (!order.contains(id)) order.add(id);
         for (String id : order) {
-            switch (id) {
-                case "extract": addTool(id, R.string.sidebar_extract, R.drawable.apk_document_24px); break;
-                case "documents": addTool(id, R.string.sidebar_documents, R.drawable.folder_24px); break;
-                case "partition_dumper": addTool(id, R.string.tool_partition_dumper, R.drawable.ic_disk_drive_24px); break;
-                case "app_ops": addTool(id, R.string.app_ops, R.drawable.ic_shield_24); break;
-                case "set_edit": addTool(id, R.string.set_edit, R.drawable.baseline_settings_24); break;
-                case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
-                case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
-                case "network_client": addTool(id, R.string.network_connections, R.drawable.cloud_download_24px); break;
-                case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
-            }
+            if ("tools".equals(id)) addTool(id, R.string.sidebar_tools, R.drawable.tools_24px);
+            else if (ToolRegistry.isInSidebarSection(id, "tools")) addRegisteredTool("tools", id);
         }
+    }
+
+    private void addRegisteredTool(String section, String id) {
+        ToolRegistry.ToolItem tool = ToolRegistry.findById(context, id);
+        if (tool == null || !ToolRegistry.isAvailable(context, id)) return;
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, id, tool.title(),
+                tool.iconRes(), null, null);
+        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }
 
     private void addTool(String id, int text, int icon) {

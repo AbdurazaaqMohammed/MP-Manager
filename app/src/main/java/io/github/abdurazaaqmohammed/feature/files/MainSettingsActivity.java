@@ -32,7 +32,6 @@ import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.ui.common.util.AppFont;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 public class MainSettingsActivity extends AppCompatActivity {
 

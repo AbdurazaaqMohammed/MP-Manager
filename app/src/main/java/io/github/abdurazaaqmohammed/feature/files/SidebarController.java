@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.feature.ftp.FtpProfile;
-import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
-import io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity;
 
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -53,15 +50,11 @@ import com.google.gson.reflect.TypeToken;
 import android.net.Uri;
 
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
-import io.github.abdurazaaqmohammed.feature.freestyle.FreeStylePickerActivity;
-import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
-import io.github.abdurazaaqmohammed.feature.system.LogcatActivity;
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
@@ -73,13 +66,12 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
-import io.github.abdurazaaqmohammed.feature.system.SetEditActivity;
 import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.feature.system.ToolRunnerActivity;
 import io.github.abdurazaaqmohammed.feature.system.DocumentsBrowserActivity;
-import io.github.abdurazaaqmohammed.feature.system.FridaConsoleActivity;
-import io.github.abdurazaaqmohammed.feature.system.ToolsHubActivity;
-import io.github.abdurazaaqmohammed.feature.system.WifiManagerActivity;
+import io.github.abdurazaaqmohammed.feature.system.ToolLauncher;
+import io.github.abdurazaaqmohammed.feature.system.ToolRegistry;
+import io.github.abdurazaaqmohammed.feature.system.ToolShortcuts;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfile;
 import io.github.abdurazaaqmohammed.feature.files.network.NetworkProfileStore;
@@ -183,6 +175,17 @@ public class SidebarController {
                     showRecycleBinOptionsDialog();
                 } else if (!sidebarOrganizeMode && entry.type() == SidebarAdapter.EntryType.PIN) {
                     showPinMenu(entry, view);
+                } else if (!sidebarOrganizeMode && entry.type() == SidebarAdapter.EntryType.TOOL) {
+                    ToolRegistry.ToolItem tool = ToolRegistry.findById(activity, entry.id());
+                    if (tool != null) {
+                        PopupMenu menu = new PopupMenu(activity, view);
+                        menu.getMenu().add(R.string.plugin_create_shortcut);
+                        menu.setOnMenuItemClickListener(item -> {
+                            ToolShortcuts.pin(activity, tool);
+                            return true;
+                        });
+                        menu.show();
+                    }
                 }
             }
 
@@ -691,91 +694,31 @@ public class SidebarController {
     }
 
     private void openSidebarTool(String id) {
-        switch (id) {
-            case "extract":
-                activity.startActivityForResult(new Intent(activity, APKExtractorActivity.class), 11);
-                break;
-            case "documents":
-                activity.startActivity(new Intent(activity, DocumentsBrowserActivity.class));
-                break;
-            case "app_ops":
-                activity.startActivity(new Intent(activity, AppOpsActivity.class));
-                break;
-            case "set_edit":
-                activity.startActivity(new Intent(activity, SetEditActivity.class));
-                break;
-            case "partition_dumper":
-                PartitionDumperDialog.show(activity);
-                break;
-            case "recycle_bin":
-                showRecycleBinDialog();
-                break;
-            case "ftp_server":
-                activity.showFtpServerDialog();
-                break;
-            case "ftp_client":
-                activity.showFtpClientDialog();
-                break;
-            case "network_client":
-                activity.getNetwork().showConnections();
-                break;
-            case "webdav_client":
-                activity.getNetwork().showConnectionDialog("webdav");
-                break;
-            case "smb_client":
-                activity.getNetwork().showConnectionDialog("smb");
-                break;
-            case "mcp_server":
-                activity.startActivity(new Intent(activity, McpServerActivity.class));
-                break;
-            case "logcat":
-                // NEW_TASK + the activity's own taskAffinity give the viewer
-                // its own recents entry, so a home-screen shortcut and the
-                // in-app sidebar land in the same, separate task.
-                activity.startActivity(new Intent(activity, LogcatActivity.class)
-                        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                break;
-            case "wifi":
-                activity.startActivity(new Intent(activity, WifiManagerActivity.class));
-                break;
-            case "frida_console":
-                activity.startActivity(new Intent(activity, FridaConsoleActivity.class)
-                        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                break;
-            case "command_shell":
-                activity.startActivity(new Intent(activity, CommandShellActivity.class));
-                break;
-            case "tools":
-                activity.startActivity(new Intent(activity, ToolsHubActivity.class));
-                break;
-            case "free_style":
-                activity.startActivity(new Intent(activity, FreeStylePickerActivity.class));
-                break;
-            case "color_picker":
-                activity.openColorPickerTool();
-                break;
-            case "layout":
-                activity.openLayoutInspectorTool();
-                break;
-            default: {
-                if (id != null && id.startsWith(SidebarAdapter.PACK_TOOL_PREFIX)) {
-                    openPackTool(id.substring(SidebarAdapter.PACK_TOOL_PREFIX.length()));
-                    break;
-                }
-                if (id != null && id.startsWith("ext:")) {
-                    openExternalSidebar(id);
-                    break;
-                }
-                SidebarAction ext = ExtensionRegistry.findSidebar(id);
-                if (ext != null) {
-                    try {
-                        ext.open(activity);
-                    } catch (Exception ignored) {
-                    }
-                }
-                break;
+        if (ToolLauncher.open(activity, id)) return;
+        if (id == null) return;
+        if (id.startsWith(SidebarAdapter.PACK_TOOL_PREFIX)) {
+            openPackTool(id.substring(SidebarAdapter.PACK_TOOL_PREFIX.length()));
+        } else if (id.startsWith("ext:")) {
+            openExternalSidebar(id);
+        } else {
+            SidebarAction extension = ExtensionRegistry.findSidebar(id);
+            if (extension != null) {
+                try { extension.open(activity); } catch (Exception ignored) {}
             }
         }
+    }
+
+    /** Main-activity-owned dialogs used by the shared hub/shortcut launcher. */
+    public boolean openBuiltInTool(String id) {
+        switch (id) {
+            case "recycle_bin": showRecycleBinDialog(); break;
+            case "ftp_server": activity.showFtpServerDialog(); break;
+            case "network_client": activity.getNetwork().showConnections(); break;
+            case "color_picker": activity.openColorPickerTool(); break;
+            case "layout": activity.openLayoutInspectorTool(); break;
+            default: return false;
+        }
+        return true;
     }
 
     /** Launches an installed pack tool in the shared runner activity. */

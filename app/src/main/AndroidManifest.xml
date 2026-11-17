@@ -102,13 +102,30 @@
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.feature.system.ToolsHubActivity"
             android:exported="false"
-            android:label="Plugins">
+            android:label="@string/sidebar_tools">
         </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.feature.system.ToolShortcutActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.feature.system.ToolRunnerActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.feature.system.ocr.ScreenOcrActivity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:label="@string/screen_ocr_title"
+            android:windowSoftInputMode="adjustResize" />
+        <service
+            android:name="io.github.abdurazaaqmohammed.feature.system.ocr.ScreenOcrService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.feature.system.WifiManagerActivity"

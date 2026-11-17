@@ -204,6 +204,18 @@ public final class UiPrefs {
         }
     }
 
+    /** Whether tapping an editor .bak asks to restore it instead of opening its original format. */
+    public static final String SHOW_RESTORE_DIALOG_KEY = "show_restore_dialog";
+
+    public static boolean showRestoreDialog(Context context) {
+        try {
+            return PreferenceManager.getDefaultSharedPreferences(context)
+                    .getBoolean(SHOW_RESTORE_DIALOG_KEY, true);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     public static String folderAnim(Context context) {
         try {
             String v = PreferenceManager.getDefaultSharedPreferences(context).getString(FOLDER_ANIM_KEY, FOLDER_ANIM_DEFAULT);

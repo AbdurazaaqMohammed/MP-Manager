@@ -5,11 +5,19 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import android.os.Build;
+import android.os.Process;
 
 /**
  * One downloadable tool pack, parsed from the pack catalog.
  */
 public class PackDescriptor {
+
+    public record Download(String url, String sha256) {}
+    private final Map<String, Download> abiDownloads = new LinkedHashMap<>();
+    private int minSdk = 19;
 
     public static class ToolMeta {
         public final String id;
@@ -61,7 +69,7 @@ public class PackDescriptor {
                         t.optString("subtitle", "")));
             }
         }
-        return new PackDescriptor(
+        PackDescriptor pack = new PackDescriptor(
                 o.optString("id", ""),
                 o.optString("title", ""),
                 o.optString("description", ""),
@@ -72,10 +80,39 @@ public class PackDescriptor {
                 o.optString("sha256", ""),
                 o.optString("entryClass", ""),
                 tools);
+        JSONObject variants = o.optJSONObject("abiDownloads");
+        pack.minSdk = o.optInt("minSdk", 19);
+        if (variants != null) {
+            for (String abi : new String[]{"arm64-v8a", "armeabi-v7a", "x86_64", "x86"}) {
+                JSONObject variant = variants.optJSONObject(abi);
+                if (variant != null) pack.abiDownloads.put(abi, new Download(
+                        variant.optString("apkUrl", ""), variant.optString("sha256", "")));
+            }
+        }
+        return pack;
     }
 
     public boolean hasChecksum() {
-        return sha256 != null && !sha256.trim().isEmpty();
+        return sha256 != null && sha256.trim().matches("[a-fA-F0-9]{64}");
+    }
+
+    public boolean supportsDevice() { return Build.VERSION.SDK_INT >= minSdk; }
+
+    public int minSdk() { return minSdk; }
+
+    /** Native packs download only the ABI the host process can actually load. */
+    public Download download() {
+        if (!abiDownloads.isEmpty()) {
+            boolean is64 = Process.is64Bit();
+            for (String abi : Build.SUPPORTED_ABIS) {
+                if (abi.contains("64") != is64) continue;
+                Download variant = abiDownloads.get(abi);
+                if (variant != null && !variant.url().isEmpty() && variant.sha256().matches("[a-fA-F0-9]{64}")) {
+                    return variant;
+                }
+            }
+        }
+        return new Download(apkUrl, sha256);
     }
 
     public ToolMeta tool(String toolId) {

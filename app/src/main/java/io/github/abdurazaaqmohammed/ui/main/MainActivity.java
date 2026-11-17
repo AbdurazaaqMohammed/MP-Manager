@@ -4,6 +4,7 @@ import io.github.abdurazaaqmohammed.feature.diff.FolderDiffEngine;
 import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
+import io.github.abdurazaaqmohammed.feature.system.ToolLauncher;
 import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -73,6 +74,7 @@ import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.feature.apk.ApkResultHandler;
 import io.github.abdurazaaqmohammed.feature.dex.DexTools;
+import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 import io.github.abdurazaaqmohammed.feature.files.BookmarksController;
 import io.github.abdurazaaqmohammed.feature.files.FileSearchController;
 import io.github.abdurazaaqmohammed.feature.files.FtpController;
@@ -532,6 +534,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } else if (isStagedEditPath(modified) && paneFolderIsEditableArchive(pane1)) {
                         handleModifiedFileResult(data.getData(), null, null);
                     } else {
+                        DexWorkspaceStore.finishResult(modified);
                         highlightAndFocusItem(pane1, modified.getName());
                     }
                 }
@@ -542,6 +545,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** True for files staged under the app's own cache/files dirs for editing. */
     private boolean isStagedEditPath(File file) {
         if (file == null) return false;
+        if (DexWorkspaceStore.workspaceFor(file) != null) return true;
         try {
             String path = file.getPath();
             return path.startsWith(getCacheDir().getPath()) || path.startsWith(getFilesDir().getPath());
@@ -689,6 +693,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             sidebar.refreshSidebarAsync(sectionOrder != null ? sectionOrder : getSidebarSectionOrder());
         } catch (Exception ignored) {
         }
+    }
+
+    public boolean openBuiltInSidebarTool(String id) {
+        return sidebar.openBuiltInTool(id);
     }
 
     /** Sidebar shortcut: screen color picker service. Called by SidebarController. */
@@ -3421,6 +3429,17 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
         openBookmarkShortcut();
+        Intent toolIntent = getIntent();
+        String requestedTool = toolIntent == null ? null : toolIntent.getStringExtra(
+                ToolLauncher.EXTRA_MAIN_TOOL);
+        if (requestedTool != null) {
+            toolIntent.removeExtra(ToolLauncher.EXTRA_MAIN_TOOL);
+            handler.post(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    ToolLauncher.open(this, requestedTool);
+                }
+            });
+        }
     }
 
     private void openBookmarkShortcut() {
