@@ -117,12 +117,17 @@ public class SignWrapper {
     }
 
     public static void requireAuth(AppCompatActivity activity, SignKeyCallback callback) {
+        requireAuth(activity, callback, () -> {});
+    }
+
+    public static void requireAuth(AppCompatActivity activity, SignKeyCallback callback, Runnable onAbandoned) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         String keyPath;
         try {
             keyPath = prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath());
         } catch (IOException e) {
             Extensions.showMessage(activity, activity.getString(R.string.sig_default_key_failed, String.valueOf(e.getMessage())));
+            onAbandoned.run();
             return;
         }
         File keyFile = new File(keyPath);
@@ -140,21 +145,21 @@ public class SignWrapper {
         } else if (prefs.getBoolean("useBiometrics", false) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", ""));
             if (!TextUtils.isEmpty(storedPass)) {
-                authenticateWithBiometrics(activity, keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign, callback);
+                authenticateWithBiometrics(activity, keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign, callback, onAbandoned);
                 return;
             }
-            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
+            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback, onAbandoned);
         } else {
             String storedPass = prefs.getBoolean("save_password", false) ? PasswordEncryptor.decryptString(prefs.getString("keyPass", "")) : "";
             if (!TextUtils.isEmpty(storedPass) && verifyKeystorePassword(keyFile, storedPass)) {
                 callback.onAuthenticated(new SignWrapper(keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign));
                 return;
             }
-            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
+            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback, onAbandoned);
         }
     }
 
-    private static void requestPassword(AppCompatActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
+    private static void requestPassword(AppCompatActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback, Runnable onAbandoned) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         EditText pwInput = new EditText(activity);
         pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
@@ -174,10 +179,12 @@ public class SignWrapper {
                     String password = pwInput.getText() != null ? pwInput.getText().toString() : "";
                     if (TextUtils.isEmpty(password)) {
                         Extensions.showMessage(activity, R.string.no_password_entered);
+                        onAbandoned.run();
                         return;
                     }
                     if (!verifyKeystorePassword(keyFile, password)) {
                         Extensions.showMessage(activity, R.string.invalid_password);
+                        onAbandoned.run();
                         return;
                     }
                     boolean remember = cbRemember.isChecked();
@@ -189,17 +196,19 @@ public class SignWrapper {
                     }
                     callback.onAuthenticated(new SignWrapper(keyFile, password, v1, v2, v3, v4, signedBy, zipalign));
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, (dialog, which) -> onAbandoned.run())
+                .setOnCancelListener(dialog -> onAbandoned.run())
                 .show();
     }
 
-    private static void authenticateWithBiometrics(AppCompatActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
+    private static void authenticateWithBiometrics(AppCompatActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback, Runnable onAbandoned) {
         Executor executor = ContextCompat.getMainExecutor(activity);
         BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
                 Extensions.showMessage(activity, activity.getString(R.string.sig_auth_error, errString));
+                onAbandoned.run();
             }
 
             @Override

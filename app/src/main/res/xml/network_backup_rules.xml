@@ -2,4 +2,6 @@
 <full-backup-content>
     <!-- Keystore keys are device-bound: encrypted profiles must not be restored without them. -->
     <exclude domain="sharedpref" path="network_profiles.xml" />
+    <!-- Disposable editor work must not enter cloud/device backups. -->
+    <exclude domain="file" path="dex_workspaces/" />
 </full-backup-content>

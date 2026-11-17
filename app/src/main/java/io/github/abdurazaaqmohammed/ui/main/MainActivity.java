@@ -74,6 +74,7 @@ import io.github.abdurazaaqmohammed.app.UpdateController;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.feature.apk.ApkResultHandler;
 import io.github.abdurazaaqmohammed.feature.dex.DexTools;
+import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 import io.github.abdurazaaqmohammed.feature.files.BookmarksController;
 import io.github.abdurazaaqmohammed.feature.files.FileSearchController;
 import io.github.abdurazaaqmohammed.feature.files.FtpController;
@@ -530,6 +531,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } else if (isStagedEditPath(modified) && paneFolderIsEditableArchive(pane1)) {
                         handleModifiedFileResult(data.getData(), null, null);
                     } else {
+                        DexWorkspaceStore.finishResult(modified);
                         highlightAndFocusItem(pane1, modified.getName());
                     }
                 }
@@ -540,6 +542,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** True for files staged under the app's own cache/files dirs for editing. */
     private boolean isStagedEditPath(File file) {
         if (file == null) return false;
+        if (DexWorkspaceStore.workspaceFor(file) != null) return true;
         try {
             String path = file.getPath();
             return path.startsWith(getCacheDir().getPath()) || path.startsWith(getFilesDir().getPath());

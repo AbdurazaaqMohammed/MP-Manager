@@ -482,6 +482,9 @@
     <string name="invalid_password">Invalid password</string>
     <string name="restore_backup">Restore backup</string>
     <string name="restore">Restore</string>
+    <string name="show_restore_dialog">Show restore dialog for .bak files</string>
+    <string name="show_restore_dialog_desc">When enabled, tapping an editor backup asks to restore it. Turn off to open the backup with the original file type instead. MIUI and Android backup archives still open normally.</string>
+    <string name="restore_invalid_name">Invalid name for the restored file</string>
     <string name="image_properties">Image Properties</string>
     <string name="player_settings">Player Settings</string>
     <string name="keep_screen_on">Keep screen on: %1$s</string>

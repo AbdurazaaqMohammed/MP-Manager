@@ -112,6 +112,11 @@ public class FileOperationsHelper {
             public void open(File file, String fileName, File zipFile, String zipEntryPath) {
                 adapter.openWithForFile(file, fileName, zipFile, zipEntryPath);
             }
+
+            @Override
+            public void openWithDefaults(File file, String name, File archive, String entry, Runnable fallback) {
+                adapter.getFileOpener().openZipEntryWithDefault(file, name, archive, entry, fallback);
+            }
         });
     }
 

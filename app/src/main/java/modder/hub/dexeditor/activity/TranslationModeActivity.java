@@ -26,6 +26,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModel;
 
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.smali2.Smali;
@@ -53,6 +55,7 @@ import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.editor.DexEditorSession;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
@@ -99,6 +102,8 @@ public class TranslationModeActivity extends BaseActivity {
     private String zipEntryPath;
 
     private ClassTree classTree;
+    private DexEditorSession session;
+    private TranslationViewState retainedView;
     private final List<String> originals = new ArrayList<>();
     private StringAdapter adapter;
     private String lastTapped;
@@ -129,6 +134,15 @@ public class TranslationModeActivity extends BaseActivity {
         dexPaths = launch.getStringArrayListExtra("SelectedDexFiles");
         zipFilePath = launch.getStringExtra("zipFilePath");
         zipEntryPath = launch.getStringExtra("zipEntryPath");
+        session = new ViewModelProvider(this).get(DexEditorSession.class);
+        retainedView = new ViewModelProvider(this).get(TranslationViewState.class);
+        try {
+            session.initialize(this, launch, savedInstanceState);
+        } catch (Exception e) {
+            showError(e.getMessage());
+            finish();
+            return;
+        }
 
         toolbar = findViewById(R.id.translation_toolbar);
         setSupportActionBar(toolbar);
@@ -249,6 +263,31 @@ public class TranslationModeActivity extends BaseActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        retainTranslations();
+        if (session != null) session.saveWorkspace(state);
+        super.onSaveInstanceState(state);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (session != null) session.setFinishedCleanly(isFinishing());
+        if (!isFinishing()) retainTranslations();
+        autoTranslateCancelled = true;
+        super.onDestroy();
+    }
+
+    private void retainTranslations() {
+        if (retainedView == null || adapter == null) return;
+        retainedView.translations.clear();
+        retainedView.translations.putAll(adapter.getModifiedStrings());
+    }
+
+    public static class TranslationViewState extends ViewModel {
+        final Map<String, String> translations = new LinkedHashMap<>();
+    }
+
     // ------------------------------------------------------------------
     // loading
     // ------------------------------------------------------------------
@@ -262,8 +301,10 @@ public class TranslationModeActivity extends BaseActivity {
         ProgressManager pm = new ProgressManager(this, true).show();
         new Thread(() -> {
             try {
-                if (classTree == null) {
-                    classTree = new ClassTree(dexPaths, getCacheDir().getAbsolutePath());
+                boolean firstLoad = session.tree() == null;
+                classTree = session.load();
+                if (isDestroyed() || session.isClosed()) return;
+                if (firstLoad) {
                     ClassTree.CompilationOptions opts = new ClassTree.CompilationOptions();
                     opts.removeAllDebug = true;
                     classTree.setCompilationOptions(opts);
@@ -271,8 +312,13 @@ public class TranslationModeActivity extends BaseActivity {
                 List<String> strings = classTree.getAllStrings();
                 Collections.sort(strings);
                 runOnUiThread(() -> {
+                    if (isDestroyed() || session.isClosed()) return;
                     originals.clear();
                     originals.addAll(strings);
+                    for (Map.Entry<String, String> edit : retainedView.translations.entrySet()) {
+                        adapter.setTranslation(edit.getKey(), edit.getValue());
+                    }
+                    dirty = !retainedView.translations.isEmpty();
                     loaded = !strings.isEmpty();
                     adapter.refresh();
                     pm.dismiss();
@@ -747,7 +793,8 @@ public class TranslationModeActivity extends BaseActivity {
         }
         if (zipFilePath != null) result.putExtra("zipFilePath", zipFilePath);
         if (zipEntryPath != null) result.putExtra("zipEntryPath", zipEntryPath);
-        setResult(757, result);
+        session.keepResult();
+        setEditorResult(757, result);
         finish();
     }
 
