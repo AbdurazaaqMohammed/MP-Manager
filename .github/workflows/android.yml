@@ -64,8 +64,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s globstar nullglob
-          apk_files=(app/build/outputs/apk/**/*.apk)
+          mapfile -t apk_files < <(find app/build/outputs/apk -type f -name '*.apk' -print)
+          if (( ${#apk_files[@]} == 0 )); then
+            echo "No APK files were produced" >&2
+            exit 1
+          fi
           gh release delete continuous -y --cleanup-tag || true
           gh release create continuous "${apk_files[@]}" \
             --title "MP-Manager (Continuous Build)" \
