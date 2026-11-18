@@ -232,7 +232,7 @@
     <string name="items">%1$d elementos</string>
     <string name="verify_progress">Verificando sumas de verificación…</string>
     <string name="expected_hash">Esperado: %1$s</string>
-    <string name="actual_hash">Actual: %1$s</string>
+    <string name="actual_hash">Obtenido: %1$s</string>
     <string name="app_icon">Icono de la aplicación</string>
     <string name="p_package">Nombre del paquete</string>
     <string name="p_signatures">Firmas</string>
@@ -619,6 +619,10 @@ Layout Inspector
     <string name="sidebar_collapse">Contraer sección</string>
     <string name="sidebar_expand">Expandir sección</string>
     <string name="organize_sidebar">Organizar barra lateral</string>
+    <string name="sidebar_add_tool">Añadir a la barra lateral</string>
+    <string name="sidebar_remove_tool">Quitar de la barra lateral</string>
+    <string name="sidebar_tool_added">Añadido a la barra lateral</string>
+    <string name="sidebar_tool_removed">Quitado de la barra lateral</string>
     <string name="done_organizing_sidebar">Organización terminada</string>
     <string name="drag_to_reorder">Arrastra para reordenar</string>
     <string name="restore_sidebar_item">Restaurar elemento de la barra lateral</string>
@@ -2224,6 +2228,7 @@ Layout Inspector
     <string name="frida_download_message">El paquete Frida Hook Engine (%1$s MB) debe descargarse una vez y queda en la caché de la aplicación.\n\nFuente: github.com/muhammadrizwan87/frida-hook-engine</string>
     <string name="frida_downloading_engine">Descargando el paquete del motor Frida</string>
     <string name="frida_downloading_inject">Descargando frida-inject</string>
+    <string name="frida_download_failed">Descarga fallida: %1$s\n\nEl host (%2$s) debe ser accesible. Comprueba tu conexión a internet o VPN y vuelve a intentarlo.</string>
     <string name="frida_gadget_title">Frida Gadget</string>
     <string name="frida_gadget_desc">Incrusta el Frida Hook Engine en este APK: añade libfrida-gadget.so, un libfrida-gadget.config.so generado y libfrida-gadget.script.so a las librerías nativas y carga el gadget desde el onCreate() de la Application de la aplicación. La aplicación parcheada se instala y funciona sin root.</string>
     <string name="frida_target_label">Punto de inyección (llamada a loadLibrary)</string>
