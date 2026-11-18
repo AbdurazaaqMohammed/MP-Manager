@@ -12,6 +12,11 @@
 -keep class **.model.** { *; }
 -keep class **.models.** { *; }
 -dontobfuscate
+# Tool packs are separate dex files loaded at runtime; R8 cannot see their
+# subclasses or instantiations and its closed-world optimizations (method
+# finalization, class abstracting/merging) break them with VerificationError /
+# InstantiationError. Keep code optimizations off for the host.
+-dontoptimize
 
 # Release stack traces keep method line numbers.
 # Signature/InnerClasses/EnclosingMethod are REQUIRED at runtime: Chunk
@@ -21,9 +26,39 @@
 -renamesourcefileattribute SourceFile
 
 # Pack tools are loaded at runtime with DexClassLoader from installed pack
-# APKs and link against these host classes by name.
+# APKs and link against these host classes by name. Every pack module declares
+# `compileOnly project(':sdk')`, so the SDK classes are NOT inside the pack
+# APKs - the host dex is the only place they can come from. Nothing in app/src
+# references most of them directly, so R8 strips them in release builds and
+# the packs then die with NoClassDefFoundError / AbstractMethodError while
+# their entry class is being constructed. Keep the whole SDK surface that the
+# packs consume (debug builds never showed this because they skip R8).
 -keep class io.github.abdurazaaqmohammed.plugins.api.** { *; }
 -keep class io.github.abdurazaaqmohammed.plugins.ipc.** { *; }
+-keep class io.github.abdurazaaqmohammed.plugins.ext.** { *; }
+-keep class io.github.abdurazaaqmohammed.plugins.res.** { *; }
+-keep class io.github.abdurazaaqmohammed.plugins.tools.common.** { *; }
+-keep class io.github.abdurazaaqmohammed.domain.** { *; }
+-keep class io.github.abdurazaaqmohammed.ui.UiFields { *; }
+-keep class io.github.abdurazaaqmohammed.ui.views.ColorWheelView { *; }
+-keep class io.github.abdurazaaqmohammed.utils.QrUtil { *; }
+# ToolPack.extensions() is a default interface method. D8 desugars it into
+# this companion class for minSdk 23; without it all packs fail when the host
+# calls pack.extensions() because the interface method is left abstract.
+-keep class io.github.abdurazaaqmohammed.plugins.api.ToolPack$-CC { *; }
+
+# First-party packs are compiled against material:1.12.0 (the version pinned
+# by the SDK / pack modules) and reference com.google.android.material.R$attr
+# fields directly. The host must therefore ship that exact R class with all
+# its attr constants; R8/resource shrinking otherwise drops the ones the host
+# itself does not use, and a pack then dies with NoSuchFieldError on e.g.
+# colorPrimary while building its views.
+-keepclassmembers class com.google.android.material.R$attr { public static final int *; }
+
+# R8 also "abstractifies" Material widget classes that the app itself never
+# instantiates. Packs do instantiate them from their own dex, so they must stay
+# concrete with their constructors intact.
+-keep class com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton { *; }
 
 # Gson models: fields are read/written reflectively; shrinking would drop
 # them and silently lose stored user data.
