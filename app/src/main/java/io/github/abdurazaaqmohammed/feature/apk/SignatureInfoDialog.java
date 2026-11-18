@@ -240,20 +240,33 @@ public final class SignatureInfoDialog {
     }
 
     private static TextView addRowWithView(LinearLayout parent, String label, String value) {
-        LinearLayout row = new LinearLayout(parent.getContext());
+        Context context = parent.getContext();
+        LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(parent.getContext(), 2), 0, dp(parent.getContext(), 2));
-        TextView labelView = new TextView(parent.getContext());
+        row.setPadding(0, dp(context, 2), 0, dp(context, 2));
+        TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextSize(13f);
-        int minWidth = dp(parent.getContext(), 92);
+        int minWidth = dp(context, 92);
         labelView.setMinWidth(minWidth);
         row.addView(labelView, new LinearLayout.LayoutParams(minWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView valueView = new TextView(parent.getContext());
+        TextView valueView = new TextView(context);
         valueView.setText(TextUtils.isEmpty(value) ? "—" : value);
         valueView.setTextSize(13f);
-        valueView.setTextIsSelectable(true);
+        valueView.setTextIsSelectable(false);
         row.addView(valueView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        
+        View.OnLongClickListener copyListener = v -> {
+            CharSequence txt = valueView.getText();
+            if (!TextUtils.isEmpty(txt) && !txt.equals("—")) {
+                CopyUtil.copyToClipboard(context, txt);
+                return true;
+            }
+            return false;
+        };
+        row.setOnLongClickListener(copyListener);
+        valueView.setOnLongClickListener(copyListener);
+        
         parent.addView(row, matchWrap());
         return valueView;
     }
@@ -273,24 +286,37 @@ public final class SignatureInfoDialog {
     }
 
     private static void addRow(LinearLayout parent, String label, String value, boolean emphasize) {
-        LinearLayout row = new LinearLayout(parent.getContext());
+        Context context = parent.getContext();
+        LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(parent.getContext(), 2), 0, dp(parent.getContext(), 2));
-        TextView labelView = new TextView(parent.getContext());
+        row.setPadding(0, dp(context, 2), 0, dp(context, 2));
+        TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextSize(13f);
-        int minWidth = dp(parent.getContext(), 92);
+        int minWidth = dp(context, 92);
         labelView.setMinWidth(minWidth);
         row.addView(labelView, new LinearLayout.LayoutParams(minWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView valueView = new TextView(parent.getContext());
+        TextView valueView = new TextView(context);
         valueView.setText(TextUtils.isEmpty(value) ? "—" : value);
         valueView.setTextSize(13f);
-        valueView.setTextIsSelectable(true);
+        valueView.setTextIsSelectable(false);
         if (emphasize) {
             valueView.setTypeface(Typeface.DEFAULT_BOLD);
-            valueView.setTextColor(errorColor(parent.getContext()));
+            valueView.setTextColor(errorColor(context));
         }
         row.addView(valueView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        
+        View.OnLongClickListener copyListener = v -> {
+            CharSequence txt = valueView.getText();
+            if (!TextUtils.isEmpty(txt) && !txt.equals("—")) {
+                CopyUtil.copyToClipboard(context, txt);
+                return true;
+            }
+            return false;
+        };
+        row.setOnLongClickListener(copyListener);
+        valueView.setOnLongClickListener(copyListener);
+        
         parent.addView(row, matchWrap());
     }
 

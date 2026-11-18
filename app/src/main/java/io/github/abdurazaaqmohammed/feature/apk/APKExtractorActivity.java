@@ -241,7 +241,12 @@ public class APKExtractorActivity extends BaseActivity {
                         .setMessage(rss.getString(R.string.success_saved, outputPath))
                         .setNegativeButton(R.string.locate, (dialog, which) -> {
                             File file = new File(outputPath);
-                            this.setResult(RESULT_OK, new Intent().putExtra("dirToLoad", file.isDirectory() ? outputPath : file.getParent()));
+                            Intent res = new Intent();
+                            res.putExtra("dirToLoad", file.isDirectory() ? outputPath : file.getParent());
+                            if (!file.isDirectory()) {
+                                res.putExtra("highlightName", file.getName());
+                            }
+                            this.setResult(RESULT_OK, res);
                             finish();
                         })
                         .setPositiveButton(android.R.string.ok, null)
@@ -1426,7 +1431,7 @@ public class APKExtractorActivity extends BaseActivity {
     private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
         // Also scan Extracted APKs folder to populate corner status badges
         try {
-            Map<String, ExtractedApksIndex.Entry> extractedIndex = ExtractedApksIndex.scanExtractedFolder(this);
+            Map<String, List<ExtractedApksIndex.Entry>> extractedIndex = ExtractedApksIndex.scanExtractedFolder(this);
             handler.post(() -> {
                 if (appAdapter[0] != null) appAdapter[0].setExtractedIndex(extractedIndex);
                 if (appAdapter[1] != null) appAdapter[1].setExtractedIndex(extractedIndex);
@@ -1463,6 +1468,26 @@ public class APKExtractorActivity extends BaseActivity {
 
     public void extract(int pos, boolean antisplit, boolean showFinishedDialog) {
         AppInfo ai = getCurrentAdapter().filteredAppInfoList.get(pos);
+        if (LegacyUtils.aboveSdk20 && ai.isSplit && antisplit && ai.filePath != null) {
+            File baseApk = new File(ai.filePath);
+            File apkDirectory = baseApk.getParentFile();
+            ApkProtectionDetector.Result prot = ApkProtectionDetector.detect(apkDirectory);
+            if (prot.isProtected) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.protected_app_warning_title)
+                        .setMessage(getString(R.string.antisplit_protected_warning_msg, prot.getSummary()))
+                        .setIcon(R.drawable.ic_circle_exclamation_24)
+                        .setNegativeButton(R.string.cancel, null)
+                        .setPositiveButton(R.string.proceed_anyway, (dialog, which) ->
+                                performExtract(ai, true, showFinishedDialog))
+                        .show();
+                return;
+            }
+        }
+        performExtract(ai, antisplit, showFinishedDialog);
+    }
+
+    private void performExtract(AppInfo ai, boolean antisplit, boolean showFinishedDialog) {
         final String pkgName = ai.packageName;
         StringBuilder fileName = new StringBuilder(saveWithPkgName ? pkgName : ai.name).append(' ').append('v').append(ai.versionName);
         fileName.append(".apk");

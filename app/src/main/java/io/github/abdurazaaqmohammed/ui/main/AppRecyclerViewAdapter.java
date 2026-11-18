@@ -22,9 +22,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.view.Gravity;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,12 +50,12 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
     public final APKExtractorActivity apkExtractorActivity;
     public final List<AppInfo> appInfoList;
     public final List<AppInfo> filteredAppInfoList;
-    private Map<String, ExtractedApksIndex.Entry> extractedIndex;
+    private Map<String, List<ExtractedApksIndex.Entry>> extractedIndex;
 
     private Comparator<AppInfo> currentComparator;
     private AppInfoFilter filter;
 
-    public void setExtractedIndex(Map<String, ExtractedApksIndex.Entry> index) {
+    public void setExtractedIndex(Map<String, List<ExtractedApksIndex.Entry>> index) {
         this.extractedIndex = index;
         notifyDataSetChanged();
     }
@@ -236,9 +243,14 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
                 apkExtractorActivity.setResult(Activity.RESULT_OK, result);
                 apkExtractorActivity.finish();
             });
+            holder.cornerBadgeView.setOnLongClickListener(v -> {
+                showVersionsPopup(appInfo);
+                return true;
+            });
         } else {
             holder.cornerBadgeView.setVisibility(View.GONE);
             holder.cornerBadgeView.setOnClickListener(null);
+            holder.cornerBadgeView.setOnLongClickListener(null);
         }
 
         holder.itemView.setOnClickListener(v -> {
@@ -319,6 +331,125 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             appIconView = v.findViewById(R.id.icon_view);
             splitIconView = v.findViewById(R.id.badge_view);
             cornerBadgeView = v.findViewById(R.id.corner_status_badge);
+        }
+    }
+
+    private void showVersionsPopup(AppInfo appInfo) {
+        if (appInfo == null) return;
+        List<ExtractedApksIndex.Entry> entries = ExtractedApksIndex.getEntriesForApp(extractedIndex, appInfo);
+        if (entries.isEmpty()) return;
+
+        // Sort entries by version descending (newest on top)
+        List<ExtractedApksIndex.Entry> sorted = new ArrayList<>(entries);
+        Collections.sort(sorted, (a, b) -> ExtractedApksIndex.compareVersions(b.version, a.version));
+
+        ScrollView scroll = new ScrollView(apkExtractorActivity);
+        LinearLayout container = new LinearLayout(apkExtractorActivity);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padH = (int) (16 * apkExtractorActivity.getResources().getDisplayMetrics().density);
+        int padV = (int) (12 * apkExtractorActivity.getResources().getDisplayMetrics().density);
+        container.setPadding(padH, padV, padH, padV);
+
+        String installedVer = appInfo.versionName != null ? appInfo.versionName.trim() : "";
+        List<ImageView> sameVersionStatusViews = new ArrayList<>();
+        List<File> sameVersionFiles = new ArrayList<>();
+
+        for (ExtractedApksIndex.Entry entry : sorted) {
+            final File file = entry.file;
+            LinearLayout row = new LinearLayout(apkExtractorActivity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            int rowPadV = (int) (10 * apkExtractorActivity.getResources().getDisplayMetrics().density);
+            row.setPadding(0, rowPadV, 0, rowPadV);
+
+            ImageView statusIcon = new ImageView(apkExtractorActivity);
+            int iconSize = (int) (24 * apkExtractorActivity.getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
+            iconParams.setMarginEnd((int) (12 * apkExtractorActivity.getResources().getDisplayMetrics().density));
+            statusIcon.setLayoutParams(iconParams);
+
+            int cmp = ExtractedApksIndex.compareVersions(entry.version, installedVer);
+            if (cmp > 0) {
+                // Extracted is newer: Up arrow (Yellow)
+                statusIcon.setImageResource(R.drawable.ic_arrow_up_mt);
+                statusIcon.setColorFilter(0xFFFFC107, PorterDuff.Mode.SRC_IN);
+            } else if (cmp < 0) {
+                // Extracted is older: Down arrow (Red)
+                statusIcon.setImageResource(R.drawable.ic_arrow_down_mt);
+                statusIcon.setColorFilter(0xFFF44336, PorterDuff.Mode.SRC_IN);
+            } else {
+                // Same version: start with empty circle, then calculate hash
+                statusIcon.setImageResource(R.drawable.ic_circle_outline_24);
+                statusIcon.setColorFilter(0xFF888888, PorterDuff.Mode.SRC_IN);
+                sameVersionStatusViews.add(statusIcon);
+                sameVersionFiles.add(file);
+            }
+            row.addView(statusIcon);
+
+            LinearLayout textCol = new LinearLayout(apkExtractorActivity);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams textColParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            textCol.setLayoutParams(textColParams);
+
+            TextView titleView = new TextView(apkExtractorActivity);
+            titleView.setText(file.getName());
+            titleView.setTextSize(14f);
+            textCol.addView(titleView);
+
+            TextView subView = new TextView(apkExtractorActivity);
+            subView.setText("v" + entry.version + " (" + Formatter.formatFileSize(apkExtractorActivity, file.length()) + ")");
+            subView.setTextSize(12f);
+            subView.setAlpha(0.7f);
+            textCol.addView(subView);
+
+            row.addView(textCol);
+
+            // Clicking any row jumps to that specific extracted version file in MainActivity
+            row.setOnClickListener(v -> {
+                Intent result = new Intent();
+                result.putExtra("dirToLoad", file.getParent());
+                result.putExtra("highlightName", file.getName());
+                apkExtractorActivity.setResult(Activity.RESULT_OK, result);
+                apkExtractorActivity.finish();
+            });
+
+            container.addView(row);
+        }
+
+        scroll.addView(container);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(apkExtractorActivity)
+                .setTitle(apkExtractorActivity.getString(R.string.extracted_versions) + " - " + appInfo.name)
+                .setView(scroll)
+                .setPositiveButton(R.string.close, null)
+                .create();
+        dialog.show();
+
+        // Calculate SHA-256 hash asynchronously ONLY after long click dialog opens
+        if (!sameVersionStatusViews.isEmpty() && appInfo.filePath != null && new File(appInfo.filePath).exists()) {
+            new Thread(() -> {
+                try {
+                    File installedFile = new File(appInfo.filePath);
+                    String installedHash = HashUtil.hashFile(installedFile, "SHA-256");
+                    for (int i = 0; i < sameVersionFiles.size(); i++) {
+                        File extractedFile = sameVersionFiles.get(i);
+                        ImageView iv = sameVersionStatusViews.get(i);
+                        try {
+                            String extractedHash = HashUtil.hashApkOrArchiveBase(extractedFile, "SHA-256");
+                            boolean match = installedHash != null && installedHash.equalsIgnoreCase(extractedHash);
+                            apkExtractorActivity.runOnUiThread(() -> {
+                                if (match) {
+                                    iv.setImageResource(R.drawable.ic_circle_filled_green_24);
+                                    iv.clearColorFilter();
+                                } else {
+                                    iv.setImageResource(R.drawable.ic_circle_outline_24);
+                                    iv.setColorFilter(0xFF888888, PorterDuff.Mode.SRC_IN);
+                                }
+                            });
+                        } catch (Exception ignored) {}
+                    }
+                } catch (Exception ignored) {}
+            }).start();
         }
     }
 }

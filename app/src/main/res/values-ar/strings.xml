@@ -2604,4 +2604,9 @@
     <string name="same_pane_invalid_target">لا يمكن نقل مجلد إلى أحد مجلداته الفرعية</string>
     <string name="same_pane_move_hint">نقل: انتقل إلى المجلد الهدف في هذا الجزء، ثم اضغط لصق</string>
     <string name="same_pane_target_gone">المجلد الهدف لم يعد متوفراً</string>
+    <string name="extracted_versions">النسخ المحفوظة</string>
+    <string name="protected_app_warning_title">تحذير: التطبيق محمي</string>
+    <string name="antisplit_protected_warning_msg">هذا التطبيق محمي بواسطة: %1$s.\n\nتحويل التطبيق من حزمة مجزأة (APKS) إلى حزمة واحدة (APK) قد يؤدي إلى تعطله وفشل تشغيله بعد التثبيت بسبب حماية سلامة الحزمة ومكافحة التعديل.\n\nهل ترغب في المتابعة وإجراء الانتي سبليت على أية حال؟</string>
+    <string name="proceed_anyway">متابعة على أي حال</string>
+    <string name="protected_banner">⚠️ محمي: %1$s</string>
 </resources>

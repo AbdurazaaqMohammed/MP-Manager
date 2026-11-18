@@ -2650,4 +2650,9 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="run_script">Run script</string>
     <string name="run_script_confirm">Do you want to run this script?\n\n%s</string>
     <string name="shell_mode_status">Working Mode: %s</string>
+    <string name="extracted_versions">Extracted Versions</string>
+    <string name="protected_app_warning_title">Warning: Protected App</string>
+    <string name="antisplit_protected_warning_msg">This app is protected by: %1$s.\n\nConverting this app from split bundle (APKS) to a single APK (Antisplit) may cause it to crash and fail to run after installation due to anti-tamper and integrity protection.\n\nDo you want to proceed with Antisplit anyway?</string>
+    <string name="proceed_anyway">Proceed anyway</string>
+    <string name="protected_banner">⚠️ Protected: %1$s</string>
 </resources>

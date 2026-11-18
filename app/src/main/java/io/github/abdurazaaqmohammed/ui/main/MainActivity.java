@@ -23,6 +23,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -32,6 +33,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -124,7 +126,9 @@ import com.reandroid.utils.io.FileUtil;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -206,6 +210,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
     public boolean isSidebarDrawerOpen;
     public boolean isBookmarksDrawerOpen;
+    private boolean isRightDrawerOpen;
+    private TextView batteryMonitorText;
+    private final Runnable batteryTicker = new Runnable() {
+        @Override
+        public void run() {
+            if (isRightDrawerOpen && !isFinishing() && !isDestroyed()) {
+                updateBatteryStatus();
+                if (handler != null) {
+                    handler.postDelayed(this, 1000);
+                }
+            }
+        }
+    };
 
     public Handler handler;
     private boolean systemTheme;
@@ -422,6 +439,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onPause() {
         super.onPause();
+        stopBatteryMonitor();
         updates.unregister();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = settings.edit()
@@ -1062,6 +1080,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
+        batteryMonitorText = findViewById(R.id.batteryMonitorText);
         View sidebarDrawer = findViewById(R.id.sidebar_drawer);
 
         if (sidebarDrawer.getBackground() instanceof GradientDrawable sidebarBackground) {
@@ -1099,6 +1118,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             @Override
             public void onDrawerOpened(View drawerView) {
                 if (drawerView.getId() == R.id.right_menu_drawer) {
+                    isRightDrawerOpen = true;
+                    startBatteryMonitor();
                     refreshRightMenuDrawer();
                     return;
                 }
@@ -1118,7 +1139,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
             @Override
             public void onDrawerClosed(View drawerView) {
-                if (drawerView.getId() == R.id.sidebar_drawer) {
+                if (drawerView.getId() == R.id.right_menu_drawer) {
+                    isRightDrawerOpen = false;
+                    stopBatteryMonitor();
+                } else if (drawerView.getId() == R.id.sidebar_drawer) {
                     isSidebarDrawerOpen = false;
                 }
             }
@@ -1433,9 +1457,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (drawerLayout != null) {
                     if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
                         drawerLayout.closeDrawer(GravityCompat.END);
+                        isRightDrawerOpen = false;
+                        stopBatteryMonitor();
                     } else {
                         // Open first, build after: drawer animation must not wait on view building.
                         drawerLayout.openDrawer(GravityCompat.END);
+                        isRightDrawerOpen = true;
+                        startBatteryMonitor();
                         refreshRightMenuDrawer();
                     }
                 }
@@ -2904,7 +2932,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             }
             if (minPos != Integer.MAX_VALUE) {
-                lm.scrollToPositionWithOffset(minPos, 0);
+                int itemHeight = pane.getChildCount() > 0 ? pane.getChildAt(0).getHeight() : (int) (pane.getResources().getDisplayMetrics().density * 56);
+                int centerOffset = Math.max(0, (pane.getHeight() - itemHeight) / 2);
+                lm.scrollToPositionWithOffset(minPos, centerOffset);
             }
         } catch (Exception ignored) {
         }
@@ -3020,7 +3050,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (!(adapter instanceof MainFilesArrayAdapter filesAdapter)) return;
                 int pos = filesAdapter.findPositionByName(name);
                 if (pos < 0) return;
-                lm.scrollToPositionWithOffset(pos, 0);
+                int itemHeight = pane.getChildCount() > 0 ? pane.getChildAt(0).getHeight() : (int) (pane.getResources().getDisplayMetrics().density * 56);
+                int centerOffset = Math.max(0, (pane.getHeight() - itemHeight) / 2);
+                lm.scrollToPositionWithOffset(pos, centerOffset);
 
                 // Single Green Flash: ON
                 markGreen(pane1, name);
@@ -3339,6 +3371,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onResume() {
         super.onResume();
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            isRightDrawerOpen = true;
+            startBatteryMonitor();
+        } else {
+            isRightDrawerOpen = false;
+            stopBatteryMonitor();
+        }
         CURRENT = new WeakReference<>(this);
         // Pane highlight style may have changed in Settings.
         try {
@@ -3501,6 +3540,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     @Override
     protected void onDestroy() {
+        stopBatteryMonitor();
         // Drop any in-flight background listing so it never touches dead views.
         invalidatePaneLoad(true);
         invalidatePaneLoad(false);
@@ -3783,6 +3823,94 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Right (more-options) drawer; rows are built by RightMenuController. */
     public void refreshRightMenuDrawer() {
         rightMenu.build();
+    }
+
+    private void startBatteryMonitor() {
+        if (handler != null) {
+            handler.removeCallbacks(batteryTicker);
+            updateBatteryStatus();
+            handler.postDelayed(batteryTicker, 1000);
+        }
+    }
+
+    private void stopBatteryMonitor() {
+        if (handler != null) {
+            handler.removeCallbacks(batteryTicker);
+        }
+    }
+
+    private int readBatteryCurrent(BatteryManager bm, boolean isCharging) {
+        int cur = 0;
+        if (bm != null) {
+            cur = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+        }
+        if (cur == Integer.MIN_VALUE || cur == 0) {
+            try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/current_now"))) {
+                String line = reader.readLine();
+                if (line != null) {
+                    cur = Integer.parseInt(line.trim());
+                }
+            } catch (Exception ignored) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/bms/current_now"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        cur = Integer.parseInt(line.trim());
+                    }
+                } catch (Exception ignored2) {
+                }
+            }
+        }
+        int curMa = Math.abs(cur) > 10000 ? cur / 1000 : cur;
+        return isCharging ? Math.abs(curMa) : -Math.abs(curMa);
+    }
+
+    private void updateBatteryStatus() {
+        if (batteryMonitorText == null) return;
+        try {
+            Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (batteryIntent == null) return;
+
+            int rawTemp = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
+            float tempC = rawTemp / 10.0f;
+            if (tempC <= 0.0f) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/temp"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        int t = Integer.parseInt(line.trim());
+                        tempC = t > 100 ? t / 10.0f : (float) t;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            int voltMv = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+            if (voltMv > 100000) voltMv /= 1000;
+            if (voltMv <= 0) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/voltage_now"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        int v = Integer.parseInt(line.trim());
+                        voltMv = v > 100000 ? v / 1000 : v;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN);
+            boolean isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL);
+
+            BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
+            int curMa = readBatteryCurrent(bm, isCharging);
+
+            float watts = (Math.abs(curMa) * (voltMv > 0 ? voltMv : 4000)) / 1000000.0f;
+
+            String text = String.format(Locale.US, "%.1f\u00B0C  %d mA (%.1fW)", tempC, curMa, watts);
+            batteryMonitorText.setText(text);
+            if (batteryMonitorText.getVisibility() != View.VISIBLE) {
+                batteryMonitorText.setVisibility(View.VISIBLE);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public void showHiddenFilesMenu(View anchor) {

@@ -70,6 +70,46 @@ public class HashUtil {
         }
     }
 
+    public static String hashApkOrArchiveBase(File file, String algorithm) {
+        if (file == null || !file.exists()) return null;
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".apks") || name.endsWith(".xapk") || name.endsWith(".apkm") || name.endsWith(".aspk") || name.endsWith(".zip")) {
+            try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(file)) {
+                java.util.zip.ZipEntry baseEntry = null;
+                java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zf.entries();
+                while (entries.hasMoreElements()) {
+                    java.util.zip.ZipEntry ze = entries.nextElement();
+                    String en = ze.getName().toLowerCase(Locale.ROOT);
+                    if (en.equals("base.apk") || en.endsWith("/base.apk") || en.equals("base-master.apk") || en.endsWith("/base-master.apk") || en.equals("master.apk") || en.equals("main.apk")) {
+                        baseEntry = ze;
+                        break;
+                    }
+                }
+                if (baseEntry == null) {
+                    entries = zf.entries();
+                    while (entries.hasMoreElements()) {
+                        java.util.zip.ZipEntry ze = entries.nextElement();
+                        if (ze.getName().toLowerCase(Locale.ROOT).endsWith(".apk")) {
+                            baseEntry = ze;
+                            break;
+                        }
+                    }
+                }
+                if (baseEntry != null) {
+                    try (InputStream is = zf.getInputStream(baseEntry)) {
+                        return hashStream(is, algorithm);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            return hashFile(file, algorithm);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static String hashStream(InputStream in, String algorithm) throws Exception {
         if ("CRC32".equalsIgnoreCase(algorithm)) {
             CRC32 crc = new CRC32();
