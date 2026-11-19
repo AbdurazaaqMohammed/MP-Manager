@@ -165,6 +165,50 @@ public class ZipCompatTest {
         }
     }
 
+    /**
+     * Legacy Chinese zip written the way Chinese Windows archivers do: GBK
+     * name bytes, no UTF-8 flag, deflate. Both backends used to read it as
+     * mojibake; the per-entry charset heuristic must decode it everywhere.
+     */
+    @Test
+    public void legacyGbkNameDecodesConsistently() throws Exception {
+        Assume.assumeTrue("GBK charset not available on this host",
+                ZipCharset.isGbkSupported());
+        java.nio.charset.Charset gbk = java.nio.charset.Charset.forName("GBK");
+        String name = "模块/测试文件.bin";
+        byte[] payload = payload(9000);
+        File zip = folder.newFile("gbk-compat.zip");
+        writeSingleEntryZip(zip, name.getBytes(gbk), false, payload, METHOD_DEFLATE_PLAIN, rawDeflate(payload));
+
+        List<FileHeader> headers = ZipCompat.listHeaders(zip);
+        assertEquals(1, headers.size());
+        assertEquals(name, headers.get(0).getFileName());
+
+        // Lookup by decoded name — the invariant per-entry extraction and the
+        // mutation paths depend on.
+        File out = folder.newFile("gbk-out.bin");
+        ZipCompat.extractEntry(zip, name, out);
+        assertTrue(Arrays.equals(payload, Files.readAllBytes(out.toPath())));
+    }
+
+    /** Raw deflate without the zlib wrapper, as stored in zips. */
+    private static byte[] rawDeflate(byte[] data) throws IOException {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.BEST_SPEED, true);
+        try {
+            deflater.setInput(data);
+            deflater.finish();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            while (!deflater.finished()) {
+                int n = deflater.deflate(buf);
+                out.write(buf, 0, n);
+            }
+            return out.toByteArray();
+        } finally {
+            deflater.end();
+        }
+    }
+
     private static byte[] payload(int size) {
         byte[] data = new byte[size];
         for (int i = 0; i < size; i++) data[i] = (byte) ('a' + (i % 26));
@@ -187,14 +231,23 @@ public class ZipCompatTest {
         return bos.toByteArray();
     }
 
+    private static final int METHOD_DEFLATE_PLAIN = 8;
+
     /**
      * Writes a one-entry archive by hand so the central directory can carry an
      * arbitrary compression method code, which the standard writers refuse.
+     * The name is stored UTF-8 with the EFS flag set.
      */
     private static void writeSingleEntryZip(File zip, String name, byte[] content, int method, byte[] compressed)
             throws IOException {
-        byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        int flags = 0x800;
+        writeSingleEntryZip(zip, name.getBytes(StandardCharsets.UTF_8), true, content, method, compressed);
+    }
+
+    /** Same, with direct control over the stored name bytes and UTF-8 flag. */
+    private static void writeSingleEntryZip(File zip, byte[] nameBytes, boolean utf8Flag,
+                                            byte[] content, int method, byte[] compressed)
+            throws IOException {
+        int flags = utf8Flag ? 0x800 : 0;
         byte[] local = new byte[30];
         u4(local, 0, 0x04034b50L);
         u2(local, 4, 20);

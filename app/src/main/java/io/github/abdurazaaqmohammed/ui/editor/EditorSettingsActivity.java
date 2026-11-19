@@ -16,9 +16,8 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 
 
-import android.zero.studio.widget.editor.symbolinput.SymbolManagerActivity;
+import io.github.abdurazaaqmohammed.ui.editor.symbols.SymbolDrawerActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
 public class EditorSettingsActivity extends BaseActivity {
@@ -165,9 +164,7 @@ public class EditorSettingsActivity extends BaseActivity {
         }
 
         private void showBottomBarManagementDialog() {
-            startActivity(new Intent(getContext(), SymbolManagerActivity.class)
-                    .putExtra(SymbolManagerActivity.EXTRA_THEME_STYLE,
-                            ThemeRegistry.currentStyleRes(getContext())));
+            startActivity(new Intent(getContext(), SymbolDrawerActivity.class));
         }
     }
 }

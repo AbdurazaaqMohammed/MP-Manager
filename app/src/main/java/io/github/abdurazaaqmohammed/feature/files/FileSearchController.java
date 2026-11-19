@@ -56,15 +56,16 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * File search + find-in-files dialogs extracted from MainActivity.
@@ -1451,14 +1452,15 @@ public class FileSearchController {
                         && entryPath != null && !entryPath.isEmpty() && !entryPath.equals(target.getName());
 
                 if (isArchive) {
-                    try (ZipFile zf = new ZipFile(target)) {
-                        ZipEntry ze = zf.getEntry(entryPath);
-                        if (ze == null) return;
+                    // ZipCompat resolves the entry by the browsed name with the
+                    // archive's legacy charset applied; java.util.zip's decode
+                    // would miss legacy Chinese entries entirely.
+                    try {
                         File cacheDir = new File(activity.getCacheDir(), "xml_search_" + System.currentTimeMillis());
                         cacheDir.mkdirs();
                         String entryFileName = new File(entryPath).getName();
                         File tempFile = new File(cacheDir, entryFileName);
-                        try (InputStream is = zf.getInputStream(ze);
+                        try (InputStream is = ZipCompat.openEntry(target, entryPath);
                              FileOutputStream fos = new FileOutputStream(tempFile)) {
                             byte[] buf = new byte[8192];
                             int n;
@@ -1475,10 +1477,9 @@ public class FileSearchController {
                         }
                         if (isAxml) {
                             intent.putExtra("axml", true);
-                            ZipEntry rssEntry = zf.getEntry("resources.arsc");
-                            if (rssEntry != null) {
+                            try {
                                 File tmpRss = new File(cacheDir, "resources.arsc");
-                                try (InputStream ris = zf.getInputStream(rssEntry);
+                                try (InputStream ris = ZipCompat.openEntry(target, "resources.arsc");
                                      FileOutputStream rfos = new FileOutputStream(tmpRss)) {
                                     byte[] buf = new byte[8192];
                                     int n;
@@ -1487,8 +1488,12 @@ public class FileSearchController {
                                 // rssPath alone is enough: the editor parses the
                                 // resource table and decodes the entry itself.
                                 intent.putExtra("rssPath", tmpRss.getAbsolutePath());
+                            } catch (IOException ignored) {
+                                // archives without resources.arsc still open
                             }
                         }
+                    } catch (IOException e) {
+                        return;
                     }
                 } else {
                     File file = target;

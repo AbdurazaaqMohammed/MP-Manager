@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="DrawerThemeOverlay.Light" parent="ThemeOverlay.Material3.Light" />
+    <style name="DrawerThemeOverlay.Dark" parent="ThemeOverlay.Material3.Dark" />
+</resources>

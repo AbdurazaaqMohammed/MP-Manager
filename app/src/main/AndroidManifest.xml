@@ -296,6 +296,10 @@
             android:exported="false">
         </activity>
         <activity
+            android:name="io.github.abdurazaaqmohammed.ui.editor.symbols.SymbolDrawerActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
             android:name="io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"

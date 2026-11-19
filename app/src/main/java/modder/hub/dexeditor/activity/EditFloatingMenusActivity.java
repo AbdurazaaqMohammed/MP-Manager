@@ -41,7 +41,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -58,6 +57,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.plugins.ext.EditorAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import modder.hub.dexeditor.updateSoraMenu.ItemMoveCallback;
 import modder.hub.dexeditor.updateSoraMenu.RecyclerViewAdapter;
 import modder.hub.dexeditor.updateSoraMenu.StartDragListener;
@@ -67,7 +67,14 @@ Author @developer-krushna
 Code fixed comments by ChatGPT
 */
 
-public class EditFloatingMenusActivity extends AppCompatActivity implements StartDragListener {
+/**
+ * Extends BaseActivity (like AIOverViewActivity, which shares this exact
+ * CoordinatorLayout/Toolbar layout) so ThemeRegistry.applySaved() applies the
+ * app-selected theme and night mode before super.onCreate() inflation. Without
+ * it the screen followed the OS only, ignoring Dark/Black chosen in-app while
+ * the OS stays light.
+ */
+public class EditFloatingMenusActivity extends BaseActivity implements StartDragListener {
 
     private ItemTouchHelper touchHelper;
 

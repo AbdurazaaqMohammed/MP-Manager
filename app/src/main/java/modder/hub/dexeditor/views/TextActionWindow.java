@@ -748,7 +748,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	}
 	
 	private void updatePasteButtonState() {
-		this.pasteButton.setEnabled(this.codeEditor.hasClip());
+			if (this.pasteButton != null) this.pasteButton.setEnabled(this.codeEditor.hasClip());
 	}
 	
 	private void updateCopyButtonVisibility() {
@@ -853,7 +853,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		} else {
 			visibility = View.GONE;
 		}
-		this.cutButton.setVisibility(visibility);
+			if (this.cutButton != null) this.cutButton.setVisibility(visibility);
 	}
 	
 	

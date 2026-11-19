@@ -11,13 +11,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 
 /**
  * Pure file-search logic extracted from MainActivity.
@@ -213,51 +212,60 @@ public final class FileSearch {
         }
     }
 
-    private static void findInArchiveFiles(File archive, String needle, boolean searchSubfolders, boolean matchCase,
-                                           boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
-        try (ZipFile zf = new ZipFile(archive)) {
-            Enumeration<? extends ZipEntry> en = zf.entries();
-            while (en.hasMoreElements()) {
-                if (hits.size() >= MAX_HITS) return;
-                ZipEntry ze = en.nextElement();
-                String name = ze.getName();
-                if (ze.isDirectory() || ze.getSize() > MAX_CONTENT_BYTES) continue;
-                if (!searchSubfolders && name.contains("/")) continue;
-
-                // Check text file extensions
-                String lowerName = name.toLowerCase(Locale.ROOT);
-                if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".webp")
-                        || lowerName.endsWith(".so") || lowerName.endsWith(".dex") || lowerName.endsWith(".arsc")
-                        || lowerName.endsWith(".pdf") || lowerName.endsWith(".gif") || lowerName.endsWith(".mp3")
-                        || lowerName.endsWith(".mp4") || lowerName.endsWith(".ogg") || lowerName.endsWith(".wav")) {
-                    continue;
-                }
-
-                scanned[0]++;
-                if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
-
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), StandardCharsets.UTF_8))) {
-                    String line;
-                    int lineNo = 0;
-                    while ((line = br.readLine()) != null) {
-                        lineNo++;
-                        if (lineNo == 1 && line.indexOf('\0') >= 0) break; // binary check
-                        boolean hit;
-                        if (pattern != null) hit = pattern.matcher(line).find();
-                        else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
-                        if (hit) {
-                            String snippet = line.trim();
-                            if (snippet.length() > SNIPPET_LEN)
-                                snippet = snippet.substring(0, SNIPPET_LEN) + "\u2026";
-                            hits.add(new ContentHit(archive, lineNo, snippet, name));
-                            if (hits.size() >= MAX_HITS) return;
-                        }
-                        if (lineNo > MAX_LINES_PER_FILE) break;
-                    }
-                } catch (Exception ignored) {
-                }
-            }
+    /**
+     * Content search inside zip-family archives. Iterates the per-entry
+     * charset-aware headers and streams each entry through
+     * {@link ZipCompat#openEntry}: java.util.zip decodes names on Android at
+     * open time and fails outright on legacy GBK entries, so it must not be
+     * touched here.
+     */
+    static void findInArchiveFiles(File archive, String needle, boolean searchSubfolders, boolean matchCase,
+                                   boolean regex, Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
+        List<net.lingala.zip4j.model.FileHeader> headers;
+        try {
+            headers = ZipCompat.listHeaders(archive);
         } catch (Exception ignored) {
+            return;
+        }
+        for (net.lingala.zip4j.model.FileHeader fh : headers) {
+            if (hits.size() >= MAX_HITS) return;
+            String name = fh.getFileName().replace('\\', '/');
+            if (fh.isDirectory() || fh.getUncompressedSize() > MAX_CONTENT_BYTES) continue;
+            if (!searchSubfolders && name.contains("/")) continue;
+
+            // Check text file extensions
+            String lowerName = name.toLowerCase(Locale.ROOT);
+            if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".webp")
+                    || lowerName.endsWith(".so") || lowerName.endsWith(".dex") || lowerName.endsWith(".arsc")
+                    || lowerName.endsWith(".pdf") || lowerName.endsWith(".gif") || lowerName.endsWith(".mp3")
+                    || lowerName.endsWith(".mp4") || lowerName.endsWith(".ogg") || lowerName.endsWith(".wav")) {
+                continue;
+            }
+
+            scanned[0]++;
+            if (scanned[0] % 50 == 0 && progress != null) progress.onProgress(scanned[0]);
+
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(ZipCompat.openEntry(archive, name), StandardCharsets.UTF_8))) {
+                String line;
+                int lineNo = 0;
+                while ((line = br.readLine()) != null) {
+                    lineNo++;
+                    if (lineNo == 1 && line.indexOf('\0') >= 0) break; // binary check
+                    boolean hit;
+                    if (pattern != null) hit = pattern.matcher(line).find();
+                    else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
+                    if (hit) {
+                        String snippet = line.trim();
+                        if (snippet.length() > SNIPPET_LEN)
+                            snippet = snippet.substring(0, SNIPPET_LEN) + "\u2026";
+                        hits.add(new ContentHit(archive, lineNo, snippet, name));
+                        if (hits.size() >= MAX_HITS) return;
+                    }
+                    if (lineNo > MAX_LINES_PER_FILE) break;
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -348,43 +356,46 @@ public final class FileSearch {
         }
     }
 
-    private static void searchInArchiveXml(File archive, String query, boolean searchSubfolders, boolean matchCase, boolean regex,
+    /** XML content search inside zip-family archives, per-entry charset aware. */
+    static void searchInArchiveXml(File archive, String query, boolean searchSubfolders, boolean matchCase, boolean regex,
             Pattern pattern, List<ContentHit> hits, int[] scanned, Progress progress) {
-        try (ZipFile zf = new ZipFile(archive)) {
-            Enumeration<? extends ZipEntry> en = zf.entries();
-            while (en.hasMoreElements()) {
-                if (hits.size() >= MAX_HITS) return;
-                ZipEntry ze = en.nextElement();
-                String name = ze.getName();
-                if (!ze.isDirectory() && name.toLowerCase().endsWith(".xml") && ze.getSize() < MAX_CONTENT_BYTES) {
-                    if (!searchSubfolders && name.contains("/")) {
-                        // Skip subfolder entries if not searching subfolders
-                        continue;
-                    }
-                    scanned[0]++;
-                    if (progress != null) progress.onProgress(scanned[0]);
-                    try (InputStream is = new BufferedInputStream(zf.getInputStream(ze))) {
-                        is.mark(4);
-                        byte[] magic = new byte[4];
-                        int r = is.read(magic);
-                        is.reset();
-                        String decoded = null;
-                        if (r == 4 && magic[0] == 0x03 && magic[1] == 0x00 && magic[2] == 0x08 && magic[3] == 0x00) {
-                            try {
-                                decoded = new aXMLDecoder(is).decodeAsString();
-                            } catch (Exception ignored) {
-                            }
+        List<net.lingala.zip4j.model.FileHeader> headers;
+        try {
+            headers = ZipCompat.listHeaders(archive);
+        } catch (Exception ignored) {
+            return;
+        }
+        for (net.lingala.zip4j.model.FileHeader fh : headers) {
+            if (hits.size() >= MAX_HITS) return;
+            String name = fh.getFileName().replace('\\', '/');
+            if (!fh.isDirectory() && name.toLowerCase(Locale.ROOT).endsWith(".xml")
+                    && fh.getUncompressedSize() < MAX_CONTENT_BYTES) {
+                if (!searchSubfolders && name.contains("/")) {
+                    // Skip subfolder entries if not searching subfolders
+                    continue;
+                }
+                scanned[0]++;
+                if (progress != null) progress.onProgress(scanned[0]);
+                try (InputStream is = new BufferedInputStream(ZipCompat.openEntry(archive, name))) {
+                    is.mark(4);
+                    byte[] magic = new byte[4];
+                    int r = is.read(magic);
+                    is.reset();
+                    String decoded = null;
+                    if (r == 4 && magic[0] == 0x03 && magic[1] == 0x00 && magic[2] == 0x08 && magic[3] == 0x00) {
+                        try {
+                            decoded = new aXMLDecoder(is).decodeAsString();
+                        } catch (Exception ignored) {
                         }
-                        if (decoded == null) {
-                            byte[] bytes = is.readAllBytes();
-                            decoded = new String(bytes, StandardCharsets.UTF_8);
-                        }
-                        matchXmlLines(decoded, archive, name, query, matchCase, regex, pattern, hits);
-                    } catch (Exception ignored) {
                     }
+                    if (decoded == null) {
+                        byte[] bytes = is.readAllBytes();
+                        decoded = new String(bytes, StandardCharsets.UTF_8);
+                    }
+                    matchXmlLines(decoded, archive, name, query, matchCase, regex, pattern, hits);
+                } catch (Exception ignored) {
                 }
             }
-        } catch (Exception ignored) {
         }
     }
 
@@ -406,6 +417,14 @@ public final class FileSearch {
         }
     }
 
+    /**
+     * Name/size/content search inside zip-family archives. Iterates the
+     * per-entry charset-aware headers directly and streams matched entries
+     * through {@link ZipCompat#openEntry}: java.util.zip decodes names on
+     * Android at open time and fails outright on legacy GBK entries, so it
+     * must not be touched here. Results carry the decoded full paths, so they
+     * feed straight back into the browser and per-entry extraction.
+     */
     public static List<ZipEntryInfo> searchZipEntries(File zipFile, String currentSubPath, String query,
             boolean subfolders, boolean matchCase, boolean regex, String textInside,
             long minSize, long maxSize, SearchCallback callback) {
@@ -421,68 +440,74 @@ public final class FileSearch {
 
         String normQuery = matchCase ? query : query.toLowerCase(Locale.ROOT);
 
-        try (ZipFile zf = new ZipFile(zipFile)) {
-            Enumeration<? extends ZipEntry> en = zf.entries();
-            while (en.hasMoreElements()) {
-                if (callback != null && callback.isCancelled()) break;
-                ZipEntry ze = en.nextElement();
-                String rawName = ze.getName().replace('\\', '/');
-                if (!prefix.isEmpty() && !rawName.startsWith(prefix)) continue;
+        List<net.lingala.zip4j.model.FileHeader> headers;
+        try {
+            headers = ZipCompat.listHeaders(zipFile);
+        } catch (Exception ignored) {
+            return results;
+        }
+        for (net.lingala.zip4j.model.FileHeader fh : headers) {
+            if (callback != null && callback.isCancelled()) break;
+            String rawName = fh.getFileName().replace('\\', '/');
+            if (!prefix.isEmpty() && !rawName.startsWith(prefix)) continue;
 
-                String relPath = rawName.substring(prefix.length());
-                if (!subfolders && relPath.contains("/") && !relPath.endsWith("/")) {
-                    continue;
-                }
+            String relPath = rawName.substring(prefix.length());
+            if (!subfolders && relPath.contains("/") && !relPath.endsWith("/")) {
+                continue;
+            }
 
-                boolean isDir = ze.isDirectory() || rawName.endsWith("/");
-                String cleaned = isDir ? rawName.replaceAll("/+$", "") : rawName;
-                String fileName = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
+            boolean isDir = fh.isDirectory() || rawName.endsWith("/");
+            String cleaned = isDir ? rawName.replaceAll("/+$", "") : rawName;
+            String fileName = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
 
-                if (callback != null) {
-                    if (isDir) callback.onFolderEntered(new File(rawName));
-                    else callback.onFileChecking(new File(rawName));
-                }
+            if (callback != null) {
+                if (isDir) callback.onFolderEntered(new File(rawName));
+                else callback.onFileChecking(new File(rawName));
+            }
 
-                boolean matchName;
-                if (pattern != null) {
-                    matchName = pattern.matcher(fileName).find();
-                } else {
-                    matchName = matchCase ? fileName.contains(query) : fileName.toLowerCase(Locale.ROOT).contains(normQuery);
-                }
+            boolean matchName;
+            if (pattern != null) {
+                matchName = pattern.matcher(fileName).find();
+            } else {
+                matchName = matchCase ? fileName.contains(query) : fileName.toLowerCase(Locale.ROOT).contains(normQuery);
+            }
 
-                boolean matchSize = true;
-                long len = ze.getSize();
-                if (!isDir && (minSize != -1 || maxSize != -1)) {
-                    if (minSize != -1 && len < minSize) matchSize = false;
-                    if (maxSize != -1 && len > maxSize) matchSize = false;
-                }
+            boolean matchSize = true;
+            long len = fh.getUncompressedSize();
+            if (!isDir && (minSize != -1 || maxSize != -1)) {
+                if (minSize != -1 && len < minSize) matchSize = false;
+                if (maxSize != -1 && len > maxSize) matchSize = false;
+            }
 
-                boolean matchText = true;
-                if (!isDir && textInside != null && !textInside.isEmpty()) {
-                    matchText = false;
-                    if (len >= 0 && len < 10485760) {
-                        try (BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze), StandardCharsets.UTF_8))) {
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                if (matchCase ? line.contains(textInside)
-                                        : line.toLowerCase(Locale.ROOT).contains(textInside.toLowerCase(Locale.ROOT))) {
-                                    matchText = true;
-                                    break;
-                                }
+            boolean matchText = true;
+            if (!isDir && textInside != null && !textInside.isEmpty()) {
+                matchText = false;
+                if (len >= 0 && len < 10485760) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(ZipCompat.openEntry(zipFile, rawName), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            if (matchCase ? line.contains(textInside)
+                                    : line.toLowerCase(Locale.ROOT).contains(textInside.toLowerCase(Locale.ROOT))) {
+                                matchText = true;
+                                break;
                             }
-                        } catch (Exception ignored) {
                         }
+                    } catch (Exception ignored) {
                     }
                 }
-
-                if (matchName && matchSize && matchText) {
-                    long size = len < 0 ? 0 : len;
-                    long time = ze.getTime();
-                    results.add(new ZipEntryInfo(fileName, rawName, isDir, size, time >= 0 ? time : 0L, zipFile));
-                    if (callback != null) callback.onFileFound(new File(rawName), results.size());
-                }
             }
-        } catch (Exception ignored) {
+
+            if (matchName && matchSize && matchText) {
+                long size = len < 0 ? 0 : len;
+                // ZipCompat's headers always carry epoch millis in the
+                // lastModifiedTime field (converted from DOS for zip4j-native
+                // headers), matching the epoch value java.util.zip's
+                // ZipEntry.getTime() used to provide here.
+                long time = fh.getLastModifiedTime();
+                results.add(new ZipEntryInfo(fileName, rawName, isDir, size, time >= 0 ? time : 0L, zipFile));
+                if (callback != null) callback.onFileFound(new File(rawName), results.size());
+            }
         }
         return results;
     }
