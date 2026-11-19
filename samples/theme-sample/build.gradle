@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Sample v1 theme provider APK for MP-Manager.
+//
+// Contract (see AndroidManifest.xml and ThemeSampleProvider):
+//   - application meta-data io.github.abdurazaaqmohammed.MPManager.THEME_PROVIDER
+//     holds the provider's content authority,
+//   - the provider answers io.github.abdurazaaqmohammed.MPManager.action.THEME,
+//   - fixed endpoints under the authority: /theme (one contract row),
+//     /wallpaper and /preview (PNG bytes).
+//
+// Permission-free: the provider is exported with no read permission and the
+// manifest requests none.
+android {
+    compileSdk 36
+    namespace 'com.example.mpthemesample'
+    defaultConfig {
+        applicationId "com.example.mpthemesample"
+        minSdk 21
+        targetSdk 37
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// No dependencies: the contract is a plain exported ContentProvider with fixed
+// URIs, so the sample needs neither the host app nor the sdk module.

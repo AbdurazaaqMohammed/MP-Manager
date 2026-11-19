@@ -949,7 +949,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
 
         boolean lightBars;
-        String pluginId = ThemeRegistry.getCurrentId(this);
+        String pluginId = ThemeRegistry.appliedBaseId(this);
         if (pluginId == null || BuiltInThemes.SYSTEM_DEFAULT_ID.equals(pluginId)) {
             lightBars = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                     == Configuration.UI_MODE_NIGHT_NO;
@@ -958,7 +958,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             int surfaceColor = BuiltInThemes.BLACK_ID.equals(pluginId) ? Color.BLACK : MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
-            getWindow().setStatusBarColor(surfaceColor);
+            getWindow().setStatusBarColor(ThemeRegistry.packColor(this, "status_bar", surfaceColor));
             // Light navigation icons are only renderable on API 26+ (flag) and
             // reliably on 27+; below that a surface-colored bar shows white
             // icons on white, so use a dark bar to keep the buttons visible.
@@ -967,7 +967,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 getWindow().setNavigationBarColor(MaterialColors.getColor(this,
                         com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
             } else {
-                getWindow().setNavigationBarColor(surfaceColor);
+                getWindow().setNavigationBarColor(ThemeRegistry.packColor(this, "nav_bar", surfaceColor));
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
                 // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
@@ -1011,7 +1011,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // BaseActivity applied the ThemeRegistry plugin; sync legacy fields for
         // status-bar tinting, icon colors and intent extras during transition.
         theme = ThemeRegistry.currentStyleRes(this);
-        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
+        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.appliedBaseId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         PrivilegeManager.Shizuku.init(this);
         DirSizeCache.init(this);
@@ -1199,7 +1199,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         uiHelper = new UIHelper(this);
 
         logEnabled = settings.getBoolean("logEnabled", false);
-        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
+        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.appliedBaseId(this));
         String homeDir1Path = settings.getString("home1", null);
         homeDir1 = TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory() : new File(homeDir1Path);
         String homeDir2Path = settings.getString("home2", null);

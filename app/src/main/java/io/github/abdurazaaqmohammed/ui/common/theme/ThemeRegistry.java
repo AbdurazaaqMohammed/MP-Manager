@@ -4,6 +4,17 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.view.Gravity;
+import android.view.View;
+
+import androidx.core.os.ConfigurationCompat;
+
+import io.github.abdurazaaqmohammed.plugins.themes.ThemePacks;
 
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.PreferenceManager;
@@ -15,6 +26,7 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -99,7 +111,7 @@ public final class ThemeRegistry {
      * readers (status-bar tinting, icon colors) stay correct after migration.
      */
     public static int currentStyleRes(Context context) {
-        ThemePlugin plugin = get(getCurrentId(context));
+        ThemePlugin plugin = get(appliedBaseId(context));
         if (plugin != null) {
             try {
                 return plugin.styleRes();
@@ -233,6 +245,18 @@ public final class ThemeRegistry {
      *  The difference between paths doesn't affect behavior; on Black, dynamic
      *  colors are skipped so surfaces stay pure black. */
     public static void applyAccent(Activity activity) {
+        ThemePacks.Snapshot pack = ThemePacks.active(activity);
+        if (pack != null) {
+            try {
+                if (ThemePackPalette.apply(activity, pack.colors, pack.accent)) return;
+            } catch (RuntimeException ignored) {
+                // Keep the base theme if a device cannot install the resource loader.
+            }
+            Integer primary = pack.colors.get("colorPrimary");
+            if (primary == null) primary = pack.accent;
+            if (primary != null) applyClosestAccent(activity, primary);
+            return;
+        }
         try {
             String mode = PreferenceManager.getDefaultSharedPreferences(activity)
                     .getString(ACCENT_PREF_KEY, null);
@@ -261,17 +285,62 @@ public final class ThemeRegistry {
                 return;
             }
 
-            int idx = hueOverlayIndex(argb);
-            int overlay = idx < 0 || idx >= AccentOverlays.RES.length
-                    ? 0 : AccentOverlays.RES[idx];
-            if (overlay != 0) {
-                Resources.Theme theme = activity.getTheme();
-                if (theme != null) {
-                    theme.applyStyle(overlay, true);
-                }
-            }
+            applyClosestAccent(activity, argb);
         } catch (Exception ignored) {
         }
+    }
+
+    private static void applyClosestAccent(Activity activity, int argb) {
+        int overlay = AccentOverlays.RES[hueOverlayIndex(argb)];
+        Resources.Theme theme = activity.getTheme();
+        if (overlay != 0 && theme != null) theme.applyStyle(overlay, true);
+    }
+
+    public static String appliedBaseId(Context context) {
+        ThemePacks.Snapshot pack = ThemePacks.active(context);
+        if (pack != null && pack.dark != null) {
+            return pack.dark ? BuiltInThemes.DARK_ID : BuiltInThemes.LIGHT_ID;
+        }
+        return getCurrentId(context);
+    }
+
+    public static int packColor(Context context, String token, int fallback) {
+        ThemePacks.Snapshot pack = ThemePacks.active(context);
+        Integer color = pack == null ? null : pack.colors.get(token);
+        return color == null ? fallback : color;
+    }
+
+    public static CharSequence packLabel(Context context, String token, CharSequence fallback) {
+        ThemePacks.Snapshot pack = ThemePacks.active(context);
+        if (pack == null) return fallback;
+        Locale locale = ConfigurationCompat.getLocales(context.getResources().getConfiguration()).get(0);
+        String label = pack.label(token, locale == null ? Locale.getDefault() : locale);
+        return label == null ? fallback : label;
+    }
+
+    public static boolean applyPaneWallpaper(View paneStack) {
+        ThemePacks.Snapshot pack = ThemePacks.active(paneStack.getContext());
+        if (pack == null || pack.wallpaper == null) return false;
+        String path = pack.wallpaper.getAbsolutePath();
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, options);
+        options.inJustDecodeBounds = false;
+        options.inSampleSize = 1;
+        while (Math.max(options.outWidth, options.outHeight) / options.inSampleSize > 2048) {
+            options.inSampleSize *= 2;
+        }
+        Bitmap bitmap = BitmapFactory.decodeFile(path, options);
+        if (bitmap == null) return false;
+        BitmapDrawable wallpaper = new BitmapDrawable(paneStack.getResources(), bitmap);
+        wallpaper.setGravity(Gravity.FILL);
+        wallpaper.setFilterBitmap(true);
+        Integer scrim = pack.colors.get("wallpaper_scrim");
+        if (scrim == null) scrim = pack.scrim;
+        paneStack.setBackground(new LayerDrawable(new android.graphics.drawable.Drawable[]{
+                wallpaper, new ColorDrawable(scrim == null ? 0 : scrim)
+        }));
+        return true;
     }
 
     /** Called by BaseActivity before super.onCreate(). */
@@ -279,7 +348,7 @@ public final class ThemeRegistry {
         ensureBuiltIns();
         ThemePlugin plugin;
         synchronized (ThemeRegistry.class) {
-            plugin = PLUGINS.get(getCurrentId(activity));
+            plugin = PLUGINS.get(appliedBaseId(activity));
             if (plugin == null && !PLUGINS.isEmpty()) {
                 plugin = PLUGINS.values().iterator().next();
             }

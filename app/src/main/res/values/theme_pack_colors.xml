@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Host-owned resource slots for the exact colors supplied by installed themes. -->
+    <color name="theme_pack_primary">#00000000</color>
+    <style name="ThemePackPrimary">
+        <item name="colorPrimary">@color/theme_pack_primary</item>
+        <item name="android:colorPrimary">@color/theme_pack_primary</item>
+    </style>
+    <color name="theme_pack_on_primary">#00000000</color>
+    <style name="ThemePackOnPrimary">
+        <item name="colorOnPrimary">@color/theme_pack_on_primary</item>
+    </style>
+    <color name="theme_pack_primary_container">#00000000</color>
+    <style name="ThemePackPrimaryContainer">
+        <item name="colorPrimaryContainer">@color/theme_pack_primary_container</item>
+    </style>
+    <color name="theme_pack_on_primary_container">#00000000</color>
+    <style name="ThemePackOnPrimaryContainer">
+        <item name="colorOnPrimaryContainer">@color/theme_pack_on_primary_container</item>
+    </style>
+    <color name="theme_pack_secondary">#00000000</color>
+    <style name="ThemePackSecondary">
+        <item name="colorSecondary">@color/theme_pack_secondary</item>
+    </style>
+    <color name="theme_pack_on_secondary">#00000000</color>
+    <style name="ThemePackOnSecondary">
+        <item name="colorOnSecondary">@color/theme_pack_on_secondary</item>
+    </style>
+    <color name="theme_pack_secondary_container">#00000000</color>
+    <style name="ThemePackSecondaryContainer">
+        <item name="colorSecondaryContainer">@color/theme_pack_secondary_container</item>
+    </style>
+    <color name="theme_pack_on_secondary_container">#00000000</color>
+    <style name="ThemePackOnSecondaryContainer">
+        <item name="colorOnSecondaryContainer">@color/theme_pack_on_secondary_container</item>
+    </style>
+    <color name="theme_pack_tertiary">#00000000</color>
+    <style name="ThemePackTertiary">
+        <item name="colorTertiary">@color/theme_pack_tertiary</item>
+    </style>
+    <color name="theme_pack_on_tertiary">#00000000</color>
+    <style name="ThemePackOnTertiary">
+        <item name="colorOnTertiary">@color/theme_pack_on_tertiary</item>
+    </style>
+    <color name="theme_pack_surface">#00000000</color>
+    <style name="ThemePackSurface">
+        <item name="colorSurface">@color/theme_pack_surface</item>
+    </style>
+    <color name="theme_pack_on_surface">#00000000</color>
+    <style name="ThemePackOnSurface">
+        <item name="colorOnSurface">@color/theme_pack_on_surface</item>
+    </style>
+    <color name="theme_pack_surface_variant">#00000000</color>
+    <style name="ThemePackSurfaceVariant">
+        <item name="colorSurfaceVariant">@color/theme_pack_surface_variant</item>
+    </style>
+    <color name="theme_pack_on_surface_variant">#00000000</color>
+    <style name="ThemePackOnSurfaceVariant">
+        <item name="colorOnSurfaceVariant">@color/theme_pack_on_surface_variant</item>
+    </style>
+    <color name="theme_pack_surface_container_lowest">#00000000</color>
+    <style name="ThemePackSurfaceContainerLowest">
+        <item name="colorSurfaceContainerLowest">@color/theme_pack_surface_container_lowest</item>
+    </style>
+    <color name="theme_pack_surface_container_low">#00000000</color>
+    <style name="ThemePackSurfaceContainerLow">
+        <item name="colorSurfaceContainerLow">@color/theme_pack_surface_container_low</item>
+    </style>
+    <color name="theme_pack_surface_container">#00000000</color>
+    <style name="ThemePackSurfaceContainer">
+        <item name="colorSurfaceContainer">@color/theme_pack_surface_container</item>
+    </style>
+    <color name="theme_pack_surface_container_high">#00000000</color>
+    <style name="ThemePackSurfaceContainerHigh">
+        <item name="colorSurfaceContainerHigh">@color/theme_pack_surface_container_high</item>
+    </style>
+    <color name="theme_pack_surface_container_highest">#00000000</color>
+    <style name="ThemePackSurfaceContainerHighest">
+        <item name="colorSurfaceContainerHighest">@color/theme_pack_surface_container_highest</item>
+    </style>
+    <color name="theme_pack_outline">#00000000</color>
+    <style name="ThemePackOutline">
+        <item name="colorOutline">@color/theme_pack_outline</item>
+    </style>
+    <color name="theme_pack_outline_variant">#00000000</color>
+    <style name="ThemePackOutlineVariant">
+        <item name="colorOutlineVariant">@color/theme_pack_outline_variant</item>
+    </style>
+    <color name="theme_pack_error">#00000000</color>
+    <style name="ThemePackError">
+        <item name="colorError">@color/theme_pack_error</item>
+    </style>
+    <color name="theme_pack_on_error">#00000000</color>
+    <style name="ThemePackOnError">
+        <item name="colorOnError">@color/theme_pack_on_error</item>
+    </style>
+</resources>

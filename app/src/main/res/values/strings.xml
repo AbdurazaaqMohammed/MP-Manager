@@ -2680,4 +2680,10 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="compare_text_export_diff">Export as .diff</string>
     <string name="compare_text_no_differences">No differences found</string>
     <string name="compare_text_filter_empty">No lines match the current filter</string>
+    <string name="installed_themes">Installed themes</string>
+    <string name="installed_theme_current">Installed theme: %1$s</string>
+    <string name="installed_themes_empty">Install a compatible theme APK to see it here.</string>
+    <string name="installed_theme_import_failed">Could not import this theme. Your current theme has not changed.</string>
+    <string name="installed_theme_selected">%1$s (selected)</string>
+    <string name="installed_theme_description">%1$s — %2$s</string>
 </resources>

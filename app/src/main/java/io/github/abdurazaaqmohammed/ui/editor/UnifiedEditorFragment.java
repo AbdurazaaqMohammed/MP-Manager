@@ -665,6 +665,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 Language language = TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true);
                 editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, language), editor));
                 editor.setColorScheme(cachedColorScheme);
+                applyPackEditorColors();
             } catch (Exception e) {
                 Log.e("UnifiedEditor", "Error setting smali language", e);
                 editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
@@ -703,6 +704,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             ColorPreviewHelper.syncScheme(ecs);
             editor.setColorScheme(ecs);
         }
+        applyPackEditorColors();
+    }
+
+    private void applyPackEditorColors() {
+        EditorColorScheme scheme = editor.getColorScheme();
+        if (scheme == null) return;
+        Context context = requireContext();
+        int background = scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND);
+        int text = scheme.getColor(EditorColorScheme.TEXT_NORMAL);
+        int themedBackground = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
+                .packColor(context, "editor_background", background);
+        int themedText = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
+                .packColor(context, "editor_text", text);
+        if (themedBackground != background) scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, themedBackground);
+        if (themedText != text) scheme.setColor(EditorColorScheme.TEXT_NORMAL, themedText);
     }
 
     public void applyPreferences() {
@@ -1488,6 +1504,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             }
             ColorPreviewHelper.syncScheme(cachedColorScheme);
             editor.setColorScheme(cachedColorScheme);
+            applyPackEditorColors();
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Color scheme error", e);
         }
@@ -1912,7 +1929,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private static String currentEditorThemeName(Context context) {
         try {
-            String pluginId = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.getCurrentId(context);
+            String pluginId = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.appliedBaseId(context);
             if (pluginId != null) {
                 int nightMode = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.modeFor(context, pluginId);
                 if (nightMode == AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";

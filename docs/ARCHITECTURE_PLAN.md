@@ -248,3 +248,12 @@ change backend registration or the deferred library-module extraction.
 
 Validation commands and requirement-to-test evidence are recorded in
 [FILE_MANAGER_REGRESSIONS.md](FILE_MANAGER_REGRESSIONS.md).
+
+## Installed theme capability
+
+- [x] Add versioned data-only theme discovery, validation, and private import.
+- [x] Wire installed themes into the existing settings and activity theme paths.
+- [x] Document authoring and ship a standalone sample APK.
+
+Installed themes are separate from the action plugin and privilege registries.
+Future tokens must remain additive and have an actual rendering or label consumer.

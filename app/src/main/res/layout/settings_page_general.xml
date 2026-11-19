@@ -28,65 +28,76 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
+                android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/theme"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
 
-                <com.google.android.material.button.MaterialButtonToggleGroup
-                    android:id="@+id/themeToggleGroup"
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:id="@+id/themeCardTitle"
+                        android:text="@string/theme"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/themeToggleGroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/lightThemeButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:icon="@drawable/light"
+                            app:tooltipText="@string/light_theme"
+                            android:contentDescription="@string/light_theme"
+                            style="@style/Widget.Material3.Button.IconButton"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/darkThemeButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:icon="@drawable/dark"
+                            app:tooltipText="@string/dark_theme"
+                            android:contentDescription="@string/dark_theme"
+                            style="@style/Widget.Material3.Button.IconButton"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/blackThemeButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:icon="@drawable/black"
+                            app:tooltipText="@string/black_theme"
+                            android:contentDescription="@string/black_theme"
+                            style="@style/Widget.Material3.Button.IconButton"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/systemThemeButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:icon="@drawable/system_theme"
+                            android:contentDescription="@string/system_theme"
+                            app:tooltipText="@string/system_theme"
+                            style="@style/Widget.Material3.Button.IconButton"/>
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/installedThemesButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:checkedButton="@id/systemThemeButton"
-                    app:singleSelection="true"
-                    app:selectionRequired="true">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/lightThemeButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:icon="@drawable/light"
-                        app:tooltipText="@string/light_theme"
-                        android:contentDescription="@string/light_theme"
-                        style="@style/Widget.Material3.Button.IconButton"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/darkThemeButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:icon="@drawable/dark"
-                        app:tooltipText="@string/dark_theme"
-                        android:contentDescription="@string/dark_theme"
-                        style="@style/Widget.Material3.Button.IconButton"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/blackThemeButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:icon="@drawable/black"
-                        app:tooltipText="@string/black_theme"
-                        android:contentDescription="@string/black_theme"
-                        style="@style/Widget.Material3.Button.IconButton"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/systemThemeButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:icon="@drawable/system_theme"
-                        android:contentDescription="@string/system_theme"
-                        app:tooltipText="@string/system_theme"
-                        style="@style/Widget.Material3.Button.IconButton"/>
-
-                </com.google.android.material.button.MaterialButtonToggleGroup>
-
+                    android:text="@string/installed_themes" />
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>

@@ -2629,4 +2629,10 @@ Layout Inspector
     <string name="compare_text_export_diff">导出为 .diff</string>
     <string name="compare_text_no_differences">未发现差异</string>
     <string name="compare_text_filter_empty">没有符合当前筛选条件的行</string>
+    <string name="installed_themes">已安装的主题</string>
+    <string name="installed_theme_current">已安装的主题：%1$s</string>
+    <string name="installed_themes_empty">安装兼容的主题 APK 后，它会显示在这里。</string>
+    <string name="installed_theme_import_failed">无法导入此主题。当前主题未更改。</string>
+    <string name="installed_theme_selected">%1$s（已选中）</string>
+    <string name="installed_theme_description">%1$s（%2$s）</string>
 </resources>

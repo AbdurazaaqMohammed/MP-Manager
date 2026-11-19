@@ -11,6 +11,7 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import java.util.List;
@@ -83,7 +84,13 @@ public record FileIconSpec(int glyph, int background, int foreground, int label)
         float density = context.getResources().getDisplayMetrics().density;
         GradientDrawable backgroundDrawable = new GradientDrawable();
         backgroundDrawable.setCornerRadius(6 * density);
-        backgroundDrawable.setColor(background);
+        int tile = background;
+        if (glyph == R.drawable.ic_folder_mt) {
+            tile = ThemeRegistry.packColor(context, "folder_icon_bg", tile);
+        } else if (glyph == R.drawable.baseline_insert_drive_file_24) {
+            tile = ThemeRegistry.packColor(context, "file_icon_bg", tile);
+        }
+        backgroundDrawable.setColor(tile);
         Drawable icon = ResourcesCompat.getDrawable(context.getResources(), glyph, context.getTheme()).mutate();
         DrawableCompat.setTint(icon, foreground);
         LayerDrawable layer = new LayerDrawable(new Drawable[]{backgroundDrawable, icon});

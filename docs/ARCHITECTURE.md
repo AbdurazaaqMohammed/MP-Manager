@@ -156,3 +156,13 @@ The old top-level `utils/`, `shizuku/` and `MPManager/` packages are gone.
 - Text comparison remains owned by `ui/editor/CompareTextActivity`. `util/text/TextDiffEngine` owns pure row alignment, All/Differences/Matches filtering and unified-diff generation; the activity owns selection, navigation, search and document-picker export. Export uses the complete comparison, independently of the visible filter.
 - `ui/main/ChecksumDialogs` exposes CRC32 `.sfv` and MD5 `.md5` generation for files sharing a directory, with overwrite confirmation and pane refresh. `util/hash/HashUtil` owns manifest formatting, parsing and verification. `FileOpener` preserves the original parent when a manifest is staged; archive checksum entries route through `DexTools` to sibling-entry verification. Verification reports valid, changed, missing and rejected entries. Manifest paths cannot contain parent traversal or absolute paths; generated names must round-trip through the chosen format. Elevated IO uses `PrivilegeManager` mirrors, without new implementation dependencies.
 - `UnifiedEditorFragment` resolves line-number visibility consistently during initialization and resume. The current `editor_prefs/pref_show_line_numbers` setting takes precedence, with `show_line_numbers` retained only as a legacy fallback.
+
+
+## Installed themes
+
+`plugins/themes/ThemePacks` discovers installed theme APKs and imports a validated,
+signer-pinned data snapshot. `PluginPackageReceiver` invalidates discovery and
+cleans up on uninstall. `ui/common/theme/ThemeRegistry` uses the snapshot at
+activity creation; `SettingsController` owns selection and reuses the existing
+restart flow. The built-in preference remains the fallback and no theme DEX is
+loaded. See [the v1 author contract](THIRD_PARTY_PLUGINS.md#installed-themes-v1).

@@ -12,6 +12,8 @@ access, and a crashing plugin cannot take the host down.
 > any APK not signed with the host app's own certificate. If you are not the
 > app maintainer, build an external plugin as described here.
 
+Theme APKs use a separate, data-only provider contract described in [Installed themes](#installed-themes-v1). The activity-based contract below is for action plugins.
+
 ## 1. Concepts
 
 - You ship an APK (any language, libraries, resources, and layouts allowed)
@@ -149,3 +151,108 @@ fingerprint alongside the download so users can compare it in the prompt.
 3. Same-signer rule is automatic: release packs must be signed with the same
    key as the app or `PackManager` refuses to load them (debuggable builds
    skip the check for local development).
+
+
+## Installed themes (v1)
+
+Install a theme APK normally, then go to **Settings → General → Theme → Installed themes**.
+Select it and restart MP Manager when prompted. To return to a built-in theme,
+choose Light, Dark, Black, or System in the same card. No root, overlay permission,
+shared signer, network permission, or MP Manager SDK dependency is needed.
+
+### Manifest and endpoints
+
+The discovery activity is not a launcher activity and MP Manager never starts it.
+Use a unique authority owned by your APK. Put the metadata directly under `<application>`:
+
+```xml
+<activity android:name=".ThemeInfoActivity" android:exported="true"
+          android:excludeFromRecents="true">
+    <intent-filter>
+        <action android:name="io.github.abdurazaaqmohammed.MPManager.action.THEME" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+<meta-data android:name="io.github.abdurazaaqmohammed.MPManager.THEME_PROVIDER"
+           android:value="com.example.mytheme.provider" />
+<provider android:name=".ThemeProvider"
+          android:authorities="com.example.mytheme.provider" android:exported="true" />
+```
+
+Expose only public theme data, reject writes, and return one cursor row from
+`content://<authority>/theme` (`vnd.android.cursor.item/theme`). Use these
+column names and types; optional columns can be absent or `NULL`:
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `contract` | INTEGER | Required; `1`. Future incompatible versions will not be imported. |
+| `id` | TEXT | Required; stable ID within your package (e.g. `midnight-violet`). |
+| `name` | TEXT | Display name. The chooser uses your app icon and label before import. |
+| `dark` | INTEGER | `1` uses the dark base, `0` the light base; unset uses the last built-in choice. |
+| `accent` | INTEGER | Signed 32-bit ARGB; fallback for `colorPrimary`. |
+| `colors` | TEXT | JSON object mapping color tokens to `#AARRGGBB` strings. |
+| `strings` | TEXT | JSON object mapping text tokens to objects of locale tag → plain text. |
+| `wallpaper` | TEXT | Exact `content://<authority>/wallpaper` URI for a PNG or JPEG. |
+| `scrim` | INTEGER | Optional signed ARGB tint drawn over the wallpaper. |
+| `preview` | TEXT | Optional `content://<authority>/preview` PNG or JPEG (up to 256 KiB); the current chooser uses app icons instead. |
+
+MP Manager ignores unknown tokens. Each JSON column is capped at 256 Ki UTF-16
+code units. Wallpaper is limited to 8 MiB, 8,192 pixels per side and
+16,777,216 total pixels. A preview is limited to 2,048 pixels per side.
+The ID, name, and each label are limited to 100 characters; at most 32 locale
+entries per label are read.
+
+MP Manager imports a private snapshot, rather than
+reading the provider on every screen. A package update does not automatically
+apply new theme data: select the theme again to refresh it. The host pins the
+signer on import and drops the active snapshot on uninstall or signer mismatch.
+Pins are separate from action-plugin trust. Theme APK code runs only under its
+own app identity; MP Manager never loads it into its process or grants access to files.
+
+### Colors and labels
+
+The following Material attributes honor exact colors on Android 11 and newer
+when the resource loader is available. Missing attributes come from the base
+style. On older OS versions, `colorPrimary` (or `accent`) selects the closest
+bundled accent, and other Material attributes retain their base colors.
+
+```text
+colorPrimary                  colorOnPrimary
+colorPrimaryContainer         colorOnPrimaryContainer
+colorSecondary                colorOnSecondary
+colorSecondaryContainer       colorOnSecondaryContainer
+colorTertiary                 colorOnTertiary
+colorSurface                  colorOnSurface
+colorSurfaceVariant           colorOnSurfaceVariant
+colorSurfaceContainerLowest   colorSurfaceContainerLow
+colorSurfaceContainer         colorSurfaceContainerHigh
+colorSurfaceContainerHighest  colorOutline
+colorOutlineVariant           colorError
+colorOnError
+```
+
+App-specific colors: `folder_icon_bg` and `file_icon_bg` tint the folder and
+generic file tiles, `list_highlight` tints the active pane indicator,
+`wallpaper_scrim` controls the file-pane wallpaper tint, `status_bar` and
+`nav_bar` tint the main screen's bars where Android allows it, and
+`editor_background` and `editor_text` tint the unified editor's background and
+plain text. TextMate grammar syntax colors are not overridden. Wallpaper is
+shown behind the main file panes, not behind dialogs or permission screens.
+
+Allowed label keys: `tab.files`, `tab.root`, `tab.general`, `tab.behavior`,
+`tab.other`, and `settings.theme`. For example:
+
+```json
+{"tab.files":{"en":"Files","es":"Archivos","zh-CN":"文件"}}
+```
+
+MP Manager tries the current locale, its language, English, then the built-in
+label. These are cosmetic labels only: commands, confirmations, file formats,
+and protocol values cannot be renamed.
+
+### Build the sample
+
+`./gradlew :samples:theme-sample:assembleDebug` builds the permission-free
+[theme sample](../samples/theme-sample/) with its icon and wallpaper. Install the
+APK from `samples/theme-sample/build/outputs/apk/debug/` alongside your MP Manager
+build. The sample does not need to be signed with MP Manager's certificate.

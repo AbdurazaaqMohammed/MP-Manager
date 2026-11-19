@@ -60,6 +60,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuCustomizer;
 import io.github.abdurazaaqmohammed.ui.main.FileMenuOrder;
+import io.github.abdurazaaqmohammed.plugins.themes.ThemePacks;
 import io.github.abdurazaaqmohammed.ui.common.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.ui.common.util.AppFont;
@@ -149,6 +150,71 @@ public class SettingsController {
         }
     }
 
+    private void updateInstalledThemeButton(MaterialButton button, ThemePacks.Snapshot pack) {
+        button.setText(pack == null ? activity.getString(R.string.installed_themes)
+                : activity.getString(R.string.installed_theme_current, pack.name));
+    }
+
+    private void showInstalledThemes(MaterialButton button, MaterialButtonToggleGroup builtIns) {
+        button.setEnabled(false);
+        Context app = activity.getApplicationContext();
+        new Thread(() -> {
+            var entries = ThemePacks.discover(app);
+            activity.runOnUiThread(() -> {
+                button.setEnabled(true);
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                var dialog = new MaterialAlertDialogBuilder(activity)
+                        .setTitle(R.string.installed_themes)
+                        .setNegativeButton(android.R.string.cancel, null);
+                if (entries.isEmpty()) {
+                    dialog.setMessage(R.string.installed_themes_empty).show();
+                    return;
+                }
+                ThemePacks.Snapshot active = ThemePacks.active(activity);
+                var adapter = new ArrayAdapter<ThemePacks.Entry>(activity,
+                        android.R.layout.simple_list_item_1, entries) {
+                    @Override
+                    public View getView(int position, View convertView, ViewGroup parent) {
+                        TextView row = (TextView) super.getView(position, convertView, parent);
+                        ThemePacks.Entry entry = getItem(position);
+                        boolean selected = active != null && active.packageName.equals(entry.packageName);
+                        row.setText(selected ? activity.getString(R.string.installed_theme_selected, entry.label)
+                                : entry.label);
+                        row.setContentDescription(activity.getString(R.string.installed_theme_description,
+                                row.getText(), entry.packageName));
+                        int size = Math.round(24 * row.getResources().getDisplayMetrics().density);
+                        var icon = entry.icon;
+                        if (icon != null) icon.setBounds(0, 0, size, size);
+                        row.setCompoundDrawablesRelative(icon, null, null, null);
+                        row.setCompoundDrawablePadding(size / 2);
+                        return row;
+                    }
+                };
+                dialog.setAdapter(adapter, (d, index) -> {
+                    button.setEnabled(false);
+                    builtIns.setSelectionRequired(false);
+                    for (int i = 0; i < builtIns.getChildCount(); i++) builtIns.getChildAt(i).setEnabled(false);
+                    new Thread(() -> {
+                        boolean imported = ThemePacks.importAndSelect(app, entries.get(index));
+                        activity.runOnUiThread(() -> {
+                            if (activity.isFinishing() || activity.isDestroyed()) return;
+                            button.setEnabled(true);
+                            for (int i = 0; i < builtIns.getChildCount(); i++) builtIns.getChildAt(i).setEnabled(true);
+                            if (!imported) {
+                                builtIns.setSelectionRequired(ThemePacks.active(activity) == null);
+                                Extensions.showMessage(activity, R.string.installed_theme_import_failed);
+                                return;
+                            }
+                            builtIns.clearChecked();
+                            updateInstalledThemeButton(button, ThemePacks.active(activity));
+                            promptThemeRestart();
+                        });
+                    }, "theme-import").start();
+                }).show();
+            });
+        }, "theme-discovery").start();
+    }
+
     private static void restartApp(Context context) {
         try {
             Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -213,7 +279,16 @@ public class SettingsController {
 
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         String currentThemeId = ThemeRegistry.getCurrentId(activity);
-        if (BuiltInThemes.LIGHT_ID.equals(currentThemeId)) {
+        MaterialButton installedThemes = settingsDialog.findViewById(R.id.installedThemesButton);
+        TextView themeTitle = settingsDialog.findViewById(R.id.themeCardTitle);
+        themeTitle.setText(ThemeRegistry.packLabel(activity, "settings.theme", themeTitle.getText()));
+        ThemePacks.Snapshot activePack = ThemePacks.active(activity);
+        updateInstalledThemeButton(installedThemes, activePack);
+        installedThemes.setOnClickListener(v -> showInstalledThemes(installedThemes, themeButtons));
+        themeButtons.setSelectionRequired(activePack == null);
+        if (activePack != null) {
+            themeButtons.clearChecked();
+        } else if (BuiltInThemes.LIGHT_ID.equals(currentThemeId)) {
             themeButtons.check(R.id.lightThemeButton);
         } else if (BuiltInThemes.DARK_ID.equals(currentThemeId)) {
             themeButtons.check(R.id.darkThemeButton);
@@ -259,6 +334,9 @@ public class SettingsController {
                     themeButtons.check(R.id.systemThemeButton);
                     pluginId = BuiltInThemes.SYSTEM_DEFAULT_ID;
                 }
+                ThemePacks.deactivate(activity);
+                group.setSelectionRequired(true);
+                updateInstalledThemeButton(installedThemes, null);
                 applySystemThemeFlag(system);
                 ThemeRegistry.setCurrentId(activity, pluginId);
                 settings.edit().putInt("theme", ThemeRegistry.currentStyleRes(activity)).apply();

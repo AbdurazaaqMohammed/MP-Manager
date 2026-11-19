@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample v1 theme provider for MP-Manager. Permission-free: exported
+     provider with no read permission and no manifest permissions.
+
+     Contract (see app plugins/themes ThemePackContracts):
+       - an activity carries the intent action
+         io.github.abdurazaaqmohammed.MPManager.action.THEME (+ DEFAULT)
+         so PackageManager.queryIntentActivities discovery sees the package,
+       - application-level meta-data
+         io.github.abdurazaaqmohammed.MPManager.THEME_PROVIDER holds the
+         content authority of the provider,
+       - fixed endpoints under the authority:
+           /theme     -> one row: contract (INTEGER =1), id, name (TEXT),
+                         optional accent, dark, scrim (INTEGER), colors and
+                         strings (JSON TEXT), wallpaper and preview (TEXT,
+                         exact content://<same authority>/... URIs)
+           /wallpaper -> wallpaper PNG
+           /preview   -> preview PNG
+       - colors are #AARRGGBB; colors keys use the host allowlist (Material 3
+         tokens plus app tokens); strings map host label keys to
+         {BCP47 locale -> text}. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Material">
+
+        <meta-data
+            android:name="io.github.abdurazaaqmohammed.MPManager.THEME_PROVIDER"
+            android:value="com.example.mpthemesample.theme" />
+
+        <provider
+            android:name=".ThemeSampleProvider"
+            android:authorities="com.example.mpthemesample.theme"
+            android:exported="true" />
+
+        <activity
+            android:name=".ThemeInfoActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.THEME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

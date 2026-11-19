@@ -64,6 +64,11 @@
         <intent>
             <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
         </intent>
+        <!-- Theme providers (fixed content://<authority>/theme row contract). -->
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.THEME" />
+            <category android:name="android.intent.category.DEFAULT" />
+        </intent>
     </queries>
 
         <application
@@ -434,6 +439,7 @@
                     <action android:name="android.intent.action.PACKAGE_ADDED" />
                     <action android:name="android.intent.action.PACKAGE_REPLACED" />
                     <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                    <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
                     <data android:scheme="package" />
                 </intent-filter>
             </receiver>

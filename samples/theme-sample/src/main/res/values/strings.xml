@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MP Theme Sample</string>
+    <string name="theme_name">Nova Night</string>
+    <string name="theme_details">Indigo accent with a dark night-sky wallpaper</string>
+    <string name="wallpaper_desc">Sample wallpaper</string>
+    <string name="preview_desc">Theme preview</string>
+    <!-- Label keys served in the strings column (en locale below; the
+         zh-CN values live in values-zh-rCN/). -->
+    <string name="label_tab_files">Files</string>
+    <string name="label_tab_root">Root</string>
+    <string name="label_tab_general">General</string>
+    <string name="label_tab_behavior">Behavior</string>
+    <string name="label_tab_other">Other</string>
+    <string name="label_settings_theme">Theme</string>
+</resources>
