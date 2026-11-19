@@ -94,6 +94,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import com.rosan.dhizuku.api.Dhizuku;
+import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
+
 import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import rikka.shizuku.Shizuku;
@@ -1178,6 +1181,27 @@ public class SettingsController {
 
         grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(applyModeUi));
 
+        View groupDhizuku = root.findViewById(R.id.groupDhizuku);
+        TextView dhizukuStatusTv = root.findViewById(R.id.dhizukuStatusTv);
+        MaterialButton grantDhizukuBtn = root.findViewById(R.id.grantDhizukuBtn);
+        Runnable applyDhizukuUi = () -> {
+            boolean available;
+            boolean granted = false;
+            try {
+                available = Dhizuku.init(activity);
+                if (available) granted = Dhizuku.isPermissionGranted();
+            } catch (Throwable t) {
+                available = false;
+            }
+            groupDhizuku.setVisibility(available ? View.VISIBLE : View.GONE);
+            if (available) {
+                dhizukuStatusTv.setText(granted ? R.string.dhizuku_granted : R.string.dhizuku_pending);
+                grantDhizukuBtn.setVisibility(granted ? View.GONE : View.VISIBLE);
+            }
+        };
+        applyDhizukuUi.run();
+        grantDhizukuBtn.setOnClickListener(v -> requestDhizukuPerm(applyDhizukuUi));
+
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
         silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
 
@@ -1301,6 +1325,25 @@ public class SettingsController {
             });
         };
         PrivilegeManager.Shizuku.requestPermission(activity, holder[0]);
+    }
+
+    private void requestDhizukuPerm(Runnable onResult) {
+        try {
+            Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                @Override
+                public void onRequestPermission(int grantResult) {
+                    handler.post(() -> {
+                        if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                            Extensions.showMessage(activity, R.string.dhizuku_denied);
+                        }
+                        onResult.run();
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            Extensions.showMessage(activity, R.string.dhizuku_denied);
+            onResult.run();
+        }
     }
 
     private void saveSuCommand(ViewFinder root) {

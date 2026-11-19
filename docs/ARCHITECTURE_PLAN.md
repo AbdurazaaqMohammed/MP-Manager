@@ -224,6 +224,11 @@ session; each stage verified by `compileFullDebugJavaWithJavac` +
 - [x] **S7** — retire `privilege.impl`: the whole package folded into
       `privilege.internal` (implementation + Legacy* sessions + ipc aidl
       now live side by side; the package no longer exists)
+- [x] **S8** — Dhizuku authorization entry in settings (root page): a
+      status line + grant button shown when the Dhizuku server app is
+      installed, calling `Dhizuku.requestPermission` directly (same pattern
+      as the Shizuku grant button next to it). Backend selection via the
+      registry remains the open follow-up.
 - [x] **S4–S6** — the remaining M5 gap: ~40 feature/ui/mcp/util files
       migrated off `privilege.impl` onto `PrivilegeManager` mirrors
       (Root/Files/Shizuku/Staging/Permissions/Native/Installer/Startup);

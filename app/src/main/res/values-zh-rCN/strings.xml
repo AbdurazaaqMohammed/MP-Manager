@@ -671,6 +671,10 @@ Layout Inspector
     <string name="shizuku_ready">Shizuku 已连接</string>
     <string name="shizuku_unsupported">Shizuku 需要 Android 6+</string>
     <string name="grant_shizuku">授予 Shizuku 权限</string>
+    <string name="grant_dhizuku">授予 Dhizuku 权限</string>
+    <string name="dhizuku_pending">Dhizuku 权限未授予</string>
+    <string name="dhizuku_granted">Dhizuku 权限已授予</string>
+    <string name="dhizuku_denied">Dhizuku 权限被拒绝</string>
     <string name="shizuku_file_operations">Shizuku 文件操作（Android/data、obb、media）</string>
     <string name="su_command">Root (su) 命令 · 留空 = 自动 (su)</string>
     <string name="appearance">外观</string>

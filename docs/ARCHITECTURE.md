@@ -129,6 +129,12 @@ the last-resort fallback, NONE the terminal fallback (registered in
 `App.onCreate`; registry-driven selection is exposed as
 `PrivilegeManager.preferredBackend`, default routing unchanged).
 
+Dhizuku authorization is user-reachable since S8: the settings root page
+shows a status line + grant button when the Dhizuku server app is
+installed (direct `Dhizuku.requestPermission`, mirroring the Shizuku
+grant button). This authorizes the backend; actual operation routing
+through the registry is still the open follow-up.
+
 | from | to |
 |---|---|
 | `utils/` privilege classes (17 — RootManager, RootFile, RootPermissionHelper, RootStaging, ShellProcess, ShellBatchControl, ShellProgress, NativeRootManager, NativeProcess, NativeToolManager, PrivilegedInstaller, StartupPrivileges, ShizukuManager + the native-copy engine quartet) | `privilege/legacy/` → renamed `privilege/impl/` in M5 |
