@@ -202,7 +202,21 @@ public class MergeUtil {
                 return;
             }
             String baseName = findBaseSplit(splits);
-            context.handler.post(() -> showAntisplitDialogInner(file, context, splits, baseName));
+            ApkProtectionDetector.Result prot = ApkProtectionDetector.detect(file);
+            context.handler.post(() -> {
+                if (prot.isProtected) {
+                    new MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.protected_app_warning_title)
+                            .setMessage(context.getString(R.string.antisplit_protected_warning_msg, prot.getSummary()))
+                            .setIcon(R.drawable.ic_circle_exclamation_24)
+                            .setNegativeButton(R.string.cancel, null)
+                            .setPositiveButton(R.string.proceed_anyway, (dialog, which) ->
+                                    showAntisplitDialogInner(file, context, splits, baseName, prot.getSummary()))
+                            .show();
+                } else {
+                    showAntisplitDialogInner(file, context, splits, baseName, null);
+                }
+            });
         }).start();
     }
 
@@ -281,12 +295,21 @@ public class MergeUtil {
         return false;
     }
 
-    private static void showAntisplitDialogInner(File file, MainActivity context, List<FileHeader> splits, String baseName) {
+    private static void showAntisplitDialogInner(File file, MainActivity context, List<FileHeader> splits, String baseName, String protectionSummary) {
         float density = context.getResources().getDisplayMetrics().density;
         int pad = (int) (16 * density);
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(pad, pad, pad, 0);
+
+        if (protectionSummary != null) {
+            TextView warningView = new TextView(context);
+            warningView.setText(context.getString(R.string.protected_banner, protectionSummary));
+            warningView.setTextColor(0xFFFF9800);
+            warningView.setTypeface(null, Typeface.BOLD);
+            warningView.setPadding(0, 0, 0, (int) (8 * density));
+            root.addView(warningView);
+        }
 
         TextView splitsTitle = new TextView(context);
         splitsTitle.setText(context.getString(R.string.antisplit_splits, splits.size()));
@@ -439,13 +462,9 @@ public class MergeUtil {
                             bundle.loadApkDirectory(dir, false);
                         }
                     }
-                    for (ApkModule apkModule : bundle.getApkModuleList()) {
-                        String protect = Util.isProtected(apkModule);
-                        if (protect != null) {
-                            logger.logMessage(file.getAbsolutePath());
-                            logger.logMessage(protect);
-                            return false;
-                        }
+                    ApkProtectionDetector.Result prot = ApkProtectionDetector.detect(bundle);
+                    if (prot.isProtected) {
+                        logger.logMessage("⚠️ Protected APK: " + prot.getSummary());
                     }
                     System.gc();
                     try(ApkModule mergedModule = bundle.mergeModules(false)) {

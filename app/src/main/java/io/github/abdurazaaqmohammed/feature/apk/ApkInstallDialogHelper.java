@@ -76,17 +76,23 @@ public class ApkInstallDialogHelper {
      */
     private static File baseSplitApk(List<File> apkFiles) {
         if (apkFiles == null || apkFiles.isEmpty()) return null;
-        File explicitBase = null;
         for (File f : apkFiles) {
             if (f == null) continue;
             String name = f.getName().toLowerCase(Locale.ROOT);
-            if (name.equals("base.apk") || name.equals("master.apk") || name.equals("main.apk")) {
-                explicitBase = f;
-                break;
+            if (name.equals("base.apk") || name.equals("master.apk") || name.equals("main.apk")
+                    || name.startsWith("base-master") || name.startsWith("base_master")
+                    || name.startsWith("base.") || name.equals("standalone.apk")) {
+                return f;
             }
         }
-        if (explicitBase != null) return explicitBase;
-        return apkFiles.get(0);
+        // Fallback: the base APK is almost always larger than localized/config splits
+        File largest = apkFiles.get(0);
+        for (File f : apkFiles) {
+            if (f != null && f.length() > largest.length()) {
+                largest = f;
+            }
+        }
+        return largest;
     }
 
     /**

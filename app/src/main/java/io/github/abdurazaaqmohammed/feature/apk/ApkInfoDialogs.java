@@ -1489,15 +1489,11 @@ public class ApkInfoDialogs {
                         ? context.rss.getString(android.R.string.unknownName) : sigInfo.getStatusLabel();
                 final ApkSignatureInfo finalSigInfo = sigInfo;
 
-                String protectedStr;
-                try (ArchiveFile af = new ArchiveFile(file); ApkModule am = new ApkModule(af.createZipEntryMap())) {
-                    String aProtected = Util.isProtected(am);
-                    protectedStr = TextUtils.isEmpty(aProtected) ? context.getString(R.string.protection_not_found) : aProtected;
-                } catch (Exception e) {
-                    protectedStr = context.rss.getString(android.R.string.unknownName);
-                }
-
-                String finalProtectedStr = protectedStr;
+                ApkProtectionDetector.Result protResult = ApkProtectionDetector.detect(file);
+                final boolean isAppProtected = protResult.isProtected;
+                final String finalProtectedStr = isAppProtected
+                        ? "⚠️ " + protResult.getSummary()
+                        : context.getString(R.string.protection_not_found);
                 // Version comparison analysis: display only the status badge
                 PackageInfo installedPkgInfo = null;
                 try {
@@ -1547,6 +1543,9 @@ public class ApkInfoDialogs {
                     uiHelper.scrollTextView(pkgName);
                     signaturesInApk.setText(signatureStr);
                     protectedDisplay.setText(finalProtectedStr);
+                    if (isAppProtected) {
+                        protectedDisplay.setTextColor(0xFFFF9800);
+                    }
                     fileSize.setText(context.getString(R.string.fs_entries, Formatter.formatFileSize(context, file.length()), ApkInfoUtil.getEntryCount(file)));
                     int target = packageInfo.applicationInfo.targetSdkVersion;
                     apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));

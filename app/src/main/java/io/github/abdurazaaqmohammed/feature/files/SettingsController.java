@@ -1429,14 +1429,20 @@ public class SettingsController {
     private void performExportSettings() {
         FilePickerDialog.Properties props = new FilePickerDialog.Properties();
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
-        props.selection_type = FilePickerDialog.DIR_SELECT;
+        props.selection_type = FilePickerDialog.FILE_AND_DIR_SELECT;
         props.root = Environment.getExternalStorageDirectory();
         FilePickerDialog picker = new FilePickerDialog(activity, props);
         picker.setTitle(activity.getString(R.string.export_settings));
         picker.setDialogSelectionListener(files -> {
             if (files != null && files.length > 0 && files[0] != null) {
-                File dir = new File(files[0]);
-                File target = new File(dir, "MPManager_Settings_Backup.json");
+                File selected = new File(files[0]);
+                File target;
+                if (selected.isDirectory()) {
+                    String timeStamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
+                    target = new File(selected, "MPManager_Settings_Backup_" + timeStamp + ".json");
+                } else {
+                    target = selected;
+                }
                 try {
                     SettingsBackupHelper.exportToFile(activity, target);
                     Extensions.showMessage(activity, activity.getString(R.string.settings_exported) + ": " + target.getName());
