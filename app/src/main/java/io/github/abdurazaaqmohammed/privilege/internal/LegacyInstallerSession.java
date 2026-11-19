@@ -9,7 +9,7 @@ import java.io.File;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
 
 /** M2 installer session: delegates to PrivilegedInstaller. */
 public final class LegacyInstallerSession implements InstallerSession {

@@ -1,0 +1,2441 @@
+package io.github.abdurazaaqmohammed.privilege.internal;
+
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession.ShellResult;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
+
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.os.ParcelFileDescriptor;
+import androidx.preference.PreferenceManager;
+import android.text.TextUtils;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class RootManager {
+
+    private static volatile RootManager instance;
+    private final Context context;
+    private Boolean rootAvailable = null;
+    private Process suProcess;
+    private DataOutputStream suStdin;
+    private BufferedReader suStdout;
+    private final Object lock = new Object();
+
+    /** Shared with {@link ShizukuManager}, whose shell fallback parses the same output. */
+    static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
+
+    private RootManager(Context context) {
+        this.context = context.getApplicationContext();
+    }
+
+    public static RootManager getInstance(Context context) {
+        if (instance == null) {
+            synchronized (RootManager.class) {
+                if (instance == null) {
+                    instance = new RootManager(context);
+                }
+            }
+        }
+        return instance;
+    }
+
+    public static RootManager getInstance() {
+        return instance;
+    }
+
+    public WorkingModePrefs.WorkingMode getWorkingMode() {
+        return WorkingModePrefs.get(context);
+    }
+
+    public void setWorkingMode(WorkingModePrefs.WorkingMode mode) {
+        WorkingModePrefs.set(context, mode);
+    }
+
+    public boolean autoEnableRootIfAvailable() {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            if (!prefs.getBoolean("startup_request_root", false)) return false;
+            boolean modeTouched = prefs.contains("working_mode");
+            boolean opsTouched = prefs.contains("root_file_ops");
+            if (modeTouched && opsTouched) return false;
+            if (!isRootAvailable()) return false;
+            boolean changed = false;
+            if (!modeTouched) {
+                setWorkingMode(WorkingModePrefs.WorkingMode.ROOT);
+                changed = true;
+            }
+            if (!opsTouched) {
+                prefs.edit().putBoolean("root_file_ops", true).apply();
+                changed = true;
+            }
+            return changed;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isRootMode() {
+        return getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT;
+    }
+
+    public boolean isShizukuMode() {
+        return getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU;
+    }
+
+    public String suBinary() {
+        try {
+            String custom = PreferenceManager.getDefaultSharedPreferences(context)
+                    .getString("su_command", "");
+            if (custom != null) {
+                custom = custom.trim();
+                if (!custom.isEmpty() && custom.matches("^[A-Za-z0-9_./-]+$")) return custom;
+            }
+        } catch (Exception ignored) {
+        }
+        return "su";
+    }
+
+    public boolean isRootAvailable() {
+        if (rootAvailable != null) return rootAvailable;
+        rootAvailable = checkRoot();
+        return rootAvailable;
+    }
+
+    public void refreshRootCache() {
+        rootAvailable = null;
+    }
+
+    public boolean isSilentInstallEnabled() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("silent_install", false) && isRootMode();
+    }
+
+    public boolean isRootFileOpsEnabled() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("root_file_ops", false) && isRootMode();
+    }
+
+    public boolean isRootExtractorEnabled() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("root_extractor", false) && isRootMode();
+    }
+
+    private boolean checkRoot() {
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "id"});
+            // Process.waitFor(timeout, unit) is unavailable below Android 8.
+            // Wait before reading stdout so a pending su prompt cannot block
+            // the sidebar indefinitely either. The id response is very small.
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (true) {
+                try {
+                    if (process.exitValue() != 0) return false;
+                    break;
+                } catch (IllegalThreadStateException running) {
+                    if (System.nanoTime() >= deadline) return false;
+                    Thread.sleep(25);
+                }
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line = reader.readLine();
+                return line != null && line.contains("uid=0");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (process != null) process.destroy();
+        }
+    }
+
+    public static boolean isChmodModeValid(String mode) {
+        if (mode == null || mode.isEmpty()) return false;
+        return mode.matches("^[0-7]{3,4}$");
+    }
+
+    public static boolean isChownOwnerValid(String owner) {
+        if (owner == null || owner.isEmpty()) return false;
+        return owner.matches("^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?$");
+    }
+
+    public static boolean isRebootModeValid(String mode) {
+        if (mode == null || mode.isEmpty()) return true;
+        return mode.equals("recovery") || mode.equals("bootloader") || mode.equals("-p");
+    }
+
+    
+    public ShellResult execute(String command) {
+        return execute(command, 30);
+    }
+
+    public ShellResult execute(String command, int timeoutSeconds) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        return spawnSu(command, timeoutSeconds);
+    }
+
+    private ShellResult spawnSu(String command, int timeoutSeconds) {
+        return spawnSu(command, timeoutSeconds, null);
+    }
+
+    /**
+     * Runs {@code command} as root, forwarding {@link ShellProgress} markers from
+     * its stdout to {@code progress} as they arrive.
+     *
+     * <p>The drain thread is the only place that sees output while the process
+     * is alive, so it is also the only place that can turn a long batch into
+     * live numbers. Marker lines are consumed here and never reach the returned
+     * output, so callers that parse stdout (cat, ls, stat) are unaffected.
+     */
+    private ShellResult spawnSu(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return spawnSu(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command, honouring a pause / cancel token while it runs.
+     *
+     * <p>The batch reports its own process id, and every signal is sent
+     * through a second privileged shell: the batch runs as root, so the app
+     * itself is not allowed to signal it. Pausing suspends the batch so it
+     * continues exactly where it stopped; cancelling kills it and everything
+     * it started, so no work continues in the background.
+     */
+    ShellResult spawnSu(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                        TransferControl control) {
+        synchronized (lock) {
+            try {
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
+                ShellBatchControl batchControl = null;
+                ShellProgress.Listener drainListener = progress;
+                if (control != null) {
+                    batchControl = new ShellBatchControl(control, this::runSignalCommand);
+                    // The batch's own progress markers still reach the caller.
+                    drainListener = batchControl.wrap(progress);
+                }
+                // The batch reports its own pid first (ShellProgress.reportPid);
+                // capture it so a timeout can stop the root work, not just the
+                // su client this JVM spawned.
+                final long[] batchPid = {-1L};
+                ShellProgress.Listener delegate = drainListener;
+                drainListener = new ShellProgress.Listener() {
+                    @Override public void onProgress(int filesDone, long bytesDone) {
+                        if (delegate != null) delegate.onProgress(filesDone, bytesDone);
+                    }
+                    @Override public void onFailure() {
+                        if (delegate != null) delegate.onFailure();
+                    }
+                    @Override public void onPid(int pid) {
+                        batchPid[0] = pid;
+                        if (delegate != null) delegate.onPid(pid);
+                    }
+                };
+                final ShellProgress.Listener listener = drainListener;
+                try {
+                    BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+                    StringBuilder output = new StringBuilder();
+                    StringBuilder error = new StringBuilder();
+                    Thread drainOut = new Thread(() -> {
+                        String line;
+                        try {
+                            while ((line = stdout.readLine()) != null) {
+                                if (ShellProgress.consume(line, listener)) continue;
+                                if (output.length() > 0) output.append("\n");
+                                output.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    Thread drainErr = new Thread(() -> {
+                        String line;
+                        try {
+                            while ((line = stderr.readLine()) != null) {
+                                if (error.length() > 0) error.append("\n");
+                                error.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    drainOut.start();
+                    drainErr.start();
+
+                    boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+                    if (!finished) {
+                        process.destroyForcibly();
+                        // destroyForcibly only kills the su client; the root
+                        // child it spawned (cp/mv/rm of a long transfer) is
+                        // reparented to init and would keep streaming bytes in
+                        // the background — work the caller believes is dead.
+                        // The batch reported its own pid first, so the whole
+                        // tree can be signalled through the elevated backend.
+                        if (batchPid[0] > 0) {
+                            ShellProcess.kill(batchPid[0], this::runSignalCommand);
+                        }
+                    }
+                    try {
+                        drainOut.join(2000);
+                        drainErr.join(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    if (batchControl != null && batchControl.wasCancelled()) {
+                        throw new TransferCancelledException();
+                    }
+                    if (!finished) {
+                        return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
+                    }
+                    return new ShellResult(process.exitValue(), output.toString(), error.toString());
+                } finally {
+                    if (batchControl != null) batchControl.detach();
+                }
+            } catch (TransferCancelledException e) {
+                throw e;
+            } catch (Exception e) {
+                return new ShellResult(-1, "", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Runs a signal command with root rights.
+     *
+     * <p>It deliberately bypasses the shared lock: the batch that is being
+     * signalled still holds it, and waiting for it would defeat the purpose.
+     */
+    private void runSignalCommand(String command) {
+        try {
+            Process signal = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
+            signal.waitFor(10, TimeUnit.SECONDS);
+            signal.destroyForcibly();
+        } catch (Throwable ignored) {
+            // Signalling is best effort.
+        }
+    }
+
+    public static String[] suCommandForFs(Context context, String shellCommand) {
+        boolean global = false;
+        try {
+            global = getInstance(context).prefersGlobalNs();
+        } catch (Exception ignored) {
+        }
+        String su = getInstance(context).suBinary();
+        if (global) {
+            return new String[]{su, "-c",
+                    "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh(shellCommand)};
+        }
+        return new String[]{su, "-c", shellCommand};
+    }
+
+    private String[] suCommandForFs(String shellCommand) {
+        return suCommandForFs(context, shellCommand);
+    }
+
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds) {
+        return executeGlobalNs(command, timeoutSeconds, null);
+    }
+
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return executeGlobalNs(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command in the global mount namespace with a pause / cancel token.
+     */
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                                        TransferControl control) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh(command);
+        return spawnSu(wrapped, timeoutSeconds, progress, control);
+    }
+
+    private volatile int nsWinner;
+    private volatile boolean nsProbing;
+
+    public void kickNsProbe() {
+        boolean start = false;
+        synchronized (this) {
+            if (nsWinner == 0 && !nsProbing) {
+                nsProbing = true;
+                start = true;
+            }
+        }
+        if (!start) return;
+        new Thread(() -> {
+            boolean global = false;
+            try {
+                global = probeNamespaces();
+            } catch (Exception ignored) {
+            }
+            synchronized (RootManager.this) {
+                nsWinner = global ? 2 : 1;
+                nsProbing = false;
+            }
+        }).start();
+    }
+
+    public boolean prefersGlobalNs() {
+        if (nsWinner == 2) return true;
+        kickNsProbe();
+        return false;
+    }
+
+    private boolean probeNamespaces() {
+        try {
+            ShellResult plain = spawnSu("ls -1A -- /data/data 2>/dev/null | wc -l", 10);
+            int plainCount = parseCount(plain);
+            ShellResult global = spawnSu("nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh("ls -1A -- /data/data 2>/dev/null | wc -l"), 10);
+            int globalCount = parseCount(global);
+            if (globalCount > plainCount && globalCount > 1) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private static int parseCount(ShellResult r) {
+        try {
+            if (r != null && r.isSuccess() && r.output() != null) return Integer.parseInt(r.output().trim());
+        } catch (Exception ignored) {
+        }
+        return -1;
+    }
+
+    public ShellResult executeFs(String command, int timeoutSeconds) {
+        return executeFs(command, timeoutSeconds, null);
+    }
+
+    public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress) {
+        return executeFs(command, timeoutSeconds, progress, null);
+    }
+
+    /**
+     * Runs a command with a pause / cancel token attached.
+     */
+    public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress,
+                                 TransferControl control) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        boolean global = false;
+        try {
+            global = prefersGlobalNs();
+        } catch (Exception ignored) {
+        }
+        if (global) return executeGlobalNs(command, timeoutSeconds, progress, control);
+        return spawnSu(command, timeoutSeconds, progress, control);
+    }
+
+    public ShellResult executeWithInput(String command, String input) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        synchronized (lock) {
+            try {
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
+                DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
+                // writeBytes only keeps the low 8 bits of each char, which turns
+                // non-ASCII paths (e.g. Chinese APK names) into garbage before
+                // they reach su. The UTF-8 bytes must be written directly.
+                stdin.write((command + "\n").getBytes(StandardCharsets.UTF_8));
+                if (input != null) {
+                    stdin.write((input + "\n").getBytes(StandardCharsets.UTF_8));
+                }
+                stdin.write("exit\n".getBytes(StandardCharsets.UTF_8));
+                stdin.flush();
+
+                BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder output = new StringBuilder();
+                StringBuilder error = new StringBuilder();
+                Thread drainOut = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stdout.readLine()) != null) {
+                            if (output.length() > 0) output.append("\n");
+                            output.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                Thread drainErr = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stderrReader.readLine()) != null) {
+                            if (error.length() > 0) error.append("\n");
+                            error.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                drainOut.start();
+                drainErr.start();
+
+                boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+                if (!finished) {
+                    process.destroyForcibly();
+                }
+                try {
+                    drainOut.join(2000);
+                    drainErr.join(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                if (!finished) {
+                    return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
+                }
+                return new ShellResult(process.exitValue(), output.toString(), error.toString());
+            } catch (Exception e) {
+                return new ShellResult(-1, "", e.getMessage());
+            }
+        }
+    }
+
+    
+    public List<String> listFiles(String path) throws IOException {
+        ShellResult result = executeFs("ls -1 " + ShellQuote.escapeShellArg(path), 30);
+        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error());
+        List<String> files = new ArrayList<>();
+        for (String line : result.output().split("\n")) {
+            if (!line.trim().isEmpty()) files.add(line.trim());
+        }
+        return files;
+    }
+
+    public List<String> listFilesDetailed(String path) throws IOException {
+        ShellResult result = executeFs("ls -la " + ShellQuote.escapeShellArg(path), 30);
+        if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error());
+        List<String> entries = new ArrayList<>();
+        for (String line : result.output().split("\n")) {
+            if (!line.trim().isEmpty()) entries.add(line);
+        }
+        return entries;
+    }
+
+    public boolean exists(String path) {
+        ShellResult result = executeFs("test -e " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
+        return result.isSuccess() && result.output().trim().equals("yes");
+    }
+
+    public boolean isDirectory(String path) {
+        if (path == null || path.isEmpty()) return false;
+        try {
+            File f = new File(path);
+            if (f.exists() && f.isDirectory()) return true;
+        } catch (Exception ignored) {}
+        if (!isRootAvailable()) return false;
+        ShellResult result = executeFs("( [ -d " + ShellQuote.escapeShellArg(path) + " ] || [ -d " + ShellQuote.escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
+        return result.isSuccess() && result.output() != null && result.output().trim().equals("yes");
+    }
+
+    public boolean isFile(String path) {
+        ShellResult result = executeFs("test -f " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
+        return result.isSuccess() && result.output().trim().equals("yes");
+    }
+
+    public long getFileSize(String path) {
+        ShellResult result = executeFs("stat -c %s " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
+        if (result.isSuccess()) {
+            try {
+                return Long.parseLong(result.output().trim());
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    static String emulatedAlias(String path) {
+        if (path == null) return null;
+        if (path.equals("/storage/emulated")) return "/data/media";
+        if (path.startsWith("/storage/emulated/")) {
+            return "/data/media/" + path.substring("/storage/emulated/".length());
+        }
+        return path;
+    }
+
+    public String getPermissions(String path) {
+        ShellResult result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
+        if (!result.isSuccess() && !path.equals(emulatedAlias(path))) {
+            result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(path), 30);
+        }
+        return result.isSuccess() ? result.output().trim() : null;
+    }
+
+    public String getOwner(String path) {
+        ShellResult result = executeFs("stat -c %U:%G " + ShellQuote.escapeShellArg(path), 30);
+        return result.isSuccess() ? result.output().trim() : null;
+    }
+
+    public File[] listRootFiles(String path) {
+        ShellResult result = executeFs("ls -1a " + ShellQuote.escapeShellArg(path), 30);
+        if (!result.isSuccess() || result.output() == null) return null;
+
+        String[] names = result.output().split("\\r?\\n");
+        List<File> files = new ArrayList<>();
+        for (String name : names) {
+            String trimmed = name.trim();
+            if (trimmed.isEmpty() || trimmed.equals(".") || trimmed.equals("..")) continue;
+            files.add(new File(path, trimmed));
+        }
+        return files.toArray(new File[0]);
+    }
+
+    public void chmod(String path, String mode) throws IOException {
+        if (!isChmodModeValid(mode)) {
+            throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
+        }
+        ShellResult result = execute("chmod " + mode + " " + ShellQuote.escapeShellArg(path));
+        if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error());
+    }
+
+    /**
+     * chmod through the mount-namespace probe. Reading a file's mode uses
+     * {@link #executeFs} while the old write path used plain {@code execute}, so
+     * on devices that need the global namespace the write hit a path the target
+     * was not visible at and failed.
+     */
+    public void chmodFs(String path, String mode) throws IOException {
+        if (!isChmodModeValid(mode)) {
+            throw new IOException("Invalid chmod mode: " + mode + ". Must be 3-4 octal digits (e.g. 755, 0644)");
+        }
+        ShellResult result = executeFs("chmod " + mode + " -- " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
+        if (!result.isSuccess()) {
+            // Retry without the namespace and alias in case the probe is wrong here.
+            result = execute("chmod " + mode + " -- " + ShellQuote.escapeShellArg(path), 30);
+            if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error());
+        }
+        invalidateListCache();
+    }
+
+    public void chown(String path, String owner, String group) throws IOException {
+        String arg;
+        if (group != null) {
+            if (!isChownOwnerValid(owner + ":" + group)) {
+                throw new IOException("Invalid owner/group: " + owner + ":" + group);
+            }
+            arg = owner + ":" + group;
+        } else {
+            if (!isChownOwnerValid(owner)) {
+                throw new IOException("Invalid owner: " + owner);
+            }
+            arg = owner;
+        }
+        ShellResult result = execute("chown " + arg + " " + ShellQuote.escapeShellArg(path));
+        if (!result.isSuccess()) throw new IOException("chown failed: " + result.error());
+    }
+
+    public void mkdir(String path) throws IOException {
+        ShellResult result = executeFs("mkdir -p " + ShellQuote.escapeShellArg(path), 30);
+        if (!result.isSuccess()) throw new IOException("mkdir failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public void delete(String path) throws IOException {
+        if (path == null || path.isEmpty()) {
+            throw new IOException("Refusing to delete empty path");
+        }
+        if (PathGuards.isPathBlocked(path)) {
+            throw new IOException("Blocked: refusing to delete critical path: " + path);
+        }
+        File file = new File(path);
+        if (SharedStorageCompat.canDeleteThroughApp(file) && FileUtils.deleteTree(file, null)) {
+            invalidateListCache();
+            return;
+        }
+        // The FUSE view of /storage/emulated is frequently unwritable (or not
+        // even mounted) for the su shell, while the raw backing directory
+        // /data/media/X is - stat/chmod already go through the alias for the
+        // same reason. Without it, deletes inside Android/{data,obb,media}
+        // failed silently on many ROMs.
+        String target = emulatedAlias(path);
+        String failure = rmProbe("rm -rf", target, 120);
+        if (failure != null) {
+            // One retry on the raw path, for setups where the alias does not
+            // resolve (e.g. secondary users with a different media node).
+            failure = rmProbe("rm -rf", path, 120);
+        }
+        if (failure != null) throw new IOException("delete failed: " + failure);
+        invalidateListCache();
+    }
+
+    public void deleteFile(String path) throws IOException {
+        if (path == null || path.isEmpty()) {
+            throw new IOException("Refusing to delete empty path");
+        }
+        if (PathGuards.isPathBlocked(path)) {
+            throw new IOException("Blocked: refusing to delete critical path: " + path);
+        }
+        File file = new File(path);
+        if (SharedStorageCompat.canDeleteThroughApp(file) && file.delete()) {
+            invalidateListCache();
+            return;
+        }
+        String target = emulatedAlias(path);
+        String failure = rmProbe("rm -f", target, 30);
+        if (failure != null) failure = rmProbe("rm -f", path, 30);
+        if (failure != null) throw new IOException("delete failed: " + failure);
+        invalidateListCache();
+    }
+
+    /**
+     * Runs one {@code rm} followed by an existence probe of the same path.
+     *
+     * <p>The probe matters because an {@code rm} that silently did nothing (a
+     * FUSE denial inside Android/data, a namespace where the target is not
+     * visible) still exits 0, so only {@code [ ! -e ]} can tell the two cases
+     * apart; the probe reports the @@MPFAIL marker the drain thread forwards.
+     *
+     * @return null when the path is gone, otherwise the failure detail
+     */
+    private String rmProbe(String rmKind, String target, int timeoutSeconds) {
+        AtomicBoolean probeFailed =
+                new AtomicBoolean(false);
+        String arg = ShellQuote.escapeShellArg(target);
+        ShellResult result = executeFs(rmKind + " -- " + arg
+                + " ; [ ! -e " + arg + " ] || echo @@MPFAIL", timeoutSeconds,
+                new ShellProgress.Listener() {
+                    @Override
+                    public void onProgress(int filesDone, long bytesDone) {
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        probeFailed.set(true);
+                    }
+                });
+        if (!result.isSuccess() || probeFailed.get()) {
+            return result.error() == null || result.error().isEmpty() ? "path still exists" : result.error();
+        }
+        return null;
+    }
+
+    public void rename(String oldPath, String newPath) throws IOException {
+        rename(oldPath, newPath, null);
+    }
+
+    /**
+     * Moves one path with {@code mv}, with a pause / cancel token attached.
+     *
+     * <p>The timeout is generous because a cross-filesystem {@code mv} streams
+     * the whole payload; the transfer honours {@code control}, so a cancelled
+     * move is stopped through the elevated backend instead of waiting for the
+     * cap. A non-zero exit after the data landed (a failed preserve step) is
+     * not a failure: the filesystem is the truth, not the exit code.
+     */
+    public void rename(String oldPath, String newPath, TransferControl control) throws IOException {
+        ShellResult result = executeFs("mv " + ShellQuote.escapeShellArg(oldPath) + " " + ShellQuote.escapeShellArg(newPath),
+                3600, null, control);
+        if (!result.isSuccess() && !(isGone(oldPath) && exists(newPath))) {
+            throw new IOException("rename failed: " + result.error());
+        }
+        invalidateListCache();
+    }
+
+    /** Single-path existence test that tolerates already-vanished sources. */
+    private boolean isGone(String path) {
+        return !exists(path);
+    }
+
+    public void copyFile(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -f " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
+        invalidateListCache();
+    }
+
+    /**
+     * Copies with mode, ownership and timestamps in one step. Copying and then
+     * fixing the timestamps separately costs two extra {@code su} spawns per
+     * file, which dominates the runtime for small and empty files.
+     */
+    public void copyFilePreserving(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -pf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 60);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public void copyDir(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -rf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public void copyDirPreserving(String src, String dest) throws IOException {
+        ShellResult result = executeFs("cp -rpf " + ShellQuote.escapeShellArg(src) + " " + ShellQuote.escapeShellArg(dest), 120);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
+        invalidateListCache();
+    }
+
+    /**
+     * Runs every copy in one shell process. Copying item by item cost one
+     * {@code su} spawn each, all serialised behind the same lock, so even a
+     * handful of small files felt slow.
+     *
+     * <p>Each op appends a {@link ShellProgress} marker with the running totals,
+     * so the batch stays a single process while the UI still gets a number after
+     * every item instead of one jump at the end.
+     */
+    public void copyAllPreserving(List<CopyOp> ops) throws IOException {
+        copyAllPreserving(ops, null);
+    }
+
+    public void copyAllPreserving(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
+        copyAllPreserving(ops, progress, null);
+    }
+
+    /**
+     * Copies a batch, with a pause / cancel token attached to the shell.
+     */
+    public void copyAllPreserving(List<CopyOp> ops, ShellProgress.Listener progress,
+                                   TransferControl control) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        // The batch reports its own process id first, so the app can signal it
+        // while it runs.
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
+        int count = 0;
+        int timeout = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
+                cmd.append(" && rm -rf -- ").append(ShellQuote.escapeShellArg(dest));
+            } else if (cmd.length() > 0) {
+                cmd.append(" && ");
+            }
+            String parent = new File(dest).getParent();
+            if (parent != null) cmd.append(" && mkdir -p ").append(ShellQuote.escapeShellArg(parent));
+            if (op.directory) {
+                cmd.append(" && cp -rpf -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
+            } else {
+                cmd.append(" && cp -pf -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
+            }
+            filesDone += Math.max(0, op.files);
+            bytesDone += Math.max(0L, op.bytes);
+            cmd.append(ShellProgress.report(filesDone, bytesDone));
+            count++;
+            // The batch is killed when this expires and its work is thrown
+            // away, so the budget must cover what the payload really needs:
+            // per-item handling plus a conservative 10 MB/s of transfer time.
+            timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
+        }
+        if (count == 0) return;
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
+        if (!result.isSuccess()) throw new IOException("copy failed: " + result.error());
+        invalidateListCache();
+    }
+
+    /**
+     * Moves a whole selection in one {@code su} round trip.
+     *
+     * <p>{@code mv} is a rename on the same filesystem — instant, whatever the
+     * size of the tree — and falls back to copy+unlink by itself across
+     * filesystems, which is exactly move semantics. The previous approach
+     * (copy preserving + delete) streamed every byte even for a rename inside
+     * one folder.</p>
+     */
+    public void moveAll(List<CopyOp> ops, ShellProgress.Listener progress) throws IOException {
+        moveAll(ops, progress, null);
+    }
+
+    /**
+     * Moves a batch, with a pause / cancel token attached to the shell.
+     */
+    public void moveAll(List<CopyOp> ops, ShellProgress.Listener progress,
+                        TransferControl control) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        // The batch reports its own process id first, so the app can signal it.
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
+        int count = 0;
+        int timeout = 0;
+        int filesDone = 0;
+        long bytesDone = 0L;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            if (PathGuards.isPathBlocked(src)) {
+                throw new IOException("Blocked: refusing to move critical path: " + src);
+            }
+            cmd.append(" && ");
+            if (op.destExists && op.directory && !PathGuards.isPathBlocked(dest)) {
+                cmd.append("rm -rf -- ").append(ShellQuote.escapeShellArg(dest)).append(" && ");
+            }
+            String parent = new File(dest).getParent();
+            if (parent != null) cmd.append("mkdir -p ").append(ShellQuote.escapeShellArg(parent)).append(" && ");
+            cmd.append("mv -f -- ").append(ShellQuote.escapeShellArg(src)).append(' ').append(ShellQuote.escapeShellArg(dest));
+            filesDone += Math.max(0, op.files);
+            bytesDone += Math.max(0L, op.bytes);
+            cmd.append(ShellProgress.report(filesDone, bytesDone));
+            count++;
+            // The batch is killed when this expires and its work is thrown
+            // away, so the budget must cover what the payload really needs:
+            // per-item handling plus a conservative 10 MB/s of transfer time.
+            timeout += (int) Math.max(op.directory ? 120 : 60, op.bytes / (10L * 1024 * 1024));
+        }
+        if (count == 0) return;
+        ShellResult result = executeFs(cmd.toString(), Math.max(60, timeout), progress, control);
+        if (!result.isSuccess() && !moveCompletedDespiteError(ops)) {
+            throw new IOException("move failed: " + result.error());
+        }
+        invalidateListCache();
+    }
+
+    /**
+     * True when a "failed" {@code mv} batch actually landed.
+     *
+     * <p>{@code mv} across filesystems copies, unlinks the source and can still
+     * exit non-zero afterwards (a failed preserve step, a late stat error), and
+     * on a full disk it may fail while a partial destination sits next to an
+     * intact source. The exit code alone cannot tell those apart, and treating
+     * a completed move as failed makes the caller's fallback recycle the good
+     * destination and re-copy from a source that no longer exists — observed as
+     * a moved file "disappearing" into the recycle bin. Trusting the filesystem
+     * state is the only reliable signal: every source gone and every
+     * destination present means the batch succeeded.
+     */
+    private boolean moveCompletedDespiteError(List<CopyOp> ops) {
+        if (ops == null || ops.isEmpty()) return false;
+        for (CopyOp op : ops) {
+            String src = op.src;
+            String dest = op.dest;
+            if (src == null || dest == null || src.isEmpty() || dest.isEmpty() || src.equals(dest)) continue;
+            // Complete only when the source is gone AND the destination is there.
+            // A partial failure (source intact, partial destination) and a batch
+            // that never started both read as "not moved" and stay failures.
+            if (exists(src) || !exists(dest)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Removes every path in one shell process. Deleting a selection item by
+     * item cost one {@code su} spawn each, all serialised behind the same lock,
+     * so even a handful of empty files felt slow.
+     *
+     * <p>Paths are removed in chunks rather than all at once: {@code rm} is
+     * cheap to invoke inside an already-running shell, and a marker per chunk
+     * is what gives the dialog a moving counter. Failures no longer abort the
+     * batch (they are reported through the marker stream), so a single
+     * undeletable path cannot leave the rest of the selection behind.
+     *
+     * @return the paths that were actually removed.
+     */
+    public List<String> deleteAll(List<String> paths) throws IOException {
+        return deleteAll(paths, null);
+    }
+
+    public List<String> deleteAll(List<String> paths, ShellProgress.Listener progress) throws IOException {
+        return deleteAll(paths, progress, null);
+    }
+
+    /**
+     * Deletes a batch, with a pause / cancel token attached to the shell.
+     */
+    public List<String> deleteAll(List<String> paths, ShellProgress.Listener progress,
+                                  TransferControl control) throws IOException {
+        List<String> targets = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (PathGuards.isPathBlocked(path))
+                throw new IOException("Blocked: refusing to delete critical path: " + path);
+            targets.add(path);
+        }
+        if (targets.isEmpty()) return targets;
+
+        List<String> allTargets = targets;
+        int[] sharedDone = {0};
+        targets = deleteSharedPaths(targets, progress, control, sharedDone, false);
+        if (targets.isEmpty()) {
+            invalidateListCache();
+            return allTargets;
+        }
+
+        final int chunk = 32;
+        final AtomicBoolean failed =
+                new AtomicBoolean(false);
+        ShellProgress.Listener relay = new ShellProgress.Listener() {
+            @Override
+            public void onProgress(int filesDone, long bytesDone) {
+                if (progress != null) progress.onProgress(filesDone, bytesDone);
+            }
+
+            @Override
+            public void onFailure() {
+                failed.set(true);
+                if (progress != null) progress.onFailure();
+            }
+        };
+
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
+        int done = 0;
+        for (int i = 0; i < targets.size(); i += chunk) {
+            int end = Math.min(targets.size(), i + chunk);
+            cmd.append(" ; rm -rf --");
+            for (int j = i; j < end; j++) cmd.append(' ').append(ShellQuote.escapeShellArg(targets.get(j)));
+            cmd.append(ShellProgress.reportFailure());
+            done = sharedDone[0] + end;
+            cmd.append(ShellProgress.reportAlways(done, 0L));
+        }
+        ShellResult result = executeFs(cmd.toString(), Math.max(30, targets.size() * 30), relay, control);
+        if (failed.get() || !result.isSuccess()) {
+            throw new IOException("delete failed: " + result.error());
+        }
+        invalidateListCache();
+        return allTargets;
+    }
+
+    /** Leave public-storage deletions in the app's FUSE view; root-only paths stay native. */
+    private List<String> deleteSharedPaths(List<String> paths, ShellProgress.Listener progress,
+                                          TransferControl control, int[] done, boolean countDirs) {
+        List<String> remaining = new ArrayList<>();
+        FileUtils.TransferListener listener = new FileUtils.TransferListener() {
+            @Override public void onFile(File source, File destination) {
+                if (countDirs) {
+                    if (progress != null) progress.onProgress(++done[0], 0L);
+                    else done[0]++;
+                }
+            }
+            @Override public void onBytes(long count) {
+            }
+            @Override public void checkpoint() {
+                if (control != null) control.checkpoint();
+            }
+        };
+        for (String path : paths) {
+            if (control != null) control.checkpoint();
+            File file = new File(path);
+            if (SharedStorageCompat.canDeleteThroughApp(file) && FileUtils.deleteTree(file, listener)) {
+                if (!countDirs) {
+                    if (progress != null) progress.onProgress(++done[0], 0L);
+                    else done[0]++;
+                }
+            } else {
+                remaining.add(path);
+            }
+        }
+        return remaining;
+    }
+
+    /**
+     * Deletes each path recursively, reporting progress as it goes.
+     *
+     * <p>Fallback when mpio cannot start: count a root's entries, then delete
+     * that root in one rm invocation. Public storage stays in the app's FUSE
+     * view and reports each successful unlink. Counters use the same entry unit
+     * as mpio, without replaying successful roots or spawning rm per directory.
+     *
+     * <p>Markers here carry the entry delta per root; the relay turns them
+     * back into a running total for the caller.
+     *
+     * @return the paths that were removed.
+     */
+    public List<String> deleteTree(List<String> paths, ShellProgress.Listener progress) throws IOException {
+        return deleteTree(paths, progress, null);
+    }
+
+    /**
+     * Deletes each path recursively, with a pause / cancel token attached.
+     */
+    public List<String> deleteTree(List<String> paths, ShellProgress.Listener progress,
+                                   TransferControl control) throws IOException {
+        List<String> targets = new ArrayList<>();
+        for (String path : paths) {
+            if (path == null || path.isEmpty()) continue;
+            if (PathGuards.isPathBlocked(path))
+                throw new IOException("Blocked: refusing to delete critical path: " + path);
+            targets.add(path);
+        }
+        if (targets.isEmpty()) return targets;
+
+        final int[] done = {0};
+        List<String> allTargets = targets;
+        targets = deleteSharedPaths(targets, progress, control, done, true);
+        if (targets.isEmpty()) {
+            invalidateListCache();
+            return allTargets;
+        }
+        final AtomicBoolean failed =
+                new AtomicBoolean(false);
+        ShellProgress.Listener relay = new ShellProgress.Listener() {
+            @Override
+            public void onProgress(int delta, long bytesDone) {
+                if (delta > 0) done[0] += delta;
+                if (progress != null) progress.onProgress(done[0], 0L);
+            }
+
+            @Override
+            public void onFailure() {
+                failed.set(true);
+                if (progress != null) progress.onFailure();
+            }
+        };
+
+        StringBuilder cmd = new StringBuilder(ShellProgress.reportPid());
+        for (String path : targets) {
+            // Delete through the /data/media alias (see {@link #delete}): the
+            // FUSE view often rejects even the root shell inside Android/data.
+            String arg = ShellQuote.escapeShellArg(emulatedAlias(path));
+            // Count the entries once and unlink in one command. A per-directory
+            // rm process (and a final repeat sweep) was very slow for large trees.
+            cmd.append(" ; n=$(find ").append(arg).append(" 2>/dev/null | wc -l)")
+                    .append(" ; rm -rf -- ").append(arg)
+                    .append(" ; [ $? -eq 0 ] && [ ! -e ").append(arg).append(" ] && [ ! -L ").append(arg)
+                    .append(" ] && echo @@MPPROG \"$n\" 0 || echo @@MPFAIL");
+        }
+        ShellResult result = executeFs(cmd.toString(), Math.max(120, targets.size() * 60), relay, control);
+        if (failed.get() || !result.isSuccess()) throw new IOException("delete failed: " + result.error());
+        invalidateListCache();
+        return allTargets;
+    }
+
+    /**
+     * Number of directories under {@code paths}, which is the unit
+     * {@link #deleteTree} reports in.
+     */
+    public int countDirs(List<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        StringBuilder cmd = new StringBuilder("echo @@MPDIRS $(");
+        cmd.append("find");
+        // Same alias {@link #deleteTree} walks, so the dialog is sized by the
+        // same tree the delete actually sees.
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(emulatedAlias(p)));
+        cmd.append(" -type d 2>/dev/null | wc -l)");
+        ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
+        return parseCountMarker(r, "@@MPDIRS");
+    }
+
+    /** Reads an {@code @@NAME <n>} line out of a shell result. */
+    static int parseCountMarker(ShellResult r, String marker) {
+        if (r == null || r.output() == null) return 0;
+        for (String line : r.output().split("\n")) {
+            String t = line.trim();
+            if (!t.startsWith(marker)) continue;
+            try {
+                return Math.max(0, Integer.parseInt(t.substring(marker.length()).trim()));
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Counts files and totals bytes across {@code paths} using the root shell,
+     * because the app process cannot list them.
+     *
+     * <p>{@code du -sk} is used rather than {@code -sb}: every Android toolbox
+     * ships {@code -s} and {@code -k}, while {@code -b} is not universal, and a
+     * progress denominator does not need byte-exact disk usage.
+     */
+    public FileUtils.Measure measure(List<String> paths) {
+        return measureSet(paths).total;
+    }
+
+    /**
+     * Same as {@link #measure} but also returns one entry per input path, so a
+     * batch copy can attribute a known share of the work to each item.
+     *
+     * <p>The per-path lines cost one extra {@code du} + {@code find} each, all
+     * inside the single shell process that already had to be spawned.
+     */
+    public FileUtils.MeasureSet measureSet(List<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return new FileUtils.MeasureSet(new FileUtils.Measure(1, 0L), new ArrayList<>());
+        }
+        StringBuilder cmd = new StringBuilder("echo @@MPM $(");
+        cmd.append("du -sk");
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(p));
+        cmd.append(" 2>/dev/null | awk '{s+=$1} END {print s*1024+0}') $(");
+        cmd.append("find");
+        for (String p : paths) cmd.append(' ').append(ShellQuote.escapeShellArg(p));
+        cmd.append(" -type f 2>/dev/null | wc -l)\n");
+        for (int i = 0; i < paths.size(); i++) {
+            String a = ShellQuote.escapeShellArg(paths.get(i));
+            cmd.append("echo @@MPI ").append(i)
+                    .append(" $(du -sk ").append(a).append(" 2>/dev/null | awk '{print $1*1024+0}')")
+                    .append(" $(find ").append(a).append(" -type f 2>/dev/null | wc -l)\n");
+        }
+        ShellResult r = executeFs(cmd.toString(), Math.max(30, paths.size() * 20));
+        FileUtils.MeasureSet parsed = parseMeasureSet(r, paths.size());
+        return parsed != null
+                ? parsed
+                : new FileUtils.MeasureSet(new FileUtils.Measure(1, 0L), new ArrayList<>());
+    }
+
+    /**
+     * Reads the {@code @@MPM <bytes> <files>} total line and the
+     * {@code @@MPI <index> <bytes> <files>} per-path lines emitted by
+     * {@link #measureSet}.
+     */
+    static FileUtils.MeasureSet parseMeasureSet(ShellResult r, int expected) {
+        if (r == null || r.output() == null) return null;
+        FileUtils.Measure total = null;
+        List<FileUtils.Measure> each = new ArrayList<>();
+        for (int i = 0; i < expected; i++) each.add(new FileUtils.Measure(0, 0L));
+        boolean sawAny = false;
+        for (String line : r.output().split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("@@MPM ")) {
+                String[] parts = t.substring(6).trim().split("\\s+");
+                if (parts.length < 2) continue;
+                try {
+                    total = new FileUtils.Measure(Math.max(1, Integer.parseInt(parts[1])),
+                            Math.max(0L, Long.parseLong(parts[0])));
+                    sawAny = true;
+                } catch (NumberFormatException ignored) {
+                }
+            } else if (t.startsWith("@@MPI ")) {
+                String[] parts = t.substring(6).trim().split("\\s+");
+                if (parts.length < 3) continue;
+                try {
+                    int idx = Integer.parseInt(parts[0]);
+                    if (idx >= 0 && idx < each.size()) {
+                        each.set(idx, new FileUtils.Measure(Math.max(0, Integer.parseInt(parts[2])),
+                                Math.max(0L, Long.parseLong(parts[1]))));
+                    }
+                    sawAny = true;
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        if (!sawAny) return null;
+        if (total == null) {
+            int files = 0;
+            long bytes = 0L;
+            for (FileUtils.Measure m : each) {
+                files += m.files;
+                bytes += m.bytes;
+            }
+            total = new FileUtils.Measure(Math.max(1, files), bytes);
+        }
+        return new FileUtils.MeasureSet(total, each);
+    }
+
+    public void touch(String path) throws IOException {
+        ShellResult result = executeFs("touch " + ShellQuote.escapeShellArg(path), 30);
+        if (!result.isSuccess()) throw new IOException("touch failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public void ln(String target, String link) throws IOException {
+        ShellResult result = executeFs("ln -sf " + ShellQuote.escapeShellArg(target) + " " + ShellQuote.escapeShellArg(link), 30);
+        if (!result.isSuccess()) throw new IOException("ln failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public String readFile(String path) throws IOException {
+        ShellResult result = execute("cat " + ShellQuote.escapeShellArg(path));
+        if (!result.isSuccess()) throw new IOException("read failed: " + result.error());
+        return result.output();
+    }
+
+    public void writeFile(String path, String content) throws IOException {
+        if (!isRootMode()) {
+            throw new IOException("Root mode is disabled");
+        }
+        synchronized (lock) {
+            try {
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
+                DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
+                String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
+                if (content == null) content = "";
+                // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
+                // characters that writeBytes would truncate (see executeWithInput).
+                stdin.write(("cat > " + ShellQuote.escapeShellArg(path) + " << '" + delimiter + "'\n")
+                        .getBytes(StandardCharsets.UTF_8));
+                stdin.write(content.getBytes(StandardCharsets.UTF_8));
+                stdin.writeBytes("\n" + delimiter + "\n");
+                stdin.writeBytes("exit\n");
+                stdin.flush();
+
+                boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+                if (!finished) {
+                    process.destroyForcibly();
+                    throw new IOException("write timed out");
+                }
+                if (process.exitValue() != 0) {
+                    BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                    StringBuilder err = new StringBuilder();
+                    String line;
+                    while ((line = stderr.readLine()) != null) {
+                        if (err.length() > 0) err.append("\n");
+                        err.append(line);
+                    }
+                    throw new IOException("write failed: " + err);
+                }
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("write failed: " + e.getMessage());
+            }
+        }
+    }
+
+    public void appendFile(String path, String content) throws IOException {
+        if (!isRootMode()) {
+            throw new IOException("Root mode is disabled");
+        }
+        synchronized (lock) {
+            try {
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
+                DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
+                String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
+                if (content == null) content = "";
+                // UTF-8 bytes, not writeBytes: the path may contain non-ASCII
+                // characters that writeBytes would truncate (see executeWithInput).
+                stdin.write(("cat >> " + ShellQuote.escapeShellArg(path) + " << '" + delimiter + "'\n")
+                        .getBytes(StandardCharsets.UTF_8));
+                stdin.write(content.getBytes(StandardCharsets.UTF_8));
+                stdin.writeBytes("\n" + delimiter + "\n");
+                stdin.writeBytes("exit\n");
+                stdin.flush();
+
+                boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+                if (!finished) {
+                    process.destroyForcibly();
+                    throw new IOException("append timed out");
+                }
+                if (process.exitValue() != 0) {
+                    BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                    StringBuilder err = new StringBuilder();
+                    String line;
+                    while ((line = stderr.readLine()) != null) {
+                        if (err.length() > 0) err.append("\n");
+                        err.append(line);
+                    }
+                    throw new IOException("append failed: " + err);
+                }
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("append failed: " + e.getMessage());
+            }
+        }
+    }
+
+    public void copyToRoot(File localSource, String rootPath) throws IOException {
+        ShellResult result = executeFs("cp " + ShellQuote.escapeShellArg(localSource.getAbsolutePath()) + " " + ShellQuote.escapeShellArg(rootPath), 60);
+        if (!result.isSuccess()) throw new IOException("copy to root failed: " + result.error());
+        invalidateListCache();
+    }
+
+    public void installSilent(String apkPath) throws IOException {
+        installWithInstaller(Collections.singletonList(apkPath), null, 0x2);
+    }
+
+    /**
+     * Session-based silent install that attributes the install to
+     * {@code installerPkg} (e.g. Play Store spoof). Runs as uid 0, so
+     * PackageManager trusts the {@code -i} installer value the same way
+     * InstallerX's binder path trusts its spoofed caller package.
+     */
+    public void installWithInstaller(List<String> apkPaths, String installerPkg, int flags) throws IOException {
+        if (apkPaths == null || apkPaths.isEmpty()) throw new IOException("No APKs to install");
+        if (installerPkg != null && !installerPkg.isEmpty() && !PackageGuards.isPackageNameValid(installerPkg)) {
+            throw new IOException("Invalid installer package: " + installerPkg);
+        }
+        String tag = "_mp" + (System.currentTimeMillis() % 100000);
+        StringBuilder copyCmd = new StringBuilder();
+        for (int i = 0; i < apkPaths.size(); i++) {
+            String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
+            copyCmd.append("cp ").append(ShellQuote.escapeShellArg(apkPaths.get(i))).append(" ").append(ShellQuote.escapeShellArg(tmpPath)).append(" ; ");
+        }
+
+        long totalSize = 0;
+        for (String p : apkPaths) totalSize += new File(p).length();
+
+        String createCmd = PrivilegedInstaller.buildCreateCommand(totalSize, installerPkg, flags);
+
+        ShellResult copyResult = executeWithInput(copyCmd.toString(), null);
+        if (!copyResult.isSuccess()) {
+            throw new IOException("Failed to copy APKs: " + copyResult.error());
+        }
+
+        ShellResult createResult = execute(createCmd);
+        for (int attempt = 0; attempt < 2 && !createResult.isSuccess(); attempt++) {
+            String retry = PrivilegedInstaller.downgradeCreateCommand(createCmd,
+                    PrivilegedInstaller.combinedOutput(createResult.output(), createResult.error()));
+            if (retry == null) break;
+            createCmd = retry;
+            createResult = execute(createCmd);
+        }
+        String sessionId = parseSessionId(createResult.output());
+        if (!createResult.isSuccess() || sessionId == null) {
+            cleanupInstallTag(tag, apkPaths.size());
+            throw new IOException("Failed to create install session: " + createResult.error() + " " + createResult.output());
+        }
+
+        try {
+            for (int i = 0; i < apkPaths.size(); i++) {
+                String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
+                long size = new File(apkPaths.get(i)).length();
+                String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " " + ShellQuote.escapeShellArg(tmpPath);
+                ShellResult writeResult = execute(writeCmd);
+                if (!writeResult.isSuccess()) {
+                    execute("pm install-abandon " + sessionId);
+                    throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error() + " " + writeResult.output());
+                }
+            }
+
+            ShellResult commitResult = execute("pm install-commit " + sessionId);
+            if (!commitResult.isSuccess() || (!commitResult.output().contains("Success") && !commitResult.output().contains("Session"))) {
+                throw new IOException("Install failed: " + commitResult.error() + " " + commitResult.output());
+            }
+        } finally {
+            cleanupInstallTag(tag, apkPaths.size());
+        }
+    }
+
+    private void cleanupInstallTag(String tag, int count) {
+        StringBuilder cleanup = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            cleanup.append("rm -f ").append(ShellQuote.escapeShellArg("/data/local/tmp/" + tag + "_" + i + ".apk")).append(";");
+        }
+        cleanup.append("rm -f '/data/local/tmp/_split_").append(0).append(".apk';");
+        cleanup.append("rm -f '/data/local/tmp/_install.apk'");
+        try {
+            executeWithInput(cleanup.toString(), null);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static String parseSessionId(String output) {
+        if (output == null) return null;
+        int bracketStart = output.lastIndexOf('[');
+        int bracketEnd = output.lastIndexOf(']');
+        if (bracketStart < 0 || bracketEnd <= bracketStart) return null;
+        String id = output.substring(bracketStart + 1, bracketEnd).trim();
+        return id.matches("\\d+") ? id : null;
+    }
+
+    public void installSplitSilent(List<String> apkPaths) throws IOException {
+        installWithInstaller(apkPaths, null, 0x2);
+    }
+
+    public void uninstallSilent(String packageName) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        if (PackageGuards.isCriticalPackage(packageName)) {
+            throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
+        }
+        ShellResult result = executeWithInput("pm uninstall " + ShellQuote.escapeShellArg(packageName), null);
+        if (!result.isSuccess() || !result.output().contains("Success")) {
+            throw new IOException("Uninstall failed: " + result.error() + " " + result.output());
+        }
+    }
+
+    public void clearAppData(String packageName) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        if (PackageGuards.isCriticalPackage(packageName)) {
+            throw new IOException("Blocked: refusing to clear data of critical system app: " + packageName);
+        }
+        ShellResult result = execute("pm clear " + ShellQuote.escapeShellArg(packageName));
+        if (!result.isSuccess()) throw new IOException("clear data failed: " + result.error());
+    }
+
+    public void forceStopApp(String packageName) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        if (PackageGuards.isCriticalPackage(packageName)) {
+            throw new IOException("Blocked: refusing to force stop critical system app: " + packageName);
+        }
+        ShellResult result = execute("am force-stop " + ShellQuote.escapeShellArg(packageName));
+        if (!result.isSuccess()) throw new IOException("force stop failed: " + result.error());
+    }
+
+    public void enableApp(String packageName) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        ShellResult result = execute("pm enable " + ShellQuote.escapeShellArg(packageName));
+        if (!result.isSuccess()) throw new IOException("enable failed: " + result.error());
+    }
+
+    public void disableApp(String packageName) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        if (PackageGuards.isCriticalPackage(packageName)) {
+            throw new IOException("Blocked: refusing to disable critical system app: " + packageName);
+        }
+        ShellResult result = execute("pm disable-user --user 0 " + ShellQuote.escapeShellArg(packageName));
+        if (!result.isSuccess()) throw new IOException("disable failed: " + result.error());
+    }
+
+    public String getAppApkPath(String packageName) throws IOException {
+        List<String> all = getAppApkPaths(packageName);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    public List<String> getAppApkPaths(String packageName) {
+        List<String> out = new ArrayList<>();
+        if (!PackageGuards.isPackageNameValid(packageName)) return out;
+        ShellResult result = executeFs("pm path " + ShellQuote.escapeShellArg(packageName), 30);
+        if (result != null && result.isSuccess() && result.output() != null) {
+            String output = result.output();
+            int start = 0;
+            while (start <= output.length()) {
+                int nl = output.indexOf((char) 10, start);
+                String line = nl < 0 ? output.substring(start) : output.substring(start, nl);
+                if (nl < 0) start = output.length() + 1;
+                else start = nl + 1;
+                String t = line.trim();
+                if (t.endsWith(String.valueOf((char) 13))) t = t.substring(0, t.length() - 1).trim();
+                if (t.startsWith("package:")) t = t.substring(8).trim();
+                if (!t.isEmpty()) out.add(t);
+            }
+        }
+        return out;
+    }
+
+    public String getAppUid(String packageName) {
+        if (!PackageGuards.isPackageNameValid(packageName)) return null;
+        ShellResult dump = executeFs("pm dump " + ShellQuote.escapeShellArg(packageName), 30);
+        if (dump != null && dump.isSuccess() && dump.output() != null) {
+            String uid = findUidInDump(dump.output());
+            if (uid != null) return uid;
+        }
+        ShellResult statResult = executeFs("stat -c %u " + ShellQuote.escapeShellArg("/data/data/" + packageName), 30);
+        if (statResult != null && statResult.isSuccess() && statResult.output() != null) {
+            String t = statResult.output().trim();
+            if (!t.isEmpty()) return t;
+        }
+        return null;
+    }
+
+    private static String findUidInDump(String dump) {
+        // Avoid regex escapes: scan for userId=/appId= digit runs manually.
+        for (String key : new String[]{"userId=", "appId="}) {
+            int from = 0;
+            while (true) {
+                int idx = dump.indexOf(key, from);
+                if (idx < 0) break;
+                int s = idx + key.length();
+                int e = s;
+                while (e < dump.length() && Character.isDigit(dump.charAt(e))) e++;
+                if (e > s) return dump.substring(s, e);
+                from = s;
+            }
+        }
+        return null;
+    }
+
+    public List<String> getAppDataDirs(String packageName) {
+        List<String> dirs = new ArrayList<>();
+        if (!PackageGuards.isPackageNameValid(packageName)) return dirs;
+        // /data/data, /data/user/0 and /data/user_de/0 are the same dir seen
+        // through different mount views (likewise /sdcard vs
+        // /storage/emulated/0), so return at most one per group to avoid
+        // showing duplicates. First candidate in each group wins.
+        String[][] groups = {
+                {
+                        "/data/data/" + packageName,
+                        "/data/user/0/" + packageName,
+                        "/data/user_de/0/" + packageName,
+                },
+                {
+                        "/sdcard/Android/data/" + packageName,
+                        "/storage/emulated/0/Android/data/" + packageName,
+                },
+        };
+        for (String[] candidates : groups) {
+            for (String path : candidates) {
+                ShellResult result = executeFs("test -d " + ShellQuote.escapeShellArg(path) + " && echo exists", 30);
+                if (result != null && result.isSuccess() && result.output() != null
+                        && "exists".equals(result.output().trim())) {
+                    dirs.add(path);
+                    break;
+                }
+            }
+        }
+        return dirs;
+    }
+
+    public List<String> getInstalledPackages() throws IOException {
+        ShellResult result = execute("pm list packages -f");
+        if (!result.isSuccess()) throw new IOException("list packages failed: " + result.error());
+        List<String> packages = new ArrayList<>();
+        for (String line : result.output().split("\n")) {
+            if (line.startsWith("package:")) {
+                packages.add(line.substring(8).trim());
+            }
+        }
+        return packages;
+    }
+
+    
+    public void remountSystem(boolean rw) throws IOException {
+        String cmd = rw ? "mount -o remount,rw /system" : "mount -o remount,ro /system";
+        ShellResult result = execute(cmd);
+        if (!result.isSuccess()) throw new IOException("remount failed: " + result.error());
+    }
+
+    public void reboot(String mode) throws IOException {
+        if (!isRebootModeValid(mode)) {
+            throw new IOException("Invalid reboot mode: " + mode);
+        }
+        String cmd;
+        if (TextUtils.isEmpty(mode)) {
+            cmd = "reboot";
+        } else {
+            cmd = "reboot " + mode;
+        }
+        ShellResult result = execute(cmd);
+        if (!result.isSuccess()) throw new IOException("reboot failed: " + result.error());
+    }
+
+    public List<String> getRunningProcesses() throws IOException {
+        ShellResult result = execute("ps -A -o PID,USER,NAME");
+        if (!result.isSuccess()) throw new IOException("ps failed: " + result.error());
+        List<String> processes = new ArrayList<>();
+        for (String line : result.output().split("\n")) {
+            if (!line.trim().isEmpty()) processes.add(line.trim());
+        }
+        return processes;
+    }
+
+    public String getBuildProp() throws IOException {
+        return readFile("/system/build.prop");
+    }
+
+    public boolean isSystemRemountedRW() {
+        ShellResult result = execute("mount | grep ' /system '");
+        return result.isSuccess() && result.output().contains("rw");
+    }
+
+    public void backupAppData(String packageName, String outputPath) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        ShellResult result = execute("tar -cf " + ShellQuote.escapeShellArg(outputPath) + " -C /data/data " + ShellQuote.escapeShellArg(packageName), 120);
+        if (!result.isSuccess()) throw new IOException("backup failed: " + result.error());
+    }
+
+    public void restoreAppData(String packageName, String archivePath) throws IOException {
+        if (!PackageGuards.isPackageNameValid(packageName)) {
+            throw new IOException("Invalid package name: " + packageName);
+        }
+        ShellResult listResult = execute("tar -tf " + ShellQuote.escapeShellArg(archivePath) + " 2>/dev/null", 60);
+        if (!listResult.isSuccess()) {
+            throw new IOException("Cannot list archive: " + listResult.error());
+        }
+        for (String member : listResult.output().split("\n")) {
+            String m = member.trim();
+            if (m.isEmpty() || m.equals(".") || m.equals("./")) continue;
+            if (m.startsWith("/")) {
+                throw new IOException("Blocked: archive contains absolute entry: " + m);
+            }
+            for (String seg : m.split("/")) {
+                if (seg.equals("..")) {
+                    throw new IOException("Blocked: archive contains parent entry: " + m);
+                }
+            }
+        }
+        ShellResult result = execute("tar -xf " + ShellQuote.escapeShellArg(archivePath) + " -C /data/data", 120);
+        if (!result.isSuccess()) throw new IOException("restore failed: " + result.error());
+        String dataPath = "/data/data/" + packageName;
+        ShellResult existsCheck = execute("test -d " + ShellQuote.escapeShellArg(dataPath) + " && echo yes || echo no");
+        if (existsCheck.isSuccess() && "yes".equals(existsCheck.output().trim())) {
+            execute("chmod -R 771 " + ShellQuote.escapeShellArg(dataPath));
+            execute("chown -R $(stat -c %U:%G " + ShellQuote.escapeShellArg(dataPath) + " 2>/dev/null || echo system:system) " + ShellQuote.escapeShellArg(dataPath));
+        }
+    }
+
+
+    public static final long MAX_STAGE_BYTES = 1024L * 1024L * 1024L; // 1 GB for large APKs/archives
+
+    public record RootEntry(String path, boolean exists, boolean isDirectory, boolean isFile,
+                            long length, long lastModified, String mode) {
+    }
+
+    public boolean needsRootFor(String path) {
+        if (path == null || path.isEmpty()) return false;
+        try {
+            File f = new File(path);
+            if (f.exists() && f.canRead()) return false;
+        } catch (Exception ignored) {
+        }
+        if (!isRootFileOpsEnabled() || !isRootAvailable()) return false;
+        try {
+            return exists(path);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public RootEntry statEntry(String path) {
+        if (path == null || path.isEmpty() || !isRootMode()) {
+            return new RootEntry(path, false, false, false, 0L, 0L, null);
+        }
+        try {
+            ShellResult r = executeFs("stat -L -c '%n\037%F\037%s\037%Y\037%a' "
+                    + ShellQuote.escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
+            if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                String line = r.output().split("\\r?\\n")[0];
+                String[] parts = line.split("\037", -1);
+                if (parts.length >= 5) {
+                    String type = parts[1].trim();
+                    long size;
+                    long mtime;
+                    try {
+                        size = Long.parseLong(parts[2].trim());
+                    } catch (NumberFormatException e) {
+                        size = 0L;
+                    }
+                    try {
+                        mtime = Long.parseLong(parts[3].trim()) * 1000L;
+                    } catch (NumberFormatException e) {
+                        mtime = 0L;
+                    }
+                    boolean dir = "directory".equalsIgnoreCase(type);
+                    boolean reg = "regular file".equalsIgnoreCase(type)
+                            || "regular empty file".equalsIgnoreCase(type);
+                    return new RootEntry(path, true, dir, reg || (!dir && !"directory".equalsIgnoreCase(type)
+                            && !"unknown".equalsIgnoreCase(type) && isFile(path)),
+                            size, mtime, parts[4].trim());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        // Fallback: separate tests (slower but portable).
+        try {
+            boolean ex = exists(path);
+            if (!ex) return new RootEntry(path, false, false, false, 0L, 0L, null);
+            boolean dir = isDirectory(path);
+            boolean file = !dir && isFile(path);
+            long size = dir ? 0L : getFileSize(path);
+            return new RootEntry(path, true, dir, file, Math.max(0L, size), 0L, getPermissions(path));
+        } catch (Exception ignored) {
+            return new RootEntry(path, false, false, false, 0L, 0L, null);
+        }
+    }
+
+    public File[] listRootFilesWithStat(String dirPath) {
+        File[] cached = cachedList(dirPath);
+        if (cached != null) return cached;
+        File[] fresh = listRootFilesFresh(dirPath);
+        putCachedList(dirPath, fresh);
+        return fresh == null ? null : fresh.clone();
+    }
+
+    private record ListCacheEntry(File[] files, long at) {
+    }
+
+    private final Map<String, ListCacheEntry> listCache = new HashMap<>();
+    private static final long LIST_CACHE_TTL = 8000L;
+    private static final long STATIC_DIR_CACHE_TTL = 15L * 60 * 1000L; // 15 minutes for static system dirs
+
+    private static boolean isStaticSystemDir(String dir) {
+        if (dir == null) return false;
+        return dir.startsWith("/system") || dir.startsWith("/vendor")
+                || dir.startsWith("/apex") || dir.startsWith("/product")
+                || dir.startsWith("/odm") || dir.startsWith("/system_ext");
+    }
+
+    private synchronized File[] cachedList(String dirPath) {
+        if (dirPath == null) return null;
+        try {
+            ListCacheEntry e = listCache.get(dirPath);
+            long ttl = isStaticSystemDir(dirPath) ? STATIC_DIR_CACHE_TTL : LIST_CACHE_TTL;
+            if (e != null && e.files != null && System.currentTimeMillis() - e.at < ttl) {
+                return e.files.clone();
+            }
+            if (e != null) listCache.remove(dirPath);
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private synchronized void putCachedList(String dirPath, File[] files) {
+        if (dirPath == null) return;
+        try {
+            if (files == null) {
+                listCache.remove(dirPath);
+                return;
+            }
+            if (listCache.size() > 60) listCache.clear();
+            listCache.put(dirPath, new ListCacheEntry(files.clone(), System.currentTimeMillis()));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public synchronized void invalidateListCache() {
+        try {
+            listCache.clear();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private File[] listRootFilesFresh(String dirPath) {
+        String actual = emulatedAlias(dirPath);
+        File[] primary = listRootFilesLsLong(actual);
+        if (!isAppDataDir(actual)) {
+            if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
+            // One shell call that reports name/type/size/mtime per entry. Preferred
+            // over the name-only fallback, which left every row with a 0 date and
+            // so queued one extra stat per visible row just to draw it.
+            File[] detailed = listRootFilesDetailed(actual);
+            if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
+            File[] portable = listRootFilesPortable(actual);
+            if (portable != null && portable.length > 0) return remapParent(portable, dirPath);
+            return primary != null ? remapParent(primary, dirPath) : portable;
+        }
+        if (primary != null && primary.length >= 30) return remapParent(primary, dirPath);
+        File[] explicit = listAppDataDirsExplicit(actual);
+        File[] merged = unionRootFiles(primary, explicit);
+        if (merged != null && merged.length > 0) return remapParent(merged, dirPath);
+        File[] detailed = listRootFilesDetailed(actual);
+        if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
+        File[] portable = listRootFilesPortable(actual);
+        return remapParent(unionRootFiles(merged, portable), dirPath);
+    }
+
+    private static File[] remapParent(File[] files, String newParent) {
+        if (files == null) return null;
+        String cleanParent = (newParent != null && newParent.endsWith("/") && newParent.length() > 1)
+                ? newParent.substring(0, newParent.length() - 1) : newParent;
+        for (int i = 0; i < files.length; i++) {
+            File f = files[i];
+            if (f == null) continue;
+            if (f instanceof RootFile) {
+                RootFile r = (RootFile) f;
+                files[i] = new RootFile(cleanParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode(), r.isLink());
+            } else {
+                files[i] = new File(cleanParent, f.getName());
+            }
+        }
+        return files;
+    }
+
+    private File[] listRootFilesLsLong(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
+        ShellResult result = executeFs("LC_ALL=C ls -la -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 15);
+        if (!result.isSuccess() || result.output() == null) return null;
+        List<File> files = new ArrayList<>();
+        List<Integer> linkIdx = new ArrayList<>();
+        List<String> linkNames = new ArrayList<>();
+        for (String line : result.output().split("\\r?\\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("total ")) continue;
+            Matcher matcher = LS_LONG_LINE.matcher(line);
+            if (!matcher.matches()) continue;
+            char type = matcher.group(1).charAt(0);
+            if (type != '-' && type != 'd' && type != 'l') continue;
+            String name = matcher.group(4);
+            int arrow = name.indexOf(" -> ");
+            if (arrow > 0) name = name.substring(0, arrow);
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            long size;
+            try {
+                size = Long.parseLong(matcher.group(2));
+            } catch (NumberFormatException ignored) {
+                size = 0L;
+            }
+            long mtime = parseLsDateTimeFlexible(matcher.group(3));
+            String mode = matcher.group(1).length() > 1 ? matcher.group(1).substring(1) : null;
+            if (type == 'l') {
+                linkIdx.add(files.size());
+                linkNames.add(name);
+            }
+            files.add(new RootFile(cleanPath, name, true, type == 'd', type == '-',
+                    type == 'd' ? 0L : Math.max(0L, size), mtime, mode, type == 'l'));
+        }
+        if (!linkNames.isEmpty()) {
+            StringBuilder cmd = new StringBuilder();
+            for (int i = 0; i < linkNames.size(); i++) {
+                if (i > 0) cmd.append(' ');
+                String p = ShellQuote.escapeShellArg(cleanPath.equals("/") ? "/" + linkNames.get(i) : cleanPath + "/" + linkNames.get(i));
+                cmd.append("if [ -d ").append(p).append(" ] || [ -d ").append(p).append("/ ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
+            }
+            try {
+                ShellResult r = executeFs(cmd.toString(), 15);
+                if (r.isSuccess() && r.output() != null) {
+                    List<Boolean> linkIsDir = new ArrayList<>();
+                    List<Boolean> linkIsFile = new ArrayList<>();
+                    for (int i = 0; i < linkNames.size(); i++) {
+                        linkIsDir.add(Boolean.FALSE);
+                        linkIsFile.add(Boolean.FALSE);
+                    }
+                    for (String l : r.output().split("\\r?\\n")) {
+                        String t = l.trim();
+                        if (t.startsWith("LINK_DIR_")) {
+                            linkIsDir.set(Integer.parseInt(t.substring("LINK_DIR_".length())), Boolean.TRUE);
+                        } else if (t.startsWith("LINK_FILE_")) {
+                            linkIsFile.set(Integer.parseInt(t.substring("LINK_FILE_".length())), Boolean.TRUE);
+                        }
+                    }
+                    for (int i = 0; i < linkNames.size(); i++) {
+                        File old = files.get(linkIdx.get(i));
+                        boolean isDir = linkIsDir.get(i);
+                        files.set(linkIdx.get(i), new RootFile(old.getParent(), old.getName(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null, true));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return files.toArray(new File[0]);
+    }
+
+    private static long parseLsTime(String month, String day, String time) {
+        try {
+            boolean hasYear = time.matches("\\d{4}");
+            String pattern = hasYear ? "MMM d yyyy" : "MMM d HH:mm";
+            SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.US);
+            format.setLenient(false);
+            if (!hasYear) {
+                Calendar now = Calendar.getInstance();
+                format.setCalendar(now);
+            }
+            return format.parse(month + " " + day + " " + time).getTime();
+        } catch (Exception ignored) {
+            return 0L;
+        }
+    }
+
+    private static long parseLsDateTime(String date, String time) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).parse(date + " " + time).getTime();
+        } catch (Exception ignored) {
+            return 0L;
+        }
+    }
+
+    /**
+     * Parses the date field of an {@code ls -l} line. Toybox prints several
+     * shapes depending on the file's age and build, and the previous parser
+     * only understood two of them, so every line in the {@code MM-DD HH:MM}
+     * form was discarded - which silently emptied a listing and dropped the
+     * whole folder onto the metadata-less fallback.
+     */
+    static long parseLsDateTimeFlexible(String dateTime) {
+        if (dateTime == null) return 0L;
+        String value = dateTime.trim();
+        try {
+            if (value.matches("\\d{4}-\\d{2}-\\d{2}.*")) {
+                String[] p = value.split("\\s+", 2);
+                String date = p[0];
+                String time = p.length > 1 ? p[1] : null;
+                if (time != null && time.matches("\\d{4}")) time = null;
+                if (time == null) return new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date).getTime();
+                return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                        .parse(date + " " + time).getTime();
+            }
+            if (value.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                return new SimpleDateFormat("MM-dd-yyyy", Locale.US).parse(value).getTime();
+            }
+            if (value.matches("\\d{2}-\\d{2}.*")) {
+                String[] p = value.split("\\s+", 2);
+                if (p.length == 2 && p[1].matches("\\d{2}:\\d{2}")) {
+                    // toybox only omits the year for files in the current year.
+                    return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                            .parse(Calendar.getInstance().get(Calendar.YEAR) + "-" + p[0] + " " + p[1])
+                            .getTime();
+                }
+                if (p.length == 2 && p[1].matches("\\d{4}")) {
+                    return new SimpleDateFormat("MM-dd-yyyy", Locale.US)
+                            .parse(p[0] + "-" + p[1]).getTime();
+                }
+                return 0L;
+            }
+            String[] p = value.split("\\s+", 3);
+            if (p.length == 3) {
+                long t = parseLsTime(p[0], p[1], p[2]);
+                if (t > 0 && !p[2].matches("\\d{4}")) {
+                    // "Jan  1 09:30" omits the year. DateFormat.parse clears the
+                    // calendar, so the result lands in 1900; re-anchor it to the
+                    // current year (backing off one if that would be in future).
+                    Calendar parsed = Calendar.getInstance();
+                    parsed.setTimeInMillis(t);
+                    Calendar c = Calendar.getInstance();
+                    c.clear();
+                    c.set(Calendar.YEAR, Calendar.getInstance().get(Calendar.YEAR));
+                    c.set(Calendar.MONTH, parsed.get(Calendar.MONTH));
+                    c.set(Calendar.DAY_OF_MONTH, parsed.get(Calendar.DAY_OF_MONTH));
+                    c.set(Calendar.HOUR_OF_DAY, parsed.get(Calendar.HOUR_OF_DAY));
+                    c.set(Calendar.MINUTE, parsed.get(Calendar.MINUTE));
+                    c.set(Calendar.SECOND, 0);
+                    if (c.getTimeInMillis() > System.currentTimeMillis() + 86400000L) {
+                        c.add(Calendar.YEAR, -1);
+                    }
+                    t = c.getTimeInMillis();
+                }
+                return t;
+            }
+        } catch (Exception ignored) {
+        }
+        return 0L;
+    }
+
+    private static boolean isAppDataDir(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty()) return false;
+        String n = dirPath.endsWith("/") && dirPath.length() > 1
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        if (n.equals("/data/data")) return true;
+        return n.matches("^/data/user(_de)?/\\d+$");
+    }
+
+    private static File[] unionRootFiles(File[] a, File[] b) {
+        LinkedHashMap<String, File> map = new LinkedHashMap<>();
+        if (a != null) {
+            for (File f : a) {
+                if (f != null && !map.containsKey(f.getName())) map.put(f.getName(), f);
+            }
+        }
+        if (b != null) {
+            for (File f : b) {
+                if (f != null && !map.containsKey(f.getName())) map.put(f.getName(), f);
+            }
+        }
+        if (map.isEmpty()) return a != null ? a : b;
+        return map.values().toArray(new File[0]);
+    }
+
+    public File[] listAppDataDirsExplicit(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        String base = dirPath.endsWith("/") && dirPath.length() > 1
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        List<String> pkgs = new ArrayList<>();
+        try {
+            List<ApplicationInfo> apps =
+                    context.getPackageManager().getInstalledApplications(0);
+            if (apps != null) {
+                for (ApplicationInfo app : apps) {
+                    if (app != null && PackageGuards.isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        if (pkgs.isEmpty()) return null;
+        List<File> out = new ArrayList<>();
+        for (int i = 0; i < pkgs.size(); i += 150) {
+            int end = Math.min(i + 150, pkgs.size());
+            StringBuilder script = new StringBuilder("for p in");
+            for (int j = i; j < end; j++) {
+                script.append(" ").append(ShellQuote.escapeShellArg(base + "/" + pkgs.get(j)));
+            }
+            script.append("; do [ -e \"$p\" ] || [ -L \"$p\" ] || continue; ");
+            script.append("if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$p\" 2>/dev/null); then :; ");
+            script.append("else s=$(printf '%s\037unknown\0370\0370\037' \"$p\"); fi; ");
+            script.append("if [ -d \"$p\" ]; then printf '%s\0371\\n' \"$s\"; ");
+            script.append("else printf '%s\0370\\n' \"$s\"; fi; done");
+            try {
+                ShellResult r = executeFs(script.toString(), 30);
+                if (r.isSuccess() && r.output() != null) parseStatLines(out, r.output(), base);
+            } catch (Exception ignored) {
+            }
+        }
+        return out.toArray(new File[0]);
+    }
+
+    private void parseStatLines(List<File> files, String output, String fallbackParent) {
+        for (String line : output.split("\\r?\\n")) {
+            if (line.trim().isEmpty()) continue;
+            String[] parts = line.split("\037", -1);
+            if (parts.length < 6) continue;
+            String full = parts[0];
+            String name = full;
+            String parent = fallbackParent;
+            int slash = full.lastIndexOf('/');
+            if (slash >= 0) {
+                if (slash + 1 < full.length()) name = full.substring(slash + 1);
+                parent = full.substring(0, slash);
+            }
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            long size;
+            long mtime;
+            try {
+                size = Long.parseLong(parts[2].trim());
+            } catch (NumberFormatException e) {
+                size = 0L;
+            }
+            try {
+                mtime = Long.parseLong(parts[3].trim()) * 1000L;
+            } catch (NumberFormatException e) {
+                mtime = 0L;
+            }
+            String mode = parts[4].trim();
+            boolean dir = "1".equals(parts[5].trim());
+            files.add(new RootFile(parent, name,
+                    true, dir, !dir,
+                    dir ? 0L : Math.max(0L, size), mtime,
+                    mode.isEmpty() ? null : mode));
+        }
+    }
+
+    public File[] listRootFilesPortable(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
+        ShellResult result = executeFs("ls -1ALp -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
+        if (result == null || !result.isSuccess() || result.output() == null || result.output().trim().isEmpty()) {
+            result = executeFs("ls -1Ap -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 30);
+        }
+        if (!result.isSuccess() || result.output() == null) return null;
+        List<File> files = new ArrayList<>();
+        for (String line : result.output().split("\\r?\\n")) {
+            if (line.isEmpty()) continue;
+            boolean dir = line.endsWith("/");
+            String name = dir ? line.substring(0, line.length() - 1) : line;
+            int slash = name.lastIndexOf('/');
+            if (slash >= 0) name = name.substring(slash + 1);
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            files.add(new RootFile(cleanPath, name, true, dir, !dir, 0L, 0L, null));
+        }
+        return files.toArray(new File[0]);
+    }
+
+    public File[] listRootFilesDetailed(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty()) return null;
+        String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        String script = "d=" + ShellQuote.escapeShellArg(cleanPath) + "; "
+                + "for f in \"$d\"/* \"$d\"/.*; do "
+                + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
+                + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
+                + "if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$f\" 2>/dev/null); then :; "
+                + "else s=$(printf '%s\037unknown\0370\0370\037' \"$f\"); fi; "
+                + "if [ -d \"$f\" ] || [ -d \"$f\"/ ]; then printf '%s\0371\\n' \"$s\"; "
+                + "else printf '%s\0370\\n' \"$s\"; fi; "
+                + "done";
+        ShellResult result = executeFs(script, 30);
+        if (!result.isSuccess() || result.output() == null) return null;
+        List<File> files = new ArrayList<>();
+        parseStatLines(files, result.output(), cleanPath);
+        return files.toArray(new File[0]);
+    }
+
+    /**
+     * Streams a root-only file into a pipe and hands out the read end.
+     *
+     * <p>A DocumentsProvider cannot pass on a descriptor it opened with its own
+     * uid, so the bytes are produced by {@code su -c cat} in a background pump
+     * and the consumer reads them from the pipe. Nothing is buffered in memory,
+     * so a multi-gigabyte path behaves exactly like a small one.
+     */
+    public ParcelFileDescriptor openReadPipe(String srcPath) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (srcPath == null || !srcPath.startsWith("/")) {
+            throw new IOException("Refusing to read non-absolute path");
+        }
+        ParcelFileDescriptor[] pipe;
+        try {
+            pipe = ParcelFileDescriptor.createPipe();
+        } catch (IOException e) {
+            throw new IOException("Pipe failed: " + e.getMessage(), e);
+        }
+        final Process process;
+        try {
+            process = Runtime.getRuntime().exec(suCommandForFs("cat -- " + ShellQuote.escapeShellArg(srcPath)));
+        } catch (IOException e) {
+            closeQuietly(pipe[0]);
+            closeQuietly(pipe[1]);
+            throw e;
+        }
+        Thread pump = new Thread(() -> {
+            try (InputStream in = process.getInputStream();
+                 OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
+                byte[] buf = new byte[131072];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            } catch (Exception ignored) {
+                // A reader that closes early surfaces here; the process is reaped
+                // below either way.
+            } finally {
+                process.destroy();
+            }
+        }, "mp-root-read-pump");
+        pump.setDaemon(true);
+        pump.start();
+        return pipe[0];
+    }
+
+    private static void closeQuietly(ParcelFileDescriptor pfd) {
+        try {
+            if (pfd != null) pfd.close();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public long streamFromRoot(String srcPath, OutputStream out, long maxBytes) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (srcPath == null || !srcPath.startsWith("/")) {
+            throw new IOException("Refusing to read non-absolute path");
+        }
+        // No upfront stat and no size refusal here: the stat cost one extra su
+        // spawn per read, and the cap is enforced while streaming below.
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(suCommandForFs("cat " + ShellQuote.escapeShellArg(srcPath)));
+            InputStream stdout = process.getInputStream();
+            byte[] buf = new byte[262144];
+            long total = 0;
+            int n;
+            while ((n = stdout.read(buf)) != -1) {
+                total += n;
+                if (total > maxBytes) {
+                    process.destroyForcibly();
+                    throw new IOException("File too large for preview (limit " + maxBytes + " bytes). Copy it instead.");
+                }
+                out.write(buf, 0, n);
+            }
+            out.flush();
+            boolean finished = process.waitFor(300, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                throw new IOException("Read timed out: " + srcPath);
+            }
+            if (process.exitValue() != 0) {
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder err = new StringBuilder();
+                String line;
+                while ((line = stderr.readLine()) != null) {
+                    if (err.length() > 0) err.append("\n");
+                    err.append(line);
+                }
+                String detail = err.toString();
+                // A path that turned out to be a directory (or a listing gone
+                // wrong) yields "Is a directory"/"Not a directory" from cat;
+                // surface that plainly instead of the raw shell error.
+                if (detail.contains("Is a directory") || detail.contains("Not a directory")) {
+                    throw new IOException("Cannot open as a file: " + srcPath);
+                }
+                throw new IOException("Root read failed: " + err);
+            }
+            return total;
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Root read failed: " + e.getMessage());
+        } finally {
+            if (process != null) process.destroy();
+        }
+    }
+
+    /**
+     * Binary-safe root write-back: streams a local staged file into
+     * {@code su -c "cat > dst"}. Using {@code cat >} (truncate) preserves the
+     * existing inode owner/permissions when overwriting, which is safer than
+     * {@code cp} (which could orphan perms). Refuses blocked/critical paths.
+     */
+    public void streamToRoot(File localSrc, String dstPath) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (dstPath == null || !dstPath.startsWith("/")) {
+            throw new IOException("Refusing to write non-absolute path");
+        }
+        if (PathGuards.isPathBlocked(dstPath)) {
+            throw new IOException("Blocked: refusing to write critical path: " + dstPath);
+        }
+        if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
+            throw new IOException("Staged file unreadable");
+        }
+        if (localSrc.length() > MAX_STAGE_BYTES) {
+            throw new IOException("File too large to write back (" + localSrc.length() + " bytes)");
+        }
+        Process process = null;
+        try {
+            String cmd = "cat " + ShellQuote.escapeShellArg(localSrc.getAbsolutePath())
+                    + " > " + ShellQuote.escapeShellArg(dstPath);
+            process = Runtime.getRuntime().exec(suCommandForFs(cmd));
+            boolean finished = process.waitFor(300, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                throw new IOException("Write timed out: " + dstPath);
+            }
+            if (process.exitValue() != 0) {
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder err = new StringBuilder();
+                String line;
+                while ((line = stderr.readLine()) != null) {
+                    if (err.length() > 0) err.append("\n");
+                    err.append(line);
+                }
+                throw new IOException("Root write failed: " + err);
+            }
+            invalidateListCache();
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Root write failed: " + e.getMessage());
+        } finally {
+            if (process != null) process.destroy();
+        }
+    }
+
+    
+    public String getMountInfo() throws IOException {
+        ShellResult result = execute("mount");
+        return result.isSuccess() ? result.output() : "";
+    }
+
+    public boolean isMountedRW(String mountPoint) {
+        ShellResult result = execute("mount | grep ' " + mountPoint + " '");
+        return result.isSuccess() && result.output().contains("rw");
+    }
+
+    public List<String> listUsers() throws IOException {
+        List<String> users = new ArrayList<>();
+        String[][] paths = {
+                {"/etc/passwd"},
+                {"/system/etc/passwd"},
+                {"/apex/com.android.runtime/etc/passwd"},
+                {"/system/bin/toybox", "cat /etc/passwd"}
+        };
+        for (String[] cmd : paths) {
+            try {
+                ShellResult r = execute("cat " + ShellQuote.escapeShellArg(cmd[0]) + " 2>/dev/null");
+                if (r.isSuccess() && !r.output().trim().isEmpty()) {
+                    parsePasswd(r.output(), users);
+                    if (!users.isEmpty()) return users;
+                }
+            } catch (Exception ignored) {}
+        }
+        users.add("root (0)");
+        users.add("daemon (1)");
+        users.add("system (1000)");
+        users.add("shell (2000)");
+        users.add("media_rw (1023)");
+        users.add("app (10000)");
+        users.add("nobody (65534)");
+        return users;
+    }
+
+    private void parsePasswd(String content, List<String> users) {
+        for (String line : content.split("\n")) {
+            String[] parts = line.split(":");
+            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
+                String name = parts[0].trim();
+                String uid = parts[2].trim();
+                if (uid.matches("\\d+")) {
+                    String entry = name + " (" + uid + ")";
+                    boolean exists = false;
+                    for (String u : users) {
+                        if (u.equals(entry)) { exists = true; break; }
+                    }
+                    if (!exists) users.add(entry);
+                }
+            }
+        }
+    }
+
+    public List<String> listGroups() throws IOException {
+        List<String> groups = new ArrayList<>();
+        String[] paths = {
+                "/etc/group",
+                "/system/etc/group",
+                "/apex/com.android.runtime/etc/group"
+        };
+        for (String path : paths) {
+            try {
+                ShellResult r = execute("cat " + ShellQuote.escapeShellArg(path) + " 2>/dev/null");
+                if (r.isSuccess() && !r.output().trim().isEmpty()) {
+                    parseGroup(r.output(), groups);
+                    if (!groups.isEmpty()) return groups;
+                }
+            } catch (Exception ignored) {}
+        }
+        ShellResult idResult = execute("id 2>/dev/null");
+        if (idResult.isSuccess() && !idResult.output().trim().isEmpty()) {
+            String output = idResult.output();
+            int gidsStart = output.indexOf("groups=");
+            if (gidsStart > 0) {
+                String gidsStr = output.substring(gidsStart + 7);
+                for (String token : gidsStr.split("[,\\s]+")) {
+                    token = token.trim();
+                    if (token.isEmpty()) continue;
+                    String gid = token.contains("(") ? token.substring(0, token.indexOf("(")) : token;
+                    String name = token.contains("(") && token.contains(")")
+                            ? token.substring(token.indexOf("(") + 1, token.indexOf(")"))
+                            : "gid" + gid;
+                    if (gid.matches("\\d+")) {
+                        groups.add(name + " (" + gid + ")");
+                    }
+                }
+            }
+        }
+        if (groups.isEmpty()) {
+            groups.add("root (0)");
+            groups.add("daemon (1)");
+            groups.add("system (1000)");
+            groups.add("shell (2000)");
+            groups.add("media_rw (1023)");
+            groups.add("log (1007)");
+            groups.add("radio (1001)");
+            groups.add("bluetooth (1002)");
+            groups.add("sdcard_rw (1015)");
+            groups.add("nobody (65534)");
+        }
+        return groups;
+    }
+
+    private void parseGroup(String content, List<String> groups) {
+        for (String line : content.split("\n")) {
+            String[] parts = line.split(":");
+            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
+                String name = parts[0].trim();
+                String gid = parts[2].trim();
+                if (gid.matches("\\d+")) {
+                    String entry = name + " (" + gid + ")";
+                    boolean exists = false;
+                    for (String g : groups) {
+                        if (g.equals(entry)) { exists = true; break; }
+                    }
+                    if (!exists) groups.add(entry);
+                }
+            }
+        }
+    }
+}

@@ -6,7 +6,6 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 
 import android.annotation.SuppressLint;
@@ -152,8 +151,8 @@ public class ApkInstallDialogHelper {
         }
 
         if (apkFiles.size() == 1 && apkFiles.get(0) != null) {
-            RootManager rm = RootManager.getInstance(activity);
-            if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
+            if (PrivilegeManager.Root.isSilentInstallEnabled(activity)
+                    && PrivilegeManager.Root.isRootAvailable(activity)) {
                 // Legacy guard: PrivilegedInstaller already checked; kept for safety.
                 InstallUtil.installApk(activity, apkFiles.get(0));
                 return;

@@ -6,8 +6,6 @@ import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 import java.io.File;
@@ -232,7 +230,7 @@ public final class FileSorting {
                     == PrivilegeManager.Backend.ROOT) {
                 List<String> paths = new ArrayList<>();
                 for (File d : dirs) if (d != null && !isVirtualOrSpecialFs(pathOf(d))) paths.add(pathOf(d));
-                Map<String, Long> nativeSizes = NativeRootManager.sizes(ctx, paths, 30_000);
+                Map<String, Long> nativeSizes = PrivilegeManager.Native.sizes(ctx, paths, 30_000);
                 DirSizeCache.recordBatch(nativeSizes);
                 DIR_SIZE_CACHE.putAll(nativeSizes);
             }

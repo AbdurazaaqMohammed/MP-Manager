@@ -41,7 +41,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -313,7 +313,7 @@ public final class NetworkController {
             for (File child : children) uploadSource(child, destination, path, listener);
         } else {
             if (listener != null) listener.onFile(source, new File("/network/" + path));
-            try (InputStream input = RootStaging.openInputStream(activity, source)) {
+            try (InputStream input = PrivilegeManager.Staging.openInputStream(activity, source)) {
                 InputStream monitored = new FilterInputStream(input) {
                     @Override public int read(byte[] buffer, int offset, int length) throws IOException {
                         if (listener != null) listener.checkpoint();

@@ -36,8 +36,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 
 public class FileUtils {
 
@@ -560,7 +559,7 @@ public class FileUtils {
 
     public static InputStream getInputStream(File file) throws IOException {
         if (file instanceof ShizukuFile) {
-            file = ShizukuFileOps.materialize(null, file);
+            file = PrivilegeManager.Shizuku.materialize(null, file);
         }
         if (file instanceof SafFile) {
             // Provider documents stream through the ContentResolver; a path

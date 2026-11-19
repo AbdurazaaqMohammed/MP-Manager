@@ -134,7 +134,6 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
@@ -1302,7 +1301,6 @@ public class ApkInfoDialogs {
         LinearLayout rootInfoContent = display.findViewById(R.id.rootInfoContent);
         final boolean[] rootInfoLoaded = {false};
 
-        RootManager rm = RootManager.getInstance(context);
         boolean elevatedFileOps = PrivilegeManager.Files.fileOpsOn(context);
         if (elevatedFileOps) {
             rootInfoSection.setVisibility(View.VISIBLE);
@@ -1388,9 +1386,9 @@ public class ApkInfoDialogs {
                         return;
                     }
                     final String resolvedPkg = pkgNameStr;
-                    String uid = rm.getAppUid(resolvedPkg);
-                    List<String> apkPaths = rm.getAppApkPaths(resolvedPkg);
-                    List<String> dataDirs = rm.getAppDataDirs(resolvedPkg);
+                    String uid = PrivilegeManager.Root.getAppUid(context, resolvedPkg);
+                    List<String> apkPaths = PrivilegeManager.Root.getAppApkPaths(context, resolvedPkg);
+                    List<String> dataDirs = PrivilegeManager.Root.getAppDataDirs(context, resolvedPkg);
                     // pm path lists base APK first, then splits — show only
                     // the base path to avoid duplicate-looking rows.
                     final String baseApkPath = (apkPaths != null && !apkPaths.isEmpty())
@@ -1658,17 +1656,9 @@ public class ApkInfoDialogs {
                     return;
                 }
                 try {
-                    if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.SHIZUKU) {
-                        isFile = PrivilegeManager.Shizuku.isFile(context, tapPath);
-                    } else if (PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT) {
-                        RootManager rootMgr = RootManager.getInstance(context);
-                        isFile = rootMgr.isFile(tapPath);
-                        if (!isFile && !rootMgr.isDirectory(tapPath)) {
-                            isFile = new File(tapPath).isFile();
-                        }
-                    } else {
-                        isFile = new File(tapPath).isFile();
-                    }
+                    // PrivilegeManager.Files routes through the active backend
+                    // (Shizuku or root) and falls back to plain File checks.
+                    isFile = PrivilegeManager.Files.isFile(context, tapPath);
                 } catch (Exception ignored) {
                     isFile = new File(tapPath).isFile();
                 }

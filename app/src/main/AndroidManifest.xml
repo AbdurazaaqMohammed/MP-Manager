@@ -43,6 +43,9 @@
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <uses-permission-sdk-23 android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- Dhizuku (device-owner delegation). The AAR merges the same declaration;
+         kept explicit so the dependency on Dhizuku being installed is visible. -->
+    <uses-permission android:name="com.rosan.dhizuku.permission.API" />
 
     <!-- External plugin discovery (out-of-process plugins expose these actions). -->
     <queries>

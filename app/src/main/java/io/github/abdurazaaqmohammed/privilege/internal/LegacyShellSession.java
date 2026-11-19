@@ -7,7 +7,7 @@ package io.github.abdurazaaqmohammed.privilege.internal;
 import android.content.Context;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
 
 /** M2 shell session: delegates to the legacy Shizuku shell wrapper. */
 public class LegacyShellSession implements ShellSession {

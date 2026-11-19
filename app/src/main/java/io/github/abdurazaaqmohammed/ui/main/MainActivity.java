@@ -5,7 +5,7 @@ import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
 import io.github.abdurazaaqmohammed.feature.system.ToolLauncher;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
@@ -153,8 +153,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
@@ -169,12 +167,11 @@ import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -760,10 +757,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return;
         }
         try {
-            RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
+            PrivilegeManager.Permissions.tryAutoGrantInspector(MainActivity.this);
         } catch (Exception ignored) {
         }
-        if (RootPermissionHelper.hasAccessibility(this)
+        if (PrivilegeManager.Permissions.hasAccessibility(this)
                 && AccessibilityMonitoringService.getInstance() == null) {
             waitForAccessibilityService(0);
             return;
@@ -1015,7 +1012,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         theme = ThemeRegistry.currentStyleRes(this);
         systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        ShizukuFileOps.init(this);
+        PrivilegeManager.Shizuku.init(this);
         DirSizeCache.init(this);
         // Logcat capture is opt-in at app start; opening the Logcat screen
         // always starts it regardless of this preference.
@@ -1278,7 +1275,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             if (!canOpen) {
                                 try {
                                     String abs = inputPath.getAbsolutePath();
-                                    if (PrivilegeManager.Files.exists(this, abs) && RootManager.getInstance(this).isDirectory(abs)) {
+                                    if (PrivilegeManager.Files.exists(this, abs) && PrivilegeManager.Files.isDirectory(this, abs)) {
                                         canOpen = true;
                                     }
                                 } catch (Exception ignored) {
@@ -2030,10 +2027,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      *         (the user has already been notified in that case).
      */
     private File[] listPlainFolder(File folder, boolean pane1) {
-        boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
+        boolean shizukuDir = PrivilegeManager.Shizuku.isAndroidDataPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
-        boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
+        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath);
         if (rootListingPath && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT && PrivilegeManager.Files.fileOpsOn(this)) {
             files = PrivilegeManager.Files.listWithStat(this, folder.getAbsolutePath());
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
@@ -2046,14 +2043,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // the contents rather than the folder really being empty).
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
         if (appListingIncomplete) {
-            File[] viaShizuku = ShizukuFile.tryList(this, folder);
+            File[] viaShizuku = PrivilegeManager.Shizuku.tryList(this, folder);
             if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) files = viaShizuku;
         }
         if (files == null || (files.length == 0 && appListingIncomplete)) {
             boolean elevated = PrivilegeManager.Files.fileOpsOn(this);
             if (!elevated) {
                 try {
-                    elevated = RootPermissionHelper.hasElevatedShell(this);
+                    elevated = PrivilegeManager.Permissions.hasElevatedShell(this);
                 } catch (Exception ignored) {
                 }
             }
@@ -2067,8 +2064,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 if ((files == null || files.length == 0) && (shizukuDir || rootListingPath || !folder.canRead())) {
                     try {
-                        if (RootManager.getInstance(this).isRootAvailable()) {
-                            File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                        if (PrivilegeManager.Root.isRootAvailable(this)) {
+                            File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
                             if (directRoot != null) {
                                 directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
                                 if (directRoot.length > 0 || files == null) files = directRoot;
@@ -2078,8 +2075,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             } else {
                 try {
-                    if (RootManager.getInstance(this).isRootAvailable()) {
-                        File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                    if (PrivilegeManager.Root.isRootAvailable(this)) {
+                        File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
                         if (directRoot != null) {
                             directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
                             if (directRoot.length > 0 || files == null) files = directRoot;
@@ -2089,7 +2086,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             if (files == null && shizukuDir && PrivilegeManager.Files.active(this) != PrivilegeManager.Backend.ROOT) {
                 boolean rootAvailable = false;
-                try { rootAvailable = RootManager.getInstance(this).isRootAvailable(); } catch (Exception ignored) {}
+                try { rootAvailable = PrivilegeManager.Root.isRootAvailable(this); } catch (Exception ignored) {}
                 if (!rootAvailable) runOnUiThread(() -> {
                     try {
                         showShizukuGuideOnce(folder, pane1);
@@ -2733,7 +2730,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (currentFolder != null && FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
                 DirSizeCache.invalidatePrefix(currentFolder);
             }
-            RootManager.getInstance(this).invalidateListCache();
+            PrivilegeManager.Root.invalidateListCache(this);
         } catch (Exception ignored) { }
         reloadOnePane(pane1, false);
         reloadOnePane(!pane1, false);

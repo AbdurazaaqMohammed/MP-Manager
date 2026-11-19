@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.util.net;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 
 import android.content.Context;
@@ -36,7 +37,7 @@ public class WifiPasswordUtil {
 
     public static boolean isRooted(Context context) {
         try {
-            return RootManager.getInstance(context).isRootAvailable();
+            return PrivilegeManager.Root.isRootAvailable(context);
         } catch (Exception e) {
             return false;
         }
@@ -79,7 +80,7 @@ public class WifiPasswordUtil {
     private static String runSuCat(Context context, String path) {
         String su = "su";
         try {
-            su = RootManager.getInstance(context).suBinary();
+            su = PrivilegeManager.Root.suBinary(context);
         } catch (Exception ignored) {
         }
         if (su == null || su.trim().isEmpty()) {
@@ -87,7 +88,7 @@ public class WifiPasswordUtil {
         }
         Process process = null;
         try {
-            String quoted = RootManager.escapeShellArg(path);
+            String quoted = ShellQuote.escapeShellArg(path);
             process = Runtime.getRuntime().exec(new String[]{su, "-c", "cat " + quoted});
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
             StringBuilder builder = new StringBuilder();

@@ -70,8 +70,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.net.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -320,13 +319,13 @@ public class WifiManagerActivity extends BaseActivity {
 
     private void offerRootGrant() {
         try {
-            boolean rooted = RootManager.getInstance(this).isRootAvailable();
+            boolean rooted = PrivilegeManager.Root.isRootAvailable(this);
             if (!rooted) return;
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.wifi_grant_title))
                     .setMessage(getString(R.string.wifi_grant_msg))
                     .setPositiveButton(getString(R.string.grant), (d, w) -> new Thread(() -> {
-                        boolean ok = RootPermissionHelper.grantWriteSecureViaRoot(WifiManagerActivity.this);
+                        boolean ok = PrivilegeManager.Permissions.grantWriteSecureViaRoot(WifiManagerActivity.this);
                         handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.wifi_granted) : getString(R.string.wifi_grant_failed)));
                     }).start())
                     .setNegativeButton(android.R.string.cancel, null)

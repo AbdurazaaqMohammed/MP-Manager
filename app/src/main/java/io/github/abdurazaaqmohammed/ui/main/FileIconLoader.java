@@ -50,14 +50,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.ratul.topactivity.App;
 
 public class FileIconLoader {
 
@@ -548,7 +551,7 @@ public class FileIconLoader {
         }
 
         boolean canElevate = elevatedFileOps
-                || (context != null && RootManager.getInstance(context).isRootAvailable())
+                || (context != null && PrivilegeManager.Root.isRootAvailable(context))
                 || PrivilegeManager.Shizuku.ready();
 
         if (!canElevate) {
@@ -726,13 +729,13 @@ public class FileIconLoader {
         String name = file.getName();
         if (name == null || name.isEmpty()) return null;
         if (isDataRoot(listedDir)) {
-            return RootManager.isPackageNameValid(name) ? name : null;
+            return PackageGuards.isPackageNameValid(name) ? name : null;
         }
         if (isDataAppRoot(listedDir)) {
             // Android 8+: /data/app/~~.../com.pkg-... or legacy /data/app/com.pkg-...
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (RootManager.isPackageNameValid(possiblePkg)) {
+            if (PackageGuards.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
             if (file.isDirectory()) {
@@ -745,22 +748,22 @@ public class FileIconLoader {
                         String cn = c.getName();
                         int cDash = cn.indexOf('-');
                         String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                        if (RootManager.isPackageNameValid(cPkg)) {
+                        if (PackageGuards.isPackageNameValid(cPkg)) {
                             return cPkg;
                         }
                     }
                 } else if (PrivilegeManager.Files.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
-                        RootManager.ShellResult r =
-                                RootManager.getInstance(context)
-                                        .executeFs("ls -1 -- " + RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
+                        ShellSession.ShellResult r =
+                                PrivilegeManager.Root.executeFs(context,
+                                        "ls -1 -- " + ShellQuote.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
                         if (r != null && r.isSuccess() && r.output() != null) {
                             for (String line : r.output().split("\\r?\\n")) {
                                 String cn = line.trim();
                                 int cDash = cn.indexOf('-');
                                 String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                                if (RootManager.isPackageNameValid(cPkg)) {
+                                if (PackageGuards.isPackageNameValid(cPkg)) {
                                     return cPkg;
                                 }
                             }
@@ -772,7 +775,7 @@ public class FileIconLoader {
             // Inside ~~...: folders like com.example.app-hash
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (RootManager.isPackageNameValid(possiblePkg)) {
+            if (PackageGuards.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
         }
@@ -1362,8 +1365,7 @@ public class FileIconLoader {
 
     private static boolean isRootAccessAvailable() {
         try {
-            RootManager rm = RootManager.getInstance();
-            return rm != null && rm.isRootAvailable();
+            return PrivilegeManager.Root.isRootAvailable(App.getInstance());
         } catch (Throwable t) {
             return false;
         }
@@ -1398,10 +1400,9 @@ public class FileIconLoader {
 
     private static Bitmap decodeBitmapViaRootStream(String path) {
         try {
-            RootManager rm = RootManager.getInstance();
-            if (rm == null || !rm.isRootAvailable()) return null;
+            if (!PrivilegeManager.Root.isRootAvailable(App.getInstance())) return null;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            rm.streamFromRoot(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
+            PrivilegeManager.Root.streamFromRoot(App.getInstance(), path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
             byte[] data = baos.toByteArray();
             if (data == null || data.length == 0) return null;
 

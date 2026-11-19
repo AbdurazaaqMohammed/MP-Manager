@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
 
 /** M2 file-ops session: delegates to AccessManager (backend routing inside). */
 public final class LegacyFileOpsSession implements FileOpsSession {

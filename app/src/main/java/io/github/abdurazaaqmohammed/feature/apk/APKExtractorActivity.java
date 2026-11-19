@@ -59,7 +59,6 @@ import android.widget.EditText;
 
 import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -110,6 +109,8 @@ import io.github.abdurazaaqmohammed.ui.main.ExtractOptionAdapter;
 import io.github.abdurazaaqmohammed.util.text.CompareUtils;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 public class APKExtractorActivity extends BaseActivity {
     private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
@@ -866,8 +867,8 @@ public class APKExtractorActivity extends BaseActivity {
             actionIds.add(110);
         }
 
-        RootManager rootManager = RootManager.getInstance(this);
-        if (rootManager.isRootExtractorEnabled() && rootManager.isRootAvailable()) {
+        if (PrivilegeManager.Root.isRootExtractorEnabled(this)
+                && PrivilegeManager.Root.isRootAvailable(this)) {
             displayList.add(getString(R.string.clear_app_data));
             iconList.add(R.drawable.baseline_delete_24);
             actionIds.add(200);
@@ -908,7 +909,6 @@ public class APKExtractorActivity extends BaseActivity {
             adapter.clearSelection();
         } else {
             String packageName = ai.packageName;
-            RootManager rootManager = RootManager.getInstance(this);
             switch (actionId) {
                     case 100: // Launch
                         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
@@ -1042,7 +1042,7 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.clear_app_data)
                                 .setMessage(getString(R.string.clear_all_data_for, ai.name))
-                                .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction("Clear data", () -> rootManager.clearAppData(packageName), packageName))
+                                .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction("Clear data", () -> PrivilegeManager.Root.clearAppData(this, packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -1050,18 +1050,18 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.force_stop)
                                 .setMessage(getString(R.string.force_stop_x, ai.name))
-                                .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction("Force stop", () -> rootManager.forceStopApp(packageName), packageName))
+                                .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction("Force stop", () -> PrivilegeManager.Root.forceStopApp(this, packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 202: // Enable app (root)
-                        executeRootAction("Enable app", () -> rootManager.enableApp(packageName), packageName);
+                        executeRootAction("Enable app", () -> PrivilegeManager.Root.enableApp(this, packageName), packageName);
                         break;
                     case 203: // Disable app (root)
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.disable_app)
                                 .setMessage(getString(R.string.disable_x, ai.name))
-                                .setPositiveButton(R.string.disable, (d, w) -> executeRootAction("Disable app", () -> rootManager.disableApp(packageName), packageName))
+                                .setPositiveButton(R.string.disable, (d, w) -> executeRootAction("Disable app", () -> PrivilegeManager.Root.disableApp(this, packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -1069,7 +1069,7 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.root_uninstall)
                                 .setMessage(rss.getString(R.string.uninstall_root, ai.name))
-                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> rootManager.uninstallSilent(packageName), packageName))
+                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> PrivilegeManager.Root.uninstallSilent(this, packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -1078,8 +1078,7 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     private void executeRootAction(String actionName, RootRunnable action, String packageName) {
-        RootManager rootManager = RootManager.getInstance(this);
-        if (!rootManager.isRootMode() || !rootManager.isRootAvailable()) {
+        if (!PrivilegeManager.Root.isRootMode(this) || !PrivilegeManager.Root.isRootAvailable(this)) {
             Extensions.showMessage(this, getString(R.string.root_not_available));
             return;
         }
@@ -1104,21 +1103,19 @@ public class APKExtractorActivity extends BaseActivity {
 
     private boolean hasElevatedShell() {
         try {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootMode() && rm.isRootAvailable()) return true;
-            return rm.isShizukuMode() && PrivilegeManager.Shizuku.ready();
+            if (PrivilegeManager.Root.isRootMode(this) && PrivilegeManager.Root.isRootAvailable(this)) return true;
+            return PrivilegeManager.Root.isShizukuMode(this) && PrivilegeManager.Shizuku.ready();
         } catch (Exception e) {
             return false;
         }
     }
 
     private void elevatedExec(String baseCmd, String packageName, boolean guardCritical) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
-        if (guardCritical && RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to modify critical system app: " + packageName);
-        String cmd = baseCmd + " " + RootManager.escapeShellArg(packageName);
-        RootManager rm = RootManager.getInstance(this);
-        if (rm.isRootMode() && rm.isRootAvailable()) {
-            RootManager.ShellResult r = rm.execute(cmd, 30);
+        if (!PackageGuards.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (guardCritical && PackageGuards.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to modify critical system app: " + packageName);
+        String cmd = baseCmd + " " + ShellQuote.escapeShellArg(packageName);
+        if (PrivilegeManager.Root.isRootMode(this) && PrivilegeManager.Root.isRootAvailable(this)) {
+            ShellSession.ShellResult r = PrivilegeManager.Root.execute(this, cmd, 30);
             if (!r.isSuccess()) throw new IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
         } else {
             ShellSession.Result r =
@@ -1128,15 +1125,14 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     private void elevatedUninstall(String packageName) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
-        if (RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
-        RootManager rm = RootManager.getInstance(this);
-        if (rm.isRootMode() && rm.isRootAvailable()) {
-            rm.uninstallSilent(packageName);
+        if (!PackageGuards.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (PackageGuards.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
+        if (PrivilegeManager.Root.isRootMode(this) && PrivilegeManager.Root.isRootAvailable(this)) {
+            PrivilegeManager.Root.uninstallSilent(this, packageName);
             return;
         }
         ShellSession.Result r =
-                PrivilegeManager.shizuku().exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
+                PrivilegeManager.shizuku().exec("pm uninstall " + ShellQuote.escapeShellArg(packageName), 30);
         if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
     }
 

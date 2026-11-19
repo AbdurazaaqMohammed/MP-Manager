@@ -48,11 +48,15 @@ are leaf services usable by anyone, dependent on nothing business-related:
 - Some `feature/` subpackages still contain Activities/Services/Views
   (`feature/system` tools screens, `feature/freestyle` canvas). Splitting
   UI out of them is deferred; do not add new UI to `feature/`.
-- `privilege/impl/` (RootManager, AccessManager, Shizuku*, Native*, ipc)
-  is implementation, but ~30 feature/ui files still call it directly
-  (mostly `RootManager`'s instance API). New code must go through
-  `PrivilegeManager`; migrating the remaining call sites onto the session
-  interfaces is the open remainder of plan stage M5.
+- `privilege/internal/` holds the implementation (RootManager, AccessManager,
+  Shizuku*, Native*, ipc) plus the Legacy* session adapters. External callers
+  go through `PrivilegeManager`; the only remaining direct imports are the
+  `RootFile` / `ShizukuFile` `File` subclasses used with
+  `instanceof` / casts / `new` in UI/util code (a type-level usage that
+  requires moving the classes themselves or introducing a tag interface
+  — deferred as its own change). Everything else goes through
+  `PrivilegeManager` mirrors (`Root`, `Files`, `Shizuku`, `Staging`,
+  `Permissions`, `Native`, `Installer`, `Startup`).
 - `rikka/shizuku/ShizukuProcessFactory` stays in `rikka.shizuku` — it
   exists to reach a package-private ShizukuRemoteProcess constructor
   there and cannot move.
@@ -118,9 +122,18 @@ is: **`util/` contains no business logic and no privilege code.**
 
 See [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md) Problem 1 for the
 `privilege/` tree, session interfaces and registry rules. Backend
-selection order: `DHIZUKU > SHIZUKU > ROOT > NONE` (registered in
+selection is per capability, not a global ladder: SHIZUKU and DHIZUKU
+coexist as parallel privilege domains — SHIZUKU owns shell/file-ops
+(minimal privilege first), DHIZUKU owns device-owner operations, ROOT is
+the last-resort fallback, NONE the terminal fallback (registered in
 `App.onCreate`; registry-driven selection is exposed as
 `PrivilegeManager.preferredBackend`, default routing unchanged).
+
+Dhizuku authorization is user-reachable since S8: the settings root page
+shows a status line + grant button when the Dhizuku server app is
+installed (direct `Dhizuku.requestPermission`, mirroring the Shizuku
+grant button). This authorizes the backend; actual operation routing
+through the registry is still the open follow-up.
 
 | from | to |
 |---|---|

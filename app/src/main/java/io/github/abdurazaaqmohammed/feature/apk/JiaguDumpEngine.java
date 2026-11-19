@@ -29,7 +29,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 /**
  * Core of the root Jiagu Dumper: launch a protected app, let its stub unpack the
@@ -100,14 +101,13 @@ public final class JiaguDumpEngine {
      */
     public static File dump(Context context, String pkg, int waitSec, LogSink sink) throws Exception {
         sink.log("== Jiagu dump: " + pkg);
-        RootManager rm = RootManager.getInstance(context);
 
         sink.log("Launching " + pkg + " (waiting up to " + waitSec + "s)...");
-        rm.execute("monkey -p " + pkg + " 1", 30);
+        PrivilegeManager.Root.execute(context, "monkey -p " + pkg + " 1", 30);
         long pid = 0;
         long deadline = SystemClock.elapsedRealtime() + waitSec * 1000L;
         while (SystemClock.elapsedRealtime() < deadline) {
-            RootManager.ShellResult res = rm.execute("pidof " + pkg, 15);
+            ShellSession.ShellResult res = PrivilegeManager.Root.execute(context, "pidof " + pkg, 15);
             String p = res.output() == null ? "" : res.output().trim();
             if (!p.isEmpty() && p.matches("\\d+.*")) {
                 pid = Long.parseLong(p.split("\\s+")[0]);
@@ -118,7 +118,7 @@ public final class JiaguDumpEngine {
         if (pid <= 0) throw new IOException("Process not running (pidof " + pkg + " failed)");
         sink.log("pid=" + pid);
 
-        RootManager.ShellResult mapsRes = rm.execute("cat /proc/" + pid + "/maps", 30);
+        ShellSession.ShellResult mapsRes = PrivilegeManager.Root.execute(context, "cat /proc/" + pid + "/maps", 30);
         if (mapsRes.output() == null || mapsRes.output().isEmpty()) {
             throw new IOException("Cannot read /proc/" + pid + "/maps: " + mapsRes.error());
         }
@@ -157,7 +157,7 @@ public final class JiaguDumpEngine {
         long scanStart = SystemClock.elapsedRealtime();
         for (Object[] region : candidates) {
             scanRegion(pid, (Long) region[0], (Long) region[1], (Long) region[2], (String) region[3],
-                    outDir, lines, sink, rm.suBinary());
+                    outDir, lines, sink, PrivilegeManager.Root.suBinary(context));
         }
         sink.log("Scan took " + (SystemClock.elapsedRealtime() - scanStart) / 1000 + "s, "
                 + lines.size() + " dexes");

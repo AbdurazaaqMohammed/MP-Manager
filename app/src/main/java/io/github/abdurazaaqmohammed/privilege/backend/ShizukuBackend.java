@@ -13,6 +13,7 @@ import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyShellSession;
 import io.github.abdurazaaqmohammed.privilege.internal.ShizukuSessions;
+import io.github.abdurazaaqmohammed.privilege.spi.Capability;
 import io.github.abdurazaaqmohammed.privilege.spi.FileOpsCap;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
 import io.github.abdurazaaqmohammed.privilege.spi.ShellCap;
@@ -39,8 +40,11 @@ public final class ShizukuBackend implements PrivilegeBackend, ShellCap, FileOps
     }
 
     @Override
-    public int priority() {
-        return 20; // DHIZUKU (30) outranks it once present
+    public int priorityFor(Class<? extends Capability> capability) {
+        // SHIZUKU and DHIZUKU are parallel privilege domains, not a ladder:
+        // SHIZUKU owns the shell/file-ops domain (adb-shell semantics),
+        // DHIZUKU owns the device-owner domain, ROOT is the last resort.
+        return 30; // first choice for every capability it implements
     }
 
     @Override

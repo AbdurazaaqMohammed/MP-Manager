@@ -76,9 +76,10 @@ import io.github.abdurazaaqmohammed.ui.main.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -92,6 +93,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import com.rosan.dhizuku.api.Dhizuku;
+import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 
 import net.lingala.zip4j.model.enums.CompressionLevel;
 
@@ -1047,7 +1051,6 @@ public class SettingsController {
     }
 
     private void setupAccessSettings(ViewFinder root, SharedPreferences settings) {
-        RootManager rootManager = RootManager.getInstance(activity);
         AutoCompleteTextView workingModeTv = root.findViewById(R.id.workingModeTv);
         View groupRoot = root.findViewById(R.id.groupRoot);
         View groupShizuku = root.findViewById(R.id.groupShizuku);
@@ -1083,9 +1086,9 @@ public class SettingsController {
         if (shizukuSupported) modeLabels.add(labelShizuku);
         workingModeTv.setAdapter(dropdownAdapter(modeLabels));
 
-        RootManager.WorkingMode current = rootManager.getWorkingMode();
-        if (current == RootManager.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
-        else if (current == RootManager.WorkingMode.SHIZUKU && shizukuSupported) {
+        WorkingModePrefs.WorkingMode current = WorkingModePrefs.get(activity);
+        if (current == WorkingModePrefs.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
+        else if (current == WorkingModePrefs.WorkingMode.SHIZUKU && shizukuSupported) {
             workingModeTv.setText(labelShizuku, false);
         } else workingModeTv.setText(labelNonRoot, false);
 
@@ -1093,15 +1096,15 @@ public class SettingsController {
             boolean running = shizukuSupported && PrivilegeManager.Shizuku.isRunning();
             boolean granted = running && PrivilegeManager.Shizuku.hasPermission();
             grantShizukuBtn.setVisibility(
-                    rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                    WorkingModePrefs.get(activity) == WorkingModePrefs.WorkingMode.SHIZUKU
                             && running && !granted ? View.VISIBLE : View.GONE);
         };
 
         Runnable applyModeUi = () -> {
-            RootManager.WorkingMode mode = rootManager.getWorkingMode();
-            boolean isRoot = mode == RootManager.WorkingMode.ROOT;
-            boolean isSh = mode == RootManager.WorkingMode.SHIZUKU && shizukuSupported;
-            boolean rootOk = isRoot && rootManager.isRootAvailable();
+            WorkingModePrefs.WorkingMode mode = WorkingModePrefs.get(activity);
+            boolean isRoot = mode == WorkingModePrefs.WorkingMode.ROOT;
+            boolean isSh = mode == WorkingModePrefs.WorkingMode.SHIZUKU && shizukuSupported;
+            boolean rootOk = isRoot && PrivilegeManager.Root.isRootAvailable(activity);
             boolean shizukuRunning = isSh && PrivilegeManager.Shizuku.isRunning();
             boolean shizukuReady = shizukuRunning && PrivilegeManager.Shizuku.hasPermission();
 
@@ -1144,13 +1147,13 @@ public class SettingsController {
                 workingModeTv.setText(labelRoot, false);
                 Extensions.showMessage(activity, "Checking root…");
                 new Thread(() -> {
-                    boolean ok = rootManager.isRootAvailable();
+                    boolean ok = PrivilegeManager.Root.isRootAvailable(activity);
                     handler.post(() -> {
                         if (ok) {
-                            rootManager.setWorkingMode(RootManager.WorkingMode.ROOT);
+                            WorkingModePrefs.set(activity, WorkingModePrefs.WorkingMode.ROOT);
                         } else {
                             Extensions.showMessage(activity, R.string.root_denied_msg);
-                            workingModeTv.setText(rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                            workingModeTv.setText(WorkingModePrefs.get(activity) == WorkingModePrefs.WorkingMode.SHIZUKU
                                     ? labelShizuku : labelNonRoot, false);
                         }
                         applyModeUi.run();
@@ -1164,7 +1167,7 @@ public class SettingsController {
                     workingModeTv.setText(labelNonRoot, false);
                     return;
                 }
-                rootManager.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                WorkingModePrefs.set(activity, WorkingModePrefs.WorkingMode.SHIZUKU);
                 applyModeUi.run();
                 new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
                 if (!PrivilegeManager.Shizuku.hasPermission()) {
@@ -1172,11 +1175,32 @@ public class SettingsController {
                 }
                 return;
             }
-            rootManager.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+            WorkingModePrefs.set(activity, WorkingModePrefs.WorkingMode.NON_ROOT);
             applyModeUi.run();
         });
 
         grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(applyModeUi));
+
+        View groupDhizuku = root.findViewById(R.id.groupDhizuku);
+        TextView dhizukuStatusTv = root.findViewById(R.id.dhizukuStatusTv);
+        MaterialButton grantDhizukuBtn = root.findViewById(R.id.grantDhizukuBtn);
+        Runnable applyDhizukuUi = () -> {
+            boolean available;
+            boolean granted = false;
+            try {
+                available = Dhizuku.init(activity);
+                if (available) granted = Dhizuku.isPermissionGranted();
+            } catch (Throwable t) {
+                available = false;
+            }
+            groupDhizuku.setVisibility(available ? View.VISIBLE : View.GONE);
+            if (available) {
+                dhizukuStatusTv.setText(granted ? R.string.dhizuku_granted : R.string.dhizuku_pending);
+                grantDhizukuBtn.setVisibility(granted ? View.GONE : View.VISIBLE);
+            }
+        };
+        applyDhizukuUi.run();
+        grantDhizukuBtn.setOnClickListener(v -> requestDhizukuPerm(applyDhizukuUi));
 
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
         silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
@@ -1224,7 +1248,7 @@ public class SettingsController {
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
             @Override public void afterTextChanged(Editable s) {
                 String v = s == null ? "" : s.toString().trim();
-                if (!v.isEmpty() && !RootManager.isPackageNameValid(v)) {
+                if (!v.isEmpty() && !PackageGuards.isPackageNameValid(v)) {
                     installerCustomPkgEt.setError("Invalid package name");
                     return;
                 }
@@ -1303,6 +1327,25 @@ public class SettingsController {
         PrivilegeManager.Shizuku.requestPermission(activity, holder[0]);
     }
 
+    private void requestDhizukuPerm(Runnable onResult) {
+        try {
+            Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                @Override
+                public void onRequestPermission(int grantResult) {
+                    handler.post(() -> {
+                        if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                            Extensions.showMessage(activity, R.string.dhizuku_denied);
+                        }
+                        onResult.run();
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            Extensions.showMessage(activity, R.string.dhizuku_denied);
+            onResult.run();
+        }
+    }
+
     private void saveSuCommand(ViewFinder root) {
         try {
             TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
@@ -1313,7 +1356,7 @@ public class SettingsController {
             }
             PreferenceManager.getDefaultSharedPreferences(activity).edit()
                     .putString("su_command", cmd).apply();
-            RootManager.getInstance(activity).refreshRootCache();
+            PrivilegeManager.Root.refreshRootCache(activity);
         } catch (Exception ignored) {
         }
     }
@@ -1384,8 +1427,7 @@ public class SettingsController {
     }
 
     private void showRebootDialog() {
-        RootManager rootManager = RootManager.getInstance(activity);
-        if (!rootManager.isRootMode()) {
+        if (!PrivilegeManager.Root.isRootMode(activity)) {
             Extensions.showMessage(activity, R.string.root_mode_is_disabled);
             return;
         }
@@ -1409,10 +1451,10 @@ public class SettingsController {
                             .setPositiveButton(activity.getString(R.string.confirm), (d2, w2) -> {
                                 try {
                                     switch (which) {
-                                        case 0: rootManager.reboot(null); break;
-                                        case 1: rootManager.reboot("recovery"); break;
-                                        case 2: rootManager.reboot("bootloader"); break;
-                                        case 3: rootManager.reboot("-p"); break;
+                                        case 0: PrivilegeManager.Root.reboot(activity, null); break;
+                                        case 1: PrivilegeManager.Root.reboot(activity, "recovery"); break;
+                                        case 2: PrivilegeManager.Root.reboot(activity, "bootloader"); break;
+                                        case 3: PrivilegeManager.Root.reboot(activity, "-p"); break;
                                     }
                                     Extensions.showMessage(activity, "Rebooting...");
                                 } catch (Exception e) {

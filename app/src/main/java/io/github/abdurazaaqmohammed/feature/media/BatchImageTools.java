@@ -18,7 +18,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -165,14 +165,14 @@ public class BatchImageTools {
                             break;
                         }
                     }
-                    if (needJni && !NativeToolManager.loadJpegtranJni(context)) {
+                    if (needJni && !PrivilegeManager.Native.loadJpegtranJni(context)) {
                         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                                 .setTitle(R.string.crop_quality)
                                 .setMessage(R.string.jpegtran_info)
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .setNeutralButton(R.string.standard_crop, (dd, ww) -> runBatchCrop(targets, reqW, reqH, true))
-                                .setPositiveButton(R.string.lossless, (dd, ww) -> NativeToolManager.ensureJpegtran(context,
-                                        new NativeToolManager.ReadyCallback() {
+                                .setPositiveButton(R.string.lossless, (dd, ww) -> PrivilegeManager.Native.ensureJpegtran(context,
+                                        new PrivilegeManager.Native.ReadyCallback() {
                                             public void onReady() {
                                                 runBatchCrop(targets, reqW, reqH, false);
                                             }
@@ -191,7 +191,7 @@ public class BatchImageTools {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
             try {
-                boolean useJni = NativeToolManager.loadJpegtranJni(context);
+                boolean useJni = PrivilegeManager.Native.loadJpegtranJni(context);
                 int done = 0;
                 int skipped = 0;
                 for (File f : images) {

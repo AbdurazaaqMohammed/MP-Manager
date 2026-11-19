@@ -49,7 +49,8 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaConfig;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetPatcher;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -82,8 +83,7 @@ public class FridaConsoleActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        RootManager rootManager = RootManager.getInstance(this);
-        if (!rootManager.isRootAvailable()) {
+        if (!PrivilegeManager.Root.isRootAvailable(this)) {
             Extensions.showMessage(this, getString(R.string.frida_root_required));
             finish();
             return;
@@ -445,8 +445,8 @@ public class FridaConsoleActivity extends BaseActivity {
         File script = buildScriptFile();
         File runSh = buildRunScript(pkg, script);
         appendConsole("$ su -c sh " + runSh.getAbsolutePath() + "\n");
-        process = new ProcessBuilder(RootManager.getInstance(this).suBinary(), "-c",
-                "sh " + RootManager.quoteForSh(runSh.getAbsolutePath()))
+        process = new ProcessBuilder(PrivilegeManager.Root.suBinary(this), "-c",
+                "sh " + ShellQuote.quoteForSh(runSh.getAbsolutePath()))
                 .redirectErrorStream(true)
                 .start();
         setRunning(true);
@@ -497,11 +497,11 @@ public class FridaConsoleActivity extends BaseActivity {
         StringBuilder sb = new StringBuilder();
         sb.append("#!/system/bin/sh\n")
                 .append("mkdir -p ").append(REMOTE_DIR).append('\n')
-                .append("cp ").append(RootManager.quoteForSh(
+                .append("cp ").append(ShellQuote.quoteForSh(
                         FridaGadgetPatcher.injectBinary(this).getAbsolutePath()))
                 .append(' ').append(REMOTE_DIR).append("/inject\n")
                 .append("chmod 755 ").append(REMOTE_DIR).append("/inject\n")
-                .append("cp ").append(RootManager.quoteForSh(script.getAbsolutePath()))
+                .append("cp ").append(ShellQuote.quoteForSh(script.getAbsolutePath()))
                 .append(' ').append(REMOTE_DIR).append("/script.js\n");
         // pidof plus a ps fallback for ROMs without toybox pidof.
         sb.append("PID=$(pidof ").append(pkg).append(" 2>/dev/null)\n")
@@ -546,7 +546,7 @@ public class FridaConsoleActivity extends BaseActivity {
             // frida-inject runs as root: our destroy() only kills the su shell.
             try {
                 Process pkill = Runtime.getRuntime().exec(new String[]{
-                        RootManager.getInstance(this).suBinary(), "-c",
+                        PrivilegeManager.Root.suBinary(this), "-c",
                         "pkill -f " + REMOTE_DIR + "/inject"});
                 pkill.waitFor();
             } catch (Exception ignored) {

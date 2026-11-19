@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
@@ -58,14 +57,13 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.abdurazaaqmohammed.util.io.RenameHelper;
 import io.github.abdurazaaqmohammed.util.io.RenameUtil;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.archive.ZipProgressPump;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -428,7 +426,7 @@ public class EntryDialogs {
                 boolean inKeyDir = false;
                 if (!isInZip && file != null) {
                     String path = file.getAbsolutePath();
-                    if (RootManager.isPathInKeyDirectory(path)) {
+                    if (PathGuards.isPathInKeyDirectory(path)) {
                         inKeyDir = true;
                     }
                 }
@@ -462,7 +460,7 @@ public class EntryDialogs {
                                   boolean elevated, CharSequence names) throws IOException {
         if (files.isEmpty()) return;
         for (File file : files) {
-            if (!(file instanceof SafFile) && RootManager.isPathBlocked(file.getAbsolutePath()))
+            if (!(file instanceof SafFile) && PathGuards.isPathBlocked(file.getAbsolutePath()))
                 throw new IOException("Blocked: refusing to delete critical path: " + file.getAbsolutePath());
         }
         pm.setText(context.getString(R.string.calculating));
@@ -476,7 +474,7 @@ public class EntryDialogs {
         for (File file : files) paths.add(file.getAbsolutePath());
         boolean allLocal = files.stream().noneMatch(file -> file instanceof SafFile);
         List<DirectoryStats> batch = allLocal && backend == PrivilegeManager.Backend.ROOT
-                ? NativeRootManager.stats(context, paths, pm.control(), 120_000) : null;
+                ? PrivilegeManager.Native.stats(context, paths, pm.control(), 120_000) : null;
         for (int i = 0; i < files.size(); i++) {
             pm.control().checkpoint();
             File file = files.get(i);
@@ -855,7 +853,7 @@ public class EntryDialogs {
                 for (File t : targets) paths.add(t.getAbsolutePath());
                 boolean local = targets.stream().noneMatch(t -> t instanceof SafFile);
                 List<DirectoryStats> batch = local && PrivilegeManager.Files.active(context) == PrivilegeManager.Backend.ROOT
-                        ? NativeRootManager.stats(context, paths, scanControl, 10_000) : null;
+                        ? PrivilegeManager.Native.stats(context, paths, scanControl, 10_000) : null;
                 boolean complete = true;
                 for (int i = 0; i < targets.size(); i++) {
                     scanControl.checkpoint();
@@ -1005,7 +1003,7 @@ public class EntryDialogs {
                 // real folder either way: the archivers read plain Files.
                 boolean anyNeedStage = false;
                 for (File s : sources) {
-                    if (RootStaging.needsStaging(context, s)) { anyNeedStage = true; break; }
+                    if (PrivilegeManager.Staging.needsStaging(context, s)) { anyNeedStage = true; break; }
                 }
                 if (compressElevated || anyNeedStage) {
                     if (anyNeedStage) {
@@ -1015,7 +1013,7 @@ public class EntryDialogs {
                             compressStageTmp.mkdirs();
                             readableSources = new ArrayList<>();
                             for (File s : sources) {
-                                if (RootStaging.needsStaging(context, s)) {
+                                if (PrivilegeManager.Staging.needsStaging(context, s)) {
                                     File stagedChild = new File(compressStageTmp, s.getName());
                                     if (s.isDirectory()) PrivilegeManager.Files.stageTree(context, s.getAbsolutePath(), stagedChild);
                                     else PrivilegeManager.Files.stageFile(context, s.getAbsolutePath(), stagedChild);

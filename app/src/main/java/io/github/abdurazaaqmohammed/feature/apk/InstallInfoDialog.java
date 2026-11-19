@@ -33,7 +33,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 
 /**
  * Pre-install comparison sheet.
@@ -113,13 +114,12 @@ public final class InstallInfoDialog {
                 applyDontShowAgain(activity, dontShow);
                 dialog.dismiss();
                 if (keepData) {
-                    RootManager rm = RootManager.getInstance(activity);
-                    if (!rm.isRootMode()) {
+                    if (!PrivilegeManager.Root.isRootMode(activity)) {
                         new AlertDialog.Builder(activity)
                                 .setTitle(R.string.install_enable_root_mode_title)
                                 .setMessage(R.string.install_enable_root_mode_msg)
                                 .setPositiveButton(android.R.string.ok, (d, which) -> {
-                                    rm.setWorkingMode(RootManager.WorkingMode.ROOT);
+                                    WorkingModePrefs.set(activity, WorkingModePrefs.WorkingMode.ROOT);
                                     uninstallThenInstall(activity, analysis, true, onInstall);
                                 })
                                 .setNegativeButton(android.R.string.cancel, (d, which) -> {

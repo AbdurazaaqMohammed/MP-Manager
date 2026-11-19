@@ -63,4 +63,29 @@ public interface FileOpsSession {
     List<String> deleteAll(List<String> paths, boolean useElevated) throws IOException;
 
     void deleteTree(List<String> paths, boolean useElevated) throws IOException;
+
+    public static final class CopyOp {
+        public final String src;
+        public final String dest;
+        public final boolean directory;
+        public final boolean destExists;
+        /** Files this op moves, for progress accounting (0 when unknown). */
+        public final int files;
+        /** Bytes this op moves, for progress accounting (0 when unknown). */
+        public final long bytes;
+
+        public CopyOp(String src, String dest, boolean directory, boolean destExists) {
+            this(src, dest, directory, destExists, 0, 0L);
+        }
+
+        public CopyOp(String src, String dest, boolean directory, boolean destExists,
+                      int files, long bytes) {
+            this.src = src;
+            this.dest = dest;
+            this.directory = directory;
+            this.destExists = destExists;
+            this.files = files;
+            this.bytes = bytes;
+        }
+    }
 }
