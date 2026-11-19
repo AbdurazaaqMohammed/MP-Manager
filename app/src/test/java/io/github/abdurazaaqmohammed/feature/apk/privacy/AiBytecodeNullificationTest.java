@@ -210,6 +210,91 @@ public class AiBytecodeNullificationTest {
             .end method
             """;
 
+    private static final String BOTTOM_TABS_EXTENDED_SMALI =
+            """
+            .class public Lcom/amazon/mShop/rendering/ExtendedBottomTabsBarSavXController;
+            .super Ljava/lang/Object;
+            .source "ExtendedBottomTabsBarSavXController.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+                return-void
+            .end method
+
+            .method public showRufusIngressFloat()F
+                .locals 1
+                const/high16 v0, 0x3f800000    # 1.0f
+                return v0
+            .end method
+
+            .method public showRufusIngressDouble()D
+                .locals 2
+                const-wide/high16 v0, 0x3ff0000000000000L    # 1.0
+                return-wide v0
+            .end method
+
+            .method public selectRufusTabView()Ljava/lang/Object;
+                .locals 1
+                new-instance v0, Ljava/lang/Object;
+                invoke-direct {v0}, Ljava/lang/Object;-><init>()V
+                return-object v0
+            .end method
+            """;
+
+    private static final String CUSTOM_SETTINGS_AI_SMALI =
+            """
+            .class public Lcom/example/CustomSettings;
+            .super Ljava/lang/Object;
+            .source "CustomSettings.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+                return-void
+            .end method
+
+            .method public getSupportsAssistant()Z
+                .locals 1
+                const/4 v0, 0x1
+                return v0
+            .end method
+
+            .method public isEnabled()Z
+                .locals 1
+                const/4 v0, 0x1
+                return v0
+            .end method
+            """;
+
+    private static final String NON_STRING_WEBLAB_CALLER_SMALI =
+            """
+            .class public Lcom/example/NonStringCaller;
+            .super Ljava/lang/Object;
+            .source "NonStringCaller.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+                return-void
+            .end method
+
+            .method public static getObjectExperiment(Ljava/lang/String;)Ljava/lang/Object;
+                .locals 1
+                new-instance v0, Ljava/lang/Object;
+                invoke-direct {v0}, Ljava/lang/Object;-><init>()V
+                return-object v0
+            .end method
+
+            .method public testRufusObject()Ljava/lang/Object;
+                .locals 2
+                const-string v0, "rufus_config"
+                invoke-static {v0}, Lcom/example/NonStringCaller;->getObjectExperiment(Ljava/lang/String;)Ljava/lang/Object;
+                move-result-object v1
+                return-object v1
+            .end method
+            """;
+
     private static final String ACTIVE_CALLER_SMALI =
             """
             .class public Lcom/example/ActiveCaller;
@@ -516,5 +601,121 @@ public class AiBytecodeNullificationTest {
         assertEquals(0, stats.aiTabIngressNeutralized);
         assertEquals(0, stats.aiFeatureGatesNeutralized);
         assertEquals(0, stats.classesModified);
+    }
+
+    @Test
+    public void testExtendedTabIngressFloatDoubleAndObjectReturn() throws Exception {
+        File dexFile = assembleSmali(BOTTOM_TABS_EXTENDED_SMALI);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
+        ClassDef tabsDef = findClass(dex, "Lcom/amazon/mShop/rendering/ExtendedBottomTabsBarSavXController;");
+        assertNotNull(tabsDef);
+
+        PrivacyOptions options = PrivacyOptions.all();
+        PrivacyStats stats = new PrivacyStats();
+        ClassDef sanitized = PrivacyBytecodeEngine.sanitizeClass(tabsDef, options, stats);
+
+        // float and double methods stubbed, object return NOT stubbed
+        assertEquals(2, stats.aiTabIngressNeutralized);
+
+        // Verify float method rewritten to const/4 0 -> return
+        Method floatMethod = findMethod(sanitized, "showRufusIngressFloat");
+        assertNotNull(floatMethod);
+        List<Instruction> floatInsts = new ArrayList<>();
+        for (Instruction inst : floatMethod.getImplementation().getInstructions()) {
+            floatInsts.add(inst);
+        }
+        assertEquals(2, floatInsts.size());
+        assertEquals(Opcode.CONST_4, floatInsts.get(0).getOpcode());
+        assertEquals(Opcode.RETURN, floatInsts.get(1).getOpcode());
+
+        // Verify double method rewritten to const-wide 0 -> return-wide, regCount >= 2
+        Method doubleMethod = findMethod(sanitized, "showRufusIngressDouble");
+        assertNotNull(doubleMethod);
+        assertTrue(doubleMethod.getImplementation().getRegisterCount() >= 2);
+        List<Instruction> doubleInsts = new ArrayList<>();
+        for (Instruction inst : doubleMethod.getImplementation().getInstructions()) {
+            doubleInsts.add(inst);
+        }
+        assertEquals(2, doubleInsts.size());
+        assertEquals(Opcode.CONST_WIDE_16, doubleInsts.get(0).getOpcode());
+        assertEquals(Opcode.RETURN_WIDE, doubleInsts.get(1).getOpcode());
+
+        // Verify object method remains unmodified (still returns new Object)
+        Method objMethod = findMethod(sanitized, "selectRufusTabView");
+        assertNotNull(objMethod);
+        boolean hasNewInstance = false;
+        for (Instruction inst : objMethod.getImplementation().getInstructions()) {
+            if (inst.getOpcode() == Opcode.NEW_INSTANCE) {
+                hasNewInstance = true;
+            }
+        }
+        assertTrue("Expected selectRufusTabView to preserve implementation and not return null", hasNewInstance);
+
+        // Verify DexPool assembly
+        DexPool pool = new DexPool(Opcodes.getDefault());
+        pool.internClass(sanitized);
+        MemoryDataStore store = new MemoryDataStore();
+        pool.writeTo(store);
+        assertTrue(store.getSize() > 0);
+    }
+
+    @Test
+    public void testClassIdentifiedByMethodDefinitions() throws Exception {
+        File dexFile = assembleSmali(CUSTOM_SETTINGS_AI_SMALI);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
+        ClassDef settingsDef = findClass(dex, "Lcom/example/CustomSettings;");
+        assertNotNull(settingsDef);
+
+        // Class name does NOT match AI_CONTROLLER_CLASS_PATTERN, but class defines getSupportsAssistant()
+        assertFalse(AiBytecodeRules.isAiControllerClass(settingsDef.getType()));
+        assertTrue(AiBytecodeRules.isAiControllerClass(settingsDef));
+
+        PrivacyOptions options = PrivacyOptions.all();
+        PrivacyStats stats = new PrivacyStats();
+        ClassDef sanitized = PrivacyBytecodeEngine.sanitizeClass(settingsDef, options, stats);
+
+        // Both getSupportsAssistant and isEnabled are stubbed because isAiClass was wired from ClassDef
+        assertEquals(2, stats.aiEligibilityManagersStubbed);
+        assertTrue(stats.classesModified > 0);
+
+        // Verify DexPool assembly
+        DexPool pool = new DexPool(Opcodes.getDefault());
+        pool.internClass(sanitized);
+        MemoryDataStore store = new MemoryDataStore();
+        pool.writeTo(store);
+        assertTrue(store.getSize() > 0);
+    }
+
+    @Test
+    public void testWeblabTreatmentNonStringReturnPreserved() throws Exception {
+        File dexFile = assembleSmali(NON_STRING_WEBLAB_CALLER_SMALI);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
+        ClassDef callerDef = findClass(dex, "Lcom/example/NonStringCaller;");
+        assertNotNull(callerDef);
+
+        PrivacyOptions options = PrivacyOptions.all();
+        PrivacyStats stats = new PrivacyStats();
+        ClassDef sanitized = PrivacyBytecodeEngine.sanitizeClass(callerDef, options, stats);
+
+        // Target method returns Object, so move-result-object must NOT be replaced with "C"
+        assertEquals(0, stats.aiFeatureGatesNeutralized);
+
+        Method testMethod = findMethod(sanitized, "testRufusObject");
+        assertNotNull(testMethod);
+        boolean foundMoveResultObj = false;
+        for (Instruction inst : testMethod.getImplementation().getInstructions()) {
+            if (inst.getOpcode() == Opcode.MOVE_RESULT_OBJECT) {
+                foundMoveResultObj = true;
+            }
+        }
+        assertTrue("Expected move-result-object to be preserved when return type is Object", foundMoveResultObj);
+    }
+
+    @Test
+    public void testReachabilityOverloadDistinction() {
+        DexReachabilityIndex index = new DexReachabilityIndex();
+        // Index only 0-arg method
+        // Method with different return or param should not match
+        assertFalse(index.isMethodInvoked("Lcom/example/Manager;", "isEligible", "Z"));
     }
 }

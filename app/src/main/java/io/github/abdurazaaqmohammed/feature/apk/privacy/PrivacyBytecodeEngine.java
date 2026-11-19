@@ -485,6 +485,7 @@ public final class PrivacyBytecodeEngine {
         boolean isDeadWorker = hasWorker && (reachabilityIndex != null && !reachabilityIndex.isClassReferenced(classDef.getType()));
 
         boolean nullifyAi = options.nullifyAiAssistants;
+        boolean isAiClass = nullifyAi && AiBytecodeRules.isAiControllerClass(classDef);
         boolean stubAiEligibility = nullifyAi && options.stubAiEligibilityManagers;
         boolean neutralizeTabIngress = nullifyAi && (options.neutralizeAiTabIngress || options.neutraliseAiTabIngress);
 
@@ -515,8 +516,8 @@ public final class PrivacyBytecodeEngine {
                     directMethods.add(rewritten);
                     classModified = true;
                 }
-            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, classDef.getType())) {
-                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats);
+            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, isAiClass)) {
+                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats, isAiClass);
                 if (stubbed != m) {
                     classModified = true;
                     directMethods.add(stubbed);
@@ -566,8 +567,8 @@ public final class PrivacyBytecodeEngine {
                     virtualMethods.add(rewritten);
                     classModified = true;
                 }
-            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, classDef.getType())) {
-                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats);
+            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, isAiClass)) {
+                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats, isAiClass);
                 if (stubbed != m) {
                     classModified = true;
                     virtualMethods.add(stubbed);

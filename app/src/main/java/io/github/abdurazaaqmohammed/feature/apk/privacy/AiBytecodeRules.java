@@ -110,7 +110,7 @@ public final class AiBytecodeRules {
     /**
      * Determines whether a method is an AI eligibility method on an AI controller class.
      */
-    public static boolean isEligibilityMethod(Method method, String classType) {
+    public static boolean isEligibilityMethod(Method method, boolean isAiClass) {
         if (method == null) return false;
         String name = method.getName();
         if ("<init>".equals(name) || "<clinit>".equals(name)) return false;
@@ -127,7 +127,7 @@ public final class AiBytecodeRules {
             if (ASSISTANT_SPECIFIC_BOOLEAN_METHODS.contains(name)) {
                 return true;
             }
-            if (UNIVERSAL_BOOLEAN_ELIGIBILITY_METHODS.contains(name) && isAiControllerClass(classType)) {
+            if (UNIVERSAL_BOOLEAN_ELIGIBILITY_METHODS.contains(name) && isAiClass) {
                 return true;
             }
         }
@@ -136,12 +136,19 @@ public final class AiBytecodeRules {
     }
 
     /**
+     * Determines whether a method is an AI eligibility method given the class descriptor.
+     */
+    public static boolean isEligibilityMethod(Method method, String classType) {
+        return isEligibilityMethod(method, isAiControllerClass(classType));
+    }
+
+    /**
      * Stubs an AI eligibility method to return false (for boolean) or NOT_ELIGIBLE (for SavX).
      * Respects reachabilityIndex if provided.
      */
-    public static Method nullifyEligibilityMethod(Method method, DexReachabilityIndex reachabilityIndex, PrivacyStats stats) {
+    public static Method nullifyEligibilityMethod(Method method, DexReachabilityIndex reachabilityIndex, PrivacyStats stats, boolean isAiClass) {
         if (method == null) return null;
-        if (!isEligibilityMethod(method, method.getDefiningClass())) {
+        if (!isEligibilityMethod(method, isAiClass)) {
             return method;
         }
 
@@ -153,13 +160,15 @@ public final class AiBytecodeRules {
             return method;
         }
 
+        String returnType = method.getReturnType();
+        boolean isWide = "J".equals(returnType) || "D".equals(returnType);
+        int requiredLocals = isWide ? 2 : 1;
         int paramRegs = computeParameterRegisters(method);
         int origRegs = method.getImplementation() != null ? method.getImplementation().getRegisterCount() : 0;
-        int regCount = Math.max(paramRegs + 1, origRegs);
+        int regCount = Math.max(paramRegs + requiredLocals, origRegs);
 
         MutableMethodImplementation newImpl = new MutableMethodImplementation(regCount);
 
-        String returnType = method.getReturnType();
         if (isSavXEligibilityReturn(returnType)) {
             FieldReference fieldRef = new ImmutableFieldReference(
                     returnType,
@@ -192,6 +201,13 @@ public final class AiBytecodeRules {
     }
 
     /**
+     * Overload for backward compatibility using class descriptor.
+     */
+    public static Method nullifyEligibilityMethod(Method method, DexReachabilityIndex reachabilityIndex, PrivacyStats stats) {
+        return nullifyEligibilityMethod(method, reachabilityIndex, stats, isAiControllerClass(method != null ? method.getDefiningClass() : null));
+    }
+
+    /**
      * Checks if a class is an AI UI tab or ingress controller.
      */
     public static boolean isTabIngressClass(String classType) {
@@ -206,6 +222,12 @@ public final class AiBytecodeRules {
         if (method == null) return false;
         String name = method.getName();
         if ("<init>".equals(name) || "<clinit>".equals(name)) return false;
+
+        // Restrict tab ingress neutralization to void and primitive returns to avoid NPE on objects
+        String returnType = method.getReturnType();
+        if (returnType == null || returnType.startsWith("L") || returnType.startsWith("[")) {
+            return false;
+        }
 
         if (TAB_INGRESS_METHOD_PATTERN.matcher(name).matches()) {
             return true;
@@ -239,25 +261,27 @@ public final class AiBytecodeRules {
             return method;
         }
 
+        String returnType = method.getReturnType();
+        boolean isWide = "J".equals(returnType) || "D".equals(returnType);
+        int requiredLocals = isWide ? 2 : 1;
         int paramRegs = computeParameterRegisters(method);
         int origRegs = method.getImplementation() != null ? method.getImplementation().getRegisterCount() : 0;
-        int regCount = Math.max(paramRegs + 1, origRegs);
+        int regCount = Math.max(paramRegs + requiredLocals, origRegs);
 
         MutableMethodImplementation newImpl = new MutableMethodImplementation(regCount);
 
-        String returnType = method.getReturnType();
         if ("V".equals(returnType)) {
             newImpl.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
-        } else if ("Z".equals(returnType) || "B".equals(returnType) || "C".equals(returnType) || "S".equals(returnType) || "I".equals(returnType)) {
+        } else if ("Z".equals(returnType) || "B".equals(returnType) || "C".equals(returnType)
+                || "S".equals(returnType) || "I".equals(returnType) || "F".equals(returnType)) {
             newImpl.addInstruction(PrivacyBytecodeEngine.createConstInt(0, 0));
             newImpl.addInstruction(new BuilderInstruction11x(Opcode.RETURN, 0));
-        } else if ("J".equals(returnType)) {
+        } else if ("J".equals(returnType) || "D".equals(returnType)) {
             newImpl.addInstruction(PrivacyBytecodeEngine.createConstWide(0, 0L));
             newImpl.addInstruction(new BuilderInstruction11x(Opcode.RETURN_WIDE, 0));
         } else {
-            // Object return -> null
-            newImpl.addInstruction(PrivacyBytecodeEngine.createConstInt(0, 0));
-            newImpl.addInstruction(new BuilderInstruction11x(Opcode.RETURN_OBJECT, 0));
+            // Complex object or unsupported type - do not mutate to avoid NPE / VerifyError
+            return method;
         }
 
         if (stats != null) {
@@ -351,6 +375,18 @@ public final class AiBytecodeRules {
 
         // Case 2: instructionIndex is already the move-result / move-result-object instruction
         if (op == Opcode.MOVE_RESULT_OBJECT && inst instanceof OneRegisterInstruction) {
+            if (instructionIndex > 0) {
+                Instruction prev = mutable.getInstructions().get(instructionIndex - 1);
+                if (PrivacyBytecodeEngine.isInvoke(prev.getOpcode()) && prev instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) prev).getReference();
+                    if (ref instanceof MethodReference) {
+                        String ret = ((MethodReference) ref).getReturnType();
+                        if (!"Ljava/lang/String;".equals(ret) && !ret.endsWith("String;")) {
+                            return false;
+                        }
+                    }
+                }
+            }
             int reg = ((OneRegisterInstruction) inst).getRegisterA();
             mutable.replaceInstruction(instructionIndex, new BuilderInstruction21c(
                     Opcode.CONST_STRING,
@@ -360,6 +396,18 @@ public final class AiBytecodeRules {
             if (stats != null) stats.aiFeatureGatesNeutralized++;
             return true;
         } else if (op == Opcode.MOVE_RESULT && inst instanceof OneRegisterInstruction) {
+            if (instructionIndex > 0) {
+                Instruction prev = mutable.getInstructions().get(instructionIndex - 1);
+                if (PrivacyBytecodeEngine.isInvoke(prev.getOpcode()) && prev instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) prev).getReference();
+                    if (ref instanceof MethodReference) {
+                        String ret = ((MethodReference) ref).getReturnType();
+                        if (!"Z".equals(ret)) {
+                            return false;
+                        }
+                    }
+                }
+            }
             int reg = ((OneRegisterInstruction) inst).getRegisterA();
             mutable.replaceInstruction(instructionIndex, PrivacyBytecodeEngine.createConstInt(reg, 0));
             if (stats != null) stats.aiFeatureGatesNeutralized++;
@@ -374,8 +422,7 @@ public final class AiBytecodeRules {
     public static boolean isMethodReferenced(DexReachabilityIndex reachabilityIndex, Method method) {
         if (reachabilityIndex == null || method == null) return false;
         return reachabilityIndex.isMethodInvoked(method)
-                || reachabilityIndex.isMethodInvoked(method.getDefiningClass(), method.getName(), method.getReturnType())
-                || reachabilityIndex.isMethodInvoked(method.getDefiningClass(), method.getName());
+                || reachabilityIndex.isMethodInvoked(method.getDefiningClass(), method.getName(), method.getReturnType());
     }
 
     public static int computeParameterRegisters(Method method) {
