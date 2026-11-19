@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.apk.privacy;
 
+import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
@@ -7,9 +8,11 @@ import com.android.tools.smali.dexlib2.builder.BuilderInstruction;
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11n;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11x;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21c;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21s;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction31i;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction35c;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction51l;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
@@ -25,6 +28,7 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
@@ -40,11 +44,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper;
 import io.github.abdurazaaqmohammed.feature.apk.DexRepairEngine;
@@ -82,6 +88,13 @@ public final class PrivacyBytecodeEngine {
     private static final Set<String> ADB_PROPERTY_KEYS = new HashSet<>(Arrays.asList(
             "ro.debuggable", "service.adb.root"
     ));
+
+    private static final Pattern TELEMETRY_WORKER_PATTERN = Pattern.compile(
+            ".*(analytics|telemetry|tracker|tracking|metric|cujo|otm).*",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    public static final String WORKER_RESULT_CLASS = "Landroidx/work/ListenableWorker$Result;";
 
     public static class MethodTransformationResult {
         public final boolean modified;
@@ -342,32 +355,198 @@ public final class PrivacyBytecodeEngine {
     }
 
     /**
+     * Detects if a ClassDef extends androidx.work.Worker or ListenableWorker (or superclass contains Worker).
+     */
+    public static boolean isWorkManagerWorker(ClassDef classDef) {
+        if (classDef == null) return false;
+        String superclass = classDef.getSuperclass();
+        if (superclass == null) return false;
+        String normSuper = DexReachabilityIndex.normalizeClassType(superclass);
+        return "Landroidx/work/Worker;".equals(normSuper)
+                || "Landroidx/work/ListenableWorker;".equals(normSuper)
+                || normSuper.contains("Worker");
+    }
+
+    /**
+     * Checks if a class is a WorkManager worker matching telemetry naming patterns.
+     */
+    public static boolean isTelemetryWorker(ClassDef classDef) {
+        if (classDef == null) return false;
+        if (!isWorkManagerWorker(classDef)) return false;
+        String type = classDef.getType();
+        return type != null && TELEMETRY_WORKER_PATTERN.matcher(type).matches();
+    }
+
+    /**
+     * Checks if a method is doWork() returning ListenableWorker$Result.
+     */
+    public static boolean isDoWorkMethod(Method method) {
+        if (method == null) return false;
+        return "doWork".equals(method.getName())
+                && WORKER_RESULT_CLASS.equals(DexReachabilityIndex.normalizeClassType(method.getReturnType()))
+                && (method.getParameters() == null || method.getParameters().isEmpty());
+    }
+
+    /**
+     * Checks if a ClassDef defines a doWork() method.
+     */
+    public static boolean hasDoWorkMethod(ClassDef classDef) {
+        if (classDef == null) return false;
+        for (Method m : classDef.getVirtualMethods()) {
+            if (isDoWorkMethod(m)) return true;
+        }
+        for (Method m : classDef.getDirectMethods()) {
+            if (isDoWorkMethod(m)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Neutralizes doWork() implementation by replacing instructions with:
+     * invoke-static {} Landroidx/work/ListenableWorker$Result;->success()Landroidx/work/ListenableWorker$Result;
+     * move-result-object v0
+     * return-object v0
+     * Ensures registerCount >= 1.
+     */
+    public static MutableMethodImplementation neutralizeWorkerClass(ClassDef classDef, MutableMethodImplementation mutable, PrivacyStats stats) {
+        int regCount = mutable != null ? Math.max(1, mutable.getRegisterCount()) : 1;
+        MutableMethodImplementation newImpl = new MutableMethodImplementation(regCount);
+
+        BuilderInstruction invoke = new BuilderInstruction35c(
+                Opcode.INVOKE_STATIC,
+                0, 0, 0, 0, 0, 0,
+                new ImmutableMethodReference(
+                        WORKER_RESULT_CLASS,
+                        "success",
+                        Collections.emptyList(),
+                        WORKER_RESULT_CLASS
+                )
+        );
+        BuilderInstruction moveResult = new BuilderInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0);
+        BuilderInstruction returnObj = new BuilderInstruction11x(Opcode.RETURN_OBJECT, 0);
+
+        newImpl.addInstruction(invoke);
+        newImpl.addInstruction(moveResult);
+        newImpl.addInstruction(returnObj);
+
+        if (mutable != null && mutable.getRegisterCount() >= 1) {
+            try {
+                while (!mutable.getInstructions().isEmpty()) {
+                    mutable.removeInstruction(0);
+                }
+                mutable.addInstruction(invoke);
+                mutable.addInstruction(moveResult);
+                mutable.addInstruction(returnObj);
+            } catch (Exception ignored) {
+                // In-place modification could fail on dangling labels; newImpl will be used
+            }
+        }
+
+        if (stats != null) {
+            stats.backgroundWorkersNeutralized++;
+        }
+        return newImpl;
+    }
+
+    public static ClassDef neutralizeWorkerClass(ClassDef classDef, PrivacyOptions options, PrivacyStats stats, DexReachabilityIndex reachabilityIndex) {
+        return sanitizeClass(classDef, options, stats, reachabilityIndex);
+    }
+
+    public static ClassDef neutralizeWorkerClass(ClassDef classDef, PrivacyOptions options, PrivacyStats stats) {
+        return sanitizeClass(classDef, options, stats, null);
+    }
+
+    /**
      * Sanitizes all direct and virtual methods in a ClassDef.
      */
     public static ClassDef sanitizeClass(ClassDef classDef, PrivacyOptions options, PrivacyStats outStats) {
+        return sanitizeClass(classDef, options, outStats, null);
+    }
+
+    /**
+     * Sanitizes all direct and virtual methods in a ClassDef with optional reachability discovery.
+     */
+    public static ClassDef sanitizeClass(ClassDef classDef, PrivacyOptions options, PrivacyStats outStats, DexReachabilityIndex reachabilityIndex) {
+        if (options == null) options = PrivacyOptions.all();
         List<Method> directMethods = new ArrayList<>();
         List<Method> virtualMethods = new ArrayList<>();
         boolean classModified = false;
 
+        boolean isTelemetryWorker = options.neutralizeBackgroundWorkers && isTelemetryWorker(classDef);
+        boolean hasWorker = isTelemetryWorker && hasDoWorkMethod(classDef);
+        boolean isDeadWorker = hasWorker && (reachabilityIndex != null && !reachabilityIndex.isClassReferenced(classDef.getType()));
+
+        if (isDeadWorker) {
+            if (outStats != null) outStats.deadCodeSkipped++;
+        }
+
         for (Method m : classDef.getDirectMethods()) {
-            MethodTransformationResult result = sanitizeMethod(m, options);
-            if (result.modified) {
-                classModified = true;
-                if (outStats != null) outStats.merge(result.stats);
-                directMethods.add(result.method);
+            if (hasWorker && isDoWorkMethod(m)) {
+                if (isDeadWorker) {
+                    directMethods.add(m);
+                } else {
+                    MutableMethodImplementation mutable = m.getImplementation() != null
+                            ? new MutableMethodImplementation(m.getImplementation())
+                            : null;
+                    MutableMethodImplementation newImpl = neutralizeWorkerClass(classDef, mutable, outStats);
+                    int flags = m.getAccessFlags() & ~AccessFlags.ABSTRACT.getValue();
+                    Method rewritten = new ImmutableMethod(
+                            m.getDefiningClass(),
+                            m.getName(),
+                            m.getParameters(),
+                            m.getReturnType(),
+                            flags,
+                            m.getAnnotations(),
+                            m.getHiddenApiRestrictions(),
+                            newImpl
+                    );
+                    directMethods.add(rewritten);
+                    classModified = true;
+                }
             } else {
-                directMethods.add(m);
+                MethodTransformationResult result = sanitizeMethod(m, options);
+                if (result.modified) {
+                    classModified = true;
+                    if (outStats != null) outStats.merge(result.stats);
+                    directMethods.add(result.method);
+                } else {
+                    directMethods.add(m);
+                }
             }
         }
 
         for (Method m : classDef.getVirtualMethods()) {
-            MethodTransformationResult result = sanitizeMethod(m, options);
-            if (result.modified) {
-                classModified = true;
-                if (outStats != null) outStats.merge(result.stats);
-                virtualMethods.add(result.method);
+            if (hasWorker && isDoWorkMethod(m)) {
+                if (isDeadWorker) {
+                    virtualMethods.add(m);
+                } else {
+                    MutableMethodImplementation mutable = m.getImplementation() != null
+                            ? new MutableMethodImplementation(m.getImplementation())
+                            : null;
+                    MutableMethodImplementation newImpl = neutralizeWorkerClass(classDef, mutable, outStats);
+                    int flags = m.getAccessFlags() & ~AccessFlags.ABSTRACT.getValue();
+                    Method rewritten = new ImmutableMethod(
+                            m.getDefiningClass(),
+                            m.getName(),
+                            m.getParameters(),
+                            m.getReturnType(),
+                            flags,
+                            m.getAnnotations(),
+                            m.getHiddenApiRestrictions(),
+                            newImpl
+                    );
+                    virtualMethods.add(rewritten);
+                    classModified = true;
+                }
             } else {
-                virtualMethods.add(m);
+                MethodTransformationResult result = sanitizeMethod(m, options);
+                if (result.modified) {
+                    classModified = true;
+                    if (outStats != null) outStats.merge(result.stats);
+                    virtualMethods.add(result.method);
+                } else {
+                    virtualMethods.add(m);
+                }
             }
         }
 
@@ -394,13 +573,20 @@ public final class PrivacyBytecodeEngine {
      * Sanitizes an entire DEX file in-place or to a new destination.
      */
     public static PrivacyStats sanitizeDex(File dexIn, File dexOut, PrivacyOptions options) throws Exception {
+        return sanitizeDex(dexIn, dexOut, options, null);
+    }
+
+    /**
+     * Sanitizes an entire DEX file with optional reachability index.
+     */
+    public static PrivacyStats sanitizeDex(File dexIn, File dexOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex) throws Exception {
         DexRepairEngine.repairHeader(dexIn);
         DexBackedDexFile dex = DexFileFactory.loadDexFile(dexIn, null);
         DexPool pool = new DexPool(dex.getOpcodes());
         PrivacyStats stats = new PrivacyStats();
 
         for (ClassDef classDef : dex.getClasses()) {
-            ClassDef sanitized = sanitizeClass(classDef, options, stats);
+            ClassDef sanitized = sanitizeClass(classDef, options, stats, reachabilityIndex);
             pool.internClass(DexDebugStripper.strip(sanitized));
         }
 
@@ -422,6 +608,13 @@ public final class PrivacyBytecodeEngine {
      * Sanitizes all classes*.dex entries inside an APK, writing to a new output APK.
      */
     public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, APKLogger logger) throws Exception {
+        return sanitizeApk(apkIn, apkOut, options, null, logger);
+    }
+
+    /**
+     * Sanitizes all classes*.dex entries inside an APK with optional reachability index.
+     */
+    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex, APKLogger logger) throws Exception {
         ApkModule module = ApkModule.loadApkFile(apkIn);
         module.setLoadDefaultFramework(false);
         PrivacyStats totalStats = new PrivacyStats();
@@ -436,7 +629,7 @@ public final class PrivacyBytecodeEngine {
             PrivacyStats dexStats = new PrivacyStats();
 
             for (ClassDef classDef : dex.getClasses()) {
-                ClassDef sanitized = sanitizeClass(classDef, options, dexStats);
+                ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachabilityIndex);
                 pool.internClass(DexDebugStripper.strip(sanitized));
             }
 
