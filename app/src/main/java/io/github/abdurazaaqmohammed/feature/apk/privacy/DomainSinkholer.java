@@ -17,6 +17,7 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringRefere
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -48,7 +49,7 @@ public final class DomainSinkholer {
     );
 
     private static final Pattern TELEMETRY_URL_PATTERN = Pattern.compile(
-            "https?://[a-zA-Z0-9.-]*(telemetry|analytics|metrics|tracking|crashlytics|app-measurement|appsflyer|adjust\\.com|branch\\.io|kochava|mixpanel|amplitude|segment\\.io|siftscience|datadoghq|braze\\.com|launchdarkly)[a-zA-Z0-9./_?=-]*",
+            "https?://[a-zA-Z0-9.-]*(telemetry|analytics|metrics|tracking|crashlytics|app-measurement|appsflyer|adjust\\.com|branch\\.io|kochava|mixpanel|amplitude|segment\\.io|siftscience|datadoghq|braze\\.com|launchdarkly)[a-zA-Z0-9./_?=&%+:#;-]*",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -63,7 +64,7 @@ public final class DomainSinkholer {
     );
 
     private static final Pattern AI_URL_PATTERN = Pattern.compile(
-            "https?://[a-zA-Z0-9.-]*(andistreaminghub|aiq\\.xa|openai\\.com|anthropic\\.com|generativelanguage\\.googleapis\\.com)[a-zA-Z0-9./_?=-]*",
+            "https?://[a-zA-Z0-9.-]*(andistreaminghub|aiq\\.xa|openai\\.com|anthropic\\.com|generativelanguage\\.googleapis\\.com)[a-zA-Z0-9./_?=&%+:#;-]*",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -72,7 +73,7 @@ public final class DomainSinkholer {
      */
     public static boolean isTelemetryEndpoint(String str) {
         if (str == null || str.length() < 6) return false;
-        String lower = str.toLowerCase();
+        String lower = str.toLowerCase(Locale.ROOT);
         for (String domain : KNOWN_TELEMETRY_DOMAINS) {
             if (lower.contains(domain)) return true;
         }
@@ -84,7 +85,7 @@ public final class DomainSinkholer {
      */
     public static boolean isAiEndpoint(String str) {
         if (str == null || str.length() < 6) return false;
-        String lower = str.toLowerCase();
+        String lower = str.toLowerCase(Locale.ROOT);
         for (String domain : KNOWN_AI_DOMAINS) {
             if (lower.contains(domain)) return true;
         }
@@ -111,12 +112,12 @@ public final class DomainSinkholer {
      */
     public static PrivacyBytecodeEngine.MethodTransformationResult sinkholeMethod(
             Method method, PrivacyStats stats, PrivacyOptions options) {
-        if (stats == null) stats = new PrivacyStats();
+        PrivacyStats methodStats = new PrivacyStats();
         if (options == null) options = PrivacyOptions.all();
 
         MethodImplementation impl = method.getImplementation();
         if (impl == null) {
-            return new PrivacyBytecodeEngine.MethodTransformationResult(false, stats, method);
+            return new PrivacyBytecodeEngine.MethodTransformationResult(false, methodStats, method);
         }
 
         MutableMethodImplementation mutable = new MutableMethodImplementation(impl);
@@ -135,10 +136,10 @@ public final class DomainSinkholer {
                         boolean shouldSinkhole = false;
 
                         if (options.nullifyAiAssistants && isAiEndpoint(str)) {
-                            stats.aiEndpointsSinkholed++;
+                            methodStats.aiEndpointsSinkholed++;
                             shouldSinkhole = true;
                         } else if (options.sinkholeTelemetryDomains && isTelemetryEndpoint(str)) {
-                            stats.telemetryDomainsSinkholed++;
+                            methodStats.telemetryDomainsSinkholed++;
                             shouldSinkhole = true;
                         }
 
@@ -156,6 +157,10 @@ public final class DomainSinkholer {
             }
         }
 
+        if (stats != null) {
+            stats.merge(methodStats);
+        }
+
         if (modified) {
             Method transformed = new ImmutableMethod(
                     method.getDefiningClass(),
@@ -167,10 +172,10 @@ public final class DomainSinkholer {
                     method.getHiddenApiRestrictions(),
                     mutable
             );
-            return new PrivacyBytecodeEngine.MethodTransformationResult(true, stats, transformed);
+            return new PrivacyBytecodeEngine.MethodTransformationResult(true, methodStats, transformed);
         }
 
-        return new PrivacyBytecodeEngine.MethodTransformationResult(false, stats, method);
+        return new PrivacyBytecodeEngine.MethodTransformationResult(false, methodStats, method);
     }
 
     /**
