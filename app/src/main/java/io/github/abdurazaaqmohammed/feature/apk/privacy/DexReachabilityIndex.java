@@ -40,7 +40,6 @@ public final class DexReachabilityIndex {
     private final Set<String> invokedMethodsByName = new HashSet<>();
 
     private final Set<String> referencedFieldDescriptors = new HashSet<>();
-    private final Set<String> referencedFieldsWithType = new HashSet<>();
     private final Set<String> referencedFieldsByName = new HashSet<>();
 
     private final Set<String> referencedClasses = new HashSet<>();
@@ -172,7 +171,6 @@ public final class DexReachabilityIndex {
             String type = fieldRef.getType();
 
             referencedFieldsByName.add(declaringClass + "->" + name);
-            referencedFieldsWithType.add(declaringClass + "->" + name + ":" + type);
 
             recordClassReference(declaringClass);
             recordClassReference(type);
@@ -209,8 +207,17 @@ public final class DexReachabilityIndex {
         type = type.trim();
         if (type.isEmpty()) return "";
         if (type.length() == 1) return type; // primitive descriptor: Z, B, C, S, I, J, F, D, V
-        if (type.startsWith("[")) return type;
-        if (type.startsWith("L") && type.endsWith(";")) return type;
+        if (type.startsWith("[")) {
+            int bracketCount = 0;
+            while (bracketCount < type.length() && type.charAt(bracketCount) == '[') {
+                bracketCount++;
+            }
+            String component = type.substring(bracketCount);
+            return type.substring(0, bracketCount) + normalizeClassType(component);
+        }
+        if (type.startsWith("L") && type.endsWith(";")) {
+            type = type.substring(1, type.length() - 1);
+        }
         return "L" + type.replace('.', '/') + ";";
     }
 
@@ -275,8 +282,7 @@ public final class DexReachabilityIndex {
     public boolean isMethodInvoked(MethodReference methodRef) {
         if (methodRef == null) return false;
         String desc = ReferenceUtil.getMethodDescriptor(methodRef);
-        if (invokedMethodDescriptors.contains(desc)) return true;
-        return isMethodInvoked(methodRef.getDefiningClass(), methodRef.getName(), methodRef.getReturnType());
+        return invokedMethodDescriptors.contains(desc);
     }
 
     /**
@@ -320,7 +326,7 @@ public final class DexReachabilityIndex {
             return isFieldReferenced(normClass, fieldName);
         }
         String normType = normalizeReturnType(fieldType);
-        return referencedFieldsWithType.contains(normClass + "->" + fieldName + ":" + normType);
+        return referencedFieldDescriptors.contains(normClass + "->" + fieldName + ":" + normType);
     }
 
     /**
