@@ -45,6 +45,7 @@ import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
 import android.view.GestureDetector;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -1450,21 +1451,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
             View moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
             moreOptionsMenu.setOnLongClickListener(this::showMsgOnLongPress);
-            moreOptionsMenu.setOnClickListener(v -> {
-                if (drawerLayout != null) {
-                    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                        drawerLayout.closeDrawer(GravityCompat.END);
-                        isRightDrawerOpen = false;
-                        stopBatteryMonitor();
-                    } else {
-                        // Open first, build after: drawer animation must not wait on view building.
-                        drawerLayout.openDrawer(GravityCompat.END);
-                        isRightDrawerOpen = true;
-                        startBatteryMonitor();
-                        refreshRightMenuDrawer();
-                    }
-                }
-            });
+            moreOptionsMenu.setOnClickListener(v -> toggleRightMenuDrawer());
 
             View upButton = findViewById(R.id.upButton);
             upButton.setOnLongClickListener(this::showMsgOnLongPress);
@@ -1693,6 +1680,32 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    private void toggleRightMenuDrawer() {
+        if (drawerLayout == null) return;
+        if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.closeDrawer(GravityCompat.END);
+            isRightDrawerOpen = false;
+            stopBatteryMonitor();
+        } else {
+            // Open first, build after: drawer animation must not wait on view building.
+            drawerLayout.openDrawer(GravityCompat.END);
+            isRightDrawerOpen = true;
+            startBatteryMonitor();
+            refreshRightMenuDrawer();
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                toggleRightMenuDrawer();
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (isBookmarksDrawerOpen && ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -1727,29 +1740,34 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (filterBar != null) filterBar.setText("");
             } else {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                boolean navigateOnBack = PreferenceManager.getDefaultSharedPreferences(this)
+                        .getBoolean("back_navigates_folders", true);
                 if(a instanceof MainFilesArrayAdapter adapter) {
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
                     else if (adapter.isSearchResultsMode()) {
                         clearSearchResults(adapter.pane1);
                     } else {
-                        boolean handled = adapter.goUpOnBack();
-                        if (!handled) {
+                        boolean handled = navigateOnBack && adapter.goUpOnBack();
+                        if (!handled && navigateOnBack) {
                             handled = navigateBack(adapter.pane1);
                         }
-                        if (!handled) {
-                            if (isBackPressedToExit) {
-                                handler.removeCallbacks(resetExitPrompt);
-                                finishAffinity();
-                            } else {
-                                isBackPressedToExit = true;
-                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                handler.postDelayed(resetExitPrompt, 2000);
-                            }
-                        }
+                        if (!handled) handleBackToExit();
                     }
-                } else if (a instanceof RemoteFilesArrayAdapter remote) remote.goUp();
+                } else if (!navigateOnBack) handleBackToExit();
+                else if (a instanceof RemoteFilesArrayAdapter remote) remote.goUp();
                 else ftp.ftpParent(lastPaneSelected == 1);
             }
+        }
+    }
+
+    private void handleBackToExit() {
+        if (isBackPressedToExit) {
+            handler.removeCallbacks(resetExitPrompt);
+            finishAffinity();
+        } else {
+            isBackPressedToExit = true;
+            Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+            handler.postDelayed(resetExitPrompt, 2000);
         }
     }
 
@@ -3368,6 +3386,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onResume() {
         super.onResume();
+        isBackPressedToExit = false;
+        handler.removeCallbacks(resetExitPrompt);
         if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
             isRightDrawerOpen = true;
             startBatteryMonitor();
@@ -3580,20 +3600,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void showSearchDialog() {
         fileSearch.showSearchDialog();
-    }
-
-    /** Right-menu "Exit": confirm before killing in-flight work. */
-    public void confirmExitApp() {
-        try {
-            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                    .setTitle(R.string.exit)
-                    .setMessage(R.string.exit_confirm_message)
-                    .setPositiveButton(R.string.exit, (dialog, which) -> exitApp())
-                    .setNegativeButton(R.string.cancel, null)
-                    .create());
-        } catch (Exception ignored) {
-            exitApp();
-        }
     }
 
     /**

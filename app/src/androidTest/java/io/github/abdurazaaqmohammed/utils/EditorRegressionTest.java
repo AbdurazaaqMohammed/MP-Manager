@@ -5,7 +5,9 @@ import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Instrumentation;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -209,6 +211,42 @@ public class EditorRegressionTest {
         restore(b);
         assertEquals("B:second\rthird\n", second.getCode());
         assertTrue(second.getEditor().canUndo());
+    }
+
+    @Test public void lineNumbersFollowEditorPreferencesOnFileOpen() throws Exception {
+        SharedPreferences editorPrefs = application.getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
+        boolean hadLegacy = editorPrefs.contains("show_line_numbers");
+        boolean legacy = editorPrefs.getBoolean("show_line_numbers", true);
+        boolean hadCurrent = editorPrefs.contains("pref_show_line_numbers");
+        boolean current = editorPrefs.getBoolean("pref_show_line_numbers", true);
+        editorPrefs.edit().remove("show_line_numbers").remove("pref_show_line_numbers").commit();
+        try {
+            assertTrue("Line numbers are on by default", UnifiedEditorFragment.resolveShowLineNumbers(editorPrefs));
+            editorPrefs.edit().putBoolean("show_line_numbers", false).commit();
+            assertFalse("Legacy DEX-editor key is still honored when explicitly present",
+                    UnifiedEditorFragment.resolveShowLineNumbers(editorPrefs));
+            // The regression: with line numbers disabled in editor preferences
+            // (pref_show_line_numbers=false, no legacy key), opening a file
+            // re-enabled the gutter through the legacy key's default.
+            editorPrefs.edit().putBoolean("show_line_numbers", true)
+                    .putBoolean("pref_show_line_numbers", false).commit();
+            assertFalse("The current preference takes precedence over a stale legacy value",
+                    UnifiedEditorFragment.resolveShowLineNumbers(editorPrefs));
+            editorPrefs.edit().remove("show_line_numbers").commit();
+            assertFalse(UnifiedEditorFragment.resolveShowLineNumbers(editorPrefs));
+            TextEditorActivity activity = (TextEditorActivity) open(TextEditorActivity.class,
+                    file(".txt", "numbers".getBytes(StandardCharsets.UTF_8)));
+            UnifiedEditorFragment fragment = loaded(activity, "numbers");
+            AtomicReference<Boolean> enabled = new AtomicReference<>(true);
+            instrumentation.runOnMainSync(() -> enabled.set(fragment.getEditor().isLineNumberEnabled()));
+            assertFalse("Disabled line numbers must stay disabled after a file is opened", enabled.get());
+        } finally {
+            SharedPreferences.Editor restore = editorPrefs.edit()
+                    .remove("show_line_numbers").remove("pref_show_line_numbers");
+            if (hadLegacy) restore.putBoolean("show_line_numbers", legacy);
+            if (hadCurrent) restore.putBoolean("pref_show_line_numbers", current);
+            restore.commit();
+        }
     }
 
     @Test public void soraStreamingRoundTripPreservesChunkBoundaryCrLfAndSnapshots() throws Exception {

@@ -72,7 +72,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
+import io.github.abdurazaaqmohammed.util.hash.HashUtil;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
@@ -796,6 +798,11 @@ public class DexTools {
                         .putExtra("path", tempFile.getPath()), 757);
             } else if (name.equals("resources.arsc")) {
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
+            } else if (HashUtil.isChecksumFile(name)) {
+                // Tapping a .sfv/.md5 entry verifies it against its sibling
+                // archive entries instead of falling through to open-with.
+                context.handler.post(() -> new ChecksumDialogs(context, dialogUtil)
+                        .showZipChecksumVerifyDialog(zipFile, fullPath));
             } else {
                 openWith.open(tempFile, name, zipFile, fullPath);
             }

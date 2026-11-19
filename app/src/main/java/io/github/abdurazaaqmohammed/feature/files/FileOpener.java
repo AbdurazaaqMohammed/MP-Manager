@@ -1964,8 +1964,11 @@ public class FileOpener {
         } else if (("payload.bin".equalsIgnoreCase(fileName) || fileName.endsWith(".bin") || fileName.endsWith(".payload")) && PayloadParser.isPayload(file)) {
             PayloadDialog.showForPayload(context, file, pane1);
         } else if(HashUtil.isChecksumFile(fileName)) {
+            // Entry names resolve next to the manifest: when the manifest was
+            // staged from an elevated folder, keep the original parent as the
+            // base dir instead of the staging cache.
             withReadableCopy(file, readable -> {
-                if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable);
+                if (checksumDialogs != null) checksumDialogs.showHashVerifyDialog(readable, file.getParentFile());
                 else openWithDefaultOrDialog(readable, fileName);
             });
         } else if (fileName.endsWith(".xml") || fileName.endsWith(".axml")

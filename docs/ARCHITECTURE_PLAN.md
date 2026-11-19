@@ -234,3 +234,17 @@ session; each stage verified by `compileFullDebugJavaWithJavac` +
       (Root/Files/Shizuku/Staging/Permissions/Native/Installer/Startup);
       external impl imports now only the `RootFile`/`ShizukuFile`
       instanceof deviation (6 files)
+
+### File-manager usability follow-up (2026-11-19)
+
+These additions use the existing reachable UI and privilege facades; they do not
+change backend registration or the deferred library-module extraction.
+
+- [x] Route hardware Menu to the right drawer; remove confirmation from explicit Exit; add a main-settings option to bypass folder/history traversal on Android Back.
+- [x] Add the Files-page option for Unix permissions in place of dates outside shared storage, preserving sizes and nonlocal metadata views.
+- [x] Add All/Differences/Matches text-comparison filtering and unified-diff document export through a pure, testable diff helper.
+- [x] Generate conventional CRC32/MD5 manifests from the checksum dialog; verify tapped manifests against original-folder or archive siblings and report changed/missing files.
+- [x] Apply the current editor line-number preference consistently on file open, with a legacy-key fallback.
+
+Validation commands and requirement-to-test evidence are recorded in
+[FILE_MANAGER_REGRESSIONS.md](FILE_MANAGER_REGRESSIONS.md).

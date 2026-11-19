@@ -2659,4 +2659,25 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="antisplit_protected_warning_msg">This app is protected by: %1$s.\n\nConverting this app from split bundle (APKS) to a single APK (Antisplit) may cause it to crash and fail to run after installation due to anti-tamper and integrity protection.\n\nDo you want to proceed with Antisplit anyway?</string>
     <string name="proceed_anyway">Proceed anyway</string>
     <string name="protected_banner">⚠️ Protected: %1$s</string>
+    <string name="back_navigates_folders">Back button navigates folders</string>
+    <string name="back_navigates_folders_summary">Turn off to exit with two Back presses without retracing folder history. The on-screen navigation buttons still work.</string>
+    <string name="show_file_permissions">Show permissions instead of dates outside shared storage</string>
+    <string name="checksum_generate_sfv">Generate .sfv (CRC32)</string>
+    <string name="checksum_generate_md5">Generate .md5</string>
+    <string name="checksum_generating">Generating %1$s…</string>
+    <string name="checksum_generated">Checksum file created: %1$s</string>
+    <string name="checksum_overwrite_confirm">%1$s already exists. Overwrite?</string>
+    <string name="checksum_overwrite">Overwrite</string>
+    <string name="checksum_same_folder_required">Selected files must be in the same folder to generate a checksum file</string>
+    <string name="checksum_verify_summary">%1$d valid, %2$d changed, %3$d other</string>
+    <string name="checksum_verify_missing">Missing file</string>
+    <string name="checksum_error_invalid_path">Invalid entry path</string>
+    <string name="checksum_unsupported_filename">Cannot represent this filename in the selected checksum format: %1$s</string>
+    <string name="compare_text_show">Show</string>
+    <string name="compare_text_filter_all">All content</string>
+    <string name="compare_text_filter_differences">Differences only</string>
+    <string name="compare_text_filter_same">Matches only</string>
+    <string name="compare_text_export_diff">Export as .diff</string>
+    <string name="compare_text_no_differences">No differences found</string>
+    <string name="compare_text_filter_empty">No lines match the current filter</string>
 </resources>

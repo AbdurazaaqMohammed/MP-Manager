@@ -105,6 +105,16 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/text_diff_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:padding="24dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:visibility="gone" />
     </FrameLayout>
 
 </LinearLayout>

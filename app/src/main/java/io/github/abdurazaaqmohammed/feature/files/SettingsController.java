@@ -278,6 +278,11 @@ public class SettingsController {
         fixMimeTypeToggle.setChecked(settings.getBoolean("fix_mime_type", false));
         fixMimeTypeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("fix_mime_type", isChecked).apply());
 
+        CompoundButton backNavigatesFoldersToggle = settingsDialog.findViewById(R.id.backNavigatesFoldersToggle);
+        backNavigatesFoldersToggle.setChecked(settings.getBoolean("back_navigates_folders", true));
+        backNavigatesFoldersToggle.setOnCheckedChangeListener((buttonView, isChecked) ->
+                settings.edit().putBoolean("back_navigates_folders", isChecked).apply());
+
         CompoundButton askBookmarkTabToggle = settingsDialog.findViewById(R.id.askBookmarkTabToggle);
         askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
         askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
@@ -1037,6 +1042,13 @@ public class SettingsController {
         fileMenuTwoColumnSwitch.setChecked(FileMenuOrder.isTwoColumn(activity));
         fileMenuTwoColumnSwitch.setOnCheckedChangeListener((v, checked) ->
                 FileMenuOrder.setTwoColumn(activity, checked));
+
+        CompoundButton filePermsSwitch = root.findViewById(R.id.filePermsSwitch);
+        filePermsSwitch.setChecked(UiPrefs.showFilePermissions(activity));
+        filePermsSwitch.setOnCheckedChangeListener((v, checked) -> {
+            UiPrefs.setShowFilePermissions(activity, checked);
+            refreshFileLists();
+        });
 
         AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
         List<String> levels = new ArrayList<>();

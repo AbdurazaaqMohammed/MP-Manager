@@ -421,7 +421,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void initializeLogic() {
         savedFont = SettingsFragment.getFontType(requireContext());
-        editor.setLineNumberEnabled(SettingsFragment.showLineNumbers(requireContext()));
+        editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
         editor.subscribeEvent(ContentChangeEvent.class, (event, unsubscribe) -> {
             if (isInitializing) return;
             saved = false;
@@ -612,7 +612,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void loadEditorSettings(boolean loadTypeface) {
         editor.setTextSize(SettingsFragment.getFontSize(requireContext()));
-        editor.setLineNumberEnabled(SettingsFragment.showLineNumbers(requireContext()));
+        editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
         editor.setLineSpacing(2.0f, 1.1f);
         editor.setLineNumberMarginLeft(2f);
         editor.setWordwrap(!largeFileMode && editorPrefs.getBoolean("wrap_text", false));
@@ -721,12 +721,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try { editor.setTextSize(Float.parseFloat(fontSizeStr)); } catch (Exception ignored) {}
         int tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
         editor.setTabWidth(tabSize);
-        boolean showLineNumbers = editorPrefs.getBoolean("show_line_numbers", editorPrefs.getBoolean("pref_show_line_numbers", true));
-        editor.setLineNumberEnabled(showLineNumbers);
+        editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
         // The options-menu toggle stores "wrap_text"; fall back to the legacy
         // "pref_word_wrap" key so either one sticks across onResume/minimize.
         boolean wordWrap = editorPrefs.getBoolean("wrap_text", editorPrefs.getBoolean("pref_word_wrap", false));
         editor.setWordwrap(!largeFileMode && wordWrap);
+    }
+
+    /** Use the current editor preference throughout initialization; retain the legacy fallback. */
+    public static boolean resolveShowLineNumbers(SharedPreferences editorPrefs) {
+        return editorPrefs.getBoolean("pref_show_line_numbers",
+                editorPrefs.getBoolean("show_line_numbers", true));
     }
 
     public CodeEditor getEditor() { return editor; }

@@ -2608,4 +2608,25 @@ Layout Inspector
     <string name="trim_blank_canvas">自动裁剪白边</string>
     <string name="warning_dont_show_again">不再显示此警告</string>
     <string name="warning_proceed">我已了解，继续</string>
+    <string name="back_navigates_folders">返回键浏览文件夹</string>
+    <string name="back_navigates_folders_summary">关闭后，无需逐级返回文件夹，连按两次返回键即可退出。屏幕上的导航按钮仍然可用。</string>
+    <string name="show_file_permissions">在共享存储以外用权限代替日期显示</string>
+    <string name="checksum_generate_sfv">生成 .sfv（CRC32）</string>
+    <string name="checksum_generate_md5">生成 .md5</string>
+    <string name="checksum_generating">正在生成 %1$s…</string>
+    <string name="checksum_generated">校验文件已创建：%1$s</string>
+    <string name="checksum_overwrite_confirm">%1$s 已存在。是否覆盖？</string>
+    <string name="checksum_overwrite">覆盖</string>
+    <string name="checksum_same_folder_required">所选文件必须位于同一文件夹才能生成校验文件</string>
+    <string name="checksum_verify_summary">%1$d 个有效，%2$d 个已更改，%3$d 个其他</string>
+    <string name="checksum_verify_missing">文件缺失</string>
+    <string name="checksum_error_invalid_path">无效的条目路径</string>
+    <string name="checksum_unsupported_filename">所选校验格式无法表示此文件名：%1$s</string>
+    <string name="compare_text_show">显示</string>
+    <string name="compare_text_filter_all">全部内容</string>
+    <string name="compare_text_filter_differences">仅显示差异</string>
+    <string name="compare_text_filter_same">仅显示相同</string>
+    <string name="compare_text_export_diff">导出为 .diff</string>
+    <string name="compare_text_no_differences">未发现差异</string>
+    <string name="compare_text_filter_empty">没有符合当前筛选条件的行</string>
 </resources>

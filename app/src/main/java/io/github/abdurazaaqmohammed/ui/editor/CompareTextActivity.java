@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
+import io.github.abdurazaaqmohammed.util.text.TextDiffEngine;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryHelper;
 
@@ -22,13 +23,13 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.difflib.text.DiffRow;
-import com.github.difflib.text.DiffRowGenerator;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -36,10 +37,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.BiPredicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -50,24 +52,28 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 /**
  * Compares two text files (or zip entries) line by line. It uses the same diff
  * UI as {@link CompareDexActivity}: line numbers, side by side / unified layout,
- * difference navigation, search and jump to line.
+ * difference navigation, search and jump to line, plus a show filter (all /
+ * differences only / matches only) and export of the differences as a
+ * conventional unified {@code .diff} file through the system save picker.
  */
 public class CompareTextActivity extends BaseActivity {
 
     private static final int BG_DELETED = 0x33F44336;
     private static final int BG_INSERTED = 0x3334A853;
 
-    /** How whitespace and case are treated while matching lines. */
-    private enum IgnoreMode {NONE, TRIM, WHITESPACE, WHITESPACE_EMPTY}
+    private static final int REQUEST_EXPORT_DIFF = 4201;
 
     /** Layout used by the diff view. */
     private enum ViewMode {AUTO, SIDE_BY_SIDE, UNIFIED}
 
-    private final List<DiffLine> diffLines = new ArrayList<>();
-    /** Positions inside {@link #diffLines} that are actual differences. */
+    private final List<TextDiffEngine.DiffLine> diffLines = new ArrayList<>();
+    /** The rows the current {@link TextDiffEngine.FilterMode} shows. */
+    private final List<TextDiffEngine.DiffLine> visibleLines = new ArrayList<>();
+    /** Positions inside {@link #visibleLines} that are actual differences. */
     private final List<Integer> diffPositions = new ArrayList<>();
 
-    private IgnoreMode ignoreMode = IgnoreMode.NONE;
+    private TextDiffEngine.IgnoreMode ignoreMode = TextDiffEngine.IgnoreMode.NONE;
+    private TextDiffEngine.FilterMode filterMode = TextDiffEngine.FilterMode.ALL;
     private boolean matchCase = true;
     private ViewMode viewMode = ViewMode.SIDE_BY_SIDE;
 
@@ -75,14 +81,19 @@ public class CompareTextActivity extends BaseActivity {
     private String activeSearchQuery = "";
     private String names1 = "";
     private String names2 = "";
-    /** Raw contents of both sides, kept so option changes rebuild without re-reading. */
-    private List<String> textLeft;
-    private List<String> textRight;
+    /** Raw contents of both sides (plus whether they end with a newline), kept so
+     * option changes rebuild without re-reading and so the exported .diff stays
+     * contiguous even when rows were skipped. */
+    private LoadedText textLeft;
+    private LoadedText textRight;
+    /** Suggested file name of the .diff the save picker was opened for. */
+    private String pendingExportName;
 
     private MaterialToolbar toolbar;
     private View diffContainer;
     private ProgressBar progressBar;
     private RecyclerView diffListView;
+    private TextView emptyView;
     private DiffAdapter diffAdapter;
     private View searchBar;
     private EditText searchInput;
@@ -104,6 +115,7 @@ public class CompareTextActivity extends BaseActivity {
         diffContainer = findViewById(R.id.text_diff_container);
         progressBar = findViewById(R.id.text_compare_progress);
         diffListView = findViewById(R.id.text_diff_list);
+        emptyView = findViewById(R.id.text_diff_empty);
         searchBar = findViewById(R.id.text_search_bar);
         searchInput = findViewById(R.id.text_search_input);
 
@@ -156,23 +168,16 @@ public class CompareTextActivity extends BaseActivity {
                 // Read straight into line lists: buffering a multi-megabyte file
                 // into one String and re-splitting it duplicates the whole file
                 // in memory and was a large part of the compare time on phones.
-                textLeft = readLines(path1, isZip1, zip1);
-                textRight = readLines(path2, isZip2, zip2);
-                final List<DiffLine> built = buildDiff(textLeft, textRight);
+                textLeft = loadText(path1, isZip1, zip1);
+                textRight = loadText(path2, isZip2, zip2);
+                final List<TextDiffEngine.DiffLine> built = buildDiff();
                 runOnUiThread(() -> {
                     pm.dismiss();
                     diffLines.clear();
                     diffLines.addAll(built);
-                    diffPositions.clear();
-                    for (int i = 0; i < diffLines.size(); i++) {
-                        if (diffLines.get(i).tag != DiffRow.Tag.EQUAL) diffPositions.add(i);
-                    }
-                    diffAdapter.setUnified(isUnified());
-                    diffAdapter.notifyDataSetChanged();
+                    applyFilter();
                     progressBar.setVisibility(View.GONE);
                     diffContainer.setVisibility(View.VISIBLE);
-                    lastSearchIndex = -1;
-                    activeSearchQuery = "";
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -184,7 +189,18 @@ public class CompareTextActivity extends BaseActivity {
         }).start();
     }
 
-    private List<String> readLines(String path, boolean isZip, String zipPath) throws Exception {
+    /** Lines of one side plus whether the content ends with a line terminator. */
+    private static final class LoadedText {
+        final List<String> lines;
+        final boolean endsWithNewline;
+
+        LoadedText(List<String> lines, boolean endsWithNewline) {
+            this.lines = lines;
+            this.endsWithNewline = endsWithNewline;
+        }
+    }
+
+    private LoadedText loadText(String path, boolean isZip, String zipPath) throws Exception {
         ArrayList<String> lines = new ArrayList<>(4096);
         if (isZip) {
             try (ZipFile zf = new ZipFile(zipPath)) {
@@ -193,14 +209,49 @@ public class CompareTextActivity extends BaseActivity {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(zf.getInputStream(ze)))) {
                         appendLines(lines, reader);
                     }
+                    return new LoadedText(lines, entryEndsWithNewline(zf, ze));
                 }
             }
-        } else {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(path))))) {
-                appendLines(lines, reader);
-            }
+            return new LoadedText(lines, true);
         }
-        return lines;
+        File file = new File(path);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
+            appendLines(lines, reader);
+        }
+        return new LoadedText(lines, fileEndsWithNewline(file));
+    }
+
+    /** Last byte of a plain file, without loading it. readLine() also splits on CR. */
+    private static boolean fileEndsWithNewline(File file) throws Exception {
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
+            long length = raf.length();
+            if (length == 0) return false;
+            raf.seek(length - 1);
+            int last = raf.read();
+            return last == '\n' || last == '\r';
+        }
+    }
+
+    /** Last byte of a zip entry, skipping ahead when the size is known. */
+    private static boolean entryEndsWithNewline(ZipFile zf, ZipEntry ze) throws Exception {
+        long size = ze.getSize();
+        try (java.io.InputStream in = zf.getInputStream(ze)) {
+            if (size == 0) return false;
+            if (size > 0) {
+                long remaining = size - 1;
+                while (remaining > 0) {
+                    long skipped = in.skip(remaining);
+                    if (skipped <= 0) break;
+                    remaining -= skipped;
+                }
+                if (remaining == 0) return in.read() == '\n';
+                // Could not skip reliably (rare): fall through to the scan.
+            }
+            int last = -1;
+            int b;
+            while ((b = in.read()) != -1) last = b;
+            return last == '\n' || last == '\r';
+        }
     }
 
     private static void appendLines(ArrayList<String> out, BufferedReader reader) throws Exception {
@@ -220,131 +271,32 @@ public class CompareTextActivity extends BaseActivity {
         return getResources().getConfiguration().screenWidthDp < 600;
     }
 
-    private List<DiffLine> buildDiff(List<String> leftRaw, List<String> rightRaw) {
-        boolean dropBlanks = ignoreMode == IgnoreMode.WHITESPACE_EMPTY;
-        // Keep the original 1-based numbers of every kept line so ignored lines
-        // (blanks) don't shift the numbering.
-        int[] oldNumbers = new int[leftRaw.size() + 1];
-        int[] newNumbers = new int[rightRaw.size() + 1];
-        List<String> oldLines = significantLines(leftRaw, oldNumbers, dropBlanks);
-        List<String> newLines = significantLines(rightRaw, newNumbers, dropBlanks);
-
-        // The boot-image case: two files that are identical except for a couple
-        // of lines near the start. Running the full Myers diff over every line
-        // cost ~30s on phones for large files; trimming the shared prefix and
-        // suffix first (always safe: those lines are equal under the equalizer)
-        // reduces the engine's work to the region that actually differs.
-        BiPredicate<String, String> eq = equalizer();
-        int maxPrefix = Math.min(oldLines.size(), newLines.size());
-        int prefix = 0;
-        while (prefix < maxPrefix && eq.test(oldLines.get(prefix), newLines.get(prefix))) prefix++;
-        int maxSuffix = maxPrefix - prefix;
-        int suffix = 0;
-        while (suffix < maxSuffix
-                && eq.test(oldLines.get(oldLines.size() - 1 - suffix), newLines.get(newLines.size() - 1 - suffix))) {
-            suffix++;
-        }
-
-        List<String> midOld = oldLines.subList(prefix, oldLines.size() - suffix);
-        List<String> midNew = newLines.subList(prefix, newLines.size() - suffix);
-
-        List<DiffRow> midRows = midOld.isEmpty() && midNew.isEmpty()
-                ? new ArrayList<>(0)
-                : middleDiffRows(new ArrayList<>(midOld), new ArrayList<>(midNew));
-
-        List<DiffLine> result = new ArrayList<>(prefix + suffix + midRows.size());
-        for (int i = 0; i < prefix; i++) {
-            result.add(new DiffLine(DiffRow.Tag.EQUAL, oldLines.get(i), newLines.get(i),
-                    oldNumbers[i], newNumbers[i]));
-        }
-        int oldIndex = prefix;
-        int newIndex = prefix;
-        for (DiffRow row : midRows) {
-            DiffRow.Tag tag = row.getTag();
-            int oldNum = 0;
-            int newNum = 0;
-            switch (tag) {
-                case EQUAL, CHANGE -> {
-                    oldNum = oldNumbers[oldIndex];
-                    newNum = newNumbers[newIndex];
-                    oldIndex++;
-                    newIndex++;
-                }
-                case DELETE -> {
-                    oldNum = oldNumbers[oldIndex];
-                    oldIndex++;
-                }
-                case INSERT -> {
-                    newNum = newNumbers[newIndex];
-                    newIndex++;
-                }
-            }
-            result.add(new DiffLine(tag, row.getOldLine(), row.getNewLine(), oldNum, newNum));
-        }
-        for (int i = 0; i < suffix; i++) {
-            int oldPos = oldLines.size() - suffix + i;
-            int newPos = newLines.size() - suffix + i;
-            result.add(new DiffLine(DiffRow.Tag.EQUAL, oldLines.get(oldPos), newLines.get(newPos),
-                    oldNumbers[oldPos], newNumbers[newPos]));
-        }
-        return result;
+    private List<TextDiffEngine.DiffLine> buildDiff() {
+        return TextDiffEngine.buildDiff(textLeft.lines, textLeft.endsWithNewline,
+                textRight.lines, textRight.endsWithNewline, ignoreMode, matchCase);
     }
 
-    /** Diff of the differing middle region, matching how the diff rows are consumed. */
-    private List<DiffRow> middleDiffRows(List<String> midOld, List<String> midNew) {
-        // Same options as before, but now applied only to the region that can differ.
-        DiffRowGenerator generator = DiffRowGenerator.create()
-                .showInlineDiffs(false)
-                .reportLinesUnchanged(true)
-                .equalizer(equalizer())
-                .build();
-        return generator.generateDiffRows(midOld, midNew);
-    }
-
-    /** Keeps the lines the blank mode doesn't ignore, recording their original numbers. */
-    private List<String> significantLines(List<String> lines, int[] numbers, boolean dropBlanks) {
-        List<String> out = new ArrayList<>(lines.size());
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            if (dropBlanks && line.trim().isEmpty()) continue;
-            numbers[out.size()] = i + 1;
-            out.add(line);
+    /** Recomputes the visible rows, difference positions and empty state for the current filter. */
+    private void applyFilter() {
+        visibleLines.clear();
+        visibleLines.addAll(TextDiffEngine.filter(diffLines, filterMode));
+        diffPositions.clear();
+        for (int i = 0; i < visibleLines.size(); i++) {
+            if (visibleLines.get(i).tag != DiffRow.Tag.EQUAL) diffPositions.add(i);
         }
-        return out;
-    }
-
-    private BiPredicate<String, String> equalizer() {
-        return (a, b) -> {
-            if (a.equals(b)) return true;
-            String x = a;
-            String y = b;
-            switch (ignoreMode) {
-                case TRIM -> {
-                    x = x.trim();
-                    y = y.trim();
-                }
-                case WHITESPACE, WHITESPACE_EMPTY -> {
-                    x = stripWhitespace(x);
-                    y = stripWhitespace(y);
-                }
-                default -> {
-                }
-            }
-            if (!matchCase) {
-                x = x.toLowerCase(Locale.ROOT);
-                y = y.toLowerCase(Locale.ROOT);
-            }
-            return x.equals(y);
-        };
-    }
-
-    private static String stripWhitespace(String value) {
-        StringBuilder sb = new StringBuilder(value.length());
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (!Character.isWhitespace(c)) sb.append(c);
+        diffAdapter.setUnified(isUnified());
+        diffAdapter.notifyDataSetChanged();
+        boolean empty = visibleLines.isEmpty();
+        diffListView.setVisibility(empty ? View.GONE : View.VISIBLE);
+        emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+        if (empty) {
+            emptyView.setText(filterMode == TextDiffEngine.FilterMode.DIFFERENT
+                    ? R.string.compare_text_no_differences
+                    : R.string.compare_text_filter_empty);
         }
-        return sb.toString();
+        lastSearchIndex = -1;
+        activeSearchQuery = "";
+        invalidateOptionsMenu();
     }
 
     // ==========================================
@@ -409,23 +361,23 @@ public class CompareTextActivity extends BaseActivity {
     /** Moves to the next ({@code direction} &gt; 0) or previous match, wrapping around. */
     private void stepSearch(int direction) {
         String query = searchInput.getText() == null ? "" : searchInput.getText().toString().trim();
-        if (TextUtils.isEmpty(query) || diffLines.isEmpty()) {
+        if (TextUtils.isEmpty(query) || visibleLines.isEmpty()) {
             Extensions.showMessage(this, R.string.no_matches_found);
             return;
         }
         if (!query.equals(activeSearchQuery)) {
             activeSearchQuery = query;
-            lastSearchIndex = direction > 0 ? -1 : diffLines.size();
+            lastSearchIndex = direction > 0 ? -1 : visibleLines.size();
             SearchHistoryHelper.push(this, SearchHistoryHelper.KEY_COMPARE_TEXT, query);
         }
         String needle = matchCase ? query : query.toLowerCase(Locale.ROOT);
-        int size = diffLines.size();
+        int size = visibleLines.size();
         int found = -1;
         for (int offset = 0; offset < size; offset++) {
             int index = direction > 0
                     ? Math.floorMod(lastSearchIndex + 1 + offset, size)
                     : Math.floorMod(lastSearchIndex - 1 - offset, size);
-            DiffLine line = diffLines.get(index);
+            TextDiffEngine.DiffLine line = visibleLines.get(index);
             if (contains(line.oldLine, needle) || contains(line.newLine, needle)) {
                 found = index;
                 break;
@@ -448,7 +400,7 @@ public class CompareTextActivity extends BaseActivity {
         EditText input = new EditText(this);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        input.setHint("1…" + diffLines.size());
+        input.setHint("1…" + visibleLines.size());
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.jump_to_line)
                 .setView(input)
@@ -464,7 +416,7 @@ public class CompareTextActivity extends BaseActivity {
             }
             try {
                 int line = Integer.parseInt(text.toString().trim());
-                if (line < 1 || line > diffLines.size()) throw new NumberFormatException();
+                if (line < 1 || line > visibleLines.size()) throw new NumberFormatException();
                 scrollToDiffLine(line - 1);
                 dialog.dismiss();
             } catch (NumberFormatException e) {
@@ -474,7 +426,7 @@ public class CompareTextActivity extends BaseActivity {
     }
 
     private void scrollToDiffLine(int index) {
-        if (index < 0 || index >= diffLines.size()) return;
+        if (index < 0 || index >= visibleLines.size()) return;
         if (diffListView.getLayoutManager() instanceof LinearLayoutManager lm) {
             lm.scrollToPositionWithOffset(index, 0);
         } else {
@@ -521,12 +473,83 @@ public class CompareTextActivity extends BaseActivity {
     }
 
     // ==========================================
+    // Export
+    // ==========================================
+
+    /** Opens the system save picker for a unified .diff of the current comparison. */
+    private void exportDiff() {
+        if (textLeft == null || textRight == null || !hasDifferences()) {
+            Extensions.showMessage(this, R.string.nothing_to_export);
+            return;
+        }
+        pendingExportName = suggestedDiffName();
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_TITLE, pendingExportName);
+        startActivityForResult(intent, REQUEST_EXPORT_DIFF);
+    }
+
+    private boolean hasDifferences() {
+        for (TextDiffEngine.DiffLine line : diffLines) {
+            if (line.tag != DiffRow.Tag.EQUAL) return true;
+        }
+        return false;
+    }
+
+    private String suggestedDiffName() {
+        String a = sanitize(names1.isEmpty() ? "old" : names1);
+        String b = sanitize(names2.isEmpty() ? "new" : names2);
+        String name = a + "_vs_" + b + ".diff";
+        return name.length() > 96 ? "compare_text.diff" : name;
+    }
+
+    private static String sanitize(String s) {
+        return s.replaceAll("[\\\\/:*?\"<>|]+", "_");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_EXPORT_DIFF || resultCode != RESULT_OK
+                || data == null || data.getData() == null) return;
+        android.net.Uri target = data.getData();
+        List<TextDiffEngine.DiffLine> rows = new ArrayList<>(diffLines);
+        List<String> left = textLeft.lines;
+        List<String> right = textRight.lines;
+        Intent intent = getIntent();
+        String oldName = intent.getStringExtra("file1");
+        String newName = intent.getStringExtra("file2");
+        progressBar.setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            try {
+                String diff = TextDiffEngine.toUnifiedDiff(rows, left, right, oldName, newName,
+                        textLeft.endsWithNewline, textRight.endsWithNewline);
+                try (OutputStream out = getContentResolver().openOutputStream(target)) {
+                    if (out == null) throw new java.io.IOException("Provider returned no output stream");
+                    out.write(diff.getBytes(StandardCharsets.UTF_8));
+                }
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Extensions.showMessage(CompareTextActivity.this,
+                            getString(R.string.exported_to_X, pendingExportName));
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    new ErrorUtil(CompareTextActivity.this).showError(e);
+                });
+            }
+        }).start();
+    }
+
+    // ==========================================
     // Menu
     // ==========================================
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_compare_dex_diff, menu);
+        getMenuInflater().inflate(R.menu.menu_compare_text, menu);
         return true;
     }
 
@@ -543,10 +566,17 @@ public class CompareTextActivity extends BaseActivity {
         MenuItem ignoreTrim = menu.findItem(R.id.action_ignore_trim);
         MenuItem ignoreWs = menu.findItem(R.id.action_ignore_whitespace);
         MenuItem ignoreWsEmpty = menu.findItem(R.id.action_ignore_whitespace_empty);
-        if (ignoreNone != null) ignoreNone.setChecked(ignoreMode == IgnoreMode.NONE);
-        if (ignoreTrim != null) ignoreTrim.setChecked(ignoreMode == IgnoreMode.TRIM);
-        if (ignoreWs != null) ignoreWs.setChecked(ignoreMode == IgnoreMode.WHITESPACE);
-        if (ignoreWsEmpty != null) ignoreWsEmpty.setChecked(ignoreMode == IgnoreMode.WHITESPACE_EMPTY);
+        if (ignoreNone != null) ignoreNone.setChecked(ignoreMode == TextDiffEngine.IgnoreMode.NONE);
+        if (ignoreTrim != null) ignoreTrim.setChecked(ignoreMode == TextDiffEngine.IgnoreMode.TRIM);
+        if (ignoreWs != null) ignoreWs.setChecked(ignoreMode == TextDiffEngine.IgnoreMode.WHITESPACE);
+        if (ignoreWsEmpty != null) ignoreWsEmpty.setChecked(ignoreMode == TextDiffEngine.IgnoreMode.WHITESPACE_EMPTY);
+
+        MenuItem filterAll = menu.findItem(R.id.action_filter_all);
+        MenuItem filterDiff = menu.findItem(R.id.action_filter_differences);
+        MenuItem filterSame = menu.findItem(R.id.action_filter_same);
+        if (filterAll != null) filterAll.setChecked(filterMode == TextDiffEngine.FilterMode.ALL);
+        if (filterDiff != null) filterDiff.setChecked(filterMode == TextDiffEngine.FilterMode.DIFFERENT);
+        if (filterSame != null) filterSame.setChecked(filterMode == TextDiffEngine.FilterMode.SAME);
 
         MenuItem match = menu.findItem(R.id.action_match_case);
         if (match != null) match.setChecked(matchCase);
@@ -565,7 +595,7 @@ public class CompareTextActivity extends BaseActivity {
             finish();
             return true;
         }
-        if (id == R.id.action_compare_dex_exit) {
+        if (id == R.id.action_compare_text_exit) {
             finish();
             return true;
         }
@@ -586,28 +616,47 @@ public class CompareTextActivity extends BaseActivity {
         }
         if (id == R.id.action_ignore_none) {
             item.setChecked(true);
-            setIgnoreMode(IgnoreMode.NONE);
+            setIgnoreMode(TextDiffEngine.IgnoreMode.NONE);
             return true;
         }
         if (id == R.id.action_ignore_trim) {
             item.setChecked(true);
-            setIgnoreMode(IgnoreMode.TRIM);
+            setIgnoreMode(TextDiffEngine.IgnoreMode.TRIM);
             return true;
         }
         if (id == R.id.action_ignore_whitespace) {
             item.setChecked(true);
-            setIgnoreMode(IgnoreMode.WHITESPACE);
+            setIgnoreMode(TextDiffEngine.IgnoreMode.WHITESPACE);
             return true;
         }
         if (id == R.id.action_ignore_whitespace_empty) {
             item.setChecked(true);
-            setIgnoreMode(IgnoreMode.WHITESPACE_EMPTY);
+            setIgnoreMode(TextDiffEngine.IgnoreMode.WHITESPACE_EMPTY);
             return true;
         }
         if (id == R.id.action_match_case) {
             matchCase = !matchCase;
             item.setChecked(matchCase);
             rebuildDiff();
+            return true;
+        }
+        if (id == R.id.action_filter_all) {
+            item.setChecked(true);
+            setFilterMode(TextDiffEngine.FilterMode.ALL);
+            return true;
+        }
+        if (id == R.id.action_filter_differences) {
+            item.setChecked(true);
+            setFilterMode(TextDiffEngine.FilterMode.DIFFERENT);
+            return true;
+        }
+        if (id == R.id.action_filter_same) {
+            item.setChecked(true);
+            setFilterMode(TextDiffEngine.FilterMode.SAME);
+            return true;
+        }
+        if (id == R.id.action_export_diff) {
+            exportDiff();
             return true;
         }
         if (id == R.id.action_diff_search) {
@@ -636,35 +685,32 @@ public class CompareTextActivity extends BaseActivity {
         invalidateOptionsMenu();
     }
 
-    private void setIgnoreMode(IgnoreMode mode) {
+    private void setIgnoreMode(TextDiffEngine.IgnoreMode mode) {
         ignoreMode = mode;
         invalidateOptionsMenu();
         rebuildDiff();
+    }
+
+    private void setFilterMode(TextDiffEngine.FilterMode mode) {
+        filterMode = mode;
+        invalidateOptionsMenu();
+        applyFilter();
     }
 
     private void rebuildDiff() {
         if (textLeft == null || textRight == null) return;
         progressBar.setVisibility(View.VISIBLE);
         diffListView.setVisibility(View.GONE);
-        final List<String> left = textLeft;
-        final List<String> right = textRight;
         new Thread(() -> {
             try {
-                // Only the generator options change here, so the raw text is reused.
-                final List<DiffLine> built = buildDiff(left, right);
+                // Only the engine options change here, so the raw text is reused.
+                final List<TextDiffEngine.DiffLine> built = buildDiff();
                 runOnUiThread(() -> {
                     diffLines.clear();
                     diffLines.addAll(built);
-                    diffPositions.clear();
-                    for (int i = 0; i < diffLines.size(); i++) {
-                        if (diffLines.get(i).tag != DiffRow.Tag.EQUAL) diffPositions.add(i);
-                    }
-                    diffAdapter.notifyDataSetChanged();
+                    applyFilter();
                     progressBar.setVisibility(View.GONE);
                     diffListView.setVisibility(View.VISIBLE);
-                    lastSearchIndex = -1;
-                    activeSearchQuery = "";
-                    invalidateOptionsMenu();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -679,22 +725,6 @@ public class CompareTextActivity extends BaseActivity {
     // ==========================================
     // Adapter
     // ==========================================
-
-    private static final class DiffLine {
-        final DiffRow.Tag tag;
-        final String oldLine;
-        final String newLine;
-        final int oldNumber;
-        final int newNumber;
-
-        DiffLine(DiffRow.Tag tag, String oldLine, String newLine, int oldNumber, int newNumber) {
-            this.tag = tag;
-            this.oldLine = oldLine;
-            this.newLine = newLine;
-            this.oldNumber = oldNumber;
-            this.newNumber = newNumber;
-        }
-    }
 
     private final class DiffAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -723,7 +753,7 @@ public class CompareTextActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            DiffLine line = diffLines.get(position);
+            TextDiffEngine.DiffLine line = visibleLines.get(position);
             if (holder instanceof SideHolder side) {
                 side.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
                 side.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
@@ -753,7 +783,7 @@ public class CompareTextActivity extends BaseActivity {
             }
         }
 
-        private void bindUnified(UnifiedHolder holder, DiffLine line) {
+        private void bindUnified(UnifiedHolder holder, TextDiffEngine.DiffLine line) {
             switch (line.tag) {
                 case EQUAL -> {
                     showOld(holder, line, "", 0);
@@ -774,7 +804,7 @@ public class CompareTextActivity extends BaseActivity {
             }
         }
 
-        private void showOld(UnifiedHolder holder, DiffLine line, String marker, int background) {
+        private void showOld(UnifiedHolder holder, TextDiffEngine.DiffLine line, String marker, int background) {
             holder.rowOld.setVisibility(View.VISIBLE);
             holder.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
             holder.markerOld.setText(marker);
@@ -782,7 +812,7 @@ public class CompareTextActivity extends BaseActivity {
             holder.rowOld.setBackgroundColor(background);
         }
 
-        private void showNew(UnifiedHolder holder, DiffLine line, String marker, int background) {
+        private void showNew(UnifiedHolder holder, TextDiffEngine.DiffLine line, String marker, int background) {
             holder.rowNew.setVisibility(View.VISIBLE);
             holder.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
             holder.markerNew.setText(marker);
@@ -792,7 +822,7 @@ public class CompareTextActivity extends BaseActivity {
 
         @Override
         public int getItemCount() {
-            return diffLines.size();
+            return visibleLines.size();
         }
 
         class SideHolder extends RecyclerView.ViewHolder {
