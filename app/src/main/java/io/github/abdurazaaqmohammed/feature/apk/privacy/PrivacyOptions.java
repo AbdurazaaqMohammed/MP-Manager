@@ -52,6 +52,9 @@ public class PrivacyOptions implements Serializable {
     /** Suppress PeriodicWorkRequest / enqueuePeriodicWork bytecode callsites. */
     public boolean suppressPeriodicWorkEnqueue = false;
 
+    /** Neutralize pure tracker static initializers (<clinit>). */
+    public boolean nullifyTrackerClinit = false;
+
     /** Perform deep structural dataflow analysis across all classes. */
     public boolean deepStructuralAnalysis = false;
 
@@ -146,6 +149,7 @@ public class PrivacyOptions implements Serializable {
         options.blankHardwareSerial = true;
         options.blankWifiMac = true;
         options.suppressPeriodicWorkEnqueue = true;
+        options.nullifyTrackerClinit = true;
         options.deepStructuralAnalysis = true;
         options.stripLogging = true;
         options.emptyTelephonyIds = true;
@@ -189,6 +193,7 @@ public class PrivacyOptions implements Serializable {
         private boolean blankHardwareSerial = false;
         private boolean blankWifiMac = false;
         private boolean suppressPeriodicWorkEnqueue = false;
+        private boolean nullifyTrackerClinit = false;
         private boolean deepStructuralAnalysis = false;
 
         private boolean nullifyAiAssistants = true;
@@ -218,6 +223,11 @@ public class PrivacyOptions implements Serializable {
 
         public Builder setSuppressPeriodicWorkEnqueue(boolean suppressPeriodicWorkEnqueue) {
             this.suppressPeriodicWorkEnqueue = suppressPeriodicWorkEnqueue;
+            return this;
+        }
+
+        public Builder setNullifyTrackerClinit(boolean nullifyTrackerClinit) {
+            this.nullifyTrackerClinit = nullifyTrackerClinit;
             return this;
         }
 
@@ -293,6 +303,7 @@ public class PrivacyOptions implements Serializable {
             options.blankHardwareSerial = blankHardwareSerial;
             options.blankWifiMac = blankWifiMac;
             options.suppressPeriodicWorkEnqueue = suppressPeriodicWorkEnqueue;
+            options.nullifyTrackerClinit = nullifyTrackerClinit;
             options.deepStructuralAnalysis = deepStructuralAnalysis;
             return options;
         }

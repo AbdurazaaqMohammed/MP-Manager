@@ -84,6 +84,29 @@ public final class PrivacyBytecodeEngine {
     private static final String BUILD_CLASS = "Landroid/os/Build;";
     private static final String WIFI_INFO_CLASS = "Landroid/net/wifi/WifiInfo;";
     private static final String NETWORK_INTERFACE_CLASS = "Ljava/net/NetworkInterface;";
+    private static final String WORK_MANAGER_CLASS = "Landroidx/work/WorkManager;";
+
+    private static final String[] PURE_TRACKER_PACKAGES = {
+            "Lcom/cujo/otm/telemetry/",
+            "Lcom/appsflyer/",
+            "Lcom/adjust/sdk/",
+            "Lcom/google/firebase/analytics/",
+            "Lcom/google/firebase/crashlytics/",
+            "Lcom/branch/io/",
+            "Lio/branch/",
+            "Lcom/kochava/base/",
+            "Lcom/kochava/",
+            "Lcom/singular/sdk/",
+            "Lcom/threatmetrix/",
+            "Lcom/facebook/appevents/",
+            "Lcom/segment/",
+            "Lcom/amplitude/",
+            "Lcom/mixpanel/",
+            "Lcom/flurry/",
+            "Lcom/clevertap/",
+            "Lcom/webengage/",
+            "Lcom/unity3d/services/analytics/"
+    };
 
     private static final Set<String> ADB_SETTINGS_KEYS = new HashSet<>(Arrays.asList(
             "adb_enabled", "development_settings_enabled", "adb_wifi_enabled", "wireless_debugging_enabled"
@@ -129,6 +152,7 @@ public final class PrivacyBytecodeEngine {
 
         boolean blankHardwareSerial = options.blankHardwareSerial || options.mode == SanitizationMode.AGGRESSIVE;
         boolean blankWifiMac = options.blankWifiMac || options.mode == SanitizationMode.AGGRESSIVE;
+        boolean suppressPeriodicWork = options.suppressPeriodicWorkEnqueue || options.mode == SanitizationMode.AGGRESSIVE;
 
         Map<Integer, String> stringRegisters = new HashMap<>();
 
@@ -465,6 +489,31 @@ public final class PrivacyBytecodeEngine {
                     }
                 }
             }
+
+            // 7. Aggressive WorkManager Periodic Enqueue Suppression
+            if (suppressPeriodicWork && isInvoke(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (WORK_MANAGER_CLASS.equals(mr.getDefiningClass())
+                                && ("enqueueUniquePeriodicWork".equals(mr.getName()) || "enqueuePeriodicWork".equals(mr.getName()))) {
+                            mutable.replaceInstruction(i, new BuilderInstruction10x(Opcode.NOP));
+                            stats.periodicWorkEnqueueSuppressed++;
+                            modified = true;
+
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, createConstInt(resReg, 0));
+                                    stringRegisters.remove(resReg);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (modified) {
@@ -505,6 +554,18 @@ public final class PrivacyBytecodeEngine {
         if (!isWorkManagerWorker(classDef)) return false;
         String type = classDef.getType();
         return type != null && TELEMETRY_WORKER_PATTERN.matcher(type).matches();
+    }
+
+    /**
+     * Checks if a class descriptor belongs to a known pure tracker package.
+     */
+    public static boolean isPureTrackerClass(String type) {
+        if (type == null) return false;
+        String norm = DexReachabilityIndex.normalizeClassType(type);
+        for (String prefix : PURE_TRACKER_PACKAGES) {
+            if (norm.startsWith(prefix)) return true;
+        }
+        return false;
     }
 
     /**
@@ -598,6 +659,10 @@ public final class PrivacyBytecodeEngine {
         boolean stubAiEligibility = nullifyAi && options.stubAiEligibilityManagers;
         boolean neutralizeTabIngress = nullifyAi && (options.neutralizeAiTabIngress || options.neutraliseAiTabIngress);
 
+        boolean nullifyTrackerClinit = options.mode == SanitizationMode.AGGRESSIVE
+                && (options.deepStructuralAnalysis || options.nullifyTrackerClinit)
+                && isPureTrackerClass(classDef.getType());
+
         if (isDeadWorker) {
             if (outStats != null) {
                 outStats.telemetryDeadCodeSkipped++;
@@ -606,7 +671,25 @@ public final class PrivacyBytecodeEngine {
         }
 
         for (Method m : classDef.getDirectMethods()) {
-            if (hasWorker && isDoWorkMethod(m)) {
+            if (nullifyTrackerClinit && "<clinit>".equals(m.getName())) {
+                MutableMethodImplementation newImpl = new MutableMethodImplementation(0);
+                newImpl.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
+                Method rewritten = new ImmutableMethod(
+                        m.getDefiningClass(),
+                        m.getName(),
+                        m.getParameters(),
+                        m.getReturnType(),
+                        m.getAccessFlags(),
+                        m.getAnnotations(),
+                        m.getHiddenApiRestrictions(),
+                        newImpl
+                );
+                directMethods.add(rewritten);
+                if (outStats != null) {
+                    outStats.trackerClinitSanitized++;
+                }
+                classModified = true;
+            } else if (hasWorker && isDoWorkMethod(m)) {
                 if (isDeadWorker) {
                     directMethods.add(m);
                 } else {
