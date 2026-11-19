@@ -335,6 +335,27 @@ public final class PrivacyBytecodeEngine {
                     }
                 }
             }
+
+            // 5. Cloud Experiment Gates (WebLab / LaunchDarkly)
+            if (options.nullifyAiAssistants && options.forceAiExperimentControl && isInvoke(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (AiBytecodeRules.isExperimentGateInvocation(inst, mr, instructions, i, stringRegisters)) {
+                            if (AiBytecodeRules.interceptWebLabTreatment(mutable, i, stats)) {
+                                modified = true;
+                                if (i + 1 < instructions.size()) {
+                                    Instruction next = instructions.get(i + 1);
+                                    if (next.getOpcode() == Opcode.CONST_STRING && next instanceof OneRegisterInstruction) {
+                                        stringRegisters.put(((OneRegisterInstruction) next).getRegisterA(), "C");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (modified) {
@@ -463,6 +484,10 @@ public final class PrivacyBytecodeEngine {
         boolean hasWorker = isTelemetryWorker && hasDoWorkMethod(classDef);
         boolean isDeadWorker = hasWorker && (reachabilityIndex != null && !reachabilityIndex.isClassReferenced(classDef.getType()));
 
+        boolean nullifyAi = options.nullifyAiAssistants;
+        boolean stubAiEligibility = nullifyAi && options.stubAiEligibilityManagers;
+        boolean neutralizeTabIngress = nullifyAi && (options.neutralizeAiTabIngress || options.neutraliseAiTabIngress);
+
         if (isDeadWorker) {
             if (outStats != null) outStats.deadCodeSkipped++;
         }
@@ -489,6 +514,22 @@ public final class PrivacyBytecodeEngine {
                     );
                     directMethods.add(rewritten);
                     classModified = true;
+                }
+            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, classDef.getType())) {
+                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats);
+                if (stubbed != m) {
+                    classModified = true;
+                    directMethods.add(stubbed);
+                } else {
+                    directMethods.add(m);
+                }
+            } else if (neutralizeTabIngress && AiBytecodeRules.isTabIngressMethod(m, classDef.getType())) {
+                Method stubbed = AiBytecodeRules.nullifyTabIngressMethod(m, reachabilityIndex, outStats);
+                if (stubbed != m) {
+                    classModified = true;
+                    directMethods.add(stubbed);
+                } else {
+                    directMethods.add(m);
                 }
             } else {
                 MethodTransformationResult result = sanitizeMethod(m, options);
@@ -524,6 +565,22 @@ public final class PrivacyBytecodeEngine {
                     );
                     virtualMethods.add(rewritten);
                     classModified = true;
+                }
+            } else if (stubAiEligibility && AiBytecodeRules.isEligibilityMethod(m, classDef.getType())) {
+                Method stubbed = AiBytecodeRules.nullifyEligibilityMethod(m, reachabilityIndex, outStats);
+                if (stubbed != m) {
+                    classModified = true;
+                    virtualMethods.add(stubbed);
+                } else {
+                    virtualMethods.add(m);
+                }
+            } else if (neutralizeTabIngress && AiBytecodeRules.isTabIngressMethod(m, classDef.getType())) {
+                Method stubbed = AiBytecodeRules.nullifyTabIngressMethod(m, reachabilityIndex, outStats);
+                if (stubbed != m) {
+                    classModified = true;
+                    virtualMethods.add(stubbed);
+                } else {
+                    virtualMethods.add(m);
                 }
             } else {
                 MethodTransformationResult result = sanitizeMethod(m, options);
@@ -658,6 +715,12 @@ public final class PrivacyBytecodeEngine {
         } else {
             return new BuilderInstruction51l(Opcode.CONST_WIDE, reg, value);
         }
+    }
+
+    public static boolean isInvoke(Opcode op) {
+        return isInvokeStatic(op) || isInvokeVirtualOrInterface(op)
+                || op == Opcode.INVOKE_DIRECT || op == Opcode.INVOKE_DIRECT_RANGE
+                || op == Opcode.INVOKE_SUPER || op == Opcode.INVOKE_SUPER_RANGE;
     }
 
     private static boolean isInvokeStatic(Opcode op) {
