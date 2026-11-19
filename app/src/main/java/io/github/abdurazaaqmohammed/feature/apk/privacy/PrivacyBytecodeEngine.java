@@ -696,17 +696,25 @@ public final class PrivacyBytecodeEngine {
 
                 byte[] dexBytes = readAll(source.openStream());
                 DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
-                DexPool pool = new DexPool(dex.getOpcodes());
+                List<ClassDef> transformedClasses = new ArrayList<>();
                 PrivacyStats dexStats = new PrivacyStats();
+                boolean anyClassChanged = false;
 
                 for (ClassDef classDef : dex.getClasses()) {
                     ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachability);
-                    pool.internClass(DexDebugStripper.strip(sanitized));
+                    if (sanitized != classDef) {
+                        anyClassChanged = true;
+                    }
+                    transformedClasses.add(sanitized);
                 }
 
                 totalStats.merge(dexStats);
 
-                if (dexStats.totalMutations() > 0) {
+                if (anyClassChanged) {
+                    DexPool pool = new DexPool(dex.getOpcodes());
+                    for (ClassDef c : transformedClasses) {
+                        pool.internClass(DexDebugStripper.strip(c));
+                    }
                     MemoryDataStore store = new MemoryDataStore();
                     pool.writeTo(store);
                     module.add(new ByteInputSource(Arrays.copyOf(store.getData(), store.getSize()), name));
@@ -714,6 +722,7 @@ public final class PrivacyBytecodeEngine {
                         logger.logMessage("Sanitized " + name + ": " + dexStats.totalMutations() + " privacy mutations");
                     }
                 }
+                transformedClasses.clear();
             }
 
             // Module A (Telemetry & Hardware Fingerprinting)

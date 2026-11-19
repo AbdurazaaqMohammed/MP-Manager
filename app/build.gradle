@@ -66,6 +66,12 @@ android {
         buildConfig true
     }
 
+    testOptions {
+        unitTests.all {
+            maxHeapSize = "4g"
+        }
+    }
+
     // zstd for archives (.zst / .tar.zst): vendored sources, compiled per ABI when no prebuilt exists.
     if (!file("src/main/jniLibs/arm64-v8a/libmp_zstd.so").exists()) {
         externalNativeBuild {
