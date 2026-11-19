@@ -17,6 +17,7 @@ public class PrivacyStats implements Serializable {
     public int devModeChecksMasked = 0;
     public int telemetryDomainsSinkholed = 0;
     public int backgroundWorkersNeutralized = 0;
+    public int hardwareIdentifiersBlanked = 0;
 
     // ==========================================
     // Module B: Generative AI & Assistant Nullification
@@ -39,7 +40,8 @@ public class PrivacyStats implements Serializable {
      */
     public int telemetryTotalMutations() {
         return logCallsStripped + telephonyGettersBlanked + adIdsNeutralized +
-                devModeChecksMasked + telemetryDomainsSinkholed + backgroundWorkersNeutralized;
+                devModeChecksMasked + telemetryDomainsSinkholed + backgroundWorkersNeutralized +
+                hardwareIdentifiersBlanked;
     }
 
     /**
@@ -70,6 +72,7 @@ public class PrivacyStats implements Serializable {
         this.devModeChecksMasked += other.devModeChecksMasked;
         this.telemetryDomainsSinkholed += other.telemetryDomainsSinkholed;
         this.backgroundWorkersNeutralized += other.backgroundWorkersNeutralized;
+        this.hardwareIdentifiersBlanked += other.hardwareIdentifiersBlanked;
 
         this.aiFeatureGatesNeutralized += other.aiFeatureGatesNeutralized;
         this.aiEligibilityManagersStubbed += other.aiEligibilityManagersStubbed;

@@ -24,6 +24,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
@@ -80,6 +81,9 @@ public final class PrivacyBytecodeEngine {
     private static final String SETTINGS_GLOBAL = "Landroid/provider/Settings$Global;";
     private static final String SETTINGS_SYSTEM = "Landroid/provider/Settings$System;";
     private static final String SYSTEM_PROPERTIES = "Landroid/os/SystemProperties;";
+    private static final String BUILD_CLASS = "Landroid/os/Build;";
+    private static final String WIFI_INFO_CLASS = "Landroid/net/wifi/WifiInfo;";
+    private static final String NETWORK_INTERFACE_CLASS = "Ljava/net/NetworkInterface;";
 
     private static final Set<String> ADB_SETTINGS_KEYS = new HashSet<>(Arrays.asList(
             "adb_enabled", "development_settings_enabled", "adb_wifi_enabled", "wireless_debugging_enabled"
@@ -122,6 +126,9 @@ public final class PrivacyBytecodeEngine {
         List<BuilderInstruction> instructions = mutable.getInstructions();
         PrivacyStats stats = new PrivacyStats();
         boolean modified = false;
+
+        boolean blankHardwareSerial = options.blankHardwareSerial || options.mode == SanitizationMode.AGGRESSIVE;
+        boolean blankWifiMac = options.blankWifiMac || options.mode == SanitizationMode.AGGRESSIVE;
 
         Map<Integer, String> stringRegisters = new HashMap<>();
 
@@ -350,6 +357,108 @@ public final class PrivacyBytecodeEngine {
                                     if (next.getOpcode() == Opcode.CONST_STRING && next instanceof OneRegisterInstruction) {
                                         stringRegisters.put(((OneRegisterInstruction) next).getRegisterA(), "C");
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Aggressive Hardware Fingerprinting Nullification
+            // Build.SERIAL static field -> const-string ""
+            if (blankHardwareSerial && op == Opcode.SGET_OBJECT) {
+                if (inst instanceof OneRegisterInstruction && inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof FieldReference) {
+                        FieldReference fr = (FieldReference) ref;
+                        if (BUILD_CLASS.equals(fr.getDefiningClass())
+                                && "SERIAL".equals(fr.getName())
+                                && "Ljava/lang/String;".equals(fr.getType())) {
+                            int reg = ((OneRegisterInstruction) inst).getRegisterA();
+                            mutable.replaceInstruction(i, new BuilderInstruction21c(
+                                    Opcode.CONST_STRING,
+                                    reg,
+                                    new ImmutableStringReference("")
+                            ));
+                            stats.hardwareIdentifiersBlanked++;
+                            modified = true;
+                            stringRegisters.put(reg, "");
+                        }
+                    }
+                }
+            }
+
+            // Build.getSerial() static method -> NOP invoke + const-string ""
+            if (blankHardwareSerial && isInvokeStatic(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (BUILD_CLASS.equals(mr.getDefiningClass())
+                                && "getSerial".equals(mr.getName())
+                                && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            mutable.replaceInstruction(i, new BuilderInstruction10x(Opcode.NOP));
+                            stats.hardwareIdentifiersBlanked++;
+                            modified = true;
+
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                            Opcode.CONST_STRING,
+                                            resReg,
+                                            new ImmutableStringReference("")
+                                    ));
+                                    stringRegisters.put(resReg, "");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // WifiInfo (getMacAddress, getSSID, getBSSID) & NetworkInterface (getHardwareAddress)
+            if (blankWifiMac && isInvokeVirtualOrInterface(op)) {
+                if (inst instanceof ReferenceInstruction) {
+                    Object ref = ((ReferenceInstruction) inst).getReference();
+                    if (ref instanceof MethodReference) {
+                        MethodReference mr = (MethodReference) ref;
+                        if (WIFI_INFO_CLASS.equals(mr.getDefiningClass()) && "Ljava/lang/String;".equals(mr.getReturnType())) {
+                            String replacement = null;
+                            if ("getMacAddress".equals(mr.getName())) {
+                                replacement = "02:00:00:00:00:00";
+                            } else if ("getSSID".equals(mr.getName())) {
+                                replacement = "<unknown ssid>";
+                            } else if ("getBSSID".equals(mr.getName())) {
+                                replacement = "02:00:00:00:00:00";
+                            }
+
+                            if (replacement != null && i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                            Opcode.CONST_STRING,
+                                            resReg,
+                                            new ImmutableStringReference(replacement)
+                                    ));
+                                    stats.hardwareIdentifiersBlanked++;
+                                    modified = true;
+                                    stringRegisters.put(resReg, replacement);
+                                }
+                            }
+                        } else if (NETWORK_INTERFACE_CLASS.equals(mr.getDefiningClass())
+                                && "getHardwareAddress".equals(mr.getName())
+                                && "[B".equals(mr.getReturnType())) {
+                            if (i + 1 < instructions.size()) {
+                                Instruction next = instructions.get(i + 1);
+                                if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                    int resReg = ((OneRegisterInstruction) next).getRegisterA();
+                                    mutable.replaceInstruction(i + 1, createConstInt(resReg, 0));
+                                    stats.hardwareIdentifiersBlanked++;
+                                    modified = true;
+                                    stringRegisters.remove(resReg);
                                 }
                             }
                         }
