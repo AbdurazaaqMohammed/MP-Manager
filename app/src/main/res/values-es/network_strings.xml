@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_connections">Conexiones de red</string>
+    <string name="network_ftp_tab">FTP</string>
+    <string name="network_smb_tab">SMB</string>
+    <string name="network_discover">Buscar servidores</string>
+    <string name="network_scan_smb">Volver a buscar</string>
+    <string name="network_discovery_help">Buscando servidores locales automáticamente mediante anuncios de servicios, la detección de Windows y una búsqueda SMB2/3 limitada. No se prueba ningún inicio de sesión ni contraseña. Selecciona un servidor y, después, introduce su recurso compartido o colección y las credenciales.</string>
+    <string name="network_discovery_unavailable">La detección de servicios no está disponible. Aun así, puedes buscar servidores SMB o introducir un servidor manualmente.</string>
+    <string name="network_discovery_no_lan">No hay ninguna subred IPv4 Wi-Fi/Ethernet compatible. Puede que aun así aparezcan servicios anunciados; si no, introduce el servidor manualmente.</string>
+    <string name="network_discovery_scanning">Buscando SMB2/3 en direcciones cercanas (hasta 20 segundos)…</string>
+    <string name="network_discovery_finished">Búsqueda SMB terminada. Selecciona un resultado o introduce un servidor manualmente. Los servidores WebDAV solo aparecen si anuncian su servicio.</string>
+    <string name="webdav_client">WebDAV</string>
+    <string name="smb_client">SMB (recursos compartidos de Windows)</string>
+    <string name="network_connection_name">Nombre de la conexión (opcional)</string>
+    <string name="network_webdav_address">https://servidor/dav/coleccion/</string>
+    <string name="network_smb_address">smb://servidor/recurso</string>
+    <string name="network_username">Usuario (vacío para acceso anónimo)</string>
+    <string name="network_password">Contraseña</string>
+    <string name="network_domain">Dominio / grupo de trabajo (opcional)</string>
+    <string name="network_remember">Guardar conexión (cifrada en este dispositivo)</string>
+    <string name="network_saved_connections">Conexiones guardadas</string>
+    <string name="network_no_saved_connections">No hay conexiones guardadas</string>
+    <string name="network_webdav_help">Usa la URL completa de la colección WebDAV. Se recomienda HTTPS; HTTP envía las credenciales sin cifrar. Los archivos se abren como copias locales. Para guardar los cambios en el servidor, vuelve a copiarlos expresamente.</string>
+    <string name="network_smb_help">Conéctate a un recurso compartido SMB2/3, por ejemplo smb://192.168.1.10/Documentos. Puedes añadir un puerto personalizado después del host. SMB1 no es compatible.</string>
+    <string name="network_transfer_safety">Los archivos existentes no se sobrescriben. Al mover, el origen solo se elimina tras una transferencia correcta. Si se cancela o falla, el destino puede quedar incompleto.</string>
+    <string name="network_recursive_delete">Al eliminar una carpeta también se elimina todo su contenido en el servidor.</string>
+    <string name="network_downloading">Descargando copia local</string>
+    <string name="network_browse_hint">Usa la lista de carpetas para navegar por esta conexión. Las conexiones guardadas están disponibles desde su entrada en la barra lateral.</string>
+    <string name="network_permission_denied">En Android 17+ se necesita el permiso de dispositivos cercanos para los servidores locales. Concédelo en los ajustes de la app y vuelve a conectarte.</string>
+    <string name="network_extract_first">Extrae las entradas del archivo comprimido a una carpeta local antes de copiarlas o moverlas a una conexión de red.</string>
+    <string name="network_ftp_transfer_unsupported">Copia los archivos FTP a una carpeta local antes de transferirlos a WebDAV o SMB.</string>
+    <string name="network_new_connection">Nueva conexión</string>
+    <string name="network_remember_ftp">Guardar conexión FTP</string>
+    <string name="network_ftp_help">Conéctate a un servidor FTP o FTPS. Los perfiles FTP guardados siguen disponibles aquí. Los archivos se abren como copias locales; vuelve a copiar los cambios expresamente.</string>
+    <string name="network_connection_saved">Conexión guardada</string>
+    <string name="network_delete_connection">Eliminar conexión guardada</string>
+    <string name="network_delete_connection_confirm">¿Eliminar “%1$s” y dejar de fijarla en la barra lateral? Los archivos del servidor no se verán afectados.</string>
+    <string name="network_saved_connection_missing">No se encontró la conexión guardada. Vuelve a añadirla en Conexiones de red.</string>
+    <string name="network_invalid_port">Introduce un puerto entre 1 y 65535</string>
+    <string name="network_invalid_host">Introduce el nombre de host o la dirección IP del servidor, sin ruta de URL</string>
+    <string name="network_storage_connect_to_check">%1$s · Conéctate para comprobar el espacio de almacenamiento</string>
+    <string name="network_storage_unavailable">%1$s · El servidor no informa del espacio de almacenamiento</string>
+    <string name="network_storage_free">%1$s libres · Espacio total no disponible</string>
+    <string name="network_ftp_create_unsupported">Aquí no se pueden crear elementos en paneles FTP.</string>
+</resources>

@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Buscar herramientas y paquetes</string>
+    <string name="tools_hub_hint">Todas tus herramientas en un solo lugar. Mantén pulsada una herramienta para crear un acceso directo en la pantalla de inicio.</string>
+    <string name="tools_hub_summary_compact">%1$d herramientas · %2$d paquetes instalados</string>
+    <string name="tools_hub_no_results">Ninguna herramienta coincide con tu búsqueda</string>
+    <string name="tools_hub_download_badge">Descargar</string>
+    <string name="tools_hub_ready_badge">Lista</string>
+    <string name="tools_hub_pack_metadata">%1$d herramientas · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Instalado</string>
+    <string name="tools_hub_pack_available">Descarga opcional</string>
+    <string name="tools_hub_pack_update_available">Actualización disponible</string>
+    <string name="tools_hub_min_sdk">Requiere Android API %1$d o posterior</string>
+    <string name="tools_hub_install_apk">Instalar paquete desde APK</string>
+    <string name="tools_hub_advanced_plugins">Herramientas avanzadas y complementos</string>
+    <string name="tool_requires_root">Esta herramienta requiere acceso root.</string>
+    <string name="tool_extract_subtitle">Explora apps y extrae archivos APK</string>
+    <string name="tool_recycle_subtitle">Restaura o elimina archivos borrados</string>
+    <string name="tool_ftp_subtitle">Comparte archivos en tu red local</string>
+    <string name="tool_network_subtitle">Conexiones FTP, WebDAV y SMB</string>
+    <string name="tool_layout_subtitle">Inspecciona la app y el diseño en pantalla</string>
+    <string name="tool_color_subtitle">Elige colores de cualquier pantalla</string>
+    <string name="tool_freestyle_subtitle">Crea y edita composiciones visuales</string>
+    <string name="screen_ocr_title">Copiar texto de la pantalla</string>
+    <string name="screen_ocr_subtitle">OCR sin conexión para pantallas e imágenes</string>
+</resources>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="install_locations">
+        <item>Automática</item>
+        <item>Solo interna</item>
+        <item>Preferir externa</item>
+        <item>Predeterminada</item>
+    </string-array>
+
+    <string-array name="font_styles">
+        <item>Normal</item>
+        <item>Monoespaciada</item>
+    </string-array>
+
+    <string-array name="pref_magnifier_size_entries">
+        <item>Grande</item>
+        <item>Mediano</item>
+        <item>Pequeño</item>
+    </string-array>
+
+    <string-array name="pref_capture_range_entries">
+        <item>Grande</item>
+        <item>Mediano</item>
+        <item>Pequeño</item>
+    </string-array>
+
+    <string-array name="pref_capture_speed_entries">
+        <item>Rápida</item>
+        <item>Normal</item>
+        <item>Lenta</item>
+    </string-array>
+</resources>
