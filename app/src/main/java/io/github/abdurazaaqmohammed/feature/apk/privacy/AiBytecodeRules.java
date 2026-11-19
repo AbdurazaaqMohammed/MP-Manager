@@ -155,6 +155,7 @@ public final class AiBytecodeRules {
         // Reachability dead code check
         if (reachabilityIndex != null && !isMethodReferenced(reachabilityIndex, method)) {
             if (stats != null) {
+                stats.aiDeadCodeSkipped++;
                 stats.deadCodeSkipped++;
             }
             return method;
@@ -256,6 +257,7 @@ public final class AiBytecodeRules {
         // Reachability dead code check
         if (reachabilityIndex != null && !isMethodReferenced(reachabilityIndex, method)) {
             if (stats != null) {
+                stats.aiDeadCodeSkipped++;
                 stats.deadCodeSkipped++;
             }
             return method;

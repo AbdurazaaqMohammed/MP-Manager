@@ -165,6 +165,27 @@ public class DualModuleSanitizerIntegrationTest {
             .end method
             """;
 
+    // Unreferenced Dead Telemetry Worker (Module A target, 0 callers)
+    private static final String DEAD_TELEMETRY_WORKER_SMALI =
+            """
+            .class public Lcom/example/telemetry/UnreferencedTelemetryWorker;
+            .super Landroidx/work/Worker;
+            .source "UnreferencedTelemetryWorker.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Landroidx/work/Worker;-><init>()V
+                return-void
+            .end method
+
+            .method public doWork()Landroidx/work/ListenableWorker$Result;
+                .locals 1
+                invoke-static {}, Landroidx/work/ListenableWorker$Result;->failure()Landroidx/work/ListenableWorker$Result;
+                move-result-object v0
+                return-object v0
+            .end method
+            """;
+
     // Pure benign utility class for testing zero mutations
     private static final String BENIGN_UTIL_SMALI =
             """
@@ -395,8 +416,34 @@ public class DualModuleSanitizerIntegrationTest {
         assertFalse(report.isSanitizationSuccessful());
         assertEquals(ModuleAuditResult.Status.WARNING_ZERO_MUTATIONS, report.getOverallSanitizationStatus());
         assertEquals(ModuleAuditResult.Status.NOT_DETECTED, report.telemetryModuleResult.status);
+        assertEquals(0, report.telemetryModuleResult.deadCodeSkipped);
         assertEquals(ModuleAuditResult.Status.DEAD_CODE_SKIPPED, report.aiModuleResult.status);
+        assertTrue(report.aiModuleResult.deadCodeSkipped > 0);
         assertTrue(report.getSanitizationStats().deadCodeSkipped > 0);
+        assertTrue(report.getSanitizationStats().aiDeadCodeSkipped > 0);
+        assertEquals(0, report.getSanitizationStats().telemetryDeadCodeSkipped);
+        assertEquals(0, report.getSanitizationStats().totalMutations());
+    }
+
+    @Test
+    public void testPureDeadTelemetryWorkerStatus() throws Exception {
+        File tempDir = Files.createTempDirectory("dead_telemetry_test").toFile();
+        File dex1 = assembleDex(tempDir, "classes.dex", DEAD_TELEMETRY_WORKER_SMALI);
+        File apkIn = buildTestApk(tempDir, "dead_telemetry.apk", dex1);
+        File apkOut = new File(tempDir, "dead_telemetry_out.apk");
+
+        PrivacyAuditReport report = PrivacyBytecodeEngine.sanitizeApkWithAudit(apkIn, apkOut, PrivacyOptions.all(), null);
+
+        assertNotNull(report);
+        assertFalse(report.isSanitizationSuccessful());
+        assertEquals(ModuleAuditResult.Status.WARNING_ZERO_MUTATIONS, report.getOverallSanitizationStatus());
+        assertEquals(ModuleAuditResult.Status.DEAD_CODE_SKIPPED, report.telemetryModuleResult.status);
+        assertTrue(report.telemetryModuleResult.deadCodeSkipped > 0);
+        assertEquals(ModuleAuditResult.Status.NOT_DETECTED, report.aiModuleResult.status);
+        assertEquals(0, report.aiModuleResult.deadCodeSkipped);
+        assertTrue(report.getSanitizationStats().deadCodeSkipped > 0);
+        assertTrue(report.getSanitizationStats().telemetryDeadCodeSkipped > 0);
+        assertEquals(0, report.getSanitizationStats().aiDeadCodeSkipped);
         assertEquals(0, report.getSanitizationStats().totalMutations());
     }
 

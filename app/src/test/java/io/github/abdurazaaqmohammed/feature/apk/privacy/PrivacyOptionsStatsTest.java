@@ -132,6 +132,8 @@ public class PrivacyOptionsStatsTest {
         assertEquals(0, stats.aiTabIngressNeutralized);
         assertEquals(0, stats.aiEndpointsSinkholed);
         assertEquals(0, stats.deadCodeSkipped);
+        assertEquals(0, stats.telemetryDeadCodeSkipped);
+        assertEquals(0, stats.aiDeadCodeSkipped);
         assertEquals(0, stats.classesModified);
         assertEquals(0, stats.totalMutations());
 
@@ -147,6 +149,8 @@ public class PrivacyOptionsStatsTest {
         stats.aiEndpointsSinkholed = 11;
 
         // deadCodeSkipped and classesModified must NOT be included in totalMutations
+        stats.telemetryDeadCodeSkipped = 40;
+        stats.aiDeadCodeSkipped = 59;
         stats.deadCodeSkipped = 99;
         stats.classesModified = 50;
 
@@ -168,6 +172,8 @@ public class PrivacyOptionsStatsTest {
         s1.aiEligibilityManagersStubbed = 8;
         s1.aiTabIngressNeutralized = 9;
         s1.aiEndpointsSinkholed = 10;
+        s1.telemetryDeadCodeSkipped = 5;
+        s1.aiDeadCodeSkipped = 6;
         s1.deadCodeSkipped = 11;
         s1.classesModified = 12;
 
@@ -182,6 +188,8 @@ public class PrivacyOptionsStatsTest {
         s2.aiEligibilityManagersStubbed = 13;
         s2.aiTabIngressNeutralized = 12;
         s2.aiEndpointsSinkholed = 11;
+        s2.telemetryDeadCodeSkipped = 4;
+        s2.aiDeadCodeSkipped = 6;
         s2.deadCodeSkipped = 10;
         s2.classesModified = 9;
 
@@ -197,6 +205,8 @@ public class PrivacyOptionsStatsTest {
         assertEquals(21, s1.aiEligibilityManagersStubbed);
         assertEquals(21, s1.aiTabIngressNeutralized);
         assertEquals(21, s1.aiEndpointsSinkholed);
+        assertEquals(9, s1.telemetryDeadCodeSkipped);
+        assertEquals(12, s1.aiDeadCodeSkipped);
         assertEquals(21, s1.deadCodeSkipped);
         assertEquals(21, s1.classesModified);
 

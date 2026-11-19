@@ -490,7 +490,10 @@ public final class PrivacyBytecodeEngine {
         boolean neutralizeTabIngress = nullifyAi && (options.neutralizeAiTabIngress || options.neutraliseAiTabIngress);
 
         if (isDeadWorker) {
-            if (outStats != null) outStats.deadCodeSkipped++;
+            if (outStats != null) {
+                outStats.telemetryDeadCodeSkipped++;
+                outStats.deadCodeSkipped++;
+            }
         }
 
         for (Method m : classDef.getDirectMethods()) {
@@ -667,117 +670,123 @@ public final class PrivacyBytecodeEngine {
     public static PrivacyAuditReport sanitizeApkWithAudit(File apkIn, File apkOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex, APKLogger logger) throws Exception {
         if (options == null) options = PrivacyOptions.all();
 
-        ApkModule module = ApkModule.loadApkFile(apkIn);
-        module.setLoadDefaultFramework(false);
+        try (ApkModule module = ApkModule.loadApkFile(apkIn)) {
+            module.setLoadDefaultFramework(false);
 
-        // Pass 1 (Reachability Scan): Stream through classes*.dex in ApkModule and build DexReachabilityIndex if needed
-        DexReachabilityIndex reachability = reachabilityIndex;
-        if (reachability == null) {
-            reachability = new DexReachabilityIndex();
+            // Pass 1 (Reachability Scan): Stream through classes*.dex in ApkModule and build DexReachabilityIndex if needed
+            DexReachabilityIndex reachability = reachabilityIndex;
+            if (reachability == null) {
+                reachability = new DexReachabilityIndex();
+                for (InputSource source : module.getInputSources()) {
+                    String name = source.getName();
+                    if (!name.matches("classes\\d*\\.dex")) continue;
+
+                    byte[] dexBytes = readAll(source.openStream());
+                    DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+                    reachability.indexDexFile(dex);
+                }
+            }
+
+            // Pass 2 (Mutation & Dead Code Filtering): Stream through classes*.dex with reachability index
+            PrivacyStats totalStats = new PrivacyStats();
+
             for (InputSource source : module.getInputSources()) {
                 String name = source.getName();
                 if (!name.matches("classes\\d*\\.dex")) continue;
 
                 byte[] dexBytes = readAll(source.openStream());
                 DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
-                reachability.indexDexFile(dex);
-            }
-        }
+                DexPool pool = new DexPool(dex.getOpcodes());
+                PrivacyStats dexStats = new PrivacyStats();
 
-        // Pass 2 (Mutation & Dead Code Filtering): Stream through classes*.dex with reachability index
-        PrivacyStats totalStats = new PrivacyStats();
+                for (ClassDef classDef : dex.getClasses()) {
+                    ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachability);
+                    pool.internClass(DexDebugStripper.strip(sanitized));
+                }
 
-        for (InputSource source : module.getInputSources()) {
-            String name = source.getName();
-            if (!name.matches("classes\\d*\\.dex")) continue;
+                totalStats.merge(dexStats);
 
-            byte[] dexBytes = readAll(source.openStream());
-            DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
-            DexPool pool = new DexPool(dex.getOpcodes());
-            PrivacyStats dexStats = new PrivacyStats();
-
-            for (ClassDef classDef : dex.getClasses()) {
-                ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachability);
-                pool.internClass(DexDebugStripper.strip(sanitized));
-            }
-
-            totalStats.merge(dexStats);
-
-            if (dexStats.totalMutations() > 0) {
-                MemoryDataStore store = new MemoryDataStore();
-                pool.writeTo(store);
-                module.add(new ByteInputSource(Arrays.copyOf(store.getData(), store.getSize()), name));
-                if (logger != null) {
-                    logger.logMessage("Sanitized " + name + ": " + dexStats.totalMutations() + " privacy mutations");
+                if (dexStats.totalMutations() > 0) {
+                    MemoryDataStore store = new MemoryDataStore();
+                    pool.writeTo(store);
+                    module.add(new ByteInputSource(Arrays.copyOf(store.getData(), store.getSize()), name));
+                    if (logger != null) {
+                        logger.logMessage("Sanitized " + name + ": " + dexStats.totalMutations() + " privacy mutations");
+                    }
                 }
             }
-        }
 
-        // Module A (Telemetry & Hardware Fingerprinting)
-        int telemetryMutations = totalStats.telemetryTotalMutations();
-        ModuleAuditResult.Status telemetryStatus;
-        String telemetryMsg;
-        if (telemetryMutations > 0) {
-            telemetryStatus = ModuleAuditResult.Status.SUCCESS;
-            telemetryMsg = "Applied " + telemetryMutations + " telemetry mutations";
-        } else {
-            telemetryStatus = ModuleAuditResult.Status.NOT_DETECTED;
-            telemetryMsg = "No active telemetry targets detected";
-        }
-        ModuleAuditResult telemetryResult = new ModuleAuditResult(
-                "Module A: Telemetry",
-                telemetryStatus,
-                telemetryMutations,
-                0,
-                telemetryMsg
-        );
-
-        // Module B (AI & Assistant Nullification)
-        int aiMutations = totalStats.aiTotalMutations();
-        ModuleAuditResult.Status aiStatus;
-        String aiMsg;
-        if (aiMutations > 0) {
-            aiStatus = ModuleAuditResult.Status.SUCCESS;
-            aiMsg = "Applied " + aiMutations + " AI assistant mutations";
-        } else if (totalStats.deadCodeSkipped > 0) {
-            aiStatus = ModuleAuditResult.Status.DEAD_CODE_SKIPPED;
-            aiMsg = "All AI candidates were uninvoked dead code; skipped to avoid placebo patching";
-        } else {
-            aiStatus = ModuleAuditResult.Status.NOT_DETECTED;
-            aiMsg = "No AI assistant targets detected";
-        }
-        ModuleAuditResult aiResult = new ModuleAuditResult(
-                "Module B: AI & Assistants",
-                aiStatus,
-                aiMutations,
-                totalStats.deadCodeSkipped,
-                aiMsg
-        );
-
-        // Compute overall status: If total mutations > 0, SUCCESS. If total mutations == 0, WARNING_ZERO_MUTATIONS.
-        ModuleAuditResult.Status overallStatus;
-        if (totalStats.totalMutations() > 0) {
-            overallStatus = ModuleAuditResult.Status.SUCCESS;
-        } else {
-            overallStatus = ModuleAuditResult.Status.WARNING_ZERO_MUTATIONS;
-        }
-
-        // If apkOut != null and mutations applied (or always if caller requested apkOut copy), write APK
-        if (apkOut != null) {
-            if (totalStats.totalMutations() > 0 || !apkOut.equals(apkIn)) {
-                File parent = apkOut.getParentFile();
-                if (parent != null) parent.mkdirs();
-                module.writeApk(apkOut);
+            // Module A (Telemetry & Hardware Fingerprinting)
+            int telemetryMutations = totalStats.telemetryTotalMutations();
+            ModuleAuditResult.Status telemetryStatus;
+            String telemetryMsg;
+            int telemetryDeadCode = totalStats.telemetryDeadCodeSkipped;
+            if (telemetryMutations > 0) {
+                telemetryStatus = ModuleAuditResult.Status.SUCCESS;
+                telemetryMsg = "Applied " + telemetryMutations + " telemetry mutations";
+            } else if (telemetryDeadCode > 0) {
+                telemetryStatus = ModuleAuditResult.Status.DEAD_CODE_SKIPPED;
+                telemetryMsg = "All telemetry candidates were uninvoked dead code; skipped to avoid placebo patching";
+            } else {
+                telemetryStatus = ModuleAuditResult.Status.NOT_DETECTED;
+                telemetryMsg = "No active telemetry targets detected";
             }
+            ModuleAuditResult telemetryResult = new ModuleAuditResult(
+                    "Module A: Telemetry",
+                    telemetryStatus,
+                    telemetryMutations,
+                    telemetryDeadCode,
+                    telemetryMsg
+            );
+
+            // Module B (AI & Assistant Nullification)
+            int aiMutations = totalStats.aiTotalMutations();
+            ModuleAuditResult.Status aiStatus;
+            String aiMsg;
+            int aiDeadCode = totalStats.aiDeadCodeSkipped;
+            if (aiMutations > 0) {
+                aiStatus = ModuleAuditResult.Status.SUCCESS;
+                aiMsg = "Applied " + aiMutations + " AI assistant mutations";
+            } else if (aiDeadCode > 0) {
+                aiStatus = ModuleAuditResult.Status.DEAD_CODE_SKIPPED;
+                aiMsg = "All AI candidates were uninvoked dead code; skipped to avoid placebo patching";
+            } else {
+                aiStatus = ModuleAuditResult.Status.NOT_DETECTED;
+                aiMsg = "No AI assistant targets detected";
+            }
+            ModuleAuditResult aiResult = new ModuleAuditResult(
+                    "Module B: AI & Assistants",
+                    aiStatus,
+                    aiMutations,
+                    aiDeadCode,
+                    aiMsg
+            );
+
+            // Compute overall status: If total mutations > 0, SUCCESS. If total mutations == 0, WARNING_ZERO_MUTATIONS.
+            ModuleAuditResult.Status overallStatus;
+            if (totalStats.totalMutations() > 0) {
+                overallStatus = ModuleAuditResult.Status.SUCCESS;
+            } else {
+                overallStatus = ModuleAuditResult.Status.WARNING_ZERO_MUTATIONS;
+            }
+
+            // If apkOut != null and mutations applied (or always if caller requested apkOut copy), write APK
+            if (apkOut != null) {
+                if (totalStats.totalMutations() > 0 || !apkOut.equals(apkIn)) {
+                    File parent = apkOut.getParentFile();
+                    if (parent != null) parent.mkdirs();
+                    module.writeApk(apkOut);
+                }
+            }
+
+            PrivacyAuditReport report = new PrivacyAuditReport();
+            report.sanitizationStats = totalStats;
+            report.telemetryModuleResult = telemetryResult;
+            report.aiModuleResult = aiResult;
+            report.overallSanitizationStatus = overallStatus;
+
+            return report;
         }
-
-        PrivacyAuditReport report = new PrivacyAuditReport();
-        report.sanitizationStats = totalStats;
-        report.telemetryModuleResult = telemetryResult;
-        report.aiModuleResult = aiResult;
-        report.overallSanitizationStatus = overallStatus;
-
-        return report;
     }
 
     /**

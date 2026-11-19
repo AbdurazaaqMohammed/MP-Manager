@@ -30,6 +30,8 @@ public class PrivacyStats implements Serializable {
     // Audit & Structural Metrics
     // ==========================================
     public int deadCodeSkipped = 0;
+    public int telemetryDeadCodeSkipped = 0;
+    public int aiDeadCodeSkipped = 0;
     public int classesModified = 0;
 
     /**
@@ -74,7 +76,10 @@ public class PrivacyStats implements Serializable {
         this.aiTabIngressNeutralized += other.aiTabIngressNeutralized;
         this.aiEndpointsSinkholed += other.aiEndpointsSinkholed;
 
-        this.deadCodeSkipped += other.deadCodeSkipped;
+        this.telemetryDeadCodeSkipped += other.telemetryDeadCodeSkipped;
+        this.aiDeadCodeSkipped += other.aiDeadCodeSkipped;
+        int totalDead = this.telemetryDeadCodeSkipped + this.aiDeadCodeSkipped;
+        this.deadCodeSkipped = totalDead > 0 ? totalDead : (this.deadCodeSkipped + other.deadCodeSkipped);
         this.classesModified += other.classesModified;
     }
 
