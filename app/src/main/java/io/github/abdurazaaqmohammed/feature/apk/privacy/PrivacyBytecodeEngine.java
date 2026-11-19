@@ -650,18 +650,41 @@ public final class PrivacyBytecodeEngine {
     }
 
     /**
-     * Sanitizes all classes*.dex entries inside an APK, writing to a new output APK.
+     * Orchestrates multi-DEX streaming analysis and sanitization with granular audit reporting.
+     * Pass 1: Streaming cross-DEX reachability indexing to detect active invocation paths.
+     * Pass 2: Type-safe bytecode mutation, dead code elimination filtering, and dex assembly.
+     * Generates a populated PrivacyAuditReport with module-level metrics.
      */
-    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, APKLogger logger) throws Exception {
-        return sanitizeApk(apkIn, apkOut, options, null, logger);
+    public static PrivacyAuditReport sanitizeApkWithAudit(File apkIn, File apkOut, PrivacyOptions options, APKLogger logger) throws Exception {
+        return sanitizeApkWithAudit(apkIn, apkOut, options, null, logger);
     }
 
     /**
-     * Sanitizes all classes*.dex entries inside an APK with optional reachability index.
+     * Orchestrates multi-DEX streaming analysis and sanitization with granular audit reporting
+     * using an optional pre-computed reachability index. If reachabilityIndex is null, builds it
+     * on Pass 1 across all classes*.dex entries.
      */
-    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex, APKLogger logger) throws Exception {
+    public static PrivacyAuditReport sanitizeApkWithAudit(File apkIn, File apkOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex, APKLogger logger) throws Exception {
+        if (options == null) options = PrivacyOptions.all();
+
         ApkModule module = ApkModule.loadApkFile(apkIn);
         module.setLoadDefaultFramework(false);
+
+        // Pass 1 (Reachability Scan): Stream through classes*.dex in ApkModule and build DexReachabilityIndex if needed
+        DexReachabilityIndex reachability = reachabilityIndex;
+        if (reachability == null) {
+            reachability = new DexReachabilityIndex();
+            for (InputSource source : module.getInputSources()) {
+                String name = source.getName();
+                if (!name.matches("classes\\d*\\.dex")) continue;
+
+                byte[] dexBytes = readAll(source.openStream());
+                DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+                reachability.indexDexFile(dex);
+            }
+        }
+
+        // Pass 2 (Mutation & Dead Code Filtering): Stream through classes*.dex with reachability index
         PrivacyStats totalStats = new PrivacyStats();
 
         for (InputSource source : module.getInputSources()) {
@@ -674,28 +697,103 @@ public final class PrivacyBytecodeEngine {
             PrivacyStats dexStats = new PrivacyStats();
 
             for (ClassDef classDef : dex.getClasses()) {
-                ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachabilityIndex);
+                ClassDef sanitized = sanitizeClass(classDef, options, dexStats, reachability);
                 pool.internClass(DexDebugStripper.strip(sanitized));
             }
+
+            totalStats.merge(dexStats);
 
             if (dexStats.totalMutations() > 0) {
                 MemoryDataStore store = new MemoryDataStore();
                 pool.writeTo(store);
                 module.add(new ByteInputSource(Arrays.copyOf(store.getData(), store.getSize()), name));
-                totalStats.merge(dexStats);
                 if (logger != null) {
                     logger.logMessage("Sanitized " + name + ": " + dexStats.totalMutations() + " privacy mutations");
                 }
             }
         }
 
+        // Module A (Telemetry & Hardware Fingerprinting)
+        int telemetryMutations = totalStats.telemetryTotalMutations();
+        ModuleAuditResult.Status telemetryStatus;
+        String telemetryMsg;
+        if (telemetryMutations > 0) {
+            telemetryStatus = ModuleAuditResult.Status.SUCCESS;
+            telemetryMsg = "Applied " + telemetryMutations + " telemetry mutations";
+        } else {
+            telemetryStatus = ModuleAuditResult.Status.NOT_DETECTED;
+            telemetryMsg = "No active telemetry targets detected";
+        }
+        ModuleAuditResult telemetryResult = new ModuleAuditResult(
+                "Module A: Telemetry",
+                telemetryStatus,
+                telemetryMutations,
+                0,
+                telemetryMsg
+        );
+
+        // Module B (AI & Assistant Nullification)
+        int aiMutations = totalStats.aiTotalMutations();
+        ModuleAuditResult.Status aiStatus;
+        String aiMsg;
+        if (aiMutations > 0) {
+            aiStatus = ModuleAuditResult.Status.SUCCESS;
+            aiMsg = "Applied " + aiMutations + " AI assistant mutations";
+        } else if (totalStats.deadCodeSkipped > 0) {
+            aiStatus = ModuleAuditResult.Status.DEAD_CODE_SKIPPED;
+            aiMsg = "All AI candidates were uninvoked dead code; skipped to avoid placebo patching";
+        } else {
+            aiStatus = ModuleAuditResult.Status.NOT_DETECTED;
+            aiMsg = "No AI assistant targets detected";
+        }
+        ModuleAuditResult aiResult = new ModuleAuditResult(
+                "Module B: AI & Assistants",
+                aiStatus,
+                aiMutations,
+                totalStats.deadCodeSkipped,
+                aiMsg
+        );
+
+        // Compute overall status: If total mutations > 0, SUCCESS. If total mutations == 0, WARNING_ZERO_MUTATIONS.
+        ModuleAuditResult.Status overallStatus;
         if (totalStats.totalMutations() > 0) {
-            File parent = apkOut.getParentFile();
-            if (parent != null) parent.mkdirs();
-            module.writeApk(apkOut);
+            overallStatus = ModuleAuditResult.Status.SUCCESS;
+        } else {
+            overallStatus = ModuleAuditResult.Status.WARNING_ZERO_MUTATIONS;
         }
 
-        return totalStats;
+        // If apkOut != null and mutations applied (or always if caller requested apkOut copy), write APK
+        if (apkOut != null) {
+            if (totalStats.totalMutations() > 0 || !apkOut.equals(apkIn)) {
+                File parent = apkOut.getParentFile();
+                if (parent != null) parent.mkdirs();
+                module.writeApk(apkOut);
+            }
+        }
+
+        PrivacyAuditReport report = new PrivacyAuditReport();
+        report.sanitizationStats = totalStats;
+        report.telemetryModuleResult = telemetryResult;
+        report.aiModuleResult = aiResult;
+        report.overallSanitizationStatus = overallStatus;
+
+        return report;
+    }
+
+    /**
+     * Sanitizes all classes*.dex entries inside an APK, writing to a new output APK.
+     * Automatically builds DexReachabilityIndex on Pass 1.
+     */
+    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, APKLogger logger) throws Exception {
+        return sanitizeApk(apkIn, apkOut, options, null, logger);
+    }
+
+    /**
+     * Sanitizes all classes*.dex entries inside an APK with optional reachability index.
+     * Automatically builds DexReachabilityIndex if null is passed.
+     */
+    public static PrivacyStats sanitizeApk(File apkIn, File apkOut, PrivacyOptions options, DexReachabilityIndex reachabilityIndex, APKLogger logger) throws Exception {
+        return sanitizeApkWithAudit(apkIn, apkOut, options, reachabilityIndex, logger).getSanitizationStats();
     }
 
     // --- Helper Utilities ---

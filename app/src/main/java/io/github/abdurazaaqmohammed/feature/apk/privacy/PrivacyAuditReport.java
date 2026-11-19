@@ -27,6 +27,34 @@ public class PrivacyAuditReport implements Serializable {
 
     public final List<DetectedThreat> threats = new ArrayList<>();
 
+    // ==========================================
+    // Multi-DEX Sanitization & Audit Results
+    // ==========================================
+    public ModuleAuditResult telemetryModuleResult = new ModuleAuditResult("Module A: Telemetry", ModuleAuditResult.Status.NOT_DETECTED);
+    public ModuleAuditResult aiModuleResult = new ModuleAuditResult("Module B: AI & Assistants", ModuleAuditResult.Status.NOT_DETECTED);
+    public PrivacyStats sanitizationStats = new PrivacyStats();
+    public ModuleAuditResult.Status overallSanitizationStatus = ModuleAuditResult.Status.NOT_DETECTED;
+
+    public boolean isSanitizationSuccessful() {
+        return overallSanitizationStatus == ModuleAuditResult.Status.SUCCESS;
+    }
+
+    public ModuleAuditResult.Status getOverallSanitizationStatus() {
+        return overallSanitizationStatus;
+    }
+
+    public PrivacyStats getSanitizationStats() {
+        return sanitizationStats;
+    }
+
+    public ModuleAuditResult getTelemetryModuleResult() {
+        return telemetryModuleResult;
+    }
+
+    public ModuleAuditResult getAiModuleResult() {
+        return aiModuleResult;
+    }
+
     public RiskLevel getRiskLevel() {
         if (overallScore >= 75) return RiskLevel.CRITICAL;
         if (overallScore >= 50) return RiskLevel.HIGH;
