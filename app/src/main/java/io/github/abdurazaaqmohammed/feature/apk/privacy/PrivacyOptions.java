@@ -4,9 +4,15 @@ import java.io.Serializable;
 
 /**
  * Configuration options for the Dual-Module Privacy Sanitizer bytecode engine.
- * Covers Module A (Telemetry & Hardware Identification) and Module B (AI & Assistant Nullification).
+ * Covers Module A (Telemetry & Hardware Identification) and Module B (AI & Assistant Nullification),
+ * with support for Standard (Safe) and Aggressive (Deep) sanitization modes.
  */
 public class PrivacyOptions implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /** Active sanitization mode (STANDARD or AGGRESSIVE). */
+    public SanitizationMode mode = SanitizationMode.STANDARD;
 
     // ==========================================
     // Module A: Telemetry & Hardware Fingerprinting
@@ -29,6 +35,25 @@ public class PrivacyOptions implements Serializable {
 
     /** Neutralize WorkManager telemetry workers to return Result.success() immediately. */
     public boolean neutralizeBackgroundWorkers = true;
+
+    // ==========================================
+    // Aggressive Mode Extensions (Hardware & WorkManager)
+    // ==========================================
+
+    /** Blank Settings.Secure android_id callsites to return empty string (""). */
+    public boolean blankAndroidId = false;
+
+    /** Blank Build.SERIAL and Build.getSerial() to return empty string (""). */
+    public boolean blankHardwareSerial = false;
+
+    /** Blank WifiInfo.getMacAddress() callsites to return dummy MAC address. */
+    public boolean blankWifiMac = false;
+
+    /** Suppress PeriodicWorkRequest / enqueuePeriodicWork bytecode callsites. */
+    public boolean suppressPeriodicWorkEnqueue = false;
+
+    /** Perform deep structural dataflow analysis across all classes. */
+    public boolean deepStructuralAnalysis = false;
 
     // ==========================================
     // Module B: Generative AI & Assistant Nullification
@@ -86,6 +111,56 @@ public class PrivacyOptions implements Serializable {
         this.neutraliseAiTabIngress = neutralizeAiTabIngress;
     }
 
+    /**
+     * Returns a standard mode configuration with safe defaults guaranteeing app stability.
+     */
+    public static PrivacyOptions standard() {
+        PrivacyOptions options = new PrivacyOptions();
+        options.mode = SanitizationMode.STANDARD;
+        options.blankAndroidId = false;
+        options.blankHardwareSerial = false;
+        options.blankWifiMac = false;
+        options.suppressPeriodicWorkEnqueue = false;
+        options.deepStructuralAnalysis = false;
+        options.stripLogging = true;
+        options.emptyTelephonyIds = true;
+        options.neutralizeAdIds = true;
+        options.maskDeveloperMode = true;
+        options.sinkholeTelemetryDomains = true;
+        options.neutralizeBackgroundWorkers = true;
+        options.nullifyAiAssistants = true;
+        options.forceAiExperimentControl = true;
+        options.stubAiEligibilityManagers = true;
+        options.neutralizeAiTabIngress = true;
+        options.neutraliseAiTabIngress = true;
+        return options;
+    }
+
+    /**
+     * Returns an aggressive mode configuration with zero-tolerance telemetry and deep analysis.
+     */
+    public static PrivacyOptions aggressive() {
+        PrivacyOptions options = new PrivacyOptions();
+        options.mode = SanitizationMode.AGGRESSIVE;
+        options.blankAndroidId = true;
+        options.blankHardwareSerial = true;
+        options.blankWifiMac = true;
+        options.suppressPeriodicWorkEnqueue = true;
+        options.deepStructuralAnalysis = true;
+        options.stripLogging = true;
+        options.emptyTelephonyIds = true;
+        options.neutralizeAdIds = true;
+        options.maskDeveloperMode = true;
+        options.sinkholeTelemetryDomains = true;
+        options.neutralizeBackgroundWorkers = true;
+        options.nullifyAiAssistants = true;
+        options.forceAiExperimentControl = true;
+        options.stubAiEligibilityManagers = true;
+        options.neutralizeAiTabIngress = true;
+        options.neutraliseAiTabIngress = true;
+        return options;
+    }
+
     public static PrivacyOptions all() {
         return new PrivacyOptions(true, true, true, true, true, true, true, true, true, true);
     }
@@ -102,6 +177,7 @@ public class PrivacyOptions implements Serializable {
      * Fluent builder for assembling granular PrivacyOptions.
      */
     public static class Builder {
+        private SanitizationMode mode = SanitizationMode.STANDARD;
         private boolean stripLogging = true;
         private boolean emptyTelephonyIds = true;
         private boolean neutralizeAdIds = true;
@@ -109,10 +185,46 @@ public class PrivacyOptions implements Serializable {
         private boolean sinkholeTelemetryDomains = true;
         private boolean neutralizeBackgroundWorkers = true;
 
+        private boolean blankAndroidId = false;
+        private boolean blankHardwareSerial = false;
+        private boolean blankWifiMac = false;
+        private boolean suppressPeriodicWorkEnqueue = false;
+        private boolean deepStructuralAnalysis = false;
+
         private boolean nullifyAiAssistants = true;
         private boolean forceAiExperimentControl = true;
         private boolean stubAiEligibilityManagers = true;
         private boolean neutralizeAiTabIngress = true;
+
+        public Builder setMode(SanitizationMode mode) {
+            this.mode = mode;
+            return this;
+        }
+
+        public Builder setBlankAndroidId(boolean blankAndroidId) {
+            this.blankAndroidId = blankAndroidId;
+            return this;
+        }
+
+        public Builder setBlankHardwareSerial(boolean blankHardwareSerial) {
+            this.blankHardwareSerial = blankHardwareSerial;
+            return this;
+        }
+
+        public Builder setBlankWifiMac(boolean blankWifiMac) {
+            this.blankWifiMac = blankWifiMac;
+            return this;
+        }
+
+        public Builder setSuppressPeriodicWorkEnqueue(boolean suppressPeriodicWorkEnqueue) {
+            this.suppressPeriodicWorkEnqueue = suppressPeriodicWorkEnqueue;
+            return this;
+        }
+
+        public Builder setDeepStructuralAnalysis(boolean deepStructuralAnalysis) {
+            this.deepStructuralAnalysis = deepStructuralAnalysis;
+            return this;
+        }
 
         public Builder setStripLogging(boolean stripLogging) {
             this.stripLogging = stripLogging;
@@ -170,12 +282,19 @@ public class PrivacyOptions implements Serializable {
         }
 
         public PrivacyOptions build() {
-            return new PrivacyOptions(
+            PrivacyOptions options = new PrivacyOptions(
                     stripLogging, emptyTelephonyIds, neutralizeAdIds,
                     maskDeveloperMode, sinkholeTelemetryDomains, neutralizeBackgroundWorkers,
                     nullifyAiAssistants, forceAiExperimentControl, stubAiEligibilityManagers,
                     neutralizeAiTabIngress
             );
+            options.mode = mode;
+            options.blankAndroidId = blankAndroidId;
+            options.blankHardwareSerial = blankHardwareSerial;
+            options.blankWifiMac = blankWifiMac;
+            options.suppressPeriodicWorkEnqueue = suppressPeriodicWorkEnqueue;
+            options.deepStructuralAnalysis = deepStructuralAnalysis;
+            return options;
         }
     }
 }
