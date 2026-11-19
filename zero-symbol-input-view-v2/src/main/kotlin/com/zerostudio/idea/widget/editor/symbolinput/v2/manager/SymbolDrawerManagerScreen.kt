@@ -52,25 +52,23 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.PopupWindow
-import android.widget.Spinner
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.button.MaterialButton
-import android.graphics.Color
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.widget.Toast
-import android.app.AlertDialog
-import android.text.InputType
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -134,10 +132,10 @@ private data class SymbolActionOption(
  */
 private class FindReplaceEditor(
     val container: LinearLayout,
-    val replacementField: EditText,
-    private val regexToggle: CheckBox,
-    private val matchCaseToggle: CheckBox,
-    private val replaceAllToggle: CheckBox
+    val replacementField: TextInputEditText,
+    private val regexToggle: MaterialCheckBox,
+    private val matchCaseToggle: MaterialCheckBox,
+    private val replaceAllToggle: MaterialCheckBox
 ) {
     fun setVisible(visible: Boolean) {
         container.visibility = if (visible) View.VISIBLE else View.GONE
@@ -234,7 +232,13 @@ class SymbolDrawerManagerScreen(
     private val groupPageHost = DrawerPageHost(context)
     private val groupPageContents = LinkedHashMap<String, GroupPageContent>()
     private var searchButton: MaterialButton? = null
-    private val searchField = EditText(context)
+    /** Search uses the same outlined Material text field pattern as the editors. */
+    private val searchFieldLayout = managerOutlinedTextField(
+        context,
+        context.getString(R.string.symbol_drawer_135)
+    )
+    private val searchField: TextInputEditText
+        get() = searchFieldLayout.editText as TextInputEditText
     private val searchContainer = LinearLayout(context)
     private val preferenceStore = context.getSharedPreferences("zero_symbol_manager_usage_v2", Context.MODE_PRIVATE)
     private val favoriteIds = linkedSetOf<Long>().apply {
@@ -280,7 +284,7 @@ class SymbolDrawerManagerScreen(
     private val batchSummary = TextView(context)
     private val undoBar = LinearLayout(context)
     private val undoMessage = TextView(context)
-    private val undoButton = Button(context)
+    private val undoButton = managerTextButton(context)
     private var pendingUndo: (() -> Unit)? = null
 
     init {
@@ -394,7 +398,6 @@ class SymbolDrawerManagerScreen(
         background = roundedSurface(surfaceColor(), 18)
         groupTabs.setSelectedTabIndicatorColor(primaryColor())
         groupTabs.setTabTextColors(secondaryTextColor(), primaryColor())
-        searchField.background = roundedSurface(surfaceColor(), 14)
         refreshSymbols()
         // ListAdapter may calculate an empty diff when only the palette changed.
         // Force existing holders through the normal bind path so every visible
@@ -486,7 +489,7 @@ class SymbolDrawerManagerScreen(
 
     private fun buildHeader() {
         val row = horizontalRow().apply { gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL }
-        val searchButton = MaterialButton(context).apply {
+        val searchButton = managerOutlinedButton(context).apply {
             text = context.getString(R.string.symbol_drawer_132)
             contentDescription = context.getString(R.string.symbol_drawer_134)
             tag = "symbol_manager_search_button"
@@ -496,22 +499,16 @@ class SymbolDrawerManagerScreen(
             minHeight = dp(40)
             insetTop = 0
             insetBottom = 0
-            cornerRadius = dp(12)
             icon = context.getDrawable(android.R.drawable.ic_menu_search)
             iconSize = dp(18)
             iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-            iconTint = android.content.res.ColorStateList.valueOf(onSurfaceColor())
-            setTextColor(onSurfaceColor())
-            backgroundTintList = android.content.res.ColorStateList.valueOf(surfaceColor())
-            strokeWidth = dp(1)
-            strokeColor = android.content.res.ColorStateList.valueOf(outlineColor())
             setOnClickListener {
                 setSearchVisible(searchContainer.visibility != View.VISIBLE)
             }
         }
         this.searchButton = searchButton
         row.addView(searchButton, LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)))
-        val menuButton = MaterialButton(context).apply {
+        val menuButton = managerOutlinedButton(context).apply {
             text = context.getString(R.string.symbol_drawer_156)
             isAllCaps = false
             textSize = 13f
@@ -519,15 +516,9 @@ class SymbolDrawerManagerScreen(
             minHeight = dp(40)
             insetTop = 0
             insetBottom = 0
-            cornerRadius = dp(12)
             icon = context.getDrawable(android.R.drawable.ic_menu_more)
             iconSize = dp(18)
             iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-            iconTint = android.content.res.ColorStateList.valueOf(onSurfaceColor())
-            setTextColor(onSurfaceColor())
-            backgroundTintList = android.content.res.ColorStateList.valueOf(surfaceColor())
-            strokeWidth = dp(1)
-            strokeColor = android.content.res.ColorStateList.valueOf(HostThemeColors.outline(context))
             setOnClickListener { showManagerMenu(this) }
         }
         row.addView(menuButton, LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)))
@@ -654,7 +645,7 @@ class SymbolDrawerManagerScreen(
         val source = manager.groups.firstOrNull { it.id == sourceGroupId } ?: return
         val targets = manager.groups.filter { it.id != sourceGroupId }
         if (targets.isEmpty()) return
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_067, source.title))
             .setItems(targets.map { it.title }.toTypedArray()) { _, which ->
                 runCatching {
@@ -686,17 +677,14 @@ class SymbolDrawerManagerScreen(
         searchContainer.tag = "symbol_manager_search_container"
         searchContainer.orientation = VERTICAL
         searchContainer.visibility = View.GONE
-        searchField.hint = context.getString(R.string.symbol_drawer_135)
         searchField.setSingleLine(true)
         searchField.textSize = 14f
-        searchField.setPadding(dp(14), dp(10), dp(14), dp(10))
-        searchField.background = roundedSurface(surfaceColor(), 14)
         searchField.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = refreshSymbols()
             override fun afterTextChanged(s: Editable?) = Unit
         })
-        searchContainer.addView(searchField, matchWrap())
+        searchContainer.addView(searchFieldLayout, matchWrap())
         addView(searchContainer, matchWrap())
     }
 
@@ -847,7 +835,7 @@ class SymbolDrawerManagerScreen(
         val (group, ids) = selectedBatch() ?: return
         val targets = manager.groups.filter { it.id != group.id }
         if (targets.isEmpty()) { toast(context.getString(R.string.symbol_drawer_213)); return }
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_070))
             .setItems(targets.map { it.title }.toTypedArray()) { _, which ->
                 val before = manager.groups.toList()
@@ -867,7 +855,7 @@ class SymbolDrawerManagerScreen(
         val (group, ids) = selectedBatch() ?: return
         val targets = manager.groups.filter { it.id != group.id }
         if (targets.isEmpty()) { toast(context.getString(R.string.symbol_drawer_213)); return }
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_183))
             .setItems(targets.map { it.title }.toTypedArray()) { _, which ->
                 val before = manager.groups.toList()
@@ -1347,7 +1335,7 @@ class SymbolDrawerManagerScreen(
 
     private fun confirmDeleteGroup(groupId: String) {
         val group = manager.groups.firstOrNull { it.id == groupId } ?: return
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_046))
             .setMessage(context.getString(R.string.symbol_drawer_045, group.title))
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
@@ -1371,14 +1359,16 @@ class SymbolDrawerManagerScreen(
     }
 
     private fun promptGroupName(title: String, initial: String = "", done: (String) -> Unit) {
-        val input = EditText(context).apply {
-            setSingleLine(true)
-            setText(initial)
-            hint = context.getString(R.string.symbol_drawer_039)
-        }
-        AlertDialog.Builder(context)
+        val inputLayout = managerOutlinedTextField(
+            context,
+            context.getString(R.string.symbol_drawer_039)
+        )
+        val input = inputLayout.editText as TextInputEditText
+        input.setSingleLine(true)
+        input.setText(initial)
+        MaterialAlertDialogBuilder(context)
             .setTitle(title)
-            .setView(input)
+            .setView(inputLayout)
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
             .setPositiveButton(context.getString(R.string.symbol_drawer_178)) { _, _ ->
                 val value = input.text.toString().trim()
@@ -1390,11 +1380,13 @@ class SymbolDrawerManagerScreen(
 
     private fun editSymbol(existing: SymbolEntry?) {
         val group = currentGroup() ?: return
-        val label = EditText(context).apply {
-            hint = context.getString(R.string.symbol_drawer_154)
-            setSingleLine(true)
-            setText(existing?.label.orEmpty())
-        }
+        val labelLayout = managerOutlinedTextField(
+            context,
+            context.getString(R.string.symbol_drawer_154)
+        )
+        val label = labelLayout.editText as TextInputEditText
+        label.setSingleLine(true)
+        label.setText(existing?.label.orEmpty())
         val shortLegacyIndex = resolveLegacyPickerIndex(
             existing?.shortAction,
             existing?.legacyShortActionId,
@@ -1460,83 +1452,76 @@ class SymbolDrawerManagerScreen(
             setVisible(longInitialLegacyId == MpManagerFindReplaceEnvelope.LEGACY_ACTION_ID)
         }
 
-        val shortAction = Spinner(context).apply {
-            adapter = ArrayAdapter(
-                context,
-                android.R.layout.simple_spinner_item,
-                shortOptions.map(SymbolActionOption::label)
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-            setSelection(shortIndex.coerceIn(shortOptions.indices), false)
+        // Material exposed dropdowns replace the framework Spinners. The
+        // keep-current (V2 edit) and none (long action) entries stay part of the
+        // same option lists, so index-based selection semantics are unchanged.
+        val shortActionLayout = managerExposedDropdown(context)
+        val shortAction = shortActionLayout.editText as MaterialAutoCompleteTextView
+        shortAction.setAdapter(
+            ArrayAdapter(context, android.R.layout.simple_list_item_1, shortOptions.map(SymbolActionOption::label))
+        )
+        var shortSelectedIndex = shortIndex.coerceIn(shortOptions.indices)
+        shortAction.setText(shortOptions.getOrNull(shortSelectedIndex)?.label.orEmpty(), false)
+        val longActionLayout = managerExposedDropdown(context)
+        val longAction = longActionLayout.editText as MaterialAutoCompleteTextView
+        longAction.setAdapter(
+            ArrayAdapter(context, android.R.layout.simple_list_item_1, longOptions.map(SymbolActionOption::label))
+        )
+        var longSelectedIndex = longIndex.coerceIn(longOptions.indices)
+        longAction.setText(longOptions.getOrNull(longSelectedIndex)?.label.orEmpty(), false)
+        val shortTextLayout = managerOutlinedTextField(
+            context,
+            shortOptions.getOrNull(shortIndex)?.payloadHint
+                ?: context.getString(R.string.symbol_drawer_050),
+            multiline = true
+        )
+        val shortText = shortTextLayout.editText as TextInputEditText
+        shortText.setText(
+            shortFindReplacePayload?.findText
+                ?: existing?.legacyShortText?.takeIf { shortLegacyIndex != null }
+                ?: (existing?.shortAction as? SymbolAction.InsertText)?.template
+                ?: (existing?.shortAction as? SymbolAction.EditorCommand)?.payload.orEmpty()
+        )
+        shortText.isEnabled = shortOptions.getOrNull(shortIndex)?.hasPayload == true
+        val longTextLayout = managerOutlinedTextField(
+            context,
+            longOptions.getOrNull(longIndex)?.payloadHint
+                ?: context.getString(R.string.symbol_drawer_050),
+            multiline = true
+        )
+        val longText = longTextLayout.editText as TextInputEditText
+        longText.setText(
+            longFindReplacePayload?.findText
+                ?: existing?.legacyLongText?.takeIf { longLegacyIndex != null }
+                ?: (existing?.longAction as? SymbolAction.InsertText)?.template
+                ?: (existing?.longAction as? SymbolAction.EditorCommand)?.payload.orEmpty()
+        )
+        longText.isEnabled = longOptions.getOrNull(longIndex)?.hasPayload == true
+        shortAction.setOnItemClickListener { _, _, position, _ ->
+            shortSelectedIndex = position
+            val option = shortOptions.getOrNull(position)
+            shortText.isEnabled = option?.hasPayload == true
+            shortTextLayout.hint = option?.payloadHint ?: context.getString(R.string.symbol_drawer_050)
+            shortFindReplace.setVisible(option?.legacyId == MpManagerFindReplaceEnvelope.LEGACY_ACTION_ID)
         }
-        val longAction = Spinner(context).apply {
-            adapter = ArrayAdapter(
-                context,
-                android.R.layout.simple_spinner_item,
-                longOptions.map(SymbolActionOption::label)
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-            setSelection(longIndex.coerceIn(longOptions.indices), false)
-        }
-        val shortText = EditText(context).apply {
-            hint = shortOptions.getOrNull(shortIndex)?.payloadHint
-                ?: context.getString(R.string.symbol_drawer_050)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            minLines = 2
-            setText(
-                shortFindReplacePayload?.findText
-                    ?: existing?.legacyShortText?.takeIf { shortLegacyIndex != null }
-                    ?: (existing?.shortAction as? SymbolAction.InsertText)?.template
-                    ?: (existing?.shortAction as? SymbolAction.EditorCommand)?.payload.orEmpty()
-            )
-            isEnabled = shortOptions.getOrNull(shortIndex)?.hasPayload == true
-        }
-        val longText = EditText(context).apply {
-            hint = longOptions.getOrNull(longIndex)?.payloadHint
-                ?: context.getString(R.string.symbol_drawer_050)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            minLines = 2
-            setText(
-                longFindReplacePayload?.findText
-                    ?: existing?.legacyLongText?.takeIf { longLegacyIndex != null }
-                    ?: (existing?.longAction as? SymbolAction.InsertText)?.template
-                    ?: (existing?.longAction as? SymbolAction.EditorCommand)?.payload.orEmpty()
-            )
-            isEnabled = longOptions.getOrNull(longIndex)?.hasPayload == true
-        }
-        shortAction.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                shortText.isEnabled = false
-                shortFindReplace.setVisible(false)
-            }
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val option = shortOptions.getOrNull(position)
-                shortText.isEnabled = option?.hasPayload == true
-                option?.payloadHint?.let { shortText.hint = it }
-                shortFindReplace.setVisible(option?.legacyId == MpManagerFindReplaceEnvelope.LEGACY_ACTION_ID)
-            }
-        }
-        longAction.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                longText.isEnabled = false
-                longFindReplace.setVisible(false)
-            }
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val option = longOptions.getOrNull(position)
-                longText.isEnabled = option?.hasPayload == true
-                option?.payloadHint?.let { longText.hint = it }
-                longFindReplace.setVisible(option?.legacyId == MpManagerFindReplaceEnvelope.LEGACY_ACTION_ID)
-            }
+        longAction.setOnItemClickListener { _, _, position, _ ->
+            longSelectedIndex = position
+            val option = longOptions.getOrNull(position)
+            longText.isEnabled = option?.hasPayload == true
+            longTextLayout.hint = option?.payloadHint ?: context.getString(R.string.symbol_drawer_050)
+            longFindReplace.setVisible(option?.legacyId == MpManagerFindReplaceEnvelope.LEGACY_ACTION_ID)
         }
         val form = LinearLayout(context).apply {
             orientation = VERTICAL
             setPadding(dp(20), dp(8), dp(20), 0)
-            addView(label, matchWrap())
+            addView(labelLayout, matchWrap())
             addView(TextView(context).apply { text = context.getString(R.string.symbol_drawer_177) }, matchWrap())
-            addView(shortAction, matchWrap())
-            addView(shortText, matchWrap())
+            addView(shortActionLayout, matchWrap())
+            addView(shortTextLayout, matchWrap())
             addView(shortFindReplace.container, matchWrap())
             addView(TextView(context).apply { text = context.getString(R.string.symbol_drawer_224) }, matchWrap())
-            addView(longAction, matchWrap())
-            addView(longText, matchWrap())
+            addView(longActionLayout, matchWrap())
+            addView(longTextLayout, matchWrap())
             addView(longFindReplace.container, matchWrap())
             addView(TextView(context).apply {
                 text = listOf(
@@ -1575,7 +1560,7 @@ class SymbolDrawerManagerScreen(
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ))
         }
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(if (existing == null) context.getString(R.string.symbol_drawer_148) else context.getString(R.string.symbol_drawer_201))
             .setView(formScroll)
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
@@ -1583,7 +1568,7 @@ class SymbolDrawerManagerScreen(
                 runCatching {
                     val display = label.text.toString()
                     require(display.isNotEmpty()) { context.getString(R.string.symbol_drawer_187) }
-                    val shortOption = shortOptions.getOrNull(shortAction.selectedItemPosition)
+                    val shortOption = shortOptions.getOrNull(shortSelectedIndex)
                         ?: error(context.getString(R.string.symbol_drawer_215))
                     val keepShort = shortOption.keepCurrent
                     val shortId = if (keepShort) existing?.legacyShortActionId else shortOption.legacyId
@@ -1619,7 +1604,7 @@ class SymbolDrawerManagerScreen(
                         else -> null
                     }
 
-                    val longOption = longOptions.getOrNull(longAction.selectedItemPosition)
+                    val longOption = longOptions.getOrNull(longSelectedIndex)
                         ?: error(context.getString(R.string.symbol_drawer_216))
                     val keepLong = longOption.keepCurrent
                     val longId = if (keepLong) existing?.legacyLongActionId else longOption.legacyId
@@ -1712,15 +1697,16 @@ class SymbolDrawerManagerScreen(
     /** Builds the replacement field plus the independent r/c/a option checkboxes. */
     private fun buildFindReplaceEditor(): FindReplaceEditor {
         val container = LinearLayout(context).apply { orientation = VERTICAL }
-        val replacementField = EditText(context).apply {
-            hint = context.getString(R.string.symbol_drawer_231)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        }
-        container.addView(replacementField, matchWrap())
-        fun optionToggle(labelRes: Int) = CheckBox(context).apply {
+        val replacementLayout = managerOutlinedTextField(
+            context,
+            context.getString(R.string.symbol_drawer_231),
+            multiline = true
+        )
+        val replacementField = replacementLayout.editText as TextInputEditText
+        container.addView(replacementLayout, matchWrap())
+        fun optionToggle(labelRes: Int) = MaterialCheckBox(context).apply {
             text = context.getString(labelRes)
             textSize = 13f
-            setTextColor(onSurfaceColor())
         }
         val regexToggle = optionToggle(R.string.symbol_drawer_232)
         val matchCaseToggle = optionToggle(R.string.symbol_drawer_233)
@@ -1757,7 +1743,7 @@ class SymbolDrawerManagerScreen(
 
     private fun confirmDeleteSymbol(symbol: SymbolEntry) {
         val group = currentGroup() ?: return
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_047))
             .setMessage(context.getString(R.string.symbol_drawer_179, symbol.label))
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
@@ -1796,7 +1782,7 @@ class SymbolDrawerManagerScreen(
             toast(context.getString(R.string.symbol_drawer_167))
             return
         }
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_182))
             .setItems(targets.map { it.title }.toTypedArray()) { _, which ->
                 runCatching { manager.moveSymbolToGroup(source.id, symbol.id, targets[which].id); refresh() }
@@ -1806,7 +1792,7 @@ class SymbolDrawerManagerScreen(
             .showAdaptiveDialog()
     }
 
-    private fun AlertDialog.Builder.showAdaptiveDialog(): AlertDialog {
+    private fun MaterialAlertDialogBuilder.showAdaptiveDialog(): AlertDialog {
         val dialog = create()
         dialog.setOnShowListener {
             val density = resources.displayMetrics.density
@@ -1830,12 +1816,13 @@ class SymbolDrawerManagerScreen(
         gravity = android.view.Gravity.CENTER_VERTICAL
     }
 
-    private fun actionButton(title: String, action: () -> Unit) = Button(context).apply {
+    private fun actionButton(title: String, action: () -> Unit) = managerTextButton(context).apply {
         text = title
         textSize = 12f
         isAllCaps = false
-        setTextColor(primaryColor())
-        background = roundedSurface(surfaceColor(), 12)
+        minWidth = 0
+        insetTop = 0
+        insetBottom = 0
         setPadding(dp(8), dp(2), dp(8), dp(2))
         setOnClickListener { runCatching(action).onFailure(::reportError) }
     }

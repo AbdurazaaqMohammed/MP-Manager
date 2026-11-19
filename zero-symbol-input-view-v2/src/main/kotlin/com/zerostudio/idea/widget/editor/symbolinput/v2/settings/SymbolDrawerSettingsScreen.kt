@@ -56,19 +56,23 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.SeekBar
-import android.widget.Spinner
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import android.app.AlertDialog
 import android.text.InputType
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.slider.LabelFormatter
+import com.google.android.material.slider.Slider
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import kotlin.math.roundToInt
 import com.zerostudio.idea.widget.editor.symbolinput.v2.data.SharedPreferencesSymbolGroupRepository
 import com.zerostudio.idea.widget.editor.symbolinput.v2.data.SymbolGroupBundleCodec
 import com.zerostudio.idea.widget.editor.symbolinput.v2.data.SymbolGroupRepository
@@ -306,19 +310,19 @@ class SymbolDrawerSettingsScreen(
                 addSwitch(context.getString(R.string.symbol_drawer_155), current.showSymbolLabels) { update { copy(showSymbolLabels = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_184), current.showFullSymbolLabels) { update { copy(showFullSymbolLabels = it) } }
                 addHint(context.getString(R.string.symbol_drawer_108))
-                addSeek(context.getString(R.string.symbol_drawer_186), current.symbolLabelTextSizeSp, 8, 32) { update { copy(symbolLabelTextSizeSp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_186), current.symbolLabelTextSizeSp, 8, 32) { update { copy(symbolLabelTextSizeSp = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_153), current.showActionHints) { update { copy(showActionHints = it) } }
             },
             context.getString(R.string.symbol_drawer_103) to {
                 section(context.getString(R.string.symbol_drawer_082))
-                addSeek(context.getString(R.string.symbol_drawer_166), current.columns, 1, 30) { update { copy(columns = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_129), current.collapsedRows, 1, 16) { update { copy(collapsedRows = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_054), current.cellHeightDp, 6, 128) { update { copy(cellHeightDp = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_163), current.cellHorizontalSpacingDp, -24, 48) { update { copy(cellHorizontalSpacingDp = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_198), current.cellVerticalSpacingDp, -24, 48) { update { copy(cellVerticalSpacingDp = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_042), current.indicatorHeightDp, 0, 96) { update { copy(indicatorHeightDp = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_157), current.maxExpandedHeightDp, 80, 1800) { update { copy(maxExpandedHeightDp = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_158), current.minimumTouchTargetDp, 20, 112) { update { copy(minimumTouchTargetDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_166), current.columns, 1, 30) { update { copy(columns = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_129), current.collapsedRows, 1, 16) { update { copy(collapsedRows = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_054), current.cellHeightDp, 6, 128) { update { copy(cellHeightDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_163), current.cellHorizontalSpacingDp, -24, 48) { update { copy(cellHorizontalSpacingDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_198), current.cellVerticalSpacingDp, -24, 48) { update { copy(cellVerticalSpacingDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_042), current.indicatorHeightDp, 0, 96) { update { copy(indicatorHeightDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_157), current.maxExpandedHeightDp, 80, 1800) { update { copy(maxExpandedHeightDp = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_158), current.minimumTouchTargetDp, 20, 112) { update { copy(minimumTouchTargetDp = it) } }
             },
             context.getString(R.string.symbol_drawer_104) to {
                 section(context.getString(R.string.symbol_drawer_106))
@@ -329,19 +333,19 @@ class SymbolDrawerSettingsScreen(
             },
             context.getString(R.string.symbol_drawer_028) to {
                 section(context.getString(R.string.symbol_drawer_122))
-                addSeek(context.getString(R.string.symbol_drawer_225), current.longPressTimeoutMs, 250, 1000) { update { copy(longPressTimeoutMs = it) } }
-                addSeek(context.getString(R.string.symbol_drawer_083), current.flingVelocityDpPerSecond, 100, 6000) { update { copy(flingVelocityDpPerSecond = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_225), current.longPressTimeoutMs, 250, 1000) { update { copy(longPressTimeoutMs = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_083), current.flingVelocityDpPerSecond, 100, 6000) { update { copy(flingVelocityDpPerSecond = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_123), current.autoCollapseAfterAction) { update { copy(autoCollapseAfterAction = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_208), current.rememberExpandedState) { update { copy(rememberExpandedState = it) } }
                 addHint(context.getString(R.string.symbol_drawer_107))
                 section(context.getString(R.string.symbol_drawer_051))
-                addSeek(context.getString(R.string.symbol_drawer_052), current.animationDurationMs, 0, 1200) { update { copy(animationDurationMs = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_052), current.animationDurationMs, 0, 1200) { update { copy(animationDurationMs = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_037), current.reduceMotion) { update { copy(reduceMotion = it) } }
                 addChoice(context.getString(R.string.symbol_drawer_207), HapticMode.values().toList(), current.hapticMode) { update { copy(hapticMode = it) } }
             },
             context.getString(R.string.symbol_drawer_119) to {
                 section(context.getString(R.string.symbol_drawer_118))
-                addSeek(context.getString(R.string.symbol_drawer_227), current.pageCacheLimit, 1, 9) { update { copy(pageCacheLimit = it) } }
+                addSlider(context.getString(R.string.symbol_drawer_227), current.pageCacheLimit, 1, 9) { update { copy(pageCacheLimit = it) } }
                 addSwitch(context.getString(R.string.symbol_drawer_228), current.prefetchAdjacentGroups) { update { copy(prefetchAdjacentGroups = it) } }
                 section(context.getString(R.string.symbol_drawer_132))
                 addSwitch(context.getString(R.string.symbol_drawer_133), current.searchIncludesActionPayload) {
@@ -561,15 +565,12 @@ class SymbolDrawerSettingsScreen(
     }
 
     private fun actionButton(title: String, action: () -> Unit) =
-        com.google.android.material.button.MaterialButton(context).apply {
+        MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = title
             textSize = textSp(12f)
             isAllCaps = false
-            cornerRadius = dp(12)
-            strokeWidth = dp(1)
-            strokeColor = android.content.res.ColorStateList.valueOf(primaryColor())
-            backgroundTintList = android.content.res.ColorStateList.valueOf(surfaceColor())
-            setTextColor(primaryColor())
+            // Shape, stroke, tint and text colors come from the host Material3
+            // theme; no hardcoded colors or corner radii are set here.
             insetTop = 0
             insetBottom = 0
             minHeight = dp(48)
@@ -606,7 +607,7 @@ class SymbolDrawerSettingsScreen(
                 textSize = textSp(14f)
                 setTextColor(onSurfaceColor())
             }, LinearLayout.LayoutParams(0, dp(48), 1f))
-            addView(Switch(context).apply {
+            addView(MaterialSwitch(context).apply {
                 isChecked = checked
                 setOnCheckedChangeListener { _, value -> changed(value) }
             }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
@@ -616,86 +617,93 @@ class SymbolDrawerSettingsScreen(
     }
 
     private fun <T : Enum<T>> addChoice(title: String, values: List<T>, selected: T, changed: (T) -> Unit) {
-        val row = LinearLayout(context).apply {
-            orientation = VERTICAL
-            setPadding(spaceDp(14), spaceDp(10), spaceDp(14), spaceDp(10))
-            background = surfaceBackground(surfaceColor(), 0.08f, 14)
-        }
-        row.addView(label(title), matchWrap())
-        val spinner = Spinner(context)
         val initialIndex = values.indexOf(selected).coerceAtLeast(0)
-        spinner.adapter = ArrayAdapter(
-            context,
-            android.R.layout.simple_spinner_dropdown_item,
-            values.map { value ->
-                when (value) {
-                    ThemeMode.SYSTEM -> context.getString(R.string.symbol_drawer_217)
-                    LargeScreenLayoutMode.AUTO -> context.getString(R.string.symbol_drawer_205)
-                    LargeScreenLayoutMode.BOTTOM -> context.getString(R.string.symbol_drawer_063)
-                    LargeScreenLayoutMode.SIDE -> context.getString(R.string.symbol_drawer_062)
-                    SideDockEdge.LEFT -> context.getString(R.string.symbol_drawer_086)
-                    SideDockEdge.RIGHT -> context.getString(R.string.symbol_drawer_060)
-                    GroupIndicatorStyle.TEXT, GroupIndicatorStyle.TEXT_TABS -> context.getString(R.string.symbol_drawer_146)
-                    GroupIndicatorStyle.PILL -> context.getString(R.string.symbol_drawer_203)
-                    GroupIndicatorStyle.DOTS -> context.getString(R.string.symbol_drawer_043)
-                    GroupIndicatorStyle.UNDERLINE -> context.getString(R.string.symbol_drawer_105)
-                    GroupIndicatorStyle.GOOEY_METABALL -> context.getString(R.string.symbol_drawer_169)
-                    GroupIndicatorStyle.ELASTIC_WORM -> context.getString(R.string.symbol_drawer_111)
-                    GroupIndicatorStyle.SPRING_BLOB -> context.getString(R.string.symbol_drawer_112)
-                    GroupIndicatorStyle.LIQUID_MERGE -> context.getString(R.string.symbol_drawer_170)
-                    GroupIndicatorStyle.VERNIER_TICKS -> context.getString(R.string.symbol_drawer_197)
-                    GroupIndicatorStyle.MECHANICAL_RULER -> context.getString(R.string.symbol_drawer_160)
-                    GroupIndicatorStyle.WHEEL_ROLLER -> context.getString(R.string.symbol_drawer_002)
-                    GroupIndicatorStyle.CAMERA_DIAL -> context.getString(R.string.symbol_drawer_175)
-                    GroupIndicatorStyle.RADIAL_RING -> context.getString(R.string.symbol_drawer_174)
-                    GroupIndicatorStyle.RADAR_SWEEP -> context.getString(R.string.symbol_drawer_226)
-                    GroupIndicatorStyle.HUD_ARC -> context.getString(R.string.symbol_drawer_003)
-                    GroupIndicatorStyle.ORBIT_DOTS -> context.getString(R.string.symbol_drawer_218)
-                    GroupIndicatorStyle.ELASTIC_WAVE -> context.getString(R.string.symbol_drawer_110)
-                    GroupIndicatorStyle.SINE_WAVE -> context.getString(R.string.symbol_drawer_164)
-                    GroupIndicatorStyle.BOUNCE_TRACK -> context.getString(R.string.symbol_drawer_114)
-                    GroupIndicatorStyle.SPRING_SLIDER -> context.getString(R.string.symbol_drawer_113)
-                    GroupIndicatorStyle.MORPHING_BAR -> context.getString(R.string.symbol_drawer_116)
-                    GroupIndicatorStyle.SEGMENTED_TRACK -> context.getString(R.string.symbol_drawer_038)
-                    GroupIndicatorStyle.PROGRESS_LINE -> context.getString(R.string.symbol_drawer_219)
-                    GroupIndicatorStyle.DOUBLE_TRACK -> context.getString(R.string.symbol_drawer_055)
-                    GroupIndicatorStyle.MINIMAL_DASHES -> context.getString(R.string.symbol_drawer_161)
-                    GroupIndicatorStyle.SQUARE_TICKS -> context.getString(R.string.symbol_drawer_149)
-                    GroupIndicatorStyle.DIAMOND_MARKERS -> context.getString(R.string.symbol_drawer_206)
-                    GroupIndicatorStyle.TRIANGLE_POINTER -> context.getString(R.string.symbol_drawer_023)
-                    GroupIndicatorStyle.HEXAGON_NODES -> context.getString(R.string.symbol_drawer_036)
-                    GroupIndicatorStyle.GLOWING_NODES -> context.getString(R.string.symbol_drawer_056)
-                    GroupIndicatorStyle.PULSE_DOTS -> context.getString(R.string.symbol_drawer_204)
-                    GroupIndicatorStyle.STACKED_CARDS -> context.getString(R.string.symbol_drawer_059)
-                    GroupIndicatorStyle.MINI_PREVIEW -> context.getString(R.string.symbol_drawer_117)
-                    GroupIndicatorStyle.THUMBNAIL_STRIP -> context.getString(R.string.symbol_drawer_202)
-                    GroupIndicatorStyle.NUMBER_BADGES -> context.getString(R.string.symbol_drawer_141)
-                    GroupIndicatorStyle.VERTICAL_RAIL -> context.getString(R.string.symbol_drawer_064)
-                    GroupIndicatorStyle.ARC_NODES -> context.getString(R.string.symbol_drawer_109)
-                    GroupIndicatorStyle.FLUID_TRAIL -> context.getString(R.string.symbol_drawer_168)
-                    GroupIndicatorStyle.DIGITAL_COUNTER -> context.getString(R.string.symbol_drawer_142)
-                    GroupIndicatorStyle.STEPPER -> context.getString(R.string.symbol_drawer_165)
-                    else -> value.name.lowercase().replace('_', ' ')
+        val labels = values.map { value ->
+            when (value) {
+                ThemeMode.SYSTEM -> context.getString(R.string.symbol_drawer_217)
+                LargeScreenLayoutMode.AUTO -> context.getString(R.string.symbol_drawer_205)
+                LargeScreenLayoutMode.BOTTOM -> context.getString(R.string.symbol_drawer_063)
+                LargeScreenLayoutMode.SIDE -> context.getString(R.string.symbol_drawer_062)
+                SideDockEdge.LEFT -> context.getString(R.string.symbol_drawer_086)
+                SideDockEdge.RIGHT -> context.getString(R.string.symbol_drawer_060)
+                GroupIndicatorStyle.TEXT, GroupIndicatorStyle.TEXT_TABS -> context.getString(R.string.symbol_drawer_146)
+                GroupIndicatorStyle.PILL -> context.getString(R.string.symbol_drawer_203)
+                GroupIndicatorStyle.DOTS -> context.getString(R.string.symbol_drawer_043)
+                GroupIndicatorStyle.UNDERLINE -> context.getString(R.string.symbol_drawer_105)
+                GroupIndicatorStyle.GOOEY_METABALL -> context.getString(R.string.symbol_drawer_169)
+                GroupIndicatorStyle.ELASTIC_WORM -> context.getString(R.string.symbol_drawer_111)
+                GroupIndicatorStyle.SPRING_BLOB -> context.getString(R.string.symbol_drawer_112)
+                GroupIndicatorStyle.LIQUID_MERGE -> context.getString(R.string.symbol_drawer_170)
+                GroupIndicatorStyle.VERNIER_TICKS -> context.getString(R.string.symbol_drawer_197)
+                GroupIndicatorStyle.MECHANICAL_RULER -> context.getString(R.string.symbol_drawer_160)
+                GroupIndicatorStyle.WHEEL_ROLLER -> context.getString(R.string.symbol_drawer_002)
+                GroupIndicatorStyle.CAMERA_DIAL -> context.getString(R.string.symbol_drawer_175)
+                GroupIndicatorStyle.RADIAL_RING -> context.getString(R.string.symbol_drawer_174)
+                GroupIndicatorStyle.RADAR_SWEEP -> context.getString(R.string.symbol_drawer_226)
+                GroupIndicatorStyle.HUD_ARC -> context.getString(R.string.symbol_drawer_003)
+                GroupIndicatorStyle.ORBIT_DOTS -> context.getString(R.string.symbol_drawer_218)
+                GroupIndicatorStyle.ELASTIC_WAVE -> context.getString(R.string.symbol_drawer_110)
+                GroupIndicatorStyle.SINE_WAVE -> context.getString(R.string.symbol_drawer_164)
+                GroupIndicatorStyle.BOUNCE_TRACK -> context.getString(R.string.symbol_drawer_114)
+                GroupIndicatorStyle.SPRING_SLIDER -> context.getString(R.string.symbol_drawer_113)
+                GroupIndicatorStyle.MORPHING_BAR -> context.getString(R.string.symbol_drawer_116)
+                GroupIndicatorStyle.SEGMENTED_TRACK -> context.getString(R.string.symbol_drawer_038)
+                GroupIndicatorStyle.PROGRESS_LINE -> context.getString(R.string.symbol_drawer_219)
+                GroupIndicatorStyle.DOUBLE_TRACK -> context.getString(R.string.symbol_drawer_055)
+                GroupIndicatorStyle.MINIMAL_DASHES -> context.getString(R.string.symbol_drawer_161)
+                GroupIndicatorStyle.SQUARE_TICKS -> context.getString(R.string.symbol_drawer_149)
+                GroupIndicatorStyle.DIAMOND_MARKERS -> context.getString(R.string.symbol_drawer_206)
+                GroupIndicatorStyle.TRIANGLE_POINTER -> context.getString(R.string.symbol_drawer_023)
+                GroupIndicatorStyle.HEXAGON_NODES -> context.getString(R.string.symbol_drawer_036)
+                GroupIndicatorStyle.GLOWING_NODES -> context.getString(R.string.symbol_drawer_056)
+                GroupIndicatorStyle.PULSE_DOTS -> context.getString(R.string.symbol_drawer_204)
+                GroupIndicatorStyle.STACKED_CARDS -> context.getString(R.string.symbol_drawer_059)
+                GroupIndicatorStyle.MINI_PREVIEW -> context.getString(R.string.symbol_drawer_117)
+                GroupIndicatorStyle.THUMBNAIL_STRIP -> context.getString(R.string.symbol_drawer_202)
+                GroupIndicatorStyle.NUMBER_BADGES -> context.getString(R.string.symbol_drawer_141)
+                GroupIndicatorStyle.VERTICAL_RAIL -> context.getString(R.string.symbol_drawer_064)
+                GroupIndicatorStyle.ARC_NODES -> context.getString(R.string.symbol_drawer_109)
+                GroupIndicatorStyle.FLUID_TRAIL -> context.getString(R.string.symbol_drawer_168)
+                GroupIndicatorStyle.DIGITAL_COUNTER -> context.getString(R.string.symbol_drawer_142)
+                GroupIndicatorStyle.STEPPER -> context.getString(R.string.symbol_drawer_165)
+                else -> value.name.lowercase().replace('_', ' ')
+            }
+        }
+        var lastPosition = initialIndex
+        val field = MaterialAutoCompleteTextView(context).apply {
+            // Select-only exposed dropdown: the dropdown-menu end icon delegate
+            // wires the tap gesture, so free-text filtering is not allowed.
+            // Mirrors the previous Spinner interaction.
+            inputType = InputType.TYPE_NULL
+            setAdapter(
+                ArrayAdapter(
+                    context,
+                    com.google.android.material.R.layout.mtrl_auto_complete_simple_item,
+                    labels
+                )
+            )
+            setText(labels[initialIndex], false)
+            setOnItemClickListener { _, _, position, _ ->
+                if (position != lastPosition) {
+                    lastPosition = position
+                    values.getOrNull(position)?.let(changed)
                 }
             }
-        )
-        spinner.setSelection(initialIndex, false)
-        spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            private var lastPosition = initialIndex
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (position == lastPosition) return
-                lastPosition = position
-                values.getOrNull(position)?.let(changed)
-            }
         }
-        row.addView(spinner, matchWrap())
-        activePage?.addView(row, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+        val fieldLayout = TextInputLayout(context, null, com.google.android.material.R.attr.textInputStyle).apply {
+            hint = title
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            // The field is added before the end icon mode so the dropdown-menu
+            // delegate can attach its gesture listeners to the EditText.
+            addView(field, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            endIconMode = TextInputLayout.END_ICON_DROPDOWN_MENU
+        }
+        activePage?.addView(fieldLayout, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             bottomMargin = spaceDp(8)
         })
     }
 
-    private fun addSeek(title: String, value: Int, minimum: Int, maximum: Int, changed: (Int) -> Unit) {
+    private fun addSlider(title: String, value: Int, minimum: Int, maximum: Int, changed: (Int) -> Unit) {
         val row = LinearLayout(context).apply {
             orientation = VERTICAL
             setPadding(spaceDp(10), spaceDp(6), spaceDp(10), spaceDp(6))
@@ -703,24 +711,37 @@ class SymbolDrawerSettingsScreen(
         }
         val valueLabel = label("$title：$value")
         row.addView(valueLabel, matchWrap())
-        row.addView(SeekBar(context).apply {
-            max = maximum - minimum
-            progress = (value - minimum).coerceIn(0, max)
+        val initialValue = value.toFloat().coerceIn(minimum.toFloat(), maximum.toFloat())
+        row.addView(Slider(context).apply {
+            // Negative minima (spacing sliders) and integer step granularity
+            // reproduce the previous SeekBar behavior exactly.
+            valueFrom = minimum.toFloat()
+            valueTo = maximum.toFloat()
+            setStepSize(1f)
+            // Wide ranges (for example 80..1800) would draw a tick per step;
+            // hide ticks while keeping the 1-unit snapping.
+            setTickVisible(false)
+            setLabelBehavior(LabelFormatter.LABEL_GONE)
+            // Qualify explicitly: the function parameter `value` (Int) shadows
+            // the Slider's Float property inside this apply block.
+            this.value = initialValue
             var trackingTouch = false
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    valueLabel.text = "$title：${progress + minimum}"
-                    // Keyboard and accessibility adjustments do not dispatch
-                    // onStart/onStopTrackingTouch. Persist those user changes
-                    // immediately, while touch drags still commit once on release.
-                    if (fromUser && !trackingTouch) changed(progress + minimum)
-                }
-                override fun onStartTrackingTouch(bar: SeekBar?) {
+            addOnChangeListener { _, raw, fromUser ->
+                val next = raw.roundToInt().coerceIn(minimum, maximum)
+                valueLabel.text = "$title：$next"
+                // Keyboard and accessibility adjustments do not dispatch
+                // onStart/onStopTrackingTouch. Persist those user changes
+                // immediately, while touch drags still commit once on release.
+                if (fromUser && !trackingTouch) changed(next)
+            }
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {
                     trackingTouch = true
                 }
-                override fun onStopTrackingTouch(bar: SeekBar?) {
+
+                override fun onStopTrackingTouch(slider: Slider) {
                     trackingTouch = false
-                    changed((bar?.progress ?: 0) + minimum)
+                    changed(slider.value.roundToInt().coerceIn(minimum, maximum))
                 }
             })
         }, matchWrap())
@@ -764,19 +785,26 @@ class SymbolDrawerSettingsScreen(
     }
 
     private fun promptJson(title: String, message: String, imported: (String) -> Unit) {
-        val input = EditText(context).apply {
+        val field = TextInputLayout(context, null, com.google.android.material.R.attr.textInputStyle).apply {
             hint = context.getString(R.string.symbol_drawer_192)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            minLines = 6
-            gravity = Gravity.TOP
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            addView(
+                TextInputEditText(context).apply {
+                    inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                    minLines = 6
+                    gravity = Gravity.TOP
+                },
+                LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+            )
         }
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(title)
             .setMessage(message)
-            .setView(input)
+            .setView(field)
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
             .setPositiveButton(context.getString(R.string.symbol_drawer_199)) { _, _ ->
-                runCatching { imported(input.text.toString()) }.onFailure(::reportFailure)
+                val text = field.editText?.text?.toString().orEmpty()
+                runCatching { imported(text) }.onFailure(::reportFailure)
             }
             .showAdaptiveDialog()
     }
@@ -801,7 +829,7 @@ class SymbolDrawerSettingsScreen(
         // Decode and validate before asking for confirmation. Invalid files never
         // reach the repository and cannot partially overwrite the current data.
         val imported = SymbolGroupBundleCodec.decode(json)
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_180))
             .setMessage(context.getString(R.string.symbol_drawer_099, imported.size))
             .setNegativeButton(context.getString(R.string.symbol_drawer_057), null)
@@ -815,7 +843,7 @@ class SymbolDrawerSettingsScreen(
             .showAdaptiveDialog()
     }
 
-    private fun AlertDialog.Builder.showAdaptiveDialog(): AlertDialog {
+    private fun MaterialAlertDialogBuilder.showAdaptiveDialog(): AlertDialog {
         val dialog = create()
         dialog.setOnShowListener {
             val density = resources.displayMetrics.density

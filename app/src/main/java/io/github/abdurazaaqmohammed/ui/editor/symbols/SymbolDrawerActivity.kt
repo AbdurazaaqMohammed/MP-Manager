@@ -15,8 +15,8 @@ class SymbolDrawerActivity : BaseActivity() {
         SymbolDrawerMigration.migrate(this)
         val settings = intent.getBooleanExtra(EXTRA_SETTINGS, false)
         val root = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL }
-        val toolbar = androidx.appcompat.widget.Toolbar(this)
-        root.addView(toolbar, android.widget.LinearLayout.LayoutParams(-1, dpPx(56)))
+        val toolbar = com.google.android.material.appbar.MaterialToolbar(this)
+        root.addView(toolbar, android.widget.LinearLayout.LayoutParams(-1, dpPx(64)))
         val screen = if (settings) SymbolDrawerSettingsScreen(this) else SymbolDrawerManagerScreen(this)
         root.addView(screen, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)

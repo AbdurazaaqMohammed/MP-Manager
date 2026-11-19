@@ -45,7 +45,8 @@
 
 package com.zerostudio.idea.widget.editor.symbolinput.v2
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Parcel
@@ -358,7 +359,7 @@ class SymbolDrawerView @JvmOverloads constructor(
             }
         }
         settingsDialog?.dismiss()
-        settingsDialog = AlertDialog.Builder(context)
+        settingsDialog = MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.symbol_drawer_185))
             .setView(screen)
             .setPositiveButton(context.getString(R.string.symbol_drawer_075), null)
