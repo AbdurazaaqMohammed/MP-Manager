@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.impl.ipc;
+package io.github.abdurazaaqmohammed.privilege.internal.ipc;
 
 import android.content.IntentSender;
 import android.os.ParcelFileDescriptor;

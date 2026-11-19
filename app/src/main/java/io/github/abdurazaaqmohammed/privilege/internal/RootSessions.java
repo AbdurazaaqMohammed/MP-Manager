@@ -13,8 +13,8 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 
 public final class RootSessions {
 

@@ -48,7 +48,7 @@ import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -67,7 +67,7 @@ import io.github.abdurazaaqmohammed.ui.editor.CompareZipDialog;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.feature.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;

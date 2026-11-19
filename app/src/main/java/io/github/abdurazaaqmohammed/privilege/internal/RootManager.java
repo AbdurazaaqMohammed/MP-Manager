@@ -1,15 +1,15 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession.ShellResult;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellProcess;
 import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;

@@ -1,8 +1,8 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
@@ -10,7 +10,7 @@ import android.os.Handler;
 import androidx.preference.PreferenceManager;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import rikka.shizuku.Shizuku;

@@ -1,8 +1,8 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;

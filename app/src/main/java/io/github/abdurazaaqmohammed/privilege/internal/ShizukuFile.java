@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 

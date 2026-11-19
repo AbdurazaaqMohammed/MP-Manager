@@ -36,7 +36,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 
 public class FileUtils {
 

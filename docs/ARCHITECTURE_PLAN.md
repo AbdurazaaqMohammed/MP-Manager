@@ -221,6 +221,9 @@ session; each stage verified by `compileFullDebugJavaWithJavac` +
       parallel domains (SHIZUKU: shell/file-ops, DHIZUKU: device-owner),
       ROOT last-resort fallback — `priorityFor(Class<? extends Capability>)`
       replaces the global `priority()`
+- [x] **S7** — retire `privilege.impl`: the whole package folded into
+      `privilege.internal` (implementation + Legacy* sessions + ipc aidl
+      now live side by side; the package no longer exists)
 - [x] **S4–S6** — the remaining M5 gap: ~40 feature/ui/mcp/util files
       migrated off `privilege.impl` onto `PrivilegeManager` mirrors
       (Root/Files/Shizuku/Staging/Permissions/Native/Installer/Startup);

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 

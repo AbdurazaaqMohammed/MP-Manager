@@ -12,7 +12,7 @@ import android.content.Context;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.privilege.internal.RootSessions;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 import io.github.abdurazaaqmohammed.privilege.spi.Capability;
 import io.github.abdurazaaqmohammed.privilege.spi.FileOpsCap;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;

@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellProcess;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;

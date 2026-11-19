@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
 public final class ShizukuSessions {

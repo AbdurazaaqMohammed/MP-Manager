@@ -33,23 +33,23 @@ import java.util.Map;
 import androidx.appcompat.app.AppCompatActivity;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.impl.StartupPrivileges;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.StartupPrivileges;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyFileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyInstallerSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeRootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
-import io.github.abdurazaaqmohammed.privilege.impl.RootStaging;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.internal.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
@@ -101,7 +101,7 @@ public final class PrivilegeManager {
         return LegacyInstallerSession.INSTANCE;
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.AccessManager}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.AccessManager}, the legacy implementation it delegates to. */
     public static final class Files {
 
         public static Backend active(Context context) { return PrivilegeManager.active(context); }
@@ -212,7 +212,7 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager}, the legacy implementation it delegates to. */
     public static final class Shizuku {
 
         public static final int PERMISSION_CODE = ShizukuManager.PERMISSION_CODE;
@@ -342,7 +342,7 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller}, the legacy implementation it delegates to. */
     public static final class Installer {
 
         /** Type alias so callers import only PrivilegeManager. */
@@ -382,7 +382,7 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.StartupPrivileges}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.StartupPrivileges}, the legacy implementation it delegates to. */
     public static final class Startup {
 
         public static void warmShell(Activity activity) { StartupPrivileges.warmShell(activity); }
@@ -394,7 +394,7 @@ public final class PrivilegeManager {
     /**
      * 1:1 mirror of {@code RootManager}'s instance API as used by UI/features
      * (S4–S6 migration): same RootManager delegation, reachable without
-     * importing {@code privilege.impl}. Shell outcomes use
+     * importing {@code privilege.internal}. Shell outcomes use
      * {@link ShellSession.ShellResult}.
      */
     public static final class Root {

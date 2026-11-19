@@ -1,9 +1,9 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellBatchControl;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellBatchControl;
 import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
@@ -31,10 +31,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
-import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
-import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
-import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuFileService;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.internal.ipc.IFileService;
+import io.github.abdurazaaqmohammed.privilege.internal.ipc.ShizukuConnection;
+import io.github.abdurazaaqmohammed.privilege.internal.ipc.ShizukuFileService;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;

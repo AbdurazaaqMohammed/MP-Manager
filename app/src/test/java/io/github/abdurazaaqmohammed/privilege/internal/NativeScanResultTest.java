@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeScanResult;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeScanResult;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

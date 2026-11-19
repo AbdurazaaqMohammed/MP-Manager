@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl.ipc;
+package io.github.abdurazaaqmohammed.privilege.internal.ipc;
 
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
 
 
 import android.app.PendingIntent;

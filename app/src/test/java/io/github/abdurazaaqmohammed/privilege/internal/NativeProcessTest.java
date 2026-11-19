@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeProcess;
 
 import org.junit.Test;
 import java.io.InputStream;

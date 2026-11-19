@@ -1,11 +1,11 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeCopyProcess;
 
 import io.github.abdurazaaqmohammed.privilege.api.NativeDeleteException;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeProcess;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeScanResult;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeScanResult;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.SharedStorageCompat;

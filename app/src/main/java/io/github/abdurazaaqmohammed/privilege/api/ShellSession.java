@@ -2,7 +2,7 @@
  * Privilege layer — public API.
  *
  * UI/features may import ONLY this package (PrivilegeManager and the session
- * interfaces), never privilege.spi / privilege.internal / privilege.impl
+ * interfaces), never privilege.spi / privilege.internal
  * or any backend class. See docs/ARCHITECTURE.md for the dependency rules.
  */
 package io.github.abdurazaaqmohammed.privilege.api;

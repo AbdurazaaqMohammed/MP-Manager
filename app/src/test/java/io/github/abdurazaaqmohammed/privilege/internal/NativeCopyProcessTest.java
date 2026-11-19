@@ -1,7 +1,7 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
 import io.github.abdurazaaqmohammed.privilege.api.NativeCopyException;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeCopyProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeCopyProcess;
 import io.github.abdurazaaqmohammed.privilege.api.NativeDeleteException;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;

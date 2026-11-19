@@ -1,6 +1,6 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 import io.github.abdurazaaqmohammed.feature.apk.InstallerConfig;
 
 
@@ -32,10 +32,10 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuShell;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInstallAnalysis;
-import io.github.abdurazaaqmohammed.privilege.impl.ipc.IFileService;
-import io.github.abdurazaaqmohammed.privilege.impl.ipc.ShizukuConnection;
+import io.github.abdurazaaqmohammed.privilege.internal.ipc.IFileService;
+import io.github.abdurazaaqmohammed.privilege.internal.ipc.ShizukuConnection;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;

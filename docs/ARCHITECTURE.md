@@ -48,13 +48,9 @@ are leaf services usable by anyone, dependent on nothing business-related:
 - Some `feature/` subpackages still contain Activities/Services/Views
   (`feature/system` tools screens, `feature/freestyle` canvas). Splitting
   UI out of them is deferred; do not add new UI to `feature/`.
-- `privilege/impl/` (RootManager, AccessManager, Shizuku*, Native*, ipc)
-  is implementation, but ~30 feature/ui files still call it directly
-  (mostly `RootManager`'s instance API). New code must go through
-  `PrivilegeManager`; migrating the remaining call sites onto the session
-  interfaces is the open remainder of plan stage M5.
-- **S4–S6 (this branch) resolved the M5 call-site gap**: external
-  `privilege.impl` imports are down to 6 files, and only for the
+- `privilege/internal/` holds the implementation (RootManager, AccessManager,
+  Shizuku*, Native*, ipc) plus the Legacy* session adapters. External callers
+  go through `PrivilegeManager`; the only remaining direct imports are the
   `RootFile` / `ShizukuFile` `File` subclasses used with
   `instanceof` / casts / `new` in UI/util code (a type-level usage that
   requires moving the classes themselves or introducing a tag interface

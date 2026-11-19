@@ -1,10 +1,10 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
 import io.github.abdurazaaqmohammed.privilege.api.NativeCopyException;
 
 import io.github.abdurazaaqmohammed.privilege.api.NativeDeleteException;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeProcess;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeProcess;
+import io.github.abdurazaaqmohammed.privilege.internal.ShellProcess;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 

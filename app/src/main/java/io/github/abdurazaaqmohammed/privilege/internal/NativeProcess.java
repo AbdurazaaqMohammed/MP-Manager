@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.privilege.impl;
+package io.github.abdurazaaqmohammed.privilege.internal;
 
 import java.util.concurrent.TimeUnit;
 
