@@ -72,12 +72,36 @@ public final class DomainSinkholer {
      * Checks if a string URL or domain points to a telemetry or tracking collector.
      */
     public static boolean isTelemetryEndpoint(String str) {
-        if (str == null || str.length() < 6) return false;
-        String lower = str.toLowerCase(Locale.ROOT);
-        for (String domain : KNOWN_TELEMETRY_DOMAINS) {
-            if (lower.contains(domain)) return true;
+        if (str == null || str.length() < 8) return false;
+        // Never touch class names, descriptors, method signatures, or package names
+        if (str.contains("$") || str.contains(";") || str.contains("(") || str.contains(" ") || str.contains("\n")) {
+            return false;
         }
-        return TELEMETRY_URL_PATTERN.matcher(str).matches();
+        if (str.startsWith("com.") || str.startsWith("org.") || str.startsWith("android.")
+                || str.startsWith("androidx.") || str.startsWith("io.") || str.startsWith("java.")
+                || str.startsWith("javax.") || str.startsWith("kotlin.") || str.startsWith("dalvik.")) {
+            return false;
+        }
+
+        String lower = str.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("ws://") || lower.startsWith("wss://")) {
+            for (String domain : KNOWN_TELEMETRY_DOMAINS) {
+                if (lower.contains(domain)) return true;
+            }
+            return TELEMETRY_URL_PATTERN.matcher(str).matches();
+        }
+
+        for (String domain : KNOWN_TELEMETRY_DOMAINS) {
+            if ("telemetry.".equals(domain) || "analytics.".equals(domain)) {
+                if (lower.startsWith(domain) && lower.contains(".") && !lower.contains("/")) {
+                    return true;
+                }
+            } else if (lower.equals(domain) || lower.endsWith("." + domain)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -85,11 +109,29 @@ public final class DomainSinkholer {
      */
     public static boolean isAiEndpoint(String str) {
         if (str == null || str.length() < 6) return false;
-        String lower = str.toLowerCase(Locale.ROOT);
-        for (String domain : KNOWN_AI_DOMAINS) {
-            if (lower.contains(domain)) return true;
+        if (str.contains("$") || str.contains(";") || str.contains("(") || str.contains(" ") || str.contains("\n")) {
+            return false;
         }
-        return AI_URL_PATTERN.matcher(str).matches();
+        if (str.startsWith("com.") || str.startsWith("org.") || str.startsWith("android.")
+                || str.startsWith("androidx.") || str.startsWith("io.") || str.startsWith("java.")
+                || str.startsWith("javax.") || str.startsWith("kotlin.") || str.startsWith("dalvik.")) {
+            return false;
+        }
+
+        String lower = str.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("ws://") || lower.startsWith("wss://")) {
+            for (String domain : KNOWN_AI_DOMAINS) {
+                if (lower.contains(domain)) return true;
+            }
+            return AI_URL_PATTERN.matcher(str).matches();
+        }
+
+        for (String domain : KNOWN_AI_DOMAINS) {
+            if (lower.equals(domain) || lower.endsWith("." + domain)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -145,10 +187,13 @@ public final class DomainSinkholer {
 
                         if (shouldSinkhole) {
                             int reg = ((OneRegisterInstruction) inst).getRegisterA();
+                            String replacement = (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("ws://") || str.startsWith("wss://"))
+                                    ? SINKHOLE_DESTINATION
+                                    : "127.0.0.1";
                             mutable.replaceInstruction(i, new BuilderInstruction21c(
                                     Opcode.CONST_STRING,
                                     reg,
-                                    new ImmutableStringReference(SINKHOLE_DESTINATION)
+                                    new ImmutableStringReference(replacement)
                             ));
                             modified = true;
                         }

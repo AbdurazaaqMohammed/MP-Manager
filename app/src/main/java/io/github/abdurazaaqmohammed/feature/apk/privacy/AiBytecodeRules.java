@@ -79,6 +79,9 @@ public final class AiBytecodeRules {
      */
     public static boolean isAiControllerClass(String classType) {
         if (classType == null) return false;
+        if (classType.contains("SavXEligibilityState") || classType.endsWith("State;") || classType.endsWith("Status;")) {
+            return false;
+        }
         return AI_CONTROLLER_CLASS_PATTERN.matcher(classType).matches();
     }
 
@@ -87,6 +90,8 @@ public final class AiBytecodeRules {
      */
     public static boolean isAiControllerClass(ClassDef classDef) {
         if (classDef == null) return false;
+        if ((classDef.getAccessFlags() & AccessFlags.ENUM.getValue()) != 0) return false;
+        if ("Ljava/lang/Enum;".equals(classDef.getSuperclass())) return false;
         if (isAiControllerClass(classDef.getType())) return true;
         for (Method m : classDef.getMethods()) {
             String name = m.getName();
@@ -102,9 +107,9 @@ public final class AiBytecodeRules {
      * Checks if a return type descriptor represents SavXEligibilityState.
      */
     public static boolean isSavXEligibilityReturn(String returnType) {
-        if (returnType == null) return false;
+        if (returnType == null || returnType.startsWith("[")) return false;
         String norm = DexReachabilityIndex.normalizeClassType(returnType);
-        return SAVX_ELIGIBILITY_STATE_CLASS.equals(norm) || returnType.contains("SavXEligibilityState");
+        return SAVX_ELIGIBILITY_STATE_CLASS.equals(norm) || (returnType.startsWith("L") && returnType.endsWith("SavXEligibilityState;"));
     }
 
     /**
@@ -113,13 +118,16 @@ public final class AiBytecodeRules {
     public static boolean isEligibilityMethod(Method method, boolean isAiClass) {
         if (method == null) return false;
         String name = method.getName();
-        if ("<init>".equals(name) || "<clinit>".equals(name)) return false;
+        if ("<init>".equals(name) || "<clinit>".equals(name) || "values".equals(name) || "valueOf".equals(name) || name.startsWith("$")) return false;
 
         String returnType = method.getReturnType();
+        if (returnType == null || returnType.startsWith("[")) return false;
 
         // 1. Amazon SavX evaluateEligibility() -> SavXEligibilityState
         if (isSavXEligibilityReturn(returnType)) {
-            return true;
+            if (isAiClass || "evaluateEligibility".equals(name) || name.toLowerCase().contains("eligib")) {
+                return true;
+            }
         }
 
         // 2. Universal Boolean eligibility methods returning 'Z'
@@ -171,10 +179,13 @@ public final class AiBytecodeRules {
         MutableMethodImplementation newImpl = new MutableMethodImplementation(regCount);
 
         if (isSavXEligibilityReturn(returnType)) {
+            String enumClass = (returnType.startsWith("L") && returnType.endsWith(";") && !returnType.startsWith("["))
+                    ? returnType
+                    : SAVX_ELIGIBILITY_STATE_CLASS;
             FieldReference fieldRef = new ImmutableFieldReference(
-                    returnType,
+                    enumClass,
                     "NOT_ELIGIBLE",
-                    returnType
+                    enumClass
             );
             newImpl.addInstruction(new BuilderInstruction21c(Opcode.SGET_OBJECT, 0, fieldRef));
             newImpl.addInstruction(new BuilderInstruction11x(Opcode.RETURN_OBJECT, 0));
