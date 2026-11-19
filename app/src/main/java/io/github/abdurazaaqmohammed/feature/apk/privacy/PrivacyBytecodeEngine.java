@@ -429,19 +429,6 @@ public final class PrivacyBytecodeEngine {
         newImpl.addInstruction(moveResult);
         newImpl.addInstruction(returnObj);
 
-        if (mutable != null && mutable.getRegisterCount() >= 1) {
-            try {
-                while (!mutable.getInstructions().isEmpty()) {
-                    mutable.removeInstruction(0);
-                }
-                mutable.addInstruction(invoke);
-                mutable.addInstruction(moveResult);
-                mutable.addInstruction(returnObj);
-            } catch (Exception ignored) {
-                // In-place modification could fail on dangling labels; newImpl will be used
-            }
-        }
-
         if (stats != null) {
             stats.backgroundWorkersNeutralized++;
         }
@@ -489,7 +476,7 @@ public final class PrivacyBytecodeEngine {
                             ? new MutableMethodImplementation(m.getImplementation())
                             : null;
                     MutableMethodImplementation newImpl = neutralizeWorkerClass(classDef, mutable, outStats);
-                    int flags = m.getAccessFlags() & ~AccessFlags.ABSTRACT.getValue();
+                    int flags = m.getAccessFlags() & ~(AccessFlags.ABSTRACT.getValue() | AccessFlags.NATIVE.getValue());
                     Method rewritten = new ImmutableMethod(
                             m.getDefiningClass(),
                             m.getName(),
@@ -524,7 +511,7 @@ public final class PrivacyBytecodeEngine {
                             ? new MutableMethodImplementation(m.getImplementation())
                             : null;
                     MutableMethodImplementation newImpl = neutralizeWorkerClass(classDef, mutable, outStats);
-                    int flags = m.getAccessFlags() & ~AccessFlags.ABSTRACT.getValue();
+                    int flags = m.getAccessFlags() & ~(AccessFlags.ABSTRACT.getValue() | AccessFlags.NATIVE.getValue());
                     Method rewritten = new ImmutableMethod(
                             m.getDefiningClass(),
                             m.getName(),

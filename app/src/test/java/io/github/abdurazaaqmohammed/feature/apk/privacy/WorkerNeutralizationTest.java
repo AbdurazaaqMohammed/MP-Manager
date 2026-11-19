@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
@@ -16,6 +17,8 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.smali.Smali;
 import com.android.tools.smali.smali.SmaliOptions;
 
@@ -162,6 +165,38 @@ public class WorkerNeutralizationTest {
                 .locals 1
                 const-class v0, Lcom/example/AnalyticsWorker;
                 return-void
+            .end method
+            """;
+
+    private static final String NATIVE_WORKER_SMALI =
+            """
+            .class public Lcom/example/NativeTelemetryWorker;
+            .super Landroidx/work/Worker;
+            .source "NativeTelemetryWorker.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Landroidx/work/Worker;-><init>()V
+                return-void
+            .end method
+
+            .method public native doWork()Landroidx/work/ListenableWorker$Result;
+            .end method
+            """;
+
+    private static final String ABSTRACT_WORKER_SMALI =
+            """
+            .class public abstract Lcom/example/AbstractTelemetryWorker;
+            .super Landroidx/work/Worker;
+            .source "AbstractTelemetryWorker.java"
+
+            .method public constructor <init>()V
+                .locals 0
+                invoke-direct {p0}, Landroidx/work/Worker;-><init>()V
+                return-void
+            .end method
+
+            .method public abstract doWork()Landroidx/work/ListenableWorker$Result;
             .end method
             """;
 
@@ -425,5 +460,91 @@ public class WorkerNeutralizationTest {
         assertEquals(1, stats.backgroundWorkersNeutralized);
         assertEquals(3, ((List<?>) result.getInstructions()).size());
         assertTrue(result.getRegisterCount() >= 1);
+    }
+
+    @Test
+    public void testSanitizedWorkerDexPoolAssembly() throws Exception {
+        File dexFile = assembleSmali(ANALYTICS_WORKER_SMALI);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
+        ClassDef workerDef = findClass(dex, "Lcom/example/AnalyticsWorker;");
+        assertNotNull(workerDef);
+
+        PrivacyOptions options = PrivacyOptions.all();
+        PrivacyStats stats = new PrivacyStats();
+        ClassDef sanitized = PrivacyBytecodeEngine.sanitizeClass(workerDef, options, stats);
+        assertNotNull(sanitized);
+
+        DexPool pool = new DexPool(Opcodes.getDefault());
+        pool.internClass(sanitized);
+
+        MemoryDataStore store = new MemoryDataStore();
+        pool.writeTo(store);
+        assertTrue("Written DEX size should be positive", store.getSize() > 0);
+
+        // Verify re-parsing the written DEX bytes produces valid ClassDef and instructions
+        DexBackedDexFile parsed = new DexBackedDexFile(Opcodes.getDefault(), store.getData());
+        ClassDef reloadedClass = findClass(parsed, "Lcom/example/AnalyticsWorker;");
+        assertNotNull(reloadedClass);
+
+        Method reloadedDoWork = null;
+        for (Method m : reloadedClass.getVirtualMethods()) {
+            if ("doWork".equals(m.getName())) {
+                reloadedDoWork = m;
+                break;
+            }
+        }
+        assertNotNull(reloadedDoWork);
+        assertNotNull(reloadedDoWork.getImplementation());
+        List<Instruction> reloadedInstructions = new ArrayList<>();
+        for (Instruction inst : reloadedDoWork.getImplementation().getInstructions()) {
+            reloadedInstructions.add(inst);
+        }
+        assertEquals(3, reloadedInstructions.size());
+    }
+
+    @Test
+    public void testNativeAndAbstractWorkerFlagsMaskedInDexPoolAssembly() throws Exception {
+        File dexFile = assembleSmali(NATIVE_WORKER_SMALI, ABSTRACT_WORKER_SMALI);
+        DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
+
+        ClassDef nativeWorker = findClass(dex, "Lcom/example/NativeTelemetryWorker;");
+        assertNotNull(nativeWorker);
+        ClassDef abstractWorker = findClass(dex, "Lcom/example/AbstractTelemetryWorker;");
+        assertNotNull(abstractWorker);
+
+        PrivacyStats nativeStats = new PrivacyStats();
+        ClassDef sanitizedNative = PrivacyBytecodeEngine.sanitizeClass(nativeWorker, PrivacyOptions.all(), nativeStats);
+        assertEquals(1, nativeStats.backgroundWorkersNeutralized);
+
+        PrivacyStats abstractStats = new PrivacyStats();
+        ClassDef sanitizedAbstract = PrivacyBytecodeEngine.sanitizeClass(abstractWorker, PrivacyOptions.all(), abstractStats);
+        assertEquals(1, abstractStats.backgroundWorkersNeutralized);
+
+        // Verify neither NATIVE nor ABSTRACT flags remain on doWork
+        for (Method m : sanitizedNative.getVirtualMethods()) {
+            if ("doWork".equals(m.getName())) {
+                assertEquals(0, m.getAccessFlags() & (AccessFlags.NATIVE.getValue() | AccessFlags.ABSTRACT.getValue()));
+                assertNotNull(m.getImplementation());
+            }
+        }
+        for (Method m : sanitizedAbstract.getVirtualMethods()) {
+            if ("doWork".equals(m.getName())) {
+                assertEquals(0, m.getAccessFlags() & (AccessFlags.NATIVE.getValue() | AccessFlags.ABSTRACT.getValue()));
+                assertNotNull(m.getImplementation());
+            }
+        }
+
+        // Verify writing to DexPool produces valid DEX with zero assembler / verifier errors
+        DexPool pool = new DexPool(Opcodes.getDefault());
+        pool.internClass(sanitizedNative);
+        pool.internClass(sanitizedAbstract);
+
+        MemoryDataStore store = new MemoryDataStore();
+        pool.writeTo(store);
+        assertTrue(store.getSize() > 0);
+
+        DexBackedDexFile parsed = new DexBackedDexFile(Opcodes.getDefault(), store.getData());
+        assertNotNull(findClass(parsed, "Lcom/example/NativeTelemetryWorker;"));
+        assertNotNull(findClass(parsed, "Lcom/example/AbstractTelemetryWorker;"));
     }
 }
