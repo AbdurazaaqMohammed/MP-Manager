@@ -8,7 +8,7 @@ import android.content.Context;
 import java.io.File;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
 
 /**
  * Silent install / uninstall channel. Never null; readiness probes return

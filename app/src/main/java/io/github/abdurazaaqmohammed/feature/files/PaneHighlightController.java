@@ -3,6 +3,8 @@ package io.github.abdurazaaqmohammed.feature.files;
 import android.animation.ValueAnimator;
 import android.content.SharedPreferences;
 import android.view.View;
+
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
@@ -51,7 +53,11 @@ public class PaneHighlightController {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         lp.addRule(RelativeLayout.BELOW, R.id.topBar);
         lp.addRule(RelativeLayout.ABOVE, R.id.bottomBar);
-        main.addView(fillLayer, 0, lp);                    // behind the pane row
+        View wallpaper = new View(activity);
+        if (ThemeRegistry.applyPaneWallpaper(wallpaper)) {
+            main.addView(wallpaper, 0, new RelativeLayout.LayoutParams(lp));
+        }
+        main.addView(fillLayer, wallpaper.getParent() == null ? 0 : 1, lp);                    // behind the pane row
         main.addView(overlayLayer, main.getChildCount(), lp); // on top, pass-through touches
 
         reload();

@@ -809,6 +809,10 @@ Layout Inspector
     <string name="sidebar_collapse">Collapse section</string>
     <string name="sidebar_expand">Expand section</string>
     <string name="organize_sidebar">Organize sidebar</string>
+    <string name="sidebar_add_tool">Add to sidebar</string>
+    <string name="sidebar_remove_tool">Remove from sidebar</string>
+    <string name="sidebar_tool_added">Added to sidebar</string>
+    <string name="sidebar_tool_removed">Removed from sidebar</string>
     <string name="done_organizing_sidebar">Done organizing</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="restore_sidebar_item">Restore sidebar item</string>
@@ -879,6 +883,10 @@ Layout Inspector
     <string name="shizuku_ready">Shizuku connected</string>
     <string name="shizuku_unsupported">Shizuku needs Android 6+</string>
     <string name="grant_shizuku">Grant Shizuku permission</string>
+    <string name="grant_dhizuku">Grant Dhizuku permission</string>
+    <string name="dhizuku_pending">Dhizuku permission not granted</string>
+    <string name="dhizuku_granted">Dhizuku permission granted</string>
+    <string name="dhizuku_denied">Dhizuku permission denied</string>
     <string name="shizuku_file_operations">Shizuku file operations (Android/data, obb, media)</string>
     <string name="storage_provider_label">MP Manager</string>
     <string name="storage_provider_internal">Internal storage</string>
@@ -2049,8 +2057,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="restored">Restored</string>
     <string name="failed">Failed</string>
 
-    <!-- NPatch integrated mode -->
-    <string name="npatch_integrated">Signature killer &amp; xposed</string>
+    <string name="npatch_integrated">LSPatch</string>
     <string name="npatch_title">Patch with Xposed: %1$s</string>
     <string name="npatch_hint">Patches the APK with LSPatch (integrated mode): an Xposed loader is embedded so selected modules run without a manager app. The output is signed with the key configured under Sign Settings — a new patched APK is created.</string>
     <string name="npatch_bypass_lsp_0">Bypass: None</string>
@@ -2174,7 +2181,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="xposed_patcher_lite_title">Signature killer &amp; xposed</string>
+    <string name="xposed_patcher_lite_title">LSPatch</string>
     <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
@@ -2423,6 +2430,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="frida_download_message">The Frida Hook Engine bundle (%1$s MB) needs to be downloaded once and is cached in the app.\n\nSource: github.com/muhammadrizwan87/frida-hook-engine</string>
     <string name="frida_downloading_engine">Downloading Frida engine bundle</string>
     <string name="frida_downloading_inject">Downloading frida-inject</string>
+    <string name="frida_download_failed">Download failed: %1$s\n\nThe host (%2$s) must be reachable — check your internet connection/VPN and try again.</string>
     <string name="frida_gadget_title">Frida Gadget</string>
     <string name="frida_gadget_desc">Embeds the Frida Hook Engine into this APK: adds libfrida-gadget.so, a generated libfrida-gadget.config.so and libfrida-gadget.script.so to the native libraries and loads the gadget from the app\'s Application onCreate(). The patched app installs and runs without root.</string>
     <string name="frida_target_label">Injection point (loadLibrary call)</string>
@@ -2664,4 +2672,36 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="privacy_mode_standard_desc">Generally guarantees app remains stable, but may miss some targets in highly obfuscated or encrypted apps</string>
     <string name="privacy_mode_aggressive_title">Aggressive Mode</string>
     <string name="privacy_mode_aggressive_desc">Generally will kill all telemetry, but might also kill your app. If you try this and your app doesn\'t launch, try standard mode</string>
+    <string name="extracted_versions">Extracted Versions</string>
+    <string name="protected_app_warning_title">Warning: Protected App</string>
+    <string name="antisplit_protected_warning_msg">This app is protected by: %1$s.\n\nConverting this app from split bundle (APKS) to a single APK (Antisplit) may cause it to crash and fail to run after installation due to anti-tamper and integrity protection.\n\nDo you want to proceed with Antisplit anyway?</string>
+    <string name="proceed_anyway">Proceed anyway</string>
+    <string name="protected_banner">⚠️ Protected: %1$s</string>
+    <string name="back_navigates_folders">Back button navigates folders</string>
+    <string name="back_navigates_folders_summary">Turn off to exit with two Back presses without retracing folder history. The on-screen navigation buttons still work.</string>
+    <string name="show_file_permissions">Show permissions instead of dates outside shared storage</string>
+    <string name="checksum_generate_sfv">Generate .sfv (CRC32)</string>
+    <string name="checksum_generate_md5">Generate .md5</string>
+    <string name="checksum_generating">Generating %1$s…</string>
+    <string name="checksum_generated">Checksum file created: %1$s</string>
+    <string name="checksum_overwrite_confirm">%1$s already exists. Overwrite?</string>
+    <string name="checksum_overwrite">Overwrite</string>
+    <string name="checksum_same_folder_required">Selected files must be in the same folder to generate a checksum file</string>
+    <string name="checksum_verify_summary">%1$d valid, %2$d changed, %3$d other</string>
+    <string name="checksum_verify_missing">Missing file</string>
+    <string name="checksum_error_invalid_path">Invalid entry path</string>
+    <string name="checksum_unsupported_filename">Cannot represent this filename in the selected checksum format: %1$s</string>
+    <string name="compare_text_show">Show</string>
+    <string name="compare_text_filter_all">All content</string>
+    <string name="compare_text_filter_differences">Differences only</string>
+    <string name="compare_text_filter_same">Matches only</string>
+    <string name="compare_text_export_diff">Export as .diff</string>
+    <string name="compare_text_no_differences">No differences found</string>
+    <string name="compare_text_filter_empty">No lines match the current filter</string>
+    <string name="installed_themes">Installed themes</string>
+    <string name="installed_theme_current">Installed theme: %1$s</string>
+    <string name="installed_themes_empty">Install a compatible theme APK to see it here.</string>
+    <string name="installed_theme_import_failed">Could not import this theme. Your current theme has not changed.</string>
+    <string name="installed_theme_selected">%1$s (selected)</string>
+    <string name="installed_theme_description">%1$s — %2$s</string>
 </resources>

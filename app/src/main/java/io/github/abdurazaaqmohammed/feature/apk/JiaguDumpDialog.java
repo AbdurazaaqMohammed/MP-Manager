@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 /**
  * Root Jiagu Dumper (tools hub). UI over {@link JiaguDumpEngine}: dump the real
@@ -47,7 +47,7 @@ public final class JiaguDumpDialog {
     }
 
     public static void show(AppCompatActivity activity, String prefillPackage) {
-        if (!RootManager.getInstance(activity).isRootAvailable()) {
+        if (!PrivilegeManager.Root.isRootAvailable(activity)) {
             new MaterialAlertDialogBuilder(activity)
                     .setTitle(R.string.jiagu_dumper_title)
                     .setMessage(R.string.jiagu_root_required)

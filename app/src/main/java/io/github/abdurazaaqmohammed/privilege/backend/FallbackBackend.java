@@ -16,7 +16,8 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.InstallerSession;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.spi.Capability;
 import io.github.abdurazaaqmohammed.privilege.spi.FileOpsCap;
 import io.github.abdurazaaqmohammed.privilege.spi.InstallerCap;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
@@ -43,8 +44,8 @@ public final class FallbackBackend implements PrivilegeBackend, FileOpsCap, Inst
     }
 
     @Override
-    public int priority() {
-        return Integer.MIN_VALUE;
+    public int priorityFor(Class<? extends Capability> capability) {
+        return Integer.MIN_VALUE; // terminal fallback, always loses
     }
 
     @Override

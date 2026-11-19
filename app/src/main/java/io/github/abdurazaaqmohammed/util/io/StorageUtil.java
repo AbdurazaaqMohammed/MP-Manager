@@ -28,6 +28,8 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class StorageUtil {
 
@@ -198,7 +200,7 @@ public class StorageUtil {
         if (PrivilegeManager.Files.fileOpsOn(ctx)) {
             try {
                 if (PrivilegeManager.Root.isRootMode(ctx)) {
-                    io.github.abdurazaaqmohammed.privilege.impl.RootManager.ShellResult r = PrivilegeManager.Root.execute(ctx, "toybox stat -f -c '%b %a %s' " + PrivilegeManager.Root.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + PrivilegeManager.Root.escapeShellArg(si.path) + " 2>/dev/null", 5);
+                    ShellSession.ShellResult r = PrivilegeManager.Root.execute(ctx, "toybox stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null || stat -f -c '%b %a %s' " + ShellQuote.escapeShellArg(si.path) + " 2>/dev/null", 5);
                     if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                         String[] parts = r.output().trim().split("\\s+");
                         if (parts.length >= 3) {

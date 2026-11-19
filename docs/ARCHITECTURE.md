@@ -48,11 +48,15 @@ are leaf services usable by anyone, dependent on nothing business-related:
 - Some `feature/` subpackages still contain Activities/Services/Views
   (`feature/system` tools screens, `feature/freestyle` canvas). Splitting
   UI out of them is deferred; do not add new UI to `feature/`.
-- `privilege/impl/` (RootManager, AccessManager, Shizuku*, Native*, ipc)
-  is implementation, but ~30 feature/ui files still call it directly
-  (mostly `RootManager`'s instance API). New code must go through
-  `PrivilegeManager`; migrating the remaining call sites onto the session
-  interfaces is the open remainder of plan stage M5.
+- `privilege/internal/` holds the implementation (RootManager, AccessManager,
+  Shizuku*, Native*, ipc) plus the Legacy* session adapters. External callers
+  go through `PrivilegeManager`; the only remaining direct imports are the
+  `RootFile` / `ShizukuFile` `File` subclasses used with
+  `instanceof` / casts / `new` in UI/util code (a type-level usage that
+  requires moving the classes themselves or introducing a tag interface
+  — deferred as its own change). Everything else goes through
+  `PrivilegeManager` mirrors (`Root`, `Files`, `Shizuku`, `Staging`,
+  `Permissions`, `Native`, `Installer`, `Startup`).
 - `rikka/shizuku/ShizukuProcessFactory` stays in `rikka.shizuku` — it
   exists to reach a package-private ShizukuRemoteProcess constructor
   there and cannot move.
@@ -118,9 +122,18 @@ is: **`util/` contains no business logic and no privilege code.**
 
 See [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md) Problem 1 for the
 `privilege/` tree, session interfaces and registry rules. Backend
-selection order: `DHIZUKU > SHIZUKU > ROOT > NONE` (registered in
+selection is per capability, not a global ladder: SHIZUKU and DHIZUKU
+coexist as parallel privilege domains — SHIZUKU owns shell/file-ops
+(minimal privilege first), DHIZUKU owns device-owner operations, ROOT is
+the last-resort fallback, NONE the terminal fallback (registered in
 `App.onCreate`; registry-driven selection is exposed as
 `PrivilegeManager.preferredBackend`, default routing unchanged).
+
+Dhizuku authorization is user-reachable since S8: the settings root page
+shows a status line + grant button when the Dhizuku server app is
+installed (direct `Dhizuku.requestPermission`, mirroring the Shizuku
+grant button). This authorizes the backend; actual operation routing
+through the registry is still the open follow-up.
 
 | from | to |
 |---|---|
@@ -135,3 +148,21 @@ selection order: `DHIZUKU > SHIZUKU > ROOT > NONE` (registered in
 | M5: `privilege/legacy/` dissolved into `privilege/impl/`; unit tests relocated | — |
 
 The old top-level `utils/`, `shizuku/` and `MPManager/` packages are gone.
+
+## File browsing, comparison and checksums
+
+- `MainActivity` routes the hardware Menu key and the three-dot button to the same right drawer. The explicit Exit action calls the existing shutdown routine directly. The Behavior settings page controls `back_navigates_folders` (default true); disabling it bypasses folder/history navigation for Android Back, retaining transient UI dismissal and the existing double-Back exit behavior. The dedicated navigation buttons remain independent.
+- `dialog_settings.xml` hosts the Files/Root/General/Behavior/Other pages through `MainSettingsActivity`. The Files page exposes `show_file_permissions` (default false). `FileIconLoader` substitutes Unix mode information for dates outside shared-storage paths, retaining file sizes and folder-size preferences. Local/listing metadata is preferred; unavailable elevated metadata goes through the privilege facade, off the UI thread. Archive and remote metadata views retain dates.
+- Text comparison remains owned by `ui/editor/CompareTextActivity`. `util/text/TextDiffEngine` owns pure row alignment, All/Differences/Matches filtering and unified-diff generation; the activity owns selection, navigation, search and document-picker export. Export uses the complete comparison, independently of the visible filter.
+- `ui/main/ChecksumDialogs` exposes CRC32 `.sfv` and MD5 `.md5` generation for files sharing a directory, with overwrite confirmation and pane refresh. `util/hash/HashUtil` owns manifest formatting, parsing and verification. `FileOpener` preserves the original parent when a manifest is staged; archive checksum entries route through `DexTools` to sibling-entry verification. Verification reports valid, changed, missing and rejected entries. Manifest paths cannot contain parent traversal or absolute paths; generated names must round-trip through the chosen format. Elevated IO uses `PrivilegeManager` mirrors, without new implementation dependencies.
+- `UnifiedEditorFragment` resolves line-number visibility consistently during initialization and resume. The current `editor_prefs/pref_show_line_numbers` setting takes precedence, with `show_line_numbers` retained only as a legacy fallback.
+
+
+## Installed themes
+
+`plugins/themes/ThemePacks` discovers installed theme APKs and imports a validated,
+signer-pinned data snapshot. `PluginPackageReceiver` invalidates discovery and
+cleans up on uninstall. `ui/common/theme/ThemeRegistry` uses the snapshot at
+activity creation; `SettingsController` owns selection and reuses the existing
+restart flow. The built-in preference remains the fallback and no theme DEX is
+loaded. See [the v1 author contract](THIRD_PARTY_PLUGINS.md#installed-themes-v1).

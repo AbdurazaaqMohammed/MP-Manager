@@ -13,8 +13,8 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 
 public final class RootSessions {
 
@@ -38,7 +38,7 @@ public final class RootSessions {
 
         @Override
         public Result exec(String command, long timeoutSeconds) {
-            RootManager.ShellResult r = RootManager.getInstance(null).execute(command, (int) timeoutSeconds);
+            ShellSession.ShellResult r = RootManager.getInstance(null).execute(command, (int) timeoutSeconds);
             return new Result(r.exitCode() == 0, r.output(), r.error(), r.exitCode());
         }
 

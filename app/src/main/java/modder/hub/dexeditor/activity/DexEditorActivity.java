@@ -61,6 +61,7 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -144,6 +145,7 @@ import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.FileUtil;
 import modder.hub.dexeditor.utils.Notify_MT;
+import modder.hub.dexeditor.utils.RegexGuard;
 import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertCircularProgress;
 import modder.hub.dexeditor.views.AlertProgress;
@@ -2557,20 +2559,64 @@ public class DexEditorActivity extends BaseActivity {
         });
         container.addView(filterBox);
 
+        // Match case / regex / exactly match, like the other search dialogs of the app.
+        SharedPreferences searchPrefs = getSharedPreferences("search_prefs", MODE_PRIVATE);
+        StringAdapter.FilterSpec current = adapter.getCurrentSpec();
+        CheckBox cbMatchCase = new CheckBox(this);
+        cbMatchCase.setText(R.string.match_case);
+        CheckBox cbRegex = new CheckBox(this);
+        cbRegex.setText(R.string.regex);
+        CheckBox cbExactlyMatch = new CheckBox(this);
+        cbExactlyMatch.setText(R.string.exactly_match);
+        if (current != null && current.active && (current.matchCase || current.regex || current.exact)) {
+            cbMatchCase.setChecked(current.matchCase);
+            cbRegex.setChecked(current.regex);
+            cbExactlyMatch.setChecked(current.exact);
+        } else {
+            cbMatchCase.setChecked(searchPrefs.getBoolean("strings_filter_match_case", false));
+            cbRegex.setChecked(searchPrefs.getBoolean("strings_filter_regex", false));
+            cbExactlyMatch.setChecked(searchPrefs.getBoolean("strings_filter_exactly_match", false));
+        }
+        container.addView(cbMatchCase);
+        container.addView(cbRegex);
+        container.addView(cbExactlyMatch);
+
         AlertDialog filterDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.filter_strings)
                 .setView(container)
-                .setPositiveButton(R.string.apply, (d, w) -> {
-                    String filter = editText.getText().toString();
-                    adapter.setFilter(filter);
-                    SearchHistoryHelper.push(this,
-                            SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, filter);
-                })
+                .setPositiveButton(R.string.apply, null)
                 .setNegativeButton(R.string.clear, (d, w) -> adapter.setFilter(null))
                 .setNeutralButton(android.R.string.cancel, null)
                 .create();
         KeyboardUtil.focusOnShow(filterDialog, editText, false);
         filterDialog.show();
+        // Custom click so an invalid regex keeps the dialog open instead of
+        // silently closing and applying nothing.
+        filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String filter = editText.getText().toString();
+            if (cbRegex.isChecked() && !filter.isEmpty()) {
+                String regexError = RegexGuard.validate(filter, cbMatchCase.isChecked());
+                if (regexError != null) {
+                    Extensions.showMessage(this, regexError);
+                    return;
+                }
+            }
+            searchPrefs.edit()
+                    .putBoolean("strings_filter_match_case", cbMatchCase.isChecked())
+                    .putBoolean("strings_filter_regex", cbRegex.isChecked())
+                    .putBoolean("strings_filter_exactly_match", cbExactlyMatch.isChecked())
+                    .apply();
+            StringAdapter.FilterSpec spec = new StringAdapter.FilterSpec();
+            spec.query = filter;
+            spec.matchCase = cbMatchCase.isChecked();
+            spec.regex = cbRegex.isChecked();
+            spec.exact = cbExactlyMatch.isChecked();
+            spec.active = !filter.trim().isEmpty();
+            adapter.applyFilter(spec);
+            SearchHistoryHelper.push(this,
+                    SearchHistoryHelper.KEY_DEX_STRINGS_FILTER, filter);
+            filterDialog.dismiss();
+        });
         return filterDialog;
     }
 

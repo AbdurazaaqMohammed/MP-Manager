@@ -5,7 +5,7 @@ import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
 import io.github.abdurazaaqmohammed.feature.system.ToolLauncher;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
@@ -23,6 +23,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -32,6 +33,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -43,6 +45,7 @@ import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
 import android.view.GestureDetector;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -124,7 +127,9 @@ import com.reandroid.utils.io.FileUtil;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -149,8 +154,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
@@ -165,12 +168,11 @@ import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -206,6 +208,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
     public boolean isSidebarDrawerOpen;
     public boolean isBookmarksDrawerOpen;
+    private boolean isRightDrawerOpen;
+    private TextView batteryMonitorText;
+    private final Runnable batteryTicker = new Runnable() {
+        @Override
+        public void run() {
+            if (isRightDrawerOpen && !isFinishing() && !isDestroyed()) {
+                updateBatteryStatus();
+                if (handler != null) {
+                    handler.postDelayed(this, 1000);
+                }
+            }
+        }
+    };
 
     public Handler handler;
     private boolean systemTheme;
@@ -422,6 +437,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onPause() {
         super.onPause();
+        stopBatteryMonitor();
         updates.unregister();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = settings.edit()
@@ -742,10 +758,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return;
         }
         try {
-            RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
+            PrivilegeManager.Permissions.tryAutoGrantInspector(MainActivity.this);
         } catch (Exception ignored) {
         }
-        if (RootPermissionHelper.hasAccessibility(this)
+        if (PrivilegeManager.Permissions.hasAccessibility(this)
                 && AccessibilityMonitoringService.getInstance() == null) {
             waitForAccessibilityService(0);
             return;
@@ -933,7 +949,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
 
         boolean lightBars;
-        String pluginId = ThemeRegistry.getCurrentId(this);
+        String pluginId = ThemeRegistry.appliedBaseId(this);
         if (pluginId == null || BuiltInThemes.SYSTEM_DEFAULT_ID.equals(pluginId)) {
             lightBars = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                     == Configuration.UI_MODE_NIGHT_NO;
@@ -942,7 +958,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             int surfaceColor = BuiltInThemes.BLACK_ID.equals(pluginId) ? Color.BLACK : MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
-            getWindow().setStatusBarColor(surfaceColor);
+            getWindow().setStatusBarColor(ThemeRegistry.packColor(this, "status_bar", surfaceColor));
             // Light navigation icons are only renderable on API 26+ (flag) and
             // reliably on 27+; below that a surface-colored bar shows white
             // icons on white, so use a dark bar to keep the buttons visible.
@@ -951,7 +967,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 getWindow().setNavigationBarColor(MaterialColors.getColor(this,
                         com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
             } else {
-                getWindow().setNavigationBarColor(surfaceColor);
+                getWindow().setNavigationBarColor(ThemeRegistry.packColor(this, "nav_bar", surfaceColor));
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
                 // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
@@ -995,9 +1011,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // BaseActivity applied the ThemeRegistry plugin; sync legacy fields for
         // status-bar tinting, icon colors and intent extras during transition.
         theme = ThemeRegistry.currentStyleRes(this);
-        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
+        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.appliedBaseId(this));
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        ShizukuFileOps.init(this);
+        PrivilegeManager.Shizuku.init(this);
         DirSizeCache.init(this);
         // Logcat capture is opt-in at app start; opening the Logcat screen
         // always starts it regardless of this preference.
@@ -1062,6 +1078,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
+        batteryMonitorText = findViewById(R.id.batteryMonitorText);
         View sidebarDrawer = findViewById(R.id.sidebar_drawer);
 
         if (sidebarDrawer.getBackground() instanceof GradientDrawable sidebarBackground) {
@@ -1099,6 +1116,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             @Override
             public void onDrawerOpened(View drawerView) {
                 if (drawerView.getId() == R.id.right_menu_drawer) {
+                    isRightDrawerOpen = true;
+                    startBatteryMonitor();
                     refreshRightMenuDrawer();
                     return;
                 }
@@ -1118,7 +1137,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
             @Override
             public void onDrawerClosed(View drawerView) {
-                if (drawerView.getId() == R.id.sidebar_drawer) {
+                if (drawerView.getId() == R.id.right_menu_drawer) {
+                    isRightDrawerOpen = false;
+                    stopBatteryMonitor();
+                } else if (drawerView.getId() == R.id.sidebar_drawer) {
                     isSidebarDrawerOpen = false;
                 }
             }
@@ -1177,7 +1199,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         uiHelper = new UIHelper(this);
 
         logEnabled = settings.getBoolean("logEnabled", false);
-        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.getCurrentId(this));
+        systemTheme = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(ThemeRegistry.appliedBaseId(this));
         String homeDir1Path = settings.getString("home1", null);
         homeDir1 = TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory() : new File(homeDir1Path);
         String homeDir2Path = settings.getString("home2", null);
@@ -1254,7 +1276,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             if (!canOpen) {
                                 try {
                                     String abs = inputPath.getAbsolutePath();
-                                    if (PrivilegeManager.Files.exists(this, abs) && RootManager.getInstance(this).isDirectory(abs)) {
+                                    if (PrivilegeManager.Files.exists(this, abs) && PrivilegeManager.Files.isDirectory(this, abs)) {
                                         canOpen = true;
                                     }
                                 } catch (Exception ignored) {
@@ -1429,17 +1451,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
             View moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
             moreOptionsMenu.setOnLongClickListener(this::showMsgOnLongPress);
-            moreOptionsMenu.setOnClickListener(v -> {
-                if (drawerLayout != null) {
-                    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                        drawerLayout.closeDrawer(GravityCompat.END);
-                    } else {
-                        // Open first, build after: drawer animation must not wait on view building.
-                        drawerLayout.openDrawer(GravityCompat.END);
-                        refreshRightMenuDrawer();
-                    }
-                }
-            });
+            moreOptionsMenu.setOnClickListener(v -> toggleRightMenuDrawer());
 
             View upButton = findViewById(R.id.upButton);
             upButton.setOnLongClickListener(this::showMsgOnLongPress);
@@ -1668,6 +1680,32 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    private void toggleRightMenuDrawer() {
+        if (drawerLayout == null) return;
+        if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.closeDrawer(GravityCompat.END);
+            isRightDrawerOpen = false;
+            stopBatteryMonitor();
+        } else {
+            // Open first, build after: drawer animation must not wait on view building.
+            drawerLayout.openDrawer(GravityCompat.END);
+            isRightDrawerOpen = true;
+            startBatteryMonitor();
+            refreshRightMenuDrawer();
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                toggleRightMenuDrawer();
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (isBookmarksDrawerOpen && ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -1702,29 +1740,34 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (filterBar != null) filterBar.setText("");
             } else {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                boolean navigateOnBack = PreferenceManager.getDefaultSharedPreferences(this)
+                        .getBoolean("back_navigates_folders", true);
                 if(a instanceof MainFilesArrayAdapter adapter) {
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
                     else if (adapter.isSearchResultsMode()) {
                         clearSearchResults(adapter.pane1);
                     } else {
-                        boolean handled = adapter.goUpOnBack();
-                        if (!handled) {
+                        boolean handled = navigateOnBack && adapter.goUpOnBack();
+                        if (!handled && navigateOnBack) {
                             handled = navigateBack(adapter.pane1);
                         }
-                        if (!handled) {
-                            if (isBackPressedToExit) {
-                                handler.removeCallbacks(resetExitPrompt);
-                                finishAffinity();
-                            } else {
-                                isBackPressedToExit = true;
-                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
-                                handler.postDelayed(resetExitPrompt, 2000);
-                            }
-                        }
+                        if (!handled) handleBackToExit();
                     }
-                } else if (a instanceof RemoteFilesArrayAdapter remote) remote.goUp();
+                } else if (!navigateOnBack) handleBackToExit();
+                else if (a instanceof RemoteFilesArrayAdapter remote) remote.goUp();
                 else ftp.ftpParent(lastPaneSelected == 1);
             }
+        }
+    }
+
+    private void handleBackToExit() {
+        if (isBackPressedToExit) {
+            handler.removeCallbacks(resetExitPrompt);
+            finishAffinity();
+        } else {
+            isBackPressedToExit = true;
+            Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+            handler.postDelayed(resetExitPrompt, 2000);
         }
     }
 
@@ -2002,10 +2045,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      *         (the user has already been notified in that case).
      */
     private File[] listPlainFolder(File folder, boolean pane1) {
-        boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
+        boolean shizukuDir = PrivilegeManager.Shizuku.isAndroidDataPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
-        boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
+        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath);
         if (rootListingPath && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT && PrivilegeManager.Files.fileOpsOn(this)) {
             files = PrivilegeManager.Files.listWithStat(this, folder.getAbsolutePath());
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
@@ -2018,14 +2061,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // the contents rather than the folder really being empty).
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
         if (appListingIncomplete) {
-            File[] viaShizuku = ShizukuFile.tryList(this, folder);
+            File[] viaShizuku = PrivilegeManager.Shizuku.tryList(this, folder);
             if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) files = viaShizuku;
         }
         if (files == null || (files.length == 0 && appListingIncomplete)) {
             boolean elevated = PrivilegeManager.Files.fileOpsOn(this);
             if (!elevated) {
                 try {
-                    elevated = RootPermissionHelper.hasElevatedShell(this);
+                    elevated = PrivilegeManager.Permissions.hasElevatedShell(this);
                 } catch (Exception ignored) {
                 }
             }
@@ -2039,8 +2082,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 if ((files == null || files.length == 0) && (shizukuDir || rootListingPath || !folder.canRead())) {
                     try {
-                        if (RootManager.getInstance(this).isRootAvailable()) {
-                            File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                        if (PrivilegeManager.Root.isRootAvailable(this)) {
+                            File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
                             if (directRoot != null) {
                                 directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
                                 if (directRoot.length > 0 || files == null) files = directRoot;
@@ -2050,8 +2093,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             } else {
                 try {
-                    if (RootManager.getInstance(this).isRootAvailable()) {
-                        File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                    if (PrivilegeManager.Root.isRootAvailable(this)) {
+                        File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
                         if (directRoot != null) {
                             directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
                             if (directRoot.length > 0 || files == null) files = directRoot;
@@ -2061,7 +2104,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             if (files == null && shizukuDir && PrivilegeManager.Files.active(this) != PrivilegeManager.Backend.ROOT) {
                 boolean rootAvailable = false;
-                try { rootAvailable = RootManager.getInstance(this).isRootAvailable(); } catch (Exception ignored) {}
+                try { rootAvailable = PrivilegeManager.Root.isRootAvailable(this); } catch (Exception ignored) {}
                 if (!rootAvailable) runOnUiThread(() -> {
                     try {
                         showShizukuGuideOnce(folder, pane1);
@@ -2705,7 +2748,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (currentFolder != null && FileIconLoader.isUserStorage(currentFolder.getAbsolutePath())) {
                 DirSizeCache.invalidatePrefix(currentFolder);
             }
-            RootManager.getInstance(this).invalidateListCache();
+            PrivilegeManager.Root.invalidateListCache(this);
         } catch (Exception ignored) { }
         reloadOnePane(pane1, false);
         reloadOnePane(!pane1, false);
@@ -2904,7 +2947,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             }
             if (minPos != Integer.MAX_VALUE) {
-                lm.scrollToPositionWithOffset(minPos, 0);
+                int itemHeight = pane.getChildCount() > 0 ? pane.getChildAt(0).getHeight() : (int) (pane.getResources().getDisplayMetrics().density * 56);
+                int centerOffset = Math.max(0, (pane.getHeight() - itemHeight) / 2);
+                lm.scrollToPositionWithOffset(minPos, centerOffset);
             }
         } catch (Exception ignored) {
         }
@@ -3020,7 +3065,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 if (!(adapter instanceof MainFilesArrayAdapter filesAdapter)) return;
                 int pos = filesAdapter.findPositionByName(name);
                 if (pos < 0) return;
-                lm.scrollToPositionWithOffset(pos, 0);
+                int itemHeight = pane.getChildCount() > 0 ? pane.getChildAt(0).getHeight() : (int) (pane.getResources().getDisplayMetrics().density * 56);
+                int centerOffset = Math.max(0, (pane.getHeight() - itemHeight) / 2);
+                lm.scrollToPositionWithOffset(pos, centerOffset);
 
                 // Single Green Flash: ON
                 markGreen(pane1, name);
@@ -3157,23 +3204,34 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             if (pane == null) return;
             RecyclerView.Adapter<?> adapter = pane.getAdapter();
+            // The reload below rebuilds the adapter from the raw listing; if a
+            // filter is active it must be re-applied once the new adapter is
+            // bound, otherwise the filter box keeps its text but nothing is
+            // filtered (seen after returning to the app from another one).
+            Runnable afterBind = () -> {
+                if (saved != null) restorePaneScroll(pane1, saved);
+                try {
+                    sortFilter.applyFilterToPaneIfAny(pane1);
+                } catch (Exception ignored) {
+                }
+            };
             if (adapter instanceof MainFilesArrayAdapter filesAdapter) {
                 if (filesAdapter.isInZip) {
                     File zipFile = pane1 ? pane1Folder : pane2Folder;
                     if (zipFile == null) return;
                     String zipPath = filesAdapter.currentZipPath == null ? "" : filesAdapter.currentZipPath;
-                    loadZipFolderInPane(zipFile, zipPath, pane1, false,
-                            saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+                    loadZipFolderInPane(zipFile, zipPath, pane1, false, afterBind);
                     return;
                 }
                 File folder = pane1 ? pane1Folder : pane2Folder;
                 if (folder == null) return;
-                loadFolderInPaneAsync(folder, pane1, false,
-                        saved != null ? () -> restorePaneScroll(pane1, saved) : null);
+                loadFolderInPaneAsync(folder, pane1, false, afterBind);
             } else if (adapter instanceof RemoteFilesArrayAdapter remote) {
                 loadFolderInPane(remote.folder, pane1, false);
+                sortFilter.applyFilterToPaneIfAny(pane1);
             } else if (adapter instanceof FtpFilesArrayAdapter) {
                 reloadPane(pane1, preserveScroll);
+                sortFilter.applyFilterToPaneIfAny(pane1);
             }
             // No adapter yet (cold start): nothing to refresh.
         } catch (Exception ignored) {
@@ -3328,6 +3386,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onResume() {
         super.onResume();
+        isBackPressedToExit = false;
+        handler.removeCallbacks(resetExitPrompt);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            isRightDrawerOpen = true;
+            startBatteryMonitor();
+        } else {
+            isRightDrawerOpen = false;
+            stopBatteryMonitor();
+        }
         CURRENT = new WeakReference<>(this);
         // Pane highlight style may have changed in Settings.
         try {
@@ -3490,6 +3557,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     @Override
     protected void onDestroy() {
+        stopBatteryMonitor();
         // Drop any in-flight background listing so it never touches dead views.
         invalidatePaneLoad(true);
         invalidatePaneLoad(false);
@@ -3532,20 +3600,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void showSearchDialog() {
         fileSearch.showSearchDialog();
-    }
-
-    /** Right-menu "Exit": confirm before killing in-flight work. */
-    public void confirmExitApp() {
-        try {
-            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                    .setTitle(R.string.exit)
-                    .setMessage(R.string.exit_confirm_message)
-                    .setPositiveButton(R.string.exit, (dialog, which) -> exitApp())
-                    .setNegativeButton(R.string.cancel, null)
-                    .create());
-        } catch (Exception ignored) {
-            exitApp();
-        }
     }
 
     /**
@@ -3772,6 +3826,94 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Right (more-options) drawer; rows are built by RightMenuController. */
     public void refreshRightMenuDrawer() {
         rightMenu.build();
+    }
+
+    private void startBatteryMonitor() {
+        if (handler != null) {
+            handler.removeCallbacks(batteryTicker);
+            updateBatteryStatus();
+            handler.postDelayed(batteryTicker, 1000);
+        }
+    }
+
+    private void stopBatteryMonitor() {
+        if (handler != null) {
+            handler.removeCallbacks(batteryTicker);
+        }
+    }
+
+    private int readBatteryCurrent(BatteryManager bm, boolean isCharging) {
+        int cur = 0;
+        if (bm != null) {
+            cur = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+        }
+        if (cur == Integer.MIN_VALUE || cur == 0) {
+            try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/current_now"))) {
+                String line = reader.readLine();
+                if (line != null) {
+                    cur = Integer.parseInt(line.trim());
+                }
+            } catch (Exception ignored) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/bms/current_now"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        cur = Integer.parseInt(line.trim());
+                    }
+                } catch (Exception ignored2) {
+                }
+            }
+        }
+        int curMa = Math.abs(cur) > 10000 ? cur / 1000 : cur;
+        return isCharging ? Math.abs(curMa) : -Math.abs(curMa);
+    }
+
+    private void updateBatteryStatus() {
+        if (batteryMonitorText == null) return;
+        try {
+            Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (batteryIntent == null) return;
+
+            int rawTemp = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
+            float tempC = rawTemp / 10.0f;
+            if (tempC <= 0.0f) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/temp"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        int t = Integer.parseInt(line.trim());
+                        tempC = t > 100 ? t / 10.0f : (float) t;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            int voltMv = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+            if (voltMv > 100000) voltMv /= 1000;
+            if (voltMv <= 0) {
+                try (BufferedReader reader = new BufferedReader(new FileReader("/sys/class/power_supply/battery/voltage_now"))) {
+                    String line = reader.readLine();
+                    if (line != null) {
+                        int v = Integer.parseInt(line.trim());
+                        voltMv = v > 100000 ? v / 1000 : v;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN);
+            boolean isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL);
+
+            BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
+            int curMa = readBatteryCurrent(bm, isCharging);
+
+            float watts = (Math.abs(curMa) * (voltMv > 0 ? voltMv : 4000)) / 1000000.0f;
+
+            String text = String.format(Locale.US, "%.1f\u00B0C  %d mA (%.1fW)", tempC, curMa, watts);
+            batteryMonitorText.setText(text);
+            if (batteryMonitorText.getVisibility() != View.VISIBLE) {
+                batteryMonitorText.setVisibility(View.VISIBLE);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public void showHiddenFilesMenu(View anchor) {

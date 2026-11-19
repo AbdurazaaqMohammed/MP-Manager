@@ -2,7 +2,6 @@ package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
@@ -21,6 +20,8 @@ import java.util.Locale;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 /**
  * Uninstalls a package so an APK signed with a different key can take its
@@ -43,7 +44,7 @@ public final class AppReinstaller {
     /** True when app data can be read, copied and put back. */
     public static boolean canSaveData(Context context) {
         try {
-            return RootManager.getInstance(context).isRootAvailable();
+            return PrivilegeManager.Root.isRootAvailable(context);
         } catch (Throwable t) {
             Log.w(TAG, "canSaveData check failed", t);
             return false;
@@ -59,35 +60,35 @@ public final class AppReinstaller {
      */
     @NonNull
     public static String backupDataOrThrow(Context context, String packageName) throws IOException {
-        if (packageName == null || RootManager.isPathBlocked(packageName)) {
+        if (packageName == null || PathGuards.isPathBlocked(packageName)) {
             throw new IOException("Package name is null or blocked: " + packageName);
         }
-        RootManager rm;
         try {
-            rm = RootManager.getInstance(context);
+            if (!PrivilegeManager.Root.isRootAvailable(context)) {
+                throw new IOException("Root access is not available or was denied.");
+            }
+        } catch (IOException e) {
+            throw e;
         } catch (Throwable t) {
-            Log.e(TAG, "Failed to get RootManager instance", t);
+            Log.e(TAG, "Failed to initialize root shell", t);
             throw new IOException("Root initialization failed: " + t.getMessage(), t);
-        }
-        if (!rm.isRootAvailable()) {
-            throw new IOException("Root access is not available or was denied.");
         }
 
         String tag = "_mpbak_" + UUID.randomUUID().toString().replace("-", "");
         String archive = "/data/local/tmp/" + tag + ".tar";
 
         // Force-stop app first to release sqlite and file locks
-        rm.executeFs("am force-stop " + RootManager.escapeShellArg(packageName), 15);
+        PrivilegeManager.Root.executeFs(context, "am force-stop " + ShellQuote.escapeShellArg(packageName), 15);
 
         // Check if data directory exists using filesystem root check (supports global namespace)
         String baseDir = "/data/user/0";
         String dir = baseDir + "/" + packageName;
-        if (!rm.isDirectory(dir)) {
+        if (!PrivilegeManager.Files.isDirectory(context, dir)) {
             baseDir = "/data/data";
             dir = baseDir + "/" + packageName;
-            if (!rm.isDirectory(dir)) {
+            if (!PrivilegeManager.Files.isDirectory(context, dir)) {
                 // If isDirectory returned false, run a final direct shell probe before aborting
-                RootManager.ShellResult probe = rm.executeFs("( [ -e " + RootManager.escapeShellArg(dir) + " ] || ls -d " + RootManager.escapeShellArg(dir) + " ) 2>/dev/null", 15);
+                ShellSession.ShellResult probe = PrivilegeManager.Root.executeFs(context, "( [ -e " + ShellQuote.escapeShellArg(dir) + " ] || ls -d " + ShellQuote.escapeShellArg(dir) + " ) 2>/dev/null", 15);
                 if (!probe.isSuccess() || probe.output() == null || probe.output().trim().isEmpty()) {
                     String err = "Data directory does not exist or cannot be accessed: " + dir;
                     Log.e(TAG, "backupData dir check failed: " + err);
@@ -98,11 +99,11 @@ public final class AppReinstaller {
 
         // Exclude cache and code_cache to prevent locks on transient files and avoid out-of-space errors
         String tarCmd = "tar -C " + baseDir + " --exclude cache --exclude code_cache -cf "
-                + RootManager.escapeShellArg(archive) + " " + RootManager.escapeShellArg(packageName);
-        RootManager.ShellResult result = rm.executeFs(tarCmd, 180);
+                + ShellQuote.escapeShellArg(archive) + " " + ShellQuote.escapeShellArg(packageName);
+        ShellSession.ShellResult result = PrivilegeManager.Root.executeFs(context, tarCmd, 180);
         
         // Check if archive was successfully created and is non-empty
-        RootManager.ShellResult checkArchive = rm.executeFs("test -s " + RootManager.escapeShellArg(archive), 15);
+        ShellSession.ShellResult checkArchive = PrivilegeManager.Root.executeFs(context, "test -s " + ShellQuote.escapeShellArg(archive), 15);
         if (!checkArchive.isSuccess()) {
             String err = result.error().isEmpty() ? (result.output().isEmpty() ? "tar exited with code " + result.exitCode() : result.output()) : result.error();
             Log.e(TAG, "backupData tar command failed: " + err + " (exit: " + result.exitCode() + ")");
@@ -132,16 +133,15 @@ public final class AppReinstaller {
     @Nullable
     public static String readDataOwner(Context context, String packageName) {
         try {
-            RootManager rm = RootManager.getInstance(context);
-            if (!rm.isRootAvailable()) {
+            if (!PrivilegeManager.Root.isRootAvailable(context)) {
                 Log.w(TAG, "readDataOwner: root unavailable for " + packageName);
                 return null;
             }
-            RootManager.ShellResult r = rm.executeFs(
-                    "stat -c %u:%g /data/user/0/" + RootManager.escapeShellArg(packageName), 20);
+            ShellSession.ShellResult r = PrivilegeManager.Root.executeFs(context,
+                    "stat -c %u:%g /data/user/0/" + ShellQuote.escapeShellArg(packageName), 20);
             if (!r.isSuccess() || r.output() == null) {
                 // Try fallback to /data/data
-                r = rm.executeFs("stat -c %u:%g /data/data/" + RootManager.escapeShellArg(packageName), 20);
+                r = PrivilegeManager.Root.executeFs(context, "stat -c %u:%g /data/data/" + ShellQuote.escapeShellArg(packageName), 20);
                 if (!r.isSuccess() || r.output() == null) {
                     Log.w(TAG, "readDataOwner stat failed: " + r.error() + " (exit: " + r.exitCode() + ")");
                     return null;
@@ -165,28 +165,28 @@ public final class AppReinstaller {
         if (archive == null || packageName == null) {
             throw new IOException("Invalid arguments: archive=" + archive + ", package=" + packageName);
         }
-        RootManager rm;
         try {
-            rm = RootManager.getInstance(context);
+            if (!PrivilegeManager.Root.isRootAvailable(context)) {
+                throw new IOException("Root access is not available or was denied.");
+            }
+        } catch (IOException e) {
+            throw e;
         } catch (Throwable t) {
-            Log.e(TAG, "restoreData: Failed to get RootManager", t);
+            Log.e(TAG, "restoreData: failed to initialize root shell", t);
             throw new IOException("Root initialization failed: " + t.getMessage(), t);
-        }
-        if (!rm.isRootAvailable()) {
-            throw new IOException("Root access is not available or was denied.");
         }
 
         StringBuilder cmd = new StringBuilder();
-        cmd.append("am force-stop ").append(RootManager.escapeShellArg(packageName)).append(" ; ");
-        cmd.append("tar -C /data/user/0 -xf ").append(RootManager.escapeShellArg(archive))
-                .append(" ").append(RootManager.escapeShellArg(packageName)).append(" ; ");
+        cmd.append("am force-stop ").append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
+        cmd.append("tar -C /data/user/0 -xf ").append(ShellQuote.escapeShellArg(archive))
+                .append(" ").append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
         if (owner != null && owner.contains(":")) {
             cmd.append("chown -R ").append(owner).append(" /data/user/0/")
-                    .append(RootManager.escapeShellArg(packageName)).append(" ; ");
+                    .append(ShellQuote.escapeShellArg(packageName)).append(" ; ");
         }
-        cmd.append("restorecon -RF /data/user/0/").append(RootManager.escapeShellArg(packageName));
+        cmd.append("restorecon -RF /data/user/0/").append(ShellQuote.escapeShellArg(packageName));
 
-        RootManager.ShellResult r = rm.executeFs(cmd.toString(), 300);
+        ShellSession.ShellResult r = PrivilegeManager.Root.executeFs(context, cmd.toString(), 300);
         if (!r.isSuccess()) {
             String err = r.error().isEmpty() ? (r.output().isEmpty() ? "restore command exited with code " + r.exitCode() : r.output()) : r.error();
             Log.e(TAG, "restoreData failed: " + err + " (exit: " + r.exitCode() + ")");
@@ -209,7 +209,7 @@ public final class AppReinstaller {
     public static void deleteBackup(Context context, String archive) {
         if (archive == null) return;
         try {
-            RootManager.getInstance(context).execute("rm -f " + RootManager.escapeShellArg(archive), 30);
+            PrivilegeManager.Root.execute(context, "rm -f " + ShellQuote.escapeShellArg(archive), 30);
         } catch (Throwable t) {
             Log.w(TAG, "deleteBackup failed to remove: " + archive, t);
         }
@@ -225,18 +225,17 @@ public final class AppReinstaller {
         new Thread(() -> {
             boolean done = false;
             try {
-                RootManager rm = RootManager.getInstance(activity);
-                if (rm.isRootAvailable()) {
+                if (PrivilegeManager.Root.isRootAvailable(activity)) {
                     // Try full uninstall first to clear package signature completely across system
-                    RootManager.ShellResult r = rm.execute(
-                            "pm uninstall " + RootManager.escapeShellArg(packageName), 120);
+                    ShellSession.ShellResult r = PrivilegeManager.Root.execute(activity,
+                            "pm uninstall " + ShellQuote.escapeShellArg(packageName), 120);
                     String out = r.output();
                     if (r.isSuccess() && out != null && out.toLowerCase(Locale.ROOT).contains("success")) {
                         done = true;
                     } else {
                         // Fallback to --user 0 if multi-user or system restrictions require it
-                        RootManager.ShellResult rUser0 = rm.execute(
-                                "pm uninstall --user 0 " + RootManager.escapeShellArg(packageName), 120);
+                        ShellSession.ShellResult rUser0 = PrivilegeManager.Root.execute(activity,
+                                "pm uninstall --user 0 " + ShellQuote.escapeShellArg(packageName), 120);
                         String outUser0 = rUser0.output();
                         if (rUser0.isSuccess() && outUser0 != null && outUser0.toLowerCase(Locale.ROOT).contains("success")) {
                             done = true;
@@ -252,7 +251,7 @@ public final class AppReinstaller {
                 try {
                     if (PrivilegeManager.shizuku().isGranted()) {
                         ShellSession.Result r = PrivilegeManager.shizuku().exec(
-                                "pm uninstall --user 0 " + RootManager.escapeShellArg(packageName), 120);
+                                "pm uninstall --user 0 " + ShellQuote.escapeShellArg(packageName), 120);
                         if (r != null && r.success && r.stdout != null
                                 && r.stdout.toLowerCase(Locale.ROOT).contains("success")) {
                             done = true;

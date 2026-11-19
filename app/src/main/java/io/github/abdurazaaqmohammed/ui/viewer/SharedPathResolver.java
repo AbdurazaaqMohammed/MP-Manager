@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 
 
 import android.content.ContentUris;
@@ -30,7 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 /**
  * Fast replacement for the old LocateActivity path search.
@@ -225,7 +225,7 @@ public final class SharedPathResolver {
         // same-name match — it replaces the MediaStore guess above. Skipped when
         // the source app is unknown or the time budget is already spent.
         try {
-            if (RootManager.isPackageNameValid(sourcePackage) && !isCancelled(cancel)) {
+            if (PackageGuards.isPackageNameValid(sourcePackage) && !isCancelled(cancel)) {
                 log("step6 searching data dirs of " + sourcePackage);
                 Hit hit = searchPackageDataDirs(ctx, sourcePackage, nameForSearch(uri, r),
                         r.size, cancel, deadline);
@@ -600,7 +600,7 @@ public final class SharedPathResolver {
         if (authority.startsWith("com.android.") || authority.startsWith("android.")) return null;
         String candidate = authority;
         while (candidate != null && !candidate.isEmpty()) {
-            if (RootManager.isPackageNameValid(candidate)) return candidate;
+            if (PackageGuards.isPackageNameValid(candidate)) return candidate;
             int dot = candidate.lastIndexOf('.');
             if (dot <= 0) break;
             candidate = candidate.substring(0, dot);

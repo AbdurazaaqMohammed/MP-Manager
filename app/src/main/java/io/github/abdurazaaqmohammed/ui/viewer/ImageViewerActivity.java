@@ -46,7 +46,7 @@ import java.util.Set;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -453,9 +453,9 @@ public class ImageViewerActivity extends BaseActivity {
         ProgressManager pm = new ProgressManager(this, true).show();
         new Thread(() -> {
             StringBuilder sb = new StringBuilder();
-            sb.append(NativeToolManager.diagnoseExec(ImageViewerActivity.this));
-            sb.append("ABI: ").append(NativeToolManager.deviceAbi()).append("\n");
-            File pack = new File(getFilesDir(), "native/native-" + NativeToolManager.deviceAbi());
+            sb.append(PrivilegeManager.Native.diagnoseExec(ImageViewerActivity.this));
+            sb.append("ABI: ").append(PrivilegeManager.Native.deviceAbi()).append("\n");
+            File pack = new File(getFilesDir(), "native/native-" + PrivilegeManager.Native.deviceAbi());
             sb.append("Pack dir: ").append(pack.isDirectory() ? "present" : "missing").append("\n");
             try {
                 File nativeLibDir = new File(getApplicationInfo().nativeLibraryDir);
@@ -473,8 +473,8 @@ public class ImageViewerActivity extends BaseActivity {
             } catch (Exception e) {
                 sb.append("Bundled tools: error ").append(e.getMessage()).append("\n");
             }
-            File jpegtran = NativeToolManager.jpegtranBinary(this);
-            sb.append("jpegtran: ").append(NativeToolManager.describeFile(jpegtran)).append("\n");
+            File jpegtran = PrivilegeManager.Native.jpegtranBinary(this);
+            sb.append("jpegtran: ").append(PrivilegeManager.Native.describeFile(jpegtran)).append("\n");
             if (jpegtran.isFile()) {
                 try {
                     System.load(jpegtran.getAbsolutePath());
@@ -502,8 +502,8 @@ public class ImageViewerActivity extends BaseActivity {
                     sb.append("jpegtran exec: FAILED ").append(e.getMessage()).append("\n");
                 }
             }
-            File jniLib = new File(getFilesDir(), "native/" + "native-" + NativeToolManager.deviceAbi() + "/lib/libjpegtran_jni.so");
-            sb.append("jni lib: ").append(NativeToolManager.describeFile(jniLib)).append("\n");
+            File jniLib = new File(getFilesDir(), "native/" + "native-" + PrivilegeManager.Native.deviceAbi() + "/lib/libjpegtran_jni.so");
+            sb.append("jni lib: ").append(PrivilegeManager.Native.describeFile(jniLib)).append("\n");
             if (jniLib.isFile()) {
                 try {
                     if (JpegtranJni.load(jniLib.getAbsolutePath())) {

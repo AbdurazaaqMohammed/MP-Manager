@@ -1,0 +1,1140 @@
+package io.github.abdurazaaqmohammed.privilege.internal;
+
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+
+import io.github.abdurazaaqmohammed.util.io.FileUtils;
+import io.github.abdurazaaqmohammed.util.io.SafFs;
+import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.io.TransferControl;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Build;
+import android.os.ParcelFileDescriptor;
+import androidx.preference.PreferenceManager;
+
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.api.NativeCopyException;
+import io.github.abdurazaaqmohammed.privilege.api.NativeDeleteException;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
+import io.github.abdurazaaqmohammed.util.io.PathGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class AccessManager {
+
+    public enum Backend { NONE, ROOT, SHIZUKU }
+
+    private AccessManager() {
+    }
+
+    public static Backend active(Context context) {
+        if (context == null) return Backend.NONE;
+        WorkingModePrefs.WorkingMode mode = RootManager.getInstance(context).getWorkingMode();
+        if (mode == WorkingModePrefs.WorkingMode.ROOT) return Backend.ROOT;
+        if (mode == WorkingModePrefs.WorkingMode.SHIZUKU
+                && Build.VERSION.SDK_INT >= 23) return Backend.SHIZUKU;
+        return Backend.NONE;
+    }
+
+    public static boolean fileOpsOn(Context context) {
+        if (context == null) return false;
+        RootManager rm = RootManager.getInstance(context);
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
+            return rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        }
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+        }
+        return false;
+    }
+
+    public static boolean extractorOn(Context context) {
+        if (context == null) return false;
+        RootManager rm = RootManager.getInstance(context);
+        if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) return rm.isRootExtractorEnabled();
+        return false;
+    }
+
+    public static boolean needsElevated(Context context, String absPath) {
+        if (context == null || absPath == null || absPath.isEmpty()) return false;
+        try {
+            File f = new File(absPath);
+            if (f.exists() && f.canRead()) return false;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager rm = RootManager.getInstance(context);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
+            try {
+                return rm.exists(absPath);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        if (backend == Backend.SHIZUKU) {
+            try {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                if (!prefs.getBoolean("shizuku_file_ops", false)) return false;
+                return ShizukuManager.exists(context, absPath);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public static boolean exists(Context context, String absPath) {
+        if (absPath == null) return false;
+        try {
+            if (new File(absPath).exists()) return true;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).exists(absPath);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.exists(context, absPath);
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    /**
+     * Existence check through the elevated backend only. Unlike
+     * {@link #exists}, it never trusts the app-uid FUSE view: a removal done
+     * through /data/media behind FUSE's back can leave a cached dentry that
+     * makes {@code File.exists()} still report true for a deleted
+     * Android/data path - which showed "delete failed" after a successful
+     * elevated delete. Use this to verify the outcome of an elevated delete.
+     */
+    public static boolean elevatedExists(Context context, String absPath) {
+        if (absPath == null) return false;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).exists(absPath);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.exists(context, absPath);
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static boolean isDirectory(Context context, String absPath) {
+        if (absPath == null) return false;
+        try {
+            File f = new File(absPath);
+            if (f.exists() && f.isDirectory()) return true;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).isDirectory(absPath);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.isDirectory(context, absPath);
+            if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+                return RootManager.getInstance(context).isDirectory(absPath);
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static boolean isFile(Context context, String absPath) {
+        if (absPath == null) return false;
+        try {
+            File f = new File(absPath);
+            if (f.exists() && f.isFile()) return true;
+        } catch (Exception ignored) {
+        }
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).isFile(absPath);
+            if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+                return RootManager.getInstance(context).isFile(absPath);
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static File[] listWithStat(Context context, String dirPath) {
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
+        }
+        if (backend == Backend.SHIZUKU) {
+            return ShizukuManager.listWithStat(context, dirPath);
+        }
+        if (context != null && RootManager.getInstance(context).isRootAvailable()) {
+            return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
+        }
+        return null;
+    }
+
+    public static long getSize(Context context, String absPath) {
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) return RootManager.getInstance(context).getFileSize(absPath);
+        if (backend == Backend.SHIZUKU) return ShizukuManager.getFileSize(context, absPath);
+        try {
+            return new File(absPath).length();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public static long getMtime(Context context, String absPath) {
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager.RootEntry e = RootManager.getInstance(context).statEntry(absPath);
+            return e != null ? e.lastModified() : 0;
+        }
+        if (backend == Backend.SHIZUKU) return ShizukuManager.getMtime(context, absPath);
+        try {
+            return new File(absPath).lastModified();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public static File stageForRead(Context context, String srcAbsPath) throws IOException {
+        if (context == null) throw new IOException("No context");
+        if (srcAbsPath == null || !srcAbsPath.startsWith("/")) {
+            throw new IOException("Refusing to stage non-absolute path");
+        }
+        Backend backend = active(context);
+        File dst = newStagingTarget(context, srcAbsPath);
+        IOException firstFailure;
+        try {
+            stageForRead(context, backend, srcAbsPath, dst);
+            return dst;
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            dst.delete();
+            firstFailure = e;
+            if (backend == Backend.ROOT && canUseShizuku(context)) {
+                backend = Backend.SHIZUKU;
+            } else if (backend == Backend.SHIZUKU && canUseRoot(context)) {
+                backend = Backend.ROOT;
+            } else {
+                throw firstFailure;
+            }
+        }
+        File retried = newStagingTarget(context, srcAbsPath);
+        try {
+            // The two backends have genuinely different permissions: the shell uid
+            // often cannot read what root can (e.g. /vendor/build.prop is 0640
+            // root:root and readable by neither the app nor the shell), so a
+            // failure on one is worth retrying on the other before giving up.
+            stageForRead(context, backend, srcAbsPath, retried);
+            return retried;
+        } catch (IOException retryFailure) {
+            //noinspection ResultOfMethodCallIgnored
+            retried.delete();
+            retryFailure.addSuppressed(firstFailure);
+            throw retryFailure;
+        }
+    }
+
+    private static File newStagingTarget(Context context, String srcAbsPath) throws IOException {
+        File dir = RootStaging.stageDir(context);
+        String base = new File(srcAbsPath).getName();
+        if (base.isEmpty()) base = "staged_file";
+        base = base.replaceAll("[^a-zA-Z0-9_.-]", "_");
+        File dst = new File(dir, System.currentTimeMillis() + "_" + base);
+        int dup = 0;
+        while (dst.exists() && dup < 100) {
+            dst = new File(dir, System.currentTimeMillis() + "_" + (dup++) + "_" + base);
+        }
+        return dst;
+    }
+
+    private static boolean canUseRoot(Context context) {
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            return rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean canUseShizuku(Context context) {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void stageForRead(Context context, Backend backend, String srcAbsPath, File dst) throws IOException {
+        if (backend == Backend.ROOT) {
+            RootManager rm = RootManager.getInstance(context);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
+                throw new IOException("Root file access is disabled or unavailable");
+            }
+            // No size cap on read staging: the staged copy is a temp file on
+            // disk, not an in-memory read, so a big file should simply be
+            // copied rather than failing with "File too large for preview".
+            try (OutputStream os = new FileOutputStream(dst)) {
+                rm.streamFromRoot(srcAbsPath, os, Long.MAX_VALUE);
+            } catch (IOException e) {
+                //noinspection ResultOfMethodCallIgnored
+                dst.delete();
+                throw e;
+            }
+        } else if (backend == Backend.SHIZUKU) {
+            if (!canUseShizuku(context)) {
+                throw new IOException("Shizuku file access is disabled or unavailable");
+            }
+            try (OutputStream os = new FileOutputStream(dst)) {
+                if (ShizukuManager.isAllowed(srcAbsPath)) {
+                    ShizukuManager.streamFrom(context, srcAbsPath, os, Long.MAX_VALUE);
+                } else {
+                    ShizukuManager.streamFromShell(srcAbsPath, os, Long.MAX_VALUE);
+                }
+            } catch (IOException e) {
+                //noinspection ResultOfMethodCallIgnored
+                dst.delete();
+                throw e;
+            }
+        } else {
+            throw new IOException("No elevated access enabled");
+        }
+        if (!dst.isFile() || !dst.canRead()) {
+            //noinspection ResultOfMethodCallIgnored
+            dst.delete();
+            throw new IOException("Staging failed");
+        }
+    }
+
+    public static void writeBack(Context context, File stagedCopy, String originalAbsPath) throws IOException {
+        if (context == null) throw new IOException("No context");
+        if (stagedCopy == null || !stagedCopy.isFile()) throw new IOException("Nothing to save");
+        if (originalAbsPath == null || !originalAbsPath.startsWith("/")) {
+            throw new IOException("Refusing to write non-absolute path");
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager rm = RootManager.getInstance(context);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
+                throw new IOException("Root file access is disabled or unavailable");
+            }
+            rm.streamToRoot(stagedCopy, originalAbsPath);
+        } else if (backend == Backend.SHIZUKU) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            if (!prefs.getBoolean("shizuku_file_ops", false) || !ShizukuManager.ready()) {
+                throw new IOException("Shizuku file access is disabled or unavailable");
+            }
+            if (ShizukuManager.isAllowed(originalAbsPath)) {
+                ShizukuManager.streamTo(context, stagedCopy, originalAbsPath);
+            } else {
+                ShizukuManager.streamToShell(stagedCopy, originalAbsPath);
+            }
+        } else {
+            throw new IOException("No elevated access enabled");
+        }
+    }
+
+    public static void copyFile(Context context, String src, String dest, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).copyFile(src, dest);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.copyFile(context, src, dest);
+                return;
+            }
+        }
+        FileUtils.copyFile(new File(src), new File(dest));
+    }
+
+    public static void copyDir(Context context, String src, String dest, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).copyDir(src, dest);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.copyDir(context, src, dest);
+                return;
+            }
+        }
+        FileUtils.copyFolder(new File(src), new File(dest));
+    }
+
+    /**
+     * Moves one path.
+     *
+     * <p>Uses rename semantics rather than copy+delete: {@code mv} (root and
+     * Shizuku) and {@link File#renameTo} are a directory-entry update on the
+     * same filesystem, so a 2 GB file moves as fast as a 2 byte one. Only when
+     * the two paths are really on different filesystems does this fall back to
+     * streaming the bytes.</p>
+     */
+    public static void move(Context context, String src, String dest, boolean useElevated) throws IOException {
+        move(context, src, dest, useElevated, null);
+    }
+
+    /**
+     * Moves one path, with a pause / cancel token attached.
+     *
+     * <p>Uses rename semantics rather than copy+delete: {@code mv} (root and
+     * Shizuku) and {@link File#renameTo} are a directory-entry update on the
+     * same filesystem, so a 2 GB file moves as fast as a 2 byte one. Only when
+     * the two paths are really on different filesystems does this fall back to
+     * streaming the bytes.</p>
+     *
+     * @param control optional pause / cancel token; a cancelled {@code mv} is
+     *                stopped through the elevated backend that started it
+     */
+    public static void move(Context context, String src, String dest, boolean useElevated,
+                            TransferControl control) throws IOException {
+        File from = new File(src);
+        File to = new File(dest);
+        // Always try the app's own rename first, even in root/Shizuku mode: it
+        // is a directory-entry update and needs no shell at all. The elevated
+        // backends are the backup for paths this uid cannot touch.
+        if (from.renameTo(to)) return;
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).rename(src, dest, control);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.rename(context, src, dest);
+                return;
+            }
+        }
+        if (control != null) control.checkpoint();
+        if (from.isDirectory()) FileUtils.copyFolder(from, to, listenerFor(control));
+        else FileUtils.copyFile(from, to, listenerFor(control));
+        delete(context, src, false);
+    }
+
+    /** Adapts the token to the copy helpers, or null when there is none. */
+    private static FileUtils.TransferListener listenerFor(TransferControl control) {
+        if (control == null) return null;
+        return new FileUtils.TransferListener() {
+            @Override public void onFile(File source, File destination) {
+            }
+            @Override public void onBytes(long count) {
+            }
+            @Override public void checkpoint() {
+                control.checkpoint();
+            }
+            @Override public TransferControl control() {
+                return control;
+            }
+        };
+    }
+
+    /**
+     * Moves a whole selection with {@code mv}, one shell round trip per
+     * backend. See {@link #move} for why this is not copy+delete.
+     */
+    public static void moveAll(Context context, List<CopyOp> ops,
+                               ShellProgress.Listener progress) throws IOException {
+        moveAll(context, ops, progress, null);
+    }
+
+    /**
+     * Moves a whole selection, with a pause / cancel token attached.
+     */
+    public static void moveAll(Context context, List<CopyOp> ops,
+                               ShellProgress.Listener progress,
+                               TransferControl control) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager.getInstance(context).moveAll(ops, progress, control);
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            ShizukuManager.moveAll(context, ops, progress, control);
+            return;
+        }
+        for (CopyOp op : ops) {
+            move(context, op.src, op.dest, false);
+            if (progress != null) progress.onProgress(Math.max(0, op.files), Math.max(0L, op.bytes));
+        }
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps. Equivalent to a copy
+     * followed by {@link #preserveTime}, but for the root backend it is a single
+     * {@code cp -pf} instead of a copy plus a stat plus a {@code touch}, which
+     * is what made moving small and empty files feel slow in root mode.
+     */
+    public static void copyPreserving(Context context, String src, String dest, boolean directory,
+                                      boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager rm = RootManager.getInstance(context);
+                if (directory) rm.copyDirPreserving(src, dest);
+                else rm.copyFilePreserving(src, dest);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                if (directory) ShizukuManager.copyDir(context, src, dest);
+                else ShizukuManager.copyFile(context, src, dest);
+                preserveTime(context, src, dest);
+                return;
+            }
+        }
+        if (directory) FileUtils.copyFolder(new File(src), new File(dest));
+        else FileUtils.copyFile(new File(src), new File(dest));
+        preserveTime(context, src, dest);
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch. The
+     * backend gets one shell process (root) or one command (shizuku shell
+     * paths) for the entire selection instead of one per item.
+     */
+    public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException {
+        copyAllPreserving(context, ops, null);
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch. The
+     * backend gets one shell process (root) or one command (shizuku shell
+     * paths) for the entire selection instead of one per item.
+     *
+     * @param progress receives per-item counters streamed out of that process
+     */
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
+                                         ShellProgress.Listener progress) throws IOException {
+        copyAllPreserving(context, ops, progress, null);
+    }
+
+    /**
+     * Copy that keeps mode, ownership and timestamps for a whole batch, with a
+     * pause / cancel token attached.
+     *
+     * @param progress receives per-item counters streamed out of that process
+     */
+    public static void copyAllPreserving(Context context, List<CopyOp> ops,
+                                         ShellProgress.Listener progress,
+                                         TransferControl control) throws IOException {
+        if (ops == null || ops.isEmpty()) return;
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            // High-performance Native I/O Daemon (mpio) path:
+            int completedFiles = 0;
+            long completedBytes = 0L;
+            int completedOps = 0;
+            try {
+                for (CopyOp op : ops) {
+                    if (control != null) control.checkpoint();
+                    final int baseFiles = completedFiles;
+                    final long baseBytes = completedBytes;
+                    final long[] itemDone = {0L, 0L};
+                    boolean success = NativeRootManager.copy(context, op.src, op.dest,
+                            (filesDone, bytesDone, currentItem) -> {
+                                itemDone[0] = filesDone;
+                                itemDone[1] = bytesDone;
+                                if (progress != null) {
+                                    progress.onProgress(baseFiles + (int) Math.min(Integer.MAX_VALUE, filesDone),
+                                            baseBytes + bytesDone);
+                                }
+                            }, control);
+                    if (!success) throw new NativeCopyException("Native copy did not complete: " + op.src);
+                    completedFiles += (int) Math.min(Integer.MAX_VALUE, itemDone[0]);
+                    completedBytes += itemDone[1];
+                    completedOps++;
+                }
+                return;
+            } catch (TransferCancelledException | NativeCopyException e) {
+                // An I/O failure is not a missing tool. Never hide it by copying
+                // the whole batch again (or letting a partial copy look complete).
+                throw e;
+            } catch (IOException unavailable) {
+                // Only extraction/process startup can fall back, and only for
+                // items not already copied successfully.
+                final int baseFiles = completedFiles;
+                final long baseBytes = completedBytes;
+                ShellProgress.Listener relay = progress == null ? null : new ShellProgress.Listener() {
+                    @Override public void onProgress(int filesDone, long bytesDone) {
+                        progress.onProgress(baseFiles + filesDone, baseBytes + bytesDone);
+                    }
+                    @Override public void onFailure() { progress.onFailure(); }
+                    @Override public void onPid(int pid) { progress.onPid(pid); }
+                };
+                RootManager.getInstance(context).copyAllPreserving(ops.subList(completedOps, ops.size()), relay, control);
+            } finally {
+                RootManager.getInstance(context).invalidateListCache();
+            }
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            ShizukuManager.copyAllPreserving(context, ops, progress, control);
+            return;
+        }
+        int files = 0;
+        long bytes = 0L;
+        for (CopyOp op : ops) {
+            if (op.directory) FileUtils.copyFolder(new File(op.src), new File(op.dest));
+            else FileUtils.copyFile(new File(op.src), new File(op.dest));
+            preserveTime(context, op.src, op.dest);
+            files += Math.max(0, op.files);
+            bytes += Math.max(0L, op.bytes);
+            if (progress != null) progress.onProgress(files, bytes);
+        }
+    }
+
+    /**
+     * Counts files and bytes through the active elevated backend, because the
+     * app process cannot list paths like {@code /data/data/...}.
+     *
+     * @return null when no elevated backend is active
+     */
+    public static FileUtils.MeasureSet measureSetElevated(Context context, List<String> paths) {
+        if (paths == null || paths.isEmpty()) return null;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) {
+                FileUtils.MeasureSet nativeSet = NativeRootManager.scan(context, paths);
+                if (nativeSet != null && nativeSet.total.files > 0) {
+                    return nativeSet;
+                }
+                return RootManager.getInstance(context).measureSet(paths);
+            }
+            if (backend == Backend.SHIZUKU) return ShizukuManager.measureSet(context, paths);
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    /**
+     * Deletes every path in one round trip when the backend allows it.
+     *
+     * @return the paths that were handled by the backend.
+     */
+    public static List<String> deleteAll(Context context, List<String> paths, boolean useElevated) throws IOException {
+        return deleteAll(context, paths, useElevated, null);
+    }
+
+    public static List<String> deleteAll(Context context, List<String> paths, boolean useElevated,
+                                         ShellProgress.Listener progress) throws IOException {
+        if (paths == null || paths.isEmpty()) return new ArrayList<>();
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).deleteAll(paths, progress);
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.deleteAll(context, paths, progress);
+                return paths;
+            }
+        }
+        List<String> done = new ArrayList<>();
+        for (String path : paths) {
+            delete(context, path, false);
+            done.add(path);
+            if (progress != null) progress.onProgress(done.size(), 0L);
+        }
+        return done;
+    }
+
+    /**
+     * Recursive delete that reports one step per entry removed, so the
+     * dialog keeps moving instead of jumping from 0% when {@code rm -rf}
+     * returns.
+     */
+    public static void deleteTree(Context context, List<String> paths, boolean useElevated,
+                                  ShellProgress.Listener progress) throws IOException {
+        deleteTree(context, paths, useElevated, progress, null);
+    }
+
+    /**
+     * Recursive delete with a pause / cancel token attached.
+     */
+    public static void deleteTree(Context context, List<String> paths, boolean useElevated,
+                                  ShellProgress.Listener progress,
+                                  TransferControl control) throws IOException {
+        if (paths == null || paths.isEmpty()) return;
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                try {
+                    NativeRootManager.delete(context, paths, (itemsDone, bytesDone, currentItem) -> {
+                        if (progress != null) progress.onProgress((int) Math.min(Integer.MAX_VALUE, itemsDone), 0L);
+                    }, control);
+                } catch (TransferCancelledException | NativeDeleteException failed) {
+                    throw failed;
+                } catch (IOException unavailable) {
+                    // The helper never started. A running destructive batch is
+                    // never replayed, and all backends use the same entry unit.
+                    RootManager.getInstance(context).deleteTree(paths, progress, control);
+                } finally {
+                    RootManager.getInstance(context).invalidateListCache();
+                }
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.deleteTree(context, paths, progress, control);
+                return;
+            }
+        }
+        // Plain delete still reports per entry, so the dialog keeps moving.
+        final int[] done = {0};
+        FileUtils.TransferListener perEntry = new FileUtils.TransferListener() {
+            @Override
+            public void onFile(File source, File destination) {
+                if (source == null) return;
+                ++done[0];
+                if (progress != null) progress.onProgress(done[0], 0L);
+            }
+
+            @Override
+            public void onBytes(long count) {
+            }
+
+            @Override
+            public void checkpoint() {
+                // The plain delete path honours the same pause / cancel token.
+                if (control != null) control.checkpoint();
+            }
+        };
+        for (String path : paths) {
+            if (!FileUtils.deleteTree(new File(path), perEntry)) throw new IOException("Cannot delete " + path);
+        }
+    }
+
+    /** Directories under {@code paths}; the unit {@link #deleteTree} counts in. */
+    public static int countDirsElevated(Context context, List<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        Backend backend = active(context);
+        try {
+            if (backend == Backend.ROOT) return RootManager.getInstance(context).countDirs(paths);
+            if (backend == Backend.SHIZUKU) return ShizukuManager.countDirs(context, paths);
+        } catch (Exception ignored) {
+        }
+        return 0;
+    }
+
+    public static void mkdir(Context context, String path, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).mkdir(path);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.mkdir(context, path);
+                return;
+            }
+        }
+        File dir = new File(path);
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new IOException("mkdir failed");
+    }
+
+    public static void delete(Context context, String path, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).delete(path);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.delete(context, path);
+                return;
+            }
+        }
+        File f = new File(path);
+        if (f.isDirectory()) {
+            File[] kids = f.listFiles();
+            if (kids != null) for (File k : kids) delete(context, k.getAbsolutePath(), false);
+        }
+        if (!f.delete() && f.exists()) throw new IOException("delete failed");
+    }
+
+    public static void rename(Context context, String oldPath, String newPath, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).rename(oldPath, newPath);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.rename(context, oldPath, newPath);
+                return;
+            }
+        }
+        if (!new File(oldPath).renameTo(new File(newPath))) throw new IOException("rename failed");
+    }
+
+    public static void touch(Context context, String path, boolean useElevated) throws IOException {
+        if (useElevated) {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager.getInstance(context).touch(path);
+                return;
+            }
+            if (backend == Backend.SHIZUKU) {
+                ShizukuManager.touch(context, path);
+                return;
+            }
+        }
+        File f = new File(path);
+        if (!FileUtils.createNewFile(f) && !f.exists()) throw new IOException("touch failed");
+    }
+
+    public static ShellSession.ShellResult execute(Context context, String command, int timeout) {
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) return RootManager.getInstance(context).execute(command, timeout);
+        return new ShellSession.ShellResult(-1, "", "No shell backend enabled");
+    }
+
+    public static boolean touchMtime(Context context, String path, long millis) {
+        try {
+            if (new File(path).setLastModified(millis)) return true;
+        } catch (Exception ignored) {
+        }
+        try {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                long secs = millis / 1000L;
+                return RootManager.getInstance(context)
+                        .execute("touch -d @" + secs + " " + ShellQuote.escapeShellArg(path), 10)
+                        .isSuccess();
+            }
+            if (backend == Backend.SHIZUKU) {
+                if (ShizukuManager.isAllowed(path)) {
+                    ShizukuManager.touchMtime(context, path, millis);
+                    return true;
+                }
+                return ShizukuManager.touchMtimeShell(path, millis);
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static long dirSize(Context context, String path) {
+        if (path == null || path.isEmpty()) return -1;
+        try {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                DirectoryStats nativeStats = NativeRootManager.stats(context, path, null, 5000);
+                if (nativeStats != null && nativeStats.complete()) return nativeStats.bytes();
+                RootManager rm = RootManager.getInstance(context);
+                String safeCmd = "timeout 5 du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -sk " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
+                ShellSession.ShellResult r = rm.executeFs(safeCmd, 5);
+                if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
+                    r = rm.execute(safeCmd, 5);
+                }
+                if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                    String firstToken = r.output().trim().split("\\s+")[0].trim();
+                    try {
+                        long kb = Long.parseLong(firstToken);
+                        if (kb >= 0) return kb * 1024L;
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            if (backend == Backend.SHIZUKU || ShizukuManager.ready()) {
+                return ShizukuManager.dirSize(context, path);
+            }
+        } catch (Exception ignored) {
+        }
+        return -1;
+    }
+
+    public static Map<String, Long> dirSizeTree(Context context, String path) {
+        Map<String, Long> map = new HashMap<>();
+        if (path == null || path.isEmpty()) return map;
+        try {
+            Backend backend = active(context);
+            if (backend == Backend.ROOT || (context != null && RootManager.getInstance(context).isRootAvailable())) {
+                File[] siblings = RootManager.getInstance(context).listRootFilesWithStat(path);
+                if (siblings != null) {
+                    List<String> directories = new ArrayList<>();
+                    for (File sibling : siblings) if (sibling.isDirectory()) directories.add(sibling.getAbsolutePath());
+                    map.putAll(NativeRootManager.sizes(context, directories, 5000));
+                    if (!map.isEmpty()) return map;
+                }
+                RootManager rm = RootManager.getInstance(context);
+                String safeCmd = "timeout 5 du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null || du -d 1 -k " + ShellQuote.escapeShellArg(path) + " 2>/dev/null";
+                ShellSession.ShellResult r = rm.executeFs(safeCmd, 5);
+                if (r == null || !r.isSuccess() || r.output() == null || r.output().trim().isEmpty()) {
+                    r = rm.execute(safeCmd, 5);
+                }
+                if (r != null && r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
+                    String[] lines = r.output().split("\n");
+                    for (String line : lines) {
+                        line = line.trim();
+                        if (line.isEmpty()) continue;
+                        String[] parts = line.split("\\s+", 2);
+                        if (parts.length == 2) {
+                            try {
+                                long kb = Long.parseLong(parts[0].trim());
+                                String p = parts[1].trim();
+                                if (kb >= 0 && !p.isEmpty()) {
+                                    map.put(p, kb * 1024L);
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            }
+            if (map.isEmpty() && (backend == Backend.SHIZUKU || ShizukuManager.ready())) {
+                Map<String, Long> shizukuMap = ShizukuManager.dirSizeTree(context, path);
+                if (shizukuMap != null && !shizukuMap.isEmpty()) {
+                    map.putAll(shizukuMap);
+                }
+            }
+        } catch (Exception ignored) {}
+        return map;
+    }
+
+    public static void warmUp(Context context) {
+        try {
+            if (active(context) == Backend.SHIZUKU) ShizukuManager.warmUp(context);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void uploadFile(Context context, File localSrc, String dstAbs) throws IOException {
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            copyFile(context, localSrc.getAbsolutePath(), dstAbs, true);
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            ShizukuManager.streamTo(context, localSrc, dstAbs);
+            return;
+        }
+        throw new IOException("No elevated access enabled");
+    }
+
+    public static void stageFile(Context context, String srcAbs, File dst) throws IOException {
+        if (SafFs.isSafPath(srcAbs)) {
+            // A provider document: stream it into the staging copy through the
+            // ContentResolver; no elevated backend is involved.
+            SafFs.init(context);
+            SafFs.copyToRecursive(SafFs.statWrap(srcAbs), dst, null);
+            return;
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            copyFile(context, srcAbs, dst.getAbsolutePath(), true);
+            execute(context, "chmod a+r " + ShellQuote.escapeShellArg(dst.getAbsolutePath()), 30);
+            preserveTime(context, srcAbs, dst.getAbsolutePath());
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            try (OutputStream os = new FileOutputStream(dst)) {
+                ShizukuManager.streamFrom(context, srcAbs, os, Long.MAX_VALUE);
+            }
+            long t = ShizukuManager.getMtime(context, srcAbs);
+            if (t > 0) {
+                //noinspection ResultOfMethodCallIgnored
+                dst.setLastModified(t);
+            }
+            return;
+        }
+        throw new IOException("No elevated access enabled");
+    }
+
+    public static void stageTree(Context context, String srcAbs, File dst) throws IOException {
+        if (SafFs.isSafPath(srcAbs)) {
+            SafFs.init(context);
+            SafFs.copyToRecursive(SafFs.statWrap(srcAbs), dst, null);
+            return;
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            copyDir(context, srcAbs, dst.getAbsolutePath(), true);
+            execute(context, "chmod -R a+rX " + ShellQuote.escapeShellArg(dst.getAbsolutePath()), 30);
+            return;
+        }
+        if (backend == Backend.SHIZUKU) {
+            File[] kids = ShizukuManager.listWithStat(context, srcAbs);
+            if (kids == null) throw new IOException("Cannot list " + srcAbs);
+            if (!dst.isDirectory() && !dst.mkdirs() && !dst.isDirectory()) {
+                throw new IOException("Cannot create staging dir");
+            }
+            for (File k : kids) {
+                File d = new File(dst, k.getName());
+                if (k.isDirectory()) {
+                    stageTree(context, srcAbs + "/" + k.getName(), d);
+                } else {
+                    try (OutputStream os = new FileOutputStream(d)) {
+                        ShizukuManager.streamFrom(context, srcAbs + "/" + k.getName(), os,
+                                Long.MAX_VALUE);
+                    }
+                    long t = k.lastModified();
+                    if (t > 0) {
+                        //noinspection ResultOfMethodCallIgnored
+                        d.setLastModified(t);
+                    }
+                }
+            }
+            return;
+        }
+        throw new IOException("No elevated access enabled");
+    }
+
+    /**
+     * Whether an elevated backend is enabled, answered from preferences only.
+     *
+     * <p>{@link #fileOpsOn} also probes the device (a {@code su} spawn, a
+     * Shizuku ping). Callers that run on a provider thread only need the
+     * setting, and paying a shell round trip there turns one folder open into a
+     * visible stall.
+     */
+    public static boolean fileOpsConfigured(Context context) {
+        if (context == null) return false;
+        RootManager rm = RootManager.getInstance(context);
+        WorkingModePrefs.WorkingMode mode = rm.getWorkingMode();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        if (mode == WorkingModePrefs.WorkingMode.ROOT) return prefs.getBoolean("root_file_ops", false);
+        if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) {
+            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+        }
+        return false;
+    }
+
+    /**
+     * True when the Shizuku shell can copy paths this app uid cannot reach.
+     *
+     * <p>Android/{data,obb,media} are readable only as the shell user, so a
+     * copy that mixes them with ordinary folders has to be handed to {@code cp}
+     * rather than pulled through the cache one file at a time.
+     */
+    public static boolean shellCopyOn(Context context) {
+        if (context == null) return false;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT) {
+                return rm.isRootAvailable();
+            }
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU) {
+                return ShizukuManager.ready() && ShizukuShell.isGranted();
+            }
+            return false;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /** True when {@code f} is a path only the shell, not this uid, can touch. */
+    private static boolean isShellOnlyPath(File f) {
+        if (f == null) return false;
+        try {
+            if (ShizukuFile.isShizukuPath(f)) return true;
+            return PathGuards.isRootOnlyPath(f.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether copying {@code src} to {@code dest} must run in the shell.
+     *
+     * <p>Streaming such a path through {@link FileUtils} first materialises a
+     * cache copy with its own shell process, so the data crosses the pipe twice
+     * and every file costs a process spawn: exactly what made copying out of
+     * Android/data feel slower than a native file manager.
+     */
+    public static boolean needsShellCopy(Context context, File src, File dest) {
+        if (!shellCopyOn(context)) return false;
+        return isShellOnlyPath(src) || isShellOnlyPath(dest);
+    }
+
+    /** True when the path is reachable only through root or Shizuku. */
+    public static boolean needsShellAccess(Context context, String absPath) {
+        if (context == null || absPath == null || absPath.isEmpty()) return false;
+        if (needsElevated(context, absPath)) return true;
+        try {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU
+                    && ShizukuFile.isAndroidDataPath(absPath)) {
+                return ShizukuManager.ready();
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    /**
+     * Opens {@code absPath} for reading as a file descriptor, for the Documents
+     * provider.
+     *
+     * <p>A path this uid can open is handed out directly. A root/Shizuku path is
+     * pumped into a pipe by the elevated backend, so no staging copy is made
+     * first and files of any size can be passed to another app.
+     */
+    public static ParcelFileDescriptor openReadFd(Context context, String absPath) throws IOException {
+        if (absPath == null || !absPath.startsWith("/")) {
+            throw new IOException("Refusing to open non-absolute path");
+        }
+        File f = new File(absPath);
+        if (f.isFile() && f.canRead()) {
+            return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
+        }
+        Backend backend = active(context);
+        if (backend == Backend.ROOT) {
+            RootManager rm = RootManager.getInstance(context);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
+                throw new IOException("Root file access is disabled or unavailable");
+            }
+            return rm.openReadPipe(absPath);
+        }
+        if (backend == Backend.SHIZUKU) {
+            if (!canUseShizuku(context)) {
+                throw new IOException("Shizuku file access is disabled or unavailable");
+            }
+            return ShizukuManager.openReadPipe(context, absPath);
+        }
+        throw new IOException("Not readable: " + absPath);
+    }
+
+    public static void preserveTime(Context context, String srcAbs, String dstAbs) {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            if (!prefs.getBoolean("preserve_mtime", true)) return;
+            long t = 0;
+            try {
+                t = new File(srcAbs).lastModified();
+            } catch (Exception ignored) {
+            }
+            if (t <= 0) t = getMtime(context, srcAbs);
+            if (t <= 0) return;
+            File dst = new File(dstAbs);
+            if (dst.exists() && dst.canWrite()) {
+                //noinspection ResultOfMethodCallIgnored
+                dst.setLastModified(t);
+                return;
+            }
+            Backend backend = active(context);
+            if (backend == Backend.ROOT) {
+                RootManager rm = RootManager.getInstance(context);
+                long secs = t / 1000L;
+                rm.execute("touch -d @" + secs + " " + ShellQuote.escapeShellArg(dstAbs), 10);
+            } else if (backend == Backend.SHIZUKU) {
+                ShizukuManager.touchMtime(context, dstAbs, t);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+}

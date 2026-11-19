@@ -56,10 +56,10 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class ImageEditActivity extends BaseActivity {
 
@@ -108,8 +108,7 @@ public class ImageEditActivity extends BaseActivity {
     private String toPhysicalPathIfRoot(String path) {
         if (path == null) return null;
         try {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+            if (PrivilegeManager.Root.isRootFileOpsEnabled(this) && PrivilegeManager.Root.isRootAvailable(this)) {
                 if (path.startsWith("/storage/emulated/0")) {
                     return "/data/media/0" + path.substring("/storage/emulated/0".length());
                 } else if (path.startsWith("/storage/emulated/")) {
@@ -123,9 +122,8 @@ public class ImageEditActivity extends BaseActivity {
     private boolean isRootFile(String path) {
         if (path == null) return false;
         try {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                RootManager.ShellResult r = rm.execute("test -f " + RootManager.escapeShellArg(path), 5);
+            if (PrivilegeManager.Root.isRootFileOpsEnabled(this) && PrivilegeManager.Root.isRootAvailable(this)) {
+                ShellSession.ShellResult r = PrivilegeManager.Root.execute(this, "test -f " + ShellQuote.escapeShellArg(path), 5);
                 return r.isSuccess();
             }
         } catch (Exception ignored) {}
@@ -680,7 +678,7 @@ public class ImageEditActivity extends BaseActivity {
         try {
             ensureJniBlocking();
             File tmp = new File(getCacheDir(), "norm_" + System.currentTimeMillis() + ".jpg");
-            NativeToolManager.runJpegtranJni(this, op, workingFile.getAbsolutePath(), tmp.getAbsolutePath(), 0, 0, 0, 0);
+            PrivilegeManager.Native.runJpegtranJni(this, op, workingFile.getAbsolutePath(), tmp.getAbsolutePath(), 0, 0, 0, 0);
             copyFile(tmp, workingFile);
             tmp.delete();
             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
@@ -693,10 +691,10 @@ public class ImageEditActivity extends BaseActivity {
     }
 
     private void ensureJniBlocking() throws Exception {
-        if (NativeToolManager.loadJpegtranJni(this)) return;
+        if (PrivilegeManager.Native.loadJpegtranJni(this)) return;
         final Exception[] failure = new Exception[1];
         final boolean[] done = {false};
-        runOnUiThread(() -> NativeToolManager.ensureJpegtran(this, new NativeToolManager.ReadyCallback() {
+        runOnUiThread(() -> PrivilegeManager.Native.ensureJpegtran(this, new PrivilegeManager.Native.ReadyCallback() {
             public void onReady() {
                 synchronized (done) {
                     done[0] = true;
@@ -723,7 +721,7 @@ public class ImageEditActivity extends BaseActivity {
             }
         }
         if (failure[0] != null) throw failure[0];
-        if (!NativeToolManager.loadJpegtranJni(this)) throw new Exception(getString(R.string.img_jni_missing));
+        if (!PrivilegeManager.Native.loadJpegtranJni(this)) throw new Exception(getString(R.string.img_jni_missing));
     }
 
     private void readDims() {
@@ -812,7 +810,7 @@ public class ImageEditActivity extends BaseActivity {
                             : op.equals("flipH") ? JpegtranJni.OP_FLIP_H
                             : JpegtranJni.OP_FLIP_V;
                     File tmp = new File(getCacheDir(), "op_" + System.currentTimeMillis() + ".jpg");
-                    NativeToolManager.runJpegtranJni(this, jop, workingFile.getAbsolutePath(), tmp.getAbsolutePath(), 0, 0, 0, 0);
+                    PrivilegeManager.Native.runJpegtranJni(this, jop, workingFile.getAbsolutePath(), tmp.getAbsolutePath(), 0, 0, 0, 0);
                     copyFile(tmp, workingFile);
                     tmp.delete();
                     resetOrientationTag();
@@ -1222,7 +1220,7 @@ public class ImageEditActivity extends BaseActivity {
             finish();
             return;
         }
-        if (hasCrop() && isJpeg && !allowLossyCrop && !NativeToolManager.loadJpegtranJni(this)) {
+        if (hasCrop() && isJpeg && !allowLossyCrop && !PrivilegeManager.Native.loadJpegtranJni(this)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.img_crop_quality))
                     .setMessage(getString(R.string.img_crop_msg))
@@ -1231,8 +1229,8 @@ public class ImageEditActivity extends BaseActivity {
                         allowLossyCrop = true;
                         doSave();
                     })
-                    .setPositiveButton(getString(R.string.img_lossless), (d, w) -> NativeToolManager.ensureJpegtran(this,
-                            new NativeToolManager.ReadyCallback() {
+                    .setPositiveButton(getString(R.string.img_lossless), (d, w) -> PrivilegeManager.Native.ensureJpegtran(this,
+                            new PrivilegeManager.Native.ReadyCallback() {
                                 public void onReady() {
                                     doSave();
                                 }
@@ -1290,7 +1288,7 @@ public class ImageEditActivity extends BaseActivity {
                         w -= w % 16;
                         h -= h % 16;
                         File tmp = new File(getCacheDir(), "crop_" + System.currentTimeMillis() + ".jpg");
-                        NativeToolManager.runJpegtranJni(this, JpegtranJni.OP_CROP,
+                        PrivilegeManager.Native.runJpegtranJni(this, JpegtranJni.OP_CROP,
                                 workingFile.getAbsolutePath(), tmp.getAbsolutePath(), w, h, x, y);
                         copyFile(tmp, workingFile);
                         tmp.delete();
@@ -1443,9 +1441,8 @@ public class ImageEditActivity extends BaseActivity {
                 return;
             } catch (Exception directError) {
                 try {
-                    RootManager rm = RootManager.getInstance(this);
-                    if (rm.isRootAvailable()) {
-                        rm.copyFile(src.getAbsolutePath(), dst.getAbsolutePath());
+                    if (PrivilegeManager.Root.isRootAvailable(this)) {
+                        PrivilegeManager.Root.copyFile(this, src.getAbsolutePath(), dst.getAbsolutePath());
                         return;
                     }
                 } catch (Exception ignored) {}

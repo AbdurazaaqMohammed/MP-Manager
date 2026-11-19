@@ -36,10 +36,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
-
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -73,11 +72,11 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.RenameHelper;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 public class FilePropertiesDialog {
 
@@ -371,14 +370,15 @@ public class FilePropertiesDialog {
             }
         }
 
-        RootManager rm = RootManager.getInstance(context);
-        boolean canEditPerms = !isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        boolean canEditPerms = !isInZip && !multi
+                && PrivilegeManager.Root.isRootFileOpsEnabled(context)
+                && PrivilegeManager.Root.isRootAvailable(context);
 
         if (!isInZip && !multi && file != null) {
             final TextView[] permViewHolder = new TextView[1];
             View.OnClickListener openPermsAction = v -> {
                 if (canEditPerms) {
-                    showPermissionsDialog(file, rm, permViewHolder[0]);
+                    showPermissionsDialog(file, permViewHolder[0]);
                 } else {
                     Extensions.showMessage(context, R.string.storage_root_needed);
                 }
@@ -392,7 +392,7 @@ public class FilePropertiesDialog {
             final TextView[] ownerViewHolder = new TextView[1];
             View.OnClickListener openOwnerAction = v -> {
                 if (canEditPerms) {
-                    showOwnerDialog(file, rm, ownerViewHolder[0]);
+                    showOwnerDialog(file, ownerViewHolder[0]);
                 } else {
                     Extensions.showMessage(context, R.string.storage_root_needed);
                 }
@@ -407,8 +407,8 @@ public class FilePropertiesDialog {
                 String numeric = null;
                 String ownerStr = null;
                 if (canEditPerms) {
-                    numeric = rm.getPermissions(file.getAbsolutePath());
-                    ownerStr = rm.getOwner(file.getAbsolutePath());
+                    numeric = PrivilegeManager.Root.getPermissions(context, file.getAbsolutePath());
+                    ownerStr = PrivilegeManager.Root.getOwner(context, file.getAbsolutePath());
                 }
                 if (numeric == null || numeric.isEmpty()) {
                     try {
@@ -469,9 +469,9 @@ public class FilePropertiesDialog {
         dialogUtil.styleAlertDialog(selfDialog[0]);
     }
 
-    private void showOwnerDialog(File file, RootManager rm, TextView ownerView) {
+    private void showOwnerDialog(File file, TextView ownerView) {
         new Thread(() -> {
-            String currentOwner = rm.getOwner(file.getAbsolutePath());
+            String currentOwner = PrivilegeManager.Root.getOwner(context, file.getAbsolutePath());
             if (currentOwner == null || currentOwner.isEmpty()) currentOwner = "root:root";
             File parent = file.getParentFile();
             LinkedHashSet<String> candidateOwners = new LinkedHashSet<>();
@@ -480,7 +480,8 @@ public class FilePropertiesDialog {
             if (parent != null) {
                 try {
                     // Query available owners/groups in this directory using stat
-                    RootManager.ShellResult result = rm.executeFs("stat -c '%U:%G' " + RootManager.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
+                    ShellSession.ShellResult result = PrivilegeManager.Root.executeFs(context,
+                            "stat -c '%U:%G' " + ShellQuote.escapeShellArg(parent.getAbsolutePath()) + "/* 2>/dev/null | sort -u | head -n 30", 30);
                     if (result.isSuccess() && result.output() != null) {
                         for (String line : result.output().split("\\r?\\n")) {
                             line = line.trim();
@@ -512,8 +513,9 @@ public class FilePropertiesDialog {
                                 String selectedOwner = ownerList.get(checkedItem[0]);
                                 new Thread(() -> {
                                     try {
-                                        rm.executeFs("chown " + selectedOwner + " " + RootManager.escapeShellArg(file.getAbsolutePath()), 30);
-                                        rm.invalidateListCache();
+                                        PrivilegeManager.Root.executeFs(context,
+                                                "chown " + selectedOwner + " " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 30);
+                                        PrivilegeManager.Root.invalidateListCache(context);
                                         context.handler.post(() -> {
                                             if (ownerView != null) ownerView.setText(selectedOwner);
                                             Extensions.showMessage(context, R.string.owner_updated);
@@ -531,12 +533,12 @@ public class FilePropertiesDialog {
         }).start();
     }
 
-    private void showPermissionsDialog(File file, RootManager rm, TextView permView) {
+    private void showPermissionsDialog(File file, TextView permView) {
         PermissionsEditorHelper editor = new PermissionsEditorHelper(context);
         View editorView = editor.createPermissionsEditor("0000");
 
         new Thread(() -> {
-            String perms = rm.getPermissions(file.getAbsolutePath());
+            String perms = PrivilegeManager.Root.getPermissions(context, file.getAbsolutePath());
             context.handler.post(() -> {
                 if (perms != null && !perms.isEmpty()) {
                     editor.applyNumericPerms(perms);
@@ -553,8 +555,8 @@ public class FilePropertiesDialog {
                     String permsStr = String.valueOf(editor.getNumericValue());
                     new Thread(() -> {
                         try {
-                            rm.chmodFs(file.getAbsolutePath(), permsStr);
-                            rm.invalidateListCache();
+                            PrivilegeManager.Root.chmodFs(context, file.getAbsolutePath(), permsStr);
+                            PrivilegeManager.Root.invalidateListCache(context);
                             String updatedSymbolic = PermissionsEditorHelper.numericToSymbolic(permsStr);
                             final String newDisplay = updatedSymbolic + " (" + permsStr + ")";
                             context.handler.post(() -> {
@@ -1046,7 +1048,7 @@ public class FilePropertiesDialog {
                     if (PrivilegeManager.shizuku().isGranted()) {
                         ShellSession.Result res =
                                 PrivilegeManager.shizuku().exec(
-                                        "readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+                                        "readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
                         if (res.success && res.stdout != null && !res.stdout.trim().isEmpty()) {
                             return res.stdout.trim();
                         }
@@ -1064,9 +1066,9 @@ public class FilePropertiesDialog {
             }
         }
         try {
-            RootManager rm = RootManager.getInstance();
-            if (rm != null && rm.isRootAvailable()) {
-                RootManager.ShellResult res = rm.executeFs("readlink " + RootManager.escapeShellArg(file.getAbsolutePath()), 5);
+            if (PrivilegeManager.Root.isRootAvailable(context)) {
+                ShellSession.ShellResult res = PrivilegeManager.Root.executeFs(context,
+                        "readlink " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 5);
                 if (res.isSuccess() && res.output() != null) {
                     String out = res.output().trim();
                     if (!out.isEmpty()) return out;
@@ -1106,12 +1108,11 @@ public class FilePropertiesDialog {
                         }
                         if (!updated) {
                             try {
-                                RootManager rm = RootManager.getInstance();
-                                if (rm != null && rm.isRootAvailable()) {
-                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
-                                    RootManager.ShellResult res = rm.executeFs(cmd, 10);
+                                if (PrivilegeManager.Root.isRootAvailable(context)) {
+                                    String cmd = "ln -snf " + ShellQuote.escapeShellArg(newTarget) + " " + ShellQuote.escapeShellArg(file.getAbsolutePath());
+                                    ShellSession.ShellResult res = PrivilegeManager.Root.executeFs(context, cmd, 10);
                                     if (res.isSuccess()) {
-                                        rm.invalidateListCache();
+                                        PrivilegeManager.Root.invalidateListCache(context);
                                         updated = true;
                                     }
                                 }
@@ -1120,7 +1121,7 @@ public class FilePropertiesDialog {
                         if (!updated) {
                             try {
                                 if (PrivilegeManager.shizuku().isGranted()) {
-                                    String cmd = "ln -snf " + RootManager.escapeShellArg(newTarget) + " " + RootManager.escapeShellArg(file.getAbsolutePath());
+                                    String cmd = "ln -snf " + ShellQuote.escapeShellArg(newTarget) + " " + ShellQuote.escapeShellArg(file.getAbsolutePath());
                                     ShellSession.Result res =
                                             PrivilegeManager.shizuku().exec(cmd, 10);
                                     if (res.success) {

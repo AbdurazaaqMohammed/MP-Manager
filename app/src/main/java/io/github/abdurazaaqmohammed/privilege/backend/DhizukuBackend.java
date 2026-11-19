@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.privilege.spi.Capability;
 import io.github.abdurazaaqmohammed.privilege.spi.PrivilegeBackend;
 import io.github.abdurazaaqmohammed.privilege.spi.ShellCap;
 
@@ -47,8 +48,11 @@ public final class DhizukuBackend implements PrivilegeBackend, ShellCap {
     }
 
     @Override
-    public int priority() {
-        return 30; // outranks SHIZUKU (20) and ROOT (10): persistent delegation first
+    public int priorityFor(Class<? extends Capability> capability) {
+        // Device-owner domain. Yields the shell to SHIZUKU (30) — minimal
+        // privilege escalation — but stays above ROOT (10) so persistent
+        // delegation is preferred over su when both can serve.
+        return 20;
     }
 
     @Override

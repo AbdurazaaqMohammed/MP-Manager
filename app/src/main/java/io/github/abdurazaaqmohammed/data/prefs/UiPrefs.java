@@ -276,6 +276,26 @@ public final class UiPrefs {
     public static final int FOLDER_SIZE_ALL = 1;
     public static final int FOLDER_SIZE_NONE = 2;
 
+    /** Whether file rows in system (non-user-storage) folders show Unix permissions instead of dates. */
+    public static final String SHOW_FILE_PERMISSIONS_KEY = "show_file_permissions";
+
+    public static boolean showFilePermissions(Context context) {
+        try {
+            return PreferenceManager.getDefaultSharedPreferences(context)
+                    .getBoolean(SHOW_FILE_PERMISSIONS_KEY, false);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static void setShowFilePermissions(Context context, boolean value) {
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context)
+                    .edit().putBoolean(SHOW_FILE_PERMISSIONS_KEY, value).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
     public static int folderSizeMode(Context context) {
         try {
             return PreferenceManager.getDefaultSharedPreferences(context)

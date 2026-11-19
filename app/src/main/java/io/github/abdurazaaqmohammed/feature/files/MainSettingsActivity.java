@@ -103,6 +103,11 @@ public class MainSettingsActivity extends AppCompatActivity {
         pager.setOffscreenPageLimit(PAGE_LAYOUTS.length - 1);
 
         nav = findViewById(R.id.settingsBottomNav);
+        String[] themeTabKeys = {"tab.files", "tab.root", "tab.general", "tab.behavior", "tab.other"};
+        for (int i = 0; i < themeTabKeys.length; i++) {
+            var item = nav.getMenu().getItem(i);
+            item.setTitle(ThemeRegistry.packLabel(this, themeTabKeys[i], item.getTitle()));
+        }
         nav.setOnItemSelectedListener(item -> {
             if (syncingFromPager) return true;
             for (int i = 0; i < nav.getMenu().size(); i++) {

@@ -2,7 +2,7 @@
  * Privilege layer — public API.
  *
  * UI/features may import ONLY this package (PrivilegeManager and the session
- * interfaces), never privilege.spi / privilege.internal / privilege.impl
+ * interfaces), never privilege.spi / privilege.internal
  * or any backend class. See docs/ARCHITECTURE.md for the dependency rules.
  */
 package io.github.abdurazaaqmohammed.privilege.api;
@@ -49,4 +49,17 @@ public interface ShellSession {
             this.exitCode = exitCode;
         }
     }
+
+    /** Immutable outcome of one command, legacy record form (accessors exitCode()/output()/error()). Distinct from {@link Result} until the two are merged. */
+    public record ShellResult(int exitCode, String output, String error) {
+            public ShellResult(int exitCode, String output, String error) {
+                this.exitCode = exitCode;
+                this.output = output != null ? output : "";
+                this.error = error != null ? error : "";
+            }
+
+            public boolean isSuccess() {
+                return exitCode == 0;
+            }
+        }
 }

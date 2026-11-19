@@ -43,6 +43,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
+import io.github.abdurazaaqmohammed.feature.system.SidebarToolSelection;
 import io.github.abdurazaaqmohammed.feature.system.ToolRegistry;
 
 public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
@@ -77,7 +78,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private final Callbacks callbacks;
     private static final String BOOKMARK_GROUP_PREFIX = "bookmark_group:";
     /** id prefix of a pack tool row inside the plugins section. */
-    public static final String PACK_TOOL_PREFIX = "packtool:";
+    public static final String PACK_TOOL_PREFIX = SidebarToolSelection.PACK_TOOL_PREFIX;
     private final List<SidebarEntry> entries = new ArrayList<>();
     private final Map<String, Boolean> collapsed = new LinkedHashMap<>();
     private final List<String> sectionOrder = new ArrayList<>();
@@ -89,6 +90,8 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private boolean showPlugins = true;
     private boolean organizeMode;
     private final List<String> toolOrder = new ArrayList<>();
+    /** Canonical ids of hub tools the user explicitly added (see SidebarToolSelection). */
+    private final Set<String> addedTools = new HashSet<>();
     private final Map<String, String> labels = new LinkedHashMap<>();
     private final Set<String> hiddenItems = new HashSet<>();
     private final List<SidebarEntry> pinned = new ArrayList<>();
@@ -168,11 +171,21 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     public void setHiddenItems(Set<String> items) {
         hiddenItems.clear();
-        if (items != null) hiddenItems.addAll(items);
+        hiddenItems.addAll(SidebarToolSelection.canonicalizeHidden(items));
     }
 
     public Set<String> getHiddenItems() {
         return new HashSet<>(hiddenItems);
+    }
+
+    /** Explicitly added hub tools (canonical ids, packtool:/custom: prefixed rows). */
+    public void setAddedTools(Set<String> ids) {
+        addedTools.clear();
+        addedTools.addAll(SidebarToolSelection.sanitizeAdded(ids));
+    }
+
+    public Set<String> getAddedTools() {
+        return new HashSet<>(addedTools);
     }
 
     public void hideEntry(SidebarEntry entry) {
@@ -272,20 +285,22 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     /**
      * Plugins/Tools section body: built-in extra tools first (dev/auxiliary
-     * utilities kept out of the main Tools section), then pack tools when the
-     * "Show plugins in sidebar" setting is on, then external plugin sidebar
+     * utilities kept out of the main Tools section, plus any hub-only tools
+     * the user explicitly added), then pack tools when the "Show plugins in
+     * sidebar" setting is on (explicitly added packs always show), then
+     * custom plugin tools chosen from the hub, then external plugin sidebar
      * actions. Flat rows, no group headers; each row uses the tool's own
      * icon. Ordering round-trips through the shared toolOrder like built-in
      * tools; newly installed entries are appended.
      */
     private void addPluginsAndTools() {
-        List<String> order = new ArrayList<>();
-        for (String id : toolOrder) if (isPluginsSectionTool(id) && !order.contains(id)) order.add(id);
-        for (String id : ToolRegistry.sidebarIds("plugins")) if (!order.contains(id)) order.add(id);
+        List<String> order = SidebarToolSelection.mergeOrder(toolOrder,
+                ToolRegistry.sidebarIds("plugins"), addedTools);
         for (String id : order) {
-            addRegisteredTool("plugins", id);
+            if (isRenderableRegistryTool(id, "plugins")) addRegisteredTool("plugins", id);
         }
         addPluginGroups();
+        addCustomTools();
         addExternalPluginActions();
     }
 
@@ -294,12 +309,26 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     /**
+     * Registry tool rendered in a section: shipped default or explicitly
+     * added from the hub. Added tools without a shipped section
+     * (storagemanager, adb, jiagu_dumper) land in the advanced plugins
+     * section.
+     */
+    private boolean isRenderableRegistryTool(String id, String section) {
+        if (ToolRegistry.isInSidebarSection(id, section)) {
+            return ToolRegistry.isDefaultSidebarTool(id) || addedTools.contains(id);
+        }
+        return "plugins".equals(section) && addedTools.contains(id)
+                && ToolRegistry.sidebarSectionOf(id) == null;
+    }
+
+    /**
      * Pack tools part of the section: one row per installed pack tool. Gated
-     * by the "Show plugins in sidebar" setting; the rest of the section shows
+     * by the "Show plugins in sidebar" setting, except tools the user added
+     * from the hub, which always show; the rest of the section shows
      * regardless.
      */
     private void addPluginGroups() {
-        if (!showPlugins) return;
         List<PluginRegistry.PackTools> packs = PluginRegistry.installedPacks();
         if (packs.isEmpty()) return;
         // index of "packtool:<pack>.<tool>" for order lookups.
@@ -316,6 +345,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (String id : toolOrder) if (byId.containsKey(id) && !order.contains(id)) order.add(id);
         for (String id : byId.keySet()) if (!order.contains(id)) order.add(id);
         for (String id : order) {
+            if (!showPlugins && !addedTools.contains(id)) continue;
             ToolPlugin tool = byId.get(id);
             String label = tool.title(context);
             if (label == null || label.isEmpty()) label = tool.id();
@@ -332,21 +362,51 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     /**
+     * Host-registered custom (non-pack, non-registry) plugin tools the user
+     * added from the hub. Rows use a {@code custom:<pluginId>} id, follow the
+     * saved drag order like pack rows, and launch through the shared tool
+     * runner.
+     */
+    private void addCustomTools() {
+        Map<String, ToolPlugin> byId = new LinkedHashMap<>();
+        for (ToolPlugin plugin : PluginRegistry.customPlugins()) {
+            if (plugin == null || plugin.id() == null) continue;
+            if (ToolRegistry.findById(context, plugin.id()) != null) continue;
+            byId.put(SidebarToolSelection.CUSTOM_TOOL_PREFIX + plugin.id(), plugin);
+        }
+        List<String> order = new ArrayList<>();
+        for (String id : toolOrder) if (byId.containsKey(id) && !order.contains(id)) order.add(id);
+        for (String id : byId.keySet()) if (!order.contains(id)) order.add(id);
+        for (String id : order) {
+            if (!addedTools.contains(id)) continue;
+            ToolPlugin plugin = byId.get(id);
+            String label = plugin.title(context);
+            if (label == null || label.isEmpty()) label = plugin.id();
+            int icon;
+            try {
+                icon = plugin.iconRes(context);
+            } catch (Exception e) {
+                icon = R.drawable.tools_24px;
+            }
+            SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "plugins", id, label,
+                    icon, null, null);
+            if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+        }
+    }
+
+    /**
      * Core file-manager tools; the main Tools section of the sidebar.
      *
-     * A saved custom order still wins. Metadata comes from the same registry
-     * as the hub, so adding a tool can never leave one entry point behind.
+     * A saved custom order still wins; hub-only tools the user explicitly
+     * added are appended. Metadata comes from the same registry as the hub,
+     * so adding a tool can never leave one entry point behind.
      */
     private void addTools() {
-        List<String> order = new ArrayList<>();
-        for (String savedId : toolOrder) {
-            String id = ToolRegistry.canonicalId(savedId);
-            if (!order.contains(id)) order.add(id);
-        }
-        for (String id : ToolRegistry.sidebarIds("tools")) if (!order.contains(id)) order.add(id);
+        List<String> order = SidebarToolSelection.mergeOrder(toolOrder,
+                ToolRegistry.sidebarIds("tools"), addedTools);
         for (String id : order) {
             if ("tools".equals(id)) addTool(id, R.string.sidebar_tools, R.drawable.tools_24px);
-            else if (ToolRegistry.isInSidebarSection(id, "tools")) addRegisteredTool("tools", id);
+            else if (isRenderableRegistryTool(id, "tools")) addRegisteredTool("tools", id);
         }
     }
 

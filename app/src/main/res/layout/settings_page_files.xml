@@ -333,6 +333,14 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/two_column_file_menu" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/filePermsSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/show_file_permissions" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"

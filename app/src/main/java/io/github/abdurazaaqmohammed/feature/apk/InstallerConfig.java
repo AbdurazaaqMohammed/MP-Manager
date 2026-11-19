@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 
 
 import android.content.Context;
@@ -140,12 +140,12 @@ public final class InstallerConfig {
                 return SHELL;
             case MODE_INITIATOR: {
                 String initiator = peekInitiatorPackage(context);
-                if (RootManager.isPackageNameValid(initiator)) return initiator;
+                if (PackageGuards.isPackageNameValid(initiator)) return initiator;
                 return context.getPackageName();
             }
             case MODE_CUSTOM: {
                 String custom = getCustomPackage(context);
-                if (RootManager.isPackageNameValid(custom)) return custom;
+                if (PackageGuards.isPackageNameValid(custom)) return custom;
                 return context.getPackageName();
             }
             case MODE_SELF:
@@ -169,7 +169,7 @@ public final class InstallerConfig {
      * package is accepted here.
      */
     public static boolean isShellClaimable(Context context, String installerPackage) {
-        return installerPackage != null && RootManager.isPackageNameValid(installerPackage);
+        return installerPackage != null && PackageGuards.isPackageNameValid(installerPackage);
     }
 
     public static boolean isShizukuSilentEnabled(Context context) {

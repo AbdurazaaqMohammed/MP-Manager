@@ -43,6 +43,9 @@
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <uses-permission-sdk-23 android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- Dhizuku (device-owner delegation). The AAR merges the same declaration;
+         kept explicit so the dependency on Dhizuku being installed is visible. -->
+    <uses-permission android:name="com.rosan.dhizuku.permission.API" />
 
     <!-- External plugin discovery (out-of-process plugins expose these actions). -->
     <queries>
@@ -60,6 +63,11 @@
         </intent>
         <intent>
             <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
+        </intent>
+        <!-- Theme providers (fixed content://<authority>/theme row contract). -->
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.THEME" />
+            <category android:name="android.intent.category.DEFAULT" />
         </intent>
     </queries>
 
@@ -431,6 +439,7 @@
                     <action android:name="android.intent.action.PACKAGE_ADDED" />
                     <action android:name="android.intent.action.PACKAGE_REPLACED" />
                     <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                    <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
                     <data android:scheme="package" />
                 </intent-filter>
             </receiver>

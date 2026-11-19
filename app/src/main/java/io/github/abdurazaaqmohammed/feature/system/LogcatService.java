@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
 
 /**
  * Owns the logcat capture so it can outlive {@link LogcatActivity}: while
@@ -91,11 +91,11 @@ public class LogcatService extends Service implements LogcatReader.Listener {
     /** Same rule as the activity used to apply: working mode decides. */
     public static LogcatReader.Mode determineMode(Context context) {
         try {
-            RootManager rm = RootManager.getInstance(context);
-            if (rm.getWorkingMode() == RootManager.WorkingMode.ROOT && rm.isRootAvailable()) {
+            WorkingModePrefs.WorkingMode mode = WorkingModePrefs.get(context);
+            if (mode == WorkingModePrefs.WorkingMode.ROOT && PrivilegeManager.Root.isRootAvailable(context)) {
                 return LogcatReader.Mode.ROOT;
             }
-            if (rm.getWorkingMode() == RootManager.WorkingMode.SHIZUKU && PrivilegeManager.Shizuku.ready()) {
+            if (mode == WorkingModePrefs.WorkingMode.SHIZUKU && PrivilegeManager.Shizuku.ready()) {
                 return LogcatReader.Mode.SHIZUKU;
             }
         } catch (Exception ignored) {

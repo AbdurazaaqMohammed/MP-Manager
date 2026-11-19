@@ -25,22 +25,33 @@ import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.ShellProgress;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager;
-import io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller;
-import io.github.abdurazaaqmohammed.privilege.impl.StartupPrivileges;
+import androidx.appcompat.app.AppCompatActivity;
+
+import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
+import io.github.abdurazaaqmohammed.privilege.internal.StartupPrivileges;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyFileOpsSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyInstallerSession;
 import io.github.abdurazaaqmohammed.privilege.internal.LegacyShellSession;
-import io.github.abdurazaaqmohammed.privilege.impl.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.AccessManager;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeRootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
+import io.github.abdurazaaqmohammed.privilege.internal.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.internal.RootStaging;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
+import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 
 public final class PrivilegeManager {
 
@@ -58,10 +69,12 @@ public final class PrivilegeManager {
     }
 
     /**
-     * Registry-driven backend preference (DHIZUKU > SHIZUKU > ROOT > NONE):
-     * the highest-priority backend that is present and authorized, or the
-     * FallbackBackend when none is. New code should prefer this over
-     * {@link #active(Context)} once backends are wired into settings.
+     * Registry-driven backend preference (SHIZUKU > DHIZUKU > ROOT > NONE):
+     * the highest-priority authorized backend for the base capability, i.e.
+     * the general preference across domains — SHIZUKU and DHIZUKU coexist
+     * and are chosen per capability, ROOT is the last-resort fallback.
+     * New code should prefer this over {@link #active(Context)} once
+     * backends are wired into settings.
      */
     public static PrivilegeBackend preferredBackend(Context context) {
         PrivilegeBackend backend =
@@ -88,7 +101,7 @@ public final class PrivilegeManager {
         return LegacyInstallerSession.INSTANCE;
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.AccessManager}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.AccessManager}, the legacy implementation it delegates to. */
     public static final class Files {
 
         public static Backend active(Context context) { return PrivilegeManager.active(context); }
@@ -126,22 +139,22 @@ public final class PrivilegeManager {
         public static void move(Context context, String src, String dest, boolean useElevated,
                             TransferControl control) throws IOException { AccessManager.move(context, src, dest, useElevated, control); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException { AccessManager.moveAll(context, ops, progress); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException { AccessManager.moveAll(context, ops, progress, control); }
 
         public static void copyPreserving(Context context, String src, String dest, boolean directory,
                                       boolean useElevated) throws IOException { AccessManager.copyPreserving(context, src, dest, directory, useElevated); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException { AccessManager.copyAllPreserving(context, ops); }
+        public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException { AccessManager.copyAllPreserving(context, ops); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException { AccessManager.copyAllPreserving(context, ops, progress); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException { AccessManager.copyAllPreserving(context, ops, progress, control); }
 
@@ -169,7 +182,7 @@ public final class PrivilegeManager {
 
         public static void touch(Context context, String path, boolean useElevated) throws IOException { AccessManager.touch(context, path, useElevated); }
 
-        public static RootManager.ShellResult execute(Context context, String command, int timeout) { return AccessManager.execute(context, command, timeout); }
+        public static ShellSession.ShellResult execute(Context context, String command, int timeout) { return AccessManager.execute(context, command, timeout); }
 
         public static boolean touchMtime(Context context, String path, long millis) { return AccessManager.touchMtime(context, path, millis); }
 
@@ -199,7 +212,7 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.ShizukuManager}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.ShizukuManager}, the legacy implementation it delegates to. */
     public static final class Shizuku {
 
         public static final int PERMISSION_CODE = ShizukuManager.PERMISSION_CODE;
@@ -257,19 +270,19 @@ public final class PrivilegeManager {
 
         public static void copyDir(Context context, String src, String dest) throws IOException { ShizukuManager.copyDir(context, src, dest); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress) throws IOException { ShizukuManager.moveAll(context, ops, progress); }
 
-        public static void moveAll(Context context, List<RootManager.CopyOp> ops,
+        public static void moveAll(Context context, List<CopyOp> ops,
                                ShellProgress.Listener progress,
                                TransferControl control) throws IOException { ShizukuManager.moveAll(context, ops, progress, control); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops) throws IOException { ShizukuManager.copyAllPreserving(context, ops); }
+        public static void copyAllPreserving(Context context, List<CopyOp> ops) throws IOException { ShizukuManager.copyAllPreserving(context, ops); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress) throws IOException { ShizukuManager.copyAllPreserving(context, ops, progress); }
 
-        public static void copyAllPreserving(Context context, List<RootManager.CopyOp> ops,
+        public static void copyAllPreserving(Context context, List<CopyOp> ops,
                                          ShellProgress.Listener progress,
                                          TransferControl control) throws IOException { ShizukuManager.copyAllPreserving(context, ops, progress, control); }
 
@@ -311,9 +324,25 @@ public final class PrivilegeManager {
 
         public static boolean shellOkFast(Context context, String command, int timeoutSeconds) { return ShizukuManager.shellOkFast(context, command, timeoutSeconds); }
 
+        public static void init(Context context) { ShizukuFileOps.init(context); }
+
+        public static boolean isAndroidDataPath(String path) { return ShizukuFile.isAndroidDataPath(path); }
+
+        public static boolean isAndroidDataPath(File f) { return ShizukuFile.isAndroidDataPath(f); }
+
+        public static File[] tryList(Context context, File folder) { return ShizukuFile.tryList(context, folder); }
+
+        public static boolean involvesShizukuPath(File src, File dest) { return ShizukuFileOps.involvesShizukuPath(src, dest); }
+
+        public static File materialize(Context context, File file) { return ShizukuFileOps.materialize(context, file); }
+
+        public static File shellCopy(File src, File destFolder, String name) { return ShizukuFileOps.shellCopy(src, destFolder, name); }
+
+        public static boolean shellMove(File src, File destFolder, String name) { return ShizukuFileOps.shellMove(src, destFolder, name); }
+
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.PrivilegedInstaller}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller}, the legacy implementation it delegates to. */
     public static final class Installer {
 
         /** Type alias so callers import only PrivilegeManager. */
@@ -353,7 +382,7 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.StartupPrivileges}, the legacy implementation it delegates to. */
+    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.internal.StartupPrivileges}, the legacy implementation it delegates to. */
     public static final class Startup {
 
         public static void warmShell(Activity activity) { StartupPrivileges.warmShell(activity); }
@@ -362,76 +391,155 @@ public final class PrivilegeManager {
 
     }
 
-    /** 1:1 mirror of {@code io.github.abdurazaaqmohammed.privilege.impl.RootManager}, the legacy implementation it delegates to. */
+    /**
+     * 1:1 mirror of {@code RootManager}'s instance API as used by UI/features
+     * (S4–S6 migration): same RootManager delegation, reachable without
+     * importing {@code privilege.internal}. Shell outcomes use
+     * {@link ShellSession.ShellResult}.
+     */
     public static final class Root {
 
-        public static RootManager getInstance(Context context) {
-            return RootManager.getInstance(context);
+        public static boolean isRootAvailable(Context context) { return RootManager.getInstance(context).isRootAvailable(); }
+
+        public static boolean isRootMode(Context context) { return RootManager.getInstance(context).isRootMode(); }
+
+        public static boolean isShizukuMode(Context context) { return RootManager.getInstance(context).isShizukuMode(); }
+
+        public static boolean isRootFileOpsEnabled(Context context) { return RootManager.getInstance(context).isRootFileOpsEnabled(); }
+
+        public static boolean isSilentInstallEnabled(Context context) { return RootManager.getInstance(context).isSilentInstallEnabled(); }
+
+        public static boolean isRootExtractorEnabled(Context context) { return RootManager.getInstance(context).isRootExtractorEnabled(); }
+
+        public static boolean autoEnableRootIfAvailable(Context context) { return RootManager.getInstance(context).autoEnableRootIfAvailable(); }
+
+        public static String suBinary(Context context) { return RootManager.getInstance(context).suBinary(); }
+
+        public static ShellSession.ShellResult execute(Context context, String command) { return RootManager.getInstance(context).execute(command); }
+
+        public static ShellSession.ShellResult execute(Context context, String command, int timeoutSeconds) { return RootManager.getInstance(context).execute(command, timeoutSeconds); }
+
+        public static ShellSession.ShellResult executeFs(Context context, String command, int timeoutSeconds) { return RootManager.getInstance(context).executeFs(command, timeoutSeconds); }
+
+        public static ShellSession.ShellResult executeFs(Context context, String command, int timeoutSeconds, ShellProgress.Listener progress) { return RootManager.getInstance(context).executeFs(command, timeoutSeconds, progress); }
+
+        public static ShellSession.ShellResult executeGlobalNs(Context context, String command, int timeoutSeconds) { return RootManager.getInstance(context).executeGlobalNs(command, timeoutSeconds); }
+
+        public static String getPermissions(Context context, String path) { return RootManager.getInstance(context).getPermissions(path); }
+
+        public static String getOwner(Context context, String path) { return RootManager.getInstance(context).getOwner(path); }
+
+        public static void uninstallSilent(Context context, String packageName) throws IOException { RootManager.getInstance(context).uninstallSilent(packageName); }
+
+        public static void reboot(Context context, String mode) throws IOException { RootManager.getInstance(context).reboot(mode); }
+
+        public static File[] listRootFilesWithStat(Context context, String dirPath) { return RootManager.getInstance(context).listRootFilesWithStat(dirPath); }
+
+        public static void invalidateListCache(Context context) { RootManager.getInstance(context).invalidateListCache(); }
+
+        public static void refreshRootCache(Context context) { RootManager.getInstance(context).refreshRootCache(); }
+
+        public static boolean exists(Context context, String path) { return RootManager.getInstance(context).exists(path); }
+
+        public static void deleteFile(Context context, String path) throws IOException { RootManager.getInstance(context).deleteFile(path); }
+
+        public static void chmodFs(Context context, String path, String mode) throws IOException { RootManager.getInstance(context).chmodFs(path, mode); }
+
+        public static void copyFile(Context context, String src, String dest) throws IOException { RootManager.getInstance(context).copyFile(src, dest); }
+
+        public static void clearAppData(Context context, String packageName) throws IOException { RootManager.getInstance(context).clearAppData(packageName); }
+
+        public static void forceStopApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).forceStopApp(packageName); }
+
+        public static void enableApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).enableApp(packageName); }
+
+        public static void disableApp(Context context, String packageName) throws IOException { RootManager.getInstance(context).disableApp(packageName); }
+
+        public static String getAppUid(Context context, String packageName) { return RootManager.getInstance(context).getAppUid(packageName); }
+
+        public static List<String> getAppApkPaths(Context context, String packageName) { return RootManager.getInstance(context).getAppApkPaths(packageName); }
+
+        public static List<String> getAppDataDirs(Context context, String packageName) { return RootManager.getInstance(context).getAppDataDirs(packageName); }
+
+        public static long streamFromRoot(Context context, String srcPath, OutputStream out, long maxBytes) throws IOException { return RootManager.getInstance(context).streamFromRoot(srcPath, out, maxBytes); }
+
+        public static void streamToRoot(Context context, File localSrc, String dstPath) throws IOException { RootManager.getInstance(context).streamToRoot(localSrc, dstPath); }
+
+    }
+
+    /** 1:1 mirror of {@code RootStaging}: staging decisions and read/write-back of staged copies. */
+    public static final class Staging {
+
+        public static boolean needsStaging(Context context, File file) { return RootStaging.needsStaging(context, file); }
+
+        public static boolean needsStaging(Context context, String absPath) { return RootStaging.needsStaging(context, absPath); }
+
+        public static File stageForRead(Context context, String srcAbsPath) throws IOException { return RootStaging.stageForRead(context, srcAbsPath); }
+
+        public static InputStream openInputStream(Context context, File file) throws IOException { return RootStaging.openInputStream(context, file); }
+
+        public static void writeBack(Context context, File stagedCopy, String originalAbsPath) throws IOException { RootStaging.writeBack(context, stagedCopy, originalAbsPath); }
+
+        public static boolean needsWriteConfirm(String absPath) { return RootStaging.needsWriteConfirm(absPath); }
+
+    }
+
+    /** 1:1 mirror of {@code RootPermissionHelper}: elevated-capability probes and grant helpers. */
+    public static final class Permissions {
+
+        public static boolean hasUsageAccess(Context context) { return RootPermissionHelper.hasUsageAccess(context); }
+
+        public static boolean hasAccessibility(Context context) { return RootPermissionHelper.hasAccessibility(context); }
+
+        public static boolean isRootShellReady(Context context) { return RootPermissionHelper.isRootShellReady(context); }
+
+        public static boolean hasElevatedShell(Context context) { return RootPermissionHelper.hasElevatedShell(context); }
+
+        public static boolean grantWriteSecureViaRoot(Context context) { return RootPermissionHelper.grantWriteSecureViaRoot(context); }
+
+        public static boolean enableAccessibilityForViaElevated(Context context, String serviceClass) { return RootPermissionHelper.enableAccessibilityForViaElevated(context, serviceClass); }
+
+        public static boolean tryAutoGrantInspector(Context context) { return RootPermissionHelper.tryAutoGrantInspector(context); }
+
+        public static boolean ensureUsageAccess(AppCompatActivity activity) { return RootPermissionHelper.ensureUsageAccess(activity); }
+
+    }
+
+    /** 1:1 mirror of the native tool/scan surface: jpegtran JNI and mpio stats. */
+    public static final class Native {
+
+        /** Type alias so callers import only PrivilegeManager. */
+        public interface ReadyCallback extends NativeToolManager.ReadyCallback {
         }
 
-        public static RootManager getInstance() {
-            return RootManager.getInstance();
+        public static String deviceAbi() { return NativeToolManager.deviceAbi(); }
+
+        public static void ensureJpegtran(Activity activity, ReadyCallback cb) { NativeToolManager.ensureJpegtran(activity, cb); }
+
+        public static boolean loadJpegtranJni(Context context) { return NativeToolManager.loadJpegtranJni(context); }
+
+        public static void runJpegtranJni(Context context, int op, String src, String dst,
+                                          int cropW, int cropH, int cropX, int cropY) throws Exception {
+            NativeToolManager.runJpegtranJni(context, op, src, dst, cropW, cropH, cropX, cropY);
         }
 
-        public static boolean isRootAvailable(Context context) {
-            try {
-                return RootManager.getInstance(context).isRootAvailable();
-            } catch (Exception e) {
-                return false;
-            }
-        }
+        public static String describeFile(File f) { return NativeToolManager.describeFile(f); }
 
-        public static boolean isRootGiven(Context context) {
-            try {
-                return RootManager.getInstance(context).isRootAvailable();
-            } catch (Exception e) {
-                return false;
-            }
-        }
+        public static DirectoryStats stats(Context context, String path, TransferControl control, long timeoutMs) { return NativeRootManager.stats(context, path, control, timeoutMs); }
 
-        public static boolean isRootMode(Context context) {
-            try {
-                return RootManager.getInstance(context).isRootMode();
-            } catch (Exception e) {
-                return false;
-            }
-        }
+        public static List<DirectoryStats> stats(Context context, List<String> paths, TransferControl control, long timeoutMs) { return NativeRootManager.stats(context, paths, control, timeoutMs); }
 
-        public static String suBinary(Context context) {
-            return RootManager.getInstance(context).suBinary();
-        }
+        public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) { return NativeRootManager.sizes(context, paths, timeoutMs); }
 
-        public static RootManager.ShellResult execute(Context context, String command, int timeoutSeconds) {
-            return RootManager.getInstance(context).execute(command, timeoutSeconds);
-        }
+        public static FileUtils.Measure scan(Context context, String path) { return NativeRootManager.scan(context, path); }
 
-        public static RootManager.ShellResult execute(String command, int timeoutSeconds) {
-            return RootManager.getInstance().execute(command, timeoutSeconds);
-        }
+        public static FileUtils.MeasureSet scan(Context context, List<String> paths) { return NativeRootManager.scan(context, paths); }
 
-        public static RootManager.ShellResult executeFs(Context context, String command, int timeoutSeconds) {
-            return RootManager.getInstance(context).executeFs(command, timeoutSeconds);
-        }
+        public static File jpegtranBinary(Context context) { return NativeToolManager.jpegtranBinary(context); }
 
-        public static RootManager.ShellResult executeFs(String command, int timeoutSeconds) {
-            return RootManager.getInstance().executeFs(command, timeoutSeconds);
-        }
+        public static String diagnoseExec(Context context) { return NativeToolManager.diagnoseExec(context); }
 
-        public static String escapeShellArg(String arg) {
-            return RootManager.escapeShellArg(arg);
-        }
+        public static boolean setExecutableChecked(File f) { return NativeToolManager.setExecutableChecked(f); }
 
-        public static String quoteForSh(String arg) {
-            return RootManager.quoteForSh(arg);
-        }
-
-        public static File[] listRootFilesWithStat(Context context, String dirPath) {
-            return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
-        }
-
-        public static void invalidateListCache(Context context) {
-            RootManager rm = RootManager.getInstance(context);
-            if (rm != null) rm.invalidateListCache();
-        }
     }
 }

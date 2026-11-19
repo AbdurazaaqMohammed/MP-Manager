@@ -59,7 +59,6 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
 
 /**
  * Full Command Shell Activity honoring Root and Shizuku modes,
@@ -538,11 +537,10 @@ public class CommandShellActivity extends BaseActivity {
         sendBtn.setIconResource(R.drawable.ic_cancel);
 
         executor.execute(() -> {
-            RootManager rm = RootManager.getInstance(this);
-            boolean rootAvailable = rm.isRootAvailable();
-            boolean rootMode = rm.isRootMode();
+            boolean rootAvailable = PrivilegeManager.Root.isRootAvailable(this);
+            boolean rootMode = PrivilegeManager.Root.isRootMode(this);
             boolean shizukuAvailable = PrivilegeManager.shizuku().isAvailable();
-            boolean shizukuMode = rm.isShizukuMode();
+            boolean shizukuMode = PrivilegeManager.Root.isShizukuMode(this);
 
             try {
                 // If Root mode is enabled OR root is directly available, execute with Root su
@@ -569,8 +567,7 @@ public class CommandShellActivity extends BaseActivity {
     }
 
     private void executeRootProcess(String cmd) throws Exception {
-        RootManager rm = RootManager.getInstance(this);
-        String suBinary = rm.suBinary();
+        String suBinary = PrivilegeManager.Root.suBinary(this);
         if (suBinary == null || suBinary.trim().isEmpty()) {
             suBinary = "su";
         }
@@ -668,13 +665,12 @@ public class CommandShellActivity extends BaseActivity {
     }
 
     private void showModeDialog() {
-        RootManager rm = RootManager.getInstance(this);
-        String currentMode = rm.isRootMode() ? "Root (su)" :
-                (rm.isShizukuMode() ? "Shizuku (rish)" : "Auto (Root if available, else Shizuku)");
+        String currentMode = PrivilegeManager.Root.isRootMode(this) ? "Root (su)" :
+                (PrivilegeManager.Root.isShizukuMode(this) ? "Shizuku (rish)" : "Auto (Root if available, else Shizuku)");
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.command_shell)
                 .setMessage(getString(R.string.shell_mode_status, currentMode) + "\n\n" +
-                        "Root Available: " + rm.isRootAvailable() + "\n" +
+                        "Root Available: " + PrivilegeManager.Root.isRootAvailable(this) + "\n" +
                         "Shizuku Available: " + PrivilegeManager.shizuku().isAvailable())
                 .setPositiveButton(android.R.string.ok, null)
                 .show();

@@ -15,12 +15,14 @@ import androidx.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
@@ -173,76 +175,139 @@ public final class ApkInstallAnalysis {
     }
 
     public static ApkInstallAnalysis analyze(Context context, File apk) {
-        String pkg = null;
-        String versionName = null;
-        long versionCode = 0;
-        try {
-            PackageInfo archive = context.getPackageManager()
-                    .getPackageArchiveInfo(apk.getAbsolutePath(), 0);
-            if (archive != null) {
-                pkg = archive.packageName;
-                versionName = archive.versionName;
-                versionCode = ApkInfoUtil.getVersionCode(archive);
+        File effectiveApk = apk;
+        File tempExtracted = null;
+        if (apk != null && apk.exists()) {
+            String name = apk.getName().toLowerCase(Locale.ROOT);
+            boolean isArchive = name.endsWith(".apks") || name.endsWith(".xapk") || name.endsWith(".apkm") || name.endsWith(".aspk") || name.endsWith(".zip");
+            if (isArchive) {
+                try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(apk)) {
+                    java.util.zip.ZipEntry baseEntry = null;
+                    java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zf.entries();
+                    while (entries.hasMoreElements()) {
+                        java.util.zip.ZipEntry ze = entries.nextElement();
+                        String en = ze.getName().toLowerCase(Locale.ROOT);
+                        if (en.equals("base.apk") || en.endsWith("/base.apk") || en.equals("base-master.apk") || en.endsWith("/base-master.apk") || en.equals("master.apk") || en.equals("main.apk") || en.equals("standalone.apk")) {
+                            baseEntry = ze;
+                            break;
+                        }
+                    }
+                    if (baseEntry == null) {
+                        entries = zf.entries();
+                        while (entries.hasMoreElements()) {
+                            java.util.zip.ZipEntry ze = entries.nextElement();
+                            if (ze.getName().toLowerCase(Locale.ROOT).endsWith(".apk")) {
+                                baseEntry = ze;
+                                break;
+                            }
+                        }
+                    }
+                    if (baseEntry != null) {
+                        tempExtracted = new File(context.getCacheDir(), "analysis_" + System.currentTimeMillis() + ".apk");
+                        try (InputStream is = zf.getInputStream(baseEntry);
+                             FileOutputStream fos = new FileOutputStream(tempExtracted)) {
+                            byte[] buf = new byte[65536];
+                            int n;
+                            while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                        }
+                        effectiveApk = tempExtracted;
+                    }
+                } catch (Throwable ignored) {
+                }
             }
-        } catch (Throwable ignored) {
         }
 
-        String checksum = sha256(apk);
-
-        ApkSignatureInfo archiveSig = null;
         try {
-            archiveSig = ApkSignatureInfo.analyze(apk);
-        } catch (Throwable ignored) {
+            String pkg = null;
+            String versionName = null;
+            long versionCode = 0;
+            try {
+                PackageInfo archive = context.getPackageManager()
+                        .getPackageArchiveInfo(effectiveApk.getAbsolutePath(), 0);
+                if (archive != null) {
+                    pkg = archive.packageName;
+                    versionName = archive.versionName;
+                    versionCode = ApkInfoUtil.getVersionCode(archive);
+                }
+            } catch (Throwable ignored) {
+            }
+
+            String checksum = sha256(effectiveApk);
+
+            ApkSignatureInfo archiveSig = null;
+            try {
+                archiveSig = ApkSignatureInfo.analyze(effectiveApk);
+            } catch (Throwable ignored) {
+            }
+            String archiveCert = archiveSig == null ? null : sha256(archiveSig.getPrimaryCertificate());
+            String archiveSubject = archiveSig == null ? null : subjectOf(archiveSig.getPrimaryCertificate());
+
+            int candidateSigStatus = archiveSig == null ? ApkSignatureInfo.STATUS_UNKNOWN : archiveSig.getStatus();
+
+            if (pkg == null) {
+                return new ApkInstallAnalysis(false, null, versionName, versionCode, null, 0,
+                        VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                        archiveCert, null, candidateSigStatus);
+            }
+
+            PackageInfo installedInfo;
+            try {
+                installedInfo = context.getPackageManager().getPackageInfo(pkg, signingFlags());
+            } catch (Throwable e) {
+                return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
+                        VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                        archiveCert, null, candidateSigStatus);
+            }
+            if (installedInfo == null) {
+                return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
+                        VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
+                        archiveCert, null, candidateSigStatus);
+            }
+
+            long installedCode = ApkInfoUtil.getVersionCode(installedInfo);
+            String installedName = installedInfo.versionName;
+            int relation = installedCode == versionCode && eq(installedName, versionName)
+                    ? VERSION_SAME
+                    : installedCode > versionCode ? VERSION_OLDER
+                    : installedCode < versionCode ? VERSION_NEWER : VERSION_DIFFERENT;
+
+            String installedCert = installedSignerSha256(installedInfo);
+            int signerRelation;
+            if (TextUtils_isEmpty(installedCert) || TextUtils_isEmpty(archiveCert)) {
+                signerRelation = SIGNER_UNKNOWN;
+            } else {
+                signerRelation = matchesInstalledSigner(installedInfo, archiveCert) ? SIGNER_SAME : SIGNER_DIFFERENT;
+            }
+
+            String installedSource = installedInfo.applicationInfo == null ? null : installedInfo.applicationInfo.sourceDir;
+            String installedChecksum = TextUtils_isEmpty(installedSource) ? null : sha256(new File(installedSource));
+            boolean sameBytes = installedChecksum != null && installedChecksum.equals(checksum);
+
+            // Also check if candidate matches any installed split in the app's install directory
+            if (!sameBytes && installedSource != null) {
+                File installDir = new File(installedSource).getParentFile();
+                if (installDir != null && installDir.exists()) {
+                    File candidateFileInDir = new File(installDir, effectiveApk.getName());
+                    if (candidateFileInDir.exists()) {
+                        String dirFileHash = sha256(candidateFileInDir);
+                        if (!dirFileHash.isEmpty() && dirFileHash.equals(checksum)) {
+                            sameBytes = true;
+                            installedChecksum = dirFileHash;
+                        }
+                    }
+                }
+            }
+
+            String installedSubject = subjectOf(installedSignerCert(installedInfo));
+
+            return new ApkInstallAnalysis(true, pkg, versionName, versionCode, installedName, installedCode,
+                    relation, signerRelation, sameBytes, checksum, installedChecksum, archiveSubject,
+                    installedSubject, archiveCert, installedCert, candidateSigStatus);
+        } finally {
+            if (tempExtracted != null && tempExtracted.exists()) {
+                tempExtracted.delete();
+            }
         }
-        String archiveCert = archiveSig == null ? null : sha256(archiveSig.getPrimaryCertificate());
-        String archiveSubject = archiveSig == null ? null : subjectOf(archiveSig.getPrimaryCertificate());
-
-        int candidateSigStatus = archiveSig == null ? ApkSignatureInfo.STATUS_UNKNOWN : archiveSig.getStatus();
-
-        if (pkg == null) {
-            return new ApkInstallAnalysis(false, null, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null, candidateSigStatus);
-        }
-
-        PackageInfo installedInfo;
-        try {
-            installedInfo = context.getPackageManager().getPackageInfo(pkg, signingFlags());
-        } catch (Throwable e) {
-            return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null, candidateSigStatus);
-        }
-        if (installedInfo == null) {
-            return new ApkInstallAnalysis(false, pkg, versionName, versionCode, null, 0,
-                    VERSION_DIFFERENT, SIGNER_UNKNOWN, false, checksum, null, archiveSubject, null,
-                    archiveCert, null, candidateSigStatus);
-        }
-
-        long installedCode = ApkInfoUtil.getVersionCode(installedInfo);
-        String installedName = installedInfo.versionName;
-        int relation = installedCode == versionCode && eq(installedName, versionName)
-                ? VERSION_SAME
-                : installedCode > versionCode ? VERSION_OLDER
-                : installedCode < versionCode ? VERSION_NEWER : VERSION_DIFFERENT;
-
-        String installedCert = installedSignerSha256(installedInfo);
-        int signerRelation;
-        if (TextUtils_isEmpty(installedCert) || TextUtils_isEmpty(archiveCert)) {
-            signerRelation = SIGNER_UNKNOWN;
-        } else {
-            signerRelation = matchesInstalledSigner(installedInfo, archiveCert) ? SIGNER_SAME : SIGNER_DIFFERENT;
-        }
-
-        String installedSource = installedInfo.applicationInfo == null ? null : installedInfo.applicationInfo.sourceDir;
-        String installedChecksum = TextUtils_isEmpty(installedSource) ? null : sha256(new File(installedSource));
-        boolean sameBytes = installedChecksum != null && installedChecksum.equals(checksum);
-
-        String installedSubject = subjectOf(installedSignerCert(installedInfo));
-
-        return new ApkInstallAnalysis(true, pkg, versionName, versionCode, installedName, installedCode,
-                relation, signerRelation, sameBytes, checksum, installedChecksum, archiveSubject,
-                installedSubject, archiveCert, installedCert, candidateSigStatus);
     }
 
     private static int signingFlags() {

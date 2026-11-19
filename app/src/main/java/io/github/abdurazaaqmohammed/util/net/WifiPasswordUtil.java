@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.util.net;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 
 
 import android.content.Context;
@@ -87,7 +88,7 @@ public class WifiPasswordUtil {
         }
         Process process = null;
         try {
-            String quoted = PrivilegeManager.Root.escapeShellArg(path);
+            String quoted = ShellQuote.escapeShellArg(path);
             process = Runtime.getRuntime().exec(new String[]{su, "-c", "cat " + quoted});
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
             StringBuilder builder = new StringBuilder();

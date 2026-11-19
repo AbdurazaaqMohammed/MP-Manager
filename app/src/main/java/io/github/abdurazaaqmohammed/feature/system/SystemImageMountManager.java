@@ -17,7 +17,8 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -127,18 +128,17 @@ public final class SystemImageMountManager {
                                 ? ("mount -o ro " + mountTypeOpt + "'" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'")
                                 : ("mount -o ro,loop " + mountTypeOpt + "'" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'"));
 
-                RootManager rm = RootManager.getInstance(context);
                 // Execute mount via executeFs (which uses global ns if preferred) and try executeGlobalNs explicitly
-                RootManager.ShellResult res = rm.executeFs(mntCmd, 15);
+                ShellSession.ShellResult res = PrivilegeManager.Root.executeFs(context, mntCmd, 15);
                 if (!res.isSuccess()) {
-                    res = rm.executeGlobalNs(mntCmd, 15);
+                    res = PrivilegeManager.Root.executeGlobalNs(context, mntCmd, 15);
                 }
                 if (!res.isSuccess()) {
                     // Try generic loop mount without explicit -t if specific fs failed
                     String fallbackCmd = "mount -o ro,loop '" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'";
-                    res = rm.executeFs(fallbackCmd, 15);
+                    res = PrivilegeManager.Root.executeFs(context, fallbackCmd, 15);
                     if (!res.isSuccess()) {
-                        res = rm.executeGlobalNs(fallbackCmd, 15);
+                        res = PrivilegeManager.Root.executeGlobalNs(context, fallbackCmd, 15);
                     }
                 }
 
@@ -198,9 +198,8 @@ public final class SystemImageMountManager {
         new Thread(() -> {
             try {
                 String ucmd = "umount -l '" + session.mountPoint.getAbsolutePath() + "' && rmdir '" + session.mountPoint.getAbsolutePath() + "' 2>/dev/null";
-                RootManager rm = RootManager.getInstance(context);
-                rm.executeFs(ucmd, 10);
-                rm.executeGlobalNs(ucmd, 10);
+                PrivilegeManager.Root.executeFs(context, ucmd, 10);
+                PrivilegeManager.Root.executeGlobalNs(context, ucmd, 10);
                 activeSessions.remove(session.mountPoint.getAbsolutePath());
             } catch (Exception ignored) {
             }

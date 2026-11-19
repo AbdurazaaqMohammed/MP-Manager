@@ -42,7 +42,9 @@ import io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -674,9 +676,8 @@ public class SharedEntryActivity extends BaseActivity {
     private boolean isRootFilePath(String path) {
         if (path == null) return false;
         try {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                RootManager.ShellResult r = rm.execute("test -f " + RootManager.escapeShellArg(path), 5);
+            if (PrivilegeManager.Root.isRootFileOpsEnabled(this) && PrivilegeManager.Root.isRootAvailable(this)) {
+                ShellSession.ShellResult r = PrivilegeManager.Root.execute(this, "test -f " + ShellQuote.escapeShellArg(path), 5);
                 return r.isSuccess();
             }
         } catch (Exception ignored) {}
@@ -690,8 +691,7 @@ public class SharedEntryActivity extends BaseActivity {
      */
     private String rootRemapForElevated(String path) {
         try {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+            if (PrivilegeManager.Root.isRootFileOpsEnabled(this) && PrivilegeManager.Root.isRootAvailable(this)) {
                 if (path.startsWith("/storage/emulated/0")) {
                     return "/data/media/0" + path.substring("/storage/emulated/0".length());
                 } else if (path.startsWith("/storage/emulated/")) {

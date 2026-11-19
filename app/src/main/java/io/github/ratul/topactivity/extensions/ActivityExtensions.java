@@ -32,7 +32,7 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.ratul.topactivity.App;
 import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.utils.DatabaseUtil;
@@ -77,7 +77,7 @@ public final class ActivityExtensions {
     public static boolean isAccessibilityNotStarted() {
         if (!DatabaseUtil.useAccessibility()) return false;
         if (AccessibilityMonitoringService.getInstance() != null) return false;
-        return !RootPermissionHelper.hasAccessibility(App.getInstance());
+        return !PrivilegeManager.Permissions.hasAccessibility(App.getInstance());
     }
 
     public static void openLink(AppCompatActivity activity, String url) {

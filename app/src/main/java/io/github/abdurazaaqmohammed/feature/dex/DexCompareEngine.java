@@ -97,11 +97,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
@@ -206,8 +208,9 @@ public final class DexCompareEngine {
          * Rewrites a single line into a form that is stable across compiler
          * optimizations: equivalent opcode encodings ({@code const/4} vs
          * {@code const}, {@code invoke-virtual/range} vs {@code invoke-virtual},
-         * {@code goto/16} vs {@code goto}, …) and compiler-assigned label
-         * numbers ({@code :goto_0} vs {@code :goto_1}) are canonicalized.
+         * {@code goto/16} vs {@code goto}, …), compiler-assigned label
+         * numbers ({@code :goto_0} vs {@code :goto_1}) and compiler-assigned
+         * register numbers ({@code v1} vs {@code v2}) are canonicalized.
          */
         public String canonicalize(String rawLine) {
             if (rawLine == null) return "";
@@ -220,7 +223,56 @@ public final class DexCompareEngine {
             if (slash > 0 && OPCODE_BASES.contains(opcode.substring(0, slash))) {
                 line = opcode.substring(0, slash) + line.substring(end);
             }
-            return canonicalizeLabels(line);
+            return canonicalizeRegisters(canonicalizeLabels(line));
+        }
+
+        private static final Pattern REGISTER_TOKEN = Pattern.compile("([vp])\\d+");
+
+        /**
+         * Strips register numbers outside string literals, keeping only the v/p
+         * kind ({@code v1} → {@code vX}). Tokens that belong to a member or type
+         * name (obfuscated names such as {@code ->v1()} or {@code Lv1;}) are left
+         * untouched: a register operand is always preceded by whitespace or
+         * {@code {}}/{@code ,}/{@code ..}, never by {@code -}, {@code >} or a
+         * word character.
+         */
+        private static String canonicalizeRegisters(String line) {
+            if (line.indexOf('v') < 0 && line.indexOf('p') < 0) return line;
+            Matcher m = REGISTER_TOKEN.matcher(line);
+            StringBuilder out = new StringBuilder(line.length());
+            int lastEmitted = 0;
+            boolean inString = false;
+            int i = 0;
+            while (i < line.length()) {
+                char c = line.charAt(i);
+                if (inString) {
+                    if (c == '\\' && i + 1 < line.length()) i++;
+                    else if (c == '"') inString = false;
+                    i++;
+                    continue;
+                }
+                if (c == '"') {
+                    inString = true;
+                    i++;
+                    continue;
+                }
+                if ((c == 'v' || c == 'p')
+                        && (i == 0 || !isRegisterAdjacency(line.charAt(i - 1)))
+                        && m.find(i) && m.start() == i
+                        && (m.end() == line.length() || !isRegisterAdjacency(line.charAt(m.end())))) {
+                    out.append(line, lastEmitted, i).append(c).append('X');
+                    lastEmitted = m.end();
+                    i = m.end();
+                    continue;
+                }
+                i++;
+            }
+            out.append(line, lastEmitted, line.length());
+            return out.toString();
+        }
+
+        private static boolean isRegisterAdjacency(char c) {
+            return Character.isLetterOrDigit(c) || c == '_' || c == '$' || c == '-' || c == '>';
         }
 
         private static final Set<String> OPCODE_BASES = new HashSet<>(Arrays.asList(
@@ -273,13 +325,17 @@ public final class DexCompareEngine {
 
         /**
          * Compares two whole smali texts under these options: ignored lines are
-         * dropped from both sides, the rest is compared line by line.
+         * dropped from both sides, the rest is compared line by line. With
+         * "ignore optimizations" the comparison also becomes tolerant to the
+         * artifacts compilers leave behind (see
+         * {@link #smaliEqualIgnoringOptimizations}).
          */
         public boolean smaliEqual(String a, String b) {
             if (a == null) a = "";
             if (b == null) b = "";
             if (a.equals(b)) return true;
             if (!any()) return false;
+            if (ignoreOptimizations) return smaliEqualIgnoringOptimizations(a, b);
             List<String> leftSide = significantLines(a);
             List<String> rightSide = significantLines(b);
             if (leftSide.size() != rightSide.size()) return false;
@@ -287,6 +343,70 @@ public final class DexCompareEngine {
                 if (!canonicalize(leftSide.get(i)).equals(canonicalize(rightSide.get(i)))) return false;
             }
             return true;
+        }
+
+        /**
+         * Optimization-tolerant smali comparison. Compiler optimizations move
+         * instructions around and rename registers and labels, so a plain
+         * positional line compare reports every touched method as changed. This
+         * compares method bodies per method signature instead — method ordering
+         * can differ between builds without any real change — and canonicalizes
+         * each line (equivalent opcode encodings, label numbers and register
+         * numbers) before comparing. Everything outside method blocks (class
+         * header, fields, annotations) is compared order-insensitively.
+         */
+        private boolean smaliEqualIgnoringOptimizations(String a, String b) {
+            if (!methodBodies(a).equals(methodBodies(b))) return false;
+            List<String> restA = nonMethodLines(a);
+            List<String> restB = nonMethodLines(b);
+            if (restA.size() != restB.size()) return false;
+            Collections.sort(restA);
+            Collections.sort(restB);
+            return restA.equals(restB);
+        }
+
+        /** Canonical signature of every method block → canonicalized body lines joined with \\n. */
+        private Map<String, String> methodBodies(String smali) {
+            Map<String, String> out = new HashMap<>();
+            if (smali == null) return out;
+            String[] lines = smali.split("\n", -1);
+            String signature = null;
+            StringBuilder body = new StringBuilder();
+            for (String rawLine : lines) {
+                String line = rawLine.trim();
+                if (signature == null) {
+                    if (line.startsWith(".method")) {
+                        signature = line;
+                        body.setLength(0);
+                    }
+                } else {
+                    if (line.startsWith(".end method")) {
+                        out.merge(signature, body.toString(), (x, y) -> x + "\n" + y);
+                        signature = null;
+                    } else if (!line.isEmpty()) {
+                        body.append(canonicalize(rawLine)).append('\n');
+                    }
+                }
+            }
+            return out;
+        }
+
+        /** Canonicalized significant lines outside method blocks (class header, fields, annotations). */
+        private List<String> nonMethodLines(String smali) {
+            List<String> out = new ArrayList<>();
+            if (smali == null) return out;
+            boolean inMethod = false;
+            for (String rawLine : smali.split("\n", -1)) {
+                String line = rawLine.trim();
+                if (inMethod) {
+                    if (line.startsWith(".end method")) inMethod = false;
+                } else if (line.startsWith(".method")) {
+                    inMethod = true;
+                } else if (!ignorable(rawLine)) {
+                    out.add(canonicalize(rawLine));
+                }
+            }
+            return out;
         }
 
         /** Splits smali into lines and drops the ones the options ignore. */

@@ -11,6 +11,8 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 
 import com.google.android.material.color.MaterialColors;
 
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
+
 /**
  * Draws the "selected pane" highlight for the dual-pane file list. Two instances
  * are stacked around the pane row: a fill layer placed BEHIND the lists (so the
@@ -63,10 +65,10 @@ public class PaneHighlightView extends View {
         underlineHeight = 3 * density;
         borderStroke = 2 * density;
         cornerRadius = 10 * density;
-        fillColor = MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorSurfaceContainerHigh, 0x33808080);
-        accentColor = MaterialColors.getColor(context,
-                android.R.attr.colorPrimary, 0xFF607D8B);
+        fillColor = ThemeRegistry.packColor(context, "list_highlight", MaterialColors.getColor(context,
+                com.google.android.material.R.attr.colorSurfaceContainerHigh, 0x33808080));
+        accentColor = ThemeRegistry.packColor(context, "list_highlight", MaterialColors.getColor(context,
+                android.R.attr.colorPrimary, 0xFF607D8B));
     }
 
     public static int modeFromString(String value) {

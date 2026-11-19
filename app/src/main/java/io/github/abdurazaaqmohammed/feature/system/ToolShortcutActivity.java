@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
+import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
@@ -34,6 +36,14 @@ public final class ToolShortcutActivity extends Activity {
             if (pack != null) {
                 target = new Intent(this, ToolRunnerActivity.class)
                         .putExtra("tool_id", id).putExtra("tool_title", pack.tool(id).title);
+            }
+        }
+        if (target == null && id != null) {
+            // Host-registered custom plugin tool: route through the shared runner.
+            ToolPlugin custom = PluginRegistry.findCustom(id);
+            if (custom != null) {
+                target = new Intent(this, ToolRunnerActivity.class)
+                        .putExtra("tool_id", id).putExtra("tool_title", custom.title(this));
             }
         }
         try {

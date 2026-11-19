@@ -6901,12 +6901,10 @@ SLio/github/abdurazaaqmohammed/utils/RootManager;->checkRoot()Z
 SLio/github/abdurazaaqmohammed/utils/RootManager;->getInstance(Landroid/content/Context;)Lio/github/abdurazaaqmohammed/utils/RootManager;
 SLio/github/abdurazaaqmohammed/utils/RootManager;->getWorkingMode()Lio/github/abdurazaaqmohammed/utils/RootManager$WorkingMode;
 SLio/github/abdurazaaqmohammed/utils/RootManager;->isRootAvailable()Z
-SLio/github/abdurazaaqmohammed/utils/RootManager;->isRootOnlyPath(Ljava/lang/String;)Z
 SLio/github/abdurazaaqmohammed/utils/RootManager;->kickNsProbe()V
 SLio/github/abdurazaaqmohammed/utils/RootManager;->lambda$kickNsProbe$2()V
 SLio/github/abdurazaaqmohammed/utils/RootManager;->parseCount(Lio/github/abdurazaaqmohammed/utils/RootManager$ShellResult;)I
 SLio/github/abdurazaaqmohammed/utils/RootManager;->probeNamespaces()Z
-SLio/github/abdurazaaqmohammed/utils/RootManager;->quoteForSh(Ljava/lang/String;)Ljava/lang/String;
 SLio/github/abdurazaaqmohammed/utils/RootManager;->spawnSu(Ljava/lang/String;I)Lio/github/abdurazaaqmohammed/utils/RootManager$ShellResult;
 SLio/github/abdurazaaqmohammed/utils/RootManager;->suBinary()Ljava/lang/String;
 SLio/github/abdurazaaqmohammed/utils/StorageUtil$StorageInfo;-><init>()V

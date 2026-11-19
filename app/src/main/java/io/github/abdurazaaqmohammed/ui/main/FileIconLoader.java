@@ -26,6 +26,7 @@ import android.media.ThumbnailUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.system.Os;
 import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.View;
@@ -50,14 +51,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
-import io.github.abdurazaaqmohammed.privilege.impl.ShizukuFile;
+import io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile;
 import io.github.abdurazaaqmohammed.data.prefs.DirSizeCache;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
-import io.github.abdurazaaqmohammed.privilege.impl.RootFile;
+import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
+import io.github.abdurazaaqmohammed.util.text.FilePermissions;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
+import io.github.abdurazaaqmohammed.util.text.PackageGuards;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.ratul.topactivity.App;
 
 public class FileIconLoader {
 
@@ -129,10 +134,19 @@ public class FileIconLoader {
     private final int dateTextSizePx;
     private final String datePattern;
     private final boolean elevatedFileOps;
+    /** Render Unix permissions instead of dates for non-user-storage rows. */
+    private final boolean showPerms;
     /** always: recursive sizes everywhere; archive: zip metadata only; never: no sizes. */
     private final String folderSizeMode;
     /** Per-listing memo of [isDir, length, mtime] so rebinds do not re-stat. */
     private final Map<String, long[]> metaMemo = new ConcurrentHashMap<>();
+    /**
+     * Per-listing memo of permission display strings ("rwxr-x--x (750)");
+     * "" marks a miss so rebinds do not retry. Instance-scoped like metaMemo
+     * so the next listing (and the refresh after a chmod) re-resolves instead
+     * of serving a stale mode.
+     */
+    private final Map<String, String> permMemo = new ConcurrentHashMap<>();
     /** Per-listing memo of resolved icons, so classification runs once per path. */
     private final Map<String, Drawable> iconMemo = new ConcurrentHashMap<>();
     /**
@@ -170,6 +184,7 @@ public class FileIconLoader {
         this.dateTextSizePx = Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
                 this.dateTextSize, context.getResources().getDisplayMetrics()));
         this.datePattern = UiPrefs.getDatePattern(context);
+        this.showPerms = UiPrefs.showFilePermissions(context);
         String mode;
         try {
             mode = PreferenceManager.getDefaultSharedPreferences(context)
@@ -377,7 +392,8 @@ public class FileIconLoader {
                 if (ghost) {
                     fileDateView.setVisibility(View.INVISIBLE);
                 } else {
-                    showFileStats(fileDateView, len, mt);
+                    showFileStats(file, fileDateView, len, mt);
+                    maybeFetchPerms(file, fileDateView, len, mt);
                 }
             } else {
                 showFileStatsAsync(file, fileDateView);
@@ -386,10 +402,10 @@ public class FileIconLoader {
         }
     }
 
-    private void showFileStats(TextView view, long size, long mtime) {
+    private void showFileStats(File file, TextView view, long size, long mtime) {
         view.setVisibility(View.VISIBLE);
         applyDateTextSize(view);
-        view.setText(new StringBuilder(UiPrefs.formatDate(datePattern, mtime))
+        view.setText(new StringBuilder(detailPrefix(file, mtime))
                 .append(' ').append(FileSize.getHumanReadableFileSize(size)));
     }
 
@@ -400,6 +416,175 @@ public class FileIconLoader {
      */
     private void applyDateTextSize(TextView view) {
         if (view.getTextSize() != dateTextSizePx) view.setTextSize(dateTextSize);
+    }
+
+    /**
+     * Leading detail text for a row: the formatted date, or Unix permissions
+     * when the permissions option is on and the path is outside user storage.
+     * Unknown permissions fall back to the date until the async lookup replaces
+     * them.
+     */
+    private String detailPrefix(File file, long mtime) {
+        String date = UiPrefs.formatDate(datePattern, mtime);
+        if (!showPerms || file == null) return date;
+        String path;
+        try {
+            path = file.getAbsolutePath();
+        } catch (Exception e) {
+            return date;
+        }
+        if (isUserStorage(path)) return date;
+        String perms = permOf(file, path);
+        return perms != null ? perms : date;
+    }
+
+    /**
+     * Permission display for a path ("rwxr-x--x (750)"), or null when unknown.
+     * Listing-carried metadata first ({@link RootFile} caches either the
+     * {@code ls -l} mode column or the octal {@code stat %a} output depending
+     * on which listing strategy answered), then a local {@code lstat}, which
+     * answers every world-stat-able path such as /system with no shell at all.
+     * Misses are not memoized here so the async backend lookup can fill the
+     * memo.
+     */
+    private String permOf(File file, String path) {
+        String memo = permMemo.get(path);
+        if (memo != null) return memo.isEmpty() ? null : memo;
+        String perms = null;
+        if (file instanceof RootFile) {
+            String mode = ((RootFile) file).getRootMode();
+            perms = FilePermissions.formatLsMode(mode);
+            if (perms == null) perms = FilePermissions.formatOctal(mode);
+        }
+        if (perms == null) {
+            int mode = statModeLocal(path);
+            if (mode >= 0) perms = FilePermissions.formatMode(mode);
+        }
+        if (perms != null) permMemo.put(path, perms);
+        return perms;
+    }
+
+    /** Local lstat; -1 when the app uid cannot stat the path. */
+    private static int statModeLocal(String path) {
+        try {
+            return Os.lstat(path).st_mode;
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    private boolean canElevateStats() {
+        return elevatedFileOps
+                || (context != null && PrivilegeManager.Root.isRootAvailable(context))
+                || PrivilegeManager.Shizuku.ready();
+    }
+
+    /**
+     * {@code stat -c %a} through the active backend, or null when it cannot
+     * answer. The root mirror alone returns "Root mode is disabled" outside
+     * root mode, which used to memoize a permanent miss for every row while
+     * Shizuku was live; under Shizuku the shared shell session answers.
+     */
+    private String backendPermissions(String path) {
+        try {
+            PrivilegeManager.Backend backend = PrivilegeManager.active(context);
+            if (backend == PrivilegeManager.Backend.ROOT) {
+                return FilePermissions.formatOctal(
+                        PrivilegeManager.Root.getPermissions(context, path));
+            }
+            if (backend == PrivilegeManager.Backend.SHIZUKU) {
+                ShellSession.Result r = PrivilegeManager.shell().exec(
+                        "stat -c %a " + ShellQuote.escapeShellArg(path), 30);
+                if (r.success && r.stdout != null) {
+                    return FilePermissions.formatOctal(r.stdout.trim());
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    /** Kicks the backend permission lookup for a row whose date is already shown. */
+    private void maybeFetchPerms(File file, TextView view, long size, long mtime) {
+        if (!showPerms) return;
+        String path;
+        try {
+            path = file.getAbsolutePath();
+        } catch (Exception e) {
+            return;
+        }
+        if (isUserStorage(path) || permMemo.get(path) != null) return;
+        if (!canElevateStats()) {
+            permMemo.put(path, "");
+            return;
+        }
+        requestBackendPerms(file, path, view, size, mtime);
+    }
+
+    /**
+     * Backend permission lookup for one path, deduped per path like the
+     * size/mtime stats and bounded by the same per-listing budget. Resolves
+     * perms or "" (failed) into the memo and re-renders the row while it is
+     * still bound to this path; folder rows fall back to their date detail
+     * instead of staying blank.
+     */
+    private void requestBackendPerms(File file, String path, TextView view, long size, long mtime) {
+        // Tag the row first: when a lookup for this path is already in flight
+        // that one renders it, and a recycled row must not keep a stale tag.
+        view.setTag(path);
+        synchronized (STATS_LOCK) {
+            if (!pendingStats.add(path)) return;
+        }
+        if (backendStatBudget.getAndDecrement() <= 0) {
+            releasePending(path);
+            // Budget spent: remember the miss so rebinding does not retry, and
+            // keep the ordinary detail visible.
+            permMemo.put(path, "");
+            if (treatAsFolder(file)) restoreFolderRow(file, view, mtime);
+            return;
+        }
+        backendStatService.execute(() -> {
+            if (!path.equals(view.getTag())) {
+                releasePending(path);
+                return;
+            }
+            String resolved = backendPermissions(path);
+            releasePending(path);
+            permMemo.put(path, resolved != null ? resolved : "");
+            if (!path.equals(view.getTag())) return;
+            final String perms = resolved;
+            context.runOnUiThread(() -> {
+                if (!path.equals(view.getTag())) return;
+                if (perms != null) {
+                    if (treatAsFolder(file)) {
+                        renderFolderDetail(file, view, perms);
+                    } else {
+                        view.setVisibility(View.VISIBLE);
+                        applyDateTextSize(view);
+                        view.setText(new StringBuilder(perms)
+                                .append(' ').append(FileSize.getHumanReadableFileSize(size)));
+                    }
+                } else if (treatAsFolder(file)) {
+                    restoreFolderRow(file, view, mtime);
+                }
+            });
+        });
+    }
+
+    /** Date-based folder detail again after permissions turned out unavailable. */
+    private void restoreFolderRow(File file, TextView view, long mtime) {
+        showFolderDate(file, view, new long[]{1, 0, mtime});
+    }
+
+    /** Folder row detail: permissions text, plus the folder size per its mode. */
+    private void renderFolderDetail(File file, TextView view, String perms) {
+        if (UiPrefs.folderSizeMode(context) == UiPrefs.FOLDER_SIZE_NONE) {
+            view.setVisibility(View.VISIBLE);
+            applyDateTextSize(view);
+            view.setText(perms);
+            return;
+        }
+        showFolderSizeAndDate(file, view, perms);
     }
 
     /**
@@ -446,8 +631,12 @@ public class FileIconLoader {
         Long cachedMtime = mtimeCache.get(tag);
         if (cachedSize != null && cachedMtime != null) {
             fileDateView.setTag(null);
-            if (cachedSize > 0 || cachedMtime > 0) showFileStats(fileDateView, cachedSize, cachedMtime);
-            else fileDateView.setVisibility(View.INVISIBLE);
+            if (cachedSize > 0 || cachedMtime > 0) {
+                showFileStats(file, fileDateView, cachedSize, cachedMtime);
+                maybeFetchPerms(file, fileDateView, cachedSize, cachedMtime);
+            } else {
+                fileDateView.setVisibility(View.INVISIBLE);
+            }
             return;
         }
         fileDateView.setVisibility(View.INVISIBLE);
@@ -471,6 +660,12 @@ public class FileIconLoader {
             try {
                 mtime = PrivilegeManager.Files.getMtime(context, tag);
             } catch (Exception ignored) {}
+            // Piggyback the permission lookup on the same backend round trip
+            // instead of queueing a second shell stat for the row.
+            if (showPerms && !isUserStorage(tag) && permMemo.get(tag) == null) {
+                String resolved = backendPermissions(tag);
+                permMemo.put(tag, resolved != null ? resolved : "");
+            }
             releasePending(tag);
             sizeCache.put(tag, size);
             mtimeCache.put(tag, mtime);
@@ -484,7 +679,7 @@ public class FileIconLoader {
             final long finalSize = memo[1];
             final long finalMtime = memo[2];
             context.runOnUiThread(() -> {
-                if (tag.equals(fileDateView.getTag())) showFileStats(fileDateView, finalSize, finalMtime);
+                if (tag.equals(fileDateView.getTag())) showFileStats(file, fileDateView, finalSize, finalMtime);
             });
         });
     }
@@ -517,6 +712,36 @@ public class FileIconLoader {
 
     private void showFolderDate(File file, TextView fileDateView, long[] meta) {
         long mtime = meta[2];
+        // Permissions option: folders outside user storage show permissions
+        // instead of the date (size still follows its own mode).
+        if (showPerms) {
+            String path;
+            try {
+                path = file.getAbsolutePath();
+            } catch (Exception e) {
+                path = null;
+            }
+            if (path != null && !isUserStorage(path)) {
+                String perms = permOf(file, path);
+                if (perms != null) {
+                    fileDateView.setTag(null);
+                    renderFolderDetail(file, fileDateView, perms);
+                    return;
+                }
+                if (permMemo.get(path) == null) {
+                    if (!canElevateStats()) {
+                        permMemo.put(path, "");
+                    } else {
+                        // Unknown so far: one budgeted backend lookup owns the
+                        // row and falls back to the date logic below on failure
+                        // or for later rebinds.
+                        fileDateView.setVisibility(View.INVISIBLE);
+                        requestBackendPerms(file, path, fileDateView, 0, mtime);
+                        return;
+                    }
+                }
+            }
+        }
         int sizeMode = UiPrefs.folderSizeMode(context);
         if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
             // "Never": date-only row
@@ -547,9 +772,7 @@ public class FileIconLoader {
             return;
         }
 
-        boolean canElevate = elevatedFileOps
-                || (context != null && RootManager.getInstance(context).isRootAvailable())
-                || PrivilegeManager.Shizuku.ready();
+        boolean canElevate = canElevateStats();
 
         if (!canElevate) {
             fileDateView.setTag(null);
@@ -726,13 +949,13 @@ public class FileIconLoader {
         String name = file.getName();
         if (name == null || name.isEmpty()) return null;
         if (isDataRoot(listedDir)) {
-            return RootManager.isPackageNameValid(name) ? name : null;
+            return PackageGuards.isPackageNameValid(name) ? name : null;
         }
         if (isDataAppRoot(listedDir)) {
             // Android 8+: /data/app/~~.../com.pkg-... or legacy /data/app/com.pkg-...
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (RootManager.isPackageNameValid(possiblePkg)) {
+            if (PackageGuards.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
             if (file.isDirectory()) {
@@ -745,22 +968,22 @@ public class FileIconLoader {
                         String cn = c.getName();
                         int cDash = cn.indexOf('-');
                         String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                        if (RootManager.isPackageNameValid(cPkg)) {
+                        if (PackageGuards.isPackageNameValid(cPkg)) {
                             return cPkg;
                         }
                     }
                 } else if (PrivilegeManager.Files.fileOpsOn(context)) {
                     // Try fast shell lookup if unreadable by normal user
                     try {
-                        RootManager.ShellResult r =
-                                RootManager.getInstance(context)
-                                        .executeFs("ls -1 -- " + RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
+                        ShellSession.ShellResult r =
+                                PrivilegeManager.Root.executeFs(context,
+                                        "ls -1 -- " + ShellQuote.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null | head -n 5", 5);
                         if (r != null && r.isSuccess() && r.output() != null) {
                             for (String line : r.output().split("\\r?\\n")) {
                                 String cn = line.trim();
                                 int cDash = cn.indexOf('-');
                                 String cPkg = cDash > 0 ? cn.substring(0, cDash) : cn;
-                                if (RootManager.isPackageNameValid(cPkg)) {
+                                if (PackageGuards.isPackageNameValid(cPkg)) {
                                     return cPkg;
                                 }
                             }
@@ -772,7 +995,7 @@ public class FileIconLoader {
             // Inside ~~...: folders like com.example.app-hash
             int dash = name.indexOf('-');
             String possiblePkg = dash > 0 ? name.substring(0, dash) : name;
-            if (RootManager.isPackageNameValid(possiblePkg)) {
+            if (PackageGuards.isPackageNameValid(possiblePkg)) {
                 return possiblePkg;
             }
         }
@@ -1362,8 +1585,7 @@ public class FileIconLoader {
 
     private static boolean isRootAccessAvailable() {
         try {
-            RootManager rm = RootManager.getInstance();
-            return rm != null && rm.isRootAvailable();
+            return PrivilegeManager.Root.isRootAvailable(App.getInstance());
         } catch (Throwable t) {
             return false;
         }
@@ -1398,10 +1620,9 @@ public class FileIconLoader {
 
     private static Bitmap decodeBitmapViaRootStream(String path) {
         try {
-            RootManager rm = RootManager.getInstance();
-            if (rm == null || !rm.isRootAvailable()) return null;
+            if (!PrivilegeManager.Root.isRootAvailable(App.getInstance())) return null;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            rm.streamFromRoot(path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
+            PrivilegeManager.Root.streamFromRoot(App.getInstance(), path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
             byte[] data = baos.toByteArray();
             if (data == null || data.length == 0) return null;
 

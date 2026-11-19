@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MP 主题示例</string>
+    <string name="theme_name">新星之夜</string>
+    <string name="theme_details">靛蓝强调色与深色夜空壁纸</string>
+    <string name="wallpaper_desc">示例壁纸</string>
+    <string name="preview_desc">主题预览</string>
+    <string name="label_tab_files">文件</string>
+    <string name="label_tab_root">Root</string>
+    <string name="label_tab_general">常规</string>
+    <string name="label_tab_behavior">行为</string>
+    <string name="label_tab_other">其他</string>
+    <string name="label_settings_theme">主题</string>
+</resources>

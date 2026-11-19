@@ -75,9 +75,9 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.viewer.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.ui.viewer.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
-import io.github.abdurazaaqmohammed.privilege.impl.RootManager;
-import io.github.abdurazaaqmohammed.privilege.impl.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.util.io.StorageUtil;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class StorageManagerActivity extends BaseActivity {
@@ -289,7 +289,7 @@ public class StorageManagerActivity extends BaseActivity {
         refreshVolumes();
     }
 
-    private String safeErr(RootManager.ShellResult r) {
+    private String safeErr(ShellSession.ShellResult r) {
         try {
             if (r == null || r.error() == null) return "";
             String e = r.error().trim().replace("\n", " ");
@@ -307,14 +307,13 @@ public class StorageManagerActivity extends BaseActivity {
             File back = null;
             String remote = "/data/local/tmp/mpman_roundtrip_test";
             try {
-                RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
                 String canary = "MPManager roundtrip " + System.currentTimeMillis() + " 0123456789 abcdefgh";
                 local = new File(getCacheDir(), "roundtrip_src.tmp");
                 try (FileOutputStream fos = new FileOutputStream(local)) {
                     fos.write(canary.getBytes(StandardCharsets.UTF_8));
                 }
                 try {
-                    rm.streamToRoot(local, remote);
+                    PrivilegeManager.Root.streamToRoot(StorageManagerActivity.this, local, remote);
                     out.append("roundtrip write: OK\n");
                 } catch (Exception e) {
                     out.append("roundtrip write FAIL: ").append(e.getMessage()).append("\n");
@@ -323,7 +322,7 @@ public class StorageManagerActivity extends BaseActivity {
                 try {
                     back = new File(getCacheDir(), "roundtrip_back.tmp");
                     try (FileOutputStream fos = new FileOutputStream(back)) {
-                        rm.streamFromRoot(remote, fos, 65536L);
+                        PrivilegeManager.Root.streamFromRoot(StorageManagerActivity.this, remote, fos, 65536L);
                     }
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     try (FileInputStream fis = new FileInputStream(back)) {
@@ -343,7 +342,7 @@ public class StorageManagerActivity extends BaseActivity {
                 if (!"stop".equals(e.getMessage())) out.append("roundtrip error: ").append(e.getMessage()).append("\n");
             } finally {
                 try {
-                    RootManager.getInstance(StorageManagerActivity.this).deleteFile(remote);
+                    PrivilegeManager.Root.deleteFile(StorageManagerActivity.this, remote);
                     out.append("roundtrip cleanup: OK\n");
                 } catch (Exception e) {
                     out.append("roundtrip cleanup FAIL: ").append(e.getMessage()).append("\n");
@@ -372,14 +371,14 @@ public class StorageManagerActivity extends BaseActivity {
             return;
         }
         if (!CacheCleaner.isServiceEnabled(this)) {
-            boolean elevated = RootPermissionHelper.hasElevatedShell(this);
+            boolean elevated = PrivilegeManager.Permissions.hasElevatedShell(this);
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.storage_enable_autoclear))
                     .setMessage(elevated ? getString(R.string.storage_autoclear_need_elevated) : getString(R.string.storage_autoclear_need))
                     .setPositiveButton(elevated ? getString(R.string.storage_enable_auto) : getString(R.string.storage_open_settings), (d, w) -> {
                         if (elevated) {
                             new Thread(() -> {
-                                boolean ok = RootPermissionHelper.enableAccessibilityForViaElevated(StorageManagerActivity.this, CacheCleanerService.class.getName());
+                                boolean ok = PrivilegeManager.Permissions.enableAccessibilityForViaElevated(StorageManagerActivity.this, CacheCleanerService.class.getName());
                                 handler.post(() -> {
                                     Extensions.showMessage(StorageManagerActivity.this, ok ? getString(R.string.storage_service_enabled_again) : getString(R.string.storage_autoenable_failed));
                                     if (!ok) CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
@@ -453,7 +452,6 @@ public class StorageManagerActivity extends BaseActivity {
 
     private void rootEmptyCacheDirsWithVerify(String pkg) {
         try {
-            RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
             String[] dirs = new String[]{
                     "/data/data/" + pkg + "/cache",
                     "/data/data/" + pkg + "/code_cache",
@@ -462,10 +460,10 @@ public class StorageManagerActivity extends BaseActivity {
             };
             StringBuilder script = new StringBuilder("rm -rf");
             for (String dir : dirs) {
-                script.append(' ').append(RootManager.escapeShellArg(dir));
+                script.append(' ').append(ShellQuote.escapeShellArg(dir));
             }
             script.append(" 2>/dev/null; ec=$?; echo RM_EXIT=$ec");
-            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+            ShellSession.ShellResult r = PrivilegeManager.Root.executeFs(StorageManagerActivity.this, script.toString(), 60);
             boolean ok = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0");
             if (!ok) {
                 String err = r.error() == null ? "" : r.error().trim();
@@ -1047,9 +1045,9 @@ public class StorageManagerActivity extends BaseActivity {
         cacheStatus.setText(getString(R.string.storage_loading_caches));
         new Thread(() -> {
             List<CacheRow> rows = new ArrayList<>();
-            boolean rootReady = RootPermissionHelper.isRootShellReady(StorageManagerActivity.this);
+            boolean rootReady = PrivilegeManager.Permissions.isRootShellReady(StorageManagerActivity.this);
             Map<String, Long> rootSizes = rootReady ? readCacheSizesViaRoot() : new HashMap<>();
-            boolean statsReady = Build.VERSION.SDK_INT >= 26 && RootPermissionHelper.hasUsageAccess(StorageManagerActivity.this);
+            boolean statsReady = Build.VERSION.SDK_INT >= 26 && PrivilegeManager.Permissions.hasUsageAccess(StorageManagerActivity.this);
             PackageManager pm = getPackageManager();
             List<ApplicationInfo> apps;
             try {
@@ -1082,11 +1080,11 @@ public class StorageManagerActivity extends BaseActivity {
                 long total = 0;
                 for (CacheRow r : rows) total += r.cacheBytes;
                 if (rows.isEmpty()) {
-                    if (Build.VERSION.SDK_INT >= 26 && !RootPermissionHelper.hasUsageAccess(StorageManagerActivity.this) && !rootReady) {
+                    if (Build.VERSION.SDK_INT >= 26 && !PrivilegeManager.Permissions.hasUsageAccess(StorageManagerActivity.this) && !rootReady) {
                         cacheStatus.setText(getString(R.string.storage_grant_usage));
                         MaterialButton grant = new MaterialButton(StorageManagerActivity.this);
                         grant.setText(getString(R.string.storage_grant_usage_btn));
-                        grant.setOnClickListener(v -> RootPermissionHelper.ensureUsageAccess(StorageManagerActivity.this));
+                        grant.setOnClickListener(v -> PrivilegeManager.Permissions.ensureUsageAccess(StorageManagerActivity.this));
                         ((ViewGroup) cacheList.getParent()).addView(grant, ((ViewGroup) cacheList.getParent()).indexOfChild(cacheList));
                     } else {
                         cacheStatus.setText(getString(R.string.storage_no_caches));
@@ -1101,8 +1099,7 @@ public class StorageManagerActivity extends BaseActivity {
     private Map<String, Long> readCacheSizesViaRoot() {
         Map<String, Long> out = new HashMap<>();
         try {
-            RootManager rm = RootManager.getInstance(this);
-            RootManager.ShellResult r = rm.executeFs("du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
+            ShellSession.ShellResult r = PrivilegeManager.Root.executeFs(this, "du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
             if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
                 parseDuOutput(r.output(), 1024L, out);
             }
@@ -1157,7 +1154,7 @@ public class StorageManagerActivity extends BaseActivity {
             Extensions.showMessage(this, getString(R.string.storage_nothing_sel));
             return;
         }
-        if (!RootPermissionHelper.isRootShellReady(this)) {
+        if (!PrivilegeManager.Permissions.isRootShellReady(this)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.storage_root_needed))
                     .setMessage(getString(R.string.storage_root_need_msg))
@@ -1170,7 +1167,6 @@ public class StorageManagerActivity extends BaseActivity {
                 .setTitle(selectedOnly ? getString(R.string.storage_clear_sel) : getString(R.string.storage_clear_all_caches))
                 .setMessage(getString(R.string.storage_apps_n, targets.size()))
                 .setPositiveButton(getString(R.string.clear), (d, w) -> new Thread(() -> {
-                    RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
                     int ok = 0;
                     List<String> failures = new ArrayList<>();
                     String firstError = "";
@@ -1184,14 +1180,14 @@ public class StorageManagerActivity extends BaseActivity {
                             };
                             StringBuilder script = new StringBuilder("rm -rf");
                             for (String dir : dirs) {
-                                script.append(' ').append(RootManager.escapeShellArg(dir));
+                                script.append(' ').append(ShellQuote.escapeShellArg(dir));
                             }
                             script.append(" 2>/dev/null; ec=$?; ");
                             for (String dir : dirs) {
-                                script.append("if [ -e ").append(RootManager.escapeShellArg(dir)).append(" ] || [ -L ").append(RootManager.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(RootManager.escapeShellArg(dir)).append("; fi; ");
+                                script.append("if [ -e ").append(ShellQuote.escapeShellArg(dir)).append(" ] || [ -L ").append(ShellQuote.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(ShellQuote.escapeShellArg(dir)).append("; fi; ");
                             }
                             script.append("echo RM_EXIT=$ec");
-                            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+                            ShellSession.ShellResult r = PrivilegeManager.Root.executeFs(StorageManagerActivity.this, script.toString(), 60);
                             boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0") && !r.output().contains("LEFT:");
                             if (clearedOk) {
                                 ok++;
@@ -1209,12 +1205,12 @@ public class StorageManagerActivity extends BaseActivity {
                         }
                     }
                     try {
-                        rm.execute("pm trim-caches 9223372036854775807", 90);
+                        PrivilegeManager.Root.execute(StorageManagerActivity.this, "pm trim-caches 9223372036854775807", 90);
                     } catch (Exception ignored) {
                     }
                     if (!failures.isEmpty()) {
                         try {
-                            RootManager.ShellResult diag = rm.executeFs("id; ls -ld " + RootManager.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
+                            ShellSession.ShellResult diag = PrivilegeManager.Root.executeFs(StorageManagerActivity.this, "id; ls -ld " + ShellQuote.escapeShellArg("/data/data/" + failures.get(0) + "/cache") + " 2>&1", 15);
                             String extra = diag.output() == null ? "" : diag.output().trim();
                             String derr = diag.error() == null ? "" : diag.error().trim();
                             if (!derr.isEmpty()) extra = (extra + " " + derr).trim();

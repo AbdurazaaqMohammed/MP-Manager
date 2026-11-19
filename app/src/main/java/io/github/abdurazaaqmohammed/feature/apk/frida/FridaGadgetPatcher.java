@@ -74,7 +74,7 @@ import java.util.zip.ZipInputStream;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
-import io.github.abdurazaaqmohammed.privilege.impl.NativeToolManager;
+import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import com.reandroid.apk.APKLogger;
 
 /**
@@ -232,7 +232,7 @@ public final class FridaGadgetPatcher {
 
     /** Downloaded frida-inject binary for this device's ABI (Path C). */
     public static File injectBinary(Context context) {
-        return new File(fridaDir(context), "frida-inject-" + NativeToolManager.deviceAbi());
+        return new File(fridaDir(context), "frida-inject-" + PrivilegeManager.Native.deviceAbi());
     }
 
     public static boolean isInjectReady(Context context) {
@@ -243,7 +243,32 @@ public final class FridaGadgetPatcher {
         void onProgress(long done, long total);
     }
 
+    /**
+     * Downloads with a few automatic retries for transient network failures
+     * (many user reports are plain connectivity hiccups: a failed DNS lookup,
+     * a dropped Wi-Fi cell, or a captive portal intercepting the first try).
+     */
     private static void downloadFile(String url, File out, DownloadProgress progress) throws Exception {
+        IOException last = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                downloadFileOnce(url, out, progress);
+                return;
+            } catch (IOException e) {
+                last = e;
+                if (attempt == 3) break;
+                try {
+                    Thread.sleep(1500L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
+        }
+        throw last;
+    }
+
+    private static void downloadFileOnce(String url, File out, DownloadProgress progress) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setConnectTimeout(20000);
         conn.setReadTimeout(60000);
@@ -269,6 +294,37 @@ public final class FridaGadgetPatcher {
         } finally {
             conn.disconnect();
         }
+    }
+
+    /**
+     * Unwraps {@link java.util.concurrent.CompletionException} and reports
+     * plain connectivity failures with a readable message instead of the raw
+     * {@code CompletionException: java.net.ConnectException: Failed to connect
+     * to github.com/x.x.x.x:443} dump users keep sending in.
+     */
+    private static void showDownloadError(Activity activity, Throwable e) {
+        Throwable cause = e;
+        while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        final Throwable failure = cause;
+        activity.runOnUiThread(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            if (failure instanceof java.net.ConnectException || failure instanceof java.net.UnknownHostException
+                    || failure instanceof java.net.SocketTimeoutException
+                    || failure instanceof java.net.NoRouteToHostException
+                    || failure instanceof java.net.SocketException) {
+                String reason = failure.getLocalizedMessage() != null
+                        ? failure.getLocalizedMessage() : failure.toString();
+                new MaterialAlertDialogBuilder(activity)
+                        .setTitle(R.string.frida_download_required)
+                        .setMessage(activity.getString(R.string.frida_download_failed, reason, "github.com"))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            } else {
+                new ErrorUtil(activity).showError(failure);
+            }
+        });
     }
 
     private static void unzip(File zip, File dest) throws IOException {
@@ -337,8 +393,7 @@ public final class FridaGadgetPatcher {
                                     if (ready) activity.runOnUiThread(onReady);
                                 })
                                 .exceptionally(e -> {
-                                    activity.runOnUiThread(() ->
-                                            new ErrorUtil(activity).showError(e));
+                                    showDownloadError(activity, e);
                                     return null;
                                 }))
                 .show();
@@ -354,7 +409,7 @@ public final class FridaGadgetPatcher {
             return;
         }
         ensureBundle(activity, () -> {
-            String arch = fridaArchForAbi(NativeToolManager.deviceAbi());
+            String arch = fridaArchForAbi(PrivilegeManager.Native.deviceAbi());
             if (arch == null) arch = "android-arm64";
             String name = "frida-inject-" + FRIDA_VERSION + "-" + arch + ".xz";
             String url = "https://github.com/frida/frida/releases/download/"
@@ -365,7 +420,7 @@ public final class FridaGadgetPatcher {
                         fridaDir(activity).mkdirs();
                         xzDecompress(file, dest);
                         file.delete();
-                        NativeToolManager.setExecutableChecked(dest);
+                        PrivilegeManager.Native.setExecutableChecked(dest);
                         if (!dest.isFile() || dest.length() == 0) {
                             throw new IOException("frida-inject download failed");
                         }
@@ -374,7 +429,7 @@ public final class FridaGadgetPatcher {
                         if (ready) activity.runOnUiThread(onReady);
                     })
                     .exceptionally(e -> {
-                        activity.runOnUiThread(() -> new ErrorUtil(activity).showError(e));
+                        showDownloadError(activity, e);
                         return null;
                     });
         });
@@ -428,13 +483,16 @@ public final class FridaGadgetPatcher {
                 future.complete(true);
             } catch (Exception e) {
                 tmp.delete();
+                // Complete on the worker thread so dependent stages do not run
+                // inside a UI-thread posted runnable; only the dialog dismissal
+                // is posted to the main thread.
                 activity.runOnUiThread(() -> {
                     try {
                         dialog.dismiss();
                     } catch (Exception ignored) {
                     }
-                    future.completeExceptionally(e);
                 });
+                future.completeExceptionally(e);
             }
         }).start();
         return future;
