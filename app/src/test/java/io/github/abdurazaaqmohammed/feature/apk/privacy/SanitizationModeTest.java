@@ -170,4 +170,33 @@ public class SanitizationModeTest {
         assertFalse(deserializedStandard.deepStructuralAnalysis);
         assertTrue(deserializedStandard.stripLogging);
     }
+
+    @Test
+    public void testThreatUncheckedOptionFiltering() {
+        // Aggressive mode: when hardware fingerprint threats unchecked, all HW IDs disabled
+        PrivacyOptions aggressiveOptions = PrivacyOptions.aggressive();
+        // simulate unchecking HARDWARE_FINGERPRINT
+        aggressiveOptions.emptyTelephonyIds = false;
+        aggressiveOptions.neutralizeAdIds = false;
+        aggressiveOptions.blankAndroidId = false;
+        aggressiveOptions.blankHardwareSerial = false;
+        aggressiveOptions.blankWifiMac = false;
+
+        assertFalse(aggressiveOptions.emptyTelephonyIds);
+        assertFalse(aggressiveOptions.neutralizeAdIds);
+        assertFalse(aggressiveOptions.blankAndroidId);
+        assertFalse(aggressiveOptions.blankHardwareSerial);
+        assertFalse(aggressiveOptions.blankWifiMac);
+        // Tracker SDK and Log still enabled
+        assertTrue(aggressiveOptions.stripLogging);
+        assertTrue(aggressiveOptions.sinkholeTelemetryDomains);
+        assertTrue(aggressiveOptions.neutralizeBackgroundWorkers);
+
+        // Standard mode: when log leaks unchecked
+        PrivacyOptions standardOptions = PrivacyOptions.standard();
+        standardOptions.stripLogging = false;
+        assertFalse(standardOptions.stripLogging);
+        assertTrue(standardOptions.emptyTelephonyIds);
+        assertTrue(standardOptions.neutralizeAdIds);
+    }
 }

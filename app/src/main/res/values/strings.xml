@@ -2660,4 +2660,8 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="privacy_track_score">Tracking &amp; Telemetry: %d/100</string>
     <string name="privacy_surv_score">Surveillance &amp; Probes: %d/100</string>
     <string name="privacy_log_score">Debug Log Leaks: %d/100</string>
+    <string name="privacy_mode_standard_title">Standard Mode</string>
+    <string name="privacy_mode_standard_desc">Generally guarantees app remains stable, but may miss some targets in highly obfuscated or encrypted apps</string>
+    <string name="privacy_mode_aggressive_title">Aggressive Mode</string>
+    <string name="privacy_mode_aggressive_desc">Generally will kill all telemetry, but might also kill your app. If you try this and your app doesn\'t launch, try standard mode</string>
 </resources>
