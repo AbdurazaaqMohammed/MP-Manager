@@ -186,7 +186,13 @@ public final class PackManager {
                         extensions.add(ext);
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
+                // ToolPack.extensions() is a default interface method. R8 can
+                // strip its body from the host dex (packs compile against the
+                // SDK with compileOnly, so nothing here keeps it alive) and
+                // leave the method abstract, in which case invoking it on a
+                // pack throws AbstractMethodError. Treat that like the default
+                // implementation's empty list instead of failing the pack.
             }
             if (packId != null && !packId.isEmpty()) {
                 LOADED.put(packId, loaded);

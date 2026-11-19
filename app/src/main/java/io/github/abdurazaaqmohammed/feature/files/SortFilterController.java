@@ -102,11 +102,16 @@ public class SortFilterController {
     }
 
     public void applyFilterToCurrentPane() {
-        boolean isPane1 = activity.lastPaneSelected == 1;
+        applyFilterToPane(activity.lastPaneSelected == 1);
+    }
+
+    /** Re-applies the pane's stored filter to that pane's (freshly bound, unfiltered) adapter. */
+    public void applyFilterToPane(boolean isPane1) {
         String filter = isPane1 ? currentPane1Filter : currentPane2Filter;
         RecyclerView pane = activity.findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
 
-        RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();
+        RecyclerView.Adapter a = pane.getAdapter();
+        if (a == null) return;
         if (a instanceof RemoteFilesArrayAdapter remote) {
             File[] all = activity.paneFiles(isPane1);
             if (all == null) return;
@@ -154,6 +159,17 @@ public class SortFilterController {
             pane.setAdapter(new MainFilesArrayAdapter(activity, filtered.toArray(new File[0]),
                     (isPane1 ? activity.pane1Folder : activity.pane2Folder).getParentFile(), isPane1, false, null));
         }
+    }
+
+    /**
+     * Re-applies a pane's filter if one is active, e.g. right after onResume
+     * re-listed the pane: the reload rebuilds the adapter from the raw
+     * listing, which would silently drop the filter while the filter box
+     * still shows its text.
+     */
+    public void applyFilterToPaneIfAny(boolean isPane1) {
+        String filter = isPane1 ? currentPane1Filter : currentPane2Filter;
+        if (!filter.isEmpty()) applyFilterToPane(isPane1);
     }
 
     public boolean isNotHidden(File f) {

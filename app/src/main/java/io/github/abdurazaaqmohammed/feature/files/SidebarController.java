@@ -50,6 +50,7 @@ import com.google.gson.reflect.TypeToken;
 import android.net.Uri;
 
 import io.github.abdurazaaqmohammed.data.prefs.SidebarPins;
+import io.github.abdurazaaqmohammed.feature.system.SidebarToolSelection;
 import io.github.abdurazaaqmohammed.util.text.AppGson;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
@@ -231,6 +232,8 @@ public class SidebarController {
         } catch (Exception ignored) {
         }
         sidebarAdapter.setToolOrder(toolOrder);
+        sidebarAdapter.setAddedTools(prefs.getStringSet(
+                SidebarToolSelection.PREF_ADDED_TOOLS, Collections.emptySet()));
         sidebarAdapter.setHiddenItems(prefs.getStringSet("sidebar_hidden_items", Collections.emptySet()));
         Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
         for (String section : new String[]{"storage", "bookmarks", "tools", "plugins"}) {
@@ -443,10 +446,7 @@ public class SidebarController {
         try {
             SidebarData data = loadSidebarData(sectionOrder);
             if (data == null) return;
-            sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                    data.storage, data.bookmarks, data.groups, data.labels,
-                    data.showPlugins);
-            sidebarAdapter.setPinned(data.pinned);
+            bindSidebarData(data);
         } catch (Exception ignored) {
         }
     }
@@ -470,10 +470,7 @@ public class SidebarController {
                 activity.handler.post(() -> {
                     try {
                         if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
-                        sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                                data.storage, data.bookmarks, data.groups, data.labels,
-                                data.showPlugins);
-                        sidebarAdapter.setPinned(data.pinned);
+                        bindSidebarData(data);
                     } catch (Exception ignored) {
                     }
                 });
@@ -515,10 +512,7 @@ public class SidebarController {
                 activity.handler.post(() -> {
                     try {
                         if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
-                        sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                                data.storage, data.bookmarks, data.groups, data.labels,
-                                data.showPlugins);
-                        sidebarAdapter.setPinned(data.pinned);
+                        bindSidebarData(data);
                     } catch (Exception ignored) {
                     }
                 });
@@ -527,11 +521,37 @@ public class SidebarController {
         }, "sidebar-load").start();
     }
 
+    /**
+     * Applies a freshly gathered snapshot on the main thread. Tool order,
+     * hidden items and explicitly added tools are re-read with the rest of
+     * the data so changes made in the Tools Hub (add/remove/reorder) are
+     * picked up when the user returns here.
+     */
+    private void bindSidebarData(SidebarData data) {
+        sidebarAdapter.setToolOrder(data.toolOrder);
+        sidebarAdapter.setAddedTools(data.addedTools);
+        sidebarAdapter.setHiddenItems(data.hiddenItems);
+        sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
+                data.storage, data.bookmarks, data.groups, data.labels,
+                data.showPlugins);
+        sidebarAdapter.setPinned(data.pinned);
+    }
+
     /** Raw sidebar inputs; safe on any thread, never touches views. */
     private SidebarData loadSidebarData(List<String> sectionOrder) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         SidebarData data = new SidebarData();
         data.order = sectionOrder;
+        List<String> toolOrder = new ArrayList<>();
+        try {
+            List<String> saved = AppGson.get().fromJson(prefs.getString("sidebar_tool_order", "[]"),
+                    new TypeToken<List<String>>() {}.getType());
+            if (saved != null) toolOrder.addAll(saved);
+        } catch (Exception ignored) {
+        }
+        data.toolOrder = toolOrder;
+        data.addedTools = prefs.getStringSet(SidebarToolSelection.PREF_ADDED_TOOLS, Collections.emptySet());
+        data.hiddenItems = prefs.getStringSet("sidebar_hidden_items", Collections.emptySet());
         try {
             data.showBookmarks = prefs.getBoolean("sidebar_show_bookmarks", true);
         } catch (Exception ignored) {
@@ -628,6 +648,9 @@ public class SidebarController {
 
     private static final class SidebarData {
         List<String> order;
+        List<String> toolOrder;
+        Set<String> addedTools;
+        Set<String> hiddenItems;
         boolean showBookmarks;
         boolean showGroups;
         boolean showPlugins = true;
@@ -698,6 +721,8 @@ public class SidebarController {
         if (id == null) return;
         if (id.startsWith(SidebarAdapter.PACK_TOOL_PREFIX)) {
             openPackTool(id.substring(SidebarAdapter.PACK_TOOL_PREFIX.length()));
+        } else if (id.startsWith(SidebarToolSelection.CUSTOM_TOOL_PREFIX)) {
+            openCustomTool(id.substring(SidebarToolSelection.CUSTOM_TOOL_PREFIX.length()));
         } else if (id.startsWith("ext:")) {
             openExternalSidebar(id);
         } else {
@@ -731,6 +756,18 @@ public class SidebarController {
         if (title == null || title.isEmpty()) title = toolId;
         Intent intent = new Intent(activity, ToolRunnerActivity.class);
         intent.putExtra("tool_id", toolId);
+        intent.putExtra("tool_title", title);
+        activity.startActivity(intent);
+    }
+
+    /** Launches a host-registered custom plugin tool added from the hub. */
+    private void openCustomTool(String pluginId) {
+        ToolPlugin tool = PluginRegistry.findCustom(pluginId);
+        if (tool == null) return;
+        String title = tool.title(activity);
+        if (title == null || title.isEmpty()) title = pluginId;
+        Intent intent = new Intent(activity, ToolRunnerActivity.class);
+        intent.putExtra("tool_id", pluginId);
         intent.putExtra("tool_title", title);
         activity.startActivity(intent);
     }

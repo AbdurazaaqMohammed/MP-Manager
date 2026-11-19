@@ -2644,4 +2644,7 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="run_script">Betiği çalıştır</string>
     <string name="run_script_confirm">Bu betiği çalıştırmak istiyor musunuz?\n\n%s</string>
     <string name="shell_mode_status">Çalışma Modu: %s</string>
+    <string name="restore_invalid_name">Geri yüklenecek dosya için geçersiz ad</string>
+    <string name="show_restore_dialog">.bak dosyaları için geri yükleme iletişim kutusunu göster</string>
+    <string name="show_restore_dialog_desc">Etkinleştirildiğinde, bir düzenleyici yedeğine dokunduğunuzda onu geri yüklemek isteyip istemediğiniz sorulur. Kapatırsanız yedek bunun yerine orijinal dosya türüyle açılır. MIUI ve Android yedek arşivleri normal şekilde açılmaya devam eder.</string>
 </resources>
