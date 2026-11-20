@@ -275,14 +275,35 @@ public class ArchiveUtil {
      * Archives using a compression method zip4j does not implement (XZ,
      * Zstandard, bzip2, LZMA) abort its central-directory read, so the same
      * guarantee is provided by {@link ZipCompat} for those.
+     *
+     * Legacy-name archives get the charset their central directory points at
+     * (GBK for legacy Chinese zips, Big5 for Traditional-Chinese ones,
+     * CP437/ISO-8859-1 for Western ones), so the names written to disk match
+     * the ones browsing showed. Archives where no single charset decodes every
+     * entry (legacy GBK beside UTF-8 names, Unicode Path extra fields) extract
+     * through the per-entry aware {@link ZipCompat#extractAll} when no password
+     * is involved; with a password zip4j runs anyway, but its header names are
+     * first corrected from the per-entry decode via the shared local-header
+     * offsets, so encrypted archives still land with correct filenames.
      */
     private static void extractZip(File archive, File destDir, boolean preserveTime, char[] password,
                                    FileUtils.TransferListener listener) throws IOException {
         File target = SplitArchiveUtil.isZipSplit(archive) ? SplitArchiveUtil.findFirstPart(archive) : archive;
         if (target == null || !target.exists()) target = archive;
         TransferControl token = listener == null ? null : listener.control();
-        try (ZipFile zf = new ZipFile(target)) {
+        ZipCharset.Plan plan = ZipCharset.planFor(target);
+        // Split zips keep their central directory in the last part, which the
+        // plain-Java fallback cannot read across parts; zip4j stays on for them.
+        if (plan == ZipCharset.Plan.MIXED && password == null
+                && !SplitArchiveUtil.isZipSplit(archive)) {
+            ZipCompat.extractAll(target, destDir, preserveTime, token);
+            return;
+        }
+        try (ZipFile zf = ZipCharset.apply(new ZipFile(target), plan)) {
             if (password != null) zf.setPassword(password);
+            if (plan == ZipCharset.Plan.MIXED) {
+                ZipCompat.correctZip4jHeaderNames(zf, target);
+            }
             // Attached before the pump starts: the bridge may replace zip4j's
             // monitor, and the pump has to poll the one zip4j actually writes
             // through or the dialog would freeze.

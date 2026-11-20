@@ -1,0 +1,28 @@
+zero-Symbol-input-view-V2
+Copyright (C) 2026 android_zero
+GitHub: https://github.com/msmt2018
+WeChat: android_zero
+
+This module's original source files carrying the following SPDX identifier are
+licensed under all three licenses cumulatively:
+
+SPDX-License-Identifier: AGPL-3.0-only AND GPL-3.0-only AND Apache-2.0
+
+The SPDX operator AND means that every listed license applies at the same time.
+It is not an option to choose only one license. Recipients must comply with the
+applicable conditions of all three licenses.
+
+The complete license texts are provided alongside this file:
+- LICENSE-AGPL-3.0-only.txt
+- LICENSE-GPL-3.0-only.txt
+- LICENSE-Apache-2.0.txt
+
+This module-level notice applies only to original zero-Symbol-input-view-V2 source files in
+this module that carry the SPDX identifier above and to contributions whose
+copyright holders have authorized this licensing. It does not relicense the
+repository as a whole, third-party dependencies, imported code, or material
+identified by separate upstream copyright/license notices.
+
+The repository-root LICENSE remains in place for repository content not
+covered by this module's explicit file-level notices. Where a file contains
+third-party material, preserve and comply with its original notices and terms.

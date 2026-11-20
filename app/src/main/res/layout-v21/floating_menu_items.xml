@@ -1,5 +1,6 @@
 <androidx.cardview.widget.CardView
 	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:card_view="http://schemas.android.com/apk/res-auto"
 	android:layout_width="match_parent"
 	android:layout_height="45dp"
@@ -22,6 +23,7 @@
 			android:layout_marginStart="10dp"
 			android:src="@drawable/ic_setting_mt"
 			android:scaleType="fitCenter"
+			app:tint="?attr/colorOnSurfaceVariant"
 			android:focusable="false"
 			android:layout_centerVertical="true" />
 		<TextView
@@ -31,6 +33,7 @@
 			android:layout_marginStart="10dp"
 			android:text="@string/menu_items"
 			android:textSize="14sp"
+			android:textColor="?android:attr/textColorPrimary"
 
 			android:focusable="false"
 			android:textAppearance="@style/TextAppearance.Compat.Notification.Title"

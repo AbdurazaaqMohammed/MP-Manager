@@ -63,9 +63,14 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import android.zero.studio.widget.editor.symbolinput.AdvancedSymbolInputView;
 import android.zero.studio.widget.editor.symbolinput.BottomBarMigration;
-import android.zero.studio.widget.editor.symbolinput.SymbolManagerActivity;
+import com.zerostudio.idea.widget.editor.symbolinput.v2.SymbolDrawerView;
+import com.zerostudio.idea.widget.editor.symbolinput.v2.model.SymbolAction;
+import com.zerostudio.idea.widget.drawer.action.SymbolActionCancellation;
+import com.zerostudio.idea.widget.drawer.action.SymbolActionResult;
+import io.github.abdurazaaqmohammed.ui.editor.symbols.SoraSymbolActionHost;
+import io.github.abdurazaaqmohammed.ui.editor.symbols.SymbolDrawerActivity;
+import io.github.abdurazaaqmohammed.ui.editor.symbols.SymbolDrawerMigration;
 import kotlin.Unit;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
@@ -146,7 +151,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 }
             });
     private LinearLayout searchPanel, replacePanel, linearHeader;
-    private AdvancedSymbolInputView symbolInputView;
+    private SymbolDrawerView symbolInputView;
+    private SoraSymbolActionHost symbolActionHost;
     private EditText searchInput, replaceInput;
     private View btnSearchPrev, btnSearchNext, btnReplaceToggle, btnSearchMenu, btnStopSearch;
     private MaterialButton btnReplaceAll;
@@ -250,6 +256,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        SymbolDrawerMigration.migrate(requireContext());
         View view = inflater.inflate(R.layout.fragment_unified_editor, container, false);
         initViews(view);
         return view;
@@ -341,18 +348,23 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         packageManager = requireContext().getPackageManager();
 
         if (symbolInputView != null) {
-            symbolInputView.bindEditor(editor);
+            symbolActionHost = new SoraSymbolActionHost(editor, isSmali ? "#" : "//",
+                    () -> openSymbolDrawerScreen(false), this::executeBottomBarCustomAction);
             symbolInputView.setOnOpenManagerListener(() -> {
-                if (getContext() != null)
-                    startActivity(new Intent(requireContext(), SymbolManagerActivity.class)
-                            .putExtra(SymbolManagerActivity.EXTRA_THEME_STYLE,
-                                    io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
-                                            .currentStyleRes(requireContext())));
+                openSymbolDrawerScreen(false);
                 return Unit.INSTANCE;
             });
-            symbolInputView.setOnCustomActionListener((actionId, text, secondText, options) -> {
-                executeBottomBarCustomAction(actionId, text, secondText, options);
+            symbolInputView.setOnOpenSettingsListener(() -> {
+                openSymbolDrawerScreen(true);
                 return Unit.INSTANCE;
+            });
+            symbolInputView.setOnSymbolActionListener((symbol, longPress) -> {
+                SymbolAction action = longPress ? symbol.getLongAction() : symbol.getShortAction();
+                if (action == null || symbolActionHost == null) return;
+                SymbolActionResult result = symbolInputView.executeAction(action, symbolActionHost,
+                        SymbolActionCancellation.Companion.getNEVER());
+                if (result instanceof SymbolActionResult.Failed && getActivity() != null)
+                    new ErrorUtil(getActivity()).showError(((SymbolActionResult.Failed) result).getCause());
             });
 
             // BaseActivity resizes the whole editor above the IME. Moving only
@@ -1006,19 +1018,36 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
     }
 
-        public void loadBottomBarFunctions() {
+    public void loadBottomBarFunctions() {
         if (symbolInputView == null) return;
         try {
-            BottomBarMigration.migrateIfNeeded(requireContext());
-            symbolInputView.bindEditor(editor);
-            symbolInputView.refreshData();
+            SymbolDrawerMigration.migrate(requireContext());
             symbolInputView.onHostResume();
         } catch (Exception e) {
             if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
         }
     }
 
-    private void executeBottomBarCustomAction(int actionId, String text, String secondText, String options) {
+    private void openSymbolDrawerScreen(boolean settings) {
+        if (getContext() != null)
+            startActivity(new Intent(requireContext(), SymbolDrawerActivity.class)
+                    .putExtra(SymbolDrawerActivity.EXTRA_SETTINGS, settings));
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (symbolInputView != null) {
+            symbolInputView.setOnSymbolActionListener(null);
+            symbolInputView.setOnOpenManagerListener(null);
+            symbolInputView.setOnOpenSettingsListener(null);
+        }
+        symbolActionHost = null;
+        symbolInputView = null;
+        super.onDestroyView();
+    }
+
+    private boolean executeBottomBarCustomAction(int actionId, String text, String secondText, String options) {
+        if (editor == null || (!editor.isEditable() && actionId != BottomBarMigration.ACTION_SEARCH)) return false;
         try {
             switch (actionId) {
                 case BottomBarMigration.ACTION_SEARCH:
@@ -1052,11 +1081,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     CharSequence clip = getClipboard();
                     if (clip != null)
                         content.replace(line, 0, line, content.getColumnCount(line), clip);
+                    else return false;
                     break;
                 }
+                default: return false;
             }
+            return true;
         } catch (Exception e) {
             new ErrorUtil(getActivity()).showError(e);
+            return false;
         }
     }
 

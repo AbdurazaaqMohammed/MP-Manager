@@ -26,7 +26,6 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.SequenceInputStream;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -64,6 +63,12 @@ public final class ZipCompat {
     private static final long UINT32_MAX = 0xFFFFFFFFL;
     private static final int UINT16_MAX = 0xFFFF;
     private static final int COPY_BUFFER = 64 * 1024;
+    /**
+     * Info-ZIP Unicode Path extra field: stores the UTF-8 name beside the
+     * legacy name plus a CRC-32 of those legacy bytes. Preferred whenever its
+     * checksum validates, since it is the writer's own unicode answer.
+     */
+    private static final int EXTRA_UNICODE_PATH = 0x7075;
     private static final byte[] LZMA_SIZE_UNKNOWN = {
             (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
             (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
@@ -73,15 +78,43 @@ public final class ZipCompat {
 
     /**
      * All central-directory entries, as zip4j headers so existing callers keep
-     * working. Falls back to a direct central-directory scan when zip4j
+     * working.
+     *
+     * <p>Archives with legacy non-ASCII names (Chinese GBK zips above all) are
+     * listed through the direct central-directory scan, because its per-entry
+     * charset heuristic decodes names zip4j can only read with one
+     * archive-wide charset. The scan is also preferred when entries carry a
+     * validated Unicode Path extra field, which zip4j ignores. Everything else
+     * still goes through zip4j, falling back to the direct scan when zip4j
      * refuses the archive because of an unknown compression method.
      */
     public static List<FileHeader> listHeaders(File zip) throws IOException {
         if (zip == null || !zip.isFile()) throw new IOException("Not a file: " + zip);
         File target = SplitArchiveUtil.isZipSplit(zip) ? SplitArchiveUtil.findFirstPart(zip) : zip;
         if (target == null || !target.exists()) target = zip;
+        try {
+            // centralDirectoryFor also reads split archives: their directory
+            // lives in the last part, not in the file zip4j is pointed at.
+            List<Entry> entries = centralDirectoryFor(target);
+            if (ZipCharset.planFor(entries) != ZipCharset.Plan.DEFAULT) {
+                return fromCentralDirectory(entries);
+            }
+        } catch (IOException ignoredParse) {
+            // zip4j may still read archives this strict scan rejects; its
+            // failure handling below is unchanged.
+        }
         try (ZipFile zf = new ZipFile(target)) {
-            return zf.getFileHeaders();
+            List<FileHeader> headers = zf.getFileHeaders();
+            // Convention for everything that leaves this class: the
+            // lastModifiedTime field carries epoch millis. zip4j stores raw
+            // DOS time there after its own read, so zip4j-decoded headers are
+            // converted here; headers built by fromCentralDirectory already
+            // hold epoch. Mutating these returned copies is safe — callers
+            // that write archives open their own ZipFile handles.
+            for (FileHeader fh : headers) {
+                fh.setLastModifiedTime(fh.getLastModifiedTimeEpoch());
+            }
+            return headers;
         } catch (Exception zip4jFailure) {
             try {
                 return fromCentralDirectory(readCentralDirectory(target));
@@ -104,6 +137,8 @@ public final class ZipCompat {
     /**
      * Opens one entry for reading. Uses zip4j when it understands the archive,
      * otherwise reads the local header directly and decompresses the payload.
+     * The zip4j attempt applies the archive's detected legacy charset, so the
+     * name lookup matches the decoded names produced by {@link #listHeaders}.
      */
     public static InputStream openEntry(File zip, String entryName) throws IOException {
         if (zip == null || entryName == null) throw new IOException("Missing archive or entry name");
@@ -111,7 +146,7 @@ public final class ZipCompat {
         if (target == null || !target.exists()) target = zip;
         ZipFile zf = null;
         try {
-            zf = new ZipFile(target);
+            zf = openZip(target);
             FileHeader fh = zf.getFileHeader(entryName);
             if (fh == null) throw new IOException("Entry not found: " + entryName);
             return closeZipWithStream(zf, zf.getInputStream(fh));
@@ -124,6 +159,89 @@ public final class ZipCompat {
                 directFailure.addSuppressed(zip4jFailure);
                 throw directFailure;
             }
+        }
+    }
+
+    /**
+     * A zip4j handle with the archive's detected legacy charset applied, so
+     * every name zip4j decodes matches the per-entry heuristic used for
+     * listing. Mutation call sites use this to keep entry names consistent
+     * between what the user saw and what zip4j matches against. Mixed-charset
+     * archives additionally get their header names corrected from the
+     * per-entry decode, because no single charset lets zip4j spell them all.
+     */
+    public static ZipFile openZip(File zip) throws IOException {
+        ZipCharset.Plan plan = ZipCharset.planFor(zip);
+        ZipFile zf = ZipCharset.apply(new ZipFile(zip), plan);
+        if (plan == ZipCharset.Plan.MIXED) {
+            correctZip4jHeaderNames(zf, zip);
+        }
+        return zf;
+    }
+
+    /** Like {@link #openZip(File)} with a password for encrypted archives. */
+    public static ZipFile openZip(File zip, char[] password) throws IOException {
+        ZipFile zf = openZip(zip);
+        if (password != null) zf.setPassword(password);
+        return zf;
+    }
+
+    /**
+     * Rewrites zip4j's decoded header names with the per-entry decode, matched
+     * through the disk-number + local-header-offset key both readers share
+     * (offsets alone repeat across split parts). Used when one archive-wide
+     * charset cannot decode every entry (mixed legacy GBK + UTF-8-flagged
+     * names) but zip4j must still run the extraction — encrypted archives
+     * above all — so the names written to disk are the correct ones. Best
+     * effort: any zip4j read failure leaves its own decode standing.
+     */
+    public static void correctZip4jHeaderNames(ZipFile zf, File zip) {
+        List<Entry> entries;
+        try {
+            entries = centralDirectoryFor(zip);
+        } catch (IOException ignoredParse) {
+            return;
+        }
+        java.util.Map<String, String> ourNameByKey = new java.util.HashMap<>();
+        for (Entry e : entries) {
+            ourNameByKey.put(offsetKey(e.diskNumberStart, e.localOffset), e.name);
+        }
+        try {
+            for (FileHeader fh : zf.getFileHeaders()) {
+                String ours = ourNameByKey.get(offsetKey(fh.getDiskNumberStart(), fh.getOffsetLocalHeader()));
+                if (ours != null && !ours.equals(fh.getFileName())) {
+                    fh.setFileName(ours);
+                }
+            }
+        } catch (ZipException ignoredRead) {
+            // zip4j could not walk its own central directory; keep its decode.
+        }
+    }
+
+    /**
+     * Composite header identity: disk number plus local-header offset. Split
+     * archives repeat offsets across parts, so the disk number is part of the
+     * key everywhere our parser meets zip4j's headers.
+     */
+    public static String offsetKey(int diskNumberStart, long localOffset) {
+        return diskNumberStart + "@" + localOffset;
+    }
+
+    /**
+     * Central directory of the archive zip4j is pointed at. Split archives
+     * keep the directory in their last part, so that part is read when the
+     * pointed-at file has none.
+     */
+    static List<Entry> centralDirectoryFor(File target) throws IOException {
+        try {
+            return readCentralDirectory(target);
+        } catch (IOException noEocdHere) {
+            List<File> parts = SplitArchiveUtil.getOrderedParts(target);
+            if (!parts.isEmpty()) {
+                File last = parts.get(parts.size() - 1);
+                if (!last.equals(target)) return readCentralDirectory(last);
+            }
+            throw noEocdHere;
         }
     }
 
@@ -440,6 +558,7 @@ public final class ZipCompat {
                 int method = u2(head, 10);
                 int dosDate = u2(head, 14);
                 int dosTime = u2(head, 12);
+                int diskNumberStart = u2(head, 34);
                 long crc = u4(head, 16);
                 long csize = u4(head, 20);
                 long usize = u4(head, 24);
@@ -464,7 +583,24 @@ public final class ZipCompat {
                 }
 
                 Entry entry = new Entry();
-                entry.name = decodeName(nameBytes, (flags & 0x800) != 0);
+                byte[] effectiveName = nameBytes;
+                boolean effectiveUtf8 = (flags & 0x800) != 0;
+                boolean fromUnicodePath = false;
+                byte[] unicodeName = unicodePathFromExtra(extra, crc32Of(nameBytes));
+                if (unicodeName != null) {
+                    // The field's CRC-32 validated against the stored legacy
+                    // name, so the writer vouched for these UTF-8 bytes.
+                    effectiveName = unicodeName;
+                    effectiveUtf8 = true;
+                    fromUnicodePath = true;
+                }
+                entry.name = ZipCharset.decodeName(effectiveName, effectiveUtf8);
+                entry.nameNonAscii = !isPureAscii(effectiveName);
+                entry.nameCharset = effectiveUtf8
+                        ? java.nio.charset.StandardCharsets.UTF_8
+                        : ZipCharset.charsetFor(effectiveName, false);
+                entry.unicodePathName = fromUnicodePath;
+                entry.utf8Flag = effectiveUtf8;
                 entry.method = method;
                 entry.flags = flags;
                 entry.encrypted = (flags & 0x0001) != 0;
@@ -472,6 +608,7 @@ public final class ZipCompat {
                 entry.compressedSize = csize;
                 entry.uncompressedSize = usize;
                 entry.localOffset = localOffset;
+                entry.diskNumberStart = diskNumberStart;
                 entry.lastModified = dosToMillis(dosDate, dosTime);
                 entries.add(entry);
             }
@@ -498,26 +635,43 @@ public final class ZipCompat {
         throw new IOException("Zip64 extra field missing");
     }
 
-    private static String decodeName(byte[] nameBytes, boolean utf8) {
-        Charset cs = utf8 ? StandardCharsets.UTF_8 : legacyCp437();
-        String name = new String(nameBytes, cs).replace('\\', '/');
-        int nul = name.indexOf('\0');
-        return nul >= 0 ? name.substring(0, nul) : name;
+    /**
+     * The UTF-8 name stored in a Unicode Path extra field (id 0x7075), or
+     * null. The field carries a CRC-32 of the legacy name bytes it replaces;
+     * a mismatch means the field is corrupt or does not belong to this entry,
+     * in which case the stored name stays authoritative.
+     */
+    private static byte[] unicodePathFromExtra(byte[] extra, long nameCrc) {
+        if (extra == null) return null;
+        int p = 0;
+        while (p + 4 <= extra.length) {
+            int id = u2(extra, p);
+            int size = u2(extra, p + 2);
+            if (size < 0 || p + 4 + size > extra.length) break;
+            if (id == EXTRA_UNICODE_PATH && size >= 5) {
+                long crc = u4(extra, p + 4);
+                if (crc == nameCrc) {
+                    byte[] name = new byte[size - 4];
+                    System.arraycopy(extra, p + 8, name, 0, size - 4);
+                    return name;
+                }
+            }
+            p += 4 + size;
+        }
+        return null;
     }
 
-    /**
-     * IBM code page 437 is the historical default for zip names that are not
-     * flagged UTF-8, but Android does not ship it, so ISO-8859-1 is the
-     * closest available stand-in there.
-     */
-    private static Charset legacyCp437() {
-        for (String name : new String[]{"IBM437", "CP437"}) {
-            try {
-                return Charset.forName(name);
-            } catch (Exception ignored) {
-            }
+    private static long crc32Of(byte[] data) {
+        CRC32 crc = new CRC32();
+        crc.update(data);
+        return crc.getValue();
+    }
+
+    private static boolean isPureAscii(byte[] data) {
+        for (byte b : data) {
+            if (b < 0) return false;
         }
-        return StandardCharsets.ISO_8859_1;
+        return true;
     }
 
     private static long dosToMillis(int dosDate, int dosTime) {
@@ -549,6 +703,7 @@ public final class ZipCompat {
         return v;
     }
 
+    /** One parsed central-directory record; visible to ZipCharset for plan scans. */
     static final class Entry {
         String name;
         int method;
@@ -558,7 +713,16 @@ public final class ZipCompat {
         long compressedSize;
         long uncompressedSize;
         long localOffset;
+        /** Split-archive part this entry's data starts in (central header field). */
+        int diskNumberStart;
         long lastModified;
+        /** Charset the per-entry heuristic picked for the name, for plan scans. */
+        Charset nameCharset;
+        /** True when the stored name bytes contain any non-ASCII byte. */
+        boolean nameNonAscii;
+        /** True when the name came from a validated Unicode Path extra field. */
+        boolean unicodePathName;
+        boolean utf8Flag;
 
         boolean isDirectory() {
             return name.endsWith("/");
@@ -567,6 +731,10 @@ public final class ZipCompat {
         FileHeader toFileHeader() {
             FileHeader fh = new FileHeader();
             fh.setFileName(name);
+            // zip4j reads its own isDirectory field and never derives it from
+            // the name, so directories would lose their trailing slash in the
+            // pane grouping without this.
+            fh.setDirectory(isDirectory());
             fh.setCompressedSize(compressedSize);
             fh.setUncompressedSize(uncompressedSize);
             fh.setCrc(crc);

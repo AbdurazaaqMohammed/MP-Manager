@@ -1574,10 +1574,28 @@ public class FileOperationsHelper {
         File tempFileDir = null;
         // Lets the dialog pause and stop the work while the archive is written.
         ZipTransferControl zipControl = null;
-        try (ZipFile sourceZip = new ZipFile(zipFile)) {
+        // Charset applied so existing entry names decode exactly like the
+        // names the user saw while browsing (legacy Chinese zips).
+        try (ZipFile sourceZip = ZipCompat.openZip(zipFile)) {
             zipControl = ZipTransferControl.attach(sourceZip, transferControl());
+            // Existing entries are keyed by the names the browser showed
+            // (per-entry charset decode), so update/replace logic matches what
+            // the user sees. Removals are translated back to zip4j's spelling
+            // through the local-header offset, which also works for archives
+            // where one charset cannot decode every entry (mixed legacy GBK +
+            // UTF-8-flagged names).
             Map<String, Long> existingEntries = new LinkedHashMap<>();
-            for (FileHeader fh : sourceZip.getFileHeaders()) existingEntries.put(fh.getFileName(), fh.getLastModifiedTime());
+            Map<String, String> ourKeyByName = new LinkedHashMap<>();
+            for (FileHeader fh : ZipCompat.listHeaders(zipFile)) {
+                String name = fh.getFileName().replace('\\', '/');
+                existingEntries.put(name, fh.getLastModifiedTime());
+                ourKeyByName.put(name, ZipCompat.offsetKey(fh.getDiskNumberStart(), fh.getOffsetLocalHeader()));
+            }
+            Map<String, String> zip4jNameByKey = new LinkedHashMap<>();
+            for (FileHeader fh : sourceZip.getFileHeaders()) {
+                zip4jNameByKey.put(ZipCompat.offsetKey(fh.getDiskNumberStart(), fh.getOffsetLocalHeader()),
+                        fh.getFileName());
+            }
             Set<String> toRemove = new LinkedHashSet<>();
             // {file, entryName}; a null entryName marks a directory added under targetDir keeping its own name
             List<Object[]> namedAdds = new ArrayList<>();
@@ -1606,9 +1624,14 @@ public class FileOperationsHelper {
                     if ("..".equals(zipEntry.getName())) continue;
                     // One handle for the whole batch: reopening the source
                     // archive per selected entry was slow and pointless.
+                    // Charset applied so full paths match the browsed names;
+                    // for mixed-charset archives the header names are then
+                    // corrected from the per-entry decode via offsets, so
+                    // getFileHeader(fullPath) resolves legacy entries too.
                     if (entrySource == null || !sameArchive(entrySource, zipEntry.getZipFile())) {
                         if (entrySource != null) entrySource.close();
-                        entrySource = new ZipFile(zipEntry.getZipFile());
+                        entrySource = ZipCompat.openZip(zipEntry.getZipFile());
+                        ZipCompat.correctZip4jHeaderNames(entrySource, zipEntry.getZipFile());
                         sourceHeaders = new ArrayList<>(entrySource.getFileHeaders());
                     }
                     String fullPath = zipEntry.getFullPath();
@@ -1650,7 +1673,16 @@ public class FileOperationsHelper {
                     if (entrySource != null) entrySource.close();
                 }
             }
-            if (!toRemove.isEmpty()) sourceZip.removeFiles(new ArrayList<>(toRemove));
+            if (!toRemove.isEmpty()) {
+                List<String> translatedRemove = new ArrayList<>(toRemove.size());
+                for (String name : toRemove) {
+                    String key = ourKeyByName.get(name);
+                    String zip4jName = key == null ? name
+                            : zip4jNameByKey.getOrDefault(key, name);
+                    translatedRemove.add(zip4jName);
+                }
+                sourceZip.removeFiles(translatedRemove);
+            }
 
             if (!plainFilesToAdd.isEmpty()) sourceZip.addFiles(plainFilesToAdd, zipParameters);
             for (Object[] add : namedAdds) {
@@ -1845,20 +1877,33 @@ public class FileOperationsHelper {
         File f = entryToDelete[0].getZipFile();
         if (!ArchiveBrowseUtil.isZipLike(f))
             throw new IOException("Entries can only be deleted inside zip archives");
+        // Selected entries carry names from the per-entry decoder; zip4j
+        // decodes with one archive-wide charset and may spell the same entry
+        // differently (mixed-charset archives). Matching through the
+        // local-header offset ties the two views together without trusting
+        // either spelling.
         List<String> toDelete = new ArrayList<>();
-        for (FileHeader fh : ZipCompat.listHeaders(f)) {
-            String name = fh.getFileName().replace('\\', '/');
-            for (ZipEntryInfo info : entryToDelete) {
-                String target = info.getFullPath();
-                if (target == null) continue;
-                if (info.isDirectory() && !target.endsWith("/")) target += "/";
-                if (name.equals(target) || (info.isDirectory() && name.startsWith(target))) {
-                    toDelete.add(name);
-                    break;
+        try (ZipFile zf = ZipCompat.openZip(f)) {
+            Map<String, String> zip4jNamesByKey = new HashMap<>();
+            for (FileHeader fh : zf.getFileHeaders()) {
+                zip4jNamesByKey.put(ZipCompat.offsetKey(fh.getDiskNumberStart(), fh.getOffsetLocalHeader()),
+                        fh.getFileName());
+            }
+            for (FileHeader fh : ZipCompat.listHeaders(f)) {
+                String name = fh.getFileName().replace('\\', '/');
+                for (ZipEntryInfo info : entryToDelete) {
+                    String target = info.getFullPath();
+                    if (target == null) continue;
+                    if (info.isDirectory() && !target.endsWith("/")) target += "/";
+                    if (name.equals(target) || (info.isDirectory() && name.startsWith(target))) {
+                        String key = ZipCompat.offsetKey(fh.getDiskNumberStart(), fh.getOffsetLocalHeader());
+                        String zip4jName = zip4jNamesByKey.get(key);
+                        toDelete.add(zip4jName != null ? zip4jName : name);
+                        break;
+                    }
                 }
             }
-        }
-        try (ZipFile zf = new ZipFile(f)) {
+            if (toDelete.isEmpty()) return;
             zf.removeFiles(toDelete);
         }
         context.loadZipFolderInPane(f, adapter.currentZipPath, adapter.pane1, false);

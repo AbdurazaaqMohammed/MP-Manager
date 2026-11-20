@@ -13,16 +13,14 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
+import net.lingala.zip4j.model.FileHeader;
+
+import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.ui.editor.CompareTextActivity;
 
 public class CompareZipDialog {
@@ -46,38 +44,37 @@ public class CompareZipDialog {
 
     public void show() {
         List<DiffItem> differences = new ArrayList<>();
-        try (ZipFile zf1 = new ZipFile(zip1); ZipFile zf2 = new ZipFile(zip2)) {
-            Map<String, ZipEntry> entries1 = new HashMap<>();
-            Enumeration<? extends ZipEntry> e1 = zf1.entries();
-            while (e1.hasMoreElements()) {
-                ZipEntry ze = e1.nextElement();
-                entries1.put(ze.getName(), ze);
+        try {
+            // ZipCompat decodes entry names with the per-entry charset
+            // heuristic, so legacy Chinese names compare and display correctly
+            // instead of as replacement garbage.
+            Map<String, FileHeader> entries1 = new HashMap<>();
+            for (FileHeader fh : ZipCompat.listHeaders(zip1)) {
+                entries1.put(fh.getFileName(), fh);
             }
 
-            Map<String, ZipEntry> entries2 = new HashMap<>();
-            Enumeration<? extends ZipEntry> e2 = zf2.entries();
-            while (e2.hasMoreElements()) {
-                ZipEntry ze = e2.nextElement();
-                entries2.put(ze.getName(), ze);
+            Map<String, FileHeader> entries2 = new HashMap<>();
+            for (FileHeader fh : ZipCompat.listHeaders(zip2)) {
+                entries2.put(fh.getFileName(), fh);
             }
 
-            for (Map.Entry<String, ZipEntry> e : entries1.entrySet()) {
+            for (Map.Entry<String, FileHeader> e : entries1.entrySet()) {
                 String name = e.getKey();
-                ZipEntry ze1 = e.getValue();
-                ZipEntry ze2 = entries2.get(name);
+                FileHeader ze1 = e.getValue();
+                FileHeader ze2 = entries2.get(name);
 
                 if (ze2 == null) {
-                    differences.add(new DiffItem("[" + context.getString(R.string.removed) + "] " + name + " (" + ze1.getSize() + " bytes)", name, "[Removed]"));
+                    differences.add(new DiffItem("[" + context.getString(R.string.removed) + "] " + name + " (" + ze1.getUncompressedSize() + " bytes)", name, "[Removed]"));
                 } else {
-                    if (ze1.getCrc() != ze2.getCrc() || ze1.getSize() != ze2.getSize()) {
-                        differences.add(new DiffItem("[" + context.getString(R.string.modified) + "] " + name + " (Size: " + ze1.getSize() + " -> " + ze2.getSize() + " bytes)", name, "[Modified]"));
+                    if (ze1.getCrc() != ze2.getCrc() || ze1.getUncompressedSize() != ze2.getUncompressedSize()) {
+                        differences.add(new DiffItem("[" + context.getString(R.string.modified) + "] " + name + " (Size: " + ze1.getUncompressedSize() + " -> " + ze2.getUncompressedSize() + " bytes)", name, "[Modified]"));
                     }
                     entries2.remove(name);
                 }
             }
 
-            for (Map.Entry<String, ZipEntry> e : entries2.entrySet()) {
-                differences.add(new DiffItem("[" + context.getString(R.string.added) + "] " + e.getKey() + " (" + e.getValue().getSize() + " bytes)", e.getKey(), "[Added]"));
+            for (Map.Entry<String, FileHeader> e : entries2.entrySet()) {
+                differences.add(new DiffItem("[" + context.getString(R.string.added) + "] " + e.getKey() + " (" + e.getValue().getUncompressedSize() + " bytes)", e.getKey(), "[Added]"));
             }
 
         } catch (Exception e) {
@@ -153,20 +150,6 @@ public class CompareZipDialog {
     }
 
     private void extractZipEntry(File zip, String entryName, File out) throws Exception {
-        try (ZipFile zf = new ZipFile(zip)) {
-            ZipEntry ze = zf.getEntry(entryName);
-            if (ze != null) {
-                try (InputStream is = zf.getInputStream(ze);
-                     FileOutputStream fos = new FileOutputStream(out)) {
-                    byte[] buffer = new byte[8192];
-                    int len;
-                    while ((len = is.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                    }
-                }
-            } else {
-                throw new Exception("Entry not found: " + entryName);
-            }
-        }
+        ZipCompat.extractEntry(zip, entryName, out);
     }
 }

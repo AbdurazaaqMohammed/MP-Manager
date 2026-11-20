@@ -2266,7 +2266,8 @@ public class FileOpener {
 
     private long calculateZipEntryFolderSize(ZipEntryInfo entry) {
         if (entry == null || entry.getZipFile() == null) return 0;
-        try (ZipFile srcZip = new ZipFile(entry.getZipFile())) {
+        // Charset applied so the prefix matches the browsed entry names.
+        try (ZipFile srcZip = ZipCompat.openZip(entry.getZipFile())) {
             String prefix = entry.getFullPath();
             if (!prefix.endsWith("/")) prefix += "/";
             long total = 0;
@@ -2627,7 +2628,7 @@ public class FileOpener {
                 File extractTarget = new File(stageExtractDir, entry.getName());
                 extractTarget.mkdirs();
 
-                try (ZipFile srcZip = new ZipFile(entry.getZipFile())) {
+                try (ZipFile srcZip = ZipCompat.openZip(entry.getZipFile())) {
                     String prefix = entry.getFullPath();
                     if (!prefix.endsWith("/")) prefix += "/";
                     for (FileHeader fh : srcZip.getFileHeaders()) {

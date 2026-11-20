@@ -100,6 +100,7 @@ dependencies {
     implementation project(':sdk')
     implementation project(':apkkit')
     implementation project(':zero-symbol-input-view')
+    implementation project(':zero-symbol-input-view-v2')
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation 'androidx.startup:startup-runtime:1.2.0'
     implementation 'androidx.media:media:1.8.0'
