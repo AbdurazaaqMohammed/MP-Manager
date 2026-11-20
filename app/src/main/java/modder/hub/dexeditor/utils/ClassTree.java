@@ -1849,7 +1849,7 @@ public class ClassTree {
             if (options.removeDebugParam || options.removeAllDebug) {
                 List<MethodParameter> params = new ArrayList<>();
                 for (MethodParameter p : delegate.getParameters()) {
-                    params.add(new ImmutableMethodParameter(p.getType(), null, null));
+                    params.add(new ImmutableMethodParameter(p.getType(), p.getAnnotations(), null));
                 }
                 return params;
             }

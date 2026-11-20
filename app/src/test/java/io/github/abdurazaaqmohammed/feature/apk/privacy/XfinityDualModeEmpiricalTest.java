@@ -5,13 +5,22 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.iface.Annotation;
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodParameter;
 import com.reandroid.apk.APKLogger;
+import com.reandroid.apk.ApkModule;
+import com.reandroid.archive.InputSource;
 
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
+import java.io.InputStream;
 
 /**
  * Empirical integration test suite evaluating Dual-Mode Privacy Sanitization
@@ -224,5 +233,42 @@ public class XfinityDualModeEmpiricalTest {
         assertTrue("Aggressive total mutations must be greater than Standard total mutations (" +
                         aggStats.totalMutations() + " > " + stdStats.totalMutations() + ")",
                 aggStats.totalMutations() > stdStats.totalMutations());
+    }
+
+    @Test
+    public void test3_RetrofitParameterAnnotationsPreservedOnXfinity() throws Exception {
+        runStandardSanitization();
+        assertTrue("Standard APK must exist", STANDARD_APK.exists());
+
+        ApkModule module = ApkModule.loadApkFile(STANDARD_APK);
+        InputSource classes12 = module.getInputSource("classes12.dex");
+        assertNotNull("classes12.dex must exist in sanitized APK", classes12);
+
+        byte[] dexBytes;
+        try (InputStream in = classes12.openStream()) {
+            dexBytes = in.readAllBytes();
+        }
+        DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+        boolean foundMethod = false;
+        for (ClassDef c : dex.getClasses()) {
+            if ("Lcim/comcast/com/xal/core/network/api/cmfa/servicesv3/authenticatorId/AuthenticatorIdService;".equals(c.getType())) {
+                for (Method m : c.getVirtualMethods()) {
+                    if ("getAuthenticatorIdStatus".equals(m.getName())) {
+                        foundMethod = true;
+                        assertEquals(2, m.getParameters().size());
+                        MethodParameter p0 = m.getParameters().get(0);
+                        assertEquals("Parameter #0 must retain @Query annotation", 1, p0.getAnnotations().size());
+                        Annotation a0 = p0.getAnnotations().iterator().next();
+                        assertEquals("Lretrofit2/http/Query;", a0.getType());
+
+                        MethodParameter p1 = m.getParameters().get(1);
+                        assertEquals("Parameter #1 must retain @Query annotation", 1, p1.getAnnotations().size());
+                        Annotation a1 = p1.getAnnotations().iterator().next();
+                        assertEquals("Lretrofit2/http/Query;", a1.getType());
+                    }
+                }
+            }
+        }
+        assertTrue("AuthenticatorIdService.getAuthenticatorIdStatus must be found and verified", foundMethod);
     }
 }

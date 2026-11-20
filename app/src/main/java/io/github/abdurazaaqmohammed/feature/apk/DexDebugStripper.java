@@ -103,9 +103,21 @@ public final class DexDebugStripper {
         @Override @Nonnull public String getName() { return delegate.getName(); }
 
         @Override @Nonnull public List<? extends MethodParameter> getParameters() {
-            List<MethodParameter> params = new ArrayList<>();
-            for (MethodParameter p : delegate.getParameters()) {
-                params.add(new ImmutableMethodParameter(p.getType(), null, null));
+            List<? extends MethodParameter> orig = delegate.getParameters();
+            if (orig == null || orig.isEmpty()) return Collections.emptyList();
+            boolean hasName = false;
+            for (MethodParameter p : orig) {
+                if (p.getName() != null) {
+                    hasName = true;
+                    break;
+                }
+            }
+            if (!hasName) {
+                return (List<MethodParameter>) orig;
+            }
+            List<MethodParameter> params = new ArrayList<>(orig.size());
+            for (MethodParameter p : orig) {
+                params.add(p.getName() == null ? p : new ImmutableMethodParameter(p.getType(), p.getAnnotations(), null));
             }
             return params;
         }
