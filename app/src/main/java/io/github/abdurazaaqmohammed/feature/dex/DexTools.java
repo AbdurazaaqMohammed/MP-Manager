@@ -1,12 +1,14 @@
 package io.github.abdurazaaqmohammed.feature.dex;
 
 
+import io.github.abdurazaaqmohammed.feature.apk.DexAntiConfuse;
 import io.github.abdurazaaqmohammed.feature.apk.DexDebugStripper;
 import io.github.abdurazaaqmohammed.feature.apk.DexMergeUtil;
 import io.github.abdurazaaqmohammed.feature.apk.DexRepairEngine;
 import io.github.abdurazaaqmohammed.feature.apk.DexStringDecryptor;
 import io.github.abdurazaaqmohammed.feature.apk.DexStringUtil;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
+import java.util.concurrent.atomic.AtomicBoolean;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
@@ -165,6 +167,7 @@ public class DexTools {
                 context.rss.getString(R.string.translation_mode),
                 context.rss.getString(R.string.dex_replace_strings),
                 context.rss.getString(R.string.dex_decrypt_strings),
+                "Anti Confuse (remove array-payload junk)",
                 context.rss.getString(R.string.dex_merge)};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(displayName)
@@ -181,6 +184,8 @@ public class DexTools {
                     } else if (which == 6) {
                         showDexStringDecryptDialog(dexFile, zipFile);
                     } else if (which == 7) {
+                        showDexAntiConfuseDialog(dexFile, zipFile);
+                    } else if (which == 8) {
                         mergeDexOption(dexFile, zipFile);
                     } else if (which == 4) {
                         // MT-style standalone translation mode (multidex dialog
@@ -958,6 +963,74 @@ public class DexTools {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create());
+    }
+
+    /**
+     * Dex Anti Confuse: removes the dead array-payload junk that APKEditor-style dex
+     * "protect"/confuse injects after every method body (odd element width 3..19,
+     * unreferenced). Only that transformation is undone — no mappings needed, no
+     * renaming reversal, no string decryption; those are separate/impossible without
+     * the original mapping file. The scanner reports exact counts and a true no-op
+     * (nothing written, honest toast) when the dex carries no junk.
+     */
+    private void showDexAntiConfuseDialog(File dexFile, File zipFileOrNull) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        TextView desc = new TextView(context);
+        desc.setText("Removes the unreachable array-data payload junk that Protect/confuse (APKEditor) appends to every method (odd element width 3-19, nothing references it). No mappings needed. It does NOT reverse renamed classes/methods or encrypted strings — de-renaming needs the original mapping file, and other string fog needs its algorithm and key.");
+        desc.setPadding(0, 0, 0, pad / 2);
+        layout.addView(desc);
+
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Anti Confuse")
+                .setView(layout)
+                .setPositiveButton("Scan", (d, w) -> runDexAntiConfuse(dexFile, zipFileOrNull))
+                .setNegativeButton(android.R.string.cancel, null)
+                .create());
+    }
+
+    private void runDexAntiConfuse(File dexFile, File zipFileOrNull) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            File tmpOut = null;
+            try {
+                tmpOut = File.createTempFile("dexanti", ".dex", context.getCacheDir());
+                DexAntiConfuse.Result result = DexAntiConfuse.cleanDex(dexFile, tmpOut);
+                pm.dismiss();
+                if (!result.changed()) {
+                    // Honest no-op: nothing was written, the dex on disk is untouched.
+                    File noopOut = tmpOut;
+                    tmpOut = null;
+                    noopOut.delete();
+                    context.handler.post(() -> Extensions.showMessage(context,
+                            "Anti Confuse: no confuser junk found — dex left unchanged ("
+                                    + result.methodsScanned + " methods scanned, 0 payloads removed)"));
+                    return;
+                }
+                final File applyOut = tmpOut;
+                tmpOut = null; // ownership: Apply hands the file to applyDexStringReplace (deletes after copy);
+                               // any other dialog exit deletes it via the dismiss listener.
+                AtomicBoolean applied = new AtomicBoolean(false);
+                context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setMessage(result.summary())
+                        .setPositiveButton(context.rss.getString(R.string.apply), (d2, w2) -> {
+                            applied.set(true);
+                            applyDexStringReplace(dexFile, zipFileOrNull, applyOut);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setOnDismissListener(d2 -> {
+                            if (!applied.get()) applyOut.delete();
+                        })
+                        .create()));
+            } catch (Exception e) {
+                if (tmpOut != null) tmpOut.delete();
+                pm.dismiss();
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
     }
 
     private void runDexStringDecrypt(File dexFile, File zipFileOrNull, String customSig) {
