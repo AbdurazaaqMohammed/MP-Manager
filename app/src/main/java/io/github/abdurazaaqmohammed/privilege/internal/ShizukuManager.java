@@ -108,6 +108,10 @@ public final class ShizukuManager {
         ShizukuConnection.ensureBackground(context);
     }
 
+    public static void stopFileService(Context context) {
+        if (context != null) ShizukuConnection.unbind(context);
+    }
+
     private static IFileService serviceSync(Context context) throws IOException {
         if (!ready()) throw new IOException("Shizuku not connected or permission missing");
         IFileService s = ShizukuConnection.await(context, 20000);

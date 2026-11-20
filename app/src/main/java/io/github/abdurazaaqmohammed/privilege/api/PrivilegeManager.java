@@ -232,6 +232,8 @@ public final class PrivilegeManager {
 
         public static void warmUp(Context context) { ShizukuManager.warmUp(context); }
 
+        public static void stopFileService(Context context) { ShizukuManager.stopFileService(context); }
+
         public static String normalize(String path) { return ShizukuManager.normalize(path); }
 
         public static boolean isAllowed(String path) { return ShizukuManager.isAllowed(path); }

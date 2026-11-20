@@ -34,18 +34,23 @@ public final class ShizukuConnection {
     private static final ServiceConnection CONNECTION = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
-            try {
-                if (binder != null && binder.pingBinder()) {
-                    IFileService s = IFileService.Stub.asInterface(binder);
-                    if (s.version() >= ShizukuFileService.SERVICE_VERSION) {
-                        service = s;
+            synchronized (ShizukuConnection.class) {
+                // A callback already queued when unbind ran must not publish the
+                // stopped service again.
+                if (!binding) return;
+                try {
+                    if (binder != null && binder.pingBinder()) {
+                        IFileService s = IFileService.Stub.asInterface(binder);
+                        if (s.version() >= ShizukuFileService.SERVICE_VERSION) {
+                            service = s;
+                        }
                     }
+                } catch (Throwable ignored) {
+                } finally {
+                    binding = false;
+                    CountDownLatch l = latch;
+                    if (l != null) l.countDown();
                 }
-            } catch (Throwable ignored) {
-            } finally {
-                binding = false;
-                CountDownLatch l = latch;
-                if (l != null) l.countDown();
             }
         }
 
@@ -91,13 +96,16 @@ public final class ShizukuConnection {
         return service;
     }
 
-    public static void unbind(Context context) {
+    public static synchronized void unbind(Context context) {
         try {
             Shizuku.unbindUserService(args(context.getApplicationContext()), CONNECTION, true);
         } catch (Throwable ignored) {
         } finally {
             service = null;
             binding = false;
+            CountDownLatch waiting = latch;
+            latch = null;
+            if (waiting != null) waiting.countDown();
         }
     }
 }

@@ -142,8 +142,9 @@ public class StorageDocumentsProvider extends DocumentsProvider {
     /** Android/{data,obb,media} is only listable as root or as the shell user. */
     private static boolean androidDataReachable(Context context) {
         try {
-            if (PrivilegeManager.Files.fileOpsConfigured(context)) return true;
-            return PrivilegeManager.Shizuku.ready();
+            // DocumentsUI waits for every provider's roots. Never ping Shizuku
+            // or start a privileged service while its shared roots cache is locked.
+            return PrivilegeManager.Files.fileOpsConfigured(context);
         } catch (Throwable e) {
             return false;
         }

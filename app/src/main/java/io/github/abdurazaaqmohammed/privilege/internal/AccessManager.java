@@ -1009,7 +1009,7 @@ public final class AccessManager {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         if (mode == WorkingModePrefs.WorkingMode.ROOT) return prefs.getBoolean("root_file_ops", false);
         if (mode == WorkingModePrefs.WorkingMode.SHIZUKU) {
-            return prefs.getBoolean("shizuku_file_ops", false) && ShizukuManager.ready();
+            return prefs.getBoolean("shizuku_file_ops", false);
         }
         return false;
     }

@@ -1382,7 +1382,21 @@ public class SettingsController {
         shizukuFileOpsToggle.setChecked(settings.getBoolean("shizuku_file_ops", false));
         shizukuFileOpsToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_file_ops", checked).apply();
-            if (checked) new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
+            final Context app = activity.getApplicationContext();
+            new Thread(() -> {
+                // Read the latest value so rapid toggle changes cannot leave a
+                // service running after the user has disabled file operations.
+                synchronized (shizukuFileOpsToggle) {
+                    if (settings.getBoolean("shizuku_file_ops", false)) {
+                        PrivilegeManager.Shizuku.warmUp(app);
+                    } else {
+                        PrivilegeManager.Shizuku.stopFileService(app);
+                    }
+                }
+                app.getContentResolver().notifyChange(
+                        android.provider.DocumentsContract.buildRootsUri(
+                                app.getPackageName() + ".documents"), null);
+            }, "shizuku-file-ops").start();
         });
 
         rootExtractorToggle.setChecked(settings.getBoolean("root_extractor", false));
