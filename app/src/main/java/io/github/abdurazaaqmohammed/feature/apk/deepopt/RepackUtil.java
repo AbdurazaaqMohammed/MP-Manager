@@ -29,19 +29,33 @@ public final class RepackUtil {
 
     public static void repack(File inputApk, File outFile, Set<String> filesToDelete,
                               APKLogger logger) throws IOException {
-        Set<String> skip = computeSkip(inputApk, filesToDelete);
+        repack(inputApk, outFile, filesToDelete, null, logger);
+    }
+
+    public static void repack(File inputApk, File outFile, Set<String> filesToDelete,
+                              Set<String> targetAbis, APKLogger logger) throws IOException {
+        Set<String> skip = computeSkip(inputApk, filesToDelete, targetAbis);
         if (logger != null && !skip.isEmpty())
             logger.logMessage("Repack: dropping " + skip.size() + " entries");
         ApkZipAlignUtil.rebuildApk(inputApk, outFile, null, null, null, skip);
     }
 
     private static Set<String> computeSkip(File inputApk, Set<String> filesToDelete) throws IOException {
+        return computeSkip(inputApk, filesToDelete, null);
+    }
+
+    private static Set<String> computeSkip(File inputApk, Set<String> filesToDelete,
+                                           Set<String> targetAbis) throws IOException {
         Set<String> skip = new HashSet<>();
         try (ZipFile zip = new ZipFile(inputApk)) {
             Enumeration<? extends ZipEntry> entries = zip.entries();
             while (entries.hasMoreElements()) {
                 String name = entries.nextElement().getName();
-                if (isSignatureFile(name) || isJunk(name, filesToDelete)) skip.add(name);
+                if (isSignatureFile(name)
+                        || isJunk(name, filesToDelete)
+                        || AbiFilter.shouldPruneAbi(name, targetAbis)) {
+                    skip.add(name);
+                }
             }
         }
         return skip;

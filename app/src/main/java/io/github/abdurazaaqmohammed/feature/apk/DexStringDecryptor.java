@@ -205,16 +205,41 @@ public final class DexStringDecryptor {
                                 }
                             }
                         } else if ("Ljava/lang/String;".equals(returnType) && paramTypes.size() == 2
-                                && "Ljava/lang/String;".equals(paramTypes.get(0).toString())
-                                && "I".equals(paramTypes.get(1).toString())) {
-                            // Scenario 2: decrypt(String ciphertext, int key) -> String
-                            int strReg = inv.getRegisterC();
-                            int keyReg = inv.getRegisterD();
+                                && (("Ljava/lang/String;".equals(paramTypes.get(0).toString()) && "I".equals(paramTypes.get(1).toString()))
+                                || ("I".equals(paramTypes.get(0).toString()) && "Ljava/lang/String;".equals(paramTypes.get(1).toString())))) {
+                            // Scenario 2: decrypt(String ciphertext, int key) OR decrypt(int key, String ciphertext) -> String
+                            boolean firstIsString = "Ljava/lang/String;".equals(paramTypes.get(0).toString());
+                            int strReg = firstIsString ? inv.getRegisterC() : inv.getRegisterD();
+                            int keyReg = firstIsString ? inv.getRegisterD() : inv.getRegisterC();
                             String ciphertext = stringRegisters.get(strReg);
                             Integer key = intRegisters.get(keyReg);
                             if (ciphertext != null && key != null) {
-                                String decrypted = xorDecrypt(ciphertext, key);
+                                String decrypted = resolveKeyedDecryption(ciphertext, key);
                                 if (decrypted != null && i + 1 < instructions.size()) {
+                                    Instruction next = instructions.get(i + 1);
+                                    if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
+                                        int resultReg = ((OneRegisterInstruction) next).getRegisterA();
+                                        mutable.replaceInstruction(i + 1, new BuilderInstruction21c(
+                                                Opcode.CONST_STRING,
+                                                resultReg,
+                                                new ImmutableStringReference(decrypted)
+                                        ));
+                                        count++;
+                                        stringRegisters.put(resultReg, decrypted);
+                                    }
+                                }
+                            }
+                        } else if ("Ljava/lang/String;".equals(returnType) && paramTypes.size() == 2
+                                && "Ljava/lang/String;".equals(paramTypes.get(0).toString())
+                                && "Ljava/lang/String;".equals(paramTypes.get(1).toString())) {
+                            // Scenario 3: decrypt(String ciphertext, String key) -> String
+                            int strReg = inv.getRegisterC();
+                            int keyReg = inv.getRegisterD();
+                            String ciphertext = stringRegisters.get(strReg);
+                            String keyStr = stringRegisters.get(keyReg);
+                            if (ciphertext != null && keyStr != null) {
+                                String decrypted = stringKeyXorDecrypt(ciphertext, keyStr);
+                                if (decrypted != null && isPrintableAsciiOrUtf8(decrypted) && i + 1 < instructions.size()) {
                                     Instruction next = instructions.get(i + 1);
                                     if (next.getOpcode() == Opcode.MOVE_RESULT_OBJECT && next instanceof OneRegisterInstruction) {
                                         int resultReg = ((OneRegisterInstruction) next).getRegisterA();
@@ -251,6 +276,85 @@ public final class DexStringDecryptor {
         return new MethodTransformationResult(false, 0, method);
     }
 
+    private static String resolveKeyedDecryption(String ciphertext, int key) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        // 1. Standard single-byte / int XOR
+        String s = xorDecrypt(ciphertext, key);
+        if (s != null && isPrintableAsciiOrUtf8(s)) return s;
+
+        // 2. Positional XOR: c[i] ^ (key + i)
+        s = positionalXorDecrypt(ciphertext, key);
+        if (s != null && isPrintableAsciiOrUtf8(s)) return s;
+
+        // 3. Rolling key XOR (MT-style obfuscator pattern)
+        s = rollingXorDecrypt(ciphertext, key);
+        if (s != null && isPrintableAsciiOrUtf8(s)) return s;
+
+        // 4. Base64 + Keyed XOR
+        s = base64XorDecrypt(ciphertext, key);
+        if (s != null && isPrintableAsciiOrUtf8(s)) return s;
+
+        // 5. Char shift / Unicode displacement
+        s = charShiftDecrypt(ciphertext, key);
+        if (s != null && isPrintableAsciiOrUtf8(s)) return s;
+
+        return null;
+    }
+
+    public static String rollingXorDecrypt(String ciphertext, int initialKey) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        char[] chars = ciphertext.toCharArray();
+        int key = initialKey;
+        for (int i = 0; i < chars.length; i++) {
+            char cipherChar = chars[i];
+            chars[i] = (char) (cipherChar ^ (key & 0xffff));
+            key = (key * 31 + cipherChar) & 0xffff;
+        }
+        return new String(chars);
+    }
+
+    public static String positionalXorDecrypt(String ciphertext, int initialKey) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        char[] chars = ciphertext.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            chars[i] = (char) (chars[i] ^ ((initialKey + i) & 0xffff));
+        }
+        return new String(chars);
+    }
+
+    public static String stringKeyXorDecrypt(String ciphertext, String key) {
+        if (ciphertext == null || key == null || key.isEmpty()) return null;
+        char[] chars = ciphertext.toCharArray();
+        int keyLen = key.length();
+        for (int i = 0; i < chars.length; i++) {
+            chars[i] = (char) (chars[i] ^ key.charAt(i % keyLen));
+        }
+        return new String(chars);
+    }
+
+    public static String charShiftDecrypt(String ciphertext, int shift) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        char[] chars = ciphertext.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            chars[i] = (char) ((chars[i] - shift) & 0xffff);
+        }
+        return new String(chars);
+    }
+
+    public static String base64XorDecrypt(String ciphertext, int key) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        try {
+            byte[] decoded = Base64.decode(ciphertext, Base64.NO_WRAP);
+            if (decoded == null || decoded.length == 0) return null;
+            for (int i = 0; i < decoded.length; i++) {
+                decoded[i] = (byte) (decoded[i] ^ (key & 0xff));
+            }
+            String s = new String(decoded, StandardCharsets.UTF_8);
+            if (isPrintableAsciiOrUtf8(s)) return s;
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private static String attemptDecrypt(String ciphertext, boolean force) {
         if (ciphertext == null || ciphertext.isEmpty()) return null;
 
@@ -263,21 +367,33 @@ public final class DexStringDecryptor {
             }
         } catch (Exception ignored) {}
 
-        // Try XOR with common constants or string reverse if custom matched
+        // Try single-byte XOR brute force
+        char[] chars = ciphertext.toCharArray();
+        for (int k = 1; k < 256; k++) {
+            char[] candidate = new char[chars.length];
+            for (int c = 0; c < chars.length; c++) candidate[c] = (char) (chars[c] ^ k);
+            String s = new String(candidate);
+            if (isPrintableAscii(s)) return s;
+        }
+
+        // Try positional XOR brute force
+        for (int k = 1; k < 256; k++) {
+            String s = positionalXorDecrypt(ciphertext, k);
+            if (s != null && isPrintableAscii(s)) return s;
+        }
+
+        // Try char shift brute force
         if (force) {
-            // Rot13 / simple shift test
-            char[] chars = ciphertext.toCharArray();
-            for (int k = 1; k < 256; k++) {
-                char[] candidate = new char[chars.length];
-                for (int c = 0; c < chars.length; c++) candidate[c] = (char) (chars[c] ^ k);
-                String s = new String(candidate);
-                if (isPrintableAscii(s)) return s;
+            for (int shift = -128; shift <= 128; shift++) {
+                if (shift == 0) continue;
+                String s = charShiftDecrypt(ciphertext, shift);
+                if (s != null && isPrintableAscii(s)) return s;
             }
         }
         return null;
     }
 
-    private static String xorDecrypt(String ciphertext, int key) {
+    public static String xorDecrypt(String ciphertext, int key) {
         if (ciphertext == null) return null;
         char[] chars = ciphertext.toCharArray();
         for (int i = 0; i < chars.length; i++) {

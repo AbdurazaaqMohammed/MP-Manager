@@ -35,6 +35,8 @@ public class DeepOptOptions {
      * guard and only keeps statically referenced resources.
      */
     public boolean safeMode = true;
+    /** Target ABIs to retain (e.g. arm64-v8a); all other architectures in lib/ will be stripped. Null keeps all. */
+    public java.util.Set<String> targetAbis;
 
     public static DeepOptOptions defaults() {
         return new DeepOptOptions();

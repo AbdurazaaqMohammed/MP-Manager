@@ -2719,6 +2719,71 @@ public class DexEditorActivity extends BaseActivity {
         });
     }
 
+    public void traceMethodCallers(String slashClass, String enclosingMethodSig) {
+        if (slashClass == null || enclosingMethodSig == null) return;
+        int pIndex = enclosingMethodSig.indexOf('(');
+        if (pIndex == -1) {
+            searchMethodUsages(slashClass, enclosingMethodSig, "()V", false);
+            return;
+        }
+        String methodName = enclosingMethodSig.substring(0, pIndex);
+        String proto = enclosingMethodSig.substring(pIndex);
+        searchMethodUsages(slashClass, methodName, proto, false);
+    }
+
+    public void decompileMethodToJava(String className, String methodName) {
+        String code = null;
+        for (EditorTab tab : tabs) {
+            if (tab.className.equals(className) && tab.type == 0) {
+                code = tab.content;
+                break;
+            }
+        }
+        if (code == null && classTree != null) {
+            ClassDef def = classTree.classMap.get(className);
+            if (def != null) {
+                try {
+                    code = classTree.getPureSmaliFromClassDef(def);
+                } catch (Exception ignored) {}
+            }
+        }
+        if (code == null) {
+            Extensions.showMessage(this, "Class not found");
+            return;
+        }
+
+        String title = SmaliHelper.extractSimpleName(className) + ".java";
+        for (int i = 0; i < tabs.size(); i++) {
+            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 1 && tabs.get(i).title.equals(title)) {
+                showEditor(i);
+                return;
+            }
+        }
+
+        final String smaliCode = code;
+        AlertCircularProgress pd = new AlertCircularProgress(this);
+        pd.setMessage(getString(R.string.decompiling));
+        pd.show();
+        new Thread(() -> {
+            try {
+                int ver = dexVersion;
+                try {
+                    if (classTree != null) ver = classTree.getOpenedDexVersion();
+                } catch (Exception ignored) {}
+                final String java = Smali2Java.translate(smaliCode, ver);
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    addTab(className, title, java, 1);
+                });
+            } catch (final Exception e) {
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    Notify_MT.Notify(DexEditorActivity.this, getString(R.string.error), e.toString(), getString(R.string.close));
+                });
+            }
+        }).start();
+    }
+
     public void searchMethodOverrides(String slashClass, String methodName, String proto) {
         runUsageOnSearchTab(() -> {
             Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");

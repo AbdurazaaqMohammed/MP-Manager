@@ -443,8 +443,13 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             holder.name.setSingleLine(false);
         }
 
-        // 3. Subtitle (History)
-        if (isHistory && type == TYPE_CLASS) {
+        // 3. Subtitle (History & Snippet Method Info)
+        if (node.getSubtitle() != null && !node.getSubtitle().isEmpty()) {
+            if (holder.subtitle.getVisibility() != View.VISIBLE) {
+                holder.subtitle.setVisibility(View.VISIBLE);
+            }
+            holder.subtitle.setText(node.getSubtitle());
+        } else if (isHistory && type == TYPE_CLASS) {
             if (holder.subtitle.getVisibility() != View.VISIBLE) {
                 holder.subtitle.setVisibility(View.VISIBLE);
             }
@@ -678,7 +683,13 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             } else if (isModifiedList) {
                 if (!node.isDirectory()) showModifiedPopupMenu(v, node);
             } else if (isSearchList) {
-                if (!node.isDirectory() && !node.isSnippet()) showSearchPopupMenu(v, node);
+                if (!node.isDirectory()) {
+                    if (node.isSnippet()) {
+                        showSnippetPopupMenu(v, node);
+                    } else {
+                        showSearchPopupMenu(v, node);
+                    }
+                }
             } else {
                 showPopupMenu(v, node, pos);
             }
@@ -717,6 +728,44 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                     break;
                 case "Remove from search result":
                     if (listener != null) listener.onNodeDeleted(node);
+                    break;
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showSnippetPopupMenu(View view, TreeNode node) {
+        if (!(context instanceof DexEditorActivity activity)) return;
+        PopupMenu popup = new PopupMenu(context, view);
+        android.view.Menu menu = popup.getMenu();
+
+        String encMethod = node.getEnclosingMethod();
+        if (encMethod != null && !encMethod.isEmpty()) {
+            menu.add(0, 1, 0, context.getString(R.string.trace_to_method) + " (" + encMethod + ")");
+            menu.add(0, 2, 1, context.getString(R.string.trace_method_callers));
+            menu.add(0, 3, 2, context.getString(R.string.decompile_method_java));
+        }
+        menu.add(0, 4, 3, context.getString(android.R.string.copy));
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1:
+                    int targetLine = node.getMethodLineNumber() >= 0 ? node.getMethodLineNumber() : node.getLineNumber();
+                    activity.openClassAtLine(node.getFullName(), targetLine, null);
+                    break;
+                case 2:
+                    if (encMethod != null) {
+                        activity.traceMethodCallers(node.getFullName(), encMethod);
+                    }
+                    break;
+                case 3:
+                    if (encMethod != null) {
+                        activity.decompileMethodToJava(node.getFullName(), encMethod);
+                    }
+                    break;
+                case 4:
+                    CopyUtil.copyToClipboard(activity, node.getName());
                     break;
             }
             return true;

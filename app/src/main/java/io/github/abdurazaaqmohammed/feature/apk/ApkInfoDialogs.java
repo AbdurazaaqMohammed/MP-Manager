@@ -9,6 +9,7 @@ import io.github.abdurazaaqmohammed.feature.apk.ApkMoreMenuOrder;
 import io.github.abdurazaaqmohammed.feature.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguUnpackDialog;
+import io.github.abdurazaaqmohammed.feature.apk.privacy.PrivacyAuditDialog;
 import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 
 import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
@@ -918,6 +919,8 @@ public class ApkInfoDialogs {
             showLibPatcherDialog(file, fileName);
         } else if (ApkMoreMenuOrder.JIAGU.equals(actionId)) {
             JiaguUnpackDialog.show(context, file);
+        } else if (ApkMoreMenuOrder.PRIVACY.equals(actionId)) {
+            PrivacyAuditDialog.showForApk(context, file, fileName);
         } else {
             // Check plugin APK actions
             for (ApkMoreAction ext : ExtensionRegistry.apkActions()) {

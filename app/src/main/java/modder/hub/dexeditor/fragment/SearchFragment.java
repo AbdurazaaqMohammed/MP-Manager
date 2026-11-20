@@ -2191,6 +2191,13 @@ public class SearchFragment extends Fragment {
                                         TreeNode snippet = new TreeNode(literal.source(), className, 0, false);
                                         snippet.setSnippet(true);
                                         snippet.setLineNumber(literal.line());
+                                        if (literal.enclosingMethod() != null) {
+                                            snippet.setEnclosingMethod(literal.enclosingMethod());
+                                            snippet.setMethodLineNumber(literal.methodStartLine());
+                                            snippet.setSubtitle(literal.enclosingMethod() + " · Line " + (literal.line() + 1));
+                                        } else {
+                                            snippet.setSubtitle("Line " + (literal.line() + 1));
+                                        }
                                         preHighlightSnippet(snippet, highlightQuery);
                                         snippets.add(snippet);
                                         match = true;

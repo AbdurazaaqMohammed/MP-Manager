@@ -41,6 +41,7 @@ public class ApkDeepOptimizer {
         options.removeFields = settings.getBoolean("deep_opt_remove_fields", true);
         options.shortenNames = settings.getBoolean("deep_opt_phase_b", false);
         options.safeMode = settings.getBoolean("deep_opt_safe_mode", true);
+        options.targetAbis = settings.getStringSet("deep_opt_target_abis", null);
         return options;
     }
 }

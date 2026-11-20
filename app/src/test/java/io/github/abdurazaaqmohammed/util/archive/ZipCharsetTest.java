@@ -501,6 +501,10 @@ public class ZipCharsetTest {
                 crc.update(data);
                 int extraLen = s.extra == null ? 0 : s.extra.length;
 
+                boolean isDir = s.nameBytes.length > 0 && s.nameBytes[s.nameBytes.length - 1] == '/';
+                byte b0 = isDir ? (byte) 0x10 : 0;
+                byte b2 = isDir ? (byte) 0xed : (byte) 0xa4;
+                byte b3 = isDir ? (byte) 0x41 : (byte) 0x81;
                 raf.write(new byte[]{
                         0x50, 0x4B, 1, 2,           // central signature
                         20, 0, 20, 0,               // versions
@@ -518,7 +522,7 @@ public class ZipCharsetTest {
                         0, 0,                       // comment length
                         0, 0,                       // disk number
                         0, 0,                       // internal attrs
-                        0, 0, 0, (byte) 0x81,       // external attrs
+                        b0, 0, b2, b3,              // external attrs
                         (byte) offsets[i], (byte) (offsets[i] >>> 8),
                         (byte) (offsets[i] >>> 16), (byte) (offsets[i] >>> 24)});
                 raf.write(s.nameBytes);
