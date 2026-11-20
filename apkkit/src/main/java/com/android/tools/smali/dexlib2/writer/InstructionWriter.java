@@ -86,6 +86,7 @@ import com.android.tools.smali.util.ExceptionWithContext;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.List;
 
@@ -497,10 +498,13 @@ public class InstructionWriter<StringRef extends StringReference, TypeRef extend
     public void write(@Nonnull ArrayPayload instruction) {
         try {
             writer.writeUshort(getOpcodeValue(instruction.getOpcode()));
-            writer.writeUshort(instruction.getElementWidth());
+            int elementWidth = instruction.getElementWidth();
+            writer.writeUshort(elementWidth);
             List<Number> elements = instruction.getArrayElements();
+            // elements.size() is the payload's declared element count for every width, so the
+            // count field is always written from it directly.
             writer.writeInt(elements.size());
-            switch (instruction.getElementWidth()) {
+            switch (elementWidth) {
                 case 1:
                     for (Number element: elements) {
                         writer.write(element.byteValue());
@@ -521,12 +525,51 @@ public class InstructionWriter<StringRef extends StringReference, TypeRef extend
                         writer.writeLong(element.longValue());
                     }
                     break;
+                default:
+                    // Widths outside {1,2,4,8} have no typed element encoding. They only occur
+                    // in dexes "confused" by anti-tamper tools, which append unreachable junk
+                    // payloads with odd widths to method bodies. The reader preserves them as
+                    // the unsigned little-endian value of each element's width bytes (one entry
+                    // per element, so the count above stays the declared count); serialize them
+                    // back to exactly those bytes. A value that does not fit its declared width
+                    // cannot be written losslessly, so fail loudly rather than truncate.
+                    for (Number element: elements) {
+                        writeOpaqueElement(element, elementWidth);
+                    }
+                    break;
             }
             if ((writer.getPosition() & 1) != 0) {
                 writer.write(0);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+    /**
+     * Serializes one element of an array payload with a non-standard element width as
+     * {@code width} little-endian bytes.
+     */
+    private void writeOpaqueElement(@Nonnull Number element, int elementWidth) throws IOException {
+        BigInteger value = element instanceof BigInteger
+                ? (BigInteger)element
+                : BigInteger.valueOf(element.longValue());
+        // elementWidth is a ushort, so 8 * elementWidth cannot overflow an int.
+        BigInteger range = BigInteger.ONE.shiftLeft(8 * elementWidth);
+        if (value.signum() < 0) {
+            // Two's complement within the declared width.
+            BigInteger minValue = BigInteger.ONE.shiftLeft(8 * elementWidth - 1).negate();
+            if (value.compareTo(minValue) < 0) {
+                throw new ExceptionWithContext(
+                        "Array payload element %s does not fit in %d byte(s)", value, elementWidth);
+            }
+            value = value.and(range.subtract(BigInteger.ONE));
+        } else if (value.compareTo(range) >= 0) {
+            throw new ExceptionWithContext(
+                    "Array payload element %s does not fit in %d byte(s)", value, elementWidth);
+        }
+        for (int i = 0; i < elementWidth; i++) {
+            writer.write(value.shiftRight(8 * i).intValue() & 0xff);
         }
     }
 

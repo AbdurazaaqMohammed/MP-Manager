@@ -37,6 +37,7 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.dexbacked.util.FixedSizeList;
 
 import javax.annotation.Nonnull;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Collections;
 
@@ -113,7 +114,28 @@ public class DexBackedArrayPayload extends DexBackedInstruction implements Array
                     return dexFile.getDataBuffer().readLong(elementsStart + index * 8);
                 }
             };
-            default -> throw new ExceptionWithContext("Invalid element width: %d", elementWidth);
+            default -> new ReturnedList() {
+                @Nonnull
+                @Override
+                public Number readItem(int index) {
+                    // Widths outside {1,2,4,8} have no typed element encoding. They only occur
+                    // in dexes "confused" by anti-tamper tools (e.g. APKEditor's protect command,
+                    // which appends an unreachable trailing payload with an odd width to every
+                    // non-empty method) or in hand-crafted files. The payload is still part of
+                    // the code stream, so it must round-trip instead of failing the whole write:
+                    // expose each element as the unsigned little-endian value of its width
+                    // bytes. The list stays one entry per element, and InstructionWriter
+                    // serializes them back to the exact same bytes (see its write(ArrayPayload)
+                    // counterpart).
+                    int elementOffset = elementsStart + index * elementWidth;
+                    BigInteger value = BigInteger.ZERO;
+                    for (int i = elementWidth - 1; i >= 0; i--) {
+                        value = value.shiftLeft(8)
+                                .add(BigInteger.valueOf(dexFile.getDataBuffer().readByte(elementOffset + i) & 0xff));
+                    }
+                    return value;
+                }
+            };
         };
     }
 
