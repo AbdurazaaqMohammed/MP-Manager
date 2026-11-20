@@ -17,6 +17,8 @@ import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstructio
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.smali.Smali;
 import com.android.tools.smali.smali.SmaliOptions;
 
@@ -235,5 +237,47 @@ public class PrivacyBytecodeEngineTest {
         // Wide const (0L)
         BuilderInstruction wide0 = PrivacyBytecodeEngine.createConstWide(0, 0L);
         assertEquals(Opcode.CONST_WIDE_16, wide0.getOpcode());
+    }
+
+    @Test
+    public void testDexVersionPreservedDuringSanitization() throws Exception {
+        byte[] dex039Header = new byte[]{'d', 'e', 'x', '\n', '0', '3', '9', 0, 0, 0, 0, 0};
+        byte[] dex038Header = new byte[]{'d', 'e', 'x', '\n', '0', '3', '8', 0, 0, 0, 0, 0};
+        byte[] dex035Header = new byte[]{'d', 'e', 'x', '\n', '0', '3', '5', 0, 0, 0, 0, 0};
+
+        Opcodes opcodes039 = PrivacyBytecodeEngine.opcodesForDex(dex039Header);
+        assertEquals(28, opcodes039.api);
+
+        Opcodes opcodes038 = PrivacyBytecodeEngine.opcodesForDex(dex038Header);
+        assertEquals(27, opcodes038.api);
+
+        Opcodes opcodes035 = PrivacyBytecodeEngine.opcodesForDex(dex035Header);
+        assertEquals(23, opcodes035.api);
+
+        // Fallbacks
+        assertEquals(Opcodes.getDefault().api, PrivacyBytecodeEngine.opcodesForDex(null).api);
+        assertEquals(Opcodes.getDefault().api, PrivacyBytecodeEngine.opcodesForDex(new byte[]{0, 1, 2}).api);
+
+        // Verify DexPool output magic matches source DEX version
+        DexPool pool039 = new DexPool(opcodes039);
+        MemoryDataStore store039 = new MemoryDataStore();
+        pool039.writeTo(store039);
+        byte[] out039 = store039.getData();
+        assertEquals('d', (char) out039[0]);
+        assertEquals('e', (char) out039[1]);
+        assertEquals('x', (char) out039[2]);
+        assertEquals('\n', (char) out039[3]);
+        assertEquals('0', (char) out039[4]);
+        assertEquals('3', (char) out039[5]);
+        assertEquals('9', (char) out039[6]);
+        assertEquals(0, out039[7]);
+
+        DexPool pool038 = new DexPool(opcodes038);
+        MemoryDataStore store038 = new MemoryDataStore();
+        pool038.writeTo(store038);
+        byte[] out038 = store038.getData();
+        assertEquals('0', (char) out038[4]);
+        assertEquals('3', (char) out038[5]);
+        assertEquals('8', (char) out038[6]);
     }
 }

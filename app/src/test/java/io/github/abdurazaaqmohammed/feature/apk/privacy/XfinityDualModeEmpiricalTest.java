@@ -271,4 +271,23 @@ public class XfinityDualModeEmpiricalTest {
         }
         assertTrue("AuthenticatorIdService.getAuthenticatorIdStatus must be found and verified", foundMethod);
     }
+
+    @Test
+    public void test4_DexVersionHeadersPreservedOnXfinity() throws Exception {
+        runStandardSanitization();
+        assertTrue("Standard APK must exist", STANDARD_APK.exists());
+
+        ApkModule module = ApkModule.loadApkFile(STANDARD_APK);
+        for (InputSource source : module.getInputSources()) {
+            String name = source.getName();
+            if (!name.matches("classes\\d*\\.dex")) continue;
+
+            byte[] header = new byte[8];
+            try (InputStream in = source.openStream()) {
+                int read = in.read(header);
+                assertEquals(8, read);
+            }
+            assertEquals("DEX " + name + " must have magic 'dex\\n039\\0'", "dex\n039\0", new String(header));
+        }
+    }
 }

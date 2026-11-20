@@ -276,3 +276,27 @@ Based on the empirical findings from both Amazon Shopping (183 MB) and Xfinity D
 - [x] **Step 3**: Decompiled and inspected key classes (`TelemetryWorker`, `DefaultXfinityAssistant`, `UserFeatureManager`, `WorkersManager`, `XaLibClientImpl`) with JADX and verified all 21 DEXes with `dexdump -c`.
 - [x] **Step 4**: Documented comprehensive empirical findings, comparative tables, and cross-app invariants in `docs/research/06_xfinity_sterilization_and_cross_app_patterns.md`.
 - [x] **Git Status**: Clean working tree maintained; no git commits executed.
+
+---
+
+## 9. Physical Device Runtime Invariants: DEX Version Preservation & Parameter Annotations
+
+During physical device deployment on Google Pixel 10 Pro XL (Android 16 / VanillaIceCream), two critical runtime Dalvik/ART invariants were uncovered and resolved:
+
+### 1. Retrofit Parameter Annotation Preservation
+- **Symptom**: `java.lang.IllegalArgumentException: No Retrofit annotation found. (parameter #0) for method ...` on app launch.
+- **Root Cause**: `DexDebugStripper.strip(ClassDef)` and `ClassTree.java` previously reconstructed `ImmutableMethodParameter` passing `null` for annotations when removing debug parameter names.
+- **Solution**: Explicitly preserved `p.getAnnotations()` in all parameter reconstructions. Verified on `AuthenticatorIdService.getAuthenticatorIdStatus` and `updateAuthenticatorId`.
+
+### 2. DEX Version Header Downgrade Trap (`IncompatibleClassChangeError`)
+- **Symptom**: App launched stably, but navigating to the "Home" tab crashed with:
+  ```text
+  FATAL EXCEPTION: main
+  java.lang.IncompatibleClassChangeError: Found interface com.xfinity.dh.wifimotion.ui.screens.WifiMotionDependencies, but class was expected
+      at com.xfinity.dh.wifimotion.ui.screens.WifiMotionDependencies.ShowWifiMotion(...)
+      at com.xfinity.digitalhome.features.navigation.smartHome.fragments.SecurityTabFragment...ShowWifiMotion(...)
+  ```
+- **Root Cause**: `PrivacyBytecodeEngine` parsed DEXes using `Opcodes.getDefault()` (`api = 20`, DEX 035). When mutated classes were written via `DexPool(dex.getOpcodes())`, `DexWriter.writeHeader` downgraded the DEX magic header from `dex\n039\0` (API 28+, Android 9+) down to legacy `dex\n035\0` (API 20, Android 1.0). In DEX 035, private and default interface methods (`invoke-direct` on an interface method) did not exist, causing ART's class linker to fail with `IncompatibleClassChangeError`.
+- **Solution**: Implemented `PrivacyBytecodeEngine.opcodesForDex(byte[] dexBytes)` utilizing `HeaderItem.getVersion(dexBytes, 0)` and `Opcodes.forDexVersion(version)` to dynamically detect and preserve modern DEX versions (037, 038, 039, 040, 041).
+- **Physical Verification**: Verified live on physical Pixel 10 Pro XL (`192.168.1.23:5555`). All 21 DEX files retained `dex\n039\0`, and navigation across all tabs ("Overview", "Services", "Activity", "Home", "Account") ran with zero crashes and live rendering of WiFi Motion and SecurityTab fragments.
+

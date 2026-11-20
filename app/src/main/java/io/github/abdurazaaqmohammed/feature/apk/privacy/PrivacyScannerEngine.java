@@ -88,7 +88,7 @@ public final class PrivacyScannerEngine {
             if (!name.matches("classes\\d*\\.dex")) continue;
 
             byte[] dexBytes = readAll(source.openStream());
-            DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+            DexBackedDexFile dex = new DexBackedDexFile(PrivacyBytecodeEngine.opcodesForDex(dexBytes), dexBytes);
             scanDexInternal(dex, report);
         }
 

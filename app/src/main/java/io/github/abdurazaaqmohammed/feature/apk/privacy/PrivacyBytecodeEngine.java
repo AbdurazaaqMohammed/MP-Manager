@@ -15,6 +15,7 @@ import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction31i
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction35c;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction51l;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
@@ -874,7 +875,7 @@ public final class PrivacyBytecodeEngine {
                     if (!name.matches("classes\\d*\\.dex")) continue;
 
                     byte[] dexBytes = readAll(source.openStream());
-                    DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+                    DexBackedDexFile dex = new DexBackedDexFile(opcodesForDex(dexBytes), dexBytes);
                     reachability.indexDexFile(dex);
                 }
             }
@@ -887,7 +888,7 @@ public final class PrivacyBytecodeEngine {
                 if (!name.matches("classes\\d*\\.dex")) continue;
 
                 byte[] dexBytes = readAll(source.openStream());
-                DexBackedDexFile dex = new DexBackedDexFile(Opcodes.getDefault(), dexBytes);
+                DexBackedDexFile dex = new DexBackedDexFile(opcodesForDex(dexBytes), dexBytes);
                 List<ClassDef> transformedClasses = new ArrayList<>();
                 PrivacyStats dexStats = new PrivacyStats();
                 boolean anyClassChanged = false;
@@ -1090,5 +1091,23 @@ public final class PrivacyBytecodeEngine {
             while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
             return bos.toByteArray();
         }
+    }
+
+    /**
+     * Determines the appropriate Opcodes instance for a DEX file by inspecting its header version.
+     * Preserves modern DEX versions (037, 038, 039, 040, 041) to ensure default/private interface
+     * methods and modern opcodes do not trigger IncompatibleClassChangeError or ART verification errors.
+     */
+    public static Opcodes opcodesForDex(byte[] dexBytes) {
+        try {
+            if (dexBytes != null && dexBytes.length >= 8) {
+                int version = HeaderItem.getVersion(dexBytes, 0);
+                if (version >= 35) {
+                    return Opcodes.forDexVersion(version);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return Opcodes.getDefault();
     }
 }
