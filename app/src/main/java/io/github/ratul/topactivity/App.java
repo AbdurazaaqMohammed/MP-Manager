@@ -72,6 +72,8 @@ public class App extends Application {
         super.onCreate();
         instance = this;
         ServiceLocator.init(this);
+        // APK tools can be opened directly without starting MainActivity first.
+        io.github.abdurazaaqmohammed.data.prefs.UiPrefs.frameworkDir(this);
         try {
             DexWorkspaceStore.initialize(getFilesDir());
         } catch (java.io.IOException ignored) {

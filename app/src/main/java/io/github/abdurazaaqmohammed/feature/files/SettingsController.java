@@ -1031,8 +1031,6 @@ public class SettingsController {
         root.findViewById(R.id.pickAppPathBtn).setOnClickListener(v ->
                 pickDirInto(appPathTv, chosen -> {
                     settings.edit().putString("app_path_dir", chosen).apply();
-                    // Logs and framework resources follow the new base immediately.
-                    UiPrefs.frameworkDir(activity);
                 }));
 
         TextView apkExtractPathTv = root.findViewById(R.id.apkExtractPathTv);

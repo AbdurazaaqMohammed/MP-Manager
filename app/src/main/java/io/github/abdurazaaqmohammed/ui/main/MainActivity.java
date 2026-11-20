@@ -1024,8 +1024,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (UiPrefs.folderSizeMode(this) != UiPrefs.FOLDER_SIZE_NONE) {
             DirSizeCache.preload();
         }
-        // Applies the custom app dir to REAndroid's framework loader before
-        // any decode/build can read the default location.
+        // Point REAndroid at private framework storage before any decode/build
+        // can read the default location.
         UiPrefs.frameworkDir(this);
         // PrivilegeManager.shizuku().warmUp() does binder IPC: deferred to runWhenIdle below,
         // never on the cold-start critical path.

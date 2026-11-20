@@ -178,12 +178,13 @@ public final class UiPrefs {
     }
 
     /**
-     * Framework resources directory ({@code <app dir>/frameworks}), following the
-     * custom app-path preference. Also points REAndroid's framework loader at
-     * it so decode/build use the same location the app extracts to.
+     * Bundled framework resources belong in private app data, independently of
+     * the user-selected working directory. Decode/build use this same location.
+     * Legacy external copies are left intact; bundled APKs are extracted here
+     * on startup without requiring shared-storage permission.
      */
     public static File frameworkDir(Context context) {
-        File fw = new File(appPathDir(context, defaultAppDir()), "frameworks");
+        File fw = new File(context.getFilesDir(), "frameworks");
         try {
             InternalFrameworks.setAndroidResourceDirectory(fw.getPath());
         } catch (Throwable ignored) {
