@@ -31,6 +31,7 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewHelper;
 import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewLanguageWrapper;
+import io.github.abdurazaaqmohammed.feature.editor.SyntaxApplyPolicy;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
@@ -164,8 +165,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private String title = "";
     // Real file name backing this editor, used to auto-detect the syntax.
     private String fileName = null;
-    // Currently applied TextMate scope (null = plain text / no highlighting).
-    private String currentSyntaxScope = null;
+    // Syntax request bookkeeping: scope requested last, worker generation and the
+    // language actually live on the editor. The policy must decide from the real
+    // editor state instead of a recorded scope alone, otherwise a scope that
+    // matches a previous request is never re-applied after the editor view is
+    // recreated (config change) or after a dropped/failed async load, which left
+    // XML/AndroidManifest.xml intermittently without highlighting.
+    private final SyntaxApplyPolicy syntaxPolicy = new SyntaxApplyPolicy();
     private int type = TYPE_TEXT;
     private boolean isSmali = false;
     private String initialContentText;
@@ -200,7 +206,6 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     // assets/syntaxes and registered from assets/languages.json. They are loaded lazily on
     // a worker thread the first time highlighting is requested and then cached per scope.
     private static boolean syntaxGrammarsLoaded = false;
-    private int syntaxGeneration;
     private static final String[] SYNTAX_LABELS = {
             "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
             "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell", "Prop"
@@ -735,7 +740,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void applyPreferences() {
         SharedPreferences editorPrefs = requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
-        if (!isSmali && currentSyntaxScope == null) {
+        if (!isSmali && syntaxPolicy.requestedScope() == null) {
             applySchemePreference();
         } else if (editor != null && editor.getColorScheme() != null) {
             editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
@@ -1005,6 +1010,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
         symbolActionHost = null;
         symbolInputView = null;
+        // The editor view that held the applied syntax language is going away.
+        // Forget the applied record so a recreated view (FragmentStateAdapter
+        // page switching keeps the fragment instance while recreating views)
+        // re-applies the requested scope instead of being deduped away, and
+        // clear the stale view reference so an in-flight grammar load can never
+        // attach a language to a destroyed editor (the completion callback
+        // re-checks editor/isAdded and drops into a retryable state instead).
+        syntaxPolicy.onViewDestroyed();
+        editor = null;
         super.onDestroyView();
     }
 
@@ -1377,9 +1391,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private int currentSyntaxIndex() {
-        if (currentSyntaxScope != null) {
+        String scope = syntaxPolicy.requestedScope();
+        if (scope != null) {
             for (int i = 0; i < SYNTAX_SCOPES.length; i++) {
-                if (currentSyntaxScope.equals(SYNTAX_SCOPES[i])) return i;
+                if (scope.equals(SYNTAX_SCOPES[i])) return i;
             }
         }
         return 0;
@@ -1478,34 +1493,67 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void applySyntax(String scope) {
         if (editor == null) return;
         if (largeFileMode) scope = null;
-        if (Objects.equals(scope, currentSyntaxScope)) {
-            if (scope == null) applySchemePreference();
-            return;
+        SyntaxApplyPolicy.Decision decision = syntaxPolicy.onRequest(
+                scope, syntaxPolicy.isAppliedToEditor(editor.getEditorLanguage()));
+        switch (decision) {
+            case SKIP_APPLIED:
+                // Requested scope is live on this editor; only refresh colors so a
+                // theme/night-mode change made since the last application shows up.
+                if (scope == null) applySchemePreference();
+                else ensureTextMateScheme();
+                return;
+            case AWAIT_IN_FLIGHT:
+                // A worker for exactly this request is still running; its completion
+                // will apply the language. Do not spawn a duplicate load.
+                return;
+            case APPLY_PLAIN: {
+                Language plain = new EmptyLanguage();
+                editor.setEditorLanguage(plain);
+                syntaxPolicy.onLanguageApplied(plain, syntaxPolicy.currentGeneration());
+                applySchemePreference();
+                return;
+            }
+            case LOAD_ASYNC:
+            default:
+                break;
         }
-        currentSyntaxScope = scope;
-        final int generation = ++syntaxGeneration;
-        if (scope == null) {
-            editor.setEditorLanguage(new EmptyLanguage());
-            applySchemePreference();
-            return;
-        }
+        final int generation = syntaxPolicy.currentGeneration();
         final Context appContext = requireContext().getApplicationContext();
         final String finalScope = scope;
         new Thread(() -> {
             TextMateLanguage language = loadSyntaxLanguage(appContext, finalScope);
             Activity activity = getActivity();
-            if (activity == null) return;
+            if (activity == null) {
+                // Fragment detached mid-load: invalidate the request so the next
+                // applyAutoSyntax retries instead of the dedup skipping it forever,
+                // and release the loaded language since no editor will use it.
+                destroyUnused(language);
+                syntaxPolicy.onResultDropped(generation);
+                return;
+            }
             activity.runOnUiThread(() -> {
-                if (!isAdded() || editor == null) return;
-                if (generation == syntaxGeneration && finalScope.equals(currentSyntaxScope) && !largeFileMode) {
+                if (!isAdded() || editor == null) {
+                    destroyUnused(language);
+                    syntaxPolicy.onResultDropped(generation);
+                    return;
+                }
+                if (syntaxPolicy.isCurrent(generation) && !largeFileMode) {
                     if (language != null) {
-                        setTextMateLanguage(language);
+                        setTextMateLanguage(language, generation);
                     } else {
-                        // Syntax loading failed - fall back to plain text and log error
+                        // Syntax loading failed - fall back to plain text and log error.
+                        // The failure is not recorded as an applied request, so the
+                        // next trigger retries the (possibly transient) load.
                         Log.e("UnifiedEditor", "Failed to load syntax for scope: " + finalScope);
                         editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
+                        syntaxPolicy.onLoadFailed(generation);
                         applySchemePreference();
                     }
+                } else {
+                    // Superseded or switched to large-file mode: never attached to
+                    // an editor, so release it.
+                    destroyUnused(language);
+                    syntaxPolicy.onResultSuperseded(generation);
                 }
             });
         }).start();
@@ -1527,9 +1575,19 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
     }
 
-    private void setTextMateLanguage(TextMateLanguage language) {
+    private void setTextMateLanguage(TextMateLanguage language, int generation) {
         if (editor == null || language == null) return;
-        editor.setEditorLanguage(new ColorPreviewLanguageWrapper(language, editor));
+        Language wrapper = new ColorPreviewLanguageWrapper(language, editor);
+        editor.setEditorLanguage(wrapper);
+        // Record what is actually live on the editor so the next applySyntax call
+        // can verify it instead of trusting a previously requested scope.
+        syntaxPolicy.onLanguageApplied(wrapper, generation);
+        ensureTextMateScheme();
+    }
+
+    /** (Re)applies the TextMate color scheme to the editor, rebuilding it after a theme change. */
+    private void ensureTextMateScheme() {
+        if (editor == null) return;
         try {
             if (cachedColorScheme == null) {
                 cachedColorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
@@ -1540,6 +1598,16 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             applyPackEditorColors();
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Color scheme error", e);
+        }
+    }
+
+    /** Releases a fully loaded language that will never be attached to an editor. */
+    private static void destroyUnused(TextMateLanguage language) {
+        if (language == null) return;
+        try {
+            language.destroy();
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "Unused language destroy error", e);
         }
     }
 
