@@ -2,12 +2,9 @@ package io.github.abdurazaaqmohammed.ui.viewer;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.graphics.BitmapFactory;
-import android.media.MediaMetadataRetriever;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -20,12 +17,13 @@ public class MiniPlayerDialog {
 
     private final Activity activity;
     private Dialog dialog;
-    private ImageView artworkView;
     private TextView titleView, artistView, currentTime, totalTime;
-    private ImageButton btnPlayPause, btnNext, btnExpand;
+    private ImageButton btnPlayPause, btnNext, btnExpand, btnMinimize;
     private SeekBar seekBar;
     private final PlayerManager playerManager;
     private boolean isShowing;
+    private boolean isMinimizing;
+    private boolean isExpanding;
 
     private final PlayerManager.PlaybackCallback callback = new PlayerManager.PlaybackCallback() {
         @Override public void onStateChanged(PlayerManager.PlayState newState) {
@@ -59,13 +57,14 @@ public class MiniPlayerDialog {
     public void show() {
         if (isShowing) return;
         isShowing = true;
+        isMinimizing = false;
+        isExpanding = false;
         playerManager.incrementUIVisible();
         playerManager.registerCallback(callback);
 
         LayoutInflater inflater = LayoutInflater.from(activity);
         View view = inflater.inflate(R.layout.dialog_mini_player, null);
 
-        artworkView = view.findViewById(R.id.artworkView);
         titleView = view.findViewById(R.id.trackTitle);
         artistView = view.findViewById(R.id.trackArtist);
         currentTime = view.findViewById(R.id.currentTime);
@@ -73,13 +72,19 @@ public class MiniPlayerDialog {
         btnPlayPause = view.findViewById(R.id.btnPlayPause);
         btnNext = view.findViewById(R.id.btnNext);
         btnExpand = view.findViewById(R.id.btnExpand);
+        btnMinimize = view.findViewById(R.id.btnMinimize);
         seekBar = view.findViewById(R.id.seekBar);
 
         btnPlayPause.setOnClickListener(v1 -> playerManager.playPause());
         btnNext.setOnClickListener(v1 -> playerManager.next());
         btnExpand.setOnClickListener(v1 -> {
+            isExpanding = true;
             dismiss();
             MediaPlayerActivity.open(activity);
+        });
+        btnMinimize.setOnClickListener(v1 -> {
+            isMinimizing = true;
+            dismiss();
         });
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
@@ -97,6 +102,12 @@ public class MiniPlayerDialog {
                 .setOnDismissListener(d -> {
                     isShowing = false;
                     playerManager.unregisterCallback(callback);
+                    playerManager.decrementUIVisible();
+                    if (!isMinimizing && !isExpanding) {
+                        playerManager.stop();
+                    }
+                    isMinimizing = false;
+                    isExpanding = false;
                 })
                 .show();
 
@@ -113,9 +124,6 @@ public class MiniPlayerDialog {
     public void dismiss() {
         if (dialog != null && dialog.isShowing()) {
             dialog.dismiss();
-            isShowing = false;
-            playerManager.unregisterCallback(callback);
-            playerManager.decrementUIVisible();
         }
     }
 
@@ -129,14 +137,5 @@ public class MiniPlayerDialog {
     private void updateUI(MediaItem item) {
         titleView.setText(item.title != null ? item.title : activity.getString(R.string.media_unknown));
         artistView.setText(item.artist != null ? item.artist : activity.getString(R.string.music_unknown_artist));
-
-        if (item.path != null) try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
-            mmr.setDataSource(activity, item.uri);
-            byte[] art = mmr.getEmbeddedPicture();
-            if (art == null) artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
-            else artworkView.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
-        } catch (Exception e) {
-            artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
-        }
     }
 }

@@ -2,8 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="145dp"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:gravity="center_vertical"
+    android:padding="20dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,19 +13,10 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <ImageView
-            android:id="@+id/artworkView"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_gallery"
-            android:contentDescription="@string/artwork" />
-
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="12dp"
             android:orientation="vertical">
 
             <TextView
@@ -32,49 +25,61 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:singleLine="true"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:lineSpacingExtra="2dp"
                 android:text="@android:string/unknownName" />
 
             <TextView
                 android:id="@+id/trackArtist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp"
                 android:singleLine="true"
+                android:ellipsize="end"
                 android:text="@android:string/unknownName" />
 
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/btnPlayPause"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/ic_start"
             android:contentDescription="@string/play_pause" />
 
         <ImageButton
             android:id="@+id/btnNext"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/skip_next_24px"
             android:contentDescription="@string/next" />
 
         <ImageButton
             android:id="@+id/btnExpand"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/fullscreen_24px"
             android:contentDescription="@string/full_player" />
+
+        <ImageButton
+            android:id="@+id/btnMinimize"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/ic_arrow_down_mt"
+            android:contentDescription="@string/minimize" />
 
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="12dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
