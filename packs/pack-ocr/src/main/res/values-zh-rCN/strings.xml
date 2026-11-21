@@ -1,0 +1,4 @@
+<resources>
+    <string name="title_screen_ocr">复制屏幕上的文字</string>
+    <string name="subtitle_screen_ocr">面向屏幕和图片的离线 OCR</string>
+</resources>
