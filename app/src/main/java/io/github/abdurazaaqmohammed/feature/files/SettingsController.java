@@ -361,6 +361,11 @@ public class SettingsController {
         backNavigatesFoldersToggle.setOnCheckedChangeListener((buttonView, isChecked) ->
                 settings.edit().putBoolean("back_navigates_folders", isChecked).apply());
 
+        CompoundButton compressPathToggle = settingsDialog.findViewById(R.id.compressPathToggle);
+        compressPathToggle.setChecked(settings.getBoolean("compress_path_display", false));
+        compressPathToggle.setOnCheckedChangeListener((buttonView, isChecked) ->
+                settings.edit().putBoolean("compress_path_display", isChecked).apply());
+
         CompoundButton askBookmarkTabToggle = settingsDialog.findViewById(R.id.askBookmarkTabToggle);
         askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
         askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
