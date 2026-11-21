@@ -108,6 +108,13 @@
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.feature.arm64.Arm64DisassemblerActivity"
+            android:exported="false"
+            android:label="ARM64 Disassembler"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
+        </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.feature.system.ToolsHubActivity"
             android:exported="false"
             android:label="@string/sidebar_tools">

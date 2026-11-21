@@ -180,7 +180,12 @@ public class ElfParser implements AutoCloseable {
         }
         sections = new Section[e_shnum];
         for (int i = 0; i < e_shnum; i++) {
-            raf.seek(e_shoff + (long) i * e_shentsize);
+            long secOff = e_shoff + (long) i * e_shentsize;
+            if (secOff + e_shentsize > raf.length()) {
+                sections = Arrays.copyOf(sections, i);
+                break;
+            }
+            raf.seek(secOff);
             Section s = new Section();
             s.index = i;
             s.name = null; // filled below
@@ -202,9 +207,13 @@ public class ElfParser implements AutoCloseable {
         // resolve names via shstrtab
         if (e_shstrndx < sections.length) {
             Section strsec = sections[e_shstrndx];
-            shstrtab = new byte[(int) Math.min(strsec.size, 4 * 1024 * 1024)];
-            raf.seek(strsec.offset);
-            raf.readFully(shstrtab);
+            long available = Math.max(0, raf.length() - strsec.offset);
+            int toRead = (int) Math.min(strsec.size, Math.min(4 * 1024 * 1024, available));
+            shstrtab = new byte[toRead];
+            if (toRead > 0) {
+                raf.seek(strsec.offset);
+                raf.read(shstrtab);
+            }
             for (Section s : sections) {
                 try {
                     long off = Long.parseLong(s.name);
@@ -229,7 +238,12 @@ public class ElfParser implements AutoCloseable {
         if (segments != null) return segments;
         segments = new ProgramHeader[e_phnum];
         for (int i = 0; i < e_phnum; i++) {
-            raf.seek(e_phoff() + (long) i * e_phentsize);
+            long phOff = e_phoff() + (long) i * e_phentsize;
+            if (phOff + e_phentsize > raf.length()) {
+                segments = Arrays.copyOf(segments, i);
+                break;
+            }
+            raf.seek(phOff);
             ProgramHeader ph = new ProgramHeader();
             ph.type = (int) readU32();
             if (is64) {
@@ -268,14 +282,20 @@ public class ElfParser implements AutoCloseable {
         Section strtab = sections.length > table.link ? sections[(int) table.link] : null;
         byte[] str = new byte[0];
         if (strtab != null) {
-            str = new byte[(int) Math.min(strtab.size, 8 * 1024 * 1024)];
-            raf.seek(strtab.offset);
-            raf.readFully(str);
+            long available = Math.max(0, raf.length() - strtab.offset);
+            int toRead = (int) Math.min(strtab.size, Math.min(8 * 1024 * 1024, available));
+            str = new byte[toRead];
+            if (toRead > 0) {
+                raf.seek(strtab.offset);
+                raf.read(str);
+            }
         }
         int count = (int) (table.size / Math.max(1, table.entsize));
         List<Symbol> out = new ArrayList<>(Math.min(count, 100000));
         for (int i = 0; i < count; i++) {
-            raf.seek(table.offset + (long) i * table.entsize);
+            long symOffset = table.offset + (long) i * table.entsize;
+            if (symOffset + table.entsize > raf.length()) break;
+            raf.seek(symOffset);
             Symbol sym = new Symbol();
             if (is64) {
                 long nameOff = readU32() & 0xFFFFFFFFL;
@@ -357,6 +377,23 @@ public class ElfParser implements AutoCloseable {
             if (ph.type == 1 /* LOAD */ && ph.filesz > 0
                     && vaddr >= ph.vaddr && vaddr < ph.vaddr + ph.filesz) {
                 return ph.offset + (vaddr - ph.vaddr);
+            }
+        }
+        return -1;
+    }
+
+    /** File offset -> Virtual address, or -1 when not mapped. */
+    public synchronized long offsetToAddr(long offset) throws IOException {
+        for (Section s : sections()) {
+            if (s.type != 8 /* NOBITS */ && s.size > 0
+                    && offset >= s.offset && offset < s.offset + s.size) {
+                return s.addr + (offset - s.offset);
+            }
+        }
+        for (ProgramHeader ph : segments()) {
+            if (ph.type == 1 /* LOAD */ && ph.filesz > 0
+                    && offset >= ph.offset && offset < ph.offset + ph.filesz) {
+                return ph.vaddr + (offset - ph.offset);
             }
         }
         return -1;
