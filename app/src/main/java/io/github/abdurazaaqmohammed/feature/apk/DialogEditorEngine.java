@@ -162,6 +162,11 @@ public final class DialogEditorEngine {
         } catch (IllegalArgumentException e) {
             issues.add("Unknown injection method");
         }
+        String configurationError = OverlayInjectorUtil.injectionConfigurationError(
+                pack.injectionMethod, pack.customHook);
+        if (configurationError != null && !issues.contains(configurationError)) {
+            issues.add(configurationError);
+        }
         if (pack.dialog != null) {
             if (pack.dialog.advanced && (pack.dialog.widgets == null || pack.dialog.widgets.isEmpty())) {
                 issues.add("Advanced dialog has no widgets");
@@ -190,6 +195,12 @@ public final class DialogEditorEngine {
         }
         if (pack.injectionMethod == null || pack.injectionMethod.trim().isEmpty()) {
             pack.injectionMethod = InjectionMethod.AUTO.name();
+        } else if (!InjectionMethod.AUTO.name().equals(pack.injectionMethod)
+                && !InjectionMethod.SMALI.name().equals(pack.injectionMethod)) {
+            pack.injectionMethod = InjectionMethod.AUTO.name();
+        }
+        if (pack.dialog != null) {
+            pack.dialog.injectionMethod = pack.injectionMethod;
         }
     }
 

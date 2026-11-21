@@ -45,6 +45,25 @@ public class DialogEditorEngineTest {
     }
 
     @Test
+    public void unsupportedInjectionMethodIsReportedAndRepairFallsBackToAuto() {
+        DialogEditorEngine.DialogPackage pack =
+                new DialogEditorEngine.DialogPackage();
+        pack.injectionMethod = "RESOURCES";
+        pack.dialog = new OverlayInjectorUtil.DialogOptions();
+        pack.dialog.injectionMethod = "RESOURCES";
+
+        assertTrue(DialogEditorEngine.validate(pack).stream()
+                .anyMatch(issue -> issue.contains("Unsupported injection method")));
+
+        DialogEditorEngine.repair(pack);
+
+        assertEquals("AUTO", pack.injectionMethod);
+        assertEquals("AUTO", pack.dialog.injectionMethod);
+        assertFalse(DialogEditorEngine.validate(pack).stream()
+                .anyMatch(issue -> issue.contains("Unsupported injection method")));
+    }
+
+    @Test
     public void analyzeCountsApkEntries() throws Exception {
         File apk = File.createTempFile("dialog-engine", ".apk");
         try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(apk))) {

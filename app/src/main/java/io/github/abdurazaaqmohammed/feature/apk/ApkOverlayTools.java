@@ -1408,7 +1408,7 @@ public class ApkOverlayTools {
         final Runnable[] showAdvProps = new Runnable[1];
         final OverlayForm form = fillForm(view);
 
-        String[] injectionMethods = {"AUTO", "SMALI", "XML", "RESOURCES"};
+        String[] injectionMethods = {"AUTO", "SMALI"};
         form.injectionMethodTv.setAdapter(
                 new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line,
                         injectionMethods));

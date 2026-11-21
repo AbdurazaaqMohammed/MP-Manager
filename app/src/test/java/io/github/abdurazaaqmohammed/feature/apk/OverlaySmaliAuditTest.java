@@ -317,6 +317,24 @@ public class OverlaySmaliAuditTest {
     }
 
     @Test
+    public void injectionConfigurationRejectsUnimplementedModesAndHooks() {
+        OverlayInjectorUtil.DialogOptions options = new OverlayInjectorUtil.DialogOptions();
+        assertNull(OverlayInjectorUtil.injectionConfigurationError(options));
+
+        options.injectionMethod = "XML";
+        assertTrue(OverlayInjectorUtil.injectionConfigurationError(options)
+                .contains("Unsupported injection method"));
+
+        options.injectionMethod = "SMALI";
+        options.customHook = "onCreate";
+        assertTrue(OverlayInjectorUtil.injectionConfigurationError(options)
+                .contains("Custom hooks are not supported"));
+
+        options.customHook = "";
+        assertNull(OverlayInjectorUtil.injectionConfigurationError(options));
+    }
+
+    @Test
     public void rainbowColorsSane() {
         int[] c = OverlayInjectorUtil.rainbowColors();
         assertEquals(12, c.length);
