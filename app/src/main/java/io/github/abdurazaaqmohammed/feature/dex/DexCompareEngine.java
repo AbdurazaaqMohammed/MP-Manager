@@ -103,7 +103,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import modder.hub.dexeditor.smali.SharedSmaliUtils;
@@ -209,13 +208,17 @@ public final class DexCompareEngine {
          * optimizations: equivalent opcode encodings ({@code const/4} vs
          * {@code const}, {@code invoke-virtual/range} vs {@code invoke-virtual},
          * {@code goto/16} vs {@code goto}, …), compiler-assigned label
-         * numbers ({@code :goto_0} vs {@code :goto_1}) and compiler-assigned
-         * register numbers ({@code v1} vs {@code v2}) are canonicalized.
+         * numbers ({@code :goto_0} vs {@code :goto_1}) and compiler-generated
+         * static field default values ({@code = null}, {@code = false}, {@code = 0})
+         * are canonicalized.
          */
         public String canonicalize(String rawLine) {
             if (rawLine == null) return "";
             if (!ignoreOptimizations) return rawLine;
             String line = rawLine.trim();
+            if (line.startsWith(".field")) {
+                line = canonicalizeFieldDefault(line);
+            }
             int end = 0;
             while (end < line.length() && !Character.isWhitespace(line.charAt(end))) end++;
             String opcode = line.substring(0, end);
@@ -223,56 +226,19 @@ public final class DexCompareEngine {
             if (slash > 0 && OPCODE_BASES.contains(opcode.substring(0, slash))) {
                 line = opcode.substring(0, slash) + line.substring(end);
             }
-            return canonicalizeRegisters(canonicalizeLabels(line));
+            return canonicalizeLabels(line);
         }
 
-        private static final Pattern REGISTER_TOKEN = Pattern.compile("([vp])\\d+");
-
-        /**
-         * Strips register numbers outside string literals, keeping only the v/p
-         * kind ({@code v1} → {@code vX}). Tokens that belong to a member or type
-         * name (obfuscated names such as {@code ->v1()} or {@code Lv1;}) are left
-         * untouched: a register operand is always preceded by whitespace or
-         * {@code {}}/{@code ,}/{@code ..}, never by {@code -}, {@code >} or a
-         * word character.
-         */
-        private static String canonicalizeRegisters(String line) {
-            if (line.indexOf('v') < 0 && line.indexOf('p') < 0) return line;
-            Matcher m = REGISTER_TOKEN.matcher(line);
-            StringBuilder out = new StringBuilder(line.length());
-            int lastEmitted = 0;
-            boolean inString = false;
-            int i = 0;
-            while (i < line.length()) {
-                char c = line.charAt(i);
-                if (inString) {
-                    if (c == '\\' && i + 1 < line.length()) i++;
-                    else if (c == '"') inString = false;
-                    i++;
-                    continue;
+        private static String canonicalizeFieldDefault(String line) {
+            int eq = line.lastIndexOf('=');
+            if (eq > 0) {
+                String val = line.substring(eq + 1).trim();
+                if ("null".equals(val) || "false".equals(val) || "0".equals(val) || "0x0".equals(val)
+                        || "0L".equals(val) || "0.0f".equals(val) || "0.0".equals(val) || "0s".equals(val) || "0t".equals(val)) {
+                    return line.substring(0, eq).trim();
                 }
-                if (c == '"') {
-                    inString = true;
-                    i++;
-                    continue;
-                }
-                if ((c == 'v' || c == 'p')
-                        && (i == 0 || !isRegisterAdjacency(line.charAt(i - 1)))
-                        && m.find(i) && m.start() == i
-                        && (m.end() == line.length() || !isRegisterAdjacency(line.charAt(m.end())))) {
-                    out.append(line, lastEmitted, i).append(c).append('X');
-                    lastEmitted = m.end();
-                    i = m.end();
-                    continue;
-                }
-                i++;
             }
-            out.append(line, lastEmitted, line.length());
-            return out.toString();
-        }
-
-        private static boolean isRegisterAdjacency(char c) {
-            return Character.isLetterOrDigit(c) || c == '_' || c == '$' || c == '-' || c == '>';
+            return line;
         }
 
         private static final Set<String> OPCODE_BASES = new HashSet<>(Arrays.asList(
@@ -384,7 +350,9 @@ public final class DexCompareEngine {
                         out.merge(signature, body.toString(), (x, y) -> x + "\n" + y);
                         signature = null;
                     } else if (!line.isEmpty()) {
-                        body.append(canonicalize(rawLine)).append('\n');
+                        if (!ignorable(rawLine)) {
+                            body.append(canonicalize(rawLine)).append('\n');
+                        }
                     }
                 }
             }
