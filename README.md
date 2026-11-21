@@ -6,7 +6,7 @@ A free dual pane, Material Design file manager for Android with focus on APKs an
   <img src="./images/Ss1.png" width="200" alt="MP Manager screenshot"> <img src="./images/Ss2.png" width="200" alt="MP Manager screenshot">
 </p>
 
-[![GitHub Release](https://img.shields.io/github/v/release/AbdurazaaqMohammed/MP-Manager?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/AbdurazaaqMohammed/MP-Manager/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/write2mustaf-cpu/MP-Manager?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/write2mustaf-cpu/MP-Manager/releases/tag/continuous)
 
 [![Telegram Discussion](https://img.shields.io/badge/Telegram%20Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/MP_Manager_Discussion)
 
@@ -28,7 +28,7 @@ MP Manager can browse and manage local, root and network storage in two panes an
 
 ## Download
 
-Grab the latest APK from [Releases](https://github.com/AbdurazaaqMohammed/MP-Manager/releases). Minimum Android version is 6.0.
+Download the latest automated build directly from [MP-Manager Continuous APK](https://github.com/write2mustaf-cpu/MP-Manager/releases/tag/continuous). Minimum Android version is 6.0.
 
 ## Contributing
 
