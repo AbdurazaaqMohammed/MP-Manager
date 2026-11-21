@@ -1607,7 +1607,6 @@ public class DexEditorActivity extends BaseActivity {
         sessionOptions.removeDebugParam = false;
         sessionOptions.removeDebugPrologue = false;
         sessionOptions.removeDebugLocal = false;
-        optionsEffectCacheKey = null;
     }
 
     public void showSmaliNavigation(String tempSmaliPath, String title, int lineNo) {
