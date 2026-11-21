@@ -1475,7 +1475,7 @@ public class ApkOverlayTools {
                         context.handler.post(() ->
                                 Extensions.showMessage(context, "Import failed: " + e.getMessage()));
                     }
-                }.start();
+                }).start();
             };
             context.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
                     .addCategory(Intent.CATEGORY_OPENABLE)
@@ -1497,7 +1497,7 @@ public class ApkOverlayTools {
                         context.handler.post(() ->
                                 Extensions.showMessage(context, "Export failed: " + e.getMessage()));
                     }
-                }.start();
+                }).start();
             };
             context.startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT)
                     .addCategory(Intent.CATEGORY_OPENABLE)
