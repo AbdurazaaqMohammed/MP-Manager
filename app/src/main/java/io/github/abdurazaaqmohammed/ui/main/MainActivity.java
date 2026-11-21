@@ -396,14 +396,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 }
                             }
                             pm.play(q, start);
-                            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
+                            showMiniPlayer();
                             return;
                         }
                     }
                 }
             } catch (Exception ignored) {}
             pm.play(PlayerManager.buildMediaItem(this, filePath));
-            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
+            showMiniPlayer();
+        }
+    }
+
+    public void showMiniPlayer() {
+        if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) {
+            (miniPlayerDialog = new MiniPlayerDialog(this)).show();
         }
     }
 
