@@ -506,6 +506,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             return;
         }
+        if (requestCode == 9022) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null
+                    && overlayDocumentImportCallback != null) {
+                overlayDocumentImportCallback.onDocumentPicked(data.getData());
+            }
+            return;
+        }
+        if (requestCode == 9023) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null
+                    && overlayDocumentExportCallback != null) {
+                overlayDocumentExportCallback.onDocumentPicked(data.getData());
+            }
+            return;
+        }
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
             Extensions.showMessage(this, R.string.storage_perm_needed);
         } else {
@@ -1038,7 +1052,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         // App language is applied by AppCompatDelegate per-app locales
         // (see SettingsController.setupLanguageSettings + res/xml/locales_config.xml).
-        // System locale automatically picks values / values-es / values-ru / values-zh-rCN.
+        // Android selects the matching localized values resources automatically.
         rss = getResources();
 
         new Thread(() -> {
@@ -3985,6 +3999,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public static ImagePickCallback overlayImageCallback;
+    public interface DocumentPickCallback {
+        void onDocumentPicked(Uri uri);
+    }
+    public static DocumentPickCallback overlayDocumentImportCallback;
+    public static DocumentPickCallback overlayDocumentExportCallback;
 
     public void showFtpServerDialog() {
         ftp.showFtpServerDialog();

@@ -121,6 +121,9 @@ public class OverlayInjectorUtil {
         public String dlgFont = "";
         public String dlgFontPath = "";
         public List<AdvWidget> widgets;
+        public String injectionMethod = "AUTO";
+        public String customHook = "";
+        public String customSmali = "";
     }
 
     public static AdvWidget copyWidget(AdvWidget w) {
@@ -156,6 +159,8 @@ public class OverlayInjectorUtil {
                                               ToastOptions toast, DialogOptions dialog,
                                               APKLogger logger) throws Exception {
         if (toast == null && dialog == null) throw new IOException("Nothing to inject");
+        String configurationError = injectionConfigurationError(dialog);
+        if (configurationError != null) throw new IOException(configurationError);
         debugInit(context);
         debug("input=" + inputApk.getAbsolutePath());
         debug("activities=" + activityClassNames);
@@ -244,6 +249,24 @@ public class OverlayInjectorUtil {
             debug("FAILED: " + e);
             throw new IOException(e.getMessage() + "\nDebug log: " + debugPath(), e);
         }
+    }
+
+    static String injectionConfigurationError(DialogOptions dialog) {
+        if (dialog == null) return null;
+        return injectionConfigurationError(dialog.injectionMethod, dialog.customHook);
+    }
+
+    static String injectionConfigurationError(String injectionMethod, String customHook) {
+        String method = injectionMethod == null || injectionMethod.trim().isEmpty()
+                ? "AUTO" : injectionMethod.trim();
+        if (!"AUTO".equals(method) && !"SMALI".equals(method)) {
+            return "Unsupported injection method: " + method
+                    + ". This injector currently supports AUTO and SMALI.";
+        }
+        if (customHook != null && !customHook.trim().isEmpty()) {
+            return "Custom hooks are not supported by this injector.";
+        }
+        return null;
     }
 
     private static File debugFile;
@@ -1578,6 +1601,9 @@ public class OverlayInjectorUtil {
                     if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, dismissListener));
                 }
                 insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb)).append("\n");
+                if (dialog.customSmali != null && dialog.customSmali.trim().startsWith(".method")) {
+                    insert.append(dialog.customSmali.trim()).append("\n");
+                }
             }
             insert.append(wrapperSmali(classDescriptor, flags.isEmpty() ? "protected" : flags,
                     toast != null, dialog != null));
