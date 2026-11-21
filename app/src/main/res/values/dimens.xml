@@ -2,4 +2,9 @@
 <resources>
     <dimen name="popupWindowIconSize">28dp</dimen>
     <dimen name="popupWindowCopyIconSize">12dp</dimen>
+    <dimen name="mp_corner_radius">16dp</dimen>
+    <dimen name="mp_corner_radius_large">24dp</dimen>
+    <dimen name="mp_content_padding">16dp</dimen>
+    <dimen name="mp_toolbar_height">56dp</dimen>
+    <dimen name="mp_elevation">4dp</dimen>
 </resources>

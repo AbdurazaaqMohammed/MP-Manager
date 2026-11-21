@@ -92,6 +92,15 @@ public class ToolRegistrySidebarDefaultsTest {
     }
 
     @Test
+    public void canonicalAliasesKeepTheirSidebarSection() {
+        assertTrue(ToolRegistry.isInSidebarSection("wifimanager", "plugins"));
+        assertTrue(ToolRegistry.isInSidebarSection("frida", "plugins"));
+        assertTrue(ToolRegistry.isInSidebarSection("partitiondumper", "tools"));
+        assertTrue(ToolRegistry.isInSidebarSection("ftp_client", "tools"));
+        assertFalse(ToolRegistry.isInSidebarSection("wifimanager", "tools"));
+    }
+
+    @Test
     public void isDefaultSidebarToolAcceptsAliases() {
         assertTrue(ToolRegistry.isDefaultSidebarTool("extract"));
         assertTrue(ToolRegistry.isDefaultSidebarTool("ftp_server"));

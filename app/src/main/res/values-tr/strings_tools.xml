@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Araçları ve paketleri ara</string>
+    <string name="tools_hub_hint">Tüm araçlarınız tek bir yerde. Ana ekrana kısayol eklemek için bir araca uzun basın.</string>
+    <string name="tools_hub_summary_compact">%1$d araç · %2$d yüklü paket</string>
+    <string name="tools_hub_no_results">Aramanızla eşleşen araç yok</string>
+    <string name="tools_hub_download_badge">İndir</string>
+    <string name="tools_hub_ready_badge">Hazır</string>
+    <string name="tools_hub_pack_metadata">%1$d araç · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Yüklü</string>
+    <string name="tools_hub_pack_available">İsteğe bağlı indirme</string>
+    <string name="tools_hub_pack_update_available">Güncelleme mevcut</string>
+    <string name="tools_hub_min_sdk">Android API %1$d veya daha yenisi gerekir</string>
+    <string name="tools_hub_install_apk">Paketi APK\'dan yükle</string>
+    <string name="tools_hub_advanced_plugins">Gelişmiş araçlar ve eklentiler</string>
+    <string name="tool_requires_root">Bu araç root erişimi gerektirir.</string>
+    <string name="tool_extract_subtitle">Uygulamalara göz atın ve APK dosyalarını çıkarın</string>
+    <string name="tool_recycle_subtitle">Silinen dosyaları geri yükleyin veya kaldırın</string>
+    <string name="tool_ftp_subtitle">Yerel ağınız üzerinden dosya paylaşın</string>
+    <string name="tool_network_subtitle">FTP, WebDAV ve SMB bağlantıları</string>
+    <string name="tool_layout_subtitle">Ekrandaki uygulamayı ve düzeni inceleyin</string>
+    <string name="tool_color_subtitle">Herhangi bir ekrandan renk seçin</string>
+    <string name="tool_freestyle_subtitle">Görsel kompozisyonlar oluşturun ve düzenleyin</string>
+    <string name="screen_ocr_title">Ekrandaki metni kopyala</string>
+    <string name="screen_ocr_subtitle">Ekranlar ve görseller için çevrimdışı OCR</string>
+</resources>

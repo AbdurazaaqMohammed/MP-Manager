@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Cari alat dan paket</string>
+    <string name="tools_hub_hint">Semua alat tersedia di satu tempat. Tekan lama alat untuk membuat pintasan di layar utama.</string>
+    <string name="tools_hub_summary_compact">%1$d alat · %2$d paket terpasang</string>
+    <string name="tools_hub_no_results">Tidak ada alat yang cocok dengan pencarian</string>
+    <string name="tools_hub_download_badge">Unduh</string>
+    <string name="tools_hub_ready_badge">Siap</string>
+    <string name="tools_hub_pack_metadata">%1$d alat · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Terpasang</string>
+    <string name="tools_hub_pack_available">Unduhan opsional</string>
+    <string name="tools_hub_pack_update_available">Pembaruan tersedia</string>
+    <string name="tools_hub_min_sdk">Memerlukan Android API %1$d atau yang lebih baru</string>
+    <string name="tools_hub_install_apk">Instal paket dari APK</string>
+    <string name="tools_hub_advanced_plugins">Alat lanjutan dan plugin</string>
+    <string name="tool_requires_root">Alat ini memerlukan akses root.</string>
+    <string name="tool_extract_subtitle">Jelajahi aplikasi dan ekstrak file APK</string>
+    <string name="tool_recycle_subtitle">Pulihkan atau hapus file yang telah dihapus</string>
+    <string name="tool_ftp_subtitle">Bagikan file melalui jaringan lokal</string>
+    <string name="tool_network_subtitle">Koneksi FTP, WebDAV, dan SMB</string>
+    <string name="tool_layout_subtitle">Periksa aplikasi dan tata letak di layar</string>
+    <string name="tool_color_subtitle">Ambil warna dari layar mana pun</string>
+    <string name="tool_freestyle_subtitle">Buat dan edit komposisi visual</string>
+    <string name="screen_ocr_title">Salin teks di layar</string>
+    <string name="screen_ocr_subtitle">OCR offline untuk layar dan gambar</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">Lingua</string>
+    <string name="language_system">Predefinita di sistema</string>
+    <string name="menu">Menu</string>
+    <string name="back">Indietro</string>
+    <string name="forward">Avanti</string>
+    <string name="more">Altre opzioni</string>
+    <string name="current_folder_path">Percorso della cartella corrente</string>
+    <string name="settings">Impostazioni</string>
+    <string name="cancel">Annulla</string>
+    <string name="ok">OK</string>
+    <string name="search">Cerca</string>
+    <string name="newFileOrFolder">Nuovo file o cartella</string>
+    <string name="sync">Sincronizza pannelli</string>
+    <string name="parent_dir">Cartella superiore</string>
+    <string name="compile">Compila</string>
+    <string name="delete">Elimina</string>
+    <string name="copy">Copia</string>
+    <string name="paste">Incolla</string>
+    <string name="share">Condividi</string>
+    <string name="rename">Rinomina</string>
+    <string name="properties">Proprietà</string>
+</resources>

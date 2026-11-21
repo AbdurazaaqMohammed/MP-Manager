@@ -79,7 +79,7 @@
             android:requestLegacyExternalStorage="true"
            android:enableOnBackInvokedCallback="false"
            android:largeHeap="true"
-           android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+           android:theme="@style/Theme.MyApp.System"
            android:name="io.github.ratul.topactivity.App"
            android:icon="@mipmap/ic_launcher"
            android:label="MP Manager">

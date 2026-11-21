@@ -929,6 +929,9 @@ Layout Inspector
     <string name="date_format">Date/time format</string>
     <string name="language">Language</string>
     <string name="language_system">System default</string>
+    <string name="ok">OK</string>
+    <string name="copy">Copy</string>
+    <string name="paste">Paste</string>
     <string name="startup_pane_1">Startup folder, pane 1</string>
     <string name="startup_pane_2">Startup folder, pane 2</string>
     <string name="opt_home_folder">Home folder</string>

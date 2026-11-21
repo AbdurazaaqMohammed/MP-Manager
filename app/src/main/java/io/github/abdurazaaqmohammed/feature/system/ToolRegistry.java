@@ -109,9 +109,10 @@ public final class ToolRegistry {
     }
 
     public static boolean isInSidebarSection(String id, String section) {
-        if ("tools".equals(id)) return "tools".equals(section);
+        String canonical = canonicalId(id);
+        if ("tools".equals(canonical)) return "tools".equals(section);
         for (Definition definition : DEFINITIONS) {
-            if (definition.id.equals(id)) return section.equals(definition.sidebarSection);
+            if (definition.id.equals(canonical)) return section.equals(definition.sidebarSection);
         }
         return false;
     }

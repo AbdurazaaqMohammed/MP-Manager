@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">ค้นหาเครื่องมือและแพ็กเกจ</string>
+    <string name="tools_hub_hint">รวมเครื่องมือทั้งหมดไว้ในที่เดียว แตะเครื่องมือค้างไว้เพื่อสร้างทางลัดบนหน้าจอหลัก</string>
+    <string name="tools_hub_summary_compact">เครื่องมือ %1$d รายการ · ติดตั้งแพ็กเกจแล้ว %2$d รายการ</string>
+    <string name="tools_hub_no_results">ไม่พบเครื่องมือที่ตรงกับการค้นหา</string>
+    <string name="tools_hub_download_badge">ดาวน์โหลด</string>
+    <string name="tools_hub_ready_badge">พร้อม</string>
+    <string name="tools_hub_pack_metadata">เครื่องมือ %1$d รายการ · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">ติดตั้งแล้ว</string>
+    <string name="tools_hub_pack_available">ดาวน์โหลดเพิ่มเติม</string>
+    <string name="tools_hub_pack_update_available">มีการอัปเดต</string>
+    <string name="tools_hub_min_sdk">ต้องใช้ Android API %1$d ขึ้นไป</string>
+    <string name="tools_hub_install_apk">ติดตั้งแพ็กเกจจาก APK</string>
+    <string name="tools_hub_advanced_plugins">เครื่องมือขั้นสูงและปลั๊กอิน</string>
+    <string name="tool_requires_root">เครื่องมือนี้ต้องใช้สิทธิ์รูท</string>
+    <string name="tool_extract_subtitle">เรียกดูแอปและแตกไฟล์ APK</string>
+    <string name="tool_recycle_subtitle">กู้คืนหรือลบไฟล์ที่ถูกลบ</string>
+    <string name="tool_ftp_subtitle">แชร์ไฟล์ผ่านเครือข่ายภายใน</string>
+    <string name="tool_network_subtitle">การเชื่อมต่อ FTP, WebDAV และ SMB</string>
+    <string name="tool_layout_subtitle">ตรวจสอบแอปและเลย์เอาต์บนหน้าจอ</string>
+    <string name="tool_color_subtitle">เลือกสีจากหน้าจอใดก็ได้</string>
+    <string name="tool_freestyle_subtitle">สร้างและแก้ไขงานจัดองค์ประกอบภาพ</string>
+    <string name="screen_ocr_title">คัดลอกข้อความบนหน้าจอ</string>
+    <string name="screen_ocr_subtitle">OCR แบบออฟไลน์สำหรับหน้าจอและรูปภาพ</string>
+</resources>

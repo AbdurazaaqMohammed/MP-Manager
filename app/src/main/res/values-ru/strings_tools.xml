@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Поиск инструментов и пакетов</string>
+    <string name="tools_hub_hint">Все инструменты в одном месте. Нажмите и удерживайте инструмент, чтобы создать ярлык на главном экране.</string>
+    <string name="tools_hub_summary_compact">%1$d инструментов · установлено пакетов: %2$d</string>
+    <string name="tools_hub_no_results">Инструменты не найдены</string>
+    <string name="tools_hub_download_badge">Скачать</string>
+    <string name="tools_hub_ready_badge">Готово</string>
+    <string name="tools_hub_pack_metadata">%1$d инструментов · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Установлен</string>
+    <string name="tools_hub_pack_available">Необязательная загрузка</string>
+    <string name="tools_hub_pack_update_available">Доступно обновление</string>
+    <string name="tools_hub_min_sdk">Требуется Android API %1$d или новее</string>
+    <string name="tools_hub_install_apk">Установить пакет из APK</string>
+    <string name="tools_hub_advanced_plugins">Расширенные инструменты и плагины</string>
+    <string name="tool_requires_root">Для этого инструмента необходим root-доступ.</string>
+    <string name="tool_extract_subtitle">Просмотр приложений и извлечение APK-файлов</string>
+    <string name="tool_recycle_subtitle">Восстановление или удаление удалённых файлов</string>
+    <string name="tool_ftp_subtitle">Обмен файлами по локальной сети</string>
+    <string name="tool_network_subtitle">Подключения FTP, WebDAV и SMB</string>
+    <string name="tool_layout_subtitle">Просмотр приложения и его макета на экране</string>
+    <string name="tool_color_subtitle">Выбор цвета с любого экрана</string>
+    <string name="tool_freestyle_subtitle">Создание и редактирование визуальных композиций</string>
+    <string name="screen_ocr_title">Копирование текста с экрана</string>
+    <string name="screen_ocr_subtitle">Офлайн-распознавание текста на экранах и изображениях</string>
+</resources>

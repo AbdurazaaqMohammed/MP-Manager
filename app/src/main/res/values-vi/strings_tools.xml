@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">Tìm kiếm công cụ và gói</string>
+    <string name="tools_hub_hint">Tất cả công cụ ở một nơi. Nhấn giữ công cụ để tạo lối tắt trên màn hình chính.</string>
+    <string name="tools_hub_summary_compact">%1$d công cụ · %2$d gói đã cài</string>
+    <string name="tools_hub_no_results">Không có công cụ phù hợp với tìm kiếm</string>
+    <string name="tools_hub_download_badge">Tải xuống</string>
+    <string name="tools_hub_ready_badge">Sẵn sàng</string>
+    <string name="tools_hub_pack_metadata">%1$d công cụ · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">Đã cài đặt</string>
+    <string name="tools_hub_pack_available">Tải xuống tùy chọn</string>
+    <string name="tools_hub_pack_update_available">Có bản cập nhật</string>
+    <string name="tools_hub_min_sdk">Yêu cầu Android API %1$d trở lên</string>
+    <string name="tools_hub_install_apk">Cài đặt gói từ APK</string>
+    <string name="tools_hub_advanced_plugins">Công cụ nâng cao và plugin</string>
+    <string name="tool_requires_root">Công cụ này cần quyền truy cập root.</string>
+    <string name="tool_extract_subtitle">Duyệt ứng dụng và trích xuất tệp APK</string>
+    <string name="tool_recycle_subtitle">Khôi phục hoặc xóa các tệp đã xóa</string>
+    <string name="tool_ftp_subtitle">Chia sẻ tệp qua mạng cục bộ</string>
+    <string name="tool_network_subtitle">Kết nối FTP, WebDAV và SMB</string>
+    <string name="tool_layout_subtitle">Kiểm tra ứng dụng và bố cục trên màn hình</string>
+    <string name="tool_color_subtitle">Lấy màu từ bất kỳ màn hình nào</string>
+    <string name="tool_freestyle_subtitle">Tạo và chỉnh sửa bố cục hình ảnh</string>
+    <string name="screen_ocr_title">Sao chép văn bản trên màn hình</string>
+    <string name="screen_ocr_subtitle">OCR ngoại tuyến cho màn hình và hình ảnh</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">言語</string>
+    <string name="language_system">システムのデフォルト</string>
+    <string name="menu">メニュー</string>
+    <string name="back">戻る</string>
+    <string name="forward">進む</string>
+    <string name="more">その他のオプション</string>
+    <string name="current_folder_path">現在のフォルダーのパス</string>
+    <string name="settings">設定</string>
+    <string name="cancel">キャンセル</string>
+    <string name="ok">OK</string>
+    <string name="search">検索</string>
+    <string name="newFileOrFolder">新しいファイルまたはフォルダー</string>
+    <string name="sync">ペインを同期</string>
+    <string name="parent_dir">親フォルダー</string>
+    <string name="compile">コンパイル</string>
+    <string name="delete">削除</string>
+    <string name="copy">コピー</string>
+    <string name="paste">貼り付け</string>
+    <string name="share">共有</string>
+    <string name="rename">名前を変更</string>
+    <string name="properties">プロパティ</string>
+</resources>

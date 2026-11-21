@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">جستجوی ابزارها و بسته‌ها</string>
+    <string name="tools_hub_hint">همه ابزارها در یک مکان. برای ساخت میان‌بر در صفحه اصلی، یک ابزار را لمس کرده و نگه دارید.</string>
+    <string name="tools_hub_summary_compact">%1$d ابزار · %2$d بسته نصب‌شده</string>
+    <string name="tools_hub_no_results">هیچ ابزاری با جستجوی شما مطابقت ندارد</string>
+    <string name="tools_hub_download_badge">بارگیری</string>
+    <string name="tools_hub_ready_badge">آماده</string>
+    <string name="tools_hub_pack_metadata">%1$d ابزار · نسخه %2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">نصب‌شده</string>
+    <string name="tools_hub_pack_available">بارگیری اختیاری</string>
+    <string name="tools_hub_pack_update_available">به‌روزرسانی موجود است</string>
+    <string name="tools_hub_min_sdk">به Android API %1$d یا جدیدتر نیاز دارد</string>
+    <string name="tools_hub_install_apk">نصب بسته از APK</string>
+    <string name="tools_hub_advanced_plugins">ابزارهای پیشرفته و افزونه‌ها</string>
+    <string name="tool_requires_root">این ابزار به دسترسی روت نیاز دارد.</string>
+    <string name="tool_extract_subtitle">مرور برنامه‌ها و استخراج فایل‌های APK</string>
+    <string name="tool_recycle_subtitle">بازیابی یا حذف فایل‌های حذف‌شده</string>
+    <string name="tool_ftp_subtitle">اشتراک‌گذاری فایل‌ها در شبکه محلی</string>
+    <string name="tool_network_subtitle">اتصال‌های FTP، WebDAV و SMB</string>
+    <string name="tool_layout_subtitle">بررسی برنامه و چیدمان روی صفحه</string>
+    <string name="tool_color_subtitle">برداشت رنگ از هر صفحه</string>
+    <string name="tool_freestyle_subtitle">ایجاد و ویرایش ترکیب‌های بصری</string>
+    <string name="screen_ocr_title">کپی متن روی صفحه</string>
+    <string name="screen_ocr_subtitle">تشخیص آفلاین متن در صفحه‌ها و تصاویر</string>
+</resources>
