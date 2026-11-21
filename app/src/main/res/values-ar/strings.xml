@@ -1447,6 +1447,17 @@
     <string name="protect_reandroid_apkeditor">حماية (REAndroid APKEditor)</string>
     <string name="clone_apk">استنساخ APK</string>
     <string name="add_toast_dialog">إضافة إشعار Toast / مربع حوار</string>
+    <string name="dialog_advanced_tools">أدوات محرر الحوار المتقدمة</string>
+    <string name="dialog_analysis_waiting">حلّل ملف APK للكشف عن نقاط الحقن المتوافقة.</string>
+    <string name="dialog_injection_method">طريقة الحقن</string>
+    <string name="dialog_custom_hook">دالة ربط مخصصة (اختياري)</string>
+    <string name="dialog_custom_smali">كود Smali مخصص (اختياري)</string>
+    <string name="dialog_analyze">تحليل APK</string>
+    <string name="dialog_import">استيراد</string>
+    <string name="dialog_export">تصدير</string>
+    <string name="dialog_backup">نسخة احتياطية</string>
+    <string name="dialog_validate_repair">التحقق والإصلاح</string>
+    <string name="toast_dialog">إشعار Toast / مربع حوار</string>
     <string name="remove_all_toasts">إزالة كافة إشعارات Toasts</string>
     <string name="remove_signature">إزالة التوقيع</string>
     <string name="signature_health">صحة التوقيع</string>
@@ -1469,7 +1480,6 @@
     <string name="enter_a_name">أدخل اسماً</string>
     <string name="save_profile">حفظ ملف التعريف</string>
     <string name="profile_saved">تم حفظ ملف التعريف</string>
-    <string name="toast_dialog">إشعار Toast / مربع حوار</string>
     <string name="enter_a_url_or_set_the_button_to_dismiss">أدخل رابطاً أو عيِّن الزر على تجاهل (Dismiss)</string>
     <string name="remove_toasts_info">سيؤدي هذا إلى تفكيك APK، وإزالة جميع استدعاءات Toast.makeText/show من كود smali، ثم إعادة التجميع. هل تريد المتابعة؟</string>
     <string name="signature_removed">تمت إزالة التوقيع</string>

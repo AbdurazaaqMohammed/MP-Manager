@@ -66,7 +66,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -108,6 +110,8 @@ public class ApkOverlayTools {
     private OverlayForm activeOverlayForm;
     private Runnable activeAdvRender;
     private static OverlayInjectorUtil.AdvWidget styleClipboard;
+    private final Deque<String> dialogUndo = new ArrayDeque<>();
+    private final Deque<String> dialogRedo = new ArrayDeque<>();
 
 
     private static void pasteStyle(OverlayInjectorUtil.AdvWidget dst,
@@ -272,6 +276,10 @@ public class ApkOverlayTools {
         TextInputEditText negUrl;
         TextInputEditText neuInput;
         TextInputEditText neuUrl;
+        MaterialAutoCompleteTextView injectionMethodTv;
+        TextInputEditText customHookInput;
+        TextInputEditText customSmaliInput;
+        TextView analysisStatus;
         MaterialSwitch toastHtml;
         MaterialSwitch toastB64;
         MaterialSwitch cancelSwitch;
@@ -280,6 +288,9 @@ public class ApkOverlayTools {
         MaterialSwitch dlgB64;
         LinearLayout toastSection;
         LinearLayout dialogSection;
+        LinearLayout advancedSection;
+        LinearLayout dialogSection2;
+        LinearLayout styleSection;
         LinearLayout posBox;
         LinearLayout negBox;
         LinearLayout neuBox;
@@ -328,6 +339,10 @@ public class ApkOverlayTools {
     private OverlayForm fillForm(View view) {
         OverlayForm f = new OverlayForm();
         f.modeTv = view.findViewById(R.id.overlayModeTv);
+        f.injectionMethodTv = view.findViewById(R.id.overlayInjectionMethod);
+        f.customHookInput = view.findViewById(R.id.overlayCustomHook);
+        f.customSmaliInput = view.findViewById(R.id.overlayCustomSmali);
+        f.analysisStatus = view.findViewById(R.id.overlayAnalysisStatus);
         f.durationTv = view.findViewById(R.id.overlayToastDuration);
         f.gravityTv = view.findViewById(R.id.overlayToastGravity);
         f.posAction = view.findViewById(R.id.overlayDlgPosAction);
@@ -353,6 +368,9 @@ public class ApkOverlayTools {
         f.dlgB64 = view.findViewById(R.id.overlayDlgB64);
         f.toastSection = view.findViewById(R.id.overlayToastSection);
         f.dialogSection = view.findViewById(R.id.overlayDialogSection);
+        f.advancedSection = view.findViewById(R.id.overlayAdvancedSection);
+        f.dialogSection2 = view.findViewById(R.id.overlayDialogSection2);
+        f.styleSection = view.findViewById(R.id.overlayStyleSection);
         f.posBox = view.findViewById(R.id.overlayPosBox);
         f.negBox = view.findViewById(R.id.overlayNegBox);
         f.neuBox = view.findViewById(R.id.overlayNeuBox);
@@ -380,6 +398,97 @@ public class ApkOverlayTools {
         f.borderWidthInput = view.findViewById(R.id.overlayBorderWidthInput);
         f.speedInput = view.findViewById(R.id.overlaySpeedInput);
         return f;
+    }
+
+    private DialogEditorEngine.DialogPackage buildEditorPackage(
+            OverlayForm form, List<OverlayInjectorUtil.AdvWidget> widgets) {
+        DialogEditorEngine.DialogPackage pack = new DialogEditorEngine.DialogPackage();
+        pack.name = "Dialog";
+        pack.injectionMethod = form.injectionMethodTv == null || form.injectionMethodTv.getText() == null
+                ? "AUTO" : form.injectionMethodTv.getText().toString().trim();
+        pack.customHook = form.customHookInput == null ? "" : textOf(form.customHookInput);
+        pack.customSmali = form.customSmaliInput == null ? "" : textOf(form.customSmaliInput);
+        if (form.toastSection.getVisibility() == View.VISIBLE) {
+            pack.toast = collectToast(form);
+        } else if (form.advSnapSwitch != null
+                && viewIsAdvanced(form)) {
+            pack.dialog = collectAdvanced(form, widgets);
+        } else {
+            pack.dialog = collectDialog(form);
+        }
+        if (pack.dialog != null) {
+            pack.dialog.injectionMethod = pack.injectionMethod;
+            pack.dialog.customHook = pack.customHook;
+            pack.dialog.customSmali = pack.customSmali;
+        }
+        return pack;
+    }
+
+    private static boolean viewIsAdvanced(OverlayForm form) {
+        return form != null && form.advancedSection != null
+                && form.advancedSection.getVisibility() == View.VISIBLE;
+    }
+
+    private void applyEditorPackage(OverlayForm form,
+                                    List<OverlayInjectorUtil.AdvWidget> widgets,
+                                    OverlayInjectorUtil.AdvWidget[] selected,
+                                    DialogEditorEngine.DialogPackage pack) {
+        if (pack == null) return;
+        if (form.injectionMethodTv != null) {
+            form.injectionMethodTv.setText(
+                    pack.injectionMethod == null ? "AUTO" : pack.injectionMethod, false);
+        }
+        setText(form.customHookInput, pack.customHook);
+        setText(form.customSmaliInput, pack.customSmali);
+        if (pack.toast != null) {
+            applyToast(form, pack.toast);
+            form.modeTv.setText(context.rss.getString(R.string.toast), false);
+            form.toastSection.setVisibility(View.VISIBLE);
+            form.dialogSection.setVisibility(View.GONE);
+            if (form.dialogSection2 != null) form.dialogSection2.setVisibility(View.GONE);
+            if (form.styleSection != null) form.styleSection.setVisibility(View.GONE);
+            form.advancedSection.setVisibility(View.GONE);
+        } else if (pack.dialog != null) {
+            if (pack.dialog.advanced) {
+                applyAdvanced(form, widgets, selected, pack.dialog);
+                form.modeTv.setText(context.rss.getString(R.string.advanced), false);
+                form.toastSection.setVisibility(View.GONE);
+                form.dialogSection.setVisibility(View.GONE);
+                if (form.dialogSection2 != null) form.dialogSection2.setVisibility(View.GONE);
+                if (form.styleSection != null) form.styleSection.setVisibility(View.VISIBLE);
+                form.advancedSection.setVisibility(View.VISIBLE);
+            } else {
+                applyDialog(form, pack.dialog);
+                form.modeTv.setText(context.rss.getString(R.string.dialog), false);
+                form.toastSection.setVisibility(View.GONE);
+                form.dialogSection.setVisibility(View.VISIBLE);
+                if (form.dialogSection2 != null) form.dialogSection2.setVisibility(View.VISIBLE);
+                if (form.styleSection != null) form.styleSection.setVisibility(View.VISIBLE);
+                form.advancedSection.setVisibility(View.GONE);
+            }
+        }
+        if (renderAdvSafeMethodNeeded()) renderAdvSafe();
+        if (form.analysisStatus != null) {
+            List<String> issues = DialogEditorEngine.validate(pack);
+            form.analysisStatus.setText(issues.isEmpty()
+                    ? "Imported design is valid."
+                    : "Imported design warnings: " + String.join("; ", issues));
+        }
+    }
+
+    private boolean renderAdvSafeMethodNeeded() {
+        return activeAdvRender != null;
+    }
+
+    private void pushDialogSnapshot(OverlayForm form,
+                                    List<OverlayInjectorUtil.AdvWidget> widgets) {
+        try {
+            DialogEditorEngine.DialogPackage pack = buildEditorPackage(form, widgets);
+            dialogUndo.push(DialogEditorEngine.toJson(pack));
+            while (dialogUndo.size() > 30) dialogUndo.removeLast();
+            dialogRedo.clear();
+        } catch (Exception ignored) {
+        }
     }
 
     private static String textOf(EditText e) {
@@ -411,6 +520,10 @@ public class ApkOverlayTools {
         OverlayInjectorUtil.DialogOptions dlg = new OverlayInjectorUtil.DialogOptions();
         dlg.title = textOf(f.titleInput);
         dlg.message = textOf(f.msgInput);
+        dlg.injectionMethod = f.injectionMethodTv == null || f.injectionMethodTv.getText() == null
+                ? "AUTO" : f.injectionMethodTv.getText().toString().trim();
+        dlg.customHook = f.customHookInput == null ? "" : textOf(f.customHookInput);
+        dlg.customSmali = f.customSmaliInput == null ? "" : textOf(f.customSmaliInput);
         dlg.positive = f.posBox.getVisibility() == View.VISIBLE ? textOf(f.posInput).trim() : "";
         dlg.negative = f.negBox.getVisibility() == View.VISIBLE ? textOf(f.negInput).trim() : "";
         dlg.neutral = f.neuBox.getVisibility() == View.VISIBLE ? textOf(f.neuInput).trim() : "";
@@ -446,6 +559,10 @@ public class ApkOverlayTools {
         }
         OverlayInjectorUtil.DialogOptions dlg = new OverlayInjectorUtil.DialogOptions();
         dlg.advanced = true;
+        dlg.injectionMethod = f.injectionMethodTv == null || f.injectionMethodTv.getText() == null
+                ? "AUTO" : f.injectionMethodTv.getText().toString().trim();
+        dlg.customHook = f.customHookInput == null ? "" : textOf(f.customHookInput);
+        dlg.customSmali = f.customSmaliInput == null ? "" : textOf(f.customSmaliInput);
         dlg.widgets = new ArrayList<>();
         for (OverlayInjectorUtil.AdvWidget w : widgets) {
             OverlayInjectorUtil.AdvWidget copy = OverlayInjectorUtil.copyWidget(w);
@@ -1290,6 +1407,133 @@ public class ApkOverlayTools {
         final Runnable[] renderAdv = new Runnable[1];
         final Runnable[] showAdvProps = new Runnable[1];
         final OverlayForm form = fillForm(view);
+
+        String[] injectionMethods = {"AUTO", "SMALI", "XML", "RESOURCES"};
+        form.injectionMethodTv.setAdapter(
+                new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line,
+                        injectionMethods));
+        form.injectionMethodTv.setText("AUTO", false);
+
+        view.findViewById(R.id.overlayAnalyze).setOnClickListener(v -> {
+            pushDialogSnapshot(form, advWidgets);
+            form.analysisStatus.setText("Analyzing...");
+            new Thread(() -> {
+                try {
+                    DialogEditorEngine.AnalysisResult result =
+                            DialogEditorEngine.analyzeApk(file);
+                    context.handler.post(() -> {
+                        form.injectionMethodTv.setText(result.recommended.name(), false);
+                        form.analysisStatus.setText(result.summary(context));
+                    });
+                } catch (Exception e) {
+                    context.handler.post(() ->
+                            form.analysisStatus.setText("Analysis failed: " + e.getMessage()));
+                }
+            }).start();
+        });
+
+        view.findViewById(R.id.overlayBackup).setOnClickListener(v ->
+                new Thread(() -> {
+                    try {
+                        File backup = DialogEditorEngine.createBackup(file);
+                        context.handler.post(() -> Extensions.showMessage(context,
+                                "Backup: " + backup.getName()));
+                    } catch (Exception e) {
+                        context.handler.post(() -> Extensions.showMessage(context,
+                                "Backup failed: " + e.getMessage()));
+                    }
+                }).start());
+
+        view.findViewById(R.id.overlayRepair).setOnClickListener(v -> {
+            pushDialogSnapshot(form, advWidgets);
+            DialogEditorEngine.DialogPackage pack =
+                    buildEditorPackage(form, advWidgets);
+            List<String> issues = DialogEditorEngine.validate(pack);
+            DialogEditorEngine.repair(pack);
+            if (issues.isEmpty()) {
+                form.analysisStatus.setText("Design is valid.");
+            } else {
+                form.analysisStatus.setText("Repaired: " + String.join("; ", issues));
+            }
+        });
+
+        view.findViewById(R.id.overlayImport).setOnClickListener(v -> {
+            pushDialogSnapshot(form, advWidgets);
+            MainActivity.overlayDocumentImportCallback = uri -> {
+                new Thread(() -> {
+                    try (InputStream in = context.getContentResolver().openInputStream(uri);
+                         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        if (in == null) throw new IOException("Could not open design file");
+                        byte[] buffer = new byte[8192];
+                        int read;
+                        while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+                        DialogEditorEngine.DialogPackage pack =
+                                DialogEditorEngine.fromJson(out.toString("UTF-8"));
+                        context.handler.post(() ->
+                                applyEditorPackage(form, advWidgets, advSelected, pack));
+                    } catch (Exception e) {
+                        context.handler.post(() ->
+                                Extensions.showMessage(context, "Import failed: " + e.getMessage()));
+                    }
+                }.start();
+            };
+            context.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("*/*"), 9022);
+        });
+
+        view.findViewById(R.id.overlayExport).setOnClickListener(v -> {
+            DialogEditorEngine.DialogPackage pack =
+                    buildEditorPackage(form, advWidgets);
+            MainActivity.overlayDocumentExportCallback = uri -> {
+                new Thread(() -> {
+                    try (java.io.OutputStream out =
+                                 context.getContentResolver().openOutputStream(uri, "wt")) {
+                        if (out == null) throw new IOException("Could not create design file");
+                        out.write(DialogEditorEngine.toJson(pack).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        context.handler.post(() ->
+                                Extensions.showMessage(context, "Dialog design exported"));
+                    } catch (Exception e) {
+                        context.handler.post(() ->
+                                Extensions.showMessage(context, "Export failed: " + e.getMessage()));
+                    }
+                }.start();
+            };
+            context.startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/json")
+                    .putExtra(Intent.EXTRA_TITLE, "mpmanager-dialog.json"), 9023);
+        });
+
+        view.findViewById(R.id.overlayUndo).setOnClickListener(v -> {
+            if (dialogUndo.isEmpty()) {
+                Extensions.showMessage(context, "Nothing to undo");
+                return;
+            }
+            dialogRedo.push(DialogEditorEngine.toJson(buildEditorPackage(form, advWidgets)));
+            try {
+                DialogEditorEngine.DialogPackage pack =
+                        DialogEditorEngine.fromJson(dialogUndo.pop());
+                applyEditorPackage(form, advWidgets, advSelected, pack);
+            } catch (Exception e) {
+                Extensions.showMessage(context, "Undo failed: " + e.getMessage());
+            }
+        });
+
+        view.findViewById(R.id.overlayRedo).setOnClickListener(v -> {
+            if (dialogRedo.isEmpty()) {
+                Extensions.showMessage(context, "Nothing to redo");
+                return;
+            }
+            dialogUndo.push(DialogEditorEngine.toJson(buildEditorPackage(form, advWidgets)));
+            try {
+                DialogEditorEngine.DialogPackage pack =
+                        DialogEditorEngine.fromJson(dialogRedo.pop());
+                applyEditorPackage(form, advWidgets, advSelected, pack);
+            } catch (Exception e) {
+                Extensions.showMessage(context, "Redo failed: " + e.getMessage());
+            }
+        });
 
         showAdvProps[0] = () -> {
             advProps.removeAllViews();

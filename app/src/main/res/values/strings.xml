@@ -1745,6 +1745,16 @@ Strings are sent to the external service you configured.</string>
     <string name="save_profile">Save profile</string>
     <string name="profile_saved">Profile saved</string>
     <string name="toast_dialog">Toast / Dialog</string>
+    <string name="dialog_advanced_tools">Advanced Dialog tools</string>
+    <string name="dialog_analysis_waiting">Analyze the APK to detect compatible injection points.</string>
+    <string name="dialog_injection_method">Injection method</string>
+    <string name="dialog_custom_hook">Custom hook / method (optional)</string>
+    <string name="dialog_custom_smali">Custom Smali code (optional)</string>
+    <string name="dialog_analyze">Analyze APK</string>
+    <string name="dialog_import">Import</string>
+    <string name="dialog_export">Export</string>
+    <string name="dialog_backup">Backup</string>
+    <string name="dialog_validate_repair">Validate and repair design</string>
     <string name="enter_a_url_or_set_the_button_to_dismiss">Enter a URL or set the button to Dismiss</string>
     <string name="remove_toasts_info">This will decompile the APK, remove all Toast.makeText/show calls from smali code, then recompile. Continue?</string>
     <string name="signature_removed">Signature removed</string>

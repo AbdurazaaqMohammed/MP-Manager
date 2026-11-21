@@ -121,6 +121,9 @@ public class OverlayInjectorUtil {
         public String dlgFont = "";
         public String dlgFontPath = "";
         public List<AdvWidget> widgets;
+        public String injectionMethod = "AUTO";
+        public String customHook = "";
+        public String customSmali = "";
     }
 
     public static AdvWidget copyWidget(AdvWidget w) {
@@ -1578,6 +1581,9 @@ public class OverlayInjectorUtil {
                     if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, dismissListener));
                 }
                 insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb)).append("\n");
+                if (dialog.customSmali != null && dialog.customSmali.trim().startsWith(".method")) {
+                    insert.append(dialog.customSmali.trim()).append("\n");
+                }
             }
             insert.append(wrapperSmali(classDescriptor, flags.isEmpty() ? "protected" : flags,
                     toast != null, dialog != null));
