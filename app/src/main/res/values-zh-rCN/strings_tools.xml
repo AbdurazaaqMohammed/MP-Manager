@@ -1,0 +1,25 @@
+<resources>
+    <string name="tools_hub_search">搜索工具和软件包</string>
+    <string name="tools_hub_hint">所有工具集中于一处。长按工具可在主屏幕创建快捷方式。</string>
+    <string name="tools_hub_summary_compact">%1$d 个工具 · %2$d 个已安装软件包</string>
+    <string name="tools_hub_no_results">没有匹配的工具</string>
+    <string name="tools_hub_download_badge">下载</string>
+    <string name="tools_hub_ready_badge">就绪</string>
+    <string name="tools_hub_pack_metadata">%1$d 个工具 · v%2$s · %3$s</string>
+    <string name="tools_hub_pack_installed">已安装</string>
+    <string name="tools_hub_pack_available">可选下载</string>
+    <string name="tools_hub_pack_update_available">有可用更新</string>
+    <string name="tools_hub_min_sdk">需要 Android API %1$d 或更高版本</string>
+    <string name="tools_hub_install_apk">从 APK 安装软件包</string>
+    <string name="tools_hub_advanced_plugins">高级工具和插件</string>
+    <string name="tool_requires_root">此工具需要 root 权限。</string>
+    <string name="tool_extract_subtitle">浏览应用并提取 APK 文件</string>
+    <string name="tool_recycle_subtitle">恢复或移除已删除的文件</string>
+    <string name="tool_ftp_subtitle">通过本地网络共享文件</string>
+    <string name="tool_network_subtitle">FTP、WebDAV 和 SMB 连接</string>
+    <string name="tool_layout_subtitle">检查屏幕上的应用和布局</string>
+    <string name="tool_color_subtitle">从任意屏幕取色</string>
+    <string name="tool_freestyle_subtitle">创建和编辑视觉作品</string>
+    <string name="screen_ocr_title">复制屏幕上的文字</string>
+    <string name="screen_ocr_subtitle">离线识别屏幕和图片中的文字</string>
+</resources>
