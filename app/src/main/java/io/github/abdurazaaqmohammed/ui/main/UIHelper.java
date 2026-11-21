@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,12 +19,14 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.io.Files;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -194,12 +197,71 @@ public class UIHelper {
     }
 
     public void scrollTextView(TextView textView) {
+        if (PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("compress_path_display", false)) {
+            compressPath(textView);
+            return;
+        }
         textView.setSingleLine(true);
 
         textView.setEllipsize(TextUtils.TruncateAt.MARQUEE);
         textView.setMarqueeRepeatLimit(-1);
         textView.setHorizontallyScrolling(true);
         textView.setSelected(true); // Start without focus
+    }
+
+    // Keeps the head and tail of an overlong path, dropping middle segments,
+    // so the current folder stays visible and the bar stays as full as fits.
+    // Short paths are shown untouched.
+    private void compressPath(TextView textView) {
+        textView.setSingleLine(true);
+        textView.setEllipsize(TextUtils.TruncateAt.END);
+        textView.setHorizontallyScrolling(false);
+        textView.setSelected(false);
+
+        int available = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
+        if (available <= 0) {
+            // View not laid out yet (first draw); retry once right before draw.
+            if (textView.getTag(R.id.compress_path_pending) == null) {
+                textView.setTag(R.id.compress_path_pending, Boolean.TRUE);
+                textView.getViewTreeObserver().addOnPreDrawListener(() -> {
+                    textView.setTag(R.id.compress_path_pending, null);
+                    compressPath(textView);
+                    return true;
+                });
+            }
+            return;
+        }
+
+        String full = textView.getText().toString();
+        TextPaint paint = textView.getPaint();
+        if (paint.measureText(full) <= available) return;
+
+        String head = leadingSegment(full);
+        // Drop tail segments from the front until the compressed form fits.
+        List<String> middle = new ArrayList<>();
+        String tail = full.substring(head.length());
+        String sep = head.endsWith("/") ? "…" : "/…";
+        while (!tail.isEmpty() && paint.measureText(head + sep + tail) > available) {
+            String seg = leadingSegment(tail);
+            middle.add(seg);
+            tail = tail.substring(seg.length());
+        }
+        if (tail.isEmpty()) return; // even the head alone does not fit; keep END ellipsize
+
+        // Grow the head back into the dropped middle, as far as still fits.
+        StringBuilder grown = new StringBuilder(head);
+        for (String seg : middle) {
+            if (paint.measureText(grown + sep + seg + tail) <= available) grown.append(seg);
+            else break;
+        }
+        textView.setText(grown + sep + tail);
+    }
+
+    private static String leadingSegment(String path) {
+        // Keep a leading "/" attached to the first segment.
+        int i = path.indexOf('/', 1);
+        return i < 0 ? path : path.substring(0, i);
     }
 
     public LinearLayout getProperties() {

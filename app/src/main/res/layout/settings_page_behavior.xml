@@ -111,6 +111,20 @@
                     android:text="@string/back_navigates_folders_summary"
                     android:textSize="12sp"
                     android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/compressPathToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/compress_path_display" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/compress_path_display_summary"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
                 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/logToggle"
