@@ -76,6 +76,7 @@
             android:dataExtractionRules="@xml/network_data_extraction_rules"
             android:usesCleartextTraffic="true"
             android:localeConfig="@xml/locales_config"
+            android:supportsRtl="true"
             android:requestLegacyExternalStorage="true"
            android:enableOnBackInvokedCallback="false"
            android:largeHeap="true"

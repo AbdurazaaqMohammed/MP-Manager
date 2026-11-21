@@ -1038,7 +1038,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         // App language is applied by AppCompatDelegate per-app locales
         // (see SettingsController.setupLanguageSettings + res/xml/locales_config.xml).
-        // System locale automatically picks values / values-es / values-ru / values-zh-rCN.
+        // Android selects the matching localized values resources automatically.
         rss = getResources();
 
         new Thread(() -> {

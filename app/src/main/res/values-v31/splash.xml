@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MPManager.Splash" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.MPManager.Splash" parent="Theme.MyApp.System">
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/mp_splash_animated</item>
         <item name="android:windowSplashScreenAnimationDuration">600</item>
     </style>

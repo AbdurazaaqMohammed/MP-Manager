@@ -3,12 +3,18 @@
     <!-- API 27+: windowLightNavigationBar works, so light themes can keep the
          surface-colored navigation bar with dark system icons. -->
     <style name="Theme.MyApp.System" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.MPManager.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MPManager.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MPManager.Large</item>
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>
     <style name="Theme.MyApp.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.MPManager.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MPManager.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MPManager.Large</item>
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">true</item>
