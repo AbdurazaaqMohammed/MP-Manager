@@ -2644,6 +2644,8 @@ Layout Inspector
     <string name="warning_proceed">我已了解，继续</string>
     <string name="back_navigates_folders">返回键浏览文件夹</string>
     <string name="back_navigates_folders_summary">关闭后，无需逐级返回文件夹，连按两次返回键即可退出。屏幕上的导航按钮仍然可用。</string>
+    <string name="compress_path_display">压缩路径显示</string>
+    <string name="compress_path_display_summary">超长路径压缩为 头部…/当前文件夹，尽量占满显示。关闭则保持滚动播放。</string>
     <string name="show_file_permissions">在共享存储以外用权限代替日期显示</string>
     <string name="checksum_generate_sfv">生成 .sfv（CRC32）</string>
     <string name="checksum_generate_md5">生成 .md5</string>

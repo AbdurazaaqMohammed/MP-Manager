@@ -2679,6 +2679,8 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="protected_banner">⚠️ Protected: %1$s</string>
     <string name="back_navigates_folders">Back button navigates folders</string>
     <string name="back_navigates_folders_summary">Turn off to exit with two Back presses without retracing folder history. The on-screen navigation buttons still work.</string>
+    <string name="compress_path_display">Compress path display</string>
+    <string name="compress_path_display_summary">Overlong paths compress to head…/current folder, using as much of the bar as fits. Off keeps the scrolling marquee.</string>
     <string name="show_file_permissions">Show permissions instead of dates outside shared storage</string>
     <string name="checksum_generate_sfv">Generate .sfv (CRC32)</string>
     <string name="checksum_generate_md5">Generate .md5</string>
