@@ -7,6 +7,9 @@
 name: Build MP-Manager APK
 
 on:
+  push:
+    branches: [ "main" ]
+    tags: [ "stage-*" ]
   workflow_dispatch:
 
 permissions:
