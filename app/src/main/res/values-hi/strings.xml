@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">भाषा</string>
+    <string name="language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="menu">मेन्यू</string>
+    <string name="back">वापस</string>
+    <string name="forward">आगे</string>
+    <string name="more">और विकल्प</string>
+    <string name="current_folder_path">वर्तमान फ़ोल्डर पथ</string>
+    <string name="settings">सेटिंग्स</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="ok">ठीक है</string>
+    <string name="search">खोजें</string>
+    <string name="newFileOrFolder">नई फ़ाइल या फ़ोल्डर</string>
+    <string name="sync">पैनल समन्वयित करें</string>
+    <string name="parent_dir">ऊपरी फ़ोल्डर</string>
+    <string name="compile">कंपाइल करें</string>
+    <string name="delete">हटाएँ</string>
+    <string name="copy">कॉपी करें</string>
+    <string name="paste">पेस्ट करें</string>
+    <string name="share">साझा करें</string>
+    <string name="rename">नाम बदलें</string>
+    <string name="properties">गुण</string>
+</resources>

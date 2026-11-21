@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">언어</string>
+    <string name="language_system">시스템 기본값</string>
+    <string name="menu">메뉴</string>
+    <string name="back">뒤로</string>
+    <string name="forward">앞으로</string>
+    <string name="more">추가 옵션</string>
+    <string name="current_folder_path">현재 폴더 경로</string>
+    <string name="settings">설정</string>
+    <string name="cancel">취소</string>
+    <string name="ok">확인</string>
+    <string name="search">검색</string>
+    <string name="newFileOrFolder">새 파일 또는 폴더</string>
+    <string name="sync">창 동기화</string>
+    <string name="parent_dir">상위 폴더</string>
+    <string name="compile">컴파일</string>
+    <string name="delete">삭제</string>
+    <string name="copy">복사</string>
+    <string name="paste">붙여넣기</string>
+    <string name="share">공유</string>
+    <string name="rename">이름 바꾸기</string>
+    <string name="properties">속성</string>
+</resources>

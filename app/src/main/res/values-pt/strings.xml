@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">Idioma</string>
+    <string name="language_system">Padrão do sistema</string>
+    <string name="menu">Menu</string>
+    <string name="back">Voltar</string>
+    <string name="forward">Avançar</string>
+    <string name="more">Mais opções</string>
+    <string name="current_folder_path">Caminho da pasta atual</string>
+    <string name="settings">Configurações</string>
+    <string name="cancel">Cancelar</string>
+    <string name="ok">OK</string>
+    <string name="search">Pesquisar</string>
+    <string name="newFileOrFolder">Novo arquivo ou pasta</string>
+    <string name="sync">Sincronizar painéis</string>
+    <string name="parent_dir">Pasta superior</string>
+    <string name="compile">Compilar</string>
+    <string name="delete">Excluir</string>
+    <string name="copy">Copiar</string>
+    <string name="paste">Colar</string>
+    <string name="share">Compartilhar</string>
+    <string name="rename">Renomear</string>
+    <string name="properties">Propriedades</string>
+</resources>
