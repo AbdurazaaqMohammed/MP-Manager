@@ -75,9 +75,9 @@ public class ElfParser implements AutoCloseable {
         public long offset, vaddr, filesz, memsz;
 
         public String flagsToString() {
-            return (flags & 4 != 0 ? "R" : "-")
-                 + (flags & 2 != 0 ? "W" : "-")
-                 + (flags & 1 != 0 ? "X" : "-");
+            return ((flags & 4) != 0 ? "R" : "-")
+                 + ((flags & 2) != 0 ? "W" : "-")
+                 + ((flags & 1) != 0 ? "X" : "-");
         }
 
         public String typeName() {
