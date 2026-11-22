@@ -195,7 +195,7 @@ internal class SymbolPageAdapter(
                     baseHorizontalSpacingDp = config.cellHorizontalSpacingDp,
                     adaptive = true,
                     baseVerticalSpacingDp = config.cellVerticalSpacingDp,
-                    lockColumnCount = !settings.showFullSymbolLabels
+                    lockColumnCount = !settings.showFullSymbolLabels && spacingState.fullLabelMinimumCellWidthDp <= 0f
                 )
                 if (adaptiveGridLayout.spanCount != gridSpec.columnCount) {
                     adaptiveGridLayout.spanCount = gridSpec.columnCount
@@ -274,7 +274,8 @@ internal class SymbolPageAdapter(
             symbolsAdapter.submitList(symbols.toList()) {
                 if (groupChanged) symbolsAdapter.refreshItemExtensions()
             }
-            if (!settings.showFullSymbolLabels || !settings.showSymbolLabels) {
+            val hasTextLabels = symbols.any { it.label.length > 2 || it.label.any { c -> c.isLetter() } }
+            if ((!settings.showFullSymbolLabels || !settings.showSymbolLabels) && !hasTextLabels) {
                 spacingState.fullLabelMinimumCellWidthDp = 0f
                 return
             }
@@ -289,16 +290,20 @@ internal class SymbolPageAdapter(
                 .maxOrNull() ?: 0f
             spacingState.fullLabelMinimumCellWidthDp = maxOf(
                 settings.minimumTouchTargetDp.toFloat(),
-                longest / density + 8f
+                longest / density + 12f
             )
-            grid.post {
+            val updateSpan = {
                 val width = (grid.width - grid.paddingLeft - grid.paddingRight).coerceAtLeast(1)
-                if (width <= 1) return@post
-                val minimumWidthPx = spacingState.fullLabelMinimumCellWidthDp * density
-                val columns = (width / minimumWidthPx).toInt().coerceIn(1, config.columns)
-                val manager = grid.layoutManager as? GridLayoutManager ?: return@post
-                if (manager.spanCount != columns) manager.spanCount = columns
+                if (width > 1) {
+                    val minimumWidthPx = spacingState.fullLabelMinimumCellWidthDp * density
+                    val maxCols = (width / minimumWidthPx).toInt().coerceIn(1, config.columns)
+                    val cols = if (symbols.size in 1..maxCols) symbols.size else maxCols
+                    val manager = grid.layoutManager as? GridLayoutManager
+                    if (manager != null && manager.spanCount != cols) manager.spanCount = cols
+                }
             }
+            updateSpan()
+            grid.post(updateSpan)
         }
         fun refreshItemExtensions() {
             grid.setBackgroundColor(
@@ -335,10 +340,10 @@ internal class SymbolPageAdapter(
                 isSingleLine = true
                 maxLines = 1
                 includeFontPadding = false
-                ellipsize = if (settings.showFullSymbolLabels) null else android.text.TextUtils.TruncateAt.END
+                ellipsize = null
                 TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                     this,
-                    if (settings.showFullSymbolLabels) 6 else 8,
+                    6,
                     settings.symbolLabelTextSizeSp.coerceAtLeast(8),
                     1,
                     TypedValue.COMPLEX_UNIT_SP
