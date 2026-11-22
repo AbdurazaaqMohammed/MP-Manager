@@ -298,7 +298,7 @@ public class ClassTree {
 
     public static class CompilationOptions {
         public String dexVersion = "Keep the same";
-        public boolean removeAllDebug = true;
+        public boolean removeAllDebug = false;
         public boolean removeDebugSource = false;
         public boolean removeDebugLine = false;
         public boolean removeDebugParam = false;
