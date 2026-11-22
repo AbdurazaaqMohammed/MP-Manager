@@ -11,7 +11,6 @@
     <string name="pin_folder">تثبيت المجلد</string>
     <string name="unpin_folder">إلغاء تثبيت المجلد</string>
     <string name="pinned_folder">مجلد مثبت</string>
-    <string name="haptic">الاستجابة بالاهتزاز</string>
     <string name="haptics_enabled">الاستجابة بالاهتزاز</string>
     <string name="haptics_selection">تحديد الملفات ونطاقات التحديد</string>
     <string name="haptics_actions">القوائم والإشارات المرجعية والتثبيت والإجراءات</string>

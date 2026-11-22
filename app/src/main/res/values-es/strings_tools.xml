@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d herramientas · %2$d paquetes instalados</string>
     <string name="tools_hub_no_results">Ninguna herramienta coincide con tu búsqueda</string>
     <string name="tools_hub_download_badge">Descargar</string>
-    <string name="tools_hub_ready_badge">Lista</string>
     <string name="tools_hub_pack_metadata">%1$d herramientas · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">Instalado</string>
     <string name="tools_hub_pack_available">Descarga opcional</string>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Ağ bağlantıları</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Sunucuları keşfet</string>
+<string name="network_scan_smb">Tekrar tara</string>
+<string name="network_discovery_help">Hizmet duyuruları, Windows keşfi ve sınırlı bir SMB2/3 taraması kullanılarak yerel sunucular otomatik olarak aranıyor. Oturum açma veya parolalar denenmez. Bir sunucu seçin, ardından paylaşımını veya koleksiyonunu ve kimlik bilgilerini girin.</string>
+<string name="network_discovery_unavailable">Hizmet keşfi kullanılamıyor. Yine de SMB taraması yapabilir veya sunucuyu elle girebilirsiniz.</string>
+<string name="network_discovery_no_lan">Desteklenen bir IPv4 Wi-Fi/Ethernet alt ağı yok. Duyrulanmış hizmetler yine de görünebilir; aksi durumda sunucuyu elle girin.</string>
+<string name="network_discovery_scanning">Yakındaki adresler SMB2/3 için taranıyor (en fazla 20 saniye)…</string>
+<string name="network_discovery_finished">SMB taraması tamamlandı. Bir sonuç seçin veya sunucuyu elle girin. WebDAV sunucuları yalnızca hizmetlerini duyururlarsa görünür.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Bağlantı adı (isteğe bağlı)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Kullanıcı adı (anonim için boş bırakın)</string>
+<string name="network_password">Parola</string>
+<string name="network_domain">Etki alanı / çalışma grubu (isteğe bağlı)</string>
+<string name="network_remember">Bağlantıyı kaydet (bu cihazda şifrelenir)</string>
+<string name="network_saved_connections">Kayıtlı bağlantılar</string>
+<string name="network_webdav_help">WebDAV koleksiyonunun tam URL\'sini kullanın. HTTPS önerilir; HTTP kimlik bilgilerini şifrelemeden gönderir. Dosyalar yerel kopyalar olarak açılır. Düzenlemeleri sunucuya kaydetmek için açıkça geri kopyalayın.</string>
+<string name="network_smb_help">SMB2/3 paylaşımına bağlanın, örneğin smb://192.168.1.10/Documents. Ana makineden sonra özel bir bağlantı noktası eklenebilir. SMB1 desteklenmiyor.</string>
+<string name="network_transfer_safety">Mevcut dosyaların üzerine yazılmaz. Taşıma işlemi, kaynağını yalnızca aktarım başarıyla tamamlandıktan sonra siler. İptal veya başarısızlık durumunda hedefte eksik bir kopya kalabilir.</string>
+<string name="network_recursive_delete">Bir klasörü silmek, sunucuda içindeki her şeyi de siler.</string>
+<string name="network_downloading">Yerel kopya indiriliyor</string>
+<string name="network_browse_hint">Bu bağlantıda gezinmek için klasör listesini kullanın. Kayıtlı bağlantılar, kenar çubuğundaki girişlerinden de açılabilir.</string>
+<string name="network_permission_denied">Android 17+ sürümünde yerel sunucular için Yakındaki cihazlar izni gerekir. Uygulama ayarlarından izin verin, ardından tekrar bağlanın.</string>
+<string name="network_extract_first">Ağ bağlantısına kopyalamadan veya taşımadan önce arşiv öğelerini yerel bir klasöre çıkarın.</string>
+<string name="network_new_connection">Yeni bağlantı</string>
+<string name="network_remember_ftp">FTP bağlantısını kaydet</string>
+<string name="network_ftp_help">Bir FTP veya FTPS sunucusuna bağlanın. Kayıtlı FTP profilleri burada kullanılabilir durumda kalır. Dosyalar yerel kopyalar olarak açılır; düzenlemeleri açıkça geri kopyalayın.</string>
+<string name="network_connection_saved">Bağlantı kaydedildi</string>
+<string name="network_delete_connection">Kayıtlı bağlantıyı sil</string>
+<string name="network_delete_connection_confirm">“%1$s” silinsin ve kenar çubuğu sabitlemesi kaldırılsın mı? Sunucudaki dosyalar etkilenmez.</string>
+<string name="network_saved_connection_missing">Kayıtlı bağlantı bulunamadı. Ağ bağlantıları bölümünden yeniden ekleyin.</string>
+<string name="network_invalid_port">1 ile 65535 arasında bir bağlantı noktası girin</string>
+<string name="network_invalid_host">URL yolu olmadan bir sunucu ana makine adı veya IP adresi girin</string>
+<string name="network_storage_unavailable">%1$s · Sunucu depolama alanı bildirmiyor</string>
+<string name="network_storage_free">%1$s boş · Toplam alan kullanılamıyor</string>
+<string name="network_ftp_create_unsupported">FTP bölmelerinde öğe oluşturma burada desteklenmiyor.</string>
+</resources>

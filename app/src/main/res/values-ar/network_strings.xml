@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">اتصالات الشبكة</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">اكتشاف الخوادم</string>
+<string name="network_scan_smb">إعادة الفحص</string>
+<string name="network_discovery_help">البحث تلقائياً عن الخوادم المحلية باستخدام إعلانات الخدمات واكتشاف Windows وفحص محدود لـ SMB2/3. لا تُجرَّب أي محاولات تسجيل دخول أو كلمات مرور. حدد خادماً ثم أدخل مشاركته أو مجموعته وبيانات الاعتماد الخاصة به.</string>
+<string name="network_discovery_unavailable">اكتشاف الخدمات غير متاح. لا يزال بإمكانك فحص SMB أو إدخال الخادم يدوياً.</string>
+<string name="network_discovery_no_lan">لا توجد شبكة فرعية IPv4 مدعومة عبر Wi-Fi أو Ethernet. قد تظهر الخدمات المُعلن عنها؛ وإلا فأدخل الخادم يدوياً.</string>
+<string name="network_discovery_scanning">جارٍ فحص العناوين القريبة بحثاً عن SMB2/3 (حتى 20 ثانية)…</string>
+<string name="network_discovery_finished">انتهى فحص SMB. حدد نتيجة أو أدخل خادماً يدوياً. تظهر خوادم WebDAV فقط إذا أعلنت عن خدمتها.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">اسم الاتصال (اختياري)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">اسم المستخدم (اتركه فارغاً للدخول المجهول)</string>
+<string name="network_password">كلمة المرور</string>
+<string name="network_domain">النطاق / مجموعة العمل (اختياري)</string>
+<string name="network_remember">حفظ الاتصال (مشفّر على هذا الجهاز)</string>
+<string name="network_saved_connections">الاتصالات المحفوظة</string>
+<string name="network_webdav_help">استخدم عنوان URL الكامل لمجموعة WebDAV. يُنصح باستخدام HTTPS؛ إذ يرسل HTTP بيانات الاعتماد دون تشفير. تُفتح الملفات كنسخ محلية، ولحفظ تعديلاتك على الخادم انسخها إليه صراحةً.</string>
+<string name="network_smb_help">اتصل بمشاركة SMB2/3، مثلاً smb://192.168.1.10/Documents. يمكن إضافة منفذ مخصص بعد المضيف. لا يتوفر دعم SMB1.</string>
+<string name="network_transfer_safety">لا يتم استبدال الملفات الموجودة. تُحذف ملفات المصدر في عملية النقل فقط بعد اكتمال النقل بنجاح. قد يترك الإلغاء أو الفشل ملفات جزئية في الوجهة.</string>
+<string name="network_recursive_delete">حذف مجلد يؤدي أيضاً إلى حذف كل ما بداخله على الخادم.</string>
+<string name="network_downloading">جارٍ تنزيل نسخة محلية</string>
+<string name="network_browse_hint">استخدم قائمة المجلدات للتنقل في هذا الاتصال. الاتصالات المحفوظة متاحة من عنصرها في الشريط الجانبي.</string>
+<string name="network_permission_denied">يلزم إذن الأجهزة القريبة للوصول إلى الخوادم المحلية على أندرويد 17 فأحدث. اسمح به في إعدادات التطبيق ثم أعد الاتصال.</string>
+<string name="network_extract_first">استخرج إدخالات الأرشيف إلى مجلد محلي قبل نسخها أو نقلها إلى اتصال شبكة.</string>
+<string name="network_new_connection">اتصال جديد</string>
+<string name="network_remember_ftp">حفظ اتصال FTP</string>
+<string name="network_ftp_help">اتصل بخادم FTP أو FTPS. تظل ملفات تعريف FTP المحفوظة متاحة هنا. تُفتح الملفات كنسخ محلية، فانسخ تعديلاتك إلى الخادم صراحةً.</string>
+<string name="network_connection_saved">تم حفظ الاتصال</string>
+<string name="network_delete_connection">حذف الاتصال المحفوظ</string>
+<string name="network_delete_connection_confirm">حذف \"%1$s\" وإزالة تثبيته من الشريط الجانبي؟ ملفات الخادم لن تتأثر.</string>
+<string name="network_saved_connection_missing">لم يتم العثور على الاتصال المحفوظ. أضفه مجدداً في اتصالات الشبكة.</string>
+<string name="network_invalid_port">أدخل منفذاً بين 1 و65535</string>
+<string name="network_invalid_host">أدخل اسم مضيف الخادم أو عنوان IP، دون مسار URL</string>
+<string name="network_storage_unavailable">%1$s · الخادم لا يبلّغ عن مساحة التخزين</string>
+<string name="network_storage_free">المتاح: %1$s · المساحة الإجمالية غير متاحة</string>
+<string name="network_ftp_create_unsupported">إنشاء إدخالات داخل لوحات FTP غير مدعوم هنا.</string>
+</resources>

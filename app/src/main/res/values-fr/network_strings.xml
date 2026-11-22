@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Connexions réseau</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Découvrir des serveurs</string>
+<string name="network_scan_smb">Analyser à nouveau</string>
+<string name="network_discovery_help">Recherche automatique de serveurs locaux via les annonces de services, la découverte Windows et une analyse SMB2/3 limitée. Aucune connexion ni aucun mot de passe ne sont testés. Sélectionnez un serveur, puis saisissez son partage ou sa collection et vos identifiants.</string>
+<string name="network_discovery_unavailable">La découverte de services est indisponible. Vous pouvez toujours analyser les serveurs SMB ou saisir un serveur manuellement.</string>
+<string name="network_discovery_no_lan">Aucun sous-réseau IPv4 Wi-Fi/Ethernet pris en charge. Les services annoncés peuvent toujours apparaître ; sinon saisissez le serveur manuellement.</string>
+<string name="network_discovery_scanning">Analyse des adresses voisines pour SMB2/3 (jusqu’à 20 secondes)…</string>
+<string name="network_discovery_finished">Analyse SMB terminée. Sélectionnez un résultat ou saisissez un serveur manuellement. Les serveurs WebDAV n’apparaissent que s’ils annoncent leur service.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Nom de la connexion (facultatif)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Nom d’utilisateur (vide pour anonyme)</string>
+<string name="network_password">Mot de passe</string>
+<string name="network_domain">Domaine / groupe de travail (facultatif)</string>
+<string name="network_remember">Enregistrer la connexion (chiffrée sur cet appareil)</string>
+<string name="network_saved_connections">Connexions enregistrées</string>
+<string name="network_webdav_help">Utilisez l’URL complète de la collection WebDAV. HTTPS est recommandé ; HTTP envoie les identifiants sans chiffrement. Les fichiers s’ouvrent en copies locales. Pour enregistrer les modifications sur le serveur, recopiez-les explicitement.</string>
+<string name="network_smb_help">Connectez-vous à un partage SMB2/3, par exemple smb://192.168.1.10/Documents. Un port personnalisé peut être ajouté après l’hôte. SMB1 n’est pas pris en charge.</string>
+<string name="network_transfer_safety">Les fichiers existants ne sont pas écrasés. Un déplacement supprime sa source uniquement après un transfert réussi. Une annulation ou un échec peut laisser une destination partielle.</string>
+<string name="network_recursive_delete">La suppression d’un dossier supprime aussi tout son contenu sur le serveur.</string>
+<string name="network_downloading">Téléchargement d’une copie locale</string>
+<string name="network_browse_hint">Utilisez la liste des dossiers pour naviguer dans cette connexion. Les connexions enregistrées sont accessibles depuis son entrée du panneau latéral.</string>
+<string name="network_permission_denied">L’autorisation Appareils à proximité est requise pour les serveurs locaux sur Android 17 et ultérieur. Accordez-la dans les réglages de l’application, puis reconnectez-vous.</string>
+<string name="network_extract_first">Extrayez les entrées d’archive dans un dossier local avant de les copier ou de les déplacer vers une connexion réseau.</string>
+<string name="network_new_connection">Nouvelle connexion</string>
+<string name="network_remember_ftp">Enregistrer la connexion FTP</string>
+<string name="network_ftp_help">Connectez-vous à un serveur FTP ou FTPS. Les profils FTP enregistrés restent disponibles ici. Les fichiers s’ouvrent en copies locales ; recopiez explicitement les modifications.</string>
+<string name="network_connection_saved">Connexion enregistrée</string>
+<string name="network_delete_connection">Supprimer la connexion enregistrée</string>
+<string name="network_delete_connection_confirm">Supprimer « %1$s » et retirer son épingle du panneau latéral ? Les fichiers du serveur ne sont pas affectés.</string>
+<string name="network_saved_connection_missing">Connexion enregistrée introuvable. Ajoutez-la à nouveau dans Connexions réseau.</string>
+<string name="network_invalid_port">Saisissez un port de 1 à 65535</string>
+<string name="network_invalid_host">Saisissez un nom d’hôte ou une adresse IP de serveur, sans chemin d’URL</string>
+<string name="network_storage_unavailable">%1$s · Le serveur n’indique pas l’espace de stockage</string>
+<string name="network_storage_free">%1$s libres · Espace total indisponible</string>
+<string name="network_ftp_create_unsupported">La création d’entrées dans les panneaux FTP n’est pas prise en charge ici.</string>
+</resources>

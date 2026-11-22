@@ -36,7 +36,6 @@
     <string name="user_apps">Kullanıcı uygulamaları</string>
     <string name="system_apps">Sistem uygulamaları</string>
     <string name="share_apk">APK\'yı paylaş</string>
-    <string name="display_functions">İşlevleri görüntüle</string>
     <string name="confirm">Onayla</string>
     <string name="theme">Tema</string>
     <string name="black_theme">Siyah tema</string>
@@ -135,7 +134,6 @@
     <string name="pkgName">Paket adı</string>
     <string name="opt">APK Optimize Et</string>
     <string name="delete_useless_files">Gereksiz dosyaları sil</string>
-    <string name="ultra_compress">Ultra Sıkıştırma</string>
     <string name="deep_optimize_safe_mode">Güvenli mod (uygulama kaynakları ada göre çözümlediğinde, herhangi bir dizeyle eşleşen girdileri koru)</string>
     <string name="files_to_delete">Silinecek Dosyalar</string>
     <string name="add">Ekle</string>
@@ -158,7 +156,6 @@
     <string name="customize">Özelleştir</string>
     <string name="delete">Sil</string>
     <string name="exit">Çıkış</string>
-    <string name="exit_confirm_message">MP Manager\'dan çıkılsın ve çalışan tüm işlemler durdurulsun mu? Etkin tüm işler sonlandırılacaktır.</string>
     <string name="compile">Derle</string>
     <string name="preferences">Tercihler</string>
     <string name="compilation_options">Derleme seçenekleri</string>
@@ -179,7 +176,6 @@
     <string name="error_x">Hata: %1$s</string>
     <string name="ip">IP: %1$s</string>
     <string name="copied">Kopyalandı</string>
-    <string name="ftp">ftp:/%1$s</string>
     <string name="usedpt">%%%1$d</string>
     <string name="used">Kullanılan: %1$s Boş: %2$s</string>
     <string name="signed_by">İmzalayan</string>
@@ -205,8 +201,6 @@
     <string name="enter_path">Yol girin</string>
     <string name="path">Yol</string>
     <string name="start">Başlangıç</string>
-    <string name="end">Bitiş</string>
-    <string name="length">Uzunluk</string>
     <string name="only_for_this_folder">Yalnızca bu klasör için</string>
     <string name="ftp_server_started">FTP Sunucusu %1$d numaralı bağlantı noktasında başlatıldı</string>
     <string name="failed_to_start_ftp_server">FTP sunucusu başlatılamadı: %1$s</string>
@@ -243,8 +237,6 @@
     <string name="archive_viewer">Arşiv görüntüleyici</string>
     <string name="image_viewer">Görsel görüntüleyici</string>
     <string name="hex_editor">Hex düzenleyici</string>
-    <string name="file_too_large">Dosya çok büyük</string>
-    <string name="file_too_large_open_hex">Bu dosya yaklaşık %1$d MB boyutunda ve bellek yetersizliği olmadan metin olarak açılamayacak kadar büyük. Bunun yerine hex düzenleyicide açılsın mı?</string>
     <string name="out_of_memory_operation">Bu işlem için yeterli boş bellek yok. Daha küçük bir dosya deneyin veya diğer uygulamaları kapatıp yeniden deneyin.</string>
     <string name="media_player">Medya oynatıcı</string>
     <string name="apk_info">APK bilgisi</string>
@@ -262,7 +254,6 @@
     <string name="fix_mime_type">Paylaşmadan/birlikte açmadan önce MIME türünü düzelt (baytlardan algıla)</string>
     <string name="reported_mime">Bildirilen MIME</string>
     <string name="real_mime">Gerçek MIME</string>
-    <string name="elf_extract_strings">Kaynak Koda Dönüştür ve Okunabilir Kodu Çıkar</string>
     <string name="saved">Kaydedildi</string>
     <string name="goto_offset">Konuma git</string>
     <string name="revert_changes">Değişiklikleri geri al</string>
@@ -292,8 +283,6 @@
     <string name="modified">Değiştirilme</string>
     <string name="mtime_edit_title">Son değiştirilme tarihini düzenle</string>
     <string name="mtime_option_picker">Tarih ve saat seçici</string>
-    <string name="mtime_option_millis">Epoch milisaniyesi</string>
-    <string name="mtime_option_now">Şimdi</string>
     <string name="mtime_updated">Son değiştirilme tarihi güncellendi</string>
     <string name="mtime_failed">Son değiştirilme tarihi güncellenemedi</string>
     <string name="items">%1$d öğe</string>
@@ -312,10 +301,6 @@
     <string name="not_installed">Yüklü değil</string>
     <string name="downgrade">Sürüm düşürme</string>
     <string name="upgrade">Yükseltme</string>
-    <string name="same_version">Aynı sürüm</string>
-    <string name="version_comparison">Sürüm karşılaştırması</string>
-    <string name="installed_app">Yüklü uygulama</string>
-    <string name="new_apk">Yeni APK</string>
     <string name="permissions">İzinler</string>
     <string name="quick_edit">Hızlı düzenle</string>
     <string name="compare_apks">APK\'ları karşılaştır</string>
@@ -329,7 +314,6 @@
     <string name="signature_file">Dosya</string>
     <string name="signature_scheme">Şema</string>
     <string name="signature_status">Durum</string>
-    <string name="signature_signer">İmzalayan</string>
     <string name="sig_status_verified">Doğrulandı</string>
     <string name="sig_status_failed">Doğrulama başarısız</string>
     <string name="sig_status_none">İmzalı değil</string>
@@ -375,7 +359,6 @@
     <string name="renamed_successfully">Başarıyla yeniden adlandırıldı</string>
     <string name="deleted_successfully">Başarıyla silindi</string>
     <string name="delete_failed">Silme başarısız: %1$s</string>
-    <string name="download_failed">İndirme başarısız: %1$s</string>
     <string name="uploading">%1$s yükleniyor</string>
     <string name="renaming">Yeniden adlandırılıyor…</string>
     <string name="rename_preview">Yeniden adlandırma önizlemesi</string>
@@ -386,7 +369,6 @@
     <string name="set_uid">UID Ayarla</string>
     <string name="set_gid">GID Ayarla</string>
     <string name="sticky">Yapışkan</string>
-    <string name="numeric">"Sayısal: "</string>
     <string name="owner">Sahip</string>
     <string name="group">Grup</string>
     <string name="other">Diğer</string>
@@ -403,11 +385,7 @@
     <string name="extract_libs">Kitaplıkları çıkar</string>
     <string name="extract_base">base.apk dosyalarını çıkar</string>
     <string name="extract_ic">Uygulama simgesini çıkar</string>
-    <string name="root_permissions">Root İzinleri</string>
     <string name="permissions_updated">İzinler güncellendi</string>
-    <string name="permissions_unavailable">Geçerli izinler okunamadı</string>
-    <string name="checksum_reading_elevated">Yükseltilmiş erişimle okunuyor…</string>
-    <string name="checksum_unavailable">Sağlama toplamı kullanılamıyor: %1$s</string>
     <string name="invert_selection">Seçimi Tersine Çevir</string>
     <string name="playback_error">Oynatma hatası</string>
     <string name="buffering">Ara belleğe alınıyor: %1$d\%</string>
@@ -441,7 +419,6 @@
     <string name="done">Bitti</string>
     <string name="unhidden">%1$s görünür yapıldı</string>
     <string name="ftp_server">FTP Sunucusu</string>
-    <string name="ftp_client">FTP İstemcisi</string>
     <string name="connect">Bağlan</string>
     <string name="warning_dangerous_directory">Uyarı: Tehlikeli Dizin</string>
     <string name="warn_delete_s">Hassas bir sistem dizinindeki dosyaları silmek üzeresiniz. Bu işlem uygulamaları bozabilir veya sistem kararsızlığına neden olabilir.\n\nKesinlikle emin misiniz?</string>
@@ -795,8 +772,6 @@ Layout Inspector
     <string name="choose_signature_key">İmza anahtarı seç</string>
     <string name="select_signature_file">İmza dosyası seç</string>
     <string name="pick_file">Dosya seç</string>
-    <string name="extract_split_apks">Bölünmüş APK dosyalarını çıkar</string>
-    <string name="show_launch_activities">Başlatma Etkinliklerini Göster</string>
     <string name="advanced_options">Gelişmiş Seçenekler</string>
     <string name="menu_items">Menü öğeleri</string>
     <string name="option_icon_cd">Seçenek Simgesi</string>
@@ -1042,7 +1017,6 @@ Layout Inspector
     <string name="querier_out_of_range">Sayı aralık dışında</string>
     <string name="querier_only_decimal_negative">Yalnızca ondalık negatif olabilir</string>
     <string name="menu_select_all">Tümünü seç</string>
-    <string name="menu_hidden_files">Gizli dosyalar</string>
     <string name="menu_show_system_hidden">Sistem gizlilerini göster</string>
     <string name="menu_show_manual_hidden">El ile gizlenenleri göster</string>
     <string name="menu_hide_selected">Seçili dosyaları gizle</string>
@@ -1050,7 +1024,6 @@ Layout Inspector
     <string name="menu_swap_panes">Bölmeleri değiştir</string>
     <string name="sidebar_extract">APK Çıkar</string>
     <string name="sidebar_layout_inspector">Düzen Denetçisi</string>
-    <string name="sidebar_wifi">Wi-Fi Yöneticisi</string>
     <string name="sidebar_logcat">Logcat</string>
     <string name="logcat_subtitle">Sistem günlük çıktısını görüntüle</string>
     <string name="logcat_mode_root">Root modu - tüm sistem günlükleri</string>
@@ -1091,7 +1064,6 @@ Layout Inspector
     <string name="logcat_shortcut_unsupported">Başlatıcı kısayollara izin vermiyor</string>
     <string name="sidebar_tools">Araçlar Merkezi</string>
     <string name="sidebar_documents">Belge sağlayıcıları</string>
-    <string name="sidebar_plugins">Eklentiler/Araçlar</string>
     <string name="show_plugin_groups_sidebar">Kenar çubuğunda eklentileri göster</string>
     <string name="plugin_open">Aç</string>
     <string name="plugin_create_shortcut">Kısayol oluştur</string>
@@ -1106,7 +1078,6 @@ Layout Inspector
     <string name="translation_jump_hint">Dize numarası (1..%1$d)</string>
     <string name="translation_string_n">Dize %1$d</string>
     <string name="translation_hint">Çeviri</string>
-    <string name="translation_tap_first">Önce bir dizeye dokunun</string>
     <string name="translation_select_app">Önce bir çeviri uygulaması seçin (smali düzenleyicide listeye uzun basın)</string>
     <string name="translation_nothing_to_save">Kaydedilecek çeviri yok</string>
     <string name="translation_not_loaded">Dex dosyaları henüz yüklenmedi</string>
@@ -1114,7 +1085,6 @@ Layout Inspector
     <string name="translation_save_dictionary">Sözlüğe kaydet</string>
     <string name="translation_dictionary_saved">Sözlük kaydedildi: %1$s</string>
     <string name="translation_dictionary_manager">Sözlük yöneticisi</string>
-    <string name="translation_dictionary_apply">Sözlüğü uygula</string>
     <string name="translation_dictionary_applied">%1$d çeviri uygulandı</string>
     <string name="translation_no_dictionaries">Bu dosya için henüz kaydedilmiş sözlük yok</string>
     <string name="translation_delete_dictionary">%1$s silinsin mi?</string>
@@ -1157,13 +1127,9 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="translation_regex">Düzenli ifade</string>
     <string name="translation_exactly">Tam eşleştir</string>
     <string name="translating">Çevriliyor…</string>
-    <string name="translation_service_picker">Otomatik çeviri hizmeti</string>
     <string name="translation_start">Başlat</string>
     <string name="translation_no_services">Yüklü PROCESS_TEXT çeviri uygulaması yok</string>
     <string name="translation_auto">Çevrilmeyenleri otomatik çevir</string>
-    <string name="translation_all_translated">Her dizenin zaten bir çevirisi var</string>
-    <string name="translation_auto_done">%1$d dize %2$d sn içinde otomatik çevrildi</string>
-    <string name="translation_auto_none">Çeviri uygulaması hiçbir şey döndürmedi</string>
     <string name="translation_language">Dil</string>
     <string name="translation_language_hint">Dil kodu (ör. tr, en)</string>
     <string name="translation_show_untranslated">Yalnızca çevrilmeyenleri göster</string>
@@ -1183,7 +1149,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="tools_hub_disable">Devre dışı bırak</string>
     <string name="tools_hub_trust">Güven</string>
     <string name="tools_hub_tool_packs">Araç paketleri</string>
-    <string name="tools_hub_external_plugins_n">Harici eklentiler (%1$d)</string>
     <string name="tools_hub_remove_msg">Bu paket ve %1$d aracı kaldırılsın mı?</string>
     <string name="tools_hub_remove">Kaldır</string>
     <string name="tools_hub_update">Güncelle</string>
@@ -1194,8 +1159,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="tools_hub_installed_toast">%1$s yüklendi</string>
     <string name="tools_hub_certificate">Sertifika (SHA-256):</string>
     <string name="tools_hub_cert_unavailable">(kullanılamıyor)</string>
-    <string name="tools_hub_pack_title">%1$s (%2$d)  v%3$s</string>
-    <string name="tools_hub_summary">%1$d dahil · %3$d/%4$d paketten %2$d araç</string>
     <string name="tool_default_title">Araç</string>
     <string name="tool_no_view">Araç açıldı ancak bir görünüm döndürmedi.</string>
     <string name="tool_missing">Yüklü paket “%1$s” aracını sağlamıyor.</string>
@@ -1269,7 +1232,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="shared_entry_single_file">Hex düzenleme için tek bir dosya gerekir.</string>
     <string name="shared_entry_not_archive">Bir arşiv değil (zip, 7z, rar, tar…).</string>
     <string name="shared_entry_single_archive">Arşiv görüntüleyici için tek bir arşiv gerekir.</string>
-    <string name="shared_entry_staging">Geçici bir kopya hazırlanıyor…</string>
     <string name="shared_entry_stage_failed">Bu dosyanın geçici bir kopyası hazırlanamadı.</string>
     <string name="color_stop">Durdur</string>
     <string name="color_start">Başlat</string>
@@ -1622,7 +1584,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="updated_i_of_i">%1$d / %2$d güncellendi</string>
     <string name="saved_i_of_i_to_x">%1$d / %2$d şuraya kaydedildi: %3$s</string>
     <string name="downloading_x">%1$s indiriliyor</string>
-    <string name="read_write_exec">"        Oku     Yaz     Çalıştır"</string>
     <string name="save_to_folder">Klasöre kaydet</string>
     <string name="shizuku_needed">Bu klasör için Shizuku gerekir. Devam etmek için Shizuku\'yu yükleyin ve erişim izni verin.</string>
     <string name="shizuku_install">Shizuku\'yu Yükle</string>
@@ -1764,7 +1725,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="reading_with_elevated_access">Yükseltilmiş erişimle okunuyor…</string>
     <string name="cannot_open_permission_denied">Açılamıyor: izin reddedildi</string>
     <string name="opened_with_root">Root ile açıldı</string>
-    <string name="sign">İmzala</string>
     <string name="antisplit_merge_to_apk">Bölümleri APK olarak birleştir</string>
     <string name="arsc_editor_plus">ARSC Düzenleyici Plus</string>
     <string name="failed_to_renamex">%1$s yeniden adlandırılamadı</string>
@@ -1825,10 +1785,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="decrease_indent">Girintiyi azalt</string>
     <string name="no_matches_found">Eşleşme bulunamadı</string>
     <string name="symbol_replaced_matches">%1$d eşleşme değiştirildi</string>
-    <string name="folder_size_mode">Klasörlerde boyutu göster</string>
-    <string name="folder_size_always">Her zaman</string>
-    <string name="folder_size_archive">Yalnızca arşivde</string>
-    <string name="folder_size_never">Hiçbir zaman</string>
     <string name="reload_file">Dosyayı yeniden yükle</string>
     <string name="save_as_axml">AXML olarak kaydet (derlenmiş)</string>
     <string name="save_as_plain_xml">Düz XML olarak kaydet</string>
@@ -1837,7 +1793,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="save_axml">AXML olarak kaydet</string>
     <string name="save_plain">Düz metin olarak kaydet</string>
     <string name="sh_select_action">Gerçekleştirilecek bir işlem seçin</string>
-    <string name="sh_edit">Düzenle</string>
     <string name="sh_execute">Çalıştır</string>
     <string name="sh_run_as_root">Root olarak çalıştır</string>
     <string name="sh_root_unavailable">Root modu etkin değil</string>
@@ -1975,7 +1930,6 @@ Dizeler yapılandırdığınız harici hizmete gönderilir.</string>
     <string name="days_x">%1$d gün</string>
     <string name="forever">Sonsuza dek</string>
     <string name="details">Ayrıntılar</string>
-    <string name="delete_failed_x">%1$d öğe silinemedi</string>
     <string name="save_denied_title">Orijinal konuma kaydedilemiyor</string>
     <string name="save_read_only_reason">Dosya yalnızca okuma erişimi veren başka bir uygulamadan açıldı, bu nedenle Android tarafından orijinaline geri yazmaya izin verilmiyor.</string>
     <string name="save_denied_reason">Depolama konumu yazma erişimini reddetti. Android 10 ve üzeri sürümlerde çıkarılabilir SD kartlar yalnızca SAF, root veya Shizuku üzerinden yazmayı kabul eder.</string>
@@ -2016,22 +1970,12 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="overview">Genel Bakış</string>
     <string name="overview_subtitle">Kaynak başına girdiler. Açmak için birine dokunun.</string>
     <string name="add_setting">Yeni Ayar</string>
-    <string name="edit_setting">Ayarı Düzenle</string>
-    <string name="delete_setting">Ayarı Sil</string>
-    <string name="setting_key">Anahtar</string>
-    <string name="setting_value">Değer</string>
-    <string name="setting_table">Tablo / Ad Alanı</string>
-    <string name="confirm_delete_setting">\"%1$s\" öğesini silmek istediğinizden emin misiniz?</string>
-    <string name="setting_saved">Ayar başarıyla kaydedildi</string>
-    <string name="setting_deleted">Ayar silindi</string>
     <string name="saved_to_x">Kopya şuraya kaydedildi: %1$s</string>
     <string name="saved_elevated">Yükseltilmiş erişim kullanılarak kaydedildi</string>
     <string name="save_elevated">Yükseltilmiş erişimle kaydet</string>
-    <string name="restored_renamed_toast">Bu konumda aynı ada sahip bir öğe zaten bulunduğundan geri yüklenen öğe %1$s olarak yeniden adlandırıldı.</string>
     <string name="recycle_bin_reason_overwrite">Üzerine yazıldı</string>
     <string name="recycle_bin_reason_delete">Silindi</string>
     <string name="recycle_bin_options">Geri dönüşüm kutusu seçenekleri</string>
-    <string name="enable_recycle_bin">Geri dönüşüm kutusunu etkinleştir</string>
     <string name="sort_by_deletion_time">Silinme zamanı</string>
     <string name="sort_by_modified_time">Son değiştirilme zamanı</string>
     <string name="sort_by_name">Dosya adı</string>
@@ -2099,7 +2043,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="libpatcher_type_float_zero">Float → 0.0</string>
     <string name="libpatcher_type_double_zero">Double → 0.0</string>
     <string name="libpatcher_type_void_nop">Void → NOP</string>
-    <string name="libpatcher_unsupported">Desteklenmeyen mimari (%1$s)</string>
     <string name="libpatcher_no_libs">Bu APK\'da yamalanacak yerel kitaplık yok</string>
     <string name="libpatcher_no_offsets">En az bir konum girin</string>
     <string name="libpatcher_invalid_offsets">Geçersiz konum biçimi. 0x100,0x200 gibi hex değerleri kullanın</string>
@@ -2115,35 +2058,14 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="docs_empty">Henüz konum yok. Konum ekle\'ye dokunun ve sistem seçicisinden bir sağlayıcı seçin — verilerini koruyan sağlayıcılar için tek giriş yolu bu izindir.</string>
     <string name="docs_error">Bu konum açılamadı</string>
     <string name="docs_no_picker">Bu cihazda sistem dosya seçicisi yok</string>
-    <string name="docs_no_viewer">Bu dosyayı açabilecek uygulama yok</string>
     <string name="docs_forget">Bu konumu kaldır</string>
-    <string name="docs_open">Aç</string>
-    <string name="docs_copy_out">Klasöre kopyala…</string>
-    <string name="docs_copy_in">Dosyayı içeri kopyala…</string>
     <string name="docs_copy_in_hint">Önce diğer bölmede bir klasör açın, ardından bu konuma bir dosya kopyalayın.</string>
-    <string name="docs_copy_in_dir">Şimdilik yalnızca tek dosyalar içeri kopyalanabilir</string>
-    <string name="docs_copied_in">%1$s buraya kopyalandı</string>
-    <string name="docs_new_folder">Yeni klasör</string>
-    <string name="docs_rename_failed">Yeniden adlandırma başarısız — sağlayıcı reddetti</string>
-    <string name="docs_delete_failed">Silme başarısız — sağlayıcı reddetti</string>
-    <string name="docs_create_failed">Oluşturulamadı — sağlayıcı reddetti</string>
-    <string name="docs_prop_type">Tür: %1$s</string>
-    <string name="docs_prop_folder">Klasör</string>
-    <string name="docs_prop_size">Boyut: %1$s</string>
-    <string name="docs_prop_modified">Değiştirilme: %1$s</string>
-    <string name="docs_prop_id">Belge kimliği: %1$s</string>
-    <string name="docs_copy_failed">Kopyalama başarısız: %1$s</string>
     <string name="saf_transfer_unsupported">Bu öğe türü henüz bir sağlayıcı konumuna aktarılamıyor</string>
     <string name="reading_from_provider">Sağlayıcıdan okunuyor…</string>
     <string name="opened_from_provider">Sağlayıcıdan açıldı — düzenlemeler oraya geri kaydedilir</string>
     <string name="pin_to_sidebar">Kenar çubuğuna sabitle</string>
     <string name="unpin_from_sidebar">Kenar çubuğundan sabitlemeyi kaldır</string>
     <string name="connecting_to">%1$s konumuna bağlanılıyor…</string>
-    <string name="saf_new_file">Yeni dosya</string>
-    <string name="saf_same_location">Her iki bölme de aynı konumda</string>
-    <string name="saf_op_failed">İşlem başarısız: %1$s</string>
-    <string name="saf_done">Bitti</string>
-    <string name="docs_copied">Şuraya kopyalandı: %1$s</string>
     <string name="npatch_profile_save">Geçerli ayarları profil olarak kaydet</string>
     <string name="npatch_profile_name">Profil adı</string>
     <string name="npatch_profile_loaded">Profil yüklendi: %1$s</string>
@@ -2168,8 +2090,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="npatch_done_title">Yamalama tamamlandı</string>
     <string name="npatch_done">Yamalandı: %1$s</string>
     <string name="npatch_install_prompt">%1$s oluşturuldu. Modüller gömüldü — uygulama bağımsız olarak çalışır. Yüklensin mi?</string>
-    <string name="xposed_patcher_lite_title">İmza öldürücü ve Xposed</string>
-    <string name="xposed_patcher_lite_message">Xposed yama motoru (LSPatch) hafif sürümde bulunmamaktadır. APK\'ları gömülü modüllerle yamalamak için MP Manager\'ın tam sürümünü yükleyin.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">KOPYALA</string>
@@ -2177,9 +2097,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="op_deleting">SİL</string>
     <string name="op_extracting">ÇIKAR</string>
     <string name="op_compressing">SIKIŞTIR</string>
-    <string name="op_adding">EKLE</string>
-    <string name="op_signing">İMZALA</string>
-    <string name="op_processing">ÇALIŞIYOR</string>
 
     <!-- Progress dialog: path labels -->
     <string name="progress_from">Kaynak</string>
@@ -2194,23 +2111,16 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="progress_speed_bytes">%1$s/sn</string>
     <string name="progress_speed_items">%1$d/sn</string>
     <string name="progress_eta">%1$s kaldı</string>
-    <string name="progress_done">Bitti</string>
     <string name="reorder_bookmarks">Yer imlerini yeniden sırala</string>
     <string name="progress_pause">Duraklat</string>
-    <string name="progress_stop">Duraklat</string>
     <string name="resume">Sürdür</string>
     <string name="cancel">İptal</string>
     <!-- Progress dialog: pause / cancel controls -->
     <string name="progress_paused">Duraklatıldı</string>
     <string name="progress_cancelling">İptal ediliyor…</string>
-    <string name="progress_cancelled">İşlem iptal edildi</string>
     <string name="progress_cancel_confirm">Bu işlem iptal edilsin mi?</string>
     <string name="progress_cancel_confirm_msg">İşlem en kısa sürede durdurulacaktır. Halihazırda kopyalanmış veya silinmiş dosyalar geri alınmayacaktır.</string>
     <string name="progress_keep_waiting">Beklemeye devam et</string>
-    <string name="display_details">Uygulama ayrıntılarını görüntüle</string>
-    <string name="display_actions">Uygulama işlemlerini görüntüle</string>
-    <string name="more_functions">Daha fazla işlev</string>
-    <string name="open_in_play_store_action">Play Store\'da aç</string>
     <string name="edit_app_details">Uygulama ayrıntılarını düzenle</string>
     <string name="special_permissions">Özel İzinler</string>
     <string name="mime">MIME</string>
@@ -2251,7 +2161,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="menu_refresh">Yenile</string>
     <string name="customize_right_menu">Sağ menü sırası</string>
     <string name="customize_right_menu_hint">Öğeleri herhangi bir yere sürüklemek için uzun basın</string>
-    <string name="reset_signature_key">Varsayılan anahtara sıfırla</string>
     <string name="signature_key_reset">İmza anahtarı varsayılana sıfırlandı</string>
     <string name="backup_restore_settings">Yedekle ve Geri Yükle</string>
     <string name="export_settings">Ayarları dışa aktar</string>
@@ -2262,9 +2171,7 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="import_settings_failed">Ayarlar içe aktarılamadı</string>
     <string name="remember_password">Parolayı hatırla</string>
     <string name="confirm_move_f">%1$s öğesini taşımak istediğinizden emin misiniz?</string>
-    <string name="img_unsaved_msg">Kapatmadan önce değişiklikler kaydedilsin mi? Kaydedilmemiş düzenlemeler atılır.</string>
     <string name="owner_updated">Sahip güncellendi</string>
-    <string name="format_label">Biçim</string>
     <string name="add_colon">İki nokta üst üste ekle</string>
     <string name="upper_case">Büyük harf</string>
     <string name="hash_label">KARMA</string>
@@ -2274,7 +2181,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="collage_saved">Görsel kolajı şuraya kaydedildi: %1$s</string>
     <string name="apply_crop">Kırpmayı Uygula</string>
     <string name="crop_canvas">Tuvali Kırp</string>
-    <string name="trim_blank_canvas">Beyaz Kenarlıkları Otomatik Kırp</string>
 
     <!-- Split & Merge Archive / File Tools -->
     <string name="split_file">Böl</string>
@@ -2282,8 +2188,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="split_dialog_title">Dosyayı böl</string>
     <string name="split_by_size">Parça boyutuna göre</string>
     <string name="split_by_count">Parça sayısına göre</string>
-    <string name="split_part_size">Parça boyutu</string>
-    <string name="split_num_parts">Parça sayısı</string>
     <string name="split_naming">Adlandırma biçimi</string>
     <string name="split_naming_standard">Standart (.001, .002…)</string>
     <string name="split_naming_part">Parça biçimi (.part1, .part2…)</string>
@@ -2294,7 +2198,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="merge_success">Başarıyla birleştirildi: %1$s</string>
     <string name="delete_original_after_split">Böldükten sonra orijinal dosyayı sil</string>
     <string name="delete_parts_after_merge">Birleştirdikten sonra bölünmüş parçaları sil</string>
-    <string name="split_open_archive">Arşivi aç</string>
     <string name="split_missing_parts">Bu klasörde bu dosya için başka bölünmüş parça bulunamadı.</string>
     <string name="output_filename">Çıktı dosya adı:</string>
 
@@ -2304,19 +2207,15 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="flutter_engine_version">Motor işleme kimliği: %1$s</string>
     <string name="flutter_dart_version">Dart anlık görüntü karması: %1$s</string>
     <string name="flutter_ssl_unpin">SSL Sabitlemesini Atlat (Evrensel)</string>
-    <string name="flutter_ssl_unpin_desc">BoringSSL içindeki sertifika doğrulamasını atlatmak için libflutter.so dosyasını yamar.</string>
     <string name="flutter_ssl_unpin_success">%1$s için SSL Sabitlemesi atlatıldı</string>
     <string name="flutter_extract_strings">Dart Dizelerini ve Uç Noktalarını Çıkar</string>
     <string name="flutter_extract_assets">Flutter Varlıklarını Çıkar</string>
     <string name="flutter_snapshot_info">Dart Anlık Görüntü Bilgisi</string>
-    <string name="flutter_dump_summary">Flutter Uygulama Özeti</string>
-    <string name="flutter_not_found">Flutter bileşeni bulunamadı</string>
     <string name="flutter_search_hint">Dizelerde / URL\'lerde / uç noktalarda ara…</string>
     <string name="flutter_copied">Panoya kopyalandı</string>
     <string name="flutter_strings_count">%1$d dize bulundu</string>
 
     <!-- Android OTA Payload Dumper & Inspector -->
-    <string name="payload_tools_title">OTA Yük Denetçisi</string>
     <string name="payload_search_hint">Bölümlerde ara (boot, vendor, system…)…</string>
     <string name="payload_partitions_count">%1$d bölüm bulundu (%2$s sıkıştırılmamış)</string>
     <string name="payload_extract_partition">Bölümü çıkar (.img)</string>
@@ -2342,72 +2241,33 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="set_edit_subtitle">Android sistem, genel ve güvenli ayarlarını düzenleyin</string>
     <string name="partition_dumper_title">Bölüm Dökümleyici (Root)</string>
     <string name="partition_info_title">Bölüm Ayrıntıları</string>
-    <string name="partition_batch_dump">Seçileni Dökümle (%d)</string>
-    <string name="partition_select_all">Tümünü Seç</string>
-    <string name="partition_deselect_all">Seçimi Kaldır</string>
     <string name="partition_copy_details">Ayrıntıları Kopyala</string>
     <string name="partition_refresh">Yenile</string>
     <string name="all">Tümü</string>
     <string name="partition_search_hint">Bölümlerde ara (recovery, boot, vendor, system…)…</string>
     <string name="partition_slot_a">Yuva A</string>
     <string name="partition_slot_b">Yuva B</string>
-    <string name="partition_slot_active_tag"> Etkin</string>
-    <string name="partition_dump_btn">Dökümle (.img)</string>
-    <string name="partition_dump_dialog_title">%1$s dökümle</string>
     <string name="partition_dump_dest_label">Hedef dizin:</string>
     <string name="partition_dump_filename_label">Çıktı dosya adı (.img):</string>
     <string name="partition_dumping_progress">%1$s dökümleniyor: %2$s / %3$s (%4$s)</string>
     <string name="title_success">Başarılı</string>
-    <string name="partition_dump_success">Bölüm başarıyla dökümlendi:\n%1$s</string>
-    <string name="partition_open_img">.img olarak aç</string>
-    <string name="partition_show_in_folder">Klasörde göster</string>
     <string name="partition_root_required">Bölüm dökümleme için Root ayrıcalıkları (su) gerekir.</string>
     <string name="partition_count_summary">%1$d bölüm kullanılabilir</string>
-    <string name="partition_diff_banner">Yuva A ve Yuva B arasında farklar algılandı (%1$d bölüm farklı — ayrıntılar için dokunun)</string>
-    <string name="partition_diff_dialog_title">Yuva Farkları (%1$d bölüm)</string>
-    <string name="partition_diff_dialog_msg">Aşağıdaki bölümler Yuva A ve Yuva B arasında farklı içeriklere sahiptir:\n\n%1$s</string>
-    <string name="partition_diff_filter_btn">Yalnızca Farkları Göster</string>
 
     <!-- Partition Action Dialog: Copy vs Flash -->
     <string name="partition_action_dialog_title">Bölüm: %1$s</string>
     <string name="partition_opt_copy">Bölümü Yedekle (Kopyala / Dökümle)</string>
-    <string name="partition_opt_copy_desc">Seçtiğiniz hedefe 1:1 ham kopya (.img) dökümleyin.</string>
     <string name="partition_opt_flash">Bölüme Görüntü Yaz</string>
-    <string name="partition_opt_flash_desc">Akıllı uyumluluk ve güvenlik doğrulamasıyla harici bir .img dosyası yazın.</string>
-    <string name="partition_copy_title">%1$s yedeği</string>
     <string name="partition_copy_btn">Kopyayı Kaydet (.img)</string>
-    <string name="partition_flash_dialog_title">Şuraya yaz: %1$s</string>
     <string name="partition_flash_src_label">Yazılacak görüntü dosyasını seçin (.img):</string>
-    <string name="partition_flash_select_available">Geçerli klasördeki kullanılabilir .img dosyaları:</string>
-    <string name="partition_flash_path_hint">.img yolunu girin veya yapıştırın…</string>
     <string name="partition_flash_btn">Bölüme Yaz</string>
     <string name="partition_flash_confirm_title">Yazmayı Onayla</string>
-    <string name="partition_flash_confirm_msg">Şunu yazmak üzeresiniz:\n%1$s\n\nŞu bölüme:\n%2$s (%3$s)\n\nBu işlem bu bölümdeki mevcut tüm verilerin üzerine yazacaktır. Devam edilsin mi?</string>
-    <string name="partition_flash_success">%1$s bölümü başarıyla yazıldı!</string>
-    <string name="partition_flashing_progress">%1$s yazılıyor: %2$s / %3$s (%4$s)</string>
     <string name="partition_flash_ack_risk">Riskleri anlıyorum ve bu dosyayı yazmanın tüm sorumluluğunu alıyorum.</string>
-    <string name="partition_flash_file_not_found">Seçilen dosya depolamada mevcut değil.</string>
-    <string name="partition_flash_match_ok">Dosya yazılmaya hazır (%1$s)</string>
     <string name="partition_flash_size_exceeded">Dosya boyutu (%1$s) bölüm kapasitesini (%2$s) aşıyor! Bozulmayı önlemek için yazma engellendi.</string>
-    <string name="partition_flash_sparse_warning">Uyarı: Dosya bir Android Seyrek Görüntüsü gibi görünüyor. dd ile doğrudan yazma için sıkıştırılmamış bir Ham Görüntü gerekir.</string>
     <string name="partition_flash_empty_file">Seçilen dosya boş (0 bayt).</string>
-    <string name="partition_browse_file">Gözat…</string>
     <string name="property_image_type">Görüntü Türü</string>
-    <string name="partition_detected_type">Algılanan Tür: %1$s</string>
-    <string name="partition_flash_size_too_small">Uyarı: Dosya boyutu (%1$s) bölüm kapasitesinden (%2$s) daha küçük. Bunun bu bölüm için doğru dosya olduğundan emin misiniz?</string>
-    <string name="partition_flash_force_small_ack">Bu dosyanın bu bölüm için olduğundan eminim ve tüm sorumluluğu alıyorum.</string>
-    <string name="partition_flash_sparse_prompt">Görüntü sıkıştırılmış (Android Seyrek Görüntüsü). Gerçek sıkıştırılmamış boyut: %1$s.\nBir işlem seçin:</string>
     <string name="partition_flash_unsparse_to_file">Ham Görüntüyü Kaydet (.img)</string>
-    <string name="partition_flash_unsparse_and_flash">Genişlet ve Yaz (Ek depolama gerekmez)</string>
-    <string name="partition_unsparse_progress">%1$s genişletiliyor: %2$s (%%%3$d)</string>
     <string name="partition_unsparse_success">Görüntü başarıyla genişletildi:\n%1$s\n(Boyut: %2$s)</string>
-    <string name="partition_flash_exact_match">Dosya boyutu bölüm kapasitesiyle (%1$s) eşleşiyor. Boyut tek başına uyumluluğu garanti etmez.</string>
-    <string name="partition_flash_danger_title">Yazma uyumluluk uyarısı</string>
-    <string name="partition_flash_danger_confirm_msg">Dosya boyutu (%1$s) bölüm kapasitesinden (%2$s) %3$s daha küçük.\n\nDaha küçük bir görüntü geçerli olabilir. Eksiksiz olduğunu ve bu bölüm için amaçlandığını doğrulayın. Uyumsuz bir görüntü cihazın açılmasını engelleyebilir.\n\nBu dosya %4$s (%5$s) üzerine yazılsın mı?</string>
-    <string name="partition_flash_force_btn">Riski bana ait olmak üzere yaz</string>
-    <string name="partition_flash_type_mismatch_banner">Algılanan görüntü türü hedef bölümden farklı.\nAlgılanan tür: %1$s\nHedef: %2$s (%3$s)\n\nUyumsuz bir görüntü cihazın açılmasını engelleyebilir.</string>
-    <string name="partition_flash_type_mismatch_ack">Algılanan görüntü türünün bu bölümden farklı olduğunun farkındayım ancak yine de zorla yazmak istiyorum.</string>
-    <string name="partition_flash_type_mismatch_confirm">Algılanan tür: %1$s\nHedef bölüm: %2$s\n\nUyumsuz bir görüntü cihazın açılmasını engelleyebilir.\n\nBu dosya %3$s (%4$s) üzerine yazılsın mı?</string>
 
     <string name="frida_gadget">Frida Gadget</string>
     <string name="frida_console">Frida Konsolu</string>
@@ -2577,7 +2437,6 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="app_ops_action_clear_data">Verileri temizle</string>
     <string name="app_ops_action_uninstall">Kaldır</string>
     <string name="app_ops_tag_fake_granted">Sahte İzin Verildi (Kısıtlanmış)</string>
-    <string name="app_ops_tag_fake_granted_desc">Sistem iznin verildiğini bildiriyor ancak AppOps erişimi sessizce yoksayıyor/düşürüyor!</string>
     <string name="app_ops_search_hint">Uygulamalarda ara</string>
     <string name="app_ops_no_apps">Uygulama bulunamadı</string>
     <string name="app_ops_requires_elevated">Bu araç yükseltilmiş komutları çalıştırmak için root veya Shizuku gerektirir. Uygulama ayarlarından birini etkinleştirip tekrar deneyin — o zamana kadar aşağıdaki işlemler devre dışıdır.</string>
@@ -2647,4 +2506,63 @@ Saplama uygulaması dökümde bulunan gerçek uygulamayla değiştirilir ve ekle
     <string name="restore_invalid_name">Geri yüklenecek dosya için geçersiz ad</string>
     <string name="show_restore_dialog">.bak dosyaları için geri yükleme iletişim kutusunu göster</string>
     <string name="show_restore_dialog_desc">Etkinleştirildiğinde, bir düzenleyici yedeğine dokunduğunuzda onu geri yüklemek isteyip istemediğiniz sorulur. Kapatırsanız yedek bunun yerine orijinal dosya türüyle açılır. MIUI ve Android yedek arşivleri normal şekilde açılmaya devam eder.</string>
+<string name="sidebar_add_tool">Kenar çubuğuna ekle</string>
+<string name="sidebar_remove_tool">Kenar çubuğundan kaldır</string>
+<string name="sidebar_tool_added">Kenar çubuğuna eklendi</string>
+<string name="sidebar_tool_removed">Kenar çubuğundan kaldırıldı</string>
+<string name="grant_dhizuku">Dhizuku izni ver</string>
+<string name="dhizuku_pending">Dhizuku izni verilmedi</string>
+<string name="dhizuku_granted">Dhizuku izni verildi</string>
+<string name="dhizuku_denied">Dhizuku izni reddedildi</string>
+<string name="trace_to_method">Metoda kadar izle</string>
+<string name="trace_method_callers">Metot çağıranlarını izle</string>
+<string name="decompile_method_java">Metodu Java kaynak koduna dönüştür</string>
+<string name="trace_string_usages">Proje genelinde dize kullanımlarını izle</string>
+<string name="frida_download_failed">İndirme başarısız: %1$s\n\nAna makineye (%2$s) ulaşılabilmelidir — internet bağlantınızı/VPN\'inizi kontrol edin ve tekrar deneyin.</string>
+<string name="privacy_audit_title">Gizlilik ve İhlal Denetimi</string>
+<string name="privacy_sanitize_btn">Temizle ve Yamala</string>
+<string name="privacy_done">APK temizlendi! %1$d gizlilik değişikliği uygulandı.</string>
+<string name="privacy_no_threats">İhlalci gizlilik tehdidi veya izleme çağrısı bulunamadı.</string>
+<string name="privacy_hw_score">Donanım parmak izi: %d/100</string>
+<string name="privacy_track_score">İzleme ve telemetri: %d/100</string>
+<string name="privacy_surv_score">Gözetim ve sorgulamalar: %d/100</string>
+<string name="privacy_log_score">Hata ayıklama günlüğü sızıntıları: %d/100</string>
+<string name="privacy_mode_standard_title">Standart Mod</string>
+<string name="privacy_mode_standard_desc">Genellikle uygulamanın kararlı kalmasını garanti eder, ancak yoğun gizlenmiş veya şifrelenmiş uygulamalarda bazı hedefleri kaçırabilir</string>
+<string name="privacy_mode_aggressive_title">Agresif Mod</string>
+<string name="privacy_mode_aggressive_desc">Genellikle tüm telemetriyi ortadan kaldırır, ancak uygulamanızı da bozabilir. Bunu denediğinizde uygulamanız açılmıyorsa standart modu deneyin</string>
+<string name="extracted_versions">Çıkarılan sürümler</string>
+<string name="protected_app_warning_title">Uyarı: Korumalı uygulama</string>
+<string name="antisplit_protected_warning_msg">Bu uygulama şununla korunuyor: %1$s.\n\nBu uygulamayı bölünmüş paketten (APKS) tek bir APK\'ya dönüştürmek (Antisplit), kurcalamaya karşı koruma ve bütünlük koruması nedeniyle yükleme sonrasında çökmesine ve çalışamamasına yol açabilir.\n\nYine de Antisplit ile devam etmek istiyor musunuz?</string>
+<string name="proceed_anyway">Yine de devam et</string>
+<string name="protected_banner">⚠️ Korumalı: %1$s</string>
+<string name="back_navigates_folders">Geri düğmesi klasörlerde gezinir</string>
+<string name="back_navigates_folders_summary">Klasör geçmişini geriye doğru izlemeden iki kez Geri\'ye basarak çıkmak için kapatın. Ekrandaki gezinme düğmeleri yine de çalışır.</string>
+<string name="compress_path_display">Yol gösterimini sıkıştır</string>
+<string name="compress_path_display_summary">Aşırı uzun yollar, çubuğa sığan kadarını kullanarak baş…/geçerli klasör olarak sıkıştırılır. Kapalıyken kayan yazı gösterimi korunur.</string>
+<string name="show_file_permissions">Paylaşılan depolama dışında tarihler yerine izinleri göster</string>
+<string name="checksum_generate_sfv">.sfv oluştur (CRC32)</string>
+<string name="checksum_generate_md5">.md5 oluştur</string>
+<string name="checksum_generating">%1$s oluşturuluyor…</string>
+<string name="checksum_generated">Sağlama toplamı dosyası oluşturuldu: %1$s</string>
+<string name="checksum_overwrite_confirm">%1$s zaten var. Üzerine yazılsın mı?</string>
+<string name="checksum_overwrite">Üzerine yaz</string>
+<string name="checksum_same_folder_required">Sağlama toplamı dosyası oluşturmak için seçilen dosyalar aynı klasörde olmalıdır</string>
+<string name="checksum_verify_summary">%1$d geçerli, %2$d değişmiş, %3$d diğer</string>
+<string name="checksum_verify_missing">Eksik dosya</string>
+<string name="checksum_error_invalid_path">Geçersiz girdi yolu</string>
+<string name="checksum_unsupported_filename">Bu dosya adı seçilen sağlama toplamı biçiminde gösterilemiyor: %1$s</string>
+<string name="compare_text_show">Göster</string>
+<string name="compare_text_filter_all">Tüm içerik</string>
+<string name="compare_text_filter_differences">Yalnızca farklar</string>
+<string name="compare_text_filter_same">Yalnızca eşleşmeler</string>
+<string name="compare_text_export_diff">.diff olarak dışa aktar</string>
+<string name="compare_text_no_differences">Fark bulunamadı</string>
+<string name="compare_text_filter_empty">Geçerli filtreyle eşleşen satır yok</string>
+<string name="installed_themes">Yüklü temalar</string>
+<string name="installed_theme_current">Yüklü tema: %1$s</string>
+<string name="installed_themes_empty">Burada görmek için uyumlu bir tema APK\'sı yükleyin.</string>
+<string name="installed_theme_import_failed">Bu tema içe aktarılamadı. Geçerli temanız değişmedi.</string>
+<string name="installed_theme_selected">%1$s (seçili)</string>
+<string name="installed_theme_description">%1$s — %2$s</string>
 </resources>

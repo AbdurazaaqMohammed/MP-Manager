@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">เครื่องมือ %1$d รายการ · ติดตั้งแพ็กเกจแล้ว %2$d รายการ</string>
     <string name="tools_hub_no_results">ไม่พบเครื่องมือที่ตรงกับการค้นหา</string>
     <string name="tools_hub_download_badge">ดาวน์โหลด</string>
-    <string name="tools_hub_ready_badge">พร้อม</string>
     <string name="tools_hub_pack_metadata">เครื่องมือ %1$d รายการ · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">ติดตั้งแล้ว</string>
     <string name="tools_hub_pack_available">ดาวน์โหลดเพิ่มเติม</string>

@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d tools · %2$d packs installed</string>
     <string name="tools_hub_no_results">No tools match your search</string>
     <string name="tools_hub_download_badge">Download</string>
-    <string name="tools_hub_ready_badge">Ready</string>
     <string name="tools_hub_pack_metadata">%1$d tools · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">Installed</string>
     <string name="tools_hub_pack_available">Optional download</string>

@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d أداة · %2$d حزمة مثبتة</string>
     <string name="tools_hub_no_results">لا توجد أدوات تطابق بحثك</string>
     <string name="tools_hub_download_badge">تنزيل</string>
-    <string name="tools_hub_ready_badge">جاهزة</string>
     <string name="tools_hub_pack_metadata">%1$d أداة · الإصدار %2$s · %3$s</string>
     <string name="tools_hub_pack_installed">مثبتة</string>
     <string name="tools_hub_pack_available">تنزيل اختياري</string>

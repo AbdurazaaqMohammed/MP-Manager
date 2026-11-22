@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Kết nối mạng</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Khám phá máy chủ</string>
+<string name="network_scan_smb">Quét lại</string>
+<string name="network_discovery_help">Tự động tìm máy chủ cục bộ bằng thông báo dịch vụ, cơ chế khám phá của Windows và quét SMB2/3 có giới hạn. Không thử đăng nhập hay mật khẩu nào. Chọn một máy chủ, sau đó nhập share hoặc collection cùng thông tin đăng nhập của nó.</string>
+<string name="network_discovery_unavailable">Khám phá dịch vụ không khả dụng. Bạn vẫn có thể quét SMB hoặc nhập máy chủ thủ công.</string>
+<string name="network_discovery_no_lan">Không có subnet IPv4 qua Wi-Fi/Ethernet được hỗ trợ. Các dịch vụ được quảng bá vẫn có thể xuất hiện; nếu không, hãy nhập máy chủ thủ công.</string>
+<string name="network_discovery_scanning">Đang quét các địa chỉ lân cận để tìm SMB2/3 (tối đa 20 giây)…</string>
+<string name="network_discovery_finished">Đã hoàn tất quét SMB. Chọn một kết quả hoặc nhập máy chủ thủ công. Máy chủ WebDAV chỉ xuất hiện khi chúng quảng bá dịch vụ của mình.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Tên kết nối (không bắt buộc)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Tên người dùng (để trống nếu ẩn danh)</string>
+<string name="network_password">Mật khẩu</string>
+<string name="network_domain">Miền / workgroup (không bắt buộc)</string>
+<string name="network_remember">Lưu kết nối (mã hóa trên thiết bị này)</string>
+<string name="network_saved_connections">Kết nối đã lưu</string>
+<string name="network_webdav_help">Dùng URL collection WebDAV đầy đủ. Nên dùng HTTPS; HTTP gửi thông tin đăng nhập mà không mã hóa. Tệp được mở dưới dạng bản sao cục bộ. Để lưu các chỉnh sửa lên máy chủ, hãy sao chép chúng trở lại một cách rõ ràng.</string>
+<string name="network_smb_help">Kết nối tới share SMB2/3, ví dụ smb://192.168.1.10/Documents. Có thể thêm cổng tùy chỉnh sau tên máy chủ. Không hỗ trợ SMB1.</string>
+<string name="network_transfer_safety">Các tệp hiện có không bị ghi đè. Thao tác di chuyển chỉ xóa nguồn sau khi truyền thành công. Việc hủy hoặc thất bại có thể để lại đích chưa hoàn chỉnh.</string>
+<string name="network_recursive_delete">Xóa một thư mục cũng sẽ xóa mọi thứ bên trong nó trên máy chủ.</string>
+<string name="network_downloading">Đang tải xuống bản sao cục bộ</string>
+<string name="network_browse_hint">Dùng danh sách thư mục để điều hướng kết nối này. Các kết nối đã lưu có thể truy cập từ mục trên thanh bên.</string>
+<string name="network_permission_denied">Cần quyền Thiết bị lân cận cho máy chủ cục bộ trên Android 17+. Hãy cấp quyền trong cài đặt ứng dụng rồi kết nối lại.</string>
+<string name="network_extract_first">Giải nén các mục trong kho lưu trữ vào thư mục cục bộ trước khi sao chép hoặc di chuyển chúng tới kết nối mạng.</string>
+<string name="network_new_connection">Kết nối mới</string>
+<string name="network_remember_ftp">Lưu kết nối FTP</string>
+<string name="network_ftp_help">Kết nối tới máy chủ FTP hoặc FTPS. Các hồ sơ FTP đã lưu vẫn khả dụng tại đây. Tệp được mở dưới dạng bản sao cục bộ; hãy sao chép các chỉnh sửa trở lại một cách rõ ràng.</string>
+<string name="network_connection_saved">Đã lưu kết nối</string>
+<string name="network_delete_connection">Xóa kết nối đã lưu</string>
+<string name="network_delete_connection_confirm">Xóa “%1$s” và bỏ ghim khỏi thanh bên? Tệp trên máy chủ không bị ảnh hưởng.</string>
+<string name="network_saved_connection_missing">Không tìm thấy kết nối đã lưu. Hãy thêm lại trong Kết nối mạng.</string>
+<string name="network_invalid_port">Nhập cổng từ 1 đến 65535</string>
+<string name="network_invalid_host">Nhập tên máy chủ hoặc địa chỉ IP, không chứa đường dẫn URL</string>
+<string name="network_storage_unavailable">%1$s · Máy chủ không báo dung lượng lưu trữ</string>
+<string name="network_storage_free">Còn trống %1$s · Tổng dung lượng không khả dụng</string>
+<string name="network_ftp_create_unsupported">Không hỗ trợ tạo mục mới trong khung FTP tại đây.</string>
+</resources>

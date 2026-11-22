@@ -5,7 +5,6 @@
     <string name="ocr_runtime_description">Download the open-source OCR Pack once. The main app contains no OCR engine or model weights.</string>
     <string name="ocr_download_runtime">Download OCR Pack</string>
     <string name="ocr_runtime_unpublished">The OCR Pack is not published in this catalog yet. Refresh the packs catalog or install the signed pack APK from Tools Hub.</string>
-    <string name="ocr_runtime_loading">Loading OCR Pack…</string>
     <string name="ocr_android_required">On-device OCR requires Android 7 or newer.</string>
     <string name="ocr_language">Recognition language</string>
     <string name="ocr_language_english">English</string>
@@ -42,7 +41,6 @@
     <string name="ocr_capture_cancelled">Screen capture was not allowed</string>
     <string name="ocr_capture_failed">Could not capture this screen. Try again or import a screenshot.</string>
     <string name="ocr_capture_start_failed">Could not start capture: %1$s</string>
-    <string name="ocr_capture_stopped">Screen capture stopped</string>
     <string name="ocr_select_region">Drag over text, or read the full image</string>
     <string name="ocr_recognize">Read text</string>
     <string name="ocr_full_image">Full image</string>
@@ -61,7 +59,6 @@
     <string name="ocr_engine_error">Text recognition failed: %1$s</string>
     <string name="ocr_licenses">Open-source licenses</string>
     <string name="ocr_licenses_description">PaddleOCR mobile models (Baidu / PaddlePaddle Authors), distributed by RapidOCR: Apache License 2.0. ONNX Runtime (Microsoft and contributors): MIT License. Models are pinned to the RapidOCR v3.10.0 model registry. Recognition uses no cloud service.</string>
-    <string name="ocr_retry">Try again</string>
     <string name="ocr_open_link">Open %1$s</string>
     <string name="ocr_send_email">Email %1$s</string>
     <string name="ocr_dial_number">Dial %1$s</string>

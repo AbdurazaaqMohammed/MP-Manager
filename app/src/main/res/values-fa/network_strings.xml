@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">اتصال‌های شبکه</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">کشف سرورها</string>
+<string name="network_scan_smb">جستجوی دوباره</string>
+<string name="network_discovery_help">جستجوی خودکار سرورهای محلی با آگهی‌های سرویس، مکانیسم کشف ویندوز و یک جستجوی محدود SMB2/3 انجام می‌شود. هیچ ورود یا رمز عبوری امتحان نمی‌شود. یک سرور انتخاب کنید، سپس اشتراک یا مجموعه و اطلاعات ورود آن را وارد کنید.</string>
+<string name="network_discovery_unavailable">کشف سرویس در دسترس نیست. همچنان می‌توانید SMB را جستجو کنید یا سرور را دستی وارد کنید.</string>
+<string name="network_discovery_no_lan">هیچ زیرشبکه IPv4 سازگار Wi-Fi/اترنت یافت نشد. ممکن است سرویس‌های آگهی‌شده همچنان ظاهر شوند؛ در غیر این صورت سرور را دستی وارد کنید.</string>
+<string name="network_discovery_scanning">در حال جستجوی نشانی‌های نزدیک برای SMB2/3 (حداکثر ۲۰ ثانیه)…</string>
+<string name="network_discovery_finished">جستجوی SMB تمام شد. یک نتیجه انتخاب کنید یا سرور را دستی وارد کنید. سرورهای WebDAV فقط وقتی سرویس خود را آگهی کنند ظاهر می‌شوند.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">نام اتصال (اختیاری)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">نام کاربری (برای ورود ناشناس خالی بگذارید)</string>
+<string name="network_password">رمز عبور</string>
+<string name="network_domain">دامنه / گروه کاری (اختیاری)</string>
+<string name="network_remember">ذخیره اتصال (روی این دستگاه رمزنگاری می‌شود)</string>
+<string name="network_saved_connections">اتصال‌های ذخیره‌شده</string>
+<string name="network_webdav_help">نشانی کامل مجموعه WebDAV را وارد کنید. HTTPS توصیه می‌شود؛ HTTP اطلاعات ورود را بدون رمزنگاری می‌فرستد. پرونده‌ها به‌صورت نسخه محلی باز می‌شوند. برای ذخیره ویرایش‌ها روی سرور، صریحاً آن‌ها را به سرور رونوشت کنید.</string>
+<string name="network_smb_help">به یک اشتراک SMB2/3 متصل شوید، برای مثال smb://192.168.1.10/Documents. می‌توانید درگاه سفارشی را پس از میزبان اضافه کنید. SMB1 پشتیبانی نمی‌شود.</string>
+<string name="network_transfer_safety">پرونده‌های موجود بازنویسی نمی‌شوند. عملیات انتقال، منبع را تنها پس از انتقال موفق حذف می‌کند. لغو یا شکست ممکن است مقصدی ناقص باقی بگذارد.</string>
+<string name="network_recursive_delete">حذف یک پوشه، همه محتویات درون آن را نیز روی سرور حذف می‌کند.</string>
+<string name="network_downloading">در حال بارگیری نسخه محلی</string>
+<string name="network_browse_hint">برای پیمایش این اتصال از فهرست پوشه‌ها استفاده کنید. اتصال‌های ذخیره‌شده از مدخل نوار کناری آن در دسترس هستند.</string>
+<string name="network_permission_denied">برای سرورهای محلی در اندروید ۱۷+، مجوز «دستگاه‌های نزدیک» لازم است. آن را در تنظیمات برنامه اجازه دهید و دوباره متصل شوید.</string>
+<string name="network_extract_first">پیش از رونوشت یا انتقال مدخل‌های بایگانی به یک اتصال شبکه، آن‌ها را در یک پوشه محلی استخراج کنید.</string>
+<string name="network_new_connection">اتصال جدید</string>
+<string name="network_remember_ftp">ذخیره اتصال FTP</string>
+<string name="network_ftp_help">به یک سرور FTP یا FTPS متصل شوید. نمایه‌های FTP ذخیره‌شده همچنان اینجا در دسترس هستند. پرونده‌ها به‌صورت نسخه محلی باز می‌شوند؛ ویرایش‌ها را صریحاً به سرور رونوشت کنید.</string>
+<string name="network_connection_saved">اتصال ذخیره شد</string>
+<string name="network_delete_connection">حذف اتصال ذخیره‌شده</string>
+<string name="network_delete_connection_confirm">«%1$s» حذف و سنجاق نوار کناری آن برداشته شود؟ پرونده‌های سرور تحت تأثیر قرار نمی‌گیرند.</string>
+<string name="network_saved_connection_missing">اتصال ذخیره‌شده یافت نشد. آن را در اتصال‌های شبکه دوباره اضافه کنید.</string>
+<string name="network_invalid_port">درگاهی از ۱ تا ۶۵۵۳۵ وارد کنید</string>
+<string name="network_invalid_host">نام میزبان سرور یا نشانی IP را بدون مسیر URL وارد کنید</string>
+<string name="network_storage_unavailable">%1$s · سرور فضای ذخیره‌سازی را گزارش نمی‌کند</string>
+<string name="network_storage_free">%1$s آزاد · کل فضا در دسترس نیست</string>
+<string name="network_ftp_create_unsupported">ساخت مدخل در پنجره‌های FTP اینجا پشتیبانی نمی‌شود.</string>
+</resources>

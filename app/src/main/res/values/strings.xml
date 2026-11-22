@@ -2,6 +2,8 @@
     <string name="app_name" translatable="false">MP Manager</string>
     <string name="success_saved">File saved successfully to %s</string>
     <string name="enable_logs" >Save logs</string>
+    <string name="xposed_patcher_lite_title">LSPatch</string>
+    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
     <string name="sign_apk_after_merge">Sign the APK after merging</string>
     <string name="signing">Signing %1$s</string>
     <string name="saving">Saving…</string>
@@ -35,7 +37,6 @@
     <string name="user_apps">User apps</string>
     <string name="system_apps">System apps</string>
     <string name="share_apk">Share APK</string>
-    <string name="display_functions">Display functions</string>
     <string name="confirm">Confirm</string>
     <string name="theme">Theme</string>
     <string name="black_theme">Black theme</string>
@@ -134,7 +135,6 @@
     <string name="pkgName">Package name</string>
     <string name="opt">Optimize APK</string>
     <string name="delete_useless_files">Delete useless files</string>
-    <string name="ultra_compress">Ultra Compress</string>
     <string name="deep_optimize_safe_mode">Safe mode (when the app resolves resources by name, keep entries matching any string)</string>
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
@@ -157,7 +157,6 @@
     <string name="customize">Customize</string>
     <string name="delete">Delete</string>
     <string name="exit">Exit</string>
-    <string name="exit_confirm_message">Exit MP Manager and stop everything it is running? All active work will be terminated.</string>
     <string name="compile">Compile</string>
     <string name="preferences">Preferences</string>
     <string name="compilation_options">Compilation options</string>
@@ -178,7 +177,6 @@
     <string name="error_x">Error: %1$s</string>
     <string name="ip">IP: %1$s</string>
     <string name="copied">Copied</string>
-    <string name="ftp">ftp:/%1$s</string>
     <string name="usedpt">%1$d%%</string>
     <string name="used">Used: %1$s Free: %2$s</string>
     <string name="signed_by">Signed By</string>
@@ -204,8 +202,6 @@
     <string name="enter_path">Enter path</string>
     <string name="path">Path</string>
     <string name="start">Start</string>
-    <string name="end">End</string>
-    <string name="length">Length</string>
     <string name="only_for_this_folder">Only for this folder</string>
     <string name="ftp_server_started">FTP Server started on port %1$d</string>
     <string name="failed_to_start_ftp_server">Failed to start FTP server: %1$s</string>
@@ -242,8 +238,6 @@
     <string name="archive_viewer">Archive viewer</string>
     <string name="image_viewer">Image viewer</string>
     <string name="hex_editor">Hex editor</string>
-    <string name="file_too_large">File too large</string>
-    <string name="file_too_large_open_hex">This file is about %1$d MB, too big to open as text without running out of memory. Open it in the hex editor instead?</string>
     <string name="out_of_memory_operation">Not enough free memory for this operation. Try a smaller file, or close other apps and retry.</string>
     <string name="media_player">Media player</string>
     <string name="apk_info">APK info</string>
@@ -261,7 +255,6 @@
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>
-    <string name="elf_extract_strings">Decompile &amp; Extract Readable Code</string>
     <string name="saved">Saved</string>
     <string name="goto_offset">Go to offset</string>
     <string name="revert_changes">Revert changes</string>
@@ -291,8 +284,6 @@
     <string name="modified">Modified</string>
     <string name="mtime_edit_title">Edit last modified</string>
     <string name="mtime_option_picker">Date &amp; time picker</string>
-    <string name="mtime_option_millis">Epoch milliseconds</string>
-    <string name="mtime_option_now">Now</string>
     <string name="mtime_updated">Last modified updated</string>
     <string name="mtime_failed">Failed to update last modified</string>
     <string name="items">%1$d items</string>
@@ -311,10 +302,6 @@
     <string name="not_installed">Not installed</string>
     <string name="downgrade">Downgrade</string>
     <string name="upgrade">Upgrade</string>
-    <string name="same_version">Same version</string>
-    <string name="version_comparison">Version comparison</string>
-    <string name="installed_app">Installed app</string>
-    <string name="new_apk">New APK</string>
     <string name="permissions">Permissions</string>
     <string name="quick_edit">Quick edit</string>
     <string name="compare_apks">Compare APKs</string>
@@ -328,7 +315,6 @@
     <string name="signature_file">File</string>
     <string name="signature_scheme">Scheme</string>
     <string name="signature_status">Status</string>
-    <string name="signature_signer">Signer</string>
     <string name="sig_status_verified">Verified</string>
     <string name="sig_status_failed">Verification failed</string>
     <string name="sig_status_none">Not signed</string>
@@ -374,7 +360,6 @@
     <string name="renamed_successfully">Renamed successfully</string>
     <string name="deleted_successfully">Deleted successfully</string>
     <string name="delete_failed">Delete failed: %1$s</string>
-    <string name="download_failed">Download failed: %1$s</string>
     <string name="uploading">Uploading %1$s</string>
     <string name="renaming">Renaming…</string>
     <string name="rename_preview">Rename preview</string>
@@ -385,7 +370,6 @@
     <string name="set_uid">Set UID</string>
     <string name="set_gid">Set GID</string>
     <string name="sticky">Sticky</string>
-    <string name="numeric">"Numeric: "</string>
     <string name="owner">Owner</string>
     <string name="group">Group</string>
     <string name="other">Other</string>
@@ -402,11 +386,7 @@
     <string name="extract_libs">Extract libs</string>
     <string name="extract_base">Extract base.apk files</string>
     <string name="extract_ic">Extract app icon</string>
-    <string name="root_permissions">Root Permissions</string>
     <string name="permissions_updated">Permissions updated</string>
-    <string name="permissions_unavailable">Could not read the current permissions</string>
-    <string name="checksum_reading_elevated">Reading with elevated access…</string>
-    <string name="checksum_unavailable">Checksum unavailable: %1$s</string>
     <string name="invert_selection">Invert Selection</string>
     <string name="playback_error">Playback error</string>
     <string name="buffering">Buffering: %1$d\%</string>
@@ -440,7 +420,6 @@
     <string name="done">Done</string>
     <string name="unhidden">Unhidden %1$s</string>
     <string name="ftp_server">FTP Server</string>
-    <string name="ftp_client">FTP Client</string>
     <string name="connect">Connect</string>
     <string name="warning_dangerous_directory">Warning: Dangerous Directory</string>
     <string name="warn_delete_s">You are about to delete files in a sensitive system directory. This may break apps or cause system instability.\n\nAre you absolutely sure?</string>
@@ -797,8 +776,6 @@ Layout Inspector
     <string name="choose_signature_key">Choose signature key</string>
     <string name="select_signature_file">Select signature file</string>
     <string name="pick_file">Pick file</string>
-    <string name="extract_split_apks">Extract split APK files</string>
-    <string name="show_launch_activities">Show Launch Activities</string>
     <string name="advanced_options">Advanced Options</string>
     <string name="menu_items">Menu items</string>
     <string name="option_icon_cd">Option Icon</string>
@@ -929,9 +906,6 @@ Layout Inspector
     <string name="date_format">Date/time format</string>
     <string name="language">Language</string>
     <string name="language_system">System default</string>
-    <string name="ok">OK</string>
-    <string name="copy">Copy</string>
-    <string name="paste">Paste</string>
     <string name="startup_pane_1">Startup folder, pane 1</string>
     <string name="startup_pane_2">Startup folder, pane 2</string>
     <string name="opt_home_folder">Home folder</string>
@@ -1055,7 +1029,6 @@ Layout Inspector
     <string name="querier_out_of_range">Number out of range</string>
     <string name="querier_only_decimal_negative">Only decimal can be negative</string>
     <string name="menu_select_all">Select all</string>
-    <string name="menu_hidden_files">Hidden files</string>
     <string name="menu_show_system_hidden">Show system hidden</string>
     <string name="menu_show_manual_hidden">Show manual hidden</string>
     <string name="menu_hide_selected">Hide selected files</string>
@@ -1063,7 +1036,6 @@ Layout Inspector
     <string name="menu_swap_panes">Swap panes</string>
     <string name="sidebar_extract">Extract APK</string>
     <string name="sidebar_layout_inspector">Layout Inspector</string>
-    <string name="sidebar_wifi">Wi-Fi Manager</string>
     <string name="sidebar_logcat">Logcat</string>
     <string name="logcat_subtitle">View system log output</string>
     <string name="logcat_mode_root">Root mode - all system logs</string>
@@ -1104,7 +1076,6 @@ Layout Inspector
     <string name="logcat_shortcut_unsupported">Launcher does not allow shortcuts</string>
     <string name="sidebar_tools">Tools Hub</string>
     <string name="sidebar_documents">Documents providers</string>
-    <string name="sidebar_plugins">Plugins/Tools</string>
     <string name="show_plugin_groups_sidebar">Show plugins in sidebar</string>
     <string name="plugin_open">Open</string>
     <string name="plugin_create_shortcut">Create shortcut</string>
@@ -1119,7 +1090,6 @@ Layout Inspector
     <string name="translation_jump_hint">String number (1..%1$d)</string>
     <string name="translation_string_n">String %1$d</string>
     <string name="translation_hint">Translation</string>
-    <string name="translation_tap_first">Tap a string first</string>
     <string name="translation_select_app">Select a translation app first (long-press the list in the smali editor)</string>
     <string name="translation_nothing_to_save">No translations to save</string>
     <string name="translation_not_loaded">Dex files are not loaded yet</string>
@@ -1127,7 +1097,6 @@ Layout Inspector
     <string name="translation_save_dictionary">Save to dictionary</string>
     <string name="translation_dictionary_saved">Dictionary saved: %1$s</string>
     <string name="translation_dictionary_manager">Dictionary manager</string>
-    <string name="translation_dictionary_apply">Apply dictionary</string>
     <string name="translation_dictionary_applied">Applied %1$d translation(s)</string>
     <string name="translation_no_dictionaries">No dictionaries saved for this file yet</string>
     <string name="translation_delete_dictionary">Delete %1$s?</string>
@@ -1170,13 +1139,9 @@ Strings are sent to the external service you configured.</string>
     <string name="translation_regex">Regex</string>
     <string name="translation_exactly">Exactly match</string>
     <string name="translating">Translating…</string>
-    <string name="translation_service_picker">Auto translation service</string>
     <string name="translation_start">Start</string>
     <string name="translation_no_services">No PROCESS_TEXT translation apps are installed</string>
     <string name="translation_auto">Auto translate untranslated</string>
-    <string name="translation_all_translated">Every string already has a translation</string>
-    <string name="translation_auto_done">Auto-translated %1$d string(s) in %2$ds</string>
-    <string name="translation_auto_none">The translation app returned nothing</string>
     <string name="translation_language">Language</string>
     <string name="translation_language_hint">Language code (e.g. ru, es)</string>
     <string name="translation_show_untranslated">Show untranslated only</string>
@@ -1196,7 +1161,6 @@ Strings are sent to the external service you configured.</string>
     <string name="tools_hub_disable">Disable</string>
     <string name="tools_hub_trust">Trust</string>
     <string name="tools_hub_tool_packs">Tool packs</string>
-    <string name="tools_hub_external_plugins_n">External plugins  (%1$d)</string>
     <string name="tools_hub_remove_msg">Remove this pack and its %1$d tools?</string>
     <string name="tools_hub_remove">Remove</string>
     <string name="tools_hub_update">Update</string>
@@ -1207,8 +1171,6 @@ Strings are sent to the external service you configured.</string>
     <string name="tools_hub_installed_toast">%1$s installed</string>
     <string name="tools_hub_certificate">Certificate (SHA-256):</string>
     <string name="tools_hub_cert_unavailable">(unavailable)</string>
-    <string name="tools_hub_pack_title">%1$s (%2$d)  v%3$s</string>
-    <string name="tools_hub_summary">%1$d included · %2$d from %3$d/%4$d packs</string>
     <string name="tool_default_title">Tool</string>
     <string name="tool_no_view">The tool opened but did not return a view.</string>
     <string name="tool_missing">The installed pack does not provide the “%1$s” tool.</string>
@@ -1282,7 +1244,6 @@ Strings are sent to the external service you configured.</string>
     <string name="shared_entry_single_file">Hex editing needs a single file.</string>
     <string name="shared_entry_not_archive">Not an archive (zip, 7z, rar, tar…).</string>
     <string name="shared_entry_single_archive">Archive viewer needs a single archive.</string>
-    <string name="shared_entry_staging">Preparing a temporary copy…</string>
     <string name="shared_entry_stage_failed">Could not prepare a temporary copy of this file.</string>
     <string name="color_stop">Stop</string>
     <string name="color_start">Start</string>
@@ -1635,7 +1596,6 @@ Strings are sent to the external service you configured.</string>
     <string name="updated_i_of_i">Updated %1$d of %2$d</string>
     <string name="saved_i_of_i_to_x">Saved %1$d of %2$d to %3$s</string>
     <string name="downloading_x">Downloading %1$s</string>
-    <string name="read_write_exec">"        Read    Write   Exec"</string>
     <string name="save_to_folder">Save to folder</string>
     <string name="shizuku_needed">This folder requires Shizuku. Install Shizuku and grant access to continue.</string>
     <string name="shizuku_install">Install Shizuku</string>
@@ -1777,7 +1737,6 @@ Strings are sent to the external service you configured.</string>
     <string name="reading_with_elevated_access">Reading with elevated access…</string>
     <string name="cannot_open_permission_denied">Cannot open: permission denied</string>
     <string name="opened_with_root">Opened with root</string>
-    <string name="sign">Sign</string>
     <string name="antisplit_merge_to_apk">AntiSplit/merge to APK</string>
     <string name="arsc_editor_plus">ARSC Editor Plus</string>
     <string name="failed_to_renamex">Failed to rename %1$s</string>
@@ -1838,10 +1797,6 @@ Strings are sent to the external service you configured.</string>
     <string name="decrease_indent">Decrease indent</string>
     <string name="no_matches_found">No matches found</string>
     <string name="symbol_replaced_matches">Replaced %1$d matches</string>
-    <string name="folder_size_mode">Show size on folders</string>
-    <string name="folder_size_always">Always</string>
-    <string name="folder_size_archive">Only in archive</string>
-    <string name="folder_size_never">Never</string>
     <string name="reload_file">Reload file</string>
     <string name="save_as_axml">Save as AXML (compiled)</string>
     <string name="save_as_plain_xml">Save as plain XML</string>
@@ -1850,7 +1805,6 @@ Strings are sent to the external service you configured.</string>
     <string name="save_axml">Save as AXML</string>
     <string name="save_plain">Save as plain text</string>
     <string name="sh_select_action">Select an action to perform</string>
-    <string name="sh_edit">Edit</string>
     <string name="sh_execute">Execute</string>
     <string name="sh_run_as_root">Run as root</string>
     <string name="sh_root_unavailable">Root mode is not enabled</string>
@@ -1992,7 +1946,6 @@ Strings are sent to the external service you configured.</string>
     <string name="days_x">%1$d days</string>
     <string name="forever">Forever</string>
     <string name="details">Details</string>
-    <string name="delete_failed_x">%1$d item(s) could not be deleted</string>
     <string name="save_denied_title">Can\'t save to the original location</string>
     <string name="save_read_only_reason">The file was opened from another app that only granted read access, so writing back to the original is not permitted by Android.</string>
     <string name="save_denied_reason">The storage location denied write access. Removable SD cards on Android 10+ only accept writes through SAF, root or Shizuku.</string>
@@ -2033,22 +1986,12 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="overview">Overview</string>
     <string name="overview_subtitle">Entries per source. Tap one to open it.</string>
     <string name="add_setting">New Setting</string>
-    <string name="edit_setting">Edit Setting</string>
-    <string name="delete_setting">Delete Setting</string>
-    <string name="setting_key">Key</string>
-    <string name="setting_value">Value</string>
-    <string name="setting_table">Table / Namespace</string>
-    <string name="confirm_delete_setting">Are you sure you want to delete \"%1$s\"?</string>
-    <string name="setting_saved">Setting saved successfully</string>
-    <string name="setting_deleted">Setting deleted</string>
     <string name="saved_to_x">Saved copy to %1$s</string>
     <string name="saved_elevated">Saved using elevated access</string>
     <string name="save_elevated">Save with elevated access</string>
-    <string name="restored_renamed_toast">Restored item was renamed to %1$s because an item with the same name already exists in that location.</string>
     <string name="recycle_bin_reason_overwrite">Overwritten</string>
     <string name="recycle_bin_reason_delete">Deleted</string>
     <string name="recycle_bin_options">Recycle bin options</string>
-    <string name="enable_recycle_bin">Enable recycle bin</string>
     <string name="sort_by_deletion_time">Deletion time</string>
     <string name="sort_by_modified_time">Last modified time</string>
     <string name="sort_by_name">File name</string>
@@ -2115,7 +2058,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="libpatcher_type_float_zero">Float → 0.0</string>
     <string name="libpatcher_type_double_zero">Double → 0.0</string>
     <string name="libpatcher_type_void_nop">Void → NOP</string>
-    <string name="libpatcher_unsupported">Unsupported architecture (%1$s)</string>
     <string name="libpatcher_no_libs">This APK has no native libraries to patch</string>
     <string name="libpatcher_no_offsets">Enter at least one offset</string>
     <string name="libpatcher_invalid_offsets">Invalid offsets format. Use hex values like 0x100,0x200</string>
@@ -2131,35 +2073,14 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="docs_empty">No locations yet. Tap Add location and pick a provider in the system picker — that grant is the only way in for providers that protect their data.</string>
     <string name="docs_error">Could not open this location</string>
     <string name="docs_no_picker">No system file picker available on this device</string>
-    <string name="docs_no_viewer">No app can open this file</string>
     <string name="docs_forget">Remove this location</string>
-    <string name="docs_open">Open</string>
-    <string name="docs_copy_out">Copy to folder…</string>
-    <string name="docs_copy_in">Copy file in…</string>
     <string name="docs_copy_in_hint">Open a folder in the other pane first, then copy a file into this location.</string>
-    <string name="docs_copy_in_dir">Only single files can be copied in for now</string>
-    <string name="docs_copied_in">Copied %1$s here</string>
-    <string name="docs_new_folder">New folder</string>
-    <string name="docs_rename_failed">Rename failed — the provider refused it</string>
-    <string name="docs_delete_failed">Delete failed — the provider refused it</string>
-    <string name="docs_create_failed">Could not create it — the provider refused it</string>
-    <string name="docs_prop_type">Type: %1$s</string>
-    <string name="docs_prop_folder">Folder</string>
-    <string name="docs_prop_size">Size: %1$s</string>
-    <string name="docs_prop_modified">Modified: %1$s</string>
-    <string name="docs_prop_id">Document id: %1$s</string>
-    <string name="docs_copy_failed">Copy failed: %1$s</string>
     <string name="saf_transfer_unsupported">This item type cannot be transferred into a provider location yet</string>
     <string name="reading_from_provider">Reading from provider…</string>
     <string name="opened_from_provider">Opened from provider — edits save back to it</string>
     <string name="pin_to_sidebar">Pin to sidebar</string>
     <string name="unpin_from_sidebar">Unpin from sidebar</string>
     <string name="connecting_to">Connecting to %1$s…</string>
-    <string name="saf_new_file">New file</string>
-    <string name="saf_same_location">Both panes are in the same location</string>
-    <string name="saf_op_failed">Operation failed: %1$s</string>
-    <string name="saf_done">Done</string>
-    <string name="docs_copied">Copied to %1$s</string>
     <string name="npatch_profile_save">Save current as profile</string>
     <string name="npatch_profile_name">Profile name</string>
     <string name="npatch_profile_loaded">Loaded profile: %1$s</string>
@@ -2184,8 +2105,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="npatch_done_title">Patching finished</string>
     <string name="npatch_done">Patched: %1$s</string>
     <string name="npatch_install_prompt">%1$s was created. Modules are embedded — the app runs standalone. Install it?</string>
-    <string name="xposed_patcher_lite_title">LSPatch</string>
-    <string name="xposed_patcher_lite_message">The Xposed patcher engine (LSPatch) is not bundled in the lite build. Install the full version of MP Manager to patch APKs with embedded modules.</string>
 
     <!-- Progress dialog: operation captions -->
     <string name="op_copying">COPY</string>
@@ -2193,9 +2112,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="op_deleting">DELETE</string>
     <string name="op_extracting">EXTRACT</string>
     <string name="op_compressing">COMPRESS</string>
-    <string name="op_adding">ADD</string>
-    <string name="op_signing">SIGN</string>
-    <string name="op_processing">WORKING</string>
 
     <!-- Progress dialog: path labels -->
     <string name="progress_from">From</string>
@@ -2210,23 +2126,16 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="progress_speed_bytes">%1$s/s</string>
     <string name="progress_speed_items">%1$d/s</string>
     <string name="progress_eta">%1$s left</string>
-    <string name="progress_done">Done</string>
     <string name="reorder_bookmarks">Reorder bookmarks</string>
     <string name="progress_pause">Pause</string>
-    <string name="progress_stop">Pause</string>
     <string name="resume">Resume</string>
     <string name="cancel">Cancel</string>
     <!-- Progress dialog: pause / cancel controls -->
     <string name="progress_paused">Paused</string>
     <string name="progress_cancelling">Cancelling…</string>
-    <string name="progress_cancelled">Operation cancelled</string>
     <string name="progress_cancel_confirm">Cancel this operation?</string>
     <string name="progress_cancel_confirm_msg">The operation will stop as soon as possible. Files already copied or deleted will not be undone.</string>
     <string name="progress_keep_waiting">Keep waiting</string>
-    <string name="display_details">Display app details</string>
-    <string name="display_actions">Display app actions</string>
-    <string name="more_functions">More functions</string>
-    <string name="open_in_play_store_action">Open in Play Store</string>
     <string name="edit_app_details">Organize app details</string>
     <string name="special_permissions">Special Permissions</string>
     <string name="mime">MIME</string>
@@ -2267,7 +2176,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="menu_refresh">Refresh</string>
     <string name="customize_right_menu">Right menu order</string>
     <string name="customize_right_menu_hint">Long-press to drag items anywhere</string>
-    <string name="reset_signature_key">Reset to default key</string>
     <string name="signature_key_reset">Signature key reset to default</string>
     <string name="backup_restore_settings">Backup &amp; Restore</string>
     <string name="export_settings">Export settings</string>
@@ -2278,9 +2186,7 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="import_settings_failed">Failed to import settings</string>
     <string name="remember_password">Remember password</string>
     <string name="confirm_move_f">Are you sure you want to move %1$s?</string>
-    <string name="img_unsaved_msg">Save changes before closing? Unsaved edits are discarded.</string>
     <string name="owner_updated">Owner updated</string>
-    <string name="format_label">Format</string>
     <string name="add_colon">Add colon</string>
     <string name="upper_case">Upper case</string>
     <string name="hash_label">HASH</string>
@@ -2290,7 +2196,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="collage_saved">Image collage saved to %1$s</string>
     <string name="apply_crop">Apply Crop</string>
     <string name="crop_canvas">Crop Canvas</string>
-    <string name="trim_blank_canvas">Auto-Crop White Borders</string>
 
     <!-- Split & Merge Archive / File Tools -->
     <string name="split_file">Split</string>
@@ -2298,8 +2203,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="split_dialog_title">Split file</string>
     <string name="split_by_size">By part size</string>
     <string name="split_by_count">By number of parts</string>
-    <string name="split_part_size">Part size</string>
-    <string name="split_num_parts">Number of parts</string>
     <string name="split_naming">Naming format</string>
     <string name="split_naming_standard">Standard (.001, .002…)</string>
     <string name="split_naming_part">Part format (.part1, .part2…)</string>
@@ -2310,7 +2213,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="merge_success">Merged successfully: %1$s</string>
     <string name="delete_original_after_split">Delete original file after splitting</string>
     <string name="delete_parts_after_merge">Delete split parts after merging</string>
-    <string name="split_open_archive">Open archive</string>
     <string name="split_missing_parts">No other split parts found for this file in this folder.</string>
     <string name="output_filename">Output filename:</string>
 
@@ -2320,19 +2222,15 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="flutter_engine_version">Engine commit: %1$s</string>
     <string name="flutter_dart_version">Dart snapshot hash: %1$s</string>
     <string name="flutter_ssl_unpin">Bypass SSL Pinning (Universal)</string>
-    <string name="flutter_ssl_unpin_desc">Patches libflutter.so to bypass certificate verification in BoringSSL.</string>
     <string name="flutter_ssl_unpin_success">SSL Pinning bypassed for %1$s</string>
     <string name="flutter_extract_strings">Extract Dart Strings &amp; Endpoints</string>
     <string name="flutter_extract_assets">Extract Flutter Assets</string>
     <string name="flutter_snapshot_info">Dart Snapshot Info</string>
-    <string name="flutter_dump_summary">Flutter App Summary</string>
-    <string name="flutter_not_found">No Flutter components found</string>
     <string name="flutter_search_hint">Search strings / URLs / endpoints…</string>
     <string name="flutter_copied">Copied to clipboard</string>
     <string name="flutter_strings_count">%1$d strings found</string>
 
     <!-- Android OTA Payload Dumper & Inspector -->
-    <string name="payload_tools_title">OTA Payload Inspector</string>
     <string name="payload_search_hint">Search partitions (boot, vendor, system…)…</string>
     <string name="payload_partitions_count">%1$d partitions found (%2$s uncompressed)</string>
     <string name="payload_extract_partition">Extract partition (.img)</string>
@@ -2358,72 +2256,33 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="set_edit_subtitle">Edit Android system, global, and secure settings</string>
     <string name="partition_dumper_title">Partition Dumper (Root)</string>
     <string name="partition_info_title">Partition Details</string>
-    <string name="partition_batch_dump">Dump Selected (%d)</string>
-    <string name="partition_select_all">Select All</string>
-    <string name="partition_deselect_all">Deselect All</string>
     <string name="partition_copy_details">Copy Details</string>
     <string name="partition_refresh">Refresh</string>
     <string name="all">All</string>
     <string name="partition_search_hint">Search partitions (recovery, boot, vendor, system…)…</string>
     <string name="partition_slot_a">Slot A</string>
     <string name="partition_slot_b">Slot B</string>
-    <string name="partition_slot_active_tag"> Active</string>
-    <string name="partition_dump_btn">Dump (.img)</string>
-    <string name="partition_dump_dialog_title">Dump %1$s</string>
     <string name="partition_dump_dest_label">Destination directory:</string>
     <string name="partition_dump_filename_label">Output file name (.img):</string>
     <string name="partition_dumping_progress">Dumping %1$s: %2$s / %3$s (%4$s)</string>
     <string name="title_success">Success</string>
-    <string name="partition_dump_success">Partition dumped successfully:\n%1$s</string>
-    <string name="partition_open_img">Open as .img</string>
-    <string name="partition_show_in_folder">Show in folder</string>
     <string name="partition_root_required">Partition dumping requires Root privileges (su).</string>
     <string name="partition_count_summary">%1$d partitions available</string>
-    <string name="partition_diff_banner">Differences detected between Slot A and Slot B (%1$d partitions differ — tap for details)</string>
-    <string name="partition_diff_dialog_title">Slot Differences (%1$d partitions)</string>
-    <string name="partition_diff_dialog_msg">The following partitions have different contents between Slot A and Slot B:\n\n%1$s</string>
-    <string name="partition_diff_filter_btn">Show Only Differences</string>
 
     <!-- Partition Action Dialog: Copy vs Flash -->
     <string name="partition_action_dialog_title">Partition: %1$s</string>
     <string name="partition_opt_copy">Backup Partition (Copy / Dump)</string>
-    <string name="partition_opt_copy_desc">Dump a 1:1 raw copy (.img) to your chosen destination.</string>
     <string name="partition_opt_flash">Flash Image to Partition</string>
-    <string name="partition_opt_flash_desc">Write an external .img file with smart compatibility &amp; safety validation.</string>
-    <string name="partition_copy_title">Backup %1$s</string>
     <string name="partition_copy_btn">Save Copy (.img)</string>
-    <string name="partition_flash_dialog_title">Flash to: %1$s</string>
     <string name="partition_flash_src_label">Select image file to flash (.img):</string>
-    <string name="partition_flash_select_available">Available .img files in current folder:</string>
-    <string name="partition_flash_path_hint">Enter or paste .img path…</string>
     <string name="partition_flash_btn">Flash Partition</string>
     <string name="partition_flash_confirm_title">Confirm Flashing</string>
-    <string name="partition_flash_confirm_msg">You are about to write:\n%1$s\n\nTo partition:\n%2$s (%3$s)\n\nThis will overwrite all existing data on this partition. Proceed?</string>
-    <string name="partition_flash_success">Partition %1$s flashed successfully!</string>
-    <string name="partition_flashing_progress">Flashing %1$s: %2$s / %3$s (%4$s)</string>
     <string name="partition_flash_ack_risk">I understand the risks and take full responsibility for flashing this file.</string>
-    <string name="partition_flash_file_not_found">Selected file does not exist on storage.</string>
-    <string name="partition_flash_match_ok">File ready for flashing (%1$s)</string>
     <string name="partition_flash_size_exceeded">File size (%1$s) exceeds partition capacity (%2$s)! Flashing blocked to prevent corruption.</string>
-    <string name="partition_flash_sparse_warning">Warning: File appears to be an Android Sparse Image. Direct flashing via dd requires an uncompressed Raw Image.</string>
     <string name="partition_flash_empty_file">Selected file is empty (0 bytes).</string>
-    <string name="partition_browse_file">Browse…</string>
     <string name="property_image_type">Image Type</string>
-    <string name="partition_detected_type">Detected Type: %1$s</string>
-    <string name="partition_flash_size_too_small">Warning: File size (%1$s) is smaller than partition capacity (%2$s). Are you sure this is the correct file for this partition?</string>
-    <string name="partition_flash_force_small_ack">I am sure this file is intended for this partition and I take full responsibility.</string>
-    <string name="partition_flash_sparse_prompt">Image is compressed (Android Sparse Image). Real uncompressed size: %1$s.\nChoose an action:</string>
     <string name="partition_flash_unsparse_to_file">Save Raw Image (.img)</string>
-    <string name="partition_flash_unsparse_and_flash">Expand and Flash (No extra storage needed)</string>
-    <string name="partition_unsparse_progress">Unsparsing %1$s: %2$s (%3$d%%)</string>
     <string name="partition_unsparse_success">Image unsparsed successfully:\n%1$s\n(Size: %2$s)</string>
-    <string name="partition_flash_exact_match">File size matches partition capacity (%1$s). Size alone does not guarantee compatibility.</string>
-    <string name="partition_flash_danger_title">Flash compatibility warning</string>
-    <string name="partition_flash_danger_confirm_msg">File size (%1$s) is smaller than partition capacity (%2$s) by %3$s.\n\nA smaller image can be valid. Verify that it is complete and intended for this partition. An incompatible image may prevent the device from booting.\n\nFlash this file onto %4$s (%5$s)?</string>
-    <string name="partition_flash_force_btn">Flash at my own risk</string>
-    <string name="partition_flash_type_mismatch_banner">The detected image type differs from the target partition.\nDetected type: %1$s\nTarget: %2$s (%3$s)\n\nAn incompatible image may prevent the device from booting.</string>
-    <string name="partition_flash_type_mismatch_ack">I am aware the detected image type differs from this partition, but I want to force flash it anyway.</string>
-    <string name="partition_flash_type_mismatch_confirm">Detected type: %1$s\nTarget partition: %2$s\n\nAn incompatible image may prevent the device from booting.\n\nFlash this file onto %3$s (%4$s)?</string>
 
     <string name="frida_gadget">Frida Gadget</string>
     <string name="frida_console">Frida Console</string>
@@ -2594,7 +2453,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="app_ops_action_clear_data">Clear data</string>
     <string name="app_ops_action_uninstall">Uninstall</string>
     <string name="app_ops_tag_fake_granted">Fake Granted (Restrained)</string>
-    <string name="app_ops_tag_fake_granted_desc">System reports permission granted, but AppOps silently ignores/drops access!</string>
     <string name="app_ops_search_hint">Search apps</string>
     <string name="app_ops_no_apps">No applications found</string>
     <string name="app_ops_requires_elevated">This tool needs root or Shizuku to run elevated commands. Enable one in the app settings and try again — the actions below are disabled until then.</string>
@@ -2662,8 +2520,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="run_script_confirm">Do you want to run this script?\n\n%s</string>
     <string name="shell_mode_status">Working Mode: %s</string>
     <string name="privacy_audit_title">Privacy &amp; Invasiveness Audit</string>
-    <string name="privacy_audit_desc">Scan and excise tracking SDKs, hardware IDs, and surveillance probes</string>
-    <string name="privacy_score_label">Invasiveness Risk Score: %1$d/100 (%2$s)</string>
     <string name="privacy_sanitize_btn">Sanitize &amp; Patch</string>
     <string name="privacy_done">APK sanitized! %1$d privacy mutations applied.</string>
     <string name="privacy_no_threats">No invasive privacy threats or tracking calls were found.</string>

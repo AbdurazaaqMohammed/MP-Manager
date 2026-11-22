@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d инструментов · установлено пакетов: %2$d</string>
     <string name="tools_hub_no_results">Инструменты не найдены</string>
     <string name="tools_hub_download_badge">Скачать</string>
-    <string name="tools_hub_ready_badge">Готово</string>
     <string name="tools_hub_pack_metadata">%1$d инструментов · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">Установлен</string>
     <string name="tools_hub_pack_available">Необязательная загрузка</string>

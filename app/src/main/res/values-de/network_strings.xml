@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Netzwerkverbindungen</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Server suchen</string>
+<string name="network_scan_smb">Erneut scannen</string>
+<string name="network_discovery_help">Sucht automatisch mit Dienstanzeigen, Windows-Erkennung und einem begrenzten SMB2/3-Scan nach lokalen Servern. Es werden keine Logins oder Passwörter probiert. Wähle einen Server und gib dann seine Freigabe oder Collection und die Zugangsdaten ein.</string>
+<string name="network_discovery_unavailable">Die Diensterkennung ist nicht verfügbar. Du kannst weiterhin nach SMB scannen oder einen Server manuell eingeben.</string>
+<string name="network_discovery_no_lan">Kein unterstütztes IPv4-WLAN-/Ethernet-Subnetz. Beworbene Dienste erscheinen dennoch; andernfalls gib den Server manuell ein.</string>
+<string name="network_discovery_scanning">Nahe Adressen werden auf SMB2/3 gescannt (bis zu 20 Sekunden)…</string>
+<string name="network_discovery_finished">SMB-Scan abgeschlossen. Wähle ein Ergebnis oder gib einen Server manuell ein. WebDAV-Server erscheinen nur, wenn sie ihren Dienst ankündigen.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Verbindungsname (optional)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Benutzername (leer für anonym)</string>
+<string name="network_password">Passwort</string>
+<string name="network_domain">Domäne/Arbeitsgruppe (optional)</string>
+<string name="network_remember">Verbindung speichern (auf diesem Gerät verschlüsselt)</string>
+<string name="network_saved_connections">Gespeicherte Verbindungen</string>
+<string name="network_webdav_help">Verwende die vollständige WebDAV-Collection-URL. HTTPS wird empfohlen; HTTP sendet Zugangsdaten unverschlüsselt. Dateien öffnen sich als lokale Kopien. Um Bearbeitungen auf dem Server zu speichern, kopiere sie explizit zurück.</string>
+<string name="network_smb_help">Verbinde dich mit einer SMB2/3-Freigabe, z. B. smb://192.168.1.10/Documents. Ein benutzerdefinierter Port kann hinter dem Host angegeben werden. SMB1 wird nicht unterstützt.</string>
+<string name="network_transfer_safety">Vorhandene Dateien werden nicht überschrieben. Ein Verschieben löscht seine Quelle erst nach erfolgreichem Transfer. Abbruch oder Fehler kann ein unvollständiges Ziel hinterlassen.</string>
+<string name="network_recursive_delete">Das Löschen eines Ordners löscht auch alles darin auf dem Server.</string>
+<string name="network_downloading">Lokale Kopie wird heruntergeladen</string>
+<string name="network_browse_hint">Navigiere mit der Ordnerliste durch diese Verbindung. Gespeicherte Verbindungen erreichst du über ihren Seitenleisten-Eintrag.</string>
+<string name="network_permission_denied">Für lokale Server ab Android 17 ist die Berechtigung für Geräte in der Nähe erforderlich. Erlaube sie in den App-Einstellungen und verbinde dich erneut.</string>
+<string name="network_extract_first">Extrahiere Archiv-Einträge in einen lokalen Ordner, bevor du sie zu einer Netzwerkverbindung kopierst oder verschiebst.</string>
+<string name="network_new_connection">Neue Verbindung</string>
+<string name="network_remember_ftp">FTP-Verbindung speichern</string>
+<string name="network_ftp_help">Verbinde dich mit einem FTP- oder FTPS-Server. Gespeicherte FTP-Profile bleiben hier verfügbar. Dateien öffnen sich als lokale Kopien; kopiere Bearbeitungen explizit zurück.</string>
+<string name="network_connection_saved">Verbindung gespeichert</string>
+<string name="network_delete_connection">Gespeicherte Verbindung löschen</string>
+<string name="network_delete_connection_confirm">„%1$s“ löschen und ihre Seitenleisten-Anheftung entfernen? Serverdateien sind nicht betroffen.</string>
+<string name="network_saved_connection_missing">Gespeicherte Verbindung nicht gefunden. Füge sie unter Netzwerkverbindungen erneut hinzu.</string>
+<string name="network_invalid_port">Gib einen Port von 1 bis 65535 ein</string>
+<string name="network_invalid_host">Gib einen Server-Hostnamen oder eine IP-Adresse ein, ohne URL-Pfad</string>
+<string name="network_storage_unavailable">%1$s · Server meldet keinen Speicherplatz</string>
+<string name="network_storage_free">%1$s frei · Gesamtspeicherplatz nicht verfügbar</string>
+<string name="network_ftp_create_unsupported">Das Erstellen von Einträgen in FTP-Panes wird hier nicht unterstützt.</string>
+</resources>

@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d ابزار · %2$d بسته نصب‌شده</string>
     <string name="tools_hub_no_results">هیچ ابزاری با جستجوی شما مطابقت ندارد</string>
     <string name="tools_hub_download_badge">بارگیری</string>
-    <string name="tools_hub_ready_badge">آماده</string>
     <string name="tools_hub_pack_metadata">%1$d ابزار · نسخه %2$s · %3$s</string>
     <string name="tools_hub_pack_installed">نصب‌شده</string>
     <string name="tools_hub_pack_available">بارگیری اختیاری</string>

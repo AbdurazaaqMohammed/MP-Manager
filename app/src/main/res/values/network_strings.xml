@@ -11,7 +11,6 @@
     <string name="network_discovery_scanning">Scanning nearby addresses for SMB2/3 (up to 20 seconds)…</string>
     <string name="network_discovery_finished">SMB scan finished. Select a result or enter a server manually. WebDAV servers appear only if they advertise their service.</string>
     <string name="webdav_client">WebDAV</string>
-    <string name="smb_client">SMB (Windows shares)</string>
     <string name="network_connection_name">Connection name (optional)</string>
     <string name="network_webdav_address">https://server/dav/collection/</string>
     <string name="network_smb_address">smb://server/share</string>
@@ -20,7 +19,6 @@
     <string name="network_domain">Domain / workgroup (optional)</string>
     <string name="network_remember">Save connection (encrypted on this device)</string>
     <string name="network_saved_connections">Saved connections</string>
-    <string name="network_no_saved_connections">No saved connections</string>
     <string name="network_webdav_help">Use the full WebDAV collection URL. HTTPS is recommended; HTTP sends credentials without encryption. Files open as local copies. To save edits on the server, copy them back explicitly.</string>
     <string name="network_smb_help">Connect to an SMB2/3 share, for example smb://192.168.1.10/Documents. A custom port can be added after the host. SMB1 is not supported.</string>
     <string name="network_transfer_safety">Existing files are not overwritten. A move deletes its source only after a successful transfer. Cancellation or failure may leave a partial destination.</string>
@@ -29,7 +27,6 @@
     <string name="network_browse_hint">Use the folder list to navigate this connection. Saved connections are available from its sidebar entry.</string>
     <string name="network_permission_denied">Nearby devices permission is required for local servers on Android 17+. Allow it in app settings, then connect again.</string>
     <string name="network_extract_first">Extract archive entries to a local folder before copying or moving them to a network connection.</string>
-    <string name="network_ftp_transfer_unsupported">Copy FTP files to a local folder before transferring them to WebDAV or SMB.</string>
     <string name="network_new_connection">New connection</string>
     <string name="network_remember_ftp">Save FTP connection</string>
     <string name="network_ftp_help">Connect to an FTP or FTPS server. Saved FTP profiles remain available here. Files open as local copies; copy edits back explicitly.</string>
@@ -39,7 +36,6 @@
     <string name="network_saved_connection_missing">Saved connection not found. Add it again in Network connections.</string>
     <string name="network_invalid_port">Enter a port from 1 to 65535</string>
     <string name="network_invalid_host">Enter a server hostname or IP address, without a URL path</string>
-    <string name="network_storage_connect_to_check">%1$s · Connect to check storage space</string>
     <string name="network_storage_unavailable">%1$s · Server does not report storage space</string>
     <string name="network_storage_free">%1$s free · Total space unavailable</string>
     <string name="network_ftp_create_unsupported">Creating entries in FTP panes is not supported here.</string>

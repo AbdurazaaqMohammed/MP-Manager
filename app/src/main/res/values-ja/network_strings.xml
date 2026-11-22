@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">ネットワーク接続</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">サーバーを探索</string>
+<string name="network_scan_smb">再スキャン</string>
+<string name="network_discovery_help">サービスアドバタイズ、Windows探索、範囲を限定したSMB2/3スキャンを使用して、ローカルサーバーを自動的に検索します。ログインやパスワードの試行は行いません。サーバーを選択してから、その共有またはコレクションと認証情報を入力してください。</string>
+<string name="network_discovery_unavailable">サービス探索を利用できません。SMBをスキャンするか、サーバーを手動で入力してください。</string>
+<string name="network_discovery_no_lan">対応するIPv4のWi-Fi/イーサネットサブネットがありません。アドバタイズされたサービスは引き続き表示される場合があります。表示されない場合は、サーバーを手動で入力してください。</string>
+<string name="network_discovery_scanning">近隣のアドレスをSMB2/3についてスキャン中（最大20秒）…</string>
+<string name="network_discovery_finished">SMBスキャンが完了しました。結果を選択するか、サーバーを手動で入力してください。WebDAVサーバーは、サービスをアドバタイズしている場合にのみ表示されます。</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">接続名（任意）</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">ユーザー名（空欄で匿名）</string>
+<string name="network_password">パスワード</string>
+<string name="network_domain">ドメイン/ワークグループ（任意）</string>
+<string name="network_remember">接続を保存（このデバイス上で暗号化）</string>
+<string name="network_saved_connections">保存済みの接続</string>
+<string name="network_webdav_help">完全なWebDAVコレクションURLを使用してください。HTTPSを推奨します。HTTPは認証情報を暗号化なしで送信します。ファイルはローカルコピーとして開きます。編集内容をサーバーに保存するには、明示的にコピーして戻してください。</string>
+<string name="network_smb_help">SMB2/3共有に接続します（例: smb://192.168.1.10/Documents）。ホストの後にカスタムポートを追加できます。SMB1はサポートされていません。</string>
+<string name="network_transfer_safety">既存のファイルは上書きされません。移動は、転送が成功した後にのみ元のファイルを削除します。キャンセルや失敗の場合、コピー先に不完全なファイルが残ることがあります。</string>
+<string name="network_recursive_delete">フォルダーを削除すると、サーバー上のその中身もすべて削除されます。</string>
+<string name="network_downloading">ローカルコピーをダウンロード中</string>
+<string name="network_browse_hint">フォルダーリストでこの接続を移動します。保存済みの接続はサイドバーの項目から利用できます。</string>
+<string name="network_permission_denied">Android 17以降でローカルサーバーを利用するには「付近のデバイス」権限が必要です。アプリ設定で許可してから、再度接続してください。</string>
+<string name="network_extract_first">ネットワーク接続へコピーまたは移動する前に、アーカイブエントリをローカルフォルダーに抽出してください。</string>
+<string name="network_new_connection">新しい接続</string>
+<string name="network_remember_ftp">FTP接続を保存</string>
+<string name="network_ftp_help">FTPまたはFTPSサーバーに接続します。保存済みのFTPプロファイルはここから利用できます。ファイルはローカルコピーとして開きます。編集内容は明示的にコピーして戻してください。</string>
+<string name="network_connection_saved">接続を保存しました</string>
+<string name="network_delete_connection">保存済みの接続を削除</string>
+<string name="network_delete_connection_confirm">「%1$s」を削除してサイドバーのピン留めも解除しますか？サーバー上のファイルには影響しません。</string>
+<string name="network_saved_connection_missing">保存済みの接続が見つかりません。ネットワーク接続で再度追加してください。</string>
+<string name="network_invalid_port">1〜65535のポートを入力してください</string>
+<string name="network_invalid_host">サーバーのホスト名またはIPアドレスを入力してください（URLパスは含めないでください）</string>
+<string name="network_storage_unavailable">%1$s · サーバーがストレージ容量を報告していません</string>
+<string name="network_storage_free">空き%1$s · 合計容量を利用できません</string>
+<string name="network_ftp_create_unsupported">ここではFTPペイン内でのアイテム作成はサポートされていません。</string>
+</resources>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">การเชื่อมต่อเครือข่าย</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">ค้นหาเซิร์ฟเวอร์</string>
+<string name="network_scan_smb">สแกนอีกครั้ง</string>
+<string name="network_discovery_help">กำลังค้นหาเซิร์ฟเวอร์ในเครือข่ายโดยอัตโนมัติ ด้วยการโฆษณาบริการ การค้นหาของ Windows และการสแกน SMB2/3 ในขอบเขตจำกัด จะไม่มีการลองใช้การล็อกอินหรือรหัสผ่านใด ๆ เลือกเซิร์ฟเวอร์ แล้วป้อน share หรือ collection และข้อมูลรับรองของเซิร์ฟเวอร์นั้น</string>
+<string name="network_discovery_unavailable">การค้นหาบริการไม่พร้อมใช้งาน คุณยังสแกนหา SMB หรือป้อนเซิร์ฟเวอร์เองได้</string>
+<string name="network_discovery_no_lan">ไม่พบซับเน็ต IPv4 Wi-Fi/Ethernet ที่รองรับ บริการที่โฆษณาไว้อาจยังปรากฏได้ มิฉะนั้นให้ป้อนเซิร์ฟเวอร์เอง</string>
+<string name="network_discovery_scanning">กำลังสแกนที่อยู่ใกล้เคียงหา SMB2/3 (ใช้เวลาสูงสุด 20 วินาที)…</string>
+<string name="network_discovery_finished">สแกน SMB เสร็จแล้ว เลือกผลลัพธ์หรือป้อนเซิร์ฟเวอร์เอง เซิร์ฟเวอร์ WebDAV จะปรากฏเฉพาะเมื่อมีการโฆษณาบริการเท่านั้น</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">ชื่อการเชื่อมต่อ (ไม่บังคับ)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">ชื่อผู้ใช้ (เว้นว่างเพื่อใช้แบบไม่ระบุตัวตน)</string>
+<string name="network_password">รหัสผ่าน</string>
+<string name="network_domain">โดเมน / เวิร์กกรุ๊ป (ไม่บังคับ)</string>
+<string name="network_remember">บันทึกการเชื่อมต่อ (เข้ารหัสไว้บนอุปกรณ์นี้)</string>
+<string name="network_saved_connections">การเชื่อมต่อที่บันทึกไว้</string>
+<string name="network_webdav_help">ใช้ URL ของ collection WebDAV แบบเต็ม แนะนำให้ใช้ HTTPS เพราะ HTTP จะส่งข้อมูลรับรองแบบไม่เข้ารหัส ไฟล์จะเปิดเป็นสำเนาในเครื่อง หากต้องการบันทึกการแก้ไขลงเซิร์ฟเวอร์ ให้คัดลอกกลับไปเอง</string>
+<string name="network_smb_help">เชื่อมต่อกับ share SMB2/3 เช่น smb://192.168.1.10/Documents สามารถระบุพอร์ตเองได้หลังชื่อโฮสต์ ไม่รองรับ SMB1</string>
+<string name="network_transfer_safety">ไฟล์ที่มีอยู่จะไม่ถูกเขียนทับ การย้ายจะลบไฟล์ต้นทางเมื่อถ่ายโอนสำเร็จเท่านั้น การยกเลิกหรือความล้มเหลวอาจทำให้ฝั่งปลายทางเหลือไฟล์เพียงบางส่วน</string>
+<string name="network_recursive_delete">การลบโฟลเดอร์จะลบทุกอย่างที่อยู่ข้างในบนเซิร์ฟเวอร์ด้วย</string>
+<string name="network_downloading">กำลังดาวน์โหลดสำเนาในเครื่อง</string>
+<string name="network_browse_hint">ใช้รายการโฟลเดอร์เพื่อเลื่อนดูการเชื่อมต่อนี้ เข้าถึงการเชื่อมต่อที่บันทึกไว้ได้จากรายการในแถบด้านข้าง</string>
+<string name="network_permission_denied">ต้องได้รับสิทธิ์อุปกรณ์ใกล้เคียงเพื่อใช้เซิร์ฟเวอร์ในเครือข่ายเดียวกันบน Android 17+ อนุญาตในการตั้งค่าแอป แล้วเชื่อมต่ออีกครั้ง</string>
+<string name="network_extract_first">แตกไฟล์รายการจากไฟล์บีบอัดไปยังโฟลเดอร์ในเครื่องก่อน จึงจะคัดลอกหรือย้ายไปยังการเชื่อมต่อเครือข่ายได้</string>
+<string name="network_new_connection">การเชื่อมต่อใหม่</string>
+<string name="network_remember_ftp">บันทึกการเชื่อมต่อ FTP</string>
+<string name="network_ftp_help">เชื่อมต่อกับเซิร์ฟเวอร์ FTP หรือ FTPS โปรไฟล์ FTP ที่บันทึกไว้จะยังใช้ได้ที่นี่ ไฟล์จะเปิดเป็นสำเนาในเครื่อง หากแก้ไขแล้วให้คัดลอกกลับไปยังเซิร์ฟเวอร์เอง</string>
+<string name="network_connection_saved">บันทึกการเชื่อมต่อแล้ว</string>
+<string name="network_delete_connection">ลบการเชื่อมต่อที่บันทึกไว้</string>
+<string name="network_delete_connection_confirm">ลบ “%1$s” และถอนหมุดจากแถบด้านข้างหรือไม่? ไฟล์บนเซิร์ฟเวอร์จะไม่ได้รับผลกระทบ</string>
+<string name="network_saved_connection_missing">ไม่พบการเชื่อมต่อที่บันทึกไว้ เพิ่มใหม่อีกครั้งในการเชื่อมต่อเครือข่าย</string>
+<string name="network_invalid_port">ป้อนพอร์ตตั้งแต่ 1 ถึง 65535</string>
+<string name="network_invalid_host">ป้อนชื่อโฮสต์หรือที่อยู่ IP ของเซิร์ฟเวอร์ โดยไม่รวมเส้นทาง URL</string>
+<string name="network_storage_unavailable">%1$s · เซิร์ฟเวอร์ไม่ได้รายงานพื้นที่จัดเก็บ</string>
+<string name="network_storage_free">ว่าง %1$s · พื้นที่รวมไม่พร้อมใช้งาน</string>
+<string name="network_ftp_create_unsupported">ที่นี่ไม่รองรับการสร้างรายการในบานหน้าต่าง FTP</string>
+</resources>

@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d 个工具 · %2$d 个已安装软件包</string>
     <string name="tools_hub_no_results">没有匹配的工具</string>
     <string name="tools_hub_download_badge">下载</string>
-    <string name="tools_hub_ready_badge">就绪</string>
     <string name="tools_hub_pack_metadata">%1$d 个工具 · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">已安装</string>
     <string name="tools_hub_pack_available">可选下载</string>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">नेटवर्क कनेक्शन</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">सर्वर खोजें</string>
+<string name="network_scan_smb">फिर स्कैन करें</string>
+<string name="network_discovery_help">सेवा विज्ञापनों, Windows डिस्कवरी और सीमित SMB2/3 स्कैन से स्थानीय सर्वर अपने आप खोजे जा रहे हैं। कोई लॉगिन या पासवर्ड आज़माया नहीं जाता। कोई सर्वर चुनें, फिर उसका शेयर या कलेक्शन और क्रेडेंशियल दर्ज करें।</string>
+<string name="network_discovery_unavailable">सेवा खोज उपलब्ध नहीं है। आप अब भी SMB स्कैन कर सकते हैं या सर्वर मैन्युअल रूप से दर्ज कर सकते हैं।</string>
+<string name="network_discovery_no_lan">कोई समर्थित IPv4 Wi-Fi/Ethernet सबनेट नहीं। विज्ञापित सेवाएँ अब भी दिख सकती हैं; अन्यथा सर्वर मैन्युअल रूप से दर्ज करें।</string>
+<string name="network_discovery_scanning">आस-पास के पतों पर SMB2/3 स्कैन हो रहा है (20 सेकंड तक)…</string>
+<string name="network_discovery_finished">SMB स्कैन पूरा हुआ। कोई परिणाम चुनें या सर्वर मैन्युअल रूप से दर्ज करें। WebDAV सर्वर तभी दिखते हैं जब वे अपनी सेवा का विज्ञापन करें।</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">कनेक्शन नाम (वैकल्पिक)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">उपयोगकर्ता नाम (गुमनाम के लिए खाली छोड़ें)</string>
+<string name="network_password">पासवर्ड</string>
+<string name="network_domain">डोमेन / वर्कग्रुप (वैकल्पिक)</string>
+<string name="network_remember">कनेक्शन सेव करें (इस डिवाइस पर एन्क्रिप्टेड)</string>
+<string name="network_saved_connections">सेव किए गए कनेक्शन</string>
+<string name="network_webdav_help">पूरा WebDAV कलेक्शन URL उपयोग करें। HTTPS अनुशंसित है; HTTP क्रेडेंशियल बिना एन्क्रिप्शन भेजता है। फ़ाइलें स्थानीय कॉपी के रूप में खुलती हैं। बदलाव सर्वर पर सेव करने के लिए उन्हें स्पष्ट रूप से वापस कॉपी करें।</string>
+<string name="network_smb_help">SMB2/3 शेयर से कनेक्ट करें, उदाहरण smb://192.168.1.10/Documents। होस्ट के बाद कोई कस्टम पोर्ट जोड़ा जा सकता है। SMB1 समर्थित नहीं है।</string>
+<string name="network_transfer_safety">मौजूदा फ़ाइलें बदलकर नहीं लिखी जातीं। ले जाने पर स्रोत तभी हटता है जब ट्रांसफ़र सफल हो जाए। रद्द करने या विफलता पर गंतव्य अधूरा रह सकता है।</string>
+<string name="network_recursive_delete">फ़ोल्डर हटाने पर सर्वर पर उसके अंदर की सब कुछ भी हट जाती है।</string>
+<string name="network_downloading">स्थानीय कॉपी डाउनलोड हो रही है</string>
+<string name="network_browse_hint">इस कनेक्शन में नेविगेट करने के लिए फ़ोल्डर सूची उपयोग करें। सेव किए गए कनेक्शन उसकी साइडबार प्रविष्टि से उपलब्ध हैं।</string>
+<string name="network_permission_denied">Android 17+ पर स्थानीय सर्वरों के लिए आस-पास के डिवाइस अनुमति आवश्यक है। उसे ऐप सेटिंग्स में देकर फिर कनेक्ट करें।</string>
+<string name="network_extract_first">नेटवर्क कनेक्शन पर कॉपी या ले जाने से पहले संग्रह प्रविष्टियाँ स्थानीय फ़ोल्डर में निकालें।</string>
+<string name="network_new_connection">नया कनेक्शन</string>
+<string name="network_remember_ftp">FTP कनेक्शन सेव करें</string>
+<string name="network_ftp_help">FTP या FTPS सर्वर से कनेक्ट करें। सेव किए गए FTP प्रोफ़ाइल यहाँ उपलब्ध रहते हैं। फ़ाइलें स्थानीय कॉपी के रूप में खुलती हैं; बदलाव स्पष्ट रूप से वापस कॉपी करें।</string>
+<string name="network_connection_saved">कनेक्शन सेव हुआ</string>
+<string name="network_delete_connection">सेव किया कनेक्शन हटाएँ</string>
+<string name="network_delete_connection_confirm">“%1$s” हटाकर उसका साइडबार पिन हटाएँ? सर्वर की फ़ाइलें प्रभावित नहीं होतीं।</string>
+<string name="network_saved_connection_missing">सेव किया कनेक्शन नहीं मिला। इसे नेटवर्क कनेक्शन में फिर जोड़ें।</string>
+<string name="network_invalid_port">1 से 65535 तक का पोर्ट दर्ज करें</string>
+<string name="network_invalid_host">URL पथ के बिना सर्वर होस्टनाम या IP पता दर्ज करें</string>
+<string name="network_storage_unavailable">%1$s · सर्वर स्टोरेज जगह नहीं बताता</string>
+<string name="network_storage_free">%1$s खाली · कुल जगह उपलब्ध नहीं</string>
+<string name="network_ftp_create_unsupported">FTP पैन में प्रविष्टियाँ बनाना यहाँ समर्थित नहीं है।</string>
+</resources>

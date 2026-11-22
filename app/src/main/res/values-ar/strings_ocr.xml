@@ -5,7 +5,6 @@
     <string name="ocr_runtime_description">نزّل حزمة OCR مفتوحة المصدر مرة واحدة. لا يحتوي التطبيق الرئيسي على المحرك أو نماذج التعرف.</string>
     <string name="ocr_download_runtime">تنزيل حزمة OCR</string>
     <string name="ocr_runtime_unpublished">لم يتم نشر حزمة OCR في هذا الكتالوج بعد. حدّث كتالوج الحزم أو ثبّت ملف APK الموقّع من مركز الأدوات.</string>
-    <string name="ocr_runtime_loading">جارٍ تحميل حزمة OCR…</string>
     <string name="ocr_android_required">يتطلب التعرف على النصوص على الجهاز أندرويد 7 أو أحدث.</string>
     <string name="ocr_language">لغة التعرف على النصوص</string>
     <string name="ocr_language_english">الإنجليزية</string>
@@ -42,7 +41,6 @@
     <string name="ocr_capture_cancelled">لم يُسمح بالتقاط الشاشة</string>
     <string name="ocr_capture_failed">تعذر التقاط هذه الشاشة. أعد المحاولة أو استورد لقطة شاشة.</string>
     <string name="ocr_capture_start_failed">تعذر بدء الالتقاط: %1$s</string>
-    <string name="ocr_capture_stopped">توقف التقاط الشاشة</string>
     <string name="ocr_select_region">حدد النص بالسحب أو اقرأ الصورة كاملة</string>
     <string name="ocr_recognize">قراءة النص</string>
     <string name="ocr_full_image">الصورة كاملة</string>
@@ -61,7 +59,6 @@
     <string name="ocr_engine_error">فشل التعرف على النص: %1$s</string>
     <string name="ocr_licenses">تراخيص المصادر المفتوحة</string>
     <string name="ocr_licenses_description">نماذج PaddleOCR المحمولة (Baidu / PaddlePaddle Authors) الموزعة عبر RapidOCR: رخصة Apache 2.0. محرك ONNX Runtime (Microsoft والمساهمون): رخصة MIT. النماذج مثبتة على سجل RapidOCR v3.10.0. لا يستخدم التعرف أي خدمة سحابية.</string>
-    <string name="ocr_retry">إعادة المحاولة</string>
     <string name="ocr_open_link">فتح %1$s</string>
     <string name="ocr_send_email">مراسلة %1$s</string>
     <string name="ocr_dial_number">طلب %1$s</string>

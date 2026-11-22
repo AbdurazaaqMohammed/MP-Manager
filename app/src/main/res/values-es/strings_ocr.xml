@@ -5,7 +5,6 @@
     <string name="ocr_runtime_description">Descarga una sola vez el paquete OCR de código abierto. La app principal no incluye ningún motor de OCR ni pesos de modelos.</string>
     <string name="ocr_download_runtime">Descargar paquete OCR</string>
     <string name="ocr_runtime_unpublished">El paquete OCR aún no está publicado en este catálogo. Actualiza el catálogo de paquetes o instala el APK firmado del paquete desde el Centro de herramientas.</string>
-    <string name="ocr_runtime_loading">Cargando paquete OCR…</string>
     <string name="ocr_android_required">El OCR en el dispositivo requiere Android 7 o posterior.</string>
     <string name="ocr_language">Idioma de reconocimiento</string>
     <string name="ocr_language_english">Inglés</string>
@@ -42,7 +41,6 @@
     <string name="ocr_capture_cancelled">No se permitió la captura de pantalla</string>
     <string name="ocr_capture_failed">No se pudo capturar esta pantalla. Vuelve a intentarlo o importa una captura de pantalla.</string>
     <string name="ocr_capture_start_failed">No se pudo iniciar la captura: %1$s</string>
-    <string name="ocr_capture_stopped">Captura de pantalla detenida</string>
     <string name="ocr_select_region">Arrastra sobre el texto o lee la imagen completa</string>
     <string name="ocr_recognize">Leer texto</string>
     <string name="ocr_full_image">Imagen completa</string>
@@ -61,7 +59,6 @@
     <string name="ocr_engine_error">Error en el reconocimiento de texto: %1$s</string>
     <string name="ocr_licenses">Licencias de código abierto</string>
     <string name="ocr_licenses_description">Modelos móviles de PaddleOCR (Baidu / PaddlePaddle Authors), distribuidos por RapidOCR: Apache License 2.0. ONNX Runtime (Microsoft y colaboradores): MIT License. Los modelos están fijados al registro de modelos de RapidOCR v3.10.0. El reconocimiento no usa ningún servicio en la nube.</string>
-    <string name="ocr_retry">Reintentar</string>
     <string name="ocr_open_link">Abrir %1$s</string>
     <string name="ocr_send_email">Enviar correo a %1$s</string>
     <string name="ocr_dial_number">Llamar a %1$s</string>

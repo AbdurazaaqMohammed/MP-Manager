@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d araç · %2$d yüklü paket</string>
     <string name="tools_hub_no_results">Aramanızla eşleşen araç yok</string>
     <string name="tools_hub_download_badge">İndir</string>
-    <string name="tools_hub_ready_badge">Hazır</string>
     <string name="tools_hub_pack_metadata">%1$d araç · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">Yüklü</string>
     <string name="tools_hub_pack_available">İsteğe bağlı indirme</string>

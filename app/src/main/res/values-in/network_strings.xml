@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Koneksi jaringan</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Temukan server</string>
+<string name="network_scan_smb">Pindai lagi</string>
+<string name="network_discovery_help">Mencari server lokal secara otomatis menggunakan iklan layanan, penemuan Windows, dan pemindaian SMB2/3 terbatas. Tidak ada percobaan login atau kata sandi. Pilih server, lalu masukkan share atau koleksinya beserta kredensialnya.</string>
+<string name="network_discovery_unavailable">Penemuan layanan tidak tersedia. Anda masih dapat memindai SMB atau memasukkan server secara manual.</string>
+<string name="network_discovery_no_lan">Tidak ada subnet IPv4 Wi-Fi/Ethernet yang didukung. Layanan yang diiklankan mungkin tetap muncul; jika tidak, masukkan server secara manual.</string>
+<string name="network_discovery_scanning">Memindai alamat terdekat untuk SMB2/3 (hingga 20 detik)…</string>
+<string name="network_discovery_finished">Pemindaian SMB selesai. Pilih hasil atau masukkan server secara manual. Server WebDAV hanya muncul jika mengiklankan layanannya.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Nama koneksi (opsional)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Nama pengguna (kosongkan untuk anonim)</string>
+<string name="network_password">Kata sandi</string>
+<string name="network_domain">Domain / grup kerja (opsional)</string>
+<string name="network_remember">Simpan koneksi (terenkripsi di perangkat ini)</string>
+<string name="network_saved_connections">Koneksi tersimpan</string>
+<string name="network_webdav_help">Gunakan URL koleksi WebDAV yang lengkap. HTTPS disarankan; HTTP mengirim kredensial tanpa enkripsi. Berkas dibuka sebagai salinan lokal. Untuk menyimpan suntingan di server, salin kembali secara eksplisit.</string>
+<string name="network_smb_help">Hubungkan ke share SMB2/3, misalnya smb://192.168.1.10/Documents. Port khusus dapat ditambahkan setelah host. SMB1 tidak didukung.</string>
+<string name="network_transfer_safety">Berkas yang sudah ada tidak ditimpa. Pemindahan hanya menghapus sumbernya setelah transfer berhasil. Pembatalan atau kegagalan dapat menyisakan tujuan yang parsial.</string>
+<string name="network_recursive_delete">Menghapus folder juga menghapus semua isinya di server.</string>
+<string name="network_downloading">Mengunduh salinan lokal</string>
+<string name="network_browse_hint">Gunakan daftar folder untuk menelusuri koneksi ini. Koneksi tersimpan tersedia dari entri bilah sisinya.</string>
+<string name="network_permission_denied">Izin perangkat terdekat diperlukan untuk server lokal di Android 17+. Izinkan di pengaturan aplikasi, lalu hubungkan kembali.</string>
+<string name="network_extract_first">Ekstrak entri arsip ke folder lokal sebelum menyalin atau memindahkannya ke koneksi jaringan.</string>
+<string name="network_new_connection">Koneksi baru</string>
+<string name="network_remember_ftp">Simpan koneksi FTP</string>
+<string name="network_ftp_help">Hubungkan ke server FTP atau FTPS. Profil FTP tersimpan tetap tersedia di sini. Berkas dibuka sebagai salinan lokal; salin kembali suntingan secara eksplisit.</string>
+<string name="network_connection_saved">Koneksi disimpan</string>
+<string name="network_delete_connection">Hapus koneksi tersimpan</string>
+<string name="network_delete_connection_confirm">Hapus “%1$s” dan lepaskan sematannya di bilah sisi? Berkas di server tidak terpengaruh.</string>
+<string name="network_saved_connection_missing">Koneksi tersimpan tidak ditemukan. Tambahkan lagi di Koneksi jaringan.</string>
+<string name="network_invalid_port">Masukkan port dari 1 sampai 65535</string>
+<string name="network_invalid_host">Masukkan hostname server atau alamat IP, tanpa jalur URL</string>
+<string name="network_storage_unavailable">%1$s · Server tidak melaporkan ruang penyimpanan</string>
+<string name="network_storage_free">Kosong %1$s · Total ruang tidak tersedia</string>
+<string name="network_ftp_create_unsupported">Membuat entri di panel FTP tidak didukung di sini.</string>
+</resources>

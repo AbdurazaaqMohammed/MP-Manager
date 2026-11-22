@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Ligações de rede</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Detetar servidores</string>
+<string name="network_scan_smb">Analisar novamente</string>
+<string name="network_discovery_help">A procurar automaticamente servidores locais usando anúncios de serviço, deteção do Windows e uma análise delimitada de SMB2/3. Nenhum início de sessão ou palavra-passe é tentado. Selecione um servidor e introduza a respetiva partilha/coleção e credenciais.</string>
+<string name="network_discovery_unavailable">A deteção de serviços está indisponível. Ainda pode analisar SMB ou introduzir um servidor manualmente.</string>
+<string name="network_discovery_no_lan">Nenhuma sub-rede IPv4 Wi-Fi/Ethernet suportada. Os serviços anunciados ainda podem aparecer; caso contrário, introduza o servidor manualmente.</string>
+<string name="network_discovery_scanning">A analisar endereços próximos por SMB2/3 (até 20 segundos)…</string>
+<string name="network_discovery_finished">Análise SMB concluída. Selecione um resultado ou introduza um servidor manualmente. Os servidores WebDAV só aparecem se anunciarem o seu serviço.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Nome da ligação (opcional)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Nome de utilizador (vazio para anónimo)</string>
+<string name="network_password">Palavra-passe</string>
+<string name="network_domain">Domínio / grupo de trabalho (opcional)</string>
+<string name="network_remember">Guardar ligação (encriptada neste dispositivo)</string>
+<string name="network_saved_connections">Ligações guardadas</string>
+<string name="network_webdav_help">Use o URL completo da coleção WebDAV. HTTPS é recomendado; HTTP envia credenciais sem encriptação. Os ficheiros abrem como cópias locais. Para guardar edições no servidor, copie-as de volta explicitamente.</string>
+<string name="network_smb_help">Ligue-se a uma partilha SMB2/3, por exemplo smb://192.168.1.10/Documents. Uma porta personalizada pode ser acrescentada após o anfitrião. SMB1 não é suportado.</string>
+<string name="network_transfer_safety">Os ficheiros existentes não são substituídos. Uma movimentação elimina a origem apenas após uma transferência bem-sucedida. Cancelamento ou falha pode deixar um destino parcial.</string>
+<string name="network_recursive_delete">Eliminar uma pasta também elimina tudo o que está dentro dela no servidor.</string>
+<string name="network_downloading">A transferir cópia local</string>
+<string name="network_browse_hint">Use a lista de pastas para navegar nesta ligação. As ligações guardadas estão disponíveis na entrada da barra lateral.</string>
+<string name="network_permission_denied">A permissão de dispositivos próximos é necessária para servidores locais no Android 17 ou superior. Conceda-a nas configurações da aplicação e ligue-se novamente.</string>
+<string name="network_extract_first">Extraia as entradas do arquivo para uma pasta local antes de as copiar ou mover para uma ligação de rede.</string>
+<string name="network_new_connection">Nova ligação</string>
+<string name="network_remember_ftp">Guardar ligação FTP</string>
+<string name="network_ftp_help">Ligue-se a um servidor FTP ou FTPS. Os perfis FTP guardados continuam disponíveis aqui. Os ficheiros abrem como cópias locais; copie as edições de volta explicitamente.</string>
+<string name="network_connection_saved">Ligação guardada</string>
+<string name="network_delete_connection">Eliminar ligação guardada</string>
+<string name="network_delete_connection_confirm">Eliminar “%1$s” e remover a sua fixação na barra lateral? Os ficheiros do servidor não são afetados.</string>
+<string name="network_saved_connection_missing">Ligação guardada não encontrada. Adicione-a novamente em Ligações de rede.</string>
+<string name="network_invalid_port">Introduza uma porta de 1 a 65535</string>
+<string name="network_invalid_host">Introduza um nome de anfitrião ou endereço IP do servidor, sem caminho de URL</string>
+<string name="network_storage_unavailable">%1$s · O servidor não reporta espaço de armazenamento</string>
+<string name="network_storage_free">%1$s livres · Espaço total indisponível</string>
+<string name="network_ftp_create_unsupported">A criação de entradas em painéis FTP não é suportada aqui.</string>
+</resources>

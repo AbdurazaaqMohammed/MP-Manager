@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Сетевые подключения</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Поиск серверов</string>
+<string name="network_scan_smb">Сканировать снова</string>
+<string name="network_discovery_help">Автоматический поиск локальных серверов: объявления служб, обнаружение Windows и ограниченное сканирование SMB2/3. Попыток входа и подбора паролей нет. Выберите сервер, затем укажите его общий ресурс или коллекцию и учётные данные.</string>
+<string name="network_discovery_unavailable">Обнаружение служб недоступно. Можно снова выполнить сканирование SMB или ввести сервер вручную.</string>
+<string name="network_discovery_no_lan">Поддерживаемая подсеть IPv4 (Wi-Fi/Ethernet) не найдена. Объявленные службы всё же могут появиться; иначе введите сервер вручную.</string>
+<string name="network_discovery_scanning">Сканирование соседних адресов на предмет SMB2/3 (до 20 секунд)…</string>
+<string name="network_discovery_finished">Сканирование SMB завершено. Выберите результат или введите сервер вручную. Серверы WebDAV появляются, только если сами объявляют свою службу.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Название подключения (необязательно)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Имя пользователя (пусто — анонимный вход)</string>
+<string name="network_password">Пароль</string>
+<string name="network_domain">Домен / рабочая группа (необязательно)</string>
+<string name="network_remember">Сохранить подключение (шифруется на этом устройстве)</string>
+<string name="network_saved_connections">Сохранённые подключения</string>
+<string name="network_webdav_help">Используйте полный URL коллекции WebDAV. Рекомендуется HTTPS: HTTP передаёт учётные данные без шифрования. Файлы открываются как локальные копии. Чтобы сохранить изменения на сервере, скопируйте их обратно явно.</string>
+<string name="network_smb_help">Подключение к общему ресурсу SMB2/3, например smb://192.168.1.10/Documents. Порт можно указать после адреса хоста. SMB1 не поддерживается.</string>
+<string name="network_transfer_safety">Существующие файлы не перезаписываются. Перемещение удаляет источник только после успешной передачи. При отмене или сбое в назначении может остаться часть данных.</string>
+<string name="network_recursive_delete">При удалении папки также удаляется всё её содержимое на сервере.</string>
+<string name="network_downloading">Загрузка локальной копии</string>
+<string name="network_browse_hint">Для навигации по этому подключению используйте список папок. Сохранённые подключения доступны в его пункте боковой панели.</string>
+<string name="network_permission_denied">Для локальных серверов на Android 17+ требуется разрешение «Находящиеся рядом устройства». Выдайте его в настройках приложения и подключитесь снова.</string>
+<string name="network_extract_first">Извлеките записи архива в локальную папку, прежде чем копировать или перемещать их в сетевое подключение.</string>
+<string name="network_new_connection">Новое подключение</string>
+<string name="network_remember_ftp">Сохранить FTP-подключение</string>
+<string name="network_ftp_help">Подключение к серверу FTP или FTPS. Сохранённые FTP-профили остаются доступны здесь. Файлы открываются как локальные копии; изменения копируйте на сервер явно.</string>
+<string name="network_connection_saved">Подключение сохранено</string>
+<string name="network_delete_connection">Удалить сохранённое подключение</string>
+<string name="network_delete_connection_confirm">Удалить «%1$s» и открепить его от боковой панели? Файлы на сервере не затрагиваются.</string>
+<string name="network_saved_connection_missing">Сохранённое подключение не найдено. Добавьте его снова в «Сетевые подключения».</string>
+<string name="network_invalid_port">Укажите порт от 1 до 65535</string>
+<string name="network_invalid_host">Укажите имя хоста сервера или IP-адрес, без пути URL</string>
+<string name="network_storage_unavailable">%1$s · Сервер не сообщает объём хранилища</string>
+<string name="network_storage_free">Свободно: %1$s · Общий объём недоступен</string>
+<string name="network_ftp_create_unsupported">Создание записей в панелях FTP здесь не поддерживается.</string>
+</resources>

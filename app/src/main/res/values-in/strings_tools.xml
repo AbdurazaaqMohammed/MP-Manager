@@ -4,7 +4,6 @@
     <string name="tools_hub_summary_compact">%1$d alat · %2$d paket terpasang</string>
     <string name="tools_hub_no_results">Tidak ada alat yang cocok dengan pencarian</string>
     <string name="tools_hub_download_badge">Unduh</string>
-    <string name="tools_hub_ready_badge">Siap</string>
     <string name="tools_hub_pack_metadata">%1$d alat · v%2$s · %3$s</string>
     <string name="tools_hub_pack_installed">Terpasang</string>
     <string name="tools_hub_pack_available">Unduhan opsional</string>

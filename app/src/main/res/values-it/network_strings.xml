@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="network_connections">Connessioni di rete</string>
+<string name="network_ftp_tab">FTP</string>
+<string name="network_smb_tab">SMB</string>
+<string name="network_discover">Trova server</string>
+<string name="network_scan_smb">Scansiona di nuovo</string>
+<string name="network_discovery_help">Cerca automaticamente i server locali usando annunci di servizio, individuazione Windows e una scansione SMB2/3 limitata. Non vengono provati accessi o password. Seleziona un server, poi inserisci la sua condivisione o raccolta e le credenziali.</string>
+<string name="network_discovery_unavailable">L\'individuazione dei servizi non è disponibile. Puoi comunque scansionare SMB o inserire un server manualmente.</string>
+<string name="network_discovery_no_lan">Nessuna sottorete IPv4 Wi-Fi/Ethernet supportata. I servizi annunciati possono comunque comparire; altrimenti inserisci il server manualmente.</string>
+<string name="network_discovery_scanning">Scansione degli indirizzi vicini per SMB2/3 (fino a 20 secondi)…</string>
+<string name="network_discovery_finished">Scansione SMB terminata. Seleziona un risultato o inserisci un server manualmente. I server WebDAV compaiono solo se annunciano il loro servizio.</string>
+<string name="webdav_client">WebDAV</string>
+<string name="network_connection_name">Nome connessione (facoltativo)</string>
+<string name="network_webdav_address">https://server/dav/collection/</string>
+<string name="network_smb_address">smb://server/share</string>
+<string name="network_username">Nome utente (vuoto per anonimo)</string>
+<string name="network_password">Password</string>
+<string name="network_domain">Dominio / gruppo di lavoro (facoltativo)</string>
+<string name="network_remember">Salva connessione (cifrata su questo dispositivo)</string>
+<string name="network_saved_connections">Connessioni salvate</string>
+<string name="network_webdav_help">Usa l\'URL completo della raccolta WebDAV. È consigliato HTTPS; HTTP invia le credenziali senza cifratura. I file si aprono come copie locali. Per salvare le modifiche sul server, ricopiale esplicitamente.</string>
+<string name="network_smb_help">Connetti a una condivisione SMB2/3, ad esempio smb://192.168.1.10/Documents. Una porta personalizzata può essere aggiunta dopo l\'host. SMB1 non è supportato.</string>
+<string name="network_transfer_safety">I file esistenti non vengono sovrascritti. Uno spostamento elimina l\'origine solo dopo un trasferimento riuscito. Un annullamento o un errore può lasciare una destinazione parziale.</string>
+<string name="network_recursive_delete">Eliminare una cartella elimina anche tutto il suo contenuto sul server.</string>
+<string name="network_downloading">Download della copia locale</string>
+<string name="network_browse_hint">Usa l\'elenco delle cartelle per navigare questa connessione. Le connessioni salvate sono disponibili dalla sua voce nel pannello laterale.</string>
+<string name="network_permission_denied">L\'autorizzazione dispositivi nelle vicinanze è richiesta per i server locali su Android 17+. Concedila nelle impostazioni dell\'app, poi connetti di nuovo.</string>
+<string name="network_extract_first">Estrai le voci dell\'archivio in una cartella locale prima di copiarle o spostarle in una connessione di rete.</string>
+<string name="network_new_connection">Nuova connessione</string>
+<string name="network_remember_ftp">Salva connessione FTP</string>
+<string name="network_ftp_help">Connetti a un server FTP o FTPS. I profili FTP salvati restano disponibili qui. I file si aprono come copie locali; ricopia esplicitamente le modifiche.</string>
+<string name="network_connection_saved">Connessione salvata</string>
+<string name="network_delete_connection">Elimina connessione salvata</string>
+<string name="network_delete_connection_confirm">Eliminare “%1$s” e rimuovere il suo pin dal pannello laterale? I file sul server non sono toccati.</string>
+<string name="network_saved_connection_missing">Connessione salvata non trovata. Aggiungila di nuovo in Connessioni di rete.</string>
+<string name="network_invalid_port">Inserisci una porta da 1 a 65535</string>
+<string name="network_invalid_host">Inserisci un nome host o un indirizzo IP del server, senza percorso URL</string>
+<string name="network_storage_unavailable">%1$s · Il server non comunica lo spazio di archiviazione</string>
+<string name="network_storage_free">%1$s liberi · Spazio totale non disponibile</string>
+<string name="network_ftp_create_unsupported">La creazione di voci nei pannelli FTP non è supportata qui.</string>
+</resources>
