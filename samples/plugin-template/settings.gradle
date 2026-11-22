@@ -1,0 +1,59 @@
+// Standalone build settings for the MP-Manager plugin template.
+//
+// The template is intentionally NOT included in the MP-Manager root build:
+// copy this whole directory anywhere (inside or outside the repo), rename
+// the package, and build it with its own wrapper.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        // Same AGP version as MP-Manager.
+        id 'com.android.application' version '9.2.1'
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // Scoped local cache: only the plugin SDK coordinate is ever
+        // resolved from mavenLocal (./gradlew -p plugin-sdk publishToMavenLocal).
+        mavenLocal {
+            content {
+                includeGroup 'io.github.abdurazaaqmohammed'
+            }
+        }
+    }
+}
+
+rootProject.name = 'mp-plugin-template'
+
+// Optional: build against local SDK sources instead of the published
+// artifact. Substitutes io.github.abdurazaaqmohammed:mpmanager-plugin-sdk
+// with the plugin-sdk build:
+//   ./gradlew assembleDebug -PmpPluginSdk=/abs/path/to/MP-Manager/plugin-sdk
+def sdkProp = providers.gradleProperty('mpPluginSdk').orElse('').get()
+if (!sdkProp.trim().isEmpty()) {
+    File dir = new File(sdkProp.trim())
+    if (!dir.isAbsolute()) dir = new File(rootDir, sdkProp.trim())
+    File canonical
+    try {
+        canonical = dir.canonicalFile
+    } catch (IOException e) {
+        throw new GradleException("mpPluginSdk: cannot resolve '${sdkProp}': ${e.message}")
+    }
+    if (!canonical.isDirectory()
+            || !(new File(canonical, 'settings.gradle').isFile()
+                || new File(canonical, 'settings.gradle.kts').isFile())) {
+        throw new GradleException(
+                "mpPluginSdk: expected a directory with settings.gradle(.kts): ${sdkProp}")
+    }
+    // The SDK build's root project is named mpmanager-plugin-sdk and declares
+    // group io.github.abdurazaaqmohammed, so the default composite
+    // substitution maps the dependency below onto the local SDK sources.
+    includeBuild(canonical)
+}

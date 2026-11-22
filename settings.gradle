@@ -6,18 +6,86 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "MP Manager"
-include ':app'
-include ':sdk'
-include ':packs:pack-math'
-include ':packs:pack-notes'
-include ':packs:pack-text'
-include ':packs:pack-random'
-include ':packs:pack-device'
-include ':packs:pack-media'
-include ':packs:pack-network'
-include ':packs:pack-ocr'
-include ':samples:plugin-sample'
-include ':samples:theme-sample'
-include ':apkkit'
-include ':zero-symbol-input-view'
-include ':zero-symbol-input-view-v2'
+
+// Explicit modules. Third-party plugin modules below are discovered
+// deterministically and never replace these entries.
+def explicitModules = [
+        ':app',
+        ':sdk',
+        ':plugin-sdk',
+        ':packs:pack-math',
+        ':packs:pack-notes',
+        ':packs:pack-text',
+        ':packs:pack-random',
+        ':packs:pack-device',
+        ':packs:pack-media',
+        ':packs:pack-network',
+        ':packs:pack-ocr',
+        ':samples:plugin-sample',
+        ':samples:theme-sample',
+        ':apkkit',
+        ':zero-symbol-input-view',
+        ':zero-symbol-input-view-v2',
+]
+for (path in explicitModules) {
+    include path
+}
+def knownModules = explicitModules.toSet()
+
+// Add conventional plugin modules without changing the host's explicit graph.
+def hasBuildScript = { File dir ->
+    dir.isDirectory() && (new File(dir, 'build.gradle').isFile()
+            || new File(dir, 'build.gradle.kts').isFile())
+}
+
+File pluginsRoot = new File(rootDir, 'plugins')
+if (pluginsRoot.isDirectory()) {
+    for (File pluginDir in pluginsRoot.listFiles().findAll { it.isDirectory() }.sort { it.name }) {
+        def path = ":plugins:${pluginDir.name}"
+        if (hasBuildScript(pluginDir) && !knownModules.contains(path)) {
+            include path
+            knownModules << path
+        }
+    }
+}
+
+for (File rootChild in rootDir.listFiles().findAll { it.isDirectory() }.sort { it.name }) {
+    if (!rootChild.name.startsWith('plugin-') || rootChild.name == 'plugin-sdk') continue
+    def path = ":${rootChild.name}"
+    if (hasBuildScript(rootChild) && !knownModules.contains(path)) {
+        include path
+        knownModules << path
+    }
+}
+
+// Opt-in standalone builds; this exposes tasks, never installs or trusts APKs.
+// ./gradlew projects -PmpPluginBuilds=/abs/plugin1,/abs/plugin2
+def externalPluginBuilds = providers.gradleProperty('mpPluginBuilds').orElse('').get()
+def includedPluginBuilds = new HashSet<File>()
+if (!externalPluginBuilds.trim().isEmpty()) {
+    for (raw in externalPluginBuilds.split(',')) {
+        def trimmed = raw.trim()
+        if (trimmed.isEmpty()) continue
+        File dir = new File(trimmed)
+        if (!dir.isAbsolute()) dir = new File(rootDir, trimmed)
+        File canonical
+        try {
+            canonical = dir.canonicalFile
+        } catch (IOException e) {
+            throw new GradleException("mpPluginBuilds: cannot resolve '${trimmed}': ${e.message}")
+        }
+        if (!canonical.isDirectory()) {
+            throw new GradleException("mpPluginBuilds: not a directory: ${trimmed}")
+        }
+        if (!new File(canonical, 'settings.gradle').isFile()
+                && !new File(canonical, 'settings.gradle.kts').isFile()) {
+            throw new GradleException(
+                    "mpPluginBuilds: missing settings.gradle(.kts) in ${canonical}")
+        }
+        if (canonical == rootDir.canonicalFile) {
+            throw new GradleException('mpPluginBuilds: cannot include the host build itself')
+        }
+        if (!includedPluginBuilds.add(canonical)) continue
+        includeBuild canonical
+    }
+}

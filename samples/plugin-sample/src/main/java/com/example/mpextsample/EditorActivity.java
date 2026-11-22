@@ -22,7 +22,7 @@ public class EditorActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
         EditText field = new EditText(this);
-        field.setText(selected.toUpperCase());
+        field.setText(selected.toUpperCase(java.util.Locale.ROOT));
         box.addView(field);
         Button apply = new Button(this);
         apply.setText("Apply to editor");

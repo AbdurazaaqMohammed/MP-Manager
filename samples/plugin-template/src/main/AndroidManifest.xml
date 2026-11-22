@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MP-Manager plugin template. Copy this whole directory anywhere (it has
+     its own Gradle wrapper and settings), rename the package below, and
+     implement your own process/framework UI. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:label="MP Plugin Template"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- Action area 1: sidebar entry. -->
+        <activity
+            android:name=".TemplateSidebarActivity"
+            android:exported="true"
+            android:label="Template Sidebar">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SIDEBAR_OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.sidebar" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Template Sidebar" />
+        </activity>
+
+        <!-- Action area 2: setting entry. -->
+        <activity
+            android:name=".TemplateSettingActivity"
+            android:exported="true"
+            android:label="Template Setting">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SETTING_CONFIG" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.demo" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Template Toggle" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.SETTING_KEY"
+                android:value="plugin.template.demo_enabled" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.SETTING_TYPE"
+                android:value="boolean" />
+        </activity>
+
+        <!-- Action area 3: file menu entry. -->
+        <activity
+            android:name=".TemplateFileActivity"
+            android:exported="true"
+            android:label="Template File Info">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.fileinfo" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Template File Info" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.FILE_MIME"
+                android:value="text/*" />
+        </activity>
+
+        <!-- Action area 4: editor text action. -->
+        <activity
+            android:name=".TemplateEditorActivity"
+            android:exported="true"
+            android:label="Template Uppercase">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EDITOR_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.uppercase" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="TEMPLATE UPPERCASE" />
+        </activity>
+
+        <!-- Action area 5: APK dialog entry (display-only; no transforms). -->
+        <activity
+            android:name=".TemplateApkActivity"
+            android:exported="true"
+            android:label="Template APK Info">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.apkinfo" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Template APK Info" />
+        </activity>
+
+        <!-- Hook protocol: one activity serves all declared stable hooks. -->
+        <activity
+            android:name=".HookActivity"
+            android:exported="true"
+            android:label="Template Hooks">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.HOOK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.hooks" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+                android:value="sidebar.footer,toolbar.actions,filemenu.extra,dialog.elf.extra,dialog.apk.more,editor.toolbar" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+                android:value="1" />
+        </activity>
+
+        <!-- Event protocol: exported receiver for host event broadcasts. -->
+        <receiver
+            android:name=".EventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EVENT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="template.events" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+                android:value="app.launch,file.opened,theme.changed" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+                android:value="1" />
+        </receiver>
+
+    </application>
+
+</manifest>

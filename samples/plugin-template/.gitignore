@@ -1,0 +1,5 @@
+build/
+.gradle/
+local.properties
+*.apk
+output-metadata.json

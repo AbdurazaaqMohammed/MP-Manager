@@ -8,7 +8,7 @@ android {
     defaultConfig {
         applicationId "com.example.mpextsample"
         minSdk 21
-        targetSdk 37
+        targetSdk 36
         versionCode 1
         versionName "1.0"
     }
@@ -24,6 +24,7 @@ android {
 }
 
 dependencies {
-    // Host contracts only; never bundle the SDK into the APK.
-    compileOnly project(':sdk')
+    // Slim plugin SDK (contracts + runtime helpers). Bundled into the APK on
+    // purpose: this sample proves the standalone plugin SDK packages cleanly.
+    implementation project(':plugin-sdk')
 }

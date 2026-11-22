@@ -1,0 +1,34 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The template root project IS the plugin app: copy this directory, rename
+// the namespace/applicationId below, and ship.
+android {
+    compileSdk 36
+    namespace 'com.example.mplugtemplate'
+    defaultConfig {
+        applicationId "com.example.mplugtemplate"
+        minSdk 21
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Slim plugin SDK: contracts + runtime helpers (PluginHooks/PluginTheme/
+    // PluginRequests), bundled into this plugin APK by default. Override the
+    // resolution with -PmpPluginSdk=/abs/path/to/plugin-sdk (composite
+    // substitution of the SDK sources).
+    implementation 'io.github.abdurazaaqmohammed:mpmanager-plugin-sdk:1.0.0'
+}

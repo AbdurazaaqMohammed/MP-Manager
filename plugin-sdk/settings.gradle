@@ -1,0 +1,36 @@
+// Standalone build for the slim MP-Manager plugin SDK.
+//
+// This settings file is only used when building the SDK on its own, e.g.
+//   ./gradlew -p plugin-sdk test
+//   ./gradlew -p plugin-sdk publishToMavenLocal
+// Inside the MP-Manager repository the module is included by the root
+// settings.gradle as ':plugin-sdk' (see root settings discovery notes).
+//
+// No app and no native configuration lives here on purpose: the SDK is a
+// pure Java Android library with zero third-party dependencies.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        // Same AGP version as the MP-Manager root build. Versions are pinned
+        // here (not in build.gradle) so the module also builds as part of the
+        // root build, where the root buildscript classpath provides AGP.
+        id 'com.android.library' version '9.2.1'
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Matches the published artifact id so composite-build substitution by
+// group:name (io.github.abdurazaaqmohammed:mpmanager-plugin-sdk) also works
+// when consumers include this build with -PmpPluginSdk=...
+rootProject.name = 'mpmanager-plugin-sdk'

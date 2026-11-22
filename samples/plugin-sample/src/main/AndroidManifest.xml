@@ -91,6 +91,7 @@
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
             <meta-data
                 android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
@@ -99,6 +100,47 @@
                 android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
                 android:value="Sample APK Scan" />
         </activity>
+
+        <!-- Hook protocol: one activity serves all six stable hooks. -->
+        <activity
+            android:name=".HookActivity"
+            android:exported="true"
+            android:label="Sample Hooks">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.HOOK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.hooks" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Sample Hooks" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+                android:value="sidebar.footer,toolbar.actions,filemenu.extra,dialog.elf.extra,dialog.apk.more,editor.toolbar" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+                android:value="1" />
+        </activity>
+
+        <!-- Event protocol: logs app.launch / file.opened / theme.changed. -->
+        <receiver
+            android:name=".EventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EVENT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.events" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+                android:value="app.launch,file.opened,theme.changed" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+                android:value="1" />
+        </receiver>
 
     </application>
 

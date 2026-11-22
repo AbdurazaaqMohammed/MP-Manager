@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+}
+
+// Published coordinate: io.github.abdurazaaqmohammed:mpmanager-plugin-sdk:1.0.0
+group = 'io.github.abdurazaaqmohammed'
+version = '1.0.0'
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.plugin_sdk'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 19
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    publishing {
+        // Creates the release SoftwareComponent (with sources jar) that the
+        // publication below consumes; must come before the publishing block.
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+}
+
+// This contracts-only module is Java; AGP's implicit Kotlin runtime is unnecessary.
+configurations.configureEach {
+    withDependencies { dependencies ->
+        dependencies.removeAll { it.group == 'org.jetbrains.kotlin' && it.name == 'kotlin-stdlib' }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId = 'io.github.abdurazaaqmohammed'
+                artifactId = 'mpmanager-plugin-sdk'
+                version = '1.0.0'
+                from components.release
+            }
+        }
+    }
+}
