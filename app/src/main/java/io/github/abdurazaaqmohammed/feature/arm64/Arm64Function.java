@@ -28,8 +28,8 @@ public class Arm64Function {
     }
 
     public String getSubtitle() {
-        String base = String.format(Locale.ROOT, "Addr: %s | Off: %s | %d B (%d instrs) | %s",
-                getFormattedAddress(), getFormattedOffset(), size, getInstructionCount(),
+        String base = String.format(Locale.ROOT, "%s · Off: %s · %d B · %s",
+                getFormattedAddress(), getFormattedOffset(), size,
                 bindName != null ? bindName : "LOCAL");
         if (demangledName != null && !demangledName.equals(name)) {
             return name + "\n" + base;

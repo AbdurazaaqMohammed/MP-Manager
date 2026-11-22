@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.arm64;
 
+import java.util.Locale;
+
 /**
  * Model representing an item in the ELF structure explorer tree view.
  */
@@ -48,13 +50,17 @@ public class ElfTreeItem {
     }
 
     public static ElfTreeItem symbol(String name, String bindAndType, long vaddr, long offset) {
-        String sub = String.format("0x%X  ·  %s", vaddr, bindAndType);
-        return new ElfTreeItem(ItemType.SYMBOL, name, sub, null, vaddr, offset, 0, true);
+        return symbol(name, bindAndType, vaddr, offset, 0);
+    }
+
+    public static ElfTreeItem symbol(String name, String bindAndType, long vaddr, long offset, long size) {
+        String sub = String.format(java.util.Locale.ROOT, "0x%X  ·  %s", vaddr, bindAndType);
+        return new ElfTreeItem(ItemType.SYMBOL, name, sub, bindAndType, vaddr, offset, size, true);
     }
 
     public static String formatSize(long bytes) {
         if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+        if (bytes < 1024 * 1024) return String.format(java.util.Locale.ROOT, "%.1f KB", bytes / 1024.0);
+        return String.format(java.util.Locale.ROOT, "%.2f MB", bytes / (1024.0 * 1024.0));
     }
 }
