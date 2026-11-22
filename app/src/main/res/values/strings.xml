@@ -937,6 +937,17 @@ Layout Inspector
     <string name="repair_dex">Repair DEX</string>
     <string name="dex_properties">DEX properties</string>
     <string name="dex_to_smali">DEX to Smali</string>
+    <string name="dex_to_java">DEX to Java (JADX)</string>
+    <string name="decompile_to_java_jadx">Decompile to Java (JADX)</string>
+    <string name="open_in_java_mode">Open in Java Navigator</string>
+    <string name="export_as_zip">Export as ZIP archive</string>
+    <string name="export_to_directory">Export to Directory</string>
+    <string name="java_saved_to">Java sources saved to %1$s</string>
+    <string name="java_mode">Java Mode</string>
+    <string name="smali_mode">Smali Mode</string>
+    <string name="switch_to_java_mode">Switch to Java Mode</string>
+    <string name="switch_to_smali_mode">Switch to Smali Mode</string>
+    <string name="view_smali">View Smali</string>
     <string name="translation_mode">Translation mode</string>
     <string name="repaired_to">Repaired: %1$s</string>
     <string name="smali_saved_to">Smali saved to %1$s</string>

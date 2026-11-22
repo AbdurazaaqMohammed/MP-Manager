@@ -809,6 +809,17 @@
     <string name="repair_dex">إصلاح DEX</string>
     <string name="dex_properties">خصائص DEX</string>
     <string name="dex_to_smali">DEX إلى Smali</string>
+    <string name="dex_to_java">DEX إلى Java (JADX)</string>
+    <string name="decompile_to_java_jadx">فك إلى جافا (JADX)</string>
+    <string name="open_in_java_mode">تصفح الكود تفاعلياً (Java Navigator)</string>
+    <string name="export_as_zip">تصدير كأرشيف مضغوط (ZIP)</string>
+    <string name="export_to_directory">تصدير إلى مجلد مفتوح</string>
+    <string name="java_saved_to">تم حفظ سورس الجافا في %1$s</string>
+    <string name="java_mode">وضع الجافا</string>
+    <string name="smali_mode">وضع السمالي</string>
+    <string name="switch_to_java_mode">التبديل إلى وضع الجافا</string>
+    <string name="switch_to_smali_mode">التبديل إلى وضع السمالي</string>
+    <string name="view_smali">عرض السمالي</string>
     <string name="translation_mode">وضع الترجمة</string>
     <string name="repaired_to">تم الإصلاح: %1$s</string>
     <string name="smali_saved_to">تم حفظ Smali في %1$s</string>

@@ -84,4 +84,25 @@ public class Smali2Java {
         }
     }
 
+    public static String translate(ClassDef classDef, int version) throws Exception {
+        File tmp = File.createTempFile("cls", ".dex");
+        try {
+            DexPool pool = new DexPool(Opcodes.forDexVersion(version));
+            pool.internClass(classDef);
+            pool.writeTo(new FileDataStore(tmp));
+            JadxArgs args = new JadxArgs();
+            args.setSkipResources(true);
+            args.setShowInconsistentCode(true);
+            args.setInputFiles(ImmutableList.of(tmp));
+            JadxDecompiler decompiler = new JadxDecompiler(args);
+            decompiler.load();
+            if (decompiler.getClasses().isEmpty()) return "// No classes found in decompiled DEX";
+            JavaClass jcls = decompiler.getClasses().iterator().next();
+            jcls.decompile();
+            return jcls.getCode();
+        } finally {
+            tmp.delete();
+        }
+    }
+
 }
