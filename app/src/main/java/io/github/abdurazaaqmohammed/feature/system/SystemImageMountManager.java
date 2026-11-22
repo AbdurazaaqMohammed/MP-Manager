@@ -19,6 +19,7 @@ import io.github.abdurazaaqmohammed.feature.files.FileOpener;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
@@ -123,10 +124,7 @@ public final class SystemImageMountManager {
                     mountTypeOpt = "-t vfat ";
                 }
 
-                String mntCmd = "mkdir -p '" + mountPoint.getAbsolutePath() + "' && chmod 755 '" + MOUNT_BASE_DIR + "' && " +
-                        (isBlockDev
-                                ? ("mount -o ro " + mountTypeOpt + "'" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'")
-                                : ("mount -o ro,loop " + mountTypeOpt + "'" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'"));
+                String mntCmd = buildMountCommand(imageFile.getAbsolutePath(), mountPoint.getAbsolutePath(), mountTypeOpt, isBlockDev);
 
                 // Execute mount via executeFs (which uses global ns if preferred) and try executeGlobalNs explicitly
                 ShellSession.ShellResult res = PrivilegeManager.Root.executeFs(context, mntCmd, 15);
@@ -135,7 +133,7 @@ public final class SystemImageMountManager {
                 }
                 if (!res.isSuccess()) {
                     // Try generic loop mount without explicit -t if specific fs failed
-                    String fallbackCmd = "mount -o ro,loop '" + imageFile.getAbsolutePath() + "' '" + mountPoint.getAbsolutePath() + "'";
+                    String fallbackCmd = buildFallbackMountCommand(imageFile.getAbsolutePath(), mountPoint.getAbsolutePath());
                     res = PrivilegeManager.Root.executeFs(context, fallbackCmd, 15);
                     if (!res.isSuccess()) {
                         res = PrivilegeManager.Root.executeGlobalNs(context, fallbackCmd, 15);
@@ -197,13 +195,35 @@ public final class SystemImageMountManager {
         // If navigating strictly outside the mount point, unmount in background
         new Thread(() -> {
             try {
-                String ucmd = "umount -l '" + session.mountPoint.getAbsolutePath() + "' && rmdir '" + session.mountPoint.getAbsolutePath() + "' 2>/dev/null";
+                String ucmd = buildUnmountCommand(session.mountPoint.getAbsolutePath());
                 PrivilegeManager.Root.executeFs(context, ucmd, 10);
                 PrivilegeManager.Root.executeGlobalNs(context, ucmd, 10);
                 activeSessions.remove(session.mountPoint.getAbsolutePath());
             } catch (Exception ignored) {
             }
         }).start();
+    }
+
+    /**
+     * Builds the mkdir/chmod/mount command for an image. Pure string builder
+     * (no execution) so tests can verify quoting of hostile filenames.
+     */
+    static String buildMountCommand(String sourcePath, String mountPointPath, String mountTypeOpt, boolean isBlockDev) {
+        return "mkdir -p " + ShellQuote.quoteForSh(mountPointPath)
+                + " && chmod 755 " + ShellQuote.quoteForSh(MOUNT_BASE_DIR) + " && "
+                + "mount -o ro" + (isBlockDev ? " " : ",loop ") + mountTypeOpt
+                + ShellQuote.quoteForSh(sourcePath) + " " + ShellQuote.quoteForSh(mountPointPath);
+    }
+
+    /** Builds the generic loop-mount fallback command (no explicit -t). */
+    static String buildFallbackMountCommand(String sourcePath, String mountPointPath) {
+        return "mount -o ro,loop " + ShellQuote.quoteForSh(sourcePath) + " " + ShellQuote.quoteForSh(mountPointPath);
+    }
+
+    /** Builds the lazy-unmount plus rmdir cleanup command. */
+    static String buildUnmountCommand(String mountPointPath) {
+        return "umount -l " + ShellQuote.quoteForSh(mountPointPath)
+                + " && rmdir " + ShellQuote.quoteForSh(mountPointPath) + " 2>/dev/null";
     }
 
     private static String hashPath(String path) {
