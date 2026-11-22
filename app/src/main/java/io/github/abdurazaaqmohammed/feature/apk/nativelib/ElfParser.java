@@ -423,10 +423,12 @@ public class ElfParser implements AutoCloseable {
                     if (currentStart >= 0) {
                         if (currentStr.size() >= minLen) {
                             String s = currentStr.toString(StandardCharsets.UTF_8.name());
-                            long strOffset = fileOff + currentStart;
-                            long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
-                            out.add(new ElfString(strVaddr, strOffset, s, s.length()));
-                            if (out.size() >= maxResults) break;
+                            if (isUsefulString(s)) {
+                                long strOffset = fileOff + currentStart;
+                                long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
+                                out.add(new ElfString(strVaddr, strOffset, s, s.length()));
+                                if (out.size() >= maxResults) break;
+                            }
                         }
                         currentStart = -1;
                         currentStr.reset();
@@ -437,10 +439,23 @@ public class ElfParser implements AutoCloseable {
         }
         if (currentStart >= 0 && currentStr.size() >= minLen && out.size() < maxResults) {
             String s = currentStr.toString(StandardCharsets.UTF_8.name());
-            long strOffset = fileOff + currentStart;
-            long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
-            out.add(new ElfString(strVaddr, strOffset, s, s.length()));
+            if (isUsefulString(s)) {
+                long strOffset = fileOff + currentStart;
+                long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
+                out.add(new ElfString(strVaddr, strOffset, s, s.length()));
+            }
         }
+    }
+
+    private static boolean isUsefulString(String s) {
+        if (s == null || s.length() < 4) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+                return true;
+            }
+        }
+        return s.length() >= 6;
     }
 
     private long e_phoff;

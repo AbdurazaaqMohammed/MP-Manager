@@ -23,7 +23,7 @@ MP Manager can browse and manage local, root and network storage in two panes an
 | Media | Audio and video player with background mini player, image editor, EXIF editing, Free Style collage studio | [Media](https://abdurazaaqmohammed.github.io/mpmanager/media.html) |
 | APK Tools | Install and sign APKs, decompile and build, dex and ARSC editors, manifest quick edit, LSPatch integrated mode, IL2CPP dumper, Jiagu unpacker, native library patcher | [APK Tools](https://abdurazaaqmohammed.github.io/mpmanager/apk-tools.html) |
 | Editors | Text editor with syntax highlighting and AXML decoding, hex editor, compare text, archives, resources and dex files | [Editors](https://abdurazaaqmohammed.github.io/mpmanager/editors.html) |
-| Tools | Command Shell, Smart App Ops, SetEdit, SQLite viewer and editor, partition dumper, boot image tools, ELF inspector, Logcat reader, OCR, plugins and tool packs | [Tools](https://abdurazaaqmohammed.github.io/mpmanager/tools.html) |
+| Tools | Command Shell, Smart App Ops, SetEdit, SQLite viewer and editor, partition dumper, boot image tools, ARM64 disassembler, Logcat reader, OCR, plugins and tool packs | [Tools](https://abdurazaaqmohammed.github.io/mpmanager/tools.html) |
 | AI and MCP | Built-in MCP server: let AI tools drive the app's file, ZIP and APK engines with a strict access policy | [AI and MCP](https://abdurazaaqmohammed.github.io/mpmanager/ai-mcp.html) |
 
 ## Download

@@ -68,6 +68,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -210,6 +211,7 @@ public class DexEditorActivity extends BaseActivity {
     private long lastBackPressTime = 0;
     private SharedPreferences dexPref;
     private Menu optionsMenu;
+    private boolean isJavaMode = false;
     // --- UI Components ---
     private DrawerLayout drawerLayout;
     private Toolbar toolbar;
@@ -596,7 +598,12 @@ public class DexEditorActivity extends BaseActivity {
         tabsAdapter.notifyDataSetChanged();
 
         List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
-        setTitle(R.string.dex_editor_plus);
+        isJavaMode = getIntent().getBooleanExtra("java_mode", false);
+        if (isJavaMode) {
+            setTitle(getString(R.string.dex_editor_plus) + " [" + getString(R.string.java_mode) + "]");
+        } else {
+            setTitle(R.string.dex_editor_plus);
+        }
         showProcessingProgress(true);
         fabDelete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -780,9 +787,14 @@ public class DexEditorActivity extends BaseActivity {
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         tintMenuIcons(menu);
+        MenuItem toggleMode = menu.findItem(R.id.action_toggle_java_mode);
+        if (toggleMode != null) {
+            toggleMode.setTitle(isJavaMode ? R.string.switch_to_smali_mode : R.string.switch_to_java_mode);
+        }
         if (viewPager.getVisibility() == View.VISIBLE && currentTabIndex != -1 && currentTabIndex < tabs.size()) {
             EditorTab tab = tabs.get(currentTabIndex);
             boolean isSmali = tab.type == 0;
+            boolean isJava = tab.type == 1;
             boolean isGraph = tab.type == 2;
 
             menu.findItem(R.id.undo).setVisible(isSmali);
@@ -798,6 +810,8 @@ public class DexEditorActivity extends BaseActivity {
 
             // Sub-items in "More"
             menu.findItem(R.id.smali2java).setVisible(isSmali).setEnabled(Build.VERSION.SDK_INT > 23);
+            MenuItem viewSmaliItem = menu.findItem(R.id.view_smali);
+            if (viewSmaliItem != null) viewSmaliItem.setVisible(isJava);
             menu.findItem(R.id.smali_instruction).setVisible(isSmali);
 
             MenuItem jumpToLine = menu.findItem(R.id.jumpToLine);
@@ -838,6 +852,17 @@ public class DexEditorActivity extends BaseActivity {
 
         if (id == R.id.action_compile) {
             new SaveAndExitClickListener().onClick(null, 0);
+            return true;
+        } else if (id == R.id.action_toggle_java_mode) {
+            isJavaMode = !isJavaMode;
+            if (isJavaMode) {
+                setTitle(getString(R.string.dex_editor_plus) + " [" + getString(R.string.java_mode) + "]");
+                Toast.makeText(this, R.string.java_mode, Toast.LENGTH_SHORT).show();
+            } else {
+                setTitle(R.string.dex_editor_plus);
+                Toast.makeText(this, R.string.smali_mode, Toast.LENGTH_SHORT).show();
+            }
+            invalidateOptionsMenu();
             return true;
         } else if (id == R.id.action_preferences) {
             showCompilationOptionsDialog();
@@ -957,6 +982,11 @@ public class DexEditorActivity extends BaseActivity {
                 return true;
             } else if (id == R.id.smali2java) {
                 smali2java(editorFragment);
+                return true;
+            } else if (id == R.id.view_smali) {
+                if (currentTabIndex >= 0 && currentTabIndex < tabs.size()) {
+                    openClassInSmali(tabs.get(currentTabIndex).className);
+                }
                 return true;
             } else if (id == R.id.close) {
                 closeTabWithPrompt(currentTabIndex);
@@ -1254,8 +1284,9 @@ public class DexEditorActivity extends BaseActivity {
 
         refreshExplorerPage(1);
 
+        int targetType = isJavaMode ? 1 : 0;
         for (int i = 0; i < tabs.size(); i++) {
-            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 0) {
+            if (tabs.get(i).className.equals(className) && tabs.get(i).type == targetType) {
                 showEditor(i);
                 return;
             }
@@ -1267,11 +1298,76 @@ public class DexEditorActivity extends BaseActivity {
             dexVersion = dexPref.getInt("dexVer", 35);
         }
 
+        if (isJavaMode) {
+            openClassInJava(className);
+            return;
+        }
+
         // Add tab with content if it's already in pendingSmaliMap or if it's already in another tab
         String content = null;
         if (classTree.getPendingSmaliMap().containsKey(className))
             content = classTree.getPendingSmaliMap().get(className);
 
+        addTab(className, SmaliHelper.extractSimpleName(className), content, 0);
+    }
+
+    public void openClassInJava(String className) {
+        for (int i = 0; i < tabs.size(); i++) {
+            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 1) {
+                showEditor(i);
+                return;
+            }
+        }
+
+        AlertCircularProgress pd = new AlertCircularProgress(this);
+        pd.setMessage(getString(R.string.decompiling));
+        pd.show();
+        new Thread(() -> {
+            try {
+                ClassDef def = classTree != null && classTree.classMap != null ? classTree.classMap.get(className) : null;
+                int ver = dexVersion;
+                try {
+                    if (classTree != null) ver = classTree.getOpenedDexVersion();
+                } catch (Exception ignored) {}
+
+                String java;
+                if (def != null) {
+                    java = Smali2Java.translate(def, ver);
+                } else {
+                    String smali = classTree != null && classTree.getPendingSmaliMap() != null ? classTree.getPendingSmaliMap().get(className) : null;
+                    if (smali == null && classTree != null && def != null) smali = classTree.getPureSmaliCached(def, className);
+                    java = Smali2Java.translate(smali != null ? smali : "", ver);
+                }
+
+                final String finalJava = java;
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    addTab(className, SmaliHelper.extractSimpleName(className) + ".java", finalJava, 1);
+                });
+            } catch (final Exception e) {
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    Notify_MT.Notify(DexEditorActivity.this, getString(R.string.error), e.toString(), getString(R.string.close));
+                });
+            }
+        }).start();
+    }
+
+    public void openClassInSmali(String className) {
+        for (int i = 0; i < tabs.size(); i++) {
+            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 0) {
+                showEditor(i);
+                return;
+            }
+        }
+        try {
+            dexVersion = classTree.getOpenedDexVersion();
+        } catch (Exception e) {
+            dexVersion = dexPref.getInt("dexVer", 35);
+        }
+        String content = null;
+        if (classTree != null && classTree.getPendingSmaliMap() != null && classTree.getPendingSmaliMap().containsKey(className))
+            content = classTree.getPendingSmaliMap().get(className);
         addTab(className, SmaliHelper.extractSimpleName(className), content, 0);
     }
 

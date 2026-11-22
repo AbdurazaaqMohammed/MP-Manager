@@ -22,6 +22,8 @@ import io.github.abdurazaaqmohammed.feature.apk.FastDexPatch;
 import io.github.abdurazaaqmohammed.feature.apk.Il2CppDumperUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
 import io.github.abdurazaaqmohammed.feature.apk.NativeLibPatcher;
+import io.github.abdurazaaqmohammed.feature.dex.DexTools;
+import io.github.abdurazaaqmohammed.feature.dex.JadxDecompileHelper;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 
@@ -706,6 +708,8 @@ public class ApkInfoDialogs {
                     }).show();
         } else if (ApkMoreMenuOrder.DECOMPILE.equals(actionId)) {
             showDecompileOptionsDialog(file, fileName);
+        } else if (ApkMoreMenuOrder.JADX_JAVA.equals(actionId)) {
+            handleApkToJava(file, fileName);
         } else if (ApkMoreMenuOrder.REFACTOR.equals(actionId)) {
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
             boolean forceDeleteOutputPath = settings.getBoolean("flagForce", false);
@@ -1090,6 +1094,53 @@ public class ApkInfoDialogs {
         }
     }
 
+
+    public void handleApkToJava(File file, String fileName) {
+        String baseName = fileName.replaceFirst("\\.[^.]+$", "");
+        DexTools.DexPreExtract session = DexTools.preExtractAllDex(context, file, false);
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        pm.setText(context.getString(R.string.loading));
+
+        new Thread(() -> {
+            try {
+                session.done.await();
+            } catch (InterruptedException e) {
+                return;
+            }
+            context.runOnUiThread(pm::dismiss);
+            if (session.error != null) {
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(session.error));
+                return;
+            }
+            List<File> dexFiles = new ArrayList<>();
+            ArrayList<String> dexPaths = new ArrayList<>();
+            try {
+                List<String> names = DexTools.listAllDexNames(file);
+                for (String name : names) {
+                    File f = new File(session.outputDir, name);
+                    dexFiles.add(f);
+                    dexPaths.add(f.getAbsolutePath());
+                }
+            } catch (Exception e) {
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                return;
+            }
+
+            if (dexFiles.isEmpty()) {
+                context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_files_found));
+                return;
+            }
+
+            context.runOnUiThread(() -> JadxDecompileHelper.promptDecompileAction(
+                    context, dexFiles, file, baseName,
+                    () -> {
+                        DexTools dexTools = new DexTools(context, dialogUtil, pane1, null);
+                        dexTools.openDexPlusFiles(dexPaths, null, file, "classes.dex", true);
+                    }
+            ));
+        }).start();
+    }
 
     public void showDecompileOptionsDialog(File file, String fileName) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
