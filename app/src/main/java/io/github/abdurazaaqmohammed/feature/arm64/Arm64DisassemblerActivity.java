@@ -18,11 +18,13 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +38,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.tabs.TabLayout;
+
+import io.github.abdurazaaqmohammed.feature.arm64.util.CryptoHelper;
+import java.security.MessageDigest;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -136,6 +142,54 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private long textSecOffset = 0;
     private long textSecSize = 0;
 
+    // Tab Layout & Multi-tab Containers
+    private TabLayout tabLayout;
+    private LinearLayout stringsContainer;
+    private LinearLayout hexContainer;
+    private LinearLayout treeContainer;
+
+    // Strings Tab
+    private EditText etStringsSearch;
+    private TextView tvStringsCount;
+    private RecyclerView rvStrings;
+    private StringsAdapter stringsAdapter;
+    private final List<ElfParser.ElfString> allStrings = new ArrayList<>();
+    private final List<ElfParser.ElfString> filteredStrings = new ArrayList<>();
+    private Runnable pendingStringsSearchRunnable;
+
+    // HexView Tab
+    private RecyclerView rvHex;
+    private HexAdapter hexAdapter;
+    private TextView tvHexStatus;
+    private EditText etHexSearch;
+    private MaterialButton btnPatchModeToggle;
+    private MaterialButton btnHexColsToggle;
+    private RandomAccessFile hexRaf;
+    private int hexBytesPerRow = 16;
+    private boolean isPatchMode = false;
+    private long hexFileSize = 0;
+
+    // ELF Tree Tab
+    private TextView tvTreeProgramme;
+    private TextView tvTreeImports;
+    private TextView tvTreeExports;
+    private EditText etTreeSearch;
+    private RecyclerView rvElfTree;
+    private ElfTreeAdapter elfTreeAdapter;
+    private final List<ElfTreeItem> allTreeItems = new ArrayList<>();
+    private final List<ElfTreeItem> filteredTreeItems = new ArrayList<>();
+    private Runnable pendingTreeSearchRunnable;
+
+    // Metadata & Hashes for File Info
+    private int programmeCount = 0;
+    private int importsCount = 0;
+    private int exportsCount = 0;
+    private long elfEntryPoint = 0;
+    private String elfBuildId = "N/A";
+    private String hashMd5 = "";
+    private String hashSha1 = "";
+    private String hashSha256 = "";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -161,10 +215,12 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (isDisassemblyMode) {
+                if (tabLayout != null && tabLayout.getSelectedTabPosition() == 0 && isDisassemblyMode) {
                     if (!popNavigationHistory()) {
                         showFunctionsViewUi();
                     }
+                } else if (tabLayout != null && tabLayout.getSelectedTabPosition() != 0) {
+                    tabLayout.getTabAt(0).select();
                 } else if (!pendingPatches.isEmpty()) {
                     showDiscardConfirmDialog();
                 } else {
@@ -173,6 +229,15 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 }
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (hexRaf != null) {
+            try { hexRaf.close(); } catch (Exception ignored) {}
+            hexRaf = null;
+        }
     }
 
     private void initUi() {
@@ -190,10 +255,12 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         toolbar.setSubtitle("ARM64 Disassembler");
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> {
-            if (isDisassemblyMode) {
+            if (tabLayout != null && tabLayout.getSelectedTabPosition() == 0 && isDisassemblyMode) {
                 if (!popNavigationHistory()) {
                     showFunctionsViewUi();
                 }
+            } else if (tabLayout != null && tabLayout.getSelectedTabPosition() != 0) {
+                tabLayout.getTabAt(0).select();
             } else if (!pendingPatches.isEmpty()) {
                 showDiscardConfirmDialog();
             } else {
@@ -206,9 +273,27 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         actionLayout.setOrientation(LinearLayout.HORIZONTAL);
         actionLayout.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
 
+        MaterialButton btnCrypto = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnCrypto.setText("Crypto");
+        btnCrypto.setOnClickListener(v -> showCryptoDialog());
+        actionLayout.addView(btnCrypto);
+
+        MaterialButton btnInfo = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnInfo.setText("Info");
+        btnInfo.setOnClickListener(v -> showFileInfoDialog());
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        infoParams.leftMargin = dp(6);
+        btnInfo.setLayoutParams(infoParams);
+        actionLayout.addView(btnInfo);
+
         btnGoTo = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         btnGoTo.setText("Go To");
         btnGoTo.setOnClickListener(v -> showGoToDialog());
+        LinearLayout.LayoutParams goToParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        goToParams.leftMargin = dp(6);
+        btnGoTo.setLayoutParams(goToParams);
         actionLayout.addView(btnGoTo);
 
         btnReview = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
@@ -217,7 +302,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         btnReview.setOnClickListener(v -> showReviewPatchesDialog());
         LinearLayout.LayoutParams reviewParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        reviewParams.leftMargin = dp(8);
+        reviewParams.leftMargin = dp(6);
         btnReview.setLayoutParams(reviewParams);
         actionLayout.addView(btnReview);
 
@@ -231,7 +316,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         });
         LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        saveParams.leftMargin = dp(8);
+        saveParams.leftMargin = dp(6);
         btnSave.setLayoutParams(saveParams);
         actionLayout.addView(btnSave);
 
@@ -255,7 +340,37 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(4)));
         root.addView(progressBar);
 
-        // Main Frame containing both views
+        // Modern Tab Navigation Bar
+        tabLayout = new TabLayout(this);
+        tabLayout.addTab(tabLayout.newTab().setText("Functions"));
+        tabLayout.addTab(tabLayout.newTab().setText("Strings"));
+        tabLayout.addTab(tabLayout.newTab().setText("HexView"));
+        tabLayout.addTab(tabLayout.newTab().setText("ELF Tree"));
+        tabLayout.setTabMode(TabLayout.MODE_FIXED);
+        tabLayout.setSelectedTabIndicatorColor(0xFF22C55E);
+        tabLayout.setTabTextColors(0xFF888888, 0xFF22C55E);
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                int pos = tab.getPosition();
+                functionsContainer.setVisibility(pos == 0 && !isDisassemblyMode ? View.VISIBLE : View.GONE);
+                disassemblyContainer.setVisibility(pos == 0 && isDisassemblyMode ? View.VISIBLE : View.GONE);
+                stringsContainer.setVisibility(pos == 1 ? View.VISIBLE : View.GONE);
+                hexContainer.setVisibility(pos == 2 ? View.VISIBLE : View.GONE);
+                treeContainer.setVisibility(pos == 3 ? View.VISIBLE : View.GONE);
+
+                if (pos == 2 && hexAdapter != null) {
+                    hexAdapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        });
+        root.addView(tabLayout);
+
+        // Main Frame containing all views
         FrameLayout contentFrame = new FrameLayout(this);
         contentFrame.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
@@ -357,6 +472,222 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
 
         contentFrame.addView(disassemblyContainer);
+
+        // 3. Strings Container
+        stringsContainer = new LinearLayout(this);
+        stringsContainer.setOrientation(LinearLayout.VERTICAL);
+        stringsContainer.setVisibility(View.GONE);
+        stringsContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        LinearLayout stringsTopBar = new LinearLayout(this);
+        stringsTopBar.setOrientation(LinearLayout.HORIZONTAL);
+        stringsTopBar.setGravity(Gravity.CENTER_VERTICAL);
+        stringsTopBar.setPadding(dp(10), dp(6), dp(10), dp(6));
+
+        etStringsSearch = new EditText(this);
+        etStringsSearch.setHint("Search strings (e.g. http, token, root)...");
+        etStringsSearch.setTextSize(14);
+        etStringsSearch.setSingleLine(true);
+        etStringsSearch.setPadding(dp(12), dp(10), dp(12), dp(10));
+        GradientDrawable strSearchBg = new GradientDrawable();
+        strSearchBg.setColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurfaceVariant, 0xFF222222));
+        strSearchBg.setCornerRadius(dp(8));
+        etStringsSearch.setBackground(strSearchBg);
+        etStringsSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (pendingStringsSearchRunnable != null) {
+                    searchHandler.removeCallbacks(pendingStringsSearchRunnable);
+                }
+                String q = s != null ? s.toString() : "";
+                pendingStringsSearchRunnable = () -> filterStringsAsync(q);
+                searchHandler.postDelayed(pendingStringsSearchRunnable, 150);
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+        stringsTopBar.addView(etStringsSearch, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        tvStringsCount = createBadgeChip("0", 0xFF22C55E);
+        LinearLayout.LayoutParams pStrCount = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pStrCount.leftMargin = dp(8);
+        tvStringsCount.setLayoutParams(pStrCount);
+        stringsTopBar.addView(tvStringsCount);
+
+        stringsContainer.addView(stringsTopBar);
+
+        rvStrings = new RecyclerView(this);
+        rvStrings.setLayoutManager(new LinearLayoutManager(this));
+        stringsAdapter = new StringsAdapter();
+        rvStrings.setAdapter(stringsAdapter);
+        stringsContainer.addView(rvStrings, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+
+        contentFrame.addView(stringsContainer);
+
+        // 4. HexView Container
+        hexContainer = new LinearLayout(this);
+        hexContainer.setOrientation(LinearLayout.VERTICAL);
+        hexContainer.setVisibility(View.GONE);
+        hexContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        LinearLayout hexControls = new LinearLayout(this);
+        hexControls.setOrientation(LinearLayout.HORIZONTAL);
+        hexControls.setGravity(Gravity.CENTER_VERTICAL);
+        hexControls.setPadding(dp(10), dp(4), dp(10), dp(4));
+        hexControls.setBackgroundColor(0x18888888);
+
+        btnPatchModeToggle = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnPatchModeToggle.setText("PATCH: OFF");
+        btnPatchModeToggle.setTextSize(11);
+        btnPatchModeToggle.setOnClickListener(v -> {
+            isPatchMode = !isPatchMode;
+            btnPatchModeToggle.setText(isPatchMode ? "PATCH: ON" : "PATCH: OFF");
+            btnPatchModeToggle.setTextColor(isPatchMode ? 0xFF22C55E : 0xFF888888);
+            Toast.makeText(this, isPatchMode ? "Patch mode enabled (tap a row to edit bytes)" : "Patch mode disabled", Toast.LENGTH_SHORT).show();
+        });
+        hexControls.addView(btnPatchModeToggle);
+
+        MaterialButton btnHexGoTo = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnHexGoTo.setText("Go To");
+        btnHexGoTo.setTextSize(11);
+        btnHexGoTo.setOnClickListener(v -> showHexGoToDialog());
+        LinearLayout.LayoutParams pHexGo = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pHexGo.leftMargin = dp(6);
+        btnHexGoTo.setLayoutParams(pHexGo);
+        hexControls.addView(btnHexGoTo);
+
+        MaterialButton btnHexUndo = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnHexUndo.setText("Undo");
+        btnHexUndo.setTextSize(11);
+        btnHexUndo.setOnClickListener(v -> undoLastPatch());
+        LinearLayout.LayoutParams pHexUndo = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pHexUndo.leftMargin = dp(6);
+        btnHexUndo.setLayoutParams(pHexUndo);
+        hexControls.addView(btnHexUndo);
+
+        btnHexColsToggle = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnHexColsToggle.setText("16 COLS");
+        btnHexColsToggle.setTextSize(11);
+        btnHexColsToggle.setOnClickListener(v -> {
+            hexBytesPerRow = (hexBytesPerRow == 16) ? 32 : 16;
+            btnHexColsToggle.setText(hexBytesPerRow + " COLS");
+            if (hexAdapter != null) hexAdapter.notifyDataSetChanged();
+        });
+        LinearLayout.LayoutParams pHexCols = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pHexCols.leftMargin = dp(6);
+        btnHexColsToggle.setLayoutParams(pHexCols);
+        hexControls.addView(btnHexColsToggle);
+
+        hexContainer.addView(hexControls);
+
+        etHexSearch = new EditText(this);
+        etHexSearch.setHint("Search hex (e.g. 1f 20 03 d5) or ASCII text (Press Enter)...");
+        etHexSearch.setTextSize(13);
+        etHexSearch.setSingleLine(true);
+        etHexSearch.setPadding(dp(10), dp(6), dp(10), dp(6));
+        GradientDrawable hexSearchBg = new GradientDrawable();
+        hexSearchBg.setColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurfaceVariant, 0xFF222222));
+        hexSearchBg.setCornerRadius(dp(6));
+        etHexSearch.setBackground(hexSearchBg);
+        LinearLayout.LayoutParams hexSearchLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hexSearchLp.setMargins(dp(10), dp(4), dp(10), dp(4));
+        etHexSearch.setLayoutParams(hexSearchLp);
+        etHexSearch.setOnEditorActionListener((v, actionId, event) -> {
+            performHexSearch(etHexSearch.getText().toString());
+            return true;
+        });
+        hexContainer.addView(etHexSearch);
+
+        rvHex = new RecyclerView(this);
+        rvHex.setLayoutManager(new LinearLayoutManager(this));
+        hexAdapter = new HexAdapter();
+        rvHex.setAdapter(hexAdapter);
+        hexContainer.addView(rvHex, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+
+        tvHexStatus = new TextView(this);
+        tvHexStatus.setTextSize(11);
+        tvHexStatus.setTypeface(Typeface.MONOSPACE);
+        tvHexStatus.setTextColor(0xFF888888);
+        tvHexStatus.setPadding(dp(12), dp(4), dp(12), dp(4));
+        tvHexStatus.setBackgroundColor(0x10888888);
+        hexContainer.addView(tvHexStatus);
+
+        contentFrame.addView(hexContainer);
+
+        // 5. ELF Tree Container
+        treeContainer = new LinearLayout(this);
+        treeContainer.setOrientation(LinearLayout.VERTICAL);
+        treeContainer.setVisibility(View.GONE);
+        treeContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        LinearLayout statsBar = new LinearLayout(this);
+        statsBar.setOrientation(LinearLayout.HORIZONTAL);
+        statsBar.setGravity(Gravity.CENTER_VERTICAL);
+        statsBar.setPadding(dp(10), dp(8), dp(10), dp(8));
+
+        tvTreeProgramme = createBadgeChip("Programme: 0", 0xFF22C55E);
+        statsBar.addView(tvTreeProgramme);
+
+        tvTreeImports = createBadgeChip("Imports: 0", 0xFF3B82F6);
+        LinearLayout.LayoutParams pImp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pImp.leftMargin = dp(8);
+        tvTreeImports.setLayoutParams(pImp);
+        statsBar.addView(tvTreeImports);
+
+        tvTreeExports = createBadgeChip("Exports: 0", 0xFFA855F7);
+        LinearLayout.LayoutParams pExp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pExp.leftMargin = dp(8);
+        tvTreeExports.setLayoutParams(pExp);
+        statsBar.addView(tvTreeExports);
+
+        treeContainer.addView(statsBar);
+
+        etTreeSearch = new EditText(this);
+        etTreeSearch.setHint("Search name or address (0x...)...");
+        etTreeSearch.setTextSize(14);
+        etTreeSearch.setSingleLine(true);
+        etTreeSearch.setPadding(dp(12), dp(10), dp(12), dp(10));
+        GradientDrawable treeSearchBg = new GradientDrawable();
+        treeSearchBg.setColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurfaceVariant, 0xFF222222));
+        treeSearchBg.setCornerRadius(dp(8));
+        etTreeSearch.setBackground(treeSearchBg);
+        LinearLayout.LayoutParams treeSearchLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        treeSearchLp.setMargins(dp(10), dp(4), dp(10), dp(4));
+        etTreeSearch.setLayoutParams(treeSearchLp);
+        etTreeSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (pendingTreeSearchRunnable != null) {
+                    searchHandler.removeCallbacks(pendingTreeSearchRunnable);
+                }
+                String q = s != null ? s.toString() : "";
+                pendingTreeSearchRunnable = () -> filterTreeAsync(q);
+                searchHandler.postDelayed(pendingTreeSearchRunnable, 150);
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+        treeContainer.addView(etTreeSearch);
+
+        rvElfTree = new RecyclerView(this);
+        rvElfTree.setLayoutManager(new LinearLayoutManager(this));
+        elfTreeAdapter = new ElfTreeAdapter();
+        rvElfTree.setAdapter(elfTreeAdapter);
+        treeContainer.addView(rvElfTree, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+
+        contentFrame.addView(treeContainer);
 
         root.addView(contentFrame);
         setContentView(root);
@@ -466,12 +797,145 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     }
                 }
 
+                // Metadata, Hashes & Structure extraction
+                elfEntryPoint = elf.entry;
+                hexFileSize = soFile.length();
+                if (hexRaf == null) {
+                    try { hexRaf = new RandomAccessFile(soFile, "r"); } catch (Exception ignored) {}
+                }
+                elfBuildId = elf.buildId();
+
+                // 1. Strings extraction
+                List<ElfParser.ElfString> strList = elf.allStrings(4, 30000);
+                synchronized (allStrings) {
+                    allStrings.clear();
+                    allStrings.addAll(strList);
+                    filteredStrings.clear();
+                    filteredStrings.addAll(strList);
+                }
+
+                // 2. Dynamic symbols count & breakdown
+                List<ElfParser.Symbol> dynsym = new ArrayList<>();
+                try {
+                    List<ElfParser.Symbol> ds = elf.symbols(".dynsym");
+                    if (ds != null) dynsym.addAll(ds);
+                } catch (Exception ignored) {}
+
+                int impCount = 0;
+                int expCount = 0;
+                List<ElfTreeItem> exportItems = new ArrayList<>();
+                List<ElfTreeItem> importItems = new ArrayList<>();
+
+                for (ElfParser.Symbol s : dynsym) {
+                    if (TextUtils.isEmpty(s.name)) continue;
+                    if (s.shndx == 0) {
+                        impCount++;
+                        if (importItems.size() < 200) {
+                            long off = elf.addrToOffset(s.value);
+                            importItems.add(ElfTreeItem.symbol(s.name, "Import · " + s.typeName(), s.value, off));
+                        }
+                    } else if (s.bind == 1 || s.bind == 2) {
+                        expCount++;
+                        if (exportItems.size() < 200) {
+                            long off = elf.addrToOffset(s.value);
+                            exportItems.add(ElfTreeItem.symbol(s.name, "Export · " + s.bindName(), s.value, off));
+                        }
+                    }
+                }
+                importsCount = impCount;
+                exportsCount = expCount;
+                programmeCount = list.size();
+
+                // 3. Tree Items (Segments, Code Sections, Data Sections, Symbols)
+                List<ElfTreeItem> treeList = new ArrayList<>();
+                ElfParser.ProgramHeader[] phs = elf.segments();
+                if (phs != null && phs.length > 0) {
+                    treeList.add(ElfTreeItem.header("Segments (Program Headers)", phs.length + " items"));
+                    for (ElfParser.ProgramHeader ph : phs) {
+                        treeList.add(ElfTreeItem.segment(ph.typeName(), ph.flagsToString(), ph.vaddr, ph.offset, ph.filesz));
+                    }
+                }
+
+                ElfParser.Section[] secs = elf.sections();
+                if (secs != null && secs.length > 0) {
+                    List<ElfTreeItem> codeSecs = new ArrayList<>();
+                    List<ElfTreeItem> roSecs = new ArrayList<>();
+                    List<ElfTreeItem> dataSecs = new ArrayList<>();
+                    for (ElfParser.Section sec : secs) {
+                        if (sec.size == 0 || TextUtils.isEmpty(sec.name)) continue;
+                        ElfTreeItem item = ElfTreeItem.section(sec.name, sec.flagsToString(), sec.addr, sec.offset, sec.size);
+                        if ((sec.flags & 4) != 0 || sec.name.contains("text") || sec.name.contains("plt")) {
+                            codeSecs.add(item);
+                        } else if ((sec.flags & 1) == 0 && (sec.flags & 2) != 0) {
+                            roSecs.add(item);
+                        } else {
+                            dataSecs.add(item);
+                        }
+                    }
+                    if (!codeSecs.isEmpty()) {
+                        treeList.add(ElfTreeItem.header("Code Sections", codeSecs.size() + " blocks"));
+                        treeList.addAll(codeSecs);
+                    }
+                    if (!roSecs.isEmpty()) {
+                        treeList.add(ElfTreeItem.header("Read-Only Data", roSecs.size() + " blocks"));
+                        treeList.addAll(roSecs);
+                    }
+                    if (!dataSecs.isEmpty()) {
+                        treeList.add(ElfTreeItem.header("Data & Relocations", dataSecs.size() + " blocks"));
+                        treeList.addAll(dataSecs);
+                    }
+                }
+
+                if (!exportItems.isEmpty()) {
+                    treeList.add(ElfTreeItem.header("Exported Symbols (.dynsym)", exportItems.size() + " symbols"));
+                    treeList.addAll(exportItems);
+                }
+                if (!importItems.isEmpty()) {
+                    treeList.add(ElfTreeItem.header("Imported Symbols", importItems.size() + " symbols"));
+                    treeList.addAll(importItems);
+                }
+
+                synchronized (allTreeItems) {
+                    allTreeItems.clear();
+                    allTreeItems.addAll(treeList);
+                    filteredTreeItems.clear();
+                    filteredTreeItems.addAll(treeList);
+                }
+
+                // 4. File Hashes (MD5, SHA-1, SHA-256)
+                try (java.io.InputStream is = new java.io.FileInputStream(soFile)) {
+                    byte[] b = new byte[65536];
+                    MessageDigest md5 = MessageDigest.getInstance("MD5");
+                    MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+                    MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+                    int r;
+                    while ((r = is.read(b)) > 0) {
+                        md5.update(b, 0, r);
+                        sha1.update(b, 0, r);
+                        sha256.update(b, 0, r);
+                    }
+                    hashMd5 = CryptoHelper.bytesToHex(md5.digest());
+                    hashSha1 = CryptoHelper.bytesToHex(sha1.digest());
+                    hashSha256 = CryptoHelper.bytesToHex(sha256.digest());
+                } catch (Exception ignored) {}
+
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     String info = String.format(Locale.ROOT, "ELF64 AArch64 | %d functions | .text: 0x%X - 0x%X",
                             allFunctions.size(), textSecAddr, textSecAddr + textSecSize);
                     tvStatusInfo.setText(info);
+                    if (tvTreeProgramme != null) tvTreeProgramme.setText("Programme: " + programmeCount);
+                    if (tvTreeImports != null) tvTreeImports.setText("Imports: " + importsCount);
+                    if (tvTreeExports != null) tvTreeExports.setText("Exports: " + exportsCount);
+                    if (tvStringsCount != null) tvStringsCount.setText(String.valueOf(allStrings.size()));
+                    if (tvHexStatus != null) {
+                        tvHexStatus.setText(String.format(Locale.US, "%s · %s · %d bytes",
+                                new File(originalPath).getName(), ElfTreeItem.formatSize(hexFileSize), hexFileSize));
+                    }
                     functionsAdapter.notifyDataSetChanged();
+                    if (stringsAdapter != null) stringsAdapter.notifyDataSetChanged();
+                    if (hexAdapter != null) hexAdapter.notifyDataSetChanged();
+                    if (elfTreeAdapter != null) elfTreeAdapter.notifyDataSetChanged();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -733,6 +1197,12 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private void showDisassemblyViewUi() {
         hideKeyboard();
         isDisassemblyMode = true;
+        if (tabLayout != null && tabLayout.getSelectedTabPosition() != 0) {
+            tabLayout.getTabAt(0).select();
+        }
+        if (stringsContainer != null) stringsContainer.setVisibility(View.GONE);
+        if (hexContainer != null) hexContainer.setVisibility(View.GONE);
+        if (treeContainer != null) treeContainer.setVisibility(View.GONE);
         functionsContainer.setVisibility(View.GONE);
         disassemblyContainer.setVisibility(View.VISIBLE);
         updateDisassemblyHeader();
@@ -743,7 +1213,13 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private void showFunctionsViewUi() {
         isDisassemblyMode = false;
         navHistory.clear();
+        if (tabLayout != null && tabLayout.getSelectedTabPosition() != 0) {
+            tabLayout.getTabAt(0).select();
+        }
         disassemblyContainer.setVisibility(View.GONE);
+        if (stringsContainer != null) stringsContainer.setVisibility(View.GONE);
+        if (hexContainer != null) hexContainer.setVisibility(View.GONE);
+        if (treeContainer != null) treeContainer.setVisibility(View.GONE);
         functionsContainer.setVisibility(View.VISIBLE);
         toolbar.setSubtitle("ARM64 Disassembler");
     }
@@ -1811,5 +2287,825 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 this.tvAsm = tvAsm;
             }
         }
+    }
+
+    private class StringsAdapter extends RecyclerView.Adapter<StringsAdapter.ViewHolder> {
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LinearLayout row = new LinearLayout(Arm64DisassemblerActivity.this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(dp(14), dp(8), dp(14), dp(8));
+
+            LinearLayout top = new LinearLayout(Arm64DisassemblerActivity.this);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            top.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView tvTag = new TextView(Arm64DisassemblerActivity.this);
+            tvTag.setText("str");
+            tvTag.setTextSize(10);
+            tvTag.setTypeface(Typeface.DEFAULT_BOLD);
+            tvTag.setTextColor(0xFF22C55E);
+            GradientDrawable tagBg = new GradientDrawable();
+            tagBg.setColor(0x2222C55E);
+            tagBg.setCornerRadius(dp(4));
+            tvTag.setBackground(tagBg);
+            tvTag.setPadding(dp(6), dp(2), dp(6), dp(2));
+            top.addView(tvTag);
+
+            TextView tvStr = new TextView(Arm64DisassemblerActivity.this);
+            tvStr.setTextSize(13);
+            tvStr.setTypeface(Typeface.MONOSPACE);
+            tvStr.setTextColor(MaterialColors.getColor(row, android.R.attr.textColorPrimary, 0xFFFFFFFF));
+            tvStr.setSingleLine(true);
+            tvStr.setEllipsize(TextUtils.TruncateAt.END);
+            LinearLayout.LayoutParams pStr = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            pStr.leftMargin = dp(8);
+            tvStr.setLayoutParams(pStr);
+            top.addView(tvStr);
+
+            row.addView(top);
+
+            TextView tvSub = new TextView(Arm64DisassemblerActivity.this);
+            tvSub.setTextSize(11);
+            tvSub.setTypeface(Typeface.MONOSPACE);
+            tvSub.setTextColor(0xFF888888);
+            tvSub.setPadding(dp(30), dp(2), 0, 0);
+            row.addView(tvSub);
+
+            return new ViewHolder(row, tvStr, tvSub);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            ElfParser.ElfString item;
+            synchronized (filteredStrings) {
+                if (position < 0 || position >= filteredStrings.size()) return;
+                item = filteredStrings.get(position);
+            }
+            holder.tvStr.setText(item.value);
+            holder.tvSub.setText(String.format("0x%X  ·  Offset: 0x%X  ·  UTF-8  ·  %dB", item.vaddr, item.fileOffset, item.length));
+
+            holder.itemView.setOnClickListener(v -> showStringOptionsDialog(item));
+            holder.itemView.setOnLongClickListener(v -> {
+                copyToClipboard(item.value, "String");
+                return true;
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            synchronized (filteredStrings) {
+                return filteredStrings.size();
+            }
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            final TextView tvStr;
+            final TextView tvSub;
+            ViewHolder(View itemView, TextView tvStr, TextView tvStrSub) {
+                super(itemView);
+                this.tvStr = tvStr;
+                this.tvSub = tvStrSub;
+            }
+        }
+    }
+
+    private class HexAdapter extends RecyclerView.Adapter<HexAdapter.ViewHolder> {
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            TextView tv = new TextView(Arm64DisassemblerActivity.this);
+            tv.setTextSize(12);
+            tv.setTypeface(Typeface.MONOSPACE);
+            tv.setPadding(dp(8), dp(3), dp(8), dp(3));
+            tv.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return new ViewHolder(tv);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            long rowOffset = (long) position * hexBytesPerRow;
+            int countToRead = (int) Math.min(hexBytesPerRow, hexFileSize - rowOffset);
+            if (countToRead <= 0) {
+                holder.textView.setText("");
+                return;
+            }
+
+            byte[] rowData = new byte[countToRead];
+            synchronized (Arm64DisassemblerActivity.this) {
+                if (hexRaf != null) {
+                    try {
+                        hexRaf.seek(rowOffset);
+                        hexRaf.readFully(rowData);
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            boolean hasPatch = false;
+            for (int i = 0; i < countToRead; i++) {
+                long bOff = rowOffset + i;
+                if (pendingPatches.containsKey(bOff)) {
+                    hasPatch = true;
+                    byte[] patch = pendingPatches.get(bOff);
+                    if (patch != null && patch.length > 0) {
+                        rowData[i] = patch[0];
+                    }
+                }
+            }
+
+            StringBuilder sb = new StringBuilder(128);
+            sb.append(String.format(Locale.US, "%08X: ", rowOffset));
+
+            // Hex columns
+            for (int i = 0; i < hexBytesPerRow; i++) {
+                if (i < countToRead) {
+                    sb.append(String.format("%02X ", rowData[i]));
+                } else {
+                    sb.append("   ");
+                }
+                if (i == 7 || i == 15 || i == 23) sb.append(" ");
+            }
+
+            // ASCII column
+            sb.append(" |");
+            for (int i = 0; i < countToRead; i++) {
+                byte b = rowData[i];
+                if (b >= 0x20 && b <= 0x7E) {
+                    sb.append((char) b);
+                } else {
+                    sb.append('.');
+                }
+            }
+            sb.append("|");
+
+            holder.textView.setText(sb.toString());
+            if (hasPatch) {
+                holder.textView.setBackgroundColor(0x3022C55E);
+                holder.textView.setTextColor(0xFF81C784);
+            } else {
+                holder.textView.setBackgroundColor(Color.TRANSPARENT);
+                holder.textView.setTextColor(MaterialColors.getColor(holder.textView, android.R.attr.textColorPrimary, 0xFFE0E0E0));
+            }
+
+            holder.itemView.setOnClickListener(v -> {
+                if (isPatchMode) {
+                    showHexByteEditDialog(rowOffset, countToRead, rowData);
+                } else {
+                    showHexRowActionDialog(rowOffset, countToRead, rowData);
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            if (hexFileSize <= 0) return 0;
+            return (int) Math.min(Integer.MAX_VALUE, (hexFileSize + hexBytesPerRow - 1) / hexBytesPerRow);
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            final TextView textView;
+            ViewHolder(TextView itemView) {
+                super(itemView);
+                this.textView = itemView;
+            }
+        }
+    }
+
+    private class ElfTreeAdapter extends RecyclerView.Adapter<ElfTreeAdapter.ViewHolder> {
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LinearLayout row = new LinearLayout(Arm64DisassemblerActivity.this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+            TextView tvTag = new TextView(Arm64DisassemblerActivity.this);
+            tvTag.setTextSize(10);
+            tvTag.setTypeface(Typeface.DEFAULT_BOLD);
+            tvTag.setPadding(dp(6), dp(2), dp(6), dp(2));
+            row.addView(tvTag);
+
+            LinearLayout center = new LinearLayout(Arm64DisassemblerActivity.this);
+            center.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams pCenter = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            pCenter.leftMargin = dp(10);
+            center.setLayoutParams(pCenter);
+
+            TextView tvTitle = new TextView(Arm64DisassemblerActivity.this);
+            tvTitle.setTextSize(13);
+            tvTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            tvTitle.setTextColor(MaterialColors.getColor(row, android.R.attr.textColorPrimary, 0xFFFFFFFF));
+            center.addView(tvTitle);
+
+            TextView tvSub = new TextView(Arm64DisassemblerActivity.this);
+            tvSub.setTextSize(11);
+            tvSub.setTypeface(Typeface.MONOSPACE);
+            tvSub.setTextColor(0xFF888888);
+            center.addView(tvSub);
+
+            row.addView(center);
+
+            TextView tvPerm = new TextView(Arm64DisassemblerActivity.this);
+            tvPerm.setTextSize(11);
+            tvPerm.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            tvPerm.setPadding(dp(6), dp(2), dp(6), dp(2));
+            row.addView(tvPerm);
+
+            return new ViewHolder(row, tvTag, tvTitle, tvSub, tvPerm);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            ElfTreeItem item;
+            synchronized (filteredTreeItems) {
+                if (position < 0 || position >= filteredTreeItems.size()) return;
+                item = filteredTreeItems.get(position);
+            }
+
+            if (item.itemType == ElfTreeItem.ItemType.HEADER) {
+                holder.itemView.setBackgroundColor(0x18888888);
+                holder.tvTag.setVisibility(View.GONE);
+                holder.tvPerm.setVisibility(View.GONE);
+                holder.tvTitle.setText(item.title);
+                holder.tvTitle.setTextColor(0xFF22C55E);
+                holder.tvSub.setText(item.subtitle);
+                holder.itemView.setClickable(false);
+                return;
+            }
+
+            holder.itemView.setBackgroundColor(Color.TRANSPARENT);
+            holder.tvTag.setVisibility(View.VISIBLE);
+            holder.tvTitle.setText(item.title);
+            holder.tvTitle.setTextColor(MaterialColors.getColor(holder.tvTitle, android.R.attr.textColorPrimary, 0xFFFFFFFF));
+            holder.tvSub.setText(item.subtitle);
+
+            GradientDrawable tagBg = new GradientDrawable();
+            tagBg.setCornerRadius(dp(4));
+
+            if (item.itemType == ElfTreeItem.ItemType.SEGMENT) {
+                holder.tvTag.setText("S");
+                holder.tvTag.setTextColor(0xFFA855F7);
+                tagBg.setColor(0x22A855F7);
+            } else if (item.itemType == ElfTreeItem.ItemType.SECTION) {
+                if (item.title.contains("text") || item.title.contains("plt")) {
+                    holder.tvTag.setText("C");
+                    holder.tvTag.setTextColor(0xFF22C55E);
+                    tagBg.setColor(0x2222C55E);
+                } else if (item.title.contains("rodata")) {
+                    holder.tvTag.setText("R");
+                    holder.tvTag.setTextColor(0xFF38BDF8);
+                    tagBg.setColor(0x2238BDF8);
+                } else {
+                    holder.tvTag.setText("D");
+                    holder.tvTag.setTextColor(0xFFFB923C);
+                    tagBg.setColor(0x22FB923C);
+                }
+            } else {
+                holder.tvTag.setText("f");
+                holder.tvTag.setTextColor(0xFFFBBF24);
+                tagBg.setColor(0x22FBBF24);
+            }
+            holder.tvTag.setBackground(tagBg);
+
+            if (item.permissions != null && !item.permissions.isEmpty()) {
+                holder.tvPerm.setVisibility(View.VISIBLE);
+                holder.tvPerm.setText(item.permissions);
+                if (item.permissions.contains("X")) {
+                    holder.tvPerm.setTextColor(0xFF22C55E);
+                } else if (item.permissions.contains("W")) {
+                    holder.tvPerm.setTextColor(0xFFFB923C);
+                } else {
+                    holder.tvPerm.setTextColor(0xFF888888);
+                }
+            } else {
+                holder.tvPerm.setVisibility(View.GONE);
+            }
+
+            holder.itemView.setOnClickListener(v -> onTreeItemClicked(item));
+        }
+
+        @Override
+        public int getItemCount() {
+            synchronized (filteredTreeItems) {
+                return filteredTreeItems.size();
+            }
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            final TextView tvTag, tvTitle, tvSub, tvPerm;
+            ViewHolder(View itemView, TextView tvTag, TextView tvTitle, TextView tvSub, TextView tvPerm) {
+                super(itemView);
+                this.tvTag = tvTag;
+                this.tvTitle = tvTitle;
+                this.tvSub = tvSub;
+                this.tvPerm = tvPerm;
+            }
+        }
+    }
+
+    private TextView createBadgeChip(String text, int color) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(12);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setTextColor(color);
+        tv.setPadding(dp(10), dp(4), dp(10), dp(4));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor((color & 0x00FFFFFF) | 0x22000000);
+        bg.setCornerRadius(dp(12));
+        tv.setBackground(bg);
+        return tv;
+    }
+
+    private void onTreeItemClicked(ElfTreeItem item) {
+        if (item.address >= 0) {
+            if (item.permissions != null && item.permissions.contains("X")) {
+                tabLayout.getTabAt(0).select();
+                navigateToAddress(item.address);
+            } else if (item.fileOffset >= 0) {
+                tabLayout.getTabAt(2).select();
+                jumpToHexOffset(item.fileOffset);
+            }
+        } else if (item.fileOffset >= 0) {
+            tabLayout.getTabAt(2).select();
+            jumpToHexOffset(item.fileOffset);
+        }
+    }
+
+    private void showStringOptionsDialog(ElfParser.ElfString str) {
+        List<String> options = new ArrayList<>();
+        options.add("Jump to HexView (Offset: 0x" + Long.toHexString(str.fileOffset) + ")");
+        if (str.vaddr >= textSecAddr && str.vaddr < textSecAddr + textSecSize) {
+            options.add("Jump to Disassembly (Addr: 0x" + Long.toHexString(str.vaddr) + ")");
+        }
+        options.add("Copy String");
+        options.add("Copy Virtual Address");
+        options.add("Copy File Offset");
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(str.value)
+                .setItems(options.toArray(new String[0]), (d, which) -> {
+                    String selected = options.get(which);
+                    if (selected.startsWith("Jump to HexView")) {
+                        tabLayout.getTabAt(2).select();
+                        jumpToHexOffset(str.fileOffset);
+                    } else if (selected.startsWith("Jump to Disassembly")) {
+                        tabLayout.getTabAt(0).select();
+                        navigateToAddress(str.vaddr);
+                    } else if (selected.equals("Copy String")) {
+                        copyToClipboard(str.value, "String");
+                    } else if (selected.equals("Copy Virtual Address")) {
+                        copyToClipboard(String.format("0x%X", str.vaddr), "Virtual Address");
+                    } else if (selected.equals("Copy File Offset")) {
+                        copyToClipboard(String.format("0x%X", str.fileOffset), "File Offset");
+                    }
+                })
+                .show();
+    }
+
+    private void jumpToHexOffset(long offset) {
+        if (rvHex == null || hexBytesPerRow <= 0) return;
+        int targetRow = (int) (offset / hexBytesPerRow);
+        LinearLayoutManager lm = (LinearLayoutManager) rvHex.getLayoutManager();
+        if (lm != null) {
+            lm.scrollToPositionWithOffset(targetRow, dp(40));
+        }
+    }
+
+    private void showHexRowActionDialog(long rowOffset, int count, byte[] rowData) {
+        String[] options = {
+                "Edit Byte at Offset...",
+                "Copy Row Hex Bytes",
+                "Copy Row ASCII Text",
+                "Copy Offset (0x" + Long.toHexString(rowOffset) + ")"
+        };
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(String.format("Offset 0x%08X", rowOffset))
+                .setItems(options, (d, which) -> {
+                    switch (which) {
+                        case 0:
+                            showHexByteEditDialog(rowOffset, count, rowData);
+                            break;
+                        case 1:
+                            StringBuilder hexSb = new StringBuilder();
+                            for (int i = 0; i < count; i++) {
+                                hexSb.append(String.format("%02X ", rowData[i]));
+                            }
+                            copyToClipboard(hexSb.toString().trim(), "Row Hex");
+                            break;
+                        case 2:
+                            StringBuilder ascSb = new StringBuilder();
+                            for (int i = 0; i < count; i++) {
+                                byte b = rowData[i];
+                                ascSb.append(b >= 0x20 && b <= 0x7E ? (char) b : '.');
+                            }
+                            copyToClipboard(ascSb.toString(), "Row ASCII");
+                            break;
+                        case 3:
+                            copyToClipboard(String.format("0x%X", rowOffset), "Offset");
+                            break;
+                    }
+                })
+                .show();
+    }
+
+    private void showHexByteEditDialog(long rowOffset, int count, byte[] rowData) {
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setPadding(dp(20), dp(12), dp(20), dp(12));
+
+        TextView tvPrompt = new TextView(this);
+        tvPrompt.setText("Select Byte Column (0 to " + (count - 1) + "):");
+        tvPrompt.setTextColor(0xFF888888);
+        l.addView(tvPrompt);
+
+        String[] byteOptions = new String[count];
+        for (int i = 0; i < count; i++) {
+            byteOptions[i] = String.format("+%02X (0x%02X: '%c')", i, rowData[i],
+                    (rowData[i] >= 0x20 && rowData[i] <= 0x7E) ? (char) rowData[i] : '.');
+        }
+        Spinner spByteCol = new Spinner(this);
+        spByteCol.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, byteOptions));
+        l.addView(spByteCol);
+
+        TextView tvNewHex = new TextView(this);
+        tvNewHex.setText("New Hex Value (e.g. 00, 90, FF):");
+        tvNewHex.setTextColor(0xFF22C55E);
+        tvNewHex.setPadding(0, dp(10), 0, dp(2));
+        l.addView(tvNewHex);
+
+        EditText etNewHex = new EditText(this);
+        etNewHex.setHint("Hex byte (2 chars)");
+        etNewHex.setTextSize(14);
+        etNewHex.setTypeface(Typeface.MONOSPACE);
+        etNewHex.setSingleLine(true);
+        etNewHex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2)});
+        l.addView(etNewHex);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(String.format("Patch Byte at 0x%08X", rowOffset))
+                .setView(wrapDialogView(l))
+                .setPositiveButton("Apply Patch", (d, w) -> {
+                    int col = spByteCol.getSelectedItemPosition();
+                    String hex = etNewHex.getText().toString().trim();
+                    if (hex.length() == 1) hex = "0" + hex;
+                    if (hex.length() == 2) {
+                        try {
+                            byte b = (byte) Integer.parseInt(hex, 16);
+                            long targetOffset = rowOffset + col;
+                            pendingPatches.put(targetOffset, new byte[]{b});
+                            updateSaveButtonUi();
+                            if (hexAdapter != null) hexAdapter.notifyItemChanged((int) (targetOffset / hexBytesPerRow));
+                            Toast.makeText(this, "Patched byte at 0x" + Long.toHexString(targetOffset), Toast.LENGTH_SHORT).show();
+                        } catch (Exception ex) {
+                            Toast.makeText(this, "Invalid hex byte: " + hex, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void undoLastPatch() {
+        if (pendingPatches.isEmpty()) {
+            Toast.makeText(this, "No patches to undo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Long lastKey = null;
+        for (Long k : pendingPatches.keySet()) {
+            lastKey = k;
+        }
+        if (lastKey != null) {
+            pendingPatches.remove(lastKey);
+            updateSaveButtonUi();
+            if (hexAdapter != null) hexAdapter.notifyDataSetChanged();
+            if (instructionsAdapter != null) instructionsAdapter.notifyDataSetChanged();
+            Toast.makeText(this, "Reverted patch at 0x" + Long.toHexString(lastKey), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showHexGoToDialog() {
+        EditText input = new EditText(this);
+        input.setHint("e.g. 0x1000 or 1000");
+        input.setTypeface(Typeface.MONOSPACE);
+        input.setSingleLine(true);
+        input.setPadding(dp(16), dp(10), dp(16), dp(10));
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Go to File Offset")
+                .setView(wrapDialogView(input))
+                .setPositiveButton("Go", (d, w) -> {
+                    String text = input.getText().toString().trim();
+                    if (text.startsWith("0x") || text.startsWith("0X")) text = text.substring(2);
+                    try {
+                        long offset = Long.parseLong(text, 16);
+                        jumpToHexOffset(offset);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "Invalid offset: " + text, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void performHexSearch(String query) {
+        if (TextUtils.isEmpty(query)) return;
+        new Thread(() -> {
+            try {
+                byte[] targetBytes;
+                String q = query.trim();
+                if (q.matches("^[0-9a-fA-F\\s]+$") && q.replace(" ", "").length() % 2 == 0) {
+                    targetBytes = CryptoHelper.hexToBytes(q.replace(" ", ""));
+                } else {
+                    targetBytes = q.getBytes(StandardCharsets.UTF_8);
+                }
+                if (targetBytes.length == 0) return;
+
+                long matchOffset = -1;
+                synchronized (Arm64DisassemblerActivity.this) {
+                    if (hexRaf != null) {
+                        byte[] buf = new byte[65536];
+                        long pos = 0;
+                        while (pos < hexFileSize) {
+                            hexRaf.seek(pos);
+                            int read = hexRaf.read(buf);
+                            if (read <= 0) break;
+                            for (int i = 0; i <= read - targetBytes.length; i++) {
+                                boolean match = true;
+                                for (int j = 0; j < targetBytes.length; j++) {
+                                    if (buf[i + j] != targetBytes[j]) {
+                                        match = false;
+                                        break;
+                                    }
+                                }
+                                if (match) {
+                                    matchOffset = pos + i;
+                                    break;
+                                }
+                            }
+                            if (matchOffset >= 0) break;
+                            pos += (read - targetBytes.length + 1);
+                        }
+                    }
+                }
+
+                final long found = matchOffset;
+                runOnUiThread(() -> {
+                    if (found >= 0) {
+                        jumpToHexOffset(found);
+                        Toast.makeText(this, "Match found at 0x" + Long.toHexString(found), Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "No match found for: " + query, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Search error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void filterStringsAsync(String query) {
+        new Thread(() -> {
+            List<ElfParser.ElfString> result = new ArrayList<>();
+            String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
+            synchronized (allStrings) {
+                if (TextUtils.isEmpty(q)) {
+                    result.addAll(allStrings);
+                } else {
+                    for (ElfParser.ElfString s : allStrings) {
+                        if (s.value.toLowerCase(Locale.ROOT).contains(q)
+                                || Long.toHexString(s.vaddr).contains(q)
+                                || Long.toHexString(s.fileOffset).contains(q)) {
+                            result.add(s);
+                        }
+                    }
+                }
+            }
+            runOnUiThread(() -> {
+                synchronized (filteredStrings) {
+                    filteredStrings.clear();
+                    filteredStrings.addAll(result);
+                }
+                if (tvStringsCount != null) {
+                    tvStringsCount.setText(String.valueOf(result.size()));
+                }
+                if (stringsAdapter != null) {
+                    stringsAdapter.notifyDataSetChanged();
+                }
+            });
+        }).start();
+    }
+
+    private void filterTreeAsync(String query) {
+        new Thread(() -> {
+            List<ElfTreeItem> result = new ArrayList<>();
+            String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
+            synchronized (allTreeItems) {
+                if (TextUtils.isEmpty(q)) {
+                    result.addAll(allTreeItems);
+                } else {
+                    for (ElfTreeItem item : allTreeItems) {
+                        if (item.itemType == ElfTreeItem.ItemType.HEADER) {
+                            result.add(item);
+                        } else if (item.title.toLowerCase(Locale.ROOT).contains(q)
+                                || (item.subtitle != null && item.subtitle.toLowerCase(Locale.ROOT).contains(q))) {
+                            result.add(item);
+                        }
+                    }
+                }
+            }
+            runOnUiThread(() -> {
+                synchronized (filteredTreeItems) {
+                    filteredTreeItems.clear();
+                    filteredTreeItems.addAll(result);
+                }
+                if (elfTreeAdapter != null) {
+                    elfTreeAdapter.notifyDataSetChanged();
+                }
+            });
+        }).start();
+    }
+
+    private void showFileInfoDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(20), dp(14), dp(20), dp(14));
+
+        addInfoRow(layout, "Lib Name", new File(originalPath).getName());
+        addInfoRow(layout, "Size", String.format(Locale.US, "%s (%d bytes)", ElfTreeItem.formatSize(soFile.length()), soFile.length()));
+        addInfoRow(layout, "Architecture", "ARM64 (AArch64) - Little Endian");
+        addInfoRow(layout, "Entry Point", String.format("0x%X", elfEntryPoint));
+        addInfoRow(layout, "Base Address", String.format("0x%X", textSecAddr));
+        addInfoRow(layout, "End Address", String.format("0x%X", textSecAddr + textSecSize));
+        addInfoRow(layout, "Build ID", elfBuildId);
+
+        TextView tvHashHeader = new TextView(this);
+        tvHashHeader.setText("Hashes");
+        tvHashHeader.setTextSize(14);
+        tvHashHeader.setTypeface(Typeface.DEFAULT_BOLD);
+        tvHashHeader.setTextColor(0xFF22C55E);
+        tvHashHeader.setPadding(0, dp(10), 0, dp(4));
+        layout.addView(tvHashHeader);
+
+        addInfoRow(layout, "MD5", hashMd5.isEmpty() ? "Calculating..." : hashMd5);
+        addInfoRow(layout, "SHA-1", hashSha1.isEmpty() ? "Calculating..." : hashSha1);
+        addInfoRow(layout, "SHA-256", hashSha256.isEmpty() ? "Calculating..." : hashSha256);
+
+        ScrollView sv = new ScrollView(this);
+        sv.addView(layout);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("File Information")
+                .setView(sv)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy All", (d, w) -> {
+                    String allInfo = "Lib Name: " + new File(originalPath).getName() + "\n"
+                            + "Size: " + soFile.length() + " bytes\n"
+                            + "Architecture: ARM64\n"
+                            + "Build ID: " + elfBuildId + "\n"
+                            + "MD5: " + hashMd5 + "\n"
+                            + "SHA-1: " + hashSha1 + "\n"
+                            + "SHA-256: " + hashSha256;
+                    copyToClipboard(allInfo, "ELF Info");
+                })
+                .show();
+    }
+
+    private void showCryptoDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(18), dp(12), dp(18), dp(12));
+
+        LinearLayout modeBar = new LinearLayout(this);
+        modeBar.setOrientation(LinearLayout.HORIZONTAL);
+        MaterialButton btnEncrypt = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnEncrypt.setText("ENCRYPT");
+        MaterialButton btnDecrypt = new MaterialButton(this);
+        btnDecrypt.setText("DECRYPT");
+        final boolean[] isDecryptMode = {true};
+
+        btnEncrypt.setOnClickListener(v -> {
+            isDecryptMode[0] = false;
+            btnEncrypt.setBackgroundColor(0xFF22C55E);
+            btnDecrypt.setBackgroundColor(0x33888888);
+        });
+        btnDecrypt.setOnClickListener(v -> {
+            isDecryptMode[0] = true;
+            btnDecrypt.setBackgroundColor(0xFF22C55E);
+            btnEncrypt.setBackgroundColor(0x33888888);
+        });
+        modeBar.addView(btnEncrypt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        modeBar.addView(btnDecrypt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        layout.addView(modeBar);
+
+        TextView tvAlgo = new TextView(this);
+        tvAlgo.setText("Algorithm:");
+        tvAlgo.setTextColor(0xFF3B82F6);
+        tvAlgo.setPadding(0, dp(8), 0, dp(2));
+        layout.addView(tvAlgo);
+
+        String[] algorithms = {"XOR", "RC4", "Base64", "Hex", "ROT13"};
+        Spinner spAlgo = new Spinner(this);
+        ArrayAdapter<String> algoAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_dropdown_item, algorithms);
+        spAlgo.setAdapter(algoAdapter);
+        layout.addView(spAlgo);
+
+        TextView tvKey = new TextView(this);
+        tvKey.setText("Key:");
+        tvKey.setTextColor(0xFF888888);
+        tvKey.setPadding(0, dp(6), 0, dp(2));
+        layout.addView(tvKey);
+
+        EditText etKey = new EditText(this);
+        etKey.setHint("Input key (text or hex)...");
+        etKey.setTextSize(13);
+        etKey.setSingleLine(true);
+        layout.addView(etKey);
+
+        TextView tvData = new TextView(this);
+        tvData.setText("Data:");
+        tvData.setTextColor(0xFF888888);
+        tvData.setPadding(0, dp(6), 0, dp(2));
+        layout.addView(tvData);
+
+        EditText etData = new EditText(this);
+        etData.setHint("Input data to encrypt / decrypt...");
+        etData.setTextSize(13);
+        etData.setMinLines(3);
+        etData.setMaxLines(6);
+        etData.setGravity(Gravity.TOP | Gravity.START);
+        layout.addView(etData);
+
+        TextView tvResultLabel = new TextView(this);
+        tvResultLabel.setText("Output:");
+        tvResultLabel.setTextColor(0xFF22C55E);
+        tvResultLabel.setPadding(0, dp(8), 0, dp(2));
+        layout.addView(tvResultLabel);
+
+        EditText etResult = new EditText(this);
+        etResult.setTextSize(13);
+        etResult.setTypeface(Typeface.MONOSPACE);
+        etResult.setMinLines(2);
+        etResult.setMaxLines(5);
+        etResult.setFocusable(false);
+        etResult.setClickable(true);
+        layout.addView(etResult);
+
+        MaterialButton btnRun = new MaterialButton(this);
+        btnRun.setText("▶ RUN");
+        btnRun.setBackgroundColor(0xFF22C55E);
+        btnRun.setOnClickListener(v -> {
+            String algo = spAlgo.getSelectedItem().toString();
+            String key = etKey.getText().toString();
+            String data = etData.getText().toString();
+            String res = CryptoHelper.process(algo, isDecryptMode[0], data, "Text", "Text", key, "Text");
+            etResult.setText(res);
+        });
+        LinearLayout.LayoutParams pRun = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pRun.topMargin = dp(8);
+        btnRun.setLayoutParams(pRun);
+        layout.addView(btnRun);
+
+        ScrollView sv = new ScrollView(this);
+        sv.addView(layout);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Text Decryption / Encryption")
+                .setView(sv)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy Result", (d, w) -> {
+                    String out = etResult.getText().toString();
+                    if (!out.isEmpty()) copyToClipboard(out, "Decrypted text");
+                })
+                .show();
+    }
+
+    private void addInfoRow(LinearLayout parent, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(4), 0, dp(4));
+
+        TextView tvLbl = new TextView(this);
+        tvLbl.setText(label + ":");
+        tvLbl.setTextSize(12);
+        tvLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        tvLbl.setTextColor(0xFF888888);
+        tvLbl.setLayoutParams(new LinearLayout.LayoutParams(dp(110), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(tvLbl);
+
+        TextView tvVal = new TextView(this);
+        tvVal.setText(value);
+        tvVal.setTextSize(12);
+        tvVal.setTypeface(Typeface.MONOSPACE);
+        tvVal.setTextColor(MaterialColors.getColor(row, android.R.attr.textColorPrimary, 0xFFFFFFFF));
+        tvVal.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+        row.addView(tvVal);
+
+        parent.addView(row);
     }
 }

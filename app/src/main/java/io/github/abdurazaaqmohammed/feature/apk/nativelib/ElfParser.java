@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.apk.nativelib;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -56,13 +57,59 @@ public class ElfParser implements AutoCloseable {
         public int index;
         public String name;
         public int type;
+        public long flags;
         public long addr, offset, size;
         public long link, entsize;
+
+        public String flagsToString() {
+            boolean r = (flags & 2 /* SHF_ALLOC */) != 0;
+            boolean w = (flags & 1 /* SHF_WRITE */) != 0;
+            boolean x = (flags & 4 /* SHF_EXECINSTR */) != 0;
+            return (r ? "R" : "-") + (w ? "W" : "-") + (x ? "X" : "-");
+        }
     }
 
     public static final class ProgramHeader {
         public int type;
+        public int flags;
         public long offset, vaddr, filesz, memsz;
+
+        public String flagsToString() {
+            return (flags & 4 != 0 ? "R" : "-")
+                 + (flags & 2 != 0 ? "W" : "-")
+                 + (flags & 1 != 0 ? "X" : "-");
+        }
+
+        public String typeName() {
+            switch (type) {
+                case 1: return "LOAD";
+                case 2: return "DYNAMIC";
+                case 3: return "INTERP";
+                case 4: return "NOTE";
+                case 5: return "SHLIB";
+                case 6: return "PHDR";
+                case 7: return "TLS";
+                case 0x6474e550: return "GNU_EH_FRAME";
+                case 0x6474e551: return "GNU_STACK";
+                case 0x6474e552: return "GNU_RELRO";
+                case 0x6474e553: return "GNU_PROPERTY";
+                default: return "0x" + Integer.toHexString(type);
+            }
+        }
+    }
+
+    public static final class ElfString {
+        public final long vaddr;
+        public final long fileOffset;
+        public final String value;
+        public final int length;
+
+        public ElfString(long vaddr, long fileOffset, String value, int length) {
+            this.vaddr = vaddr;
+            this.fileOffset = fileOffset;
+            this.value = value;
+            this.length = length;
+        }
     }
 
     public static final class Symbol {
@@ -191,7 +238,7 @@ public class ElfParser implements AutoCloseable {
             s.name = null; // filled below
             long nameOff = readU32() & 0xFFFFFFFFL;
             s.type = (int) readU32();
-            raf.skipBytes(is64 ? 8 : 4); // sh_flags
+            s.flags = readWord();
             s.addr = readAddr();
             s.offset = readWord();
             s.size = readWord();
@@ -247,8 +294,8 @@ public class ElfParser implements AutoCloseable {
             ProgramHeader ph = new ProgramHeader();
             ph.type = (int) readU32();
             if (is64) {
-                raf.skipBytes(4); // flags
-                ph.offset = readU32();
+                ph.flags = (int) readU32();
+                ph.offset = readU64();
                 ph.vaddr = readU64();
                 raf.skipBytes(8); // paddr
                 ph.filesz = readU64();
@@ -259,10 +306,100 @@ public class ElfParser implements AutoCloseable {
                 raf.skipBytes(4); // paddr
                 ph.filesz = readU32() & 0xFFFFFFFFL;
                 ph.memsz = readU32() & 0xFFFFFFFFL;
+                ph.flags = (int) readU32();
             }
             segments[i] = ph;
         }
         return segments;
+    }
+
+    public synchronized String buildId() throws IOException {
+        Section s = section(".note.gnu.build-id");
+        if (s != null && s.size > 16) {
+            byte[] b = readBytes(s.offset, (int) Math.min(s.size, 128));
+            if (b.length >= 16) {
+                int namesz = (b[0] & 0xFF) | ((b[1] & 0xFF) << 8);
+                int descsz = (b[4] & 0xFF) | ((b[5] & 0xFF) << 8);
+                int namePad = (namesz + 3) & ~3;
+                int descOffset = 12 + namePad;
+                if (descOffset + descsz <= b.length) {
+                    StringBuilder sb = new StringBuilder(descsz * 2);
+                    for (int i = 0; i < descsz; i++) {
+                        sb.append(String.format("%02x", b[descOffset + i]));
+                    }
+                    return sb.toString();
+                }
+            }
+        }
+        return "N/A";
+    }
+
+    public synchronized List<ElfString> allStrings(int minLen, int maxResults) throws IOException {
+        List<ElfString> out = new ArrayList<>();
+        Section[] secs = sections();
+        if (secs != null && secs.length > 0) {
+            for (Section s : secs) {
+                if (s.size == 0 || s.type == 8 /* NOBITS */) continue;
+                if ((s.flags & 2 /* SHF_ALLOC */) == 0 && (s.name == null || !s.name.contains("str"))) continue;
+                extractStringsFromRange(s.offset, s.addr, s.size, minLen, maxResults, out);
+                if (out.size() >= maxResults) break;
+            }
+        } else {
+            for (ProgramHeader ph : segments()) {
+                if (ph.type == 1 /* LOAD */ && ph.filesz > 0) {
+                    extractStringsFromRange(ph.offset, ph.vaddr, ph.filesz, minLen, maxResults, out);
+                    if (out.size() >= maxResults) break;
+                }
+            }
+        }
+        return out;
+    }
+
+    private void extractStringsFromRange(long fileOff, long vaddr, long size, int minLen, int maxResults, List<ElfString> out) throws IOException {
+        long lenToRead = Math.min(size, Math.max(0, raf.length() - fileOff));
+        if (lenToRead <= 0) return;
+        int bufSize = 65536;
+        byte[] buf = new byte[bufSize];
+        long pos = 0;
+        int currentStart = -1;
+        ByteArrayOutputStream currentStr = new ByteArrayOutputStream(128);
+
+        while (pos < lenToRead && out.size() < maxResults) {
+            int chunk = (int) Math.min(bufSize, lenToRead - pos);
+            raf.seek(fileOff + pos);
+            int read = raf.read(buf, 0, chunk);
+            if (read <= 0) break;
+
+            for (int i = 0; i < read; i++) {
+                byte b = buf[i];
+                boolean isPrintable = (b >= 0x20 && b <= 0x7E) || b == '\t';
+                if (isPrintable) {
+                    if (currentStart < 0) {
+                        currentStart = (int) (pos + i);
+                    }
+                    currentStr.write(b);
+                } else {
+                    if (currentStart >= 0) {
+                        if (currentStr.size() >= minLen) {
+                            String s = currentStr.toString(StandardCharsets.UTF_8.name());
+                            long strOffset = fileOff + currentStart;
+                            long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
+                            out.add(new ElfString(strVaddr, strOffset, s, s.length()));
+                            if (out.size() >= maxResults) break;
+                        }
+                        currentStart = -1;
+                        currentStr.reset();
+                    }
+                }
+            }
+            pos += read;
+        }
+        if (currentStart >= 0 && currentStr.size() >= minLen && out.size() < maxResults) {
+            String s = currentStr.toString(StandardCharsets.UTF_8.name());
+            long strOffset = fileOff + currentStart;
+            long strVaddr = vaddr >= 0 ? (vaddr + currentStart) : strOffset;
+            out.add(new ElfString(strVaddr, strOffset, s, s.length()));
+        }
     }
 
     private long e_phoff;
