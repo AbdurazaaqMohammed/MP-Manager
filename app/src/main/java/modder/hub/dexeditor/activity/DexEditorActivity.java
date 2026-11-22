@@ -385,6 +385,13 @@ public class DexEditorActivity extends BaseActivity {
             return;
         }
 
+        if (isCompilationOptionsActive()) {
+            // Active stripping options are only unsaved work when they would actually
+            // change the dexes - a dex with no debug info to strip needs no prompt.
+            confirmExitIfOptionsEffective();
+            return;
+        }
+
         promptDoublePressExit();
     }
 
@@ -396,6 +403,60 @@ public class DexEditorActivity extends BaseActivity {
             lastBackPressTime = currentTime;
             Extensions.showMessage(this, "Press back again to exit");
         }
+    }
+
+    /** Cache of the last no-op scan: key serializes the options the verdict belongs to. */
+    private String optionsEffectCacheKey;
+    private boolean optionsEffectCacheValue;
+
+    private String optionsEffectKey() {
+        ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        return options.dexVersion + "|" + options.removeAllDebug + "|" + options.removeDebugSource
+                + "|" + options.removeDebugLine + "|" + options.removeDebugParam
+                + "|" + options.removeDebugPrologue + "|" + options.removeDebugLocal;
+    }
+
+    /**
+     * Decides whether the exit prompt is needed while compilation options are active but no
+     * tab was edited: scans the loaded dexes for debug info the options would strip, so a
+     * dex that has nothing to remove exits without the "Unsaved changes" dialog. The scan
+     * runs off the UI thread (large dexes) and its verdict is cached per options state.
+     */
+    private void confirmExitIfOptionsEffective() {
+        String key = optionsEffectKey();
+        if (key.equals(optionsEffectCacheKey)) {
+            if (optionsEffectCacheValue) showExitConfirmation();
+            else promptDoublePressExit();
+            return;
+        }
+
+        AlertProgress progress = new AlertProgress(this);
+        progress.setMessage(getString(R.string.processing));
+        progress.setCancelable(false);
+        progress.setCanceledOnTouchOutside(false);
+        progress.show();
+
+        final ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        final ClassTree tree = classTree;
+        new Thread(() -> {
+            // Fail safe: any scan trouble falls back to prompting.
+            boolean effective = true;
+            try {
+                effective = tree != null && tree.optionsWouldChangeOutput(options);
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+            final boolean finalEffective = effective;
+            runOnUiThread(() -> {
+                progress.dismiss();
+                optionsEffectCacheKey = key;
+                optionsEffectCacheValue = finalEffective;
+                if (finalEffective) showExitConfirmation();
+                else promptDoublePressExit();
+            });
+        }, "dex-options-check").start();
     }
 
 
@@ -1784,6 +1845,18 @@ public class DexEditorActivity extends BaseActivity {
             }
         }
     }
+
+    private boolean isCompilationOptionsActive() {
+        // Read what a save will actually use - the classTree's options - not the
+        // session holder, which resets when "Remember" is off.
+        ClassTree.CompilationOptions options = classTree != null
+                ? classTree.getCompilationOptions() : sessionOptions;
+        return options.removeAllDebug || options.removeDebugSource ||
+                options.removeDebugLine || options.removeDebugParam ||
+                options.removeDebugPrologue || options.removeDebugLocal ||
+                !options.dexVersion.equals("Keep the same");
+    }
+
 
     private void showExitConfirmation() {
         List<EditorTab> modifiedTabs = new ArrayList<>();
