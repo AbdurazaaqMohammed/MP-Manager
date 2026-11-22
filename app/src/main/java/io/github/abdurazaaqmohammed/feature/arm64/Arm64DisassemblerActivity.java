@@ -18,6 +18,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -185,6 +186,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private int importsCount = 0;
     private int exportsCount = 0;
     private long elfEntryPoint = 0;
+    private String elfExportHash = "N/A";
     private String elfBuildId = "N/A";
     private String hashMd5 = "";
     private String hashSha1 = "";
@@ -804,6 +806,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     try { hexRaf = new RandomAccessFile(soFile, "r"); } catch (Exception ignored) {}
                 }
                 elfBuildId = elf.buildId();
+                elfExportHash = elf.exportHash();
 
                 // 1. Strings extraction
                 List<ElfParser.ElfString> strList = elf.allStrings(4, 30000);
@@ -2641,6 +2644,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         if (str.vaddr >= textSecAddr && str.vaddr < textSecAddr + textSecSize) {
             options.add("Jump to Disassembly (Addr: 0x" + Long.toHexString(str.vaddr) + ")");
         }
+        options.add("Send to Crypto Tool (Decrypt)");
         options.add("Copy String");
         options.add("Copy Virtual Address");
         options.add("Copy File Offset");
@@ -2655,6 +2659,8 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     } else if (selected.startsWith("Jump to Disassembly")) {
                         tabLayout.getTabAt(0).select();
                         navigateToAddress(str.vaddr);
+                    } else if (selected.equals("Send to Crypto Tool (Decrypt)")) {
+                        showCryptoDialog(str.value, true);
                     } else if (selected.equals("Copy String")) {
                         copyToClipboard(str.value, "String");
                     } else if (selected.equals("Copy Virtual Address")) {
@@ -2940,6 +2946,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         addInfoRow(layout, "Entry Point", String.format("0x%X", elfEntryPoint));
         addInfoRow(layout, "Base Address", String.format("0x%X", textSecAddr));
         addInfoRow(layout, "End Address", String.format("0x%X", textSecAddr + textSecSize));
+        addInfoRow(layout, "Export Hash", elfExportHash);
         addInfoRow(layout, "Build ID", elfBuildId);
 
         TextView tvHashHeader = new TextView(this);
@@ -2950,9 +2957,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         tvHashHeader.setPadding(0, dp(10), 0, dp(4));
         layout.addView(tvHashHeader);
 
-        addInfoRow(layout, "MD5", hashMd5.isEmpty() ? "Calculating..." : hashMd5);
-        addInfoRow(layout, "SHA-1", hashSha1.isEmpty() ? "Calculating..." : hashSha1);
-        addInfoRow(layout, "SHA-256", hashSha256.isEmpty() ? "Calculating..." : hashSha256);
+        addInfoRow(layout, "md5", hashMd5.isEmpty() ? "Calculating..." : hashMd5);
+        addInfoRow(layout, "sha1", hashSha1.isEmpty() ? "Calculating..." : hashSha1);
+        addInfoRow(layout, "sha256", hashSha256.isEmpty() ? "Calculating..." : hashSha256);
 
         ScrollView sv = new ScrollView(this);
         sv.addView(layout);
@@ -2965,124 +2972,295 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     String allInfo = "Lib Name: " + new File(originalPath).getName() + "\n"
                             + "Size: " + soFile.length() + " bytes\n"
                             + "Architecture: ARM64\n"
+                            + "Entry Point: " + String.format("0x%X", elfEntryPoint) + "\n"
+                            + "Base Address: " + String.format("0x%X", textSecAddr) + "\n"
+                            + "End Address: " + String.format("0x%X", textSecAddr + textSecSize) + "\n"
+                            + "Export Hash: " + elfExportHash + "\n"
                             + "Build ID: " + elfBuildId + "\n"
-                            + "MD5: " + hashMd5 + "\n"
-                            + "SHA-1: " + hashSha1 + "\n"
-                            + "SHA-256: " + hashSha256;
+                            + "md5: " + hashMd5 + "\n"
+                            + "sha1: " + hashSha1 + "\n"
+                            + "sha256: " + hashSha256;
                     copyToClipboard(allInfo, "ELF Info");
                 })
                 .show();
     }
 
     private void showCryptoDialog() {
+        showCryptoDialog("", true);
+    }
+
+    private void showCryptoDialog(String initialData, boolean defaultDecrypt) {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(18), dp(12), dp(18), dp(12));
+        layout.setPadding(dp(18), dp(14), dp(18), dp(14));
 
+        final boolean[] isDecryptMode = {defaultDecrypt};
+
+        // Header Title
+        TextView tvDialogTitle = new TextView(this);
+        tvDialogTitle.setText(defaultDecrypt ? "Text Decryption" : "Text Encryption");
+        tvDialogTitle.setTextSize(18);
+        tvDialogTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tvDialogTitle.setTextColor(0xFFFFFFFF);
+        tvDialogTitle.setPadding(0, 0, 0, dp(12));
+        layout.addView(tvDialogTitle);
+
+        // Mode Bar (Pill toggle: ENCRYPT | DECRYPT)
         LinearLayout modeBar = new LinearLayout(this);
         modeBar.setOrientation(LinearLayout.HORIZONTAL);
+        modeBar.setPadding(0, 0, 0, dp(12));
+
         MaterialButton btnEncrypt = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         btnEncrypt.setText("ENCRYPT");
         MaterialButton btnDecrypt = new MaterialButton(this);
         btnDecrypt.setText("DECRYPT");
-        final boolean[] isDecryptMode = {true};
 
-        btnEncrypt.setOnClickListener(v -> {
-            isDecryptMode[0] = false;
-            btnEncrypt.setBackgroundColor(0xFF22C55E);
-            btnDecrypt.setBackgroundColor(0x33888888);
-        });
-        btnDecrypt.setOnClickListener(v -> {
-            isDecryptMode[0] = true;
-            btnDecrypt.setBackgroundColor(0xFF22C55E);
-            btnEncrypt.setBackgroundColor(0x33888888);
-        });
+        Runnable updateModeColors = () -> {
+            if (isDecryptMode[0]) {
+                btnDecrypt.setBackgroundColor(0xFF22C55E);
+                btnDecrypt.setTextColor(0xFFFFFFFF);
+                btnEncrypt.setBackgroundColor(0x22888888);
+                btnEncrypt.setTextColor(0xFFAAAAAA);
+                tvDialogTitle.setText("Text Decryption");
+            } else {
+                btnEncrypt.setBackgroundColor(0xFF22C55E);
+                btnEncrypt.setTextColor(0xFFFFFFFF);
+                btnDecrypt.setBackgroundColor(0x22888888);
+                btnDecrypt.setTextColor(0xFFAAAAAA);
+                tvDialogTitle.setText("Text Encryption");
+            }
+        };
+
         modeBar.addView(btnEncrypt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
         modeBar.addView(btnDecrypt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
         layout.addView(modeBar);
 
-        TextView tvAlgo = new TextView(this);
-        tvAlgo.setText("Algorithm:");
-        tvAlgo.setTextColor(0xFF3B82F6);
-        tvAlgo.setPadding(0, dp(8), 0, dp(2));
-        layout.addView(tvAlgo);
+        // Algorithm
+        layout.addView(createFieldLabel("Algorithm"));
 
-        String[] algorithms = {"XOR", "RC4", "Base64", "Hex", "ROT13"};
+        String[] algorithms = {
+                "XOR", "RC4", "AES (ECB)", "AES (CBC)",
+                "DES (ECB)", "DES (CBC)", "3DES (Triple DES)",
+                "Base64", "Hex", "ROT13"
+        };
         Spinner spAlgo = new Spinner(this);
-        ArrayAdapter<String> algoAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, algorithms);
+        ArrayAdapter<String> algoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, algorithms);
         spAlgo.setAdapter(algoAdapter);
         layout.addView(spAlgo);
 
-        TextView tvKey = new TextView(this);
-        tvKey.setText("Key:");
-        tvKey.setTextColor(0xFF888888);
-        tvKey.setPadding(0, dp(6), 0, dp(2));
-        layout.addView(tvKey);
+        // Input Encode
+        layout.addView(createFieldLabel("Input Encode"));
+
+        String[] inputEncodings = {"Base64", "Text", "Hex"};
+        Spinner spInputEncode = new Spinner(this);
+        ArrayAdapter<String> inEncAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, inputEncodings);
+        spInputEncode.setAdapter(inEncAdapter);
+        spInputEncode.setSelection(defaultDecrypt ? 0 : 1);
+        layout.addView(spInputEncode);
+
+        // Output Encode
+        layout.addView(createFieldLabel("Output Encode"));
+
+        String[] outputEncodings = {"Text", "Base64", "Hex"};
+        Spinner spOutputEncode = new Spinner(this);
+        ArrayAdapter<String> outEncAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, outputEncodings);
+        spOutputEncode.setAdapter(outEncAdapter);
+        spOutputEncode.setSelection(defaultDecrypt ? 0 : 1);
+        layout.addView(spOutputEncode);
+
+        // Key section
+        LinearLayout llKey = new LinearLayout(this);
+        llKey.setOrientation(LinearLayout.VERTICAL);
+
+        llKey.addView(createFieldLabel("Key"));
 
         EditText etKey = new EditText(this);
-        etKey.setHint("Input key (text or hex)...");
+        etKey.setHint(defaultDecrypt ? "Input the decrypt key" : "Input the encrypt key");
         etKey.setTextSize(13);
         etKey.setSingleLine(true);
-        layout.addView(etKey);
+        llKey.addView(etKey);
 
-        TextView tvData = new TextView(this);
-        tvData.setText("Data:");
-        tvData.setTextColor(0xFF888888);
-        tvData.setPadding(0, dp(6), 0, dp(2));
-        layout.addView(tvData);
+        layout.addView(llKey);
+
+        // Key / IV Encode
+        LinearLayout llKeyEncode = new LinearLayout(this);
+        llKeyEncode.setOrientation(LinearLayout.VERTICAL);
+
+        llKeyEncode.addView(createFieldLabel("Key / IV Encode"));
+
+        String[] keyEncodings = {"Text", "Base64", "Hex"};
+        Spinner spKeyEncode = new Spinner(this);
+        ArrayAdapter<String> keyEncAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, keyEncodings);
+        spKeyEncode.setAdapter(keyEncAdapter);
+        llKeyEncode.addView(spKeyEncode);
+
+        layout.addView(llKeyEncode);
+
+        // IV section (for CBC modes)
+        LinearLayout llIv = new LinearLayout(this);
+        llIv.setOrientation(LinearLayout.VERTICAL);
+        llIv.setVisibility(View.GONE);
+
+        llIv.addView(createFieldLabel("IV (16 bytes for AES, 8 bytes for DES)"));
+
+        EditText etIv = new EditText(this);
+        etIv.setHint("Input IV...");
+        etIv.setTextSize(13);
+        etIv.setSingleLine(true);
+        llIv.addView(etIv);
+
+        layout.addView(llIv);
+
+        // Charset
+        layout.addView(createFieldLabel("Charset"));
+
+        String[] charsets = {"UTF-8", "US-ASCII", "ISO-8859-1", "UTF-16", "GBK"};
+        Spinner spCharset = new Spinner(this);
+        ArrayAdapter<String> charsetAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, charsets);
+        spCharset.setAdapter(charsetAdapter);
+        layout.addView(spCharset);
+
+        // Data
+        layout.addView(createFieldLabel("Data"));
 
         EditText etData = new EditText(this);
-        etData.setHint("Input data to encrypt / decrypt...");
+        etData.setHint("Input the data");
         etData.setTextSize(13);
         etData.setMinLines(3);
         etData.setMaxLines(6);
         etData.setGravity(Gravity.TOP | Gravity.START);
+        if (initialData != null && !initialData.isEmpty()) {
+            etData.setText(initialData);
+        }
         layout.addView(etData);
 
-        TextView tvResultLabel = new TextView(this);
-        tvResultLabel.setText("Output:");
-        tvResultLabel.setTextColor(0xFF22C55E);
-        tvResultLabel.setPadding(0, dp(8), 0, dp(2));
-        layout.addView(tvResultLabel);
+        // Output / Result Header
+        LinearLayout resultHeader = new LinearLayout(this);
+        resultHeader.setOrientation(LinearLayout.HORIZONTAL);
+        resultHeader.setGravity(Gravity.CENTER_VERTICAL);
+        resultHeader.setPadding(0, dp(10), 0, dp(2));
 
+        TextView tvResultLabel = createFieldLabel("Output");
+        resultHeader.addView(tvResultLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        MaterialButton btnCopy = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnCopy.setText("Copy");
+        btnCopy.setTextSize(11);
+        resultHeader.addView(btnCopy);
+
+        MaterialButton btnClear = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnClear.setText("Clear");
+        btnClear.setTextSize(11);
+        LinearLayout.LayoutParams pClear = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pClear.leftMargin = dp(6);
+        btnClear.setLayoutParams(pClear);
+        resultHeader.addView(btnClear);
+
+        layout.addView(resultHeader);
+
+        // Output text
         EditText etResult = new EditText(this);
         etResult.setTextSize(13);
         etResult.setTypeface(Typeface.MONOSPACE);
-        etResult.setMinLines(2);
-        etResult.setMaxLines(5);
+        etResult.setMinLines(3);
+        etResult.setMaxLines(8);
+        etResult.setGravity(Gravity.TOP | Gravity.START);
+        etResult.setHint("Result will appear here...");
+        etResult.setBackgroundColor(0x18FFFFFF);
+        etResult.setPadding(dp(10), dp(8), dp(10), dp(8));
         etResult.setFocusable(false);
         etResult.setClickable(true);
         layout.addView(etResult);
 
+        // Dynamic algorithm switching
+        spAlgo.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String algo = algorithms[position];
+                boolean isCbc = algo.contains("CBC");
+                llIv.setVisibility(isCbc ? View.VISIBLE : View.GONE);
+
+                boolean noKey = algo.equals("Base64") || algo.equals("Hex") || algo.equals("ROT13");
+                llKey.setVisibility(noKey ? View.GONE : View.VISIBLE);
+                llKeyEncode.setVisibility(noKey ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        // Mode switch listeners
+        btnEncrypt.setOnClickListener(v -> {
+            isDecryptMode[0] = false;
+            updateModeColors.run();
+            etKey.setHint("Input the encrypt key");
+            spInputEncode.setSelection(1); // Text
+            spOutputEncode.setSelection(0); // Text
+        });
+        btnDecrypt.setOnClickListener(v -> {
+            isDecryptMode[0] = true;
+            updateModeColors.run();
+            etKey.setHint("Input the decrypt key");
+            spInputEncode.setSelection(0); // Base64
+            spOutputEncode.setSelection(0); // Text
+        });
+        updateModeColors.run();
+
+        // Copy / Clear buttons
+        btnCopy.setOnClickListener(v -> {
+            String out = etResult.getText() != null ? etResult.getText().toString() : "";
+            if (!out.isEmpty()) copyToClipboard(out, "Crypto Output");
+        });
+        btnClear.setOnClickListener(v -> {
+            etData.setText("");
+            etResult.setText("");
+        });
+
+        // RUN Button
         MaterialButton btnRun = new MaterialButton(this);
-        btnRun.setText("▶ RUN");
+        btnRun.setText("▶  RUN");
+        btnRun.setTextSize(14);
+        btnRun.setTypeface(Typeface.DEFAULT_BOLD);
         btnRun.setBackgroundColor(0xFF22C55E);
+        btnRun.setTextColor(0xFFFFFFFF);
+        btnRun.setCornerRadius(dp(8));
+        LinearLayout.LayoutParams pRun = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        pRun.topMargin = dp(14);
+        pRun.bottomMargin = dp(8);
+        btnRun.setLayoutParams(pRun);
         btnRun.setOnClickListener(v -> {
             String algo = spAlgo.getSelectedItem().toString();
-            String key = etKey.getText().toString();
-            String data = etData.getText().toString();
-            String res = CryptoHelper.process(algo, isDecryptMode[0], data, "Text", "Text", key, "Text");
+            String inEnc = spInputEncode.getSelectedItem().toString();
+            String outEnc = spOutputEncode.getSelectedItem().toString();
+            String k = etKey.getText() != null ? etKey.getText().toString() : "";
+            String kEnc = spKeyEncode.getSelectedItem().toString();
+            String iv = etIv.getText() != null ? etIv.getText().toString() : "";
+            String cs = spCharset.getSelectedItem().toString();
+            String data = etData.getText() != null ? etData.getText().toString() : "";
+
+            String res = CryptoHelper.process(algo, isDecryptMode[0], data, inEnc, outEnc, k, kEnc, iv, kEnc, cs);
             etResult.setText(res);
         });
-        LinearLayout.LayoutParams pRun = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pRun.topMargin = dp(8);
-        btnRun.setLayoutParams(pRun);
         layout.addView(btnRun);
 
         ScrollView sv = new ScrollView(this);
         sv.addView(layout);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Text Decryption / Encryption")
                 .setView(sv)
                 .setPositiveButton("Close", null)
-                .setNeutralButton("Copy Result", (d, w) -> {
-                    String out = etResult.getText().toString();
-                    if (!out.isEmpty()) copyToClipboard(out, "Decrypted text");
-                })
                 .show();
+    }
+
+    private TextView createFieldLabel(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(12);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setTextColor(0xFF22C55E);
+        tv.setPadding(0, dp(6), 0, dp(2));
+        return tv;
     }
 
     private void addInfoRow(LinearLayout parent, String label, String value) {

@@ -4,8 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -332,6 +334,45 @@ public class ElfParser implements AutoCloseable {
             }
         }
         return "N/A";
+    }
+
+    public synchronized String exportHash() {
+        try {
+            List<Symbol> dynsyms = symbols(".dynsym");
+            List<String> exportNames = new ArrayList<>();
+            if (dynsyms != null) {
+                for (Symbol s : dynsyms) {
+                    if (s.shndx != 0 && s.name != null && !s.name.isEmpty() && (s.bind == 1 || s.bind == 2)) {
+                        exportNames.add(s.name);
+                    }
+                }
+            }
+            if (exportNames.isEmpty()) {
+                List<Symbol> syms = symbols(".symtab");
+                if (syms != null) {
+                    for (Symbol s : syms) {
+                        if (s.shndx != 0 && s.name != null && !s.name.isEmpty() && (s.bind == 1 || s.bind == 2)) {
+                            exportNames.add(s.name);
+                        }
+                    }
+                }
+            }
+            if (exportNames.isEmpty()) return "N/A";
+            Collections.sort(exportNames);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            for (int i = 0; i < exportNames.size(); i++) {
+                if (i > 0) md.update((byte) ',');
+                md.update(exportNames.get(i).getBytes(StandardCharsets.UTF_8));
+            }
+            byte[] digest = md.digest();
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "N/A";
+        }
     }
 
     public synchronized List<ElfString> allStrings(int minLen, int maxResults) throws IOException {
