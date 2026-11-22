@@ -13,6 +13,10 @@
         android:title="@string/more_options">
         <menu>
             <item
+                android:id="@+id/action_toggle_java_mode"
+                android:icon="@drawable/code_24px"
+                android:title="@string/switch_to_java_mode" />
+            <item
                 android:id="@+id/action_preferences"
                 android:title="@string/preferences"
                 android:icon="@drawable/ic_setting_mt" />
