@@ -94,4 +94,40 @@
     <style name="ThemePackOnError">
         <item name="colorOnError">@color/theme_pack_on_error</item>
     </style>
+    <color name="theme_pack_tertiary_container">#00000000</color>
+    <style name="ThemePackTertiaryContainer">
+        <item name="colorTertiaryContainer">@color/theme_pack_tertiary_container</item>
+    </style>
+    <color name="theme_pack_on_tertiary_container">#00000000</color>
+    <style name="ThemePackOnTertiaryContainer">
+        <item name="colorOnTertiaryContainer">@color/theme_pack_on_tertiary_container</item>
+    </style>
+    <color name="theme_pack_error_container">#00000000</color>
+    <style name="ThemePackErrorContainer">
+        <item name="colorErrorContainer">@color/theme_pack_error_container</item>
+    </style>
+    <color name="theme_pack_on_error_container">#00000000</color>
+    <style name="ThemePackOnErrorContainer">
+        <item name="colorOnErrorContainer">@color/theme_pack_on_error_container</item>
+    </style>
+    <color name="theme_pack_surface_inverse">#00000000</color>
+    <style name="ThemePackSurfaceInverse">
+        <item name="colorSurfaceInverse">@color/theme_pack_surface_inverse</item>
+    </style>
+    <color name="theme_pack_on_surface_inverse">#00000000</color>
+    <style name="ThemePackOnSurfaceInverse">
+        <item name="colorOnSurfaceInverse">@color/theme_pack_on_surface_inverse</item>
+    </style>
+    <color name="theme_pack_primary_inverse">#00000000</color>
+    <style name="ThemePackPrimaryInverse">
+        <item name="colorPrimaryInverse">@color/theme_pack_primary_inverse</item>
+    </style>
+    <color name="theme_pack_surface_dim">#00000000</color>
+    <style name="ThemePackSurfaceDim">
+        <item name="colorSurfaceDim">@color/theme_pack_surface_dim</item>
+    </style>
+    <color name="theme_pack_surface_bright">#00000000</color>
+    <style name="ThemePackSurfaceBright">
+        <item name="colorSurfaceBright">@color/theme_pack_surface_bright</item>
+    </style>
 </resources>

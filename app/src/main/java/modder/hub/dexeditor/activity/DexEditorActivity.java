@@ -251,6 +251,17 @@ public class DexEditorActivity extends BaseActivity {
         }
     }
 
+    @Override
+    protected void onThemeChanged() {
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyInPlace(this);
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyEditorChrome(this);
+        for (androidx.fragment.app.Fragment fragment : getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof UnifiedEditorFragment) {
+                ((UnifiedEditorFragment) fragment).applyThemeInPlace();
+            }
+        }
+    }
+
     /**
      * True when the applied theme is a light one. Resolved from the theme itself
      * rather than from a legacy style id, so it stays correct for theme plugins.

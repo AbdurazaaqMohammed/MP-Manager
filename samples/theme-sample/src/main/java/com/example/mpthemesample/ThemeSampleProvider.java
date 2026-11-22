@@ -17,21 +17,24 @@ import java.io.FileNotFoundException;
 import java.util.Locale;
 
 /**
- * MP-Manager v1 theme provider sample.
+ * MP-Manager v2 theme provider sample.
  *
  * Permission-free: exported with no read permission, so the host queries it
  * directly. Fixed endpoints under {@link #AUTHORITY}:
  * <pre>
- *   /theme     one row: contract (INTEGER =1), id, name (TEXT) and optional
- *              accent, dark, scrim (INTEGER), colors and strings (JSON TEXT),
- *              wallpaper and preview (TEXT, exact content URIs)
+ *   /theme     one row: contract (INTEGER =2), id, name (TEXT) and optional
+ *              accent, dark, scrim (INTEGER), colors, strings, editor_syntax
+ *              (JSON TEXT), wallpaper_scope ("files"|"all"|"none" TEXT) and
+ *              wallpaper/preview (TEXT, exact content URIs)
  *   /wallpaper wallpaper PNG (asset)
  *   /preview   preview PNG (asset)
  * </pre>
  * Accent/scrim are ARGB ints (from the documented #AARRGGBB values). Colors
  * use tokens from the host allowlist (Material 3 names plus app tokens);
- * strings map a host label key to a BCP47-locale -> text object. Unknown
- * opens throw FileNotFoundException.
+ * editor_syntax maps the eight canonical syntax categories (TextMate scope
+ * names are accepted too and mapped by the host) to ARGB colors; strings map
+ * a host label key to a BCP47-locale -> text object. Unknown opens throw
+ * FileNotFoundException.
  */
 public class ThemeSampleProvider extends ContentProvider {
 
@@ -46,6 +49,8 @@ public class ThemeSampleProvider extends ContentProvider {
 
     /** Contract version served on the contract column. */
     public static final int CONTRACT_V1 = 1;
+    /** Contract version adding editor_syntax + wallpaper_scope (served). */
+    public static final int CONTRACT_V2 = 2;
 
     /** Theme payload; ARGB ints for the INTEGER columns. */
     public static final String THEME_ID = "sample.nova";
@@ -58,6 +63,26 @@ public class ThemeSampleProvider extends ContentProvider {
     public static final String COLOR_ON_SURFACE = "#FFE6E6F0";
     public static final String COLOR_FOLDER_ICON_BG = "#FF2A2547";
     public static final String COLOR_LIST_HIGHLIGHT = "#FF3A3358";
+    public static final String WALLPAPER_SCOPE = "files";
+
+    /** Editor syntax colors (canonical categories, host-allowlisted). */
+    public static final String SYNTAX_COMMENT = "#FF7A7A99";
+    public static final String SYNTAX_KEYWORD = "#FF9D7CFF";
+    public static final String SYNTAX_STRING = "#FF8FD18F";
+    public static final String SYNTAX_NUMBER = "#FFFFB86C";
+    public static final String SYNTAX_TYPE = "#FF6FC3DF";
+    public static final String SYNTAX_FUNCTION = "#FF7DCFFF";
+    public static final String SYNTAX_OPERATOR = "#FFFF7EDB";
+    public static final String SYNTAX_VARIABLE = "#FFF8F8F2";
+    /** Same value shipped as a TextMate scope alias to show host mapping. */
+    public static final String SYNTAX_SCOPE_ENTITY_FUNCTION = "#FF7DCFFF";
+
+    /** Remaining editor tokens (gutter, selection, highlights). */
+    public static final String COLOR_EDITOR_GUTTER = "#FF151520";
+    public static final String COLOR_EDITOR_LINE_NUMBER = "#FF5A5876";
+    public static final String COLOR_EDITOR_SELECTION = "#FF3A3358";
+    public static final String COLOR_EDITOR_CURRENT_LINE = "#FF23233A";
+    public static final String COLOR_EDITOR_MATCH_HIGHLIGHT = "#FF4A3F6E";
 
     private static final int MATCH_THEME = 1;
     private static final int MATCH_WALLPAPER = 2;
@@ -73,7 +98,8 @@ public class ThemeSampleProvider extends ContentProvider {
 
     private static final String[] COLUMNS = {
             "contract", "id", "name", "accent", "dark",
-            "wallpaper", "scrim", "colors", "strings", "preview"
+            "wallpaper", "scrim", "colors", "strings",
+            "editor_syntax", "wallpaper_scope", "preview"
     };
 
     @Override
@@ -100,7 +126,7 @@ public class ThemeSampleProvider extends ContentProvider {
     private Object valueFor(String column) {
         switch (column) {
             case "contract":
-                return CONTRACT_V1;
+                return CONTRACT_V2;
             case "id":
                 return THEME_ID;
             case "name":
@@ -117,6 +143,10 @@ public class ThemeSampleProvider extends ContentProvider {
                 return colorsJson();
             case "strings":
                 return stringsJson();
+            case "editor_syntax":
+                return syntaxJson();
+            case "wallpaper_scope":
+                return WALLPAPER_SCOPE;
             case "preview":
                 return PREVIEW_URI.toString();
             default:
@@ -134,7 +164,38 @@ public class ThemeSampleProvider extends ContentProvider {
             colors.put("folder_icon_bg", COLOR_FOLDER_ICON_BG);
             colors.put("list_highlight", COLOR_LIST_HIGHLIGHT);
             colors.put("wallpaper_scrim", SCRIM_HEX);
+            colors.put("editor_background", COLOR_SURFACE);
+            colors.put("editor_text", COLOR_ON_SURFACE);
+            colors.put("editor_gutter", COLOR_EDITOR_GUTTER);
+            colors.put("editor_line_number", COLOR_EDITOR_LINE_NUMBER);
+            colors.put("editor_line_number_current", COLOR_PRIMARY);
+            colors.put("editor_selection", COLOR_EDITOR_SELECTION);
+            colors.put("editor_current_line", COLOR_EDITOR_CURRENT_LINE);
+            colors.put("editor_match_highlight", COLOR_EDITOR_MATCH_HIGHLIGHT);
             return colors.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /**
+     * v2 editor_syntax column: canonical categories plus one TextMate scope
+     * alias ({@code entity.name.function}) the host maps onto the same
+     * category, to demonstrate both accepted spellings.
+     */
+    private static String syntaxJson() {
+        try {
+            JSONObject syntax = new JSONObject();
+            syntax.put("comment", SYNTAX_COMMENT);
+            syntax.put("keyword", SYNTAX_KEYWORD);
+            syntax.put("string", SYNTAX_STRING);
+            syntax.put("number", SYNTAX_NUMBER);
+            syntax.put("type", SYNTAX_TYPE);
+            syntax.put("function", SYNTAX_FUNCTION);
+            syntax.put("operator", SYNTAX_OPERATOR);
+            syntax.put("variable", SYNTAX_VARIABLE);
+            syntax.put("entity.name.function", SYNTAX_SCOPE_ENTITY_FUNCTION);
+            return syntax.toString();
         } catch (Exception e) {
             return "{}";
         }

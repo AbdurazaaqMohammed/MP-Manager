@@ -28,7 +28,10 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 public abstract class BaseActivity extends AppCompatActivity {
 
     private int appliedFontEpoch = -1;
+    private int appliedThemeEpoch = -1;
     private String editorOwnerId;
+    private Runnable themeListener;
+    private volatile boolean resumed;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -40,6 +43,14 @@ public abstract class BaseActivity extends AppCompatActivity {
         AppFont.installFactory(this);
         appliedFontEpoch = AppFont.currentEpoch();
         super.onCreate(savedInstanceState);
+        // Capture the shared theme revision once the theme is fully applied;
+        // later bumps (selection change, import/refresh, accent) recreate us.
+        appliedThemeEpoch = ThemeRegistry.currentEpoch();
+        // Weakly held by the registry; unregistered in onDestroy. The
+        // listener only acts while foregrounded — backgrounded activities
+        // catch up through the resume epoch check below.
+        themeListener = this::handleThemeChanged;
+        ThemeRegistry.addActivityListener(themeListener);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         editorOwnerId = EditorTasks.bind(this, savedInstanceState);
         MinimizedEditors.rebind(this);
@@ -53,17 +64,75 @@ public abstract class BaseActivity extends AppCompatActivity {
             });
             ViewCompat.requestApplyInsets(content);
         }
+        // System bars + scoped wallpaper background for every themed
+        // activity; activities with their own wrapper override
+        // themeAppliesSystemBars() (MainActivity keeps its wrapper).
+        if (themeAppliesSystemBars()) {
+            ThemeRegistry.applySystemBars(this);
+        }
+        ThemeRegistry.applyActivityBackground(this);
+    }
+
+    /**
+     * Foreground-only theme change entry point. The shared revision is
+     * refreshed BEFORE the hook so a recreate triggered here cannot re-trigger
+     * itself through the resume check.
+     */
+    private void handleThemeChanged() {
+        if (!resumed || isFinishing() || isDestroyed()
+                || appliedThemeEpoch == ThemeRegistry.currentEpoch()) return;
+        appliedThemeEpoch = ThemeRegistry.currentEpoch();
+        onThemeChanged();
+    }
+
+    /**
+     * Called when the applied theme changed while this activity was
+     * foregrounded. Default recreates; editors may override for an in-place
+     * refresh (only where state restoration is verified).
+     */
+    protected void onThemeChanged() {
+        recreate();
+    }
+
+    /**
+     * Override to false when the activity applies system bar colors itself
+     * (MainActivity's wrapper) so tinting is not applied twice.
+     */
+    protected boolean themeAppliesSystemBars() {
+        return true;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         if (getIntent() != null && getIntent().getBooleanExtra("restore_progress", false)) {
             getIntent().removeExtra("restore_progress");
             ProgressManager.restoreHidden();
         }
         // Pick up a font changed in Settings while this activity was in background.
         if (appliedFontEpoch != AppFont.currentEpoch()) recreate();
+        // Pick up a theme change that happened while backgrounded (the live
+        // listener only fires while foregrounded).
+        if (appliedThemeEpoch != ThemeRegistry.currentEpoch()) {
+            handleThemeChanged();
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        int previousNight = getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        super.onConfigurationChanged(newConfig);
+        ThemeRegistry.reload(this);
+        if (previousNight != (newConfig.uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK)) handleThemeChanged();
+    }
+
+    @Override
+    protected void onPause() {
+        resumed = false;
+        super.onPause();
     }
 
     @Override
@@ -80,6 +149,8 @@ public abstract class BaseActivity extends AppCompatActivity {
         // configuration recreations (isFinishing == false) don't count.
         if (isFinishing()) MinimizedEditors.unregister(this);
         EditorTasks.unbind(editorOwnerId, this);
+        ThemeRegistry.removeActivityListener(themeListener);
+        themeListener = null;
         super.onDestroy();
     }
 

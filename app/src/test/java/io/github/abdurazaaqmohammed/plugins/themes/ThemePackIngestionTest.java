@@ -64,7 +64,23 @@ public class ThemePackIngestionTest {
         files.put("zh-CN", "\u6587\u4ef6");
         strings.put("tab.files", files);
         s.strings = strings;
+        Map<String, Integer> syntax = new LinkedHashMap<>();
+        syntax.put("comment", 0xFF6A9955);
+        syntax.put("keyword", 0xFFCC7832);
+        s.editorSyntax = syntax;
+        s.wallpaperScope = "files";
         return s;
+    }
+
+    /** Writes raw JSON directly so pre-schema (v1-era) files are simulated. */
+    private static void writeRawSnapshot(File filesDir, String pkg, String json)
+            throws IOException {
+        File file = ThemePackStore.snapshotFile(filesDir, pkg);
+        File dir = file.getParentFile();
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("mkdirs failed");
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(json.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     // ---------- snapshot persistence ----------
@@ -72,6 +88,8 @@ public class ThemePackIngestionTest {
     @Test
     public void snapshot_roundTrips() throws IOException {
         ThemePackStore.StoredSnapshot in = snapshot();
+        in.schema = ThemePackStore.SCHEMA_V2;
+        in.revision = 7L;
         in.wallpaperName = "wallpaper-123456789";
         ThemePackStore.writeSnapshot(filesDir, "com.example.themes", in);
         ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(
@@ -87,6 +105,12 @@ public class ThemePackIngestionTest {
         assertEquals("\u6587\u4ef6", out.strings.get("tab.files").get("zh-CN"));
         assertEquals("wallpaper-123456789", out.wallpaperName);
         assertNull(out.previewName);
+        // v2 fields
+        assertEquals(ThemePackStore.SCHEMA_V2, out.schema.intValue());
+        assertEquals(7L, out.revision.longValue());
+        assertEquals(2, out.editorSyntax.size());
+        assertEquals(0xFFCC7832, out.editorSyntax.get("keyword").intValue());
+        assertEquals("files", out.wallpaperScope);
     }
 
     @Test
@@ -119,6 +143,71 @@ public class ThemePackIngestionTest {
             throw new AssertionError(e);
         }
         assertNull(ThemePackStore.readSnapshot(filesDir, "com.example.themes"));
+    }
+
+    // ---------- schema/revision back-compat ----------
+
+    @Test
+    public void snapshot_preSchemaFile_normalizesToSchema1() throws IOException {
+        // Gson omits null fields, so a null schema serializes to a v1-era
+        // file with no "schema" key at all.
+        ThemePackStore.StoredSnapshot in = snapshot();
+        in.schema = null;
+        in.revision = null;
+        ThemePackStore.writeSnapshot(filesDir, "com.example.themes", in);
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(
+                filesDir, "com.example.themes");
+        assertNotNull(out);
+        assertEquals(ThemePackStore.SCHEMA_V1, out.schema.intValue());
+        assertEquals(0L, out.revision.longValue());
+    }
+
+    @Test
+    public void snapshot_schemaZeroOrNegative_treatedAs1() throws IOException {
+        writeRawSnapshot(filesDir, "com.example.themes",
+                "{\"id\":\"old\",\"schema\":0,\"revision\":3}");
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(
+                filesDir, "com.example.themes");
+        assertNotNull(out);
+        assertEquals("old", out.id);
+        assertEquals(ThemePackStore.SCHEMA_V1, out.schema.intValue());
+        assertEquals(3L, out.revision.longValue());
+    }
+
+    @Test
+    public void snapshot_unknownScopeField_forcedBackToFiles() throws IOException {
+        writeRawSnapshot(filesDir, "com.example.themes",
+                "{\"id\":\"old\",\"schema\":2,\"wallpaperScope\":\"bogus\"}");
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(
+                filesDir, "com.example.themes");
+        assertNotNull(out);
+        assertEquals("files", out.wallpaperScope);
+    }
+
+    @Test
+    public void snapshot_nonNumericRevision_normalizesToZero() throws IOException {
+        // A hand-edited file with a malformed revision must not break reads.
+        writeRawSnapshot(filesDir, "com.example.themes",
+                "{\"id\":\"old\",\"revision\":-5}");
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(
+                filesDir, "com.example.themes");
+        assertNotNull(out);
+        assertEquals(0L, out.revision.longValue());
+    }
+
+    @Test
+    public void snapshot_revisionRoundTripsThroughCommit() throws IOException {
+        String pkg = "com.example.themes";
+        ThemePackStore.StoredSnapshot in = snapshot();
+        in.revision = 41L;
+        in.schema = ThemePackStore.SCHEMA_V2;
+        assertTrue(ThemePackStore.commit(filesDir, pkg, in, null, null));
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(filesDir, pkg);
+        assertNotNull(out);
+        assertEquals(41L, out.revision.longValue());
+        assertEquals(ThemePackStore.SCHEMA_V2, out.schema.intValue());
+        assertEquals("files", out.wallpaperScope);
+        assertEquals(2, out.editorSyntax.size());
     }
 
     // ---------- path safety ----------
@@ -238,6 +327,62 @@ public class ThemePackIngestionTest {
         assertEquals(2, packDir.listFiles().length); // snapshot.json dir + old wallpaper
     }
 
+    // ---------- retained images (no-op refresh) ----------
+
+    @Test
+    public void commit_retainedName_reusesStoredImage() throws Exception {
+        String pkg = "com.example.themes";
+        File packDir = ThemePackStore.packDir(filesDir, pkg);
+        File staged = ThemePackStore.stageFile(bytes("PNGDATA"), packDir, 1024);
+        ThemePackStore.StoredSnapshot first = snapshot();
+        assertTrue(ThemePackStore.commit(filesDir, pkg, first, staged, null));
+        String retainedName = first.wallpaperName;
+        File retainedFile = ThemePackStore.wallpaperFile(filesDir, pkg, retainedName);
+        assertTrue(retainedFile.isFile());
+
+        // Metadata-only change with the image name pre-set (bytes already
+        // verified by the caller): the stored file must survive untouched.
+        ThemePackStore.StoredSnapshot changed = snapshot();
+        changed.name = "Renamed";
+        changed.wallpaperName = retainedName;
+        assertTrue(ThemePackStore.commit(filesDir, pkg, changed, null, null));
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(filesDir, pkg);
+        assertNotNull(out);
+        assertEquals("Renamed", out.name);
+        assertEquals(retainedName, out.wallpaperName);
+        assertEquals("PNGDATA", read(retainedFile));
+        // snapshot.json + the retained wallpaper; no versioned leftovers
+        assertEquals(2, packDir.listFiles().length);
+    }
+
+    @Test
+    public void commit_retainedName_failure_keepsStoredImage() throws Exception {
+        String pkg = "com.example.themes";
+        File packDir = ThemePackStore.packDir(filesDir, pkg);
+        File staged = ThemePackStore.stageFile(bytes("PNGDATA"), packDir, 1024);
+        ThemePackStore.StoredSnapshot first = snapshot();
+        assertTrue(ThemePackStore.commit(filesDir, pkg, first, staged, null));
+        String retainedName = first.wallpaperName;
+        File retainedFile = ThemePackStore.wallpaperFile(filesDir, pkg, retainedName);
+
+        // Force a snapshot persistence failure; the retained image must not
+        // be deleted by the rollback (the restored snapshot references it).
+        File snap = ThemePackStore.snapshotFile(filesDir, pkg);
+        File inside = new File(snap, "blocker");
+        assertTrue(snap.delete());
+        assertTrue(snap.mkdirs());
+        try (FileOutputStream fos = new FileOutputStream(inside)) {
+            fos.write(1);
+        }
+
+        ThemePackStore.StoredSnapshot replacement = snapshot();
+        replacement.name = "Replacement";
+        replacement.wallpaperName = retainedName;
+        assertFalse(ThemePackStore.commit(filesDir, pkg, replacement, null, null));
+        // the retained (pre-existing) image survived the rollback
+        assertEquals("PNGDATA", read(retainedFile));
+    }
+
     @Test
     public void deletePack_removesEverything() throws Exception {
         String pkg = "com.example.themes";
@@ -266,7 +411,7 @@ public class ThemePackIngestionTest {
 
         ThemePacks.Snapshot snap = new ThemePacks.Snapshot("com.example.themes",
                 "Example", Boolean.TRUE, 0xFF6750A4, 0x66000000, colors, strings,
-                null, null);
+                null, null, null, null);
         // exact BCP47 tag
         assertEquals("Files", snap.label("tab.files", Locale.US));
         assertEquals("\u6587\u4ef6", snap.label("tab.files", Locale.SIMPLIFIED_CHINESE));
@@ -281,6 +426,60 @@ public class ThemePackIngestionTest {
         assertNull(snap.label("tab.files2", Locale.US));
         assertNull(snap.label("unknown.key", Locale.US));
         assertNull(snap.label(null, Locale.US));
+    }
+
+    // ---------- Snapshot v2 fields + sameState ----------
+
+    private static ThemePacks.Snapshot buildSnapshot(Map<String, Integer> colors,
+                                                     Map<String, Integer> syntax,
+                                                     String scope, File wallpaper) {
+        return new ThemePacks.Snapshot("com.example.themes", "Example",
+                Boolean.TRUE, 0xFF6750A4, 0x66000000, colors,
+                new LinkedHashMap<>(), wallpaper, null, syntax, scope);
+    }
+
+    @Test
+    public void snapshot_v2Defaults() {
+        ThemePacks.Snapshot snap = buildSnapshot(new LinkedHashMap<>(), null, null, null);
+        // null editorSyntax becomes an empty unmodifiable map; null scope -> files
+        assertNotNull(snap.editorSyntax);
+        assertTrue(snap.editorSyntax.isEmpty());
+        assertEquals("files", snap.wallpaperScope);
+        try {
+            snap.editorSyntax.put("comment", 1);
+            fail("editorSyntax must be unmodifiable");
+        } catch (UnsupportedOperationException expected) {
+        }
+    }
+
+    @Test
+    public void snapshot_sameState_ignoresNothingVisible() {
+        Map<String, Integer> colors = new LinkedHashMap<>();
+        colors.put("colorPrimary", 0xFF6750A4);
+        Map<String, Integer> syntax = new LinkedHashMap<>();
+        syntax.put("comment", 0xFF6A9955);
+        ThemePacks.Snapshot a = buildSnapshot(colors, syntax, "all", null);
+        ThemePacks.Snapshot b = buildSnapshot(new LinkedHashMap<>(colors),
+                new LinkedHashMap<>(syntax), "all", null);
+        assertTrue(a.sameState(a));
+        assertTrue(a.sameState(b));
+        assertFalse(a.sameState(null));
+
+        // any visible change flips it
+        Map<String, Integer> otherColors = new LinkedHashMap<>(colors);
+        otherColors.put("colorPrimary", 0xFF111111);
+        assertFalse(a.sameState(buildSnapshot(otherColors, syntax, "all", null)));
+        Map<String, Integer> otherSyntax = new LinkedHashMap<>(syntax);
+        otherSyntax.put("comment", 0xFF111111);
+        assertFalse(a.sameState(buildSnapshot(colors, otherSyntax, "all", null)));
+        assertFalse(a.sameState(buildSnapshot(colors, syntax, "files", null)));
+        assertFalse(a.sameState(buildSnapshot(colors, null, "all", null)));
+        assertFalse(a.sameState(buildSnapshot(colors, syntax, "all",
+                new File("whatever-wallpaper"))));
+        ThemePacks.Snapshot differentPack = new ThemePacks.Snapshot(
+                "com.other.provider", "Example", Boolean.TRUE, 0xFF6750A4,
+                0x66000000, colors, new LinkedHashMap<>(), null, null, syntax, "all");
+        assertFalse(a.sameState(differentPack));
     }
 
     private static String read(File file) {

@@ -158,6 +158,15 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     @Override
+    protected void onThemeChanged() {
+        // Keep the live tabs and their unsaved buffers; rebuilding the activity reloads them.
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyInPlace(this);
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyEditorChrome(this);
+        UnifiedEditorFragment fragment = getFragment();
+        if (fragment != null) fragment.applyThemeInPlace();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         if (editorFragment != null) {

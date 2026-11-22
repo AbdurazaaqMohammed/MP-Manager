@@ -1,17 +1,18 @@
 package io.github.abdurazaaqmohammed.ui.common.theme;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.res.Resources;
-
-import com.google.android.material.color.ColorResourcesOverride;
+import android.content.res.loader.ResourcesLoader;
+import android.os.Build;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.android.material.color.ThemePackColorLoaderBridge;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 
-/** Bridges exact pack colors to Material's resource-loader path (Android 11+). */
+/** Owns one host-generated exact-color loader per Resources (Android 11+). */
 final class ThemePackPalette {
     private record Slot(String token, int color, int style) {}
 
@@ -26,6 +27,15 @@ final class ThemePackPalette {
             new Slot("colorOnSecondaryContainer", R.color.theme_pack_on_secondary_container, R.style.ThemePackOnSecondaryContainer),
             new Slot("colorTertiary", R.color.theme_pack_tertiary, R.style.ThemePackTertiary),
             new Slot("colorOnTertiary", R.color.theme_pack_on_tertiary, R.style.ThemePackOnTertiary),
+            new Slot("colorTertiaryContainer", R.color.theme_pack_tertiary_container, R.style.ThemePackTertiaryContainer),
+            new Slot("colorOnTertiaryContainer", R.color.theme_pack_on_tertiary_container, R.style.ThemePackOnTertiaryContainer),
+            new Slot("colorErrorContainer", R.color.theme_pack_error_container, R.style.ThemePackErrorContainer),
+            new Slot("colorOnErrorContainer", R.color.theme_pack_on_error_container, R.style.ThemePackOnErrorContainer),
+            new Slot("colorSurfaceInverse", R.color.theme_pack_surface_inverse, R.style.ThemePackSurfaceInverse),
+            new Slot("colorOnSurfaceInverse", R.color.theme_pack_on_surface_inverse, R.style.ThemePackOnSurfaceInverse),
+            new Slot("colorPrimaryInverse", R.color.theme_pack_primary_inverse, R.style.ThemePackPrimaryInverse),
+            new Slot("colorSurfaceDim", R.color.theme_pack_surface_dim, R.style.ThemePackSurfaceDim),
+            new Slot("colorSurfaceBright", R.color.theme_pack_surface_bright, R.style.ThemePackSurfaceBright),
             new Slot("colorSurface", R.color.theme_pack_surface, R.style.ThemePackSurface),
             new Slot("colorOnSurface", R.color.theme_pack_on_surface, R.style.ThemePackOnSurface),
             new Slot("colorSurfaceVariant", R.color.theme_pack_surface_variant, R.style.ThemePackSurfaceVariant),
@@ -41,31 +51,91 @@ final class ThemePackPalette {
             new Slot("colorOnError", R.color.theme_pack_on_error, R.style.ThemePackOnError),
     };
 
+    /** Per-Resources ownership state (pure, JVM-tested). */
+    private static final ThemePackPaletteState STATE = new ThemePackPaletteState();
+
     private ThemePackPalette() {}
 
-    @SuppressLint("RestrictedApi") // Material 1.12's resource-loader adapter; no reflection.
+    /**
+     * Installs (or refreshes) the pack color overrides on the activity and
+     * re-applies the ThemePack* slot styles. The same palette on the same
+     * Resources re-applies styles WITHOUT creating a new loader; a changed
+     * palette replaces the owned loader (previous one uninstalled first);
+     * an empty palette uninstalls it. Returns false when the override cannot
+     * be provided (pre-R or factory failure) — the caller keeps its base
+     * theme.
+     */
     static boolean apply(Activity activity, Map<String, Integer> colors, Integer accent) {
-        ColorResourcesOverride override = ColorResourcesOverride.getInstance();
-        if (override == null) return false;
+        Map<Integer, Integer> replacements = buildReplacements(colors, accent);
+        Resources resources = activity.getResources();
+        if (STATE.isCurrent(resources, replacements)) {
+            // Same palette: overrides already installed, no new loader.
+            applySlotStyles(activity, replacements);
+            return true;
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return replacements.isEmpty();
+        }
+        uninstallStale(resources, STATE.previous(resources));
+        if (replacements.isEmpty()) return true;
+        ResourcesLoader loader = ThemePackColorLoaderBridge.create(activity, replacements);
+        if (loader == null) return false;
+        try {
+            resources.addLoaders(loader);
+        } catch (Throwable t) {
+            return false;
+        }
+        STATE.adopted(resources, loader, replacements);
+        applySlotStyles(activity, replacements);
+        return true;
+    }
+
+    /**
+     * Removes the pack-owned override loader from this activity's resources.
+     * Call when no pack is active (the caller re-applies its base theme
+     * styles afterwards). Loaders owned by anything else are never touched.
+     */
+    public static void clear(Activity activity) {
+        if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
+        Resources resources = activity.getResources();
+        uninstallStale(resources, STATE.previous(resources));
+    }
+
+    private static void uninstallStale(Resources resources, Object stale) {
+        if (stale instanceof ResourcesLoader) {
+            Loaders.uninstall(resources, (ResourcesLoader) stale);
+        }
+    }
+
+    private static Map<Integer, Integer> buildReplacements(Map<String, Integer> colors,
+                                                           Integer accent) {
         Map<Integer, Integer> replacements = new HashMap<>();
         for (Slot slot : SLOTS) {
             Integer color = colors.get(slot.token());
             if (color == null && "colorPrimary".equals(slot.token())) color = accent;
             if (color != null) replacements.put(slot.color(), color);
         }
-        if (replacements.isEmpty()) return true;
-        Resources.Theme base = activity.getResources().newTheme();
-        base.setTo(activity.getTheme());
-        try {
-            if (!override.applyIfPossible(activity, replacements)) return false;
-        } finally {
-            // Material also applies its personalized-color style. Restore the base first
-            // so tokens the pack did not specify keep their original values.
-            activity.getTheme().setTo(base);
-        }
+        return replacements;
+    }
+
+    private static void applySlotStyles(Activity activity,
+                                        Map<Integer, Integer> replacements) {
         for (Slot slot : SLOTS) {
-            if (replacements.containsKey(slot.color())) activity.getTheme().applyStyle(slot.style(), true);
+            if (replacements.containsKey(slot.color())) {
+                activity.getTheme().applyStyle(slot.style(), true);
+            }
         }
-        return true;
+    }
+
+    /** All ResourcesLoader touchpoints, only invoked on API 30+. */
+    private static final class Loaders {
+        /** Unregisters the loader; provider FDs are released by GC
+         *  finalization (never force-closed while possibly registered). */
+        static void uninstall(Resources resources, ResourcesLoader loader) {
+            try {
+                resources.removeLoaders(loader);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 }

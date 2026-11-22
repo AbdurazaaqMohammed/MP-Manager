@@ -33,6 +33,7 @@ import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewHelper;
 import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewLanguageWrapper;
 import io.github.abdurazaaqmohammed.feature.editor.SyntaxApplyPolicy;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemePackEditorColors;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
@@ -203,6 +204,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private static String[] cachedInstructions;
     private static String cachedThemeName;
 
+    /** Signature of the editor theme state this fragment last applied (epoch diff). */
+    private String appliedThemeSignature;
+    /** Registry backing the currently live TextMate language (null = global). */
+    private ThemeRegistry lastTextMateRegistry;
+
     // TextMate syntax highlighting for regular text files. Grammars are bundled under
     // assets/syntaxes and registered from assets/languages.json. They are loaded lazily on
     // a worker thread the first time highlighting is requested and then cached per scope.
@@ -277,6 +283,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void onResume() {
         super.onResume();
         loadBottomBarFunctions();
+        // Catch theme/pack changes that happened while backgrounded: refresh
+        // in place before anything else so the editor never paints stale
+        // colors. Only rebuilds schemes; never touches text/selection/scroll.
+        maybeApplyThemeInPlace();
         applyPreferences();
         Activity activity = getActivity();
         if (isSmali && activity instanceof DexEditorActivity) {
@@ -717,10 +727,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (isSmali) {
             try {
                 ensureLanguageInitialized(requireContext().getApplicationContext());
-                Language language = TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true);
+                // Per-editor TextMate registry when the pack ships syntax
+                // categories, so pack colors are enforced without touching
+                // the global registry; per-editor scheme likewise.
+                ThemeRegistry editorRegistry = createEditorThemeRegistry(requireContext());
+                Language language = editorRegistry == null
+                        ? TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true)
+                        : TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), editorRegistry, true);
                 editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, language), editor));
-                editor.setColorScheme(cachedColorScheme);
+                editor.setColorScheme(createEditorColorScheme(requireContext(), editorRegistry));
                 applyPackEditorColors();
+                recordAppliedThemeSignature();
             } catch (Exception e) {
                 Log.e("UnifiedEditor", "Error setting smali language", e);
                 editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
@@ -755,25 +772,146 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             default -> null;
         };
         if (ecs != null) {
-            ecs.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            // Hard-coded match highlight only when the pack does not supply
+            // its own, so pack tokens are never overridden by the constant.
+            if (!ThemePackEditorColors.hasEditorToken(requireContext(),
+                    ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
+                ecs.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                        ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
+            }
             ColorPreviewHelper.syncScheme(ecs);
-            editor.setColorScheme(ecs);
+            editor.setColorScheme(ecs); // fresh per-call instance: safe to theme
         }
         applyPackEditorColors();
+        recordAppliedThemeSignature();
     }
 
     private void applyPackEditorColors() {
-        EditorColorScheme scheme = editor.getColorScheme();
-        if (scheme == null) return;
-        Context context = requireContext();
-        int background = scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND);
-        int text = scheme.getColor(EditorColorScheme.TEXT_NORMAL);
-        int themedBackground = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
-                .packColor(context, "editor_background", background);
-        int themedText = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
-                .packColor(context, "editor_text", text);
-        if (themedBackground != background) scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, themedBackground);
-        if (themedText != text) scheme.setColor(EditorColorScheme.TEXT_NORMAL, themedText);
+        if (editor == null) return;
+        // Per-editor scheme only: pack colors are applied to the instance
+        // owned by this editor; shared/cached schemes are never mutated.
+        ThemePackEditorColors.applyToScheme(requireContext(), editor.getColorScheme());
+    }
+
+    // ---------- in-place theme refresh (theme pack v2) ----------
+
+    /**
+     * Rebuilds ONLY the editor color scheme (and the TextMate theme when the
+     * pack ships syntax categories) from the current theme state. Never
+     * touches text content, selection, scroll, search state or editor
+     * preferences - safe for editors holding unsaved edits, minimized parked
+     * editors and direct calls from {@code onThemeChanged()} overrides. No-op
+     * when the view is not created yet; the next onResume picks the change up
+     * through the epoch-diff fallback in {@link #maybeApplyThemeInPlace()}.
+     */
+    public void applyThemeInPlace() {
+        if (editor == null || !isAdded() || isClosing) return;
+        try {
+            // The update path is idempotent and only replaces the language /
+            // scheme; the Content, cursor and scroll position stay intact.
+            updateEditorUI();
+            // Restore the read-only state that onResume would otherwise
+            // re-apply, so a mid-session refresh never unlocks a tab.
+            Activity activity = getActivity();
+            if (isSmali && activity instanceof DexEditorActivity) {
+                DexEditorActivity.EditorTab tab =
+                        ((DexEditorActivity) activity).getTabForClassName(className);
+                if (tab != null) {
+                    if (type == TYPE_JAVA) editor.setEditable(false);
+                    else editor.setEditable(!tab.isReadOnly);
+                }
+            }
+            ThemePackEditorColors.refreshActivityChrome(activity);
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "In-place theme refresh failed", e);
+            // Keep at least the surface colors correct on the live scheme.
+            try {
+                applyPackEditorColors();
+            } catch (Exception ignored) {
+            }
+        }
+        recordAppliedThemeSignature();
+    }
+
+    /**
+     * True when the theme/pack state changed since this fragment last applied
+     * it (epoch/theme/pack-colors signature diff).
+     */
+    private boolean themeChangedSinceLastApply() {
+        try {
+            return !ThemePackEditorColors.themeSignature(requireContext())
+                    .equals(appliedThemeSignature);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * onResume fallback: applies the theme in place when the epoch/theme
+     * signature changed since this fragment last applied it (covers changes
+     * made while the editor was backgrounded or minimized).
+     */
+    public void maybeApplyThemeInPlace() {
+        if (editor == null) return;
+        try {
+            if (themeChangedSinceLastApply()) applyThemeInPlace();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Records the signature now applied, so onResume diffs start from here. */
+    private void recordAppliedThemeSignature() {
+        try {
+            if (!isAdded()) return;
+            appliedThemeSignature = ThemePackEditorColors.themeSignature(requireContext());
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Per-editor TextMate registry when the pack ships syntax categories:
+     * built from the host-owned merged theme (base editor theme + pack
+     * selectors) so pack token colors are enforced without touching the
+     * global registry. Null = keep the plain global registry path.
+     */
+    private static ThemeRegistry createEditorThemeRegistry(Context context) {
+        try {
+            org.eclipse.tm4e.core.registry.IThemeSource merged =
+                    ThemePackEditorColors.mergedThemeSource(context);
+            if (merged == null) return null;
+            String baseName = ThemePackEditorColors.baseThemeAssetName(context);
+            io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel model =
+                    new io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel(
+                            merged, baseName);
+            model.load();
+            model.setDark(baseName.startsWith("dark"));
+            ThemeRegistry registry = new ThemeRegistry(); // non-singleton, this editor only
+            registry.loadTheme(model);
+            registry.setTheme(model);
+            return registry;
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "Editor theme registry build failed", e);
+            return null;
+        }
+    }
+
+    /**
+     * Fresh per-editor scheme from the given registry (global when null), so
+     * pack colors can be applied without ever mutating the shared cached
+     * scheme. The hard-coded match highlight only lands when the pack does
+     * not ship its own.
+     */
+    private static EditorColorScheme createEditorColorScheme(Context context,
+                                                             ThemeRegistry registry) {
+        TextMateColorScheme scheme = TextMateColorScheme.create(
+                registry != null ? registry : ThemeRegistry.getInstance());
+        if (!ThemePackEditorColors.hasEditorToken(context,
+                ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
+            scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                    ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
+        }
+        ColorPreviewHelper.syncScheme(scheme);
+        return scheme;
     }
 
     public void applyPreferences() {
@@ -781,7 +919,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (!isSmali && syntaxPolicy.requestedScope() == null) {
             applySchemePreference();
         } else if (editor != null && editor.getColorScheme() != null) {
-            editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            // Pack supplies its own match highlight: never bury it under the
+            // hard-coded constant.
+            editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                    ThemePackEditorColors.hasEditorToken(requireContext(),
+                            ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)
+                            ? editor.getColorScheme().getColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND)
+                            : ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
         }
         String fontType = editorPrefs.getString("font_type", "normal");
         Typeface typeface = fontType.equals("normal") ? Typeface.DEFAULT : Typeface.MONOSPACE;
@@ -944,8 +1088,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void startSearch(String query, int type, boolean ignoreCase, boolean next) {
         try {
-            if (editor != null && editor.getColorScheme() != null) {
-                editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            if (editor != null && editor.getColorScheme() != null
+                    && !ThemePackEditorColors.hasEditorToken(requireContext(),
+                            ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
+                editor.getColorScheme().setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                        ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
             }
             EditorSearcher searcher = editor.getSearcher();
             searcher.setCyclicJumping(true); // Find wraps around instead of dying at the last match
@@ -1531,11 +1678,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void applySyntax(String scope) {
         if (editor == null) return;
         if (largeFileMode) scope = null;
+        // Theme/pack state changed since the last application: the recorded
+        // applied language still belongs to the PREVIOUS TextMate registry, so
+        // the same-scope SKIP_APPLIED shortcut would keep serving the old pack
+        // colors while a signature re-record masks the bug. Forget the applied
+        // record BEFORE the decision so the request falls through to a fresh
+        // LOAD_ASYNC that rebuilds language + scheme from the current merged
+        // theme. Only bookkeeping is dropped: the editor Content (text,
+        // selection, scroll) is never touched, and the current language stays
+        // live until the fresh one is applied.
+        if (scope != null && themeChangedSinceLastApply()) syntaxPolicy.onViewDestroyed();
         SyntaxApplyPolicy.Decision decision = syntaxPolicy.onRequest(
                 scope, syntaxPolicy.isAppliedToEditor(editor.getEditorLanguage()));
         switch (decision) {
             case SKIP_APPLIED:
-                // Requested scope is live on this editor; only refresh colors so a
+                // Requested scope is live on the editor; only refresh colors so a
                 // theme/night-mode change made since the last application shows up.
                 if (scope == null) applySchemePreference();
                 else ensureTextMateScheme();
@@ -1559,7 +1716,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         final Context appContext = requireContext().getApplicationContext();
         final String finalScope = scope;
         new Thread(() -> {
-            TextMateLanguage language = loadSyntaxLanguage(appContext, finalScope);
+            LoadedSyntax loaded = loadSyntaxLanguage(appContext, finalScope);
+            TextMateLanguage language = loaded == null ? null : loaded.language;
+            ThemeRegistry languageRegistry = loaded == null ? null : loaded.registry;
             Activity activity = getActivity();
             if (activity == null) {
                 // Fragment detached mid-load: invalidate the request so the next
@@ -1577,7 +1736,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 }
                 if (syntaxPolicy.isCurrent(generation) && !largeFileMode) {
                     if (language != null) {
-                        setTextMateLanguage(language, generation);
+                        setTextMateLanguage(language, languageRegistry, generation);
                     } else {
                         // Syntax loading failed - fall back to plain text and log error.
                         // The failure is not recorded as an applied request, so the
@@ -1597,7 +1756,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }).start();
     }
 
-    private static synchronized TextMateLanguage loadSyntaxLanguage(Context context, String scope) {
+    /** Language + the TextMate registry it was built against (null registry = global). */
+    private static final class LoadedSyntax {
+        final TextMateLanguage language;
+        final ThemeRegistry registry;
+        LoadedSyntax(TextMateLanguage language, ThemeRegistry registry) {
+            this.language = language;
+            this.registry = registry;
+        }
+    }
+
+    private static synchronized LoadedSyntax loadSyntaxLanguage(Context context, String scope) {
         try {
             ensureLanguageInitialized(context);
             if (!syntaxGrammarsLoaded) {
@@ -1605,35 +1774,55 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 syntaxGrammarsLoaded = true;
             }
             // Grammars are cached by GrammarRegistry; languages own mutable analyzers
-            // and must never be shared between editor instances.
-            return TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false);
+            // and must never be shared between editor instances. When the pack
+            // ships syntax categories the language reads colors from a
+            // per-editor registry seeded with the merged host theme instead
+            // of the global one.
+            ThemeRegistry editorRegistry = createEditorThemeRegistry(context);
+            TextMateLanguage language = editorRegistry == null
+                    ? TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false)
+                    : TextMateLanguage.create(scope, GrammarRegistry.getInstance(), editorRegistry, false);
+            return new LoadedSyntax(language, editorRegistry);
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Syntax load error: " + scope, e);
             return null;
         }
     }
 
-    private void setTextMateLanguage(TextMateLanguage language, int generation) {
+    private void setTextMateLanguage(TextMateLanguage language, ThemeRegistry sourceRegistry, int generation) {
         if (editor == null || language == null) return;
         Language wrapper = new ColorPreviewLanguageWrapper(language, editor);
         editor.setEditorLanguage(wrapper);
         // Record what is actually live on the editor so the next applySyntax call
         // can verify it instead of trusting a previously requested scope.
         syntaxPolicy.onLanguageApplied(wrapper, generation);
-        ensureTextMateScheme();
+        lastTextMateRegistry = sourceRegistry;
+        ensureTextMateScheme(sourceRegistry);
     }
 
-    /** (Re)applies the TextMate color scheme to the editor, rebuilding it after a theme change. */
+    /** Scheme refresh against the registry backing the currently live language. */
     private void ensureTextMateScheme() {
+        ensureTextMateScheme(lastTextMateRegistry);
+    }
+
+    /** (Re)applies the TextMate color scheme to the editor, rebuilding it after a theme change.
+     *  The scheme instance is always fresh and per-editor; pack colors are
+     *  applied after creation so they win over everything else. */
+    private void ensureTextMateScheme(ThemeRegistry sourceRegistry) {
         if (editor == null) return;
         try {
-            if (cachedColorScheme == null) {
-                cachedColorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
-                cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            ThemeRegistry registry = sourceRegistry != null
+                    ? sourceRegistry : ThemeRegistry.getInstance();
+            TextMateColorScheme scheme = TextMateColorScheme.create(registry);
+            if (!ThemePackEditorColors.hasEditorToken(requireContext(),
+                    ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
+                scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                        ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
             }
-            ColorPreviewHelper.syncScheme(cachedColorScheme);
-            editor.setColorScheme(cachedColorScheme);
+            ColorPreviewHelper.syncScheme(scheme);
+            editor.setColorScheme(scheme);
             applyPackEditorColors();
+            recordAppliedThemeSignature();
         } catch (Exception e) {
             Log.e("UnifiedEditor", "Color scheme error", e);
         }
@@ -2116,8 +2305,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         new InputStreamReader(context.getAssets().open("smali/language-configuration.json")),
                         themeSource);
             } catch (Exception e) { Log.e("UnifiedEditor", "Smali language load error", e); }
-            cachedColorScheme = TextMateColorScheme.create(registry);
-            cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            // Note: the shared cached TextMate scheme is intentionally no
+            // longer built here. Every editor now gets a fresh per-editor
+            // scheme so pack colors never mutate shared instances.
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) { Log.e("UnifiedEditor", "Static init error", e); }
     }

@@ -27,6 +27,17 @@ final class ThemePackStore {
     private static final String ROOT = "theme_packs";
     private static final String SNAPSHOT_FILE = "snapshot.json";
 
+    /**
+     * Store schema of a snapshot.json. Version 1 = the original field set
+     * (v1 wire packs); version 2 adds {@code editorSyntax} and
+     * {@code wallpaperScope}. Snapshots written before this field existed
+     * read back as schema null, which {@link #readSnapshot} normalizes to
+     * {@link #SCHEMA_V1}; an explicit 0 is treated the same way.
+     */
+    static final int SCHEMA_V1 = 1;
+    static final int SCHEMA_V2 = 2;
+    static final int SCHEMA_LATEST = SCHEMA_V2;
+
     /** Parsed /theme row as persisted (Gson round-trips this directly).
      *  Images are referenced by versioned file names so the snapshot.json
      *  rename is the single atomic swap point of an import. */
@@ -41,6 +52,14 @@ final class ThemePackStore {
         @com.google.gson.annotations.SerializedName("strings") Map<String, Map<String, String>> strings;
         @com.google.gson.annotations.SerializedName("wallpaperName") String wallpaperName; // null = none
         @com.google.gson.annotations.SerializedName("previewName") String previewName;   // null = none
+        /** Store schema; absent/0 on old snapshots, normalized to 1 on read. */
+        @com.google.gson.annotations.SerializedName("schema") Integer schema;
+        /** Monotonic per-pack counter, bumped on every successful commit. */
+        @com.google.gson.annotations.SerializedName("revision") Long revision;
+        /** Canonical editor syntax colors; null = none (v1 packs). */
+        @com.google.gson.annotations.SerializedName("editorSyntax") Map<String, Integer> editorSyntax;
+        /** Wallpaper application scope; null = files (v1 behavior). */
+        @com.google.gson.annotations.SerializedName("wallpaperScope") String wallpaperScope;
     }
 
     private ThemePackStore() {
@@ -99,13 +118,24 @@ final class ThemePackStore {
         }
     }
 
-    /** Parsed snapshot, or null when missing/unreadable/malformed. */
+    /** Parsed snapshot, or null when missing/unreadable/malformed. Old
+     *  snapshots are normalized: schema null/0 becomes {@link #SCHEMA_V1},
+     *  revision null becomes 0, and an unknown wallpaperScope is forced to
+     *  {@code files} so a corrupted field cannot widen what is painted. */
     static StoredSnapshot readSnapshot(File filesDir, String providerPackage) {
         File file = snapshotFile(filesDir, providerPackage);
         if (!file.isFile()) return null;
         try (InputStreamReader r = new InputStreamReader(
                 new FileInputStream(file), StandardCharsets.UTF_8)) {
-            return new Gson().fromJson(r, StoredSnapshot.class);
+            StoredSnapshot snapshot = new Gson().fromJson(r, StoredSnapshot.class);
+            if (snapshot == null) return null;
+            if (snapshot.schema == null || snapshot.schema <= 0) snapshot.schema = SCHEMA_V1;
+            if (snapshot.revision == null || snapshot.revision < 0) snapshot.revision = 0L;
+            if (snapshot.wallpaperScope != null
+                    && !ThemePackContracts.isWallpaperScope(snapshot.wallpaperScope)) {
+                snapshot.wallpaperScope = ThemePackContracts.WALLPAPER_SCOPE_FILES;
+            }
+            return snapshot;
         } catch (Exception e) {
             return null;
         }
@@ -143,6 +173,9 @@ final class ThemePackStore {
      * {@code snapshot.json} (which names those files) is swapped atomically
      * with backup/rollback. A reader therefore always sees a consistent
      * snapshot/image pair. Staged files are consumed or removed either way.
+     * A snapshot with a pre-assigned {@code wallpaper-}/{@code preview-}
+     * name retains that already-stored file instead (byte-verified by the
+     * caller) and rollback paths never delete retained images.
      */
     static boolean commit(File filesDir, String providerPackage,
                           StoredSnapshot snapshot,
@@ -153,11 +186,18 @@ final class ThemePackStore {
         } catch (Exception e) {
             return false;
         }
-        // Fresh versioned names for this import.
-        if (stagedWallpaper != null) {
+        // A pre-assigned image name means "retain the already-stored file":
+        // the caller byte-verified it against the staged content, so the
+        // commit only swaps snapshot.json and every rollback path must leave
+        // the retained (pre-existing) image untouched — the previous snapshot
+        // being restored still references it.
+        boolean retainedWallpaper = snapshot.wallpaperName != null;
+        boolean retainedPreview = snapshot.previewName != null;
+        // Fresh versioned names for newly staged files only.
+        if (stagedWallpaper != null && !retainedWallpaper) {
             snapshot.wallpaperName = "wallpaper-" + System.nanoTime();
         }
-        if (stagedPreview != null) {
+        if (stagedPreview != null && !retainedPreview) {
             snapshot.previewName = "preview-" + System.nanoTime();
         }
         File newWallpaper = snapshot.wallpaperName == null
@@ -172,8 +212,8 @@ final class ThemePackStore {
                 throw new IOException("Cannot commit preview");
             }
         } catch (Exception e) {
-            deleteQuietly(newWallpaper);
-            deleteQuietly(newPreview);
+            if (!retainedWallpaper) deleteQuietly(newWallpaper);
+            if (!retainedPreview) deleteQuietly(newPreview);
             deleteQuietly(stagedWallpaper);
             deleteQuietly(stagedPreview);
             return false;
@@ -182,8 +222,8 @@ final class ThemePackStore {
         File snap = snapshotFile(filesDir, providerPackage);
         File snapBak = new File(dir, SNAPSHOT_FILE + ".bak");
         if (!moveTo(snap, snapBak)) {
-            deleteQuietly(newWallpaper);
-            deleteQuietly(newPreview);
+            if (!retainedWallpaper) deleteQuietly(newWallpaper);
+            if (!retainedPreview) deleteQuietly(newPreview);
             deleteQuietly(stagedWallpaper);
             deleteQuietly(stagedPreview);
             return false;
@@ -192,8 +232,8 @@ final class ThemePackStore {
             writeSnapshot(filesDir, providerPackage, snapshot);
         } catch (Exception e) {
             deleteQuietly(new File(dir, SNAPSHOT_FILE + ".tmp"));
-            deleteQuietly(newWallpaper);
-            deleteQuietly(newPreview);
+            if (!retainedWallpaper) deleteQuietly(newWallpaper);
+            if (!retainedPreview) deleteQuietly(newPreview);
             moveTo(snapBak, snap); // previous snapshot (and its images) intact
             return false;
         }

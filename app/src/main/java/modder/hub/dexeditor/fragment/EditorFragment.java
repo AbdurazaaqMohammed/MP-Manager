@@ -82,8 +82,10 @@ import io.github.rosemoe.sora.langs.java.JavaLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemePackEditorColors;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
@@ -136,6 +138,10 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private SmaliCursorUtils.MethodInfo currentMethodInfo;
 
     private static boolean tmRegistered = false;
+    private static boolean tmGrammarsLoaded = false;
+
+    /** Signature of the editor theme state this fragment last applied (epoch diff). */
+    private String appliedThemeSignature;
 
     public static final String[] SYMBOLS = new String[] {
             "->", "{", "}", "(", ")",
@@ -195,6 +201,10 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     @Override
     public void onResume() {
         super.onResume();
+        // Catch theme/pack changes that happened while backgrounded: refresh
+        // in place before anything else. Only rebuilds schemes; never touches
+        // text/selection/scroll.
+        maybeApplyThemeInPlace();
         Activity activity = getActivity();
         if (activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = ((DexEditorActivity) activity).getTabForClassName(className);
@@ -441,6 +451,12 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         if (cachedSmaliLanguage != null && themeName.equals(cachedThemeName)) return;
         try {
             initTMStatic(context);
+            if (!tmGrammarsLoaded) {
+                // Needed by the scope-based language construction used by the
+                // in-place theme refresh (same model as UnifiedEditorFragment).
+                GrammarRegistry.getInstance().loadGrammars("languages.json");
+                tmGrammarsLoaded = true;
+            }
             ThemeRegistry registry = ThemeRegistry.getInstance();
             // The theme used to be hardcoded to dark.json (twice), which rendered
             // light gray text on the light editor background.
@@ -462,8 +478,9 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             } catch (Exception e) {
                 Log.e("EditorFragment", "Smali language load error", e);
             }
-            cachedColorScheme = TextMateColorScheme.create(registry);
-            cachedColorScheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, 0x403399FF);
+            // The shared cached TextMate scheme is intentionally no longer
+            // built here: every editor gets a fresh per-editor scheme so pack
+            // colors never mutate shared instances.
             cachedInstructions = SmaliInstructionHelper.getAllSmaliInstructions();
         } catch (Exception e) {
             Log.e("EditorFragment", "Static init error", e);
@@ -472,7 +489,9 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
 
     private static String currentEditorThemeName(Context context) {
         try {
-            String pluginId = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.getCurrentId(context);
+            // appliedBaseId (not the stored preference id) is authoritative:
+            // an active pack's dark flag decides the base editor theme.
+            String pluginId = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.appliedBaseId(context);
             if (pluginId != null) {
                 int nightMode = io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.modeFor(context, pluginId);
                 if (nightMode == AppCompatDelegate.MODE_NIGHT_YES) return "dark.json";
@@ -499,8 +518,17 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         if (type == 0) {
             try {
                 ensureLanguageInitialized(requireContext().getApplicationContext());
-                smaliEditor.setEditorLanguage(new CustomAutoComplete(smaliEditor, cachedInstructions, cachedSmaliLanguage));
-                smaliEditor.setColorScheme(cachedColorScheme);
+                // Per-editor TextMate registry when the pack ships syntax
+                // categories; per-editor scheme likewise. The shared cached
+                // scheme is never assigned (or mutated) across editors.
+                ThemeRegistry editorRegistry = createEditorThemeRegistry(requireContext());
+                Language language = editorRegistry == null
+                        ? TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true)
+                        : TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), editorRegistry, true);
+                smaliEditor.setEditorLanguage(new CustomAutoComplete(smaliEditor, cachedInstructions, language));
+                smaliEditor.setColorScheme(createEditorColorScheme(requireContext(), editorRegistry));
+                ThemePackEditorColors.applyToScheme(requireContext(), smaliEditor.getColorScheme());
+                recordAppliedThemeSignature();
             } catch (Exception e) {
                 Log.e("EditorFragment", "Error setting smali language/scheme", e);
                 smaliEditor.setEditorLanguage(new EmptyLanguage());
@@ -573,6 +601,104 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
 
     public void setClosing(boolean closing) {
         this.isClosing = closing;
+    }
+
+    // ---------- in-place theme refresh (theme pack v2) ----------
+
+    /**
+     * Rebuilds ONLY the editor color scheme (and the TextMate theme when the
+     * pack ships syntax categories). Never touches text content, selection,
+     * scroll or editor preferences - safe for editors holding unsaved edits
+     * and direct calls from {@code onThemeChanged()} overrides. No-op when
+     * the view is not created yet.
+     */
+    public void applyThemeInPlace() {
+        if (smaliEditor == null || !isAdded()) return;
+        try {
+            updateEditorUI();
+            // Restore the read-only state onResume would otherwise apply.
+            Activity activity = getActivity();
+            if (activity instanceof DexEditorActivity) {
+                DexEditorActivity.EditorTab tab =
+                        ((DexEditorActivity) activity).getTabForClassName(className);
+                if (tab != null) {
+                    if (type == 1) smaliEditor.setEditable(false);
+                    else smaliEditor.setEditable(!tab.isReadOnly);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("EditorFragment", "In-place theme refresh failed", e);
+            try {
+                ThemePackEditorColors.applyToScheme(requireContext(), smaliEditor.getColorScheme());
+            } catch (Exception ignored) {
+            }
+        }
+        recordAppliedThemeSignature();
+    }
+
+    /**
+     * onResume fallback: applies the theme in place when the epoch/theme
+     * signature changed since this fragment last applied it.
+     */
+    public void maybeApplyThemeInPlace() {
+        if (smaliEditor == null) return;
+        try {
+            String signature = ThemePackEditorColors.themeSignature(requireContext());
+            if (!signature.equals(appliedThemeSignature)) applyThemeInPlace();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Records the signature now applied, so onResume diffs start from here. */
+    private void recordAppliedThemeSignature() {
+        try {
+            if (!isAdded()) return;
+            appliedThemeSignature = ThemePackEditorColors.themeSignature(requireContext());
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Per-editor TextMate registry when the pack ships syntax categories
+     * (host-owned merged base theme + pack selectors); null keeps the plain
+     * global registry path. Mirrors UnifiedEditorFragment.
+     */
+    private static ThemeRegistry createEditorThemeRegistry(Context context) {
+        try {
+            org.eclipse.tm4e.core.registry.IThemeSource merged =
+                    ThemePackEditorColors.mergedThemeSource(context);
+            if (merged == null) return null;
+            String baseName = ThemePackEditorColors.baseThemeAssetName(context);
+            io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel model =
+                    new io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel(
+                            merged, baseName);
+            model.load();
+            model.setDark(baseName.startsWith("dark"));
+            ThemeRegistry registry = new ThemeRegistry(); // non-singleton, this editor only
+            registry.loadTheme(model);
+            registry.setTheme(model);
+            return registry;
+        } catch (Exception e) {
+            Log.e("EditorFragment", "Editor theme registry build failed", e);
+            return null;
+        }
+    }
+
+    /**
+     * Fresh per-editor scheme from the given registry (global when null);
+     * the hard-coded match highlight only lands when the pack does not ship
+     * its own.
+     */
+    private static EditorColorScheme createEditorColorScheme(Context context,
+                                                             ThemeRegistry registry) {
+        TextMateColorScheme scheme = TextMateColorScheme.create(
+                registry != null ? registry : ThemeRegistry.getInstance());
+        if (!ThemePackEditorColors.hasEditorToken(context,
+                ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
+            scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
+                    ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
+        }
+        return scheme;
     }
 
     public CodeEditor getEditor() {

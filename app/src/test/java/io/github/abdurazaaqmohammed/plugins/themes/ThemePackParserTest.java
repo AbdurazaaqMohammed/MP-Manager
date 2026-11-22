@@ -41,6 +41,26 @@ public class ThemePackParserTest {
         assertEquals("status_bar", ThemePackParser.canonicalColorToken("status_bar"));
         assertEquals("editor_background", ThemePackParser.canonicalColorToken("editor_background"));
         assertEquals("editor_text", ThemePackParser.canonicalColorToken("editor_text"));
+        assertEquals("editor_line_number_current",
+                ThemePackParser.canonicalColorToken("editor_line_number_current"));
+        assertEquals("editor_line_number_current",
+                ThemePackParser.canonicalColorToken("EditorLineNumberCurrent"));
+    }
+
+    @Test
+    public void editorTokens_allEightMatch() {
+        String[] tokens = {"editor_background", "editor_text", "editor_gutter",
+                "editor_line_number", "editor_line_number_current",
+                "editor_selection", "editor_current_line", "editor_match_highlight"};
+        for (String token : tokens) {
+            assertEquals(token, ThemePackParser.canonicalColorToken(token));
+            assertEquals(token, ThemePackParser.canonicalColorToken(
+                    token.replace('_', '-')));
+        }
+        // no inert typography/icon/font/layout fields are accepted
+        assertNull(ThemePackParser.canonicalColorToken("editor_font_size"));
+        assertNull(ThemePackParser.canonicalColorToken("editor_typeface"));
+        assertNull(ThemePackParser.canonicalColorToken("editor_tab_width"));
     }
 
     @Test
@@ -222,6 +242,123 @@ public class ThemePackParserTest {
         assertFalse(locales.containsKey("en_US"));
         assertEquals(32, locales.size()); // cap enforced; trailing entries dropped
         assertFalse(locales.containsKey("zz"));
+    }
+
+    // ---------- editor syntax column (v2) ----------
+
+    @Test
+    public void editorSyntax_parseCanonicalCategories() {
+        String json = "{\"comment\":\"#FF6A9955\",\"keyword\":\"#FFCC7832\","
+                + "\"string\":\"#FF6A8759\",\"number\":\"#FF6897BB\","
+                + "\"type\":\"#FFB5B6E3\",\"function\":\"#FF7DCFFF\","
+                + "\"operator\":\"#FFFF7EDB\",\"variable\":\"#FFF8F8F2\"}";
+        Map<String, Integer> syntax = ThemePackParser.parseEditorSyntax(json);
+        assertEquals(8, syntax.size());
+        assertEquals(0xFF6A9955, syntax.get("comment").intValue());
+        assertEquals(0xFFCC7832, syntax.get("keyword").intValue());
+        assertEquals(0xFF6A8759, syntax.get("string").intValue());
+        assertEquals(0xFF6897BB, syntax.get("number").intValue());
+        assertEquals(0xFFB5B6E3, syntax.get("type").intValue());
+        assertEquals(0xFF7DCFFF, syntax.get("function").intValue());
+        assertEquals(0xFFFF7EDB, syntax.get("operator").intValue());
+        assertEquals(0xFFF8F8F2, syntax.get("variable").intValue());
+    }
+
+    @Test
+    public void editorSyntax_acceptsCaseAndSeparatorVariants() {
+        assertEquals("keyword", ThemePackParser.canonicalSyntaxKey("KEYWORD"));
+        assertEquals("function", ThemePackParser.canonicalSyntaxKey("Function"));
+        // separators stripped: "key-word" lands on the canonical category
+        assertEquals("keyword", ThemePackParser.canonicalSyntaxKey("key-word"));
+        assertEquals("operator", ThemePackParser.canonicalSyntaxKey("Keyword.Operator.Assignment"));
+    }
+
+    @Test
+    public void editorSyntax_mapsTextMateAliases() {
+        assertEquals("function", ThemePackParser.canonicalSyntaxKey("entity.name.function"));
+        assertEquals("function", ThemePackParser.canonicalSyntaxKey("meta.function-call"));
+        assertEquals("type", ThemePackParser.canonicalSyntaxKey("entity.name.class"));
+        assertEquals("type", ThemePackParser.canonicalSyntaxKey("storage.class"));
+        assertEquals("number", ThemePackParser.canonicalSyntaxKey("constant.numeric"));
+        assertEquals("number", ThemePackParser.canonicalSyntaxKey("constant.numeric.hex"));
+        assertEquals("operator", ThemePackParser.canonicalSyntaxKey("keyword.operator.assignment"));
+        assertEquals("operator", ThemePackParser.canonicalSyntaxKey("punctuation.separator.key-value"));
+        assertEquals("variable", ThemePackParser.canonicalSyntaxKey("variable.parameter"));
+        assertEquals("string", ThemePackParser.canonicalSyntaxKey("string.quoted.double"));
+        assertEquals("string", ThemePackParser.canonicalSyntaxKey("constant.character.escape"));
+        assertEquals("comment", ThemePackParser.canonicalSyntaxKey("punctuation.definition.comment"));
+        assertEquals("keyword", ThemePackParser.canonicalSyntaxKey("storage.type"));
+        assertEquals("keyword", ThemePackParser.canonicalSyntaxKey("keyword.control"));
+    }
+
+    @Test
+    public void editorSyntax_unknownKeysAndBrokenValuesDropped() {
+        String json = "{\"meta.embedded\":\"#FF111111\",\"comment\":\"nope\","
+                + "\"boolean_literal\":\"#FF222222\",\"keyword\":\"#FF333333\"}";
+        Map<String, Integer> syntax = ThemePackParser.parseEditorSyntax(json);
+        // meta.embedded is not an allowlisted alias, boolean_literal is not a
+        // category; broken color dropped; only valid entries survive
+        assertEquals(1, syntax.size());
+        assertEquals(0xFF333333, syntax.get("keyword").intValue());
+    }
+
+    @Test
+    public void editorSyntax_lastWinsPerCategory() {
+        String json = "{\"entity.name.function\":\"#FF111111\",\"function\":\"#FF222222\"}";
+        Map<String, Integer> syntax = ThemePackParser.parseEditorSyntax(json);
+        assertEquals(1, syntax.size());
+        assertEquals(0xFF222222, syntax.get("function").intValue());
+    }
+
+    @Test
+    public void editorSyntax_malformedOrOversized_throws() {
+        try {
+            ThemePackParser.parseEditorSyntax("{oops");
+            fail("malformed editor_syntax JSON must fail");
+        } catch (ThemePackParser.ParseException expected) {
+        }
+        try {
+            ThemePackParser.parseEditorSyntax(repeat("{\"comment\":\"#FF000000\",", 20000) + "}");
+            fail("oversized editor_syntax JSON must fail");
+        } catch (ThemePackParser.ParseException expected) {
+        }
+    }
+
+    @Test
+    public void editorSyntax_nullOrEmpty_isEmptyMap() {
+        assertTrue(ThemePackParser.parseEditorSyntax(null).isEmpty());
+        assertTrue(ThemePackParser.parseEditorSyntax("").isEmpty());
+        assertTrue(ThemePackParser.parseEditorSyntax("   ").isEmpty());
+    }
+
+    // ---------- wallpaper scope (v2) ----------
+
+    @Test
+    public void wallpaperScope_defaultsToFiles() {
+        assertEquals("files", ThemePackParser.parseWallpaperScope(null));
+        assertEquals("files", ThemePackParser.parseWallpaperScope(""));
+        assertEquals("files", ThemePackParser.parseWallpaperScope("   "));
+    }
+
+    @Test
+    public void wallpaperScope_acceptsExactValues() {
+        assertEquals("files", ThemePackParser.parseWallpaperScope("files"));
+        assertEquals("all", ThemePackParser.parseWallpaperScope("all"));
+        assertEquals("none", ThemePackParser.parseWallpaperScope("none"));
+    }
+
+    @Test
+    public void wallpaperScope_invalidFailsImport() {
+        try {
+            ThemePackParser.parseWallpaperScope("everything");
+            fail("unknown scope must fail");
+        } catch (ThemePackParser.ParseException expected) {
+        }
+        try {
+            ThemePackParser.parseWallpaperScope("FILES");
+            fail("scope matching is exact, not case-insensitive");
+        } catch (ThemePackParser.ParseException expected) {
+        }
     }
 
     // ---------- locale tag sanitation ----------

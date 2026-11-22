@@ -101,6 +101,14 @@ public class ArscTextActivity extends BaseActivity {
     }
 
     @Override
+    protected void onThemeChanged() {
+        // ARSC edits remain in the live fragment until Apply, so never recreate it for a theme.
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyInPlace(this);
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyEditorChrome(this);
+        if (fragment != null) fragment.applyThemeInPlace();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Session session = sessions.get(getIntent().getStringExtra("arscTextSession"));

@@ -31,10 +31,27 @@ public final class ThemePackParser {
     // normalized token -> canonical spelling
     private static final Map<String, String> COLOR_CANONICAL = canonical(ThemePackContracts.COLOR_TOKENS);
     private static final Map<String, String> LABEL_CANONICAL = canonical(ThemePackContracts.LABEL_KEYS);
+    private static final Map<String, String> SYNTAX_CANONICAL =
+            canonical(ThemePackContracts.EDITOR_SYNTAX_CATEGORIES);
+    /** Lowercased TextMate scope alias -> canonical category (matched
+     *  exactly or as a dot-boundary prefix, e.g. "string.quoted" accepts
+     *  "string.quoted.double"). */
+    private static final Map<String, String> SYNTAX_ALIAS = syntaxAliases();
 
     private static Map<String, String> canonical(String[] keys) {
         Map<String, String> map = new LinkedHashMap<>();
         for (String key : keys) map.put(normalize(key), key);
+        return map;
+    }
+
+    private static Map<String, String> syntaxAliases() {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String entry : ThemePackContracts.EDITOR_SYNTAX_SCOPE_ALIASES) {
+            int eq = entry.indexOf('=');
+            if (eq <= 0 || eq == entry.length() - 1) continue;
+            map.put(entry.substring(0, eq).toLowerCase(Locale.ROOT),
+                    entry.substring(eq + 1));
+        }
         return map;
     }
 
@@ -63,6 +80,36 @@ public final class ThemePackParser {
     /** Canonical allowlisted spelling for a label key, or null. */
     public static String canonicalLabelKey(String raw) {
         return LABEL_CANONICAL.get(normalize(raw));
+    }
+
+    /**
+     * Canonical editor syntax category for a raw key: either a canonical
+     * category ({@code "Keyword"} -> {@code keyword}) or an allowlisted
+     * TextMate scope, matched exactly or as a dot-boundary prefix with the
+     * longest declared prefix winning ({@code "keyword.operator.assignment"}
+     * -> {@code operator}, {@code "string.quoted.double"} -> {@code string}).
+     * Null when the key is not accepted.
+     */
+    public static String canonicalSyntaxKey(String raw) {
+        String key = SYNTAX_CANONICAL.get(normalize(raw));
+        if (key != null) return key;
+        if (raw == null) return null;
+        String scope = raw.trim().toLowerCase(Locale.ROOT);
+        if (scope.isEmpty()) return null;
+        String direct = SYNTAX_ALIAS.get(scope);
+        if (direct != null) return direct;
+        String best = null;
+        int bestLen = -1;
+        for (Map.Entry<String, String> alias : SYNTAX_ALIAS.entrySet()) {
+            String prefix = alias.getKey();
+            if (prefix.length() > bestLen && scope.startsWith(prefix)
+                    && (scope.length() == prefix.length()
+                        || scope.charAt(prefix.length()) == '.')) {
+                best = alias.getValue();
+                bestLen = prefix.length();
+            }
+        }
+        return best;
     }
 
     // ---------- scalar columns ----------
@@ -202,6 +249,51 @@ public final class ThemePackParser {
             if (!locales.isEmpty()) out.put(canonical, locales);
         }
         return out;
+    }
+
+    /**
+     * editor_syntax column (v2): {@code {"comment":"#FF6A9955", ...}} keyed by
+     * canonical category or allowlisted TextMate scope; values are colors with
+     * the same rules as the colors column. Keys not accepted by
+     * {@link #canonicalSyntaxKey} and unparseable colors are dropped; when
+     * several accepted keys map to one category the last one wins. Malformed
+     * JSON or over-limit payload throws {@link ParseException}.
+     */
+    public static Map<String, Integer> parseEditorSyntax(String json) {
+        if (json == null || json.trim().isEmpty()) return new LinkedHashMap<>();
+        if (json.length() > ThemePackContracts.MAX_SYNTAX_JSON_CHARS) {
+            throw new ParseException("editor_syntax payload too large");
+        }
+        Map<String, Integer> out = new LinkedHashMap<>();
+        JsonObject obj = object(json, "editor_syntax");
+        for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
+            String canonical = canonicalSyntaxKey(e.getKey());
+            if (canonical == null || e.getValue() == null) continue;
+            JsonPrimitive p;
+            try {
+                p = e.getValue().getAsJsonPrimitive();
+            } catch (Exception ignored) {
+                continue;
+            }
+            Integer argb = parseColorValue(p.isBoolean() ? null
+                    : p.isNumber() ? (Number) p.getAsNumber() : p.getAsString());
+            if (argb != null) out.put(canonical, argb);
+        }
+        return out;
+    }
+
+    /**
+     * wallpaper_scope column (v2): {@code "files"}|{@code "all"}|{@code "none"}
+     * exactly; absent/empty means {@code "files"} (v1 default). Any other
+     * value raises {@link ParseException} so a typo'd scope fails the import
+     * instead of silently changing where the wallpaper paints.
+     */
+    public static String parseWallpaperScope(Object raw) {
+        if (raw == null) return ThemePackContracts.WALLPAPER_SCOPE_FILES;
+        String value = String.valueOf(raw).trim();
+        if (value.isEmpty()) return ThemePackContracts.WALLPAPER_SCOPE_FILES;
+        if (ThemePackContracts.isWallpaperScope(value)) return value;
+        throw new ParseException("Invalid wallpaper_scope");
     }
 
     // ---------- helpers ----------

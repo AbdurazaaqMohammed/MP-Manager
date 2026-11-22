@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.common.util;
 
 import android.R;
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.Editable;
@@ -52,13 +51,9 @@ public final class ThemeDialogs {
                 .setTitle("Theme")
                 .setSingleChoiceItems(names, checked, (d, which) -> selected[0] = which)
                 .setPositiveButton(R.string.ok, (d, which) -> {
+                    io.github.abdurazaaqmohammed.plugins.themes.ThemePacks.deactivate(context);
                     ThemeRegistry.setCurrentId(context, themes.get(selected[0]).id());
-                    if (context instanceof Activity) {
-                        try {
-                            ((Activity) context).recreate();
-                        } catch (Exception ignored) {
-                        }
-                    }
+                    ThemeRegistry.reload(context);
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
@@ -168,12 +163,7 @@ public final class ThemeDialogs {
                     .edit().putString(ThemeRegistry.ACCENT_PREF_KEY, mode).apply();
         } catch (Exception ignored) {
         }
-        if (context instanceof Activity) {
-            try {
-                ((Activity) context).recreate();
-            } catch (Exception ignored) {
-            }
-        }
+        ThemeRegistry.reload(context);
     }
 
     /** Custom accent picker: the app's color wheel with hex input and the
@@ -264,12 +254,7 @@ public final class ThemeDialogs {
                                 .apply();
                     } catch (Exception ignored) {
                     }
-                    if (context instanceof Activity) {
-                        try {
-                            ((Activity) context).recreate();
-                        } catch (Exception ignored) {
-                        }
-                    }
+                    ThemeRegistry.reload(context);
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
