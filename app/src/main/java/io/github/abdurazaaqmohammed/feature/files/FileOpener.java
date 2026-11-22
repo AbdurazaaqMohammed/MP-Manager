@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog;
+import io.github.abdurazaaqmohammed.feature.arm64.Arm64DisassemblerActivity;
+import io.github.abdurazaaqmohammed.feature.dex.DexTools;
 import io.github.abdurazaaqmohammed.feature.sqlite.SqliteViewerActivity;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageEngine;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
@@ -1158,17 +1160,36 @@ public class FileOpener {
 
 
     private void showElfOptionsDialog(File file, String fileName, File originalFile) {
-        String[] options = {
-                context.getString(R.string.hex_editor),
-                "ELF Inspector",
-                context.getString(R.string.text_editor),
-                context.getString(R.string.open_with)
-        };
+        boolean isArm64 = false;
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r");
+             ElfParser elf = new ElfParser(raf)) {
+            isArm64 = (elf.is64 && elf.machine == 0xB7);
+        } catch (Exception ignored) {}
+
+        List<String> optionsList = new ArrayList<>();
+        if (isArm64) {
+            optionsList.add("ARM64 Disassembler");
+        }
+        optionsList.add(context.getString(R.string.hex_editor));
+        optionsList.add("ELF Inspector");
+        optionsList.add(context.getString(R.string.text_editor));
+        optionsList.add(context.getString(R.string.open_with));
+
+        String[] options = optionsList.toArray(new String[0]);
+        final boolean hasArm64 = isArm64;
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle("ELF: " + fileName)
                 .setItems(options, (d, which) -> {
-                    switch (which) {
+                    int action = which;
+                    if (hasArm64) {
+                        if (action == 0) {
+                            openArm64Disassembler(file, originalFile);
+                            return;
+                        }
+                        action--;
+                    }
+                    switch (action) {
                         case 0 -> openHexEditorWithOriginal(file, originalFile);
                         case 1 -> showElfInspectorDialog(file, fileName, originalFile);
                         case 2 -> openTextEditorWithOriginal(file, originalFile);
@@ -1180,8 +1201,9 @@ public class FileOpener {
         dialog.setOnShowListener(d -> {
             ListView lv = dialog.getListView();
             if (lv != null) {
+                final int inspectorPos = hasArm64 ? 2 : 1;
                 lv.setOnItemLongClickListener((parent, view, position, id) -> {
-                    if (position == 1) { // Long press on "ELF Inspector"
+                    if (position == inspectorPos) { // Long press on "ELF Inspector"
                         dialog.dismiss();
                         exportElfReadableCodeToDownload(file, fileName);
                         return true;
@@ -1191,6 +1213,22 @@ public class FileOpener {
             }
         });
         dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void openArm64Disassembler(File file, File originalFile) {
+        File orig = originalFile != null ? originalFile : file;
+        File stagedArchive = DexTools.archiveForStagedFile(orig.getPath());
+        Intent intent = new Intent(context, Arm64DisassemblerActivity.class)
+                .putExtra(Arm64DisassemblerActivity.EXTRA_SO_PATH, file.getAbsolutePath())
+                .putExtra(Arm64DisassemblerActivity.EXTRA_ORIGINAL_PATH, orig.getAbsolutePath());
+        if (stagedArchive != null) {
+            intent.putExtra("zipFilePath", stagedArchive.getAbsolutePath());
+        }
+        if (context instanceof MainActivity) {
+            ((MainActivity) context).startActivityForResult(intent, 757);
+        } else {
+            context.startActivity(intent);
+        }
     }
 
     public static boolean isKernelFile(File file, String fileName) {
@@ -1947,7 +1985,7 @@ public class FileOpener {
             || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")
             || fileName.endsWith(".rc")) {
             openTextEditorRootAware(file);
-        } else if (FileUtils.isElfFile(file)) {
+        } else if (FileUtils.isElf(fileName) || FileUtils.isElfFile(file)) {
             withReadableCopy(file, readable -> showElfOptionsDialog(readable, fileName, file));
         } else if (isKernelFile(file, fileName)) {
             withReadableCopy(file, readable -> showKernelOptionsDialog(readable, fileName, file));
