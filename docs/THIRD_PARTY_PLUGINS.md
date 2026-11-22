@@ -1,169 +1,283 @@
-# Third-Party Plugins for MP-Manager
+# Third-Party Plugins for MP Manager
 
-Third-party plugins are **normally-installed apps** with their own UID and
-their own permissions. They integrate with MP-Manager through explicit
-intents defined in `sdk/.../plugins/ipc/PluginContracts.java` (shared
-verbatim by host and plugins). There is deliberately **no code loading**:
-a plugin can never inherit the host's root, Shizuku, all-files, or network
-access, and a crashing plugin cannot take the host down.
+Plugins are **normally-installed Android apps** with their own UID, resources,
+libraries, permissions, and process. MP Manager renders native menu entries and
+opens your exported activity with an explicit intent after the user pins your
+signing certificate. It never loads third-party dex, layouts, or resource tables
+into its process. Theme providers publish validated appearance **data**, not code.
 
-> In-process packs (`ToolPack` + `plugins.ext` extensions loaded with
-> `DexClassLoader`) are **first-party only**: `PackManager` refuses to load
-> any APK not signed with the host app's own certificate. If you are not the
-> app maintainer, build an external plugin as described here.
+> Host-loaded `ToolPack` / `plugins.ext` packs remain first-party only. The
+> `PackManager` same-signer gate is unchanged. A public action plugin uses the
+> small `plugin-sdk`, not the first-party `sdk` or a host classloader.
 
-Theme APKs use a separate, data-only provider contract described in [Installed themes](#installed-themes-v1). The activity-based contract below is for action plugins.
+## Quick start: build a plugin outside the host tree
 
-## 1. Concepts
+The [standalone template](../samples/plugin-template/) is a complete Android
+Gradle project. Copy that directory to any location, including its own repository.
+It has its own wrapper, settings, manifest, activities, and event example. The host
+checkout is needed only to publish the SDK locally during this development stage;
+it is not needed by an artifact-based plugin build.
 
-- You ship an APK (any language, libraries, resources, and layouts allowed)
-  with one exported `Activity` per integration area.
-- Each activity declares an intent-filter action from `PluginContracts` plus
-  `meta-data` describing itself (id, title, file filters, setting key).
-- The host discovers plugins with `PackageManager.queryIntentActivities()`,
-  shows a **first-seen prompt** (label, package, certificate SHA-256), and
-  pins the certificate. Updates with a rotated certificate keep working when
-  the old digest is in the cert history; anything else re-prompts.
-- All calls use **explicit intents** (`setClassName`) to pinned packages.
-- Files cross the boundary as `content://` URIs with one-shot grants — never
-  raw paths (you cannot see `/data/data`, root paths, or anything outside
-  the grant).
+1. Install JDK 21, Android SDK platform 36, and the matching build tools. Configure
+   `JAVA_HOME` and `ANDROID_SDK_ROOT`, or an untracked `local.properties`.
+2. Publish the small SDK to **Maven Local** from the host checkout:
 
-## 2. Project setup
+   ```sh
+   ./gradlew -p plugin-sdk publishToMavenLocal
+   ```
 
-- `minSdk` 19+ recommended; `targetSdk` per Play policy.
-- Reference the contracts: copy
-  `sdk/src/main/java/io/github/abdurazaaqmohammed/plugins/ipc/PluginContracts.java`
-  into your project (or `compileOnly` the host `:sdk` module while
-  developing — never bundle it).
-- Declare your own `<uses-permission>` entries (camera, location, network…)
-  and request runtime permissions yourself; the host grants you nothing.
+   This configures the SDK only, not MP Manager's app, packs, or native engines.
+   The SDK coordinate is:
 
-## 3. Manifest template (one activity per area you use)
+   ```groovy
+   implementation 'io.github.abdurazaaqmohammed:mpmanager-plugin-sdk:1.0.0'
+   ```
+
+   This repository configures local publication. That coordinate is **not a
+   promise of a published Maven Central/JitPack release**. Public publication is a
+   separate maintainer release step.
+3. From your copied template, run:
+
+   ```sh
+   ./gradlew assembleDebug
+   ```
+
+4. Change the template's application ID, Java package, labels, and stable plugin
+   IDs. Keep only the integration areas you use. Install the resulting APK
+   normally alongside MP Manager, then enable/trust it in **Tools → Plugins**.
+5. Share the APK and your certificate SHA-256 fingerprint. MP Manager does not
+   require a catalog entry or the host's signing key for external plugins.
+
+For local SDK development without republishing an artifact:
+
+```sh
+./gradlew assembleDebug -PmpPluginSdk=/absolute/path/to/MP-Manager/plugin-sdk
+```
+
+The template substitutes the SDK coordinate using a lightweight composite build.
+The plugin stays in its final location; it still ships as a separate APK.
+
+### Bundle the public SDK
+
+Use **`implementation`**, not `compileOnly`, for the public plugin SDK. Inlined
+constants happened to work with the old sample's `compileOnly :sdk`, but runtime
+helpers cannot resolve host classes in a different app process. The small SDK has
+no Material, ZXing, ViewPager, or APK engine dependencies.
+
+`compileOnly project(':sdk')` is still appropriate for first-party interfaces that
+the host itself loads, not this external-plugin path. If you do not want any SDK
+dependency, you can implement the documented intent/provider wire formats yourself.
+
+## Project and folder conventions
+
+| Location | Behavior |
+| --- | --- |
+| `plugins/<id>/` | Android modules auto-included as `:plugins:<id>` when a `build.gradle` or `build.gradle.kts` exists. |
+| `plugin-<id>/` at the host root | Legacy-style modules auto-included as `:plugin-<id>`. |
+| `plugin-sdk/` | Standalone, bundleable external-plugin contracts and helpers. |
+| `sdk/` | First-party host-loaded interfaces; exposes the public SDK transitively. |
+| `packs/pack-<id>/` | First-party packs, explicitly included and same-signer gated. |
+| `samples/plugin-sample/`, `samples/theme-sample/` | In-tree working examples. |
+| `samples/plugin-template/` | Independent example; not included in the host's module graph. |
+
+Module discovery is deterministic and does not install or load plugin APKs. An
+installed external plugin can be built from **any** directory; discovery at
+runtime is based on Android manifests, not folder names.
+
+Opt in to external standalone builds from the host:
+
+```sh
+./gradlew projects -PmpPluginBuilds=/absolute/path/plugin-one,/absolute/path/plugin-two
+```
+
+Each path must be a build directory with its own Gradle settings. Composite builds
+expose their build tasks and substitutions only; they are not app dependencies,
+installation, certificate trust, or permission grants. Only include build scripts
+from a source you trust: Gradle configuration executes on your development machine.
+
+## Action-plugin manifest
+
+Expose one activity for each contribution, or share an activity across supported
+areas. Each exported activity needs a `DEFAULT` category and a stable ID. A legacy
+file action looks like this:
 
 ```xml
 <activity android:name=".HashAction" android:exported="true"
-    android:label="Hash File">
-  <intent-filter>
-    <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
-    <category android:name="android.intent.category.DEFAULT" />
-  </intent-filter>
-  <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
-      android:value="mypack.hash" />
-  <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
-      android:value="Hash File" />
-  <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.FILE_MIME"
-      android:value="*/*" />
-  <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.FILE_PATTERN"
-      android:value="" />
+          android:label="Hash file">
+    <intent-filter>
+        <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+               android:value="mypack.hash" />
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+               android:value="Hash file" />
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.FILE_MIME"
+               android:value="*/*" />
 </activity>
 ```
 
-Actions: `...action.SIDEBAR_OPEN`, `...action.SETTING_CONFIG`,
-`...action.FILE_MENU`, `...action.EDITOR_ACTION`, `...action.APK_ACTION`.
-A full working example with all five lives in `samples/plugin-sample/`.
+The [wire contracts](../plugin-sdk/src/main/java/io/github/abdurazaaqmohammed/plugins/ipc/PluginContracts.java)
+retain all five original action strings and extras. The
+[working sample](../samples/plugin-sample/) demonstrates them.
 
-## 4. The five areas
+### The five compatible integration areas
 
-### Sidebar (`ACTION_SIDEBAR_OPEN`)
+| Action constant | Input | Result / behavior |
+| --- | --- | --- |
+| `ACTION_SIDEBAR_OPEN` | `EXTRA_PLUGIN_ID` and common host/theme extras | Open your screen. The row supports sidebar order/hiding. |
+| `ACTION_SETTING_CONFIG` | `EXTRA_KEY`, `EXTRA_VALUE`, common extras | `RESULT_OK` + `EXTRA_VALUE` boolean/string; action-type settings open your screen without persisting a value. |
+| `ACTION_FILE_MENU` | Read-only content URI(s), `ClipData`, `EXTRA_FILE_NAMES`, `EXTRA_MIME` | `EXTRA_MESSAGE` is displayed. Do not assume output URIs are automatically imported. |
+| `ACTION_EDITOR` (`EDITOR_ACTION`) | Selection and bounded full document text | `EXTRA_REPLACE_SELECTION` / `EXTRA_SET_FULL_TEXT` are applied as an edit. No live editor handle crosses the process boundary. |
+| `ACTION_APK` (`APK_ACTION`) | Read/write content URI to a **staged copy**, `EXTRA_APK_NAME` | Rewrite the staged URI and return `RESULT_OK`; the host imports the result using a safe suggested output name. |
 
-- In: `EXTRA_PLUGIN_ID`. Just show your screen.
-- Your activity label (or `TITLE` meta) becomes the sidebar row; users can
-  reorder/hide it like built-ins.
+Settings metadata: `SETTING_KEY` (defaults to plugin ID), `SETTING_TYPE` =
+`boolean` (default) or `action`. The host stores external values under
+`external_setting:<package>:<key>`, never under a raw host preference key. Unambiguous `plugin.*` legacy values from a currently trusted plugin are migrated
+once; arbitrary host preference keys are never migrated. Menu IDs/order remain
+compatible.
 
-### Settings (`ACTION_SETTING_CONFIG`)
+File metadata: `FILE_MIME` (comma list, `type/*` wildcards) and optional
+`FILE_PATTERN` filename regex (maximum 256 characters). Matching uses linear-time
+RE2 syntax: lookaround, backreferences, and other backtracking-only constructs are
+unsupported and fail closed. File contributions must match every selected real
+file. At most 64 file URIs/64 KiB of file metadata are shared per request.
 
-- Meta: `SETTING_KEY` (pref key, default = plugin id),
-  `SETTING_TYPE` = `boolean` (default) or `action`.
-- In: `EXTRA_PLUGIN_ID`, `EXTRA_KEY`, `EXTRA_VALUE` (current, booleans only).
-- Out (`setResult(RESULT_OK, …)`): `EXTRA_VALUE` with the new boolean/String.
-  The host persists it under the key; read it back with the same key.
-- `action` type: tap opens your screen, nothing is persisted.
+APK choices use `APK_CHOICES` entries `Label|value`, and `APK_AUTO_SIGN` may opt into
+the host's options UI. External APK plugins must bundle their own processing
+libraries. They do not resolve `:apkkit` or arbitrary host classes through the
+host's classloader.
 
-### File menu (`ACTION_FILE_MENU`)
+## Generic native action hooks
 
-- Listed only when your `FILE_MIME` (comma list, `type/*` wildcards) and
-  `FILE_PATTERN` (filename regex) match **every** selected file, and only
-  for real files (never inside archives).
-- In: data URI + `ClipData` (multi-select), `EXTRA_FILE_NAMES`,
-  `EXTRA_MIME`, read grant (write grant is never added).
-- Out: `EXTRA_MESSAGE` (shown as a toast) and optionally
-  `EXTRA_OUTPUT_URI`.
-- Your id (`ext:<plugin-id>`) joins the persisted menu order automatically,
-  so users rearrange it in **File menu order** like built-ins.
+A hook is a **host-defined native insertion point**, not arbitrary code injection.
+The host discovers static manifest declarations without running your activity.
+The same action covers supported current and future points:
 
-### Editor floating menu (`ACTION_EDITOR`)
+```xml
+<activity android:name=".HookActivity" android:exported="true"
+          android:label="My plugin action">
+    <intent-filter>
+        <action android:name="io.github.abdurazaaqmohammed.MPManager.action.HOOK" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+               android:value="mypack.action" />
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+               android:value="1" />
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+               android:value="toolbar.actions,filemenu.extra,dialog.elf.extra" />
+</activity>
+```
 
-- Your id is auto-appended to the stored menu order: users reorder, disable,
-  or hide your button in the floating-menu editor like built-ins.
-- In: `EXTRA_SELECTED_TEXT` ("" when empty), `EXTRA_FULL_TEXT` (truncated
-  past 150 KB — open the file yourself for huge docs).
-- Out: `EXTRA_REPLACE_SELECTION` and/or `EXTRA_SET_FULL_TEXT`. The host
-  applies them as one batch edit. There is no live editor handle across the
-  process boundary by design.
+Read `EXTRA_HOOK_ID` to distinguish where the action was invoked. Missing manifest
+contract version means `1`; unsupported versions are ignored. Unknown hooks are
+ignored. Each activity contributes one native action to each declared supported
+slot; use separate activities for different labels/actions.
 
-### APK dialog (`ACTION_APK`)
+| Stable hook ID | Host UI | Context/result |
+| --- | --- | --- |
+| `sidebar.footer` | Sidebar action rows, initially appended | Same as sidebar; existing sidebar order/hiding. |
+| `toolbar.actions` | Visible plugin-actions button in the main top bar | Native popup; no file access by default. |
+| `filemenu.extra` | File context menu | Same matching/read-only URI and result contract as `FILE_MENU`. |
+| `dialog.elf.extra` | ELF options dialog | Read-only URI to the selected file; native action row. |
+| `dialog.apk.more` | APK More menu | Same staged-copy input/result as `APK_ACTION`. |
+| `editor.toolbar` | Existing editor floating action menu | Same bounded selection/text and result contract as `EDITOR_ACTION`. |
 
-- Host starts your activity for result. In: data URI (a staged copy of the
-  APK in the host cache, read+write grant) + `EXTRA_APK_NAME`.
-- Heavy lifting belongs to shared code that lives **once**, in the host:
-  `com.reandroid`, smali, apksig, etc. live in the `:apkkit` module
-  (implementation for the host, compileOnly for plugins). At runtime a
-  plugin DexClassLoads its kill/transform classes with the **host APK's
-  dexloader as parent**, so references to the universal classes resolve
-  from the host while plugin-only classes (your kill-sig helpers,
-  `com.antik`, staged assets) resolve from the plugin's own dex/assets.
-  See `samples/plugin-kill-sig` for a full example.
-- Your entry is appended after the built-ins in the More list.
+New IDs are package-qualified:
+`ext:<package>/<plugin-id-or-class>@<hook-id>`. Duplicate contributions collapse
+predictably. Existing legacy IDs are unchanged. Use **Tools → Plugins → Plugin
+actions** to hide hook contributions; toolbar/ELF order is managed there. The
+sidebar/file/editor/APK surfaces retain their existing order customizers.
 
-## 5. Conventions (required)
+## Automatic events are separately opt-in
 
-- Namespace every id: `<pack>.<name>`. Collisions resolve to one entry.
-- Keep titles ≤ ~42 chars, no trailing period; subtitles/labels read best
-  as short sentences or comma lists (`"Split bills and tip"`).
-- Never block on the host side: every host call is guarded, but prefer fast
-  results and progress UI of your own for long work.
-- Binder limit (~1 MB total per transaction): keep extras small; stream file
-  bytes from the content URI instead of stuffing them into extras.
+Trusting a clicked action does **not** enable automatic notifications. A receiver
+may declare event interests, but the user must separately choose **Allow automatic
+events** in Tools Hub. Consent is tied to the pinned certificate and is cleared
+when that package is re-pinned with a different certificate. Only the event IDs
+shown in the consent prompt are allowed; an update adding a new interest needs
+fresh consent for it.
 
-## 6. Distribution
+```xml
+<receiver android:name=".PluginEventReceiver" android:exported="true">
+    <intent-filter>
+        <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EVENT" />
+    </intent-filter>
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.CONTRACT_VERSION"
+               android:value="1" />
+    <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.HOOKS"
+               android:value="app.launch,file.opened,theme.changed" />
+</receiver>
+```
 
-Users install your APK normally (Play, F-Droid, sideload). No catalog entry
-is needed: the host discovers you on launch and on package changes, then
-asks the user to pin your certificate on first use. Publish your signing
-fingerprint alongside the download so users can compare it in the prompt.
+- `app.launch`: once per host process after the main UI is ready. Not replayed if
+  consent is enabled later in that process.
+- `file.opened`: best-effort notification after a successful host open/launch.
+  `EXTRA_HOOK_PAYLOAD` is a small **Bundle** with `file_name` and `mime` strings.
+- `theme.changed`: the active appearance changed; common theme extras describe it.
 
-## 7. Maintainer release checklist (first-party packs)
+The host sends explicit-component, unordered broadcasts, not implicit system-wide
+broadcasts or background activities. There is no result or synchronous timeout to
+wait for. A bounded background queue drops excess events; delivery is not a durable
+log. Receivers must return promptly or use their own appropriate background-work
+API. Events never carry paths, file contents, editor text, or URI grants. Another
+app could call your exported receiver, so treat all inputs as untrusted and never
+perform privileged operations based only on `EXTRA_HOST_PACKAGE`.
 
-1. Build each pack APK; record its SHA-256 in `app/src/main/assets/packs.json`
-   (`sha256` must be non-empty — installs without one are refused). Use
-   `--checksums`: after uploading the APKs it hashes each `apkUrl` and rewrites
-   the fields, or hash the local builds directly with `id=path` pairs:
-   `java tools/SignCatalog.java --checksums packs.json media=packs/pack-media/release/pack-media-release.apk ...`
-   Run it again once the APKs are uploaded if you hashed local files, so the
-   recorded values match the served bytes.
-2. Sign the catalog (private key in `%USERPROFILE%\.config\mp-manager\`,
-   never in the repo):
-   `java tools/SignCatalog.java --sign <keystore> <alias> <password> packs.json`
-   then verify with `--verify`. Upload `packs.json` + `packs.json.sig` +
-   the APKs to the release. Unsigned catalog refreshes are ignored by the app.
-   `--fill` does steps 1 and 2 in one command (add the same `id=path` pairs).
-3. Same-signer rule is automatic: release packs must be signed with the same
-   key as the app or `PackManager` refuses to load them (debuggable builds
-   skip the check for local development).
+## Common host capabilities and palette bridge
 
+All context-aware action/hook/event requests include:
 
-## Installed themes (v1)
+- `EXTRA_CONTRACT_VERSION` (`1`), `EXTRA_HOST_PACKAGE`, `EXTRA_HOST_HOOKS` (`String[]`).
+- `EXTRA_THEME_ID`, `EXTRA_THEME_DARK`, optional `EXTRA_THEME_ACCENT`.
+- `EXTRA_THEME_PALETTE`: a bounded Bundle of allowlisted token → primitive ARGB int.
 
-Install a theme APK normally, then go to **Settings → General → Theme → Installed themes**.
-Select it and restart MP Manager when prompted. To return to a built-in theme,
-choose Light, Dark, Black, or System in the same card. No root, overlay permission,
-shared signer, network permission, or MP Manager SDK dependency is needed.
+Use the bundleable runtime helper in your own screen:
 
-### Manifest and endpoints
+```java
+PluginTheme.ThemeInfo theme = PluginTheme.from(getIntent());
+int background = theme.color("colorSurface", theme.dark ? 0xff121212 : 0xfffafafa);
+int foreground = theme.color("colorOnSurface", theme.dark ? 0xffeeeeee : 0xff202020);
+root.setBackgroundColor(background);
+title.setTextColor(foreground);
+```
 
-The discovery activity is not a launcher activity and MP Manager never starts it.
-Use a unique authority owned by your APK. Put the metadata directly under `<application>`:
+Missing tokens retain your own safe defaults. An installed pack's validated
+palette is shared as data; built-in palette values come from host theme attributes.
+This is cooperative styling, not permission to inflate host layouts or run code in
+the host process.
+
+A successful action result may request **its own package's** installed theme:
+
+```java
+Intent result = PluginRequests.resultIntent("Done");
+PluginTheme.requestApplyTheme(result, "my-theme-id");
+setResult(RESULT_OK, result);
+finish();
+```
+
+MP Manager shows a confirmation, resolves the theme provider owned by that action
+package, validates the requested row ID/signature/data, and imports it in the
+background. A result cannot silently apply a theme, nominate another package, or
+supply an arbitrary provider URI. A plain sidebar launch has no result callback;
+use a result-capable action/hook to request a theme.
+
+## Installed themes: v1 and v2
+
+Install a theme APK normally, then go to **Settings → General → Theme → Installed
+themes**. A successful selection takes effect without a process restart. Other
+screens refresh on resume; editor screens restyle in place to preserve unsaved
+buffers. To return to a built-in theme, choose Light, Dark, Black, or System.
+
+The [theme sample](../samples/theme-sample/) demonstrates v2. V1 provider rows and
+previously stored v1 snapshots are still accepted. No root, overlay permission,
+host signing key, or shared process is needed.
+
+### Manifest and fixed provider endpoints
+
+The discovery activity is not a launcher and the host never starts it. Put the
+provider authority metadata directly under `<application>`:
 
 ```xml
 <activity android:name=".ThemeInfoActivity" android:exported="true"
@@ -175,84 +289,149 @@ Use a unique authority owned by your APK. Put the metadata directly under `<appl
 </activity>
 <meta-data android:name="io.github.abdurazaaqmohammed.MPManager.THEME_PROVIDER"
            android:value="com.example.mytheme.provider" />
-<provider android:name=".ThemeProvider"
-          android:authorities="com.example.mytheme.provider" android:exported="true" />
+<provider android:name=".ThemeProvider" android:exported="true"
+          android:authorities="com.example.mytheme.provider" />
 ```
 
-Expose only public theme data, reject writes, and return one cursor row from
-`content://<authority>/theme` (`vnd.android.cursor.item/theme`). Use these
-column names and types; optional columns can be absent or `NULL`:
+Expose public theme data only; reject writes. Return exactly one row from
+`content://<authority>/theme` (`vnd.android.cursor.item/theme`). Optional columns
+may be absent or null.
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `contract` | INTEGER | Required; `1`. Future incompatible versions will not be imported. |
-| `id` | TEXT | Required; stable ID within your package (e.g. `midnight-violet`). |
-| `name` | TEXT | Display name. The chooser uses your app icon and label before import. |
-| `dark` | INTEGER | `1` uses the dark base, `0` the light base; unset uses the last built-in choice. |
+| `contract` | INTEGER | Required: `1` or `2`; unknown versions rejected. |
+| `id` | TEXT | Required stable ID within the package. |
+| `name` | TEXT | Display name; falls back to app label/ID if absent. |
+| `dark` | INTEGER | `1` dark base, `0` light base; absent follows last built-in choice. |
 | `accent` | INTEGER | Signed 32-bit ARGB; fallback for `colorPrimary`. |
-| `colors` | TEXT | JSON object mapping color tokens to `#AARRGGBB` strings. |
-| `strings` | TEXT | JSON object mapping text tokens to objects of locale tag → plain text. |
-| `wallpaper` | TEXT | Exact `content://<authority>/wallpaper` URI for a PNG or JPEG. |
-| `scrim` | INTEGER | Optional signed ARGB tint drawn over the wallpaper. |
-| `preview` | TEXT | Optional `content://<authority>/preview` PNG or JPEG (up to 256 KiB); the current chooser uses app icons instead. |
+| `colors` | TEXT | JSON mapping accepted tokens to `#RRGGBB` / `#AARRGGBB`. |
+| `strings` | TEXT | JSON mapping cosmetic label tokens to locale → plain text. |
+| `wallpaper` | TEXT | Exact same-authority `/wallpaper` endpoint, PNG/JPEG only. |
+| `scrim` | INTEGER | Optional ARGB tint over wallpaper. |
+| `preview` | TEXT | Exact same-authority `/preview` endpoint, PNG/JPEG only. |
+| `wallpaper_scope` | TEXT, v2 | `files` (default), `all`, or `none`. |
+| `editor_syntax` | TEXT, v2 | JSON mapping accepted syntax categories/scopes to colors. |
 
-MP Manager ignores unknown tokens. Each JSON column is capped at 256 Ki UTF-16
-code units. Wallpaper is limited to 8 MiB, 8,192 pixels per side and
-16,777,216 total pixels. A preview is limited to 2,048 pixels per side.
-The ID, name, and each label are limited to 100 characters; at most 32 locale
-entries per label are read.
+Color and label JSON are each capped at 256 Ki UTF-16 code units; syntax JSON at
+32 Ki. Wallpaper: 8 MiB, 8,192 pixels per side, 16,777,216 total pixels. Preview:
+256 KiB, 2,048 pixels per side. IDs, names, and labels: 100 characters; at most
+32 locale entries per label. Unknown tokens/columns are ignored; malformed
+required data, unsupported scope, wrong authority, or oversized data rejects the
+import atomically.
 
-MP Manager imports a private snapshot, rather than
-reading the provider on every screen. A package update does not automatically
-apply new theme data: select the theme again to refresh it. The host pins the
-signer on import and drops the active snapshot on uninstall or signer mismatch.
-Pins are separate from action-plugin trust. Theme APK code runs only under its
-own app identity; MP Manager never loads it into its process or grants access to files.
+### Colors, editor syntax, and coverage
 
-### Colors and labels
+The canonical allowlist lives in
+[`ThemePackContracts`](../plugin-sdk/src/main/java/io/github/abdurazaaqmohammed/plugins/themes/ThemePackContracts.java).
+Names are case/separator-insensitive. Material tokens map to **host-owned** color
+resources/styles. Android 11+ applies exact Material colors where the resource
+loader is available. Older devices retain their base Material palette and use the
+closest bundled accent. Direct app/editor tokens work independently of that API.
 
-The following Material attributes honor exact colors on Android 11 and newer
-when the resource loader is available. Missing attributes come from the base
-style. On older OS versions, `colorPrimary` (or `accent`) selects the closest
-bundled accent, and other Material attributes retain their base colors.
+App tokens include file/folder icon tile backgrounds, active pane highlight,
+wallpaper scrim, system bars, and editor colors:
 
 ```text
-colorPrimary                  colorOnPrimary
-colorPrimaryContainer         colorOnPrimaryContainer
-colorSecondary                colorOnSecondary
-colorSecondaryContainer       colorOnSecondaryContainer
-colorTertiary                 colorOnTertiary
-colorSurface                  colorOnSurface
-colorSurfaceVariant           colorOnSurfaceVariant
-colorSurfaceContainerLowest   colorSurfaceContainerLow
-colorSurfaceContainer         colorSurfaceContainerHigh
-colorSurfaceContainerHighest  colorOutline
-colorOutlineVariant           colorError
-colorOnError
+editor_background          editor_text
+editor_gutter              editor_line_number
+editor_line_number_current editor_selection
+editor_current_line        editor_match_highlight
 ```
 
-App-specific colors: `folder_icon_bg` and `file_icon_bg` tint the folder and
-generic file tiles, `list_highlight` tints the active pane indicator,
-`wallpaper_scrim` controls the file-pane wallpaper tint, `status_bar` and
-`nav_bar` tint the main screen's bars where Android allows it, and
-`editor_background` and `editor_text` tint the unified editor's background and
-plain text. TextMate grammar syntax colors are not overridden. Wallpaper is
-shown behind the main file panes, not behind dialogs or permission screens.
-
-Allowed label keys: `tab.files`, `tab.root`, `tab.general`, `tab.behavior`,
-`tab.other`, and `settings.theme`. For example:
+Syntax accepts `comment`, `keyword`, `string`, `number`, `type`, `function`,
+`operator`, and `variable`, plus documented common TextMate scope aliases mapped
+to those categories. TextMate languages use host-generated theme rules in an
+isolated per-editor registry. Non-TextMate Java schemes share some color slots:
+string/number share the literal slot; type also styles plain identifiers. These
+are not arbitrary grammar or UI replacements.
 
 ```json
-{"tab.files":{"en":"Files","es":"Archivos","zh-CN":"文件"}}
+{"comment":"#6A9955","keyword":"#C586C0","entity.name.function":"#DCDCAA"}
 ```
 
-MP Manager tries the current locale, its language, English, then the built-in
-label. These are cosmetic labels only: commands, confirmations, file formats,
-and protocol values cannot be renamed.
+`wallpaper_scope=all` applies to host-owned activity backgrounds, not OS permission
+prompts, keyboards, notifications, or replacement layouts. Opaque host controls
+retain their own surfaces. `none` disables wallpaper. Missing v2 fields preserve
+v1 behavior (`files` scope, existing syntax defaults).
 
-### Build the sample
+Allowed labels remain cosmetic: `tab.files`, `tab.root`, `tab.general`,
+`tab.behavior`, `tab.other`, `settings.theme`. They cannot rename security prompts,
+confirmations, commands, file formats, or protocol values. Locale lookup prefers
+exact locale, language, English, then a safe fallback.
 
-`./gradlew :samples:theme-sample:assembleDebug` builds the permission-free
-[theme sample](../samples/theme-sample/) with its icon and wallpaper. Install the
-APK from `samples/theme-sample/build/outputs/apk/debug/` alongside your MP Manager
-build. The sample does not need to be signed with MP Manager's certificate.
+### Snapshot refresh and trust
+
+The host imports a private, atomic snapshot; providers are not read on every
+screen. The active provider is refreshed in background after its package update.
+A malformed/unavailable update keeps the previous valid snapshot. A signature
+mismatch/uninstall deactivates it. A refresh finishing after the user selects a
+different theme cannot switch them back. Theme signer pins are separate from
+action-plugin/event consent.
+
+### Build the working samples
+
+```sh
+./gradlew :samples:plugin-sample:assembleDebug :samples:theme-sample:assembleDebug
+```
+
+The output APKs are under each module's `build/outputs/apk/debug/`. Install them
+alongside MP Manager; they need not share its certificate.
+
+## Security and authoring limits
+
+- Keep metadata ≤2,048 characters, declared interests ≤32, IDs/labels ≤128 chars.
+  Stream file bytes from content URIs rather than putting them in extras.
+- All action launches are explicit and recheck the current pinned certificate.
+  Disabled packages are not offered; Tools Hub still lists them for re-enabling.
+- File/ELF input grants are read-only and activity-scoped. APK writes target a
+  staged copy only. The plugin retains only the access Android grants it, not the
+  host's root/Shizuku/all-files/network privileges.
+- Editor full-text input is capped at 150 KiB. An oversized selection is not
+  silently truncated into a misleading whole-selection transformation.
+- Keep result messages short (host display cap 512 characters). Avoid custom
+  Parcelables in wire Bundles. A hostile plugin is still untrusted data even after
+  certificate pinning; pinning identifies an author, not safety.
+- Automatic events are best effort and separately consented. No silent file access,
+  host callbacks, plugin result execution, or synchronous plugin UI query exists.
+
+### Deferred extension levels
+
+This version intentionally does not support arbitrary external XML/RemoteViews,
+per-file dynamic badge IPC, in-process third-party plugins, foreign APK resource
+mapping, or font/icon/layout/motion asset endpoints. Those need separate bounded
+contracts and actual host consumers. Do not advertise those manifest IDs/columns as
+working features. The first-party signer gate is not loosened.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| SDK coordinate not found | Run standalone `publishToMavenLocal`, or point `mpPluginSdk` at the SDK build. No public artifact is claimed yet. |
+| Plugin activity not discovered | Exported/enabled, `DEFAULT` category, exact action, correct activity metadata; reinstall after manifest changes. |
+| Hook missing | Known hook ID, contract version 1, not disabled/hidden, matching file filters if applicable. |
+| Events missing | Exported receiver, exact `EVENT` action, supported interests, action trust **and** separate event consent. |
+| Theme rejected | One row, version 1/2, owned authority, exact endpoints, signer unchanged, valid JSON/image limits. |
+| Some colors keep defaults | Missing tokens, older-API Material fallback, or opaque host control surfaces; not a generic resource overlay. |
+| Activity helper class missing | Use `implementation` of `plugin-sdk`, not `compileOnly` of the host SDK. |
+
+## Verification
+
+```sh
+./gradlew -p plugin-sdk test publishToMavenLocal
+./gradlew -p samples/plugin-template assembleDebug
+./gradlew -p samples/plugin-template assembleDebug -PmpPluginSdk=/absolute/path/plugin-sdk
+./gradlew :app:testFullDebugUnitTest :samples:plugin-sample:assembleDebug :samples:theme-sample:assembleDebug
+python -I tools/verify_plugin_settings.py .
+```
+
+Device regression tests use the isolated `-PeditorRegressionBuild` host. Install
+the working sample before running `PluginHooksInstrumentedTest`. See
+[plugin smoke tests](PLUGIN_SMOKE_TESTS.md) for manual surface/refresh checks.
+
+## Maintainer release checklist: first-party packs
+
+First-party packs still require their catalog checksums, catalog signature, and
+host signer. Use `tools/SignCatalog.java` to hash/sign/verify the catalog, keep
+private keys outside the repository, and only publish artifacts in a separately
+authorized release. Neither building a public plugin nor publishing the SDK to
+Maven Local changes this gate.

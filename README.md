@@ -32,7 +32,7 @@ Grab the latest APK from [Releases](https://github.com/AbdurazaaqMohammed/MP-Man
 
 ## Contributing
 
-Pull requests are welcome. If you want to build on top of MP Manager, see the [third-party plugin API](docs/THIRD_PARTY_PLUGINS.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the codebase is organized.
+Pull requests are welcome. To extend MP Manager, start with the [third-party plugin guide](docs/THIRD_PARTY_PLUGINS.md) and the [standalone plugin template](samples/plugin-template/). Plugins can be built in their own repositories using the small [plugin SDK](plugin-sdk/); no host signing key or in-process code loading is required.
 
 ## Translations
 

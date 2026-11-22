@@ -101,6 +101,7 @@ final class ThemePackPalette {
         uninstallStale(resources, STATE.previous(resources));
     }
 
+    @androidx.annotation.RequiresApi(30)
     private static void uninstallStale(Resources resources, Object stale) {
         if (stale instanceof ResourcesLoader) {
             Loaders.uninstall(resources, (ResourcesLoader) stale);
@@ -128,6 +129,7 @@ final class ThemePackPalette {
     }
 
     /** All ResourcesLoader touchpoints, only invoked on API 30+. */
+    @androidx.annotation.RequiresApi(30)
     private static final class Loaders {
         /** Unregisters the loader; provider FDs are released by GC
          *  finalization (never force-closed while possibly registered). */

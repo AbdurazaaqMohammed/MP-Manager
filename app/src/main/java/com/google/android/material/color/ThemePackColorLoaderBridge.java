@@ -8,6 +8,7 @@ import java.util.Map;
 
 /** Direct access to Material 1.12's factory so the host can own and remove its loader. */
 @SuppressLint("RestrictedApi")
+@androidx.annotation.RequiresApi(30)
 public final class ThemePackColorLoaderBridge {
 
     private ThemePackColorLoaderBridge() {
