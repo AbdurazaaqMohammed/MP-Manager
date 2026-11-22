@@ -10,8 +10,6 @@ import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -22,7 +20,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Process;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -52,7 +49,6 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -71,7 +67,6 @@ import io.github.abdurazaaqmohammed.plugins.ext.SettingToggle;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
-import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.ui.main.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
@@ -133,21 +128,8 @@ public class SettingsController {
         this.externalSettingLauncher = externalSettingLauncher;
     }
 
-    /**
-     * The theme is read once per process in a handful of places (including the text editor
-     * themes and the file icons), so a live switch leaves parts of the app on the old theme.
-     * Ask for a restart instead of pretending the change is complete.
-     */
-    private void promptThemeRestart() {
-        try {
-            Snackbar snackbar = Snackbar.make(
-                    activity.findViewById(android.R.id.content),
-                    R.string.restart_to_apply_theme, Snackbar.LENGTH_INDEFINITE);
-            snackbar.setAction(R.string.restart, v -> restartApp(activity));
-            snackbar.show();
-        } catch (Exception ignored) {
-            activity.recreate();
-        }
+    private void refreshTheme() {
+        ThemeRegistry.reload(activity);
     }
 
     private void updateInstalledThemeButton(MaterialButton button, ThemePacks.Snapshot pack) {
@@ -207,32 +189,12 @@ public class SettingsController {
                             }
                             builtIns.clearChecked();
                             updateInstalledThemeButton(button, ThemePacks.active(activity));
-                            promptThemeRestart();
+                            refreshTheme();
                         });
                     }, "theme-import").start();
                 }).show();
             });
         }, "theme-discovery").start();
-    }
-
-    private static void restartApp(Context context) {
-        try {
-            Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            if (launch == null) return;
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            PendingIntent pending = PendingIntent.getActivity(context, 0x5448, launch,
-                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            if (am != null) {
-                am.set(AlarmManager.RTC, System.currentTimeMillis() + 150, pending);
-            } else {
-                context.startActivity(launch);
-            }
-        } catch (Exception ignored) {
-        }
-        Process.killProcess(Process.myPid());
-        System.exit(0);
     }
 
     public void attach(ViewFinder settingsDialog) {
@@ -340,7 +302,7 @@ public class SettingsController {
                 applySystemThemeFlag(system);
                 ThemeRegistry.setCurrentId(activity, pluginId);
                 settings.edit().putInt("theme", ThemeRegistry.currentStyleRes(activity)).apply();
-                promptThemeRestart();
+                refreshTheme();
             }
         });
 
@@ -584,6 +546,7 @@ public class SettingsController {
         try {
             for (ExternalActions.Entry e : external) {
                 if (e == null) continue;
+                ExternalActions.migrateSetting(activity, e, settings);
                 final String key = ExternalActions.settingKey(e);
                 final boolean isAction = ExternalActions.settingIsAction(e);
                 String tl = TextUtils.isEmpty(e.title) ? e.id : e.title;
@@ -629,7 +592,7 @@ public class SettingsController {
     private void openExternalSetting(ExternalActions.Entry e, String key,
                                      boolean isAction, SharedPreferences settings) {
         try {
-            Intent intent = PluginHost.explicitIntent(e.plugin,
+            Intent intent = ExternalActions.intent(activity, e,
                     PluginContracts.ACTION_SETTING_CONFIG);
             intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, e.plugin.pluginId);
             intent.putExtra(PluginContracts.EXTRA_KEY, key);
@@ -639,8 +602,11 @@ public class SettingsController {
             PluginTrust.ensureTrusted(activity, e.plugin, () ->
                     externalSettingLauncher.launch(intent, result -> {
                         try {
-                            if (isAction || result.getResultCode() != Activity.RESULT_OK
+                            if (result.getResultCode() != Activity.RESULT_OK
                                     || result.getData() == null) return;
+                            io.github.abdurazaaqmohammed.plugins.ipc.PluginThemeRequests
+                                    .handle(activity, e, result.getData());
+                            if (isAction) return;
                             Bundle extras = result.getData().getExtras();
                             if (extras == null || !extras.containsKey(PluginContracts.EXTRA_VALUE)) return;
                             Object v = extras.get(PluginContracts.EXTRA_VALUE);

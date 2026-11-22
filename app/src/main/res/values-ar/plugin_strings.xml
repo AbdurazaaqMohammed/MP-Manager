@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">إجراءات المكوّن الإضافي</string>
+    <string name="plugin_show_action">إظهار الإجراء</string>
+    <string name="plugin_hide_action">إخفاء الإجراء</string>
+    <string name="plugin_move_up">نقل إلى أعلى</string>
+    <string name="plugin_move_down">نقل إلى أسفل</string>
+    <string name="plugin_action_hidden">مخفي: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">السماح بالأحداث التلقائية</string>
+    <string name="plugin_events_disable">تعطيل الأحداث التلقائية</string>
+    <string name="plugin_events_trust_first">وثِق بهذا المكوّن الإضافي قبل السماح بالأحداث التلقائية.</string>
+    <string name="plugin_events_consent">السماح لـ %1$s بتلقّي هذه الأحداث أثناء استخدام MP Manager؟\n\n%2$s\n\nتحتوي الأحداث على لوحة الألوان النشطة، وعند file.opened على اسم الملف المعروض ونوع MIME. ولا تتضمن محتوى الملفات أو مسارات الملفات أو نص المحرر أو أذونات الوصول إلى الملفات. وهذا منفصل عن إذن تشغيل الإجراء الذي يُضغط عليه.</string>
+    <string name="plugin_apply_theme">تطبيق مظهر المكوّن الإضافي؟</string>
+    <string name="plugin_apply_theme_message">يطلب %1$s المظهر المثبّت «%2$s». سيستورد MP Manager بيانات المظهر التي تم التحقق منها فقط. لن يعمل أي رمز للمكوّن الإضافي داخل MP Manager.</string>
+    <string name="plugin_apply_theme_failed">تعذّر تطبيق مظهر المكوّن الإضافي المطلوب.</string>
+</resources>

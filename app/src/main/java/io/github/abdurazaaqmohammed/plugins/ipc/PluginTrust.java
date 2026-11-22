@@ -25,26 +25,53 @@ public final class PluginTrust {
     public static void ensureTrusted(final Activity activity,
                                      final ExternalPlugin plugin,
                                      final Runnable onTrust) {
-        if (activity == null || plugin == null) return;
+        ensureTrusted(activity, plugin, onTrust, () -> {});
+    }
+
+    public static void ensureTrusted(final Activity activity,
+                                     final ExternalPlugin plugin,
+                                     final Runnable onTrust,
+                                     final Runnable onDeclined) {
+        if (activity == null || plugin == null) {
+            onDeclined.run();
+            return;
+        }
         try {
-            if (PluginHost.isTrusted(activity, plugin.packageName)) {
-                onTrust.run();
+            if (PluginHost.isDisabled(activity, plugin.packageName)) {
+                onDeclined.run();
+                return;
+            }
+            if (PluginHost.canInvoke(activity, plugin)) {
+                activity.runOnUiThread(() -> {
+                    if (!activity.isFinishing() && !activity.isDestroyed()
+                            && PluginHost.canInvoke(activity, plugin)) onTrust.run();
+                    else onDeclined.run();
+                });
                 return;
             }
         } catch (Exception ignored) {
         }
         try {
-            activity.runOnUiThread(() -> showPrompt(activity, plugin, onTrust));
+            activity.runOnUiThread(() -> showPrompt(activity, plugin, onTrust, onDeclined));
         } catch (Exception ignored) {
+            onDeclined.run();
         }
     }
 
     private static void showPrompt(Activity activity, ExternalPlugin plugin,
-                                   Runnable onTrust) {
+                                   Runnable onTrust, Runnable onDeclined) {
         try {
+            if (activity.isFinishing() || activity.isDestroyed()
+                    || PluginHost.isDisabled(activity, plugin.packageName)) {
+                onDeclined.run();
+                return;
+            }
             String digest = PluginHost.certDigest(activity, plugin.packageName);
-            boolean rotation = digest != null
-                    && PluginHost.pinnedDigest(activity, plugin.packageName) != null;
+            if (digest == null) {
+                onDeclined.run();
+                return;
+            }
+            boolean rotation = PluginHost.pinnedDigest(activity, plugin.packageName) != null;
             String title = rotation ? "Plugin certificate changed" : "Allow external plugin?";
             StringBuilder msg = new StringBuilder();
             msg.append(plugin.label).append('\n').append(plugin.packageName);
@@ -56,6 +83,7 @@ public final class PluginTrust {
                         + " permissions. Allow it to integrate with MP-Manager?");
             }
             msg.append("\n\nCertificate (SHA-256):\n").append(fingerprint(digest));
+            java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean();
             new MaterialAlertDialogBuilder(activity)
                     .setTitle(title)
                     .setMessage(msg.toString())
@@ -63,15 +91,22 @@ public final class PluginTrust {
                     .setPositiveButton("Allow", (d, w) -> {
                         try {
                             String fresh = PluginHost.certDigest(activity, plugin.packageName);
-                            if (fresh == null) return;
+                            if (!digest.equals(fresh)) return;
                             PluginHost.setTrusted(activity, plugin.packageName, fresh,
                                     String.valueOf(plugin.label), true);
-                            onTrust.run();
+                            if (PluginHost.canInvoke(activity, plugin)) {
+                                allowed.set(true);
+                                onTrust.run();
+                            }
                         } catch (Exception ignored) {
                         }
                     })
+                    .setOnDismissListener(dialog -> {
+                        if (!allowed.get()) onDeclined.run();
+                    })
                     .show();
         } catch (Exception ignored) {
+            onDeclined.run();
         }
     }
 

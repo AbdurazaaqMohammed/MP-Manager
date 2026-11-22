@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Thao tác plugin</string>
+    <string name="plugin_show_action">Hiện thao tác</string>
+    <string name="plugin_hide_action">Ẩn thao tác</string>
+    <string name="plugin_move_up">Chuyển lên</string>
+    <string name="plugin_move_down">Chuyển xuống</string>
+    <string name="plugin_action_hidden">Đã ẩn: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Cho phép sự kiện tự động</string>
+    <string name="plugin_events_disable">Tắt sự kiện tự động</string>
+    <string name="plugin_events_trust_first">Hãy tin tưởng plugin này trước khi cho phép sự kiện tự động.</string>
+    <string name="plugin_events_consent">Cho phép %1$s nhận các sự kiện này khi bạn dùng MP Manager?\n\n%2$s\n\nSự kiện chứa bảng màu đang dùng và, đối với file.opened, tên hiển thị của tệp và kiểu MIME. Sự kiện không chứa nội dung tệp, đường dẫn tệp, văn bản của trình chỉnh sửa hoặc quyền truy cập tệp. Điều này tách biệt với quyền chạy một thao tác mà bạn chạm vào.</string>
+    <string name="plugin_apply_theme">Áp dụng giao diện của plugin?</string>
+    <string name="plugin_apply_theme_message">%1$s yêu cầu giao diện đã cài đặt “%2$s”. MP Manager sẽ chỉ nhập dữ liệu giao diện đã được xác thực. Không có mã plugin nào chạy trong MP Manager.</string>
+    <string name="plugin_apply_theme_failed">Không thể áp dụng giao diện plugin đã yêu cầu.</string>
+</resources>

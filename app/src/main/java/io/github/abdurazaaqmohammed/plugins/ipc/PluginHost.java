@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.pm.ComponentInfo;
 import android.content.pm.Signature;
 import android.content.pm.SigningInfo;
 import android.os.Build;
@@ -57,6 +58,16 @@ public final class PluginHost {
      * plugin id (or "" when the meta-data is missing).
      */
     public static List<ExternalPlugin> query(Context context, String action) {
+        return queryActivities(context, action, false);
+    }
+
+    /** Management screens also need to list explicitly disabled packages. */
+    public static List<ExternalPlugin> queryIncludingDisabled(Context context, String action) {
+        return queryActivities(context, action, true);
+    }
+
+    private static List<ExternalPlugin> queryActivities(Context context, String action,
+                                                        boolean includeDisabled) {
         List<ExternalPlugin> out = new ArrayList<>();
         try {
             PackageManager pm = context.getPackageManager();
@@ -71,6 +82,9 @@ public final class PluginHost {
             for (ResolveInfo info : infos) {
                 if (info == null || info.activityInfo == null) continue;
                 ActivityInfo ai = info.activityInfo;
+                if (!ai.exported || !ai.enabled || ai.applicationInfo == null
+                        || !ai.applicationInfo.enabled
+                        || (!includeDisabled && isDisabled(context, ai.packageName))) continue;
                 Bundle meta = null;
                 String pluginId = "";
                 try {
@@ -94,11 +108,70 @@ public final class PluginHost {
         return out;
     }
 
-    /** Explicit intent for a trusted plugin activity. */
+    /** Explicit intent for a plugin activity. Callers must verify trust before launch. */
     public static Intent explicitIntent(ExternalPlugin plugin, String action) {
         Intent intent = new Intent(action);
         intent.setClassName(plugin.packageName, plugin.className);
         return intent;
+    }
+
+    /** Host capabilities and appearance are data, never host permissions. */
+    public static Intent explicitIntent(Context context, ExternalPlugin plugin, String action) {
+        Intent intent = explicitIntent(plugin, action);
+        intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, plugin.pluginId);
+        intent.putExtra(PluginContracts.EXTRA_CONTRACT_VERSION, PluginContracts.CONTRACT_VERSION);
+        intent.putExtra(PluginContracts.EXTRA_HOST_PACKAGE, context.getPackageName());
+        intent.putExtra(PluginContracts.EXTRA_HOST_HOOKS, PluginHooks.actionHooks());
+        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry
+                .applyPluginThemeExtras(context, intent);
+        return intent;
+    }
+
+    /** Receivers are discovered without running their code. */
+    public static List<ExternalPlugin> queryEventReceivers(Context context,
+                                                          boolean includeDisabled) {
+        List<ExternalPlugin> out = new ArrayList<>();
+        try {
+            PackageManager pm = context.getPackageManager();
+            List<ResolveInfo> infos = pm.queryBroadcastReceivers(
+                    new Intent(PluginContracts.ACTION_EVENT), PackageManager.GET_META_DATA);
+            if (infos == null) return out;
+            for (ResolveInfo info : infos) {
+                if (info == null || info.activityInfo == null) continue;
+                ActivityInfo receiver = info.activityInfo;
+                if (!receiver.exported || !receiver.enabled || receiver.applicationInfo == null
+                        || !receiver.applicationInfo.enabled
+                        || (!includeDisabled && isDisabled(context, receiver.packageName))) continue;
+                Bundle meta = receiver.metaData;
+                String pluginId = "";
+                try {
+                    if (meta != null) pluginId = meta.getString(PluginContracts.META_PLUGIN_ID, "");
+                } catch (Exception ignored) {
+                }
+                CharSequence label = receiver.packageName;
+                try {
+                    label = info.loadLabel(pm);
+                } catch (Exception ignored) {
+                }
+                out.add(new ExternalPlugin(receiver.packageName, receiver.name,
+                        pluginId, label, meta));
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    /** Validate the explicit activity and certificate again at dispatch time. */
+    public static boolean canInvoke(Context context, ExternalPlugin plugin) {
+        if (context == null || plugin == null || !isTrusted(context, plugin.packageName)) return false;
+        try {
+            ComponentInfo info = context.getPackageManager().getActivityInfo(
+                    new android.content.ComponentName(plugin.packageName, plugin.className), 0);
+            return info.exported && info.enabled && info.applicationInfo != null
+                    && info.applicationInfo.enabled;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     /** Current signing-cert digest (lowercase hex SHA-256), or null. */
@@ -201,25 +274,107 @@ public final class PluginHost {
         }
     }
 
+    /** False only after an explicit disable; unseen plugins may still be offered. */
+    public static boolean isDisabled(Context context, String pkg) {
+        try {
+            SharedPreferences p = prefs(context);
+            return p.contains(pkg + "_enabled") && !p.getBoolean(pkg + "_enabled", false);
+        } catch (Exception ignored) {
+            return true;
+        }
+    }
+
     public static void setTrusted(Context context, String pkg, String digest,
                                   String label, boolean enabled) {
         try {
-            prefs(context).edit()
-                    .putString(pkg + "_digest", digest == null ? "" : digest.toLowerCase())
+            String normalized = digest == null ? "" : digest.toLowerCase(java.util.Locale.ROOT);
+            String oldDigest = pinnedDigest(context, pkg);
+            SharedPreferences.Editor editor = prefs(context).edit()
+                    .putString(pkg + "_digest", normalized)
                     .putString(pkg + "_label", label == null ? pkg : label)
-                    .putBoolean(pkg + "_enabled", enabled)
-                    .apply();
+                    .putBoolean(pkg + "_enabled", enabled);
+            // Event consent is tied to this certificate, never transferred on re-pinning.
+            if (oldDigest == null || !oldDigest.equals(normalized)) {
+                editor.remove(pkg + "_events").remove(pkg + "_events_digest")
+                        .remove(pkg + "_event_ids");
+            }
+            editor.apply();
+            ExternalActions.clearAllCaches();
+            HookRegistry.invalidate();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static boolean eventsEnabled(Context context, String pkg) {
+        try {
+            SharedPreferences p = prefs(context);
+            String digest = p.getString(pkg + "_events_digest", "");
+            return p.getBoolean(pkg + "_events", false) && !digest.isEmpty()
+                    && digest.equals(pinnedDigest(context, pkg)) && isTrusted(context, pkg);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static boolean eventAllowed(Context context, String pkg, String eventId) {
+        try {
+            return eventsEnabled(context, pkg) && PluginHooks.isEvent(eventId)
+                    && prefs(context).getStringSet(pkg + "_event_ids",
+                            java.util.Collections.emptySet()).contains(eventId);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static void setEventsEnabled(Context context, String pkg, boolean enabled) {
+        java.util.Set<String> interests = new java.util.HashSet<>();
+        if (enabled) {
+            for (ExternalPlugin receiver : queryEventReceivers(context, true)) {
+                if (!pkg.equals(receiver.packageName) || !HookRegistry.supportsVersion(receiver)) continue;
+                for (String event : HookRegistry.declaredHooks(receiver)) {
+                    if (PluginHooks.isEvent(event)) interests.add(event);
+                }
+            }
+        }
+        setEventsEnabled(context, pkg, enabled, interests);
+    }
+
+    /** Freeze exactly the disclosed event IDs, so an update cannot expand consent. */
+    public static void setEventsEnabled(Context context, String pkg, boolean enabled,
+                                       java.util.Collection<String> disclosedEvents) {
+        try {
+            String digest = pinnedDigest(context, pkg);
+            if (enabled && (!isTrusted(context, pkg) || digest == null)) return;
+            java.util.Set<String> interests = new java.util.HashSet<>();
+            if (enabled && disclosedEvents != null) {
+                for (String event : disclosedEvents) if (PluginHooks.isEvent(event)) interests.add(event);
+            }
+            prefs(context).edit().putBoolean(pkg + "_events", enabled)
+                    .putString(pkg + "_events_digest", enabled ? digest : "")
+                    .putStringSet(pkg + "_event_ids", interests).apply();
         } catch (Exception ignored) {
         }
     }
 
     public static void removeTrust(Context context, String pkg) {
         try {
-            prefs(context).edit()
+            SharedPreferences.Editor editor = prefs(context).edit()
                     .remove(pkg + "_digest")
                     .remove(pkg + "_label")
                     .remove(pkg + "_enabled")
-                    .apply();
+                    .remove(pkg + "_events")
+                    .remove(pkg + "_events_digest")
+                    .remove(pkg + "_event_ids");
+            editor.apply();
+            android.content.SharedPreferences settings = androidx.preference.PreferenceManager
+                    .getDefaultSharedPreferences(context);
+            android.content.SharedPreferences.Editor values = settings.edit();
+            String prefix = "external_setting:" + pkg + ":";
+            for (String key : settings.getAll().keySet()) if (key.startsWith(prefix)) values.remove(key);
+            values.apply();
+            ExternalActions.clearAllCaches();
+            HookRegistry.invalidate();
+            HookOrder.removePackage(context, pkg);
         } catch (Exception ignored) {
         }
     }

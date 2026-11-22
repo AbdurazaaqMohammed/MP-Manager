@@ -64,6 +64,12 @@
         <intent>
             <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
         </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.HOOK" />
+        </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EVENT" />
+        </intent>
         <!-- Theme providers (fixed content://<authority>/theme row contract). -->
         <intent>
             <action android:name="io.github.abdurazaaqmohammed.MPManager.action.THEME" />
@@ -289,6 +295,7 @@
         </service>
        <activity
            android:name="io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity"
+           android:configChanges="uiMode"
            android:windowSoftInputMode="adjustResize|stateHidden"
            android:launchMode="singleTop"
            android:exported="false">
@@ -333,7 +340,7 @@
             android:name="io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name="io.github.abdurazaaqmohammed.ui.editor.CompareTextActivity"
@@ -384,7 +391,7 @@
            </provider>
             <activity
                 android:name="modder.hub.dexeditor.activity.DexEditorActivity"
-                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
                 android:windowSoftInputMode="adjustResize" />
            <provider
                android:name="androidx.core.content.FileProvider"

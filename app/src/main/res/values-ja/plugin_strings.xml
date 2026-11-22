@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">プラグインのアクション</string>
+    <string name="plugin_show_action">アクションを表示</string>
+    <string name="plugin_hide_action">アクションを非表示</string>
+    <string name="plugin_move_up">上へ移動</string>
+    <string name="plugin_move_down">下へ移動</string>
+    <string name="plugin_action_hidden">非表示: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">自動イベントを許可</string>
+    <string name="plugin_events_disable">自動イベントを無効にする</string>
+    <string name="plugin_events_trust_first">自動イベントを許可する前に、このプラグインを信頼してください。</string>
+    <string name="plugin_events_consent">MP Manager の使用中、%1$s がこれらのイベントを受け取ることを許可しますか？\n\n%2$s\n\nイベントには現在のパレットと、file.opened の場合はファイルの表示名と MIME タイプが含まれます。ファイルの内容、ファイルパス、エディタのテキスト、ファイルアクセスの許可は含まれません。これは、タップした操作を実行する許可とは別のものです。</string>
+    <string name="plugin_apply_theme">プラグインのテーマを適用しますか？</string>
+    <string name="plugin_apply_theme_message">%1$s がインストール済みのテーマ「%2$s」を要求しています。MP Manager は検証済みの外観データのみを取り込みます。MP Manager 内でプラグインのコードは実行されません。</string>
+    <string name="plugin_apply_theme_failed">要求されたプラグインのテーマを適用できませんでした。</string>
+</resources>

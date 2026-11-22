@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.plugins.ipc;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.MimeTypeMap;
@@ -26,11 +27,19 @@ public final class ExternalActions {
         public final ExternalPlugin plugin;
         public final String id;
         public final String title;
+        public final String action;
+        public final String hookId;
 
         Entry(ExternalPlugin plugin, String id, String title) {
+            this(plugin, id, title, null, null);
+        }
+
+        Entry(ExternalPlugin plugin, String id, String title, String action, String hookId) {
             this.plugin = plugin;
             this.id = id;
-            this.title = title;
+            this.title = PluginMetadata.title(title, plugin.packageName);
+            this.action = action;
+            this.hookId = hookId;
         }
     }
 
@@ -46,20 +55,46 @@ public final class ExternalActions {
     /** Stable host id for a discovered plugin. */
     public static String entryId(ExternalPlugin plugin) {
         String base;
-        if (plugin.pluginId != null && !plugin.pluginId.isEmpty()) {
-            base = plugin.pluginId;
+        String declared = plugin.pluginId;
+        if (declared != null && declared.length() <= 128
+                && declared.matches("[A-Za-z0-9._-]+")) {
+            base = declared;
         } else {
             base = plugin.packageName + "/" + plugin.className;
         }
         return "ext:" + base;
     }
 
+    /** Build the wire request once for legacy actions and generic hooks alike. */
+    public static Intent intent(Context context, Entry entry, String legacyAction) {
+        Intent intent = PluginHost.explicitIntent(context, entry.plugin,
+                entry.action == null ? legacyAction : entry.action);
+        if (entry.hookId != null) intent.putExtra(PluginContracts.EXTRA_HOOK_ID, entry.hookId);
+        return intent;
+    }
+
+    private static List<Entry> available(Context context, List<Entry> entries) {
+        java.util.Map<String, Entry> seen = new java.util.LinkedHashMap<>();
+        for (Entry entry : entries) {
+            if (PluginHost.isDisabled(context, entry.plugin.packageName)) continue;
+            Entry previous = seen.get(entry.id);
+            if (previous == null || (!PluginHost.isTrusted(context, previous.plugin.packageName)
+                    && PluginHost.isTrusted(context, entry.plugin.packageName))) {
+                seen.put(entry.id, entry);
+            }
+        }
+        return new ArrayList<>(seen.values());
+    }
+
     public static String metaString(ExternalPlugin plugin, String key, String def) {
         try {
             Bundle meta = plugin.meta;
             if (meta != null) {
-                String v = meta.getString(key);
-                if (v != null) return v;
+                Object value = meta.get(key);
+                String v = value instanceof String ? (String) value
+                        : value instanceof Integer ? String.valueOf(value)
+                        : value instanceof Boolean ? String.valueOf(value) : null;
+                if (v != null && PluginRequests.isMetaValueOk(v)) return v;
             }
         } catch (Exception ignored) {
         }
@@ -74,11 +109,11 @@ public final class ExternalActions {
     public static synchronized List<Entry> sidebarEntries(Context context) {
         long now = 0;
         try {
-            now = System.currentTimeMillis();
+            now = android.os.SystemClock.elapsedRealtime();
         } catch (Exception ignored) {
         }
-        if (sSidebarCache != null && now - sSidebarCacheAt < CACHE_TTL_MS) {
-            return new ArrayList<>(sSidebarCache);
+        if (sSidebarCacheAt != 0 && now - sSidebarCacheAt < CACHE_TTL_MS) {
+            return available(context, sSidebarCache);
         }
         List<Entry> out = new ArrayList<>();
         try {
@@ -91,14 +126,21 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
+        out.addAll(HookRegistry.entries(context, PluginContracts.HOOK_SIDEBAR_FOOTER));
         sSidebarCache = out;
         sSidebarCacheAt = now;
-        return new ArrayList<>(out);
+        return available(context, out);
     }
 
     /** Drops the cached sidebar entries so the next query hits PackageManager. */
     public static synchronized void clearSidebarCache() {
         sSidebarCacheAt = 0;
+    }
+
+    /** Drops every discovery cache after package or trust changes. */
+    public static synchronized void clearAllCaches() {
+        sSidebarCacheAt = 0;
+        sFileCacheAt = 0;
     }
 
     public static List<Entry> settingEntries(Context context) {
@@ -113,16 +155,40 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
-        return out;
+        return available(context, out);
     }
 
     public static String settingKey(Entry entry) {
+        return PluginMetadata.settingKey(entry.plugin.packageName, declaredSettingKey(entry));
+    }
+
+    public static String declaredSettingKey(Entry entry) {
         String key = metaString(entry.plugin, PluginContracts.META_SETTING_KEY, null);
         if (key == null || key.isEmpty()) {
             String pid = entry.plugin.pluginId;
             key = (pid == null || pid.isEmpty()) ? entry.id : pid;
         }
         return key;
+    }
+
+    public static void migrateSetting(Context context, Entry entry,
+                                      android.content.SharedPreferences settings) {
+        String legacyKey = declaredSettingKey(entry);
+        String key = settingKey(entry);
+        if (!legacyKey.startsWith("plugin.") || settings.contains(key)
+                || !settings.contains(legacyKey)
+                || !PluginHost.isTrusted(context, entry.plugin.packageName)) return;
+        int owners = 0;
+        for (Entry candidate : settingEntries(context)) {
+            if (legacyKey.equals(declaredSettingKey(candidate))) owners++;
+        }
+        if (owners != 1) return;
+        Object value = settings.getAll().get(legacyKey);
+        android.content.SharedPreferences.Editor editor = settings.edit();
+        if (value instanceof Boolean) editor.putBoolean(key, (Boolean) value);
+        else if (value instanceof String) editor.putString(key, (String) value);
+        else return;
+        editor.remove(legacyKey).apply();
     }
 
     public static boolean settingIsAction(Entry entry) {
@@ -152,11 +218,11 @@ public final class ExternalActions {
     public static synchronized List<Entry> cachedFileEntries(Context context) {
         long now = 0;
         try {
-            now = System.currentTimeMillis();
+            now = android.os.SystemClock.elapsedRealtime();
         } catch (Exception ignored) {
         }
-        if (sFileCache != null && now - sFileCacheAt < CACHE_TTL_MS) {
-            return new ArrayList<>(sFileCache);
+        if (sFileCacheAt != 0 && now - sFileCacheAt < CACHE_TTL_MS) {
+            return available(context, sFileCache);
         }
         List<Entry> out = new ArrayList<>();
         try {
@@ -166,9 +232,10 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
+        out.addAll(HookRegistry.entries(context, PluginContracts.HOOK_FILE_MENU_EXTRA));
         sFileCache = out;
         sFileCacheAt = now;
-        return new ArrayList<>(out);
+        return available(context, out);
     }
 
     public static List<String> fileMenuIds(Context context) {
@@ -208,11 +275,7 @@ public final class ExternalActions {
                 if (!any) return false;
             }
             if (!pattern.isEmpty()) {
-                try {
-                    if (!file.getName().matches(pattern)) return false;
-                } catch (Exception ignored) {
-                    return false;
-                }
+                if (!PluginMetadata.filenameMatches(pattern, file.getName())) return false;
             }
             return true;
         } catch (Exception ignored) {
@@ -257,11 +320,17 @@ public final class ExternalActions {
      */
     public static List<Uri> stageUris(Context context, List<File> files) {
         try {
+            if (files == null || files.isEmpty() || files.size() > 64) return null;
             List<Uri> out = new ArrayList<>();
+            int metadataBytes = 0;
             for (File f : files) {
+                if (f == null) return null;
                 Uri uri = FileProvider.getUriForFile(context,
                         context.getPackageName() + ".provider", f);
                 if (uri == null) return null;
+                metadataBytes += (uri.toString() + f.getName())
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+                if (metadataBytes > 64 * 1024) return null;
                 out.add(uri);
             }
             return out;
@@ -282,7 +351,8 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
-        return out;
+        out.addAll(HookRegistry.entries(context, PluginContracts.HOOK_EDITOR_ACTIONS));
+        return available(context, out);
     }
 
     public static List<Entry> apkEntries(Context context) {
@@ -297,7 +367,8 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
-        return out;
+        out.addAll(HookRegistry.entries(context, PluginContracts.HOOK_APK_DIALOG_MORE));
+        return available(context, out);
     }
 
     public static Entry findById(List<Entry> entries, String id) {

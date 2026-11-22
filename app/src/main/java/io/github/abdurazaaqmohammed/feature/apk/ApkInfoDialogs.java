@@ -29,6 +29,7 @@ import io.github.abdurazaaqmohammed.ui.main.SignatureKeyDialog;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -71,7 +72,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
-import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginThemeRequests;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -943,7 +944,7 @@ public class ApkInfoDialogs {
                     try {
                         File stageDir = new File(context.getCacheDir(), "apk_plugin_stage");
                         if (!stageDir.exists()) stageDir.mkdirs();
-                        File staged = new File(stageDir, file.getName());
+                        File staged = File.createTempFile("apk-", ".apk", stageDir);
                         try (InputStream in = new FileInputStream(file);
                              FileOutputStream out = new FileOutputStream(staged)) {
                             byte[] buf = new byte[65536];
@@ -952,21 +953,22 @@ public class ApkInfoDialogs {
                         }
                         Uri apkUri = FileProvider.getUriForFile(
                                 context, context.getPackageName() + ".provider", staged);
-                        Intent extIntent = PluginHost.explicitIntent(
-                                found.plugin, PluginContracts.ACTION_APK);
+                        // Shared builder picks the entry's own public action
+                        // (generic hook or legacy APK action) plus plugin/hook/
+                        // contract and theme extras. The staged copy URI rides
+                        // in data + ClipData; the read+write intent flags carry
+                        // the Activity-lifetime grant, so no persistent
+                        // grantUriPermission call is made. The plugin rewrites
+                        // the same URI in place and the host copies the result.
+                        Intent extIntent = ExternalActions.intent(context, found,
+                                PluginContracts.ACTION_APK);
                         extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                        extIntent.putExtra(PluginContracts.EXTRA_PLUGIN_ID,
-                                found.plugin.pluginId);
+                        extIntent.setClipData(ClipData.newRawUri(
+                                "apk_plugin_stage", apkUri));
                         extIntent.putExtra(PluginContracts.EXTRA_APK_NAME,
                                 fileName);
                         extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
                                 | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        try {
-                            context.grantUriPermission(found.plugin.packageName, apkUri,
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                            | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        } catch (Exception ignored) {
-                        }
                         PluginTrust.ensureTrusted(
                                 context, found.plugin, () -> {
                                     List<String> choiceLabels = new ArrayList<>();
@@ -995,11 +997,17 @@ public class ApkInfoDialogs {
                                     final boolean[] selectedSign = {autoSignMeta != null && (autoSignMeta.equals("1") || autoSignMeta.equalsIgnoreCase("true"))};
                                     final Consumer<ActivityResult> runPlugin = result -> {
                                         try {
-                                            if (result.getResultCode() == Activity.RESULT_OK) {
-                                                Intent data = result.getData();
+                                            Intent data = result == null ? null : result.getData();
+                                            // The plugin result may carry its own
+                                            // installed theme; the parent handler
+                                            // gates on trust and asks before use.
+                                            if (result != null && result.getResultCode() == Activity.RESULT_OK) {
+                                                PluginThemeRequests.handle(context, found, data);
                                                 String outName = data == null ? null : data.getStringExtra(
                                                         PluginContracts.EXTRA_OUTPUT_NAME);
                                                 if (outName == null || outName.isEmpty()
+                                                        || outName.length() > 128 || outName.equals(".") || outName.equals("..")
+                                                        || outName.matches(".*[\\p{Cntrl}\\p{Cf}].*")
                                                         || outName.contains("/") || outName.contains("\\")) {
                                                     int dot = fileName.lastIndexOf('.');
                                                     outName = (dot > 0 ? fileName.substring(0, dot) : fileName) + "_killed.apk";
@@ -1020,6 +1028,7 @@ public class ApkInfoDialogs {
                                                 String msg = data == null ? null : data.getStringExtra(
                                                         PluginContracts.EXTRA_MESSAGE);
                                                 if (msg == null || msg.isEmpty()) msg = "Done";
+                                                msg = boundedPluginMessage(msg);
                                                 if (selectedSign[0]) {
                                                     final String m = msg;
                                                     File finalOutFile = outFile;
@@ -1072,7 +1081,9 @@ public class ApkInfoDialogs {
                                         new MaterialAlertDialogBuilder(context)
                                                 .setTitle(found.plugin.label != null ? String.valueOf(found.plugin.label) : found.title)
                                                 .setView(box)
-                                                .setNegativeButton(android.R.string.cancel, null)
+                                                .setOnCancelListener(d -> { try { staged.delete(); } catch (Exception ignored) {} })
+                                                .setNegativeButton(android.R.string.cancel,
+                                                        (d, w) -> { try { staged.delete(); } catch (Exception ignored) {} })
                                                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                                                     int ch = selectedChoice[0];
                                                     if (ch >= 0 && ch < choiceIds.size()) extIntent.putExtra("method", choiceIds.get(ch));
@@ -1081,7 +1092,7 @@ public class ApkInfoDialogs {
                                                 })
                                                 .show();
                                     }
-                                });
+                                }, () -> { try { staged.delete(); } catch (Exception ignored) {} });
                     } catch (Exception e2) {
                         try {
                             Extensions.showMessage(context, "Cannot share this APK with the plugin");
@@ -1276,6 +1287,21 @@ public class ApkInfoDialogs {
                 })
                 .setNegativeButton(android.R.string.cancel, null);
         builder.show();
+    }
+
+    /** Upper bound for plugin-supplied result text shown to the user. */
+    public static final int MAX_PLUGIN_MESSAGE_CHARS = 512;
+
+    /** Plugin-supplied result text is clamped before any UI display. */
+    public static String boundedPluginMessage(String message) {
+        if (message == null) return "";
+        try {
+            if (message.length() > MAX_PLUGIN_MESSAGE_CHARS) {
+                return message.substring(0, MAX_PLUGIN_MESSAGE_CHARS);
+            }
+        } catch (Exception ignored) {
+        }
+        return message;
     }
 
     @SuppressLint("RequestInstallPackagesPolicy")

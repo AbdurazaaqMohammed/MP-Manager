@@ -115,6 +115,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -131,6 +132,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.ApkToolsHandler;
 import io.github.abdurazaaqmohammed.ui.main.ChecksumDialogs;
 import io.github.abdurazaaqmohammed.ui.main.FileOperationsHelper;
+import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity;
@@ -149,6 +151,10 @@ import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.feature.apk.nativelib.ElfParser;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.plugins.ipc.HookRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginEvents;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -492,11 +498,15 @@ public class FileOpener {
                     if (zipFile != null && zipEntryPath != null)
                         context.noteArchiveParent(readable, zipFile, zipEntryPath);
                     context.loadZipFolderInPane(readable, "", pane1, true);
+                    notifyFileOpened(readable);
                 });
                 return;
             case BUILTIN_IMAGE:
                 if (file == null) return;
-                withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath()));
+                withReadableCopy(file, readable -> {
+                    context.openImageViewer(readable.getAbsolutePath());
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_HEX:
                 if (file == null || !file.isFile()) {
@@ -507,7 +517,10 @@ public class FileOpener {
                 return;
             case BUILTIN_MEDIA:
                 if (file == null) return;
-                withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath()));
+                withReadableCopy(file, readable -> {
+                    context.playMediaFile(readable.getAbsolutePath());
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_APK: {
                 if (fileName == null) return;
@@ -519,32 +532,41 @@ public class FileOpener {
                 withReadableCopy(file, readable -> {
                     if (apkTools != null) apkTools.showApkInfoDialog(readable, fileName);
                     else openWithDefaultOrDialog(readable, fileName);
+                    notifyFileOpened(readable);
                 });
                 return;
             }
             case BUILTIN_FONT:
                 if (file == null) return;
                 showFontPreview(file, fileName);
+                notifyFileOpened(file);
                 return;
             case BUILTIN_PDF:
                 if (file == null) return;
                 showPdfViewer(file, fileName);
+                notifyFileOpened(file);
                 return;
             case BUILTIN_HTML:
                 if (file == null) return;
                 showHtmlViewer(file, fileName);
+                notifyFileOpened(file);
                 return;
             case BUILTIN_ARSC:
                 if (file == null) return;
-                withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
+                withReadableCopy(file, readable -> {
+                    showArscOpenWith(readable, null, "resources.arsc");
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_XML:
                 if (file == null) return;
                 showXmlFunctions(file, fileName);
+                notifyFileOpened(file);
                 return;
             case BUILTIN_SIG:
                 if (file == null) return;
                 importSignature(file, fileName);
+                notifyFileOpened(file);
                 return;
             case BUILTIN_DRAWABLE:
                 if (file == null) return;
@@ -553,10 +575,12 @@ public class FileOpener {
                 } else {
                     DrawablePreviewDialog.showFile(context, file);
                 }
+                notifyFileOpened(file);
                 return;
             case BUILTIN_SQLITE:
                 if (file == null) return;
                 openSqliteViewer(file);
+                notifyFileOpened(file);
                 return;
             default:
                 return;
@@ -676,12 +700,21 @@ public class FileOpener {
     private boolean tryLaunchExternalDefault(Uri uri, File readable, String logicalName) {
         String actionMime = MimeUtil.getMimeTypeForAction(context, readable, logicalName);
         if (actionMime == null) actionMime = "application/octet-stream";
-        if (tryLaunchDefaultApp(uri, actionMime)) return true;
+        if (tryLaunchDefaultApp(uri, actionMime)) {
+            notifyFileOpened(readable);
+            return true;
+        }
         try {
             String real = MimeUtil.getRealMimeType(readable);
-            if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return true;
+            if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) {
+                notifyFileOpened(readable);
+                return true;
+            }
             String reported = MimeUtil.getReportedMimeType(context, readable, logicalName);
-            if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return true;
+            if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) {
+                notifyFileOpened(readable);
+                return true;
+            }
         } catch (Exception ignored) {
         }
         return false;
@@ -829,7 +862,10 @@ public class FileOpener {
                 target = firstPart;
             }
         }
-        withReadableCopy(target, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+        withReadableCopy(target, readable -> {
+            context.loadZipFolderInPane(readable, "", pane1, true);
+            notifyFileOpened(readable);
+        });
     }
 
     private void showAppsForMime(File file, String fileName, boolean useActual) {
@@ -1173,6 +1209,9 @@ public class FileOpener {
         }
     }
 
+    /** Upper bound of dialog.elf.extra options appended to the dialog. */
+    private static final int MAX_ELF_HOOK_OPTIONS = 16;
+
     private void showElfOptionsDialog(File file, String fileName, File originalFile) {
         boolean isArm64 = false;
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
@@ -1187,6 +1226,24 @@ public class FileOpener {
         optionsList.add(context.getString(R.string.hex_editor));
         optionsList.add(context.getString(R.string.text_editor));
         optionsList.add(context.getString(R.string.open_with));
+        final int builtinCount = optionsList.size();
+
+        // dialog.elf.extra hooks, appended after the built-in options. The
+        // parent registry applies order/hiding and filters disabled packages;
+        // only dedup and the dialog-friendliness cap are added here.
+        List<ExternalActions.Entry> elfHooks = new ArrayList<>();
+        try {
+            Set<String> seenHookIds = new HashSet<>();
+            for (ExternalActions.Entry e : HookRegistry.visibleEntries(context,
+                    PluginContracts.HOOK_ELF_DIALOG_EXTRA)) {
+                if (e == null || e.id == null || e.plugin == null) continue;
+                if (!seenHookIds.add(e.id)) continue;
+                if (elfHooks.size() >= MAX_ELF_HOOK_OPTIONS) break;
+                elfHooks.add(e);
+                optionsList.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
+            }
+        } catch (Exception ignored) {
+        }
 
         String[] options = optionsList.toArray(new String[0]);
         final boolean hasArm64 = isArm64;
@@ -1194,6 +1251,13 @@ public class FileOpener {
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle("ELF: " + fileName)
                 .setItems(options, (d, which) -> {
+                    if (which >= builtinCount) {
+                        int hookIndex = which - builtinCount;
+                        if (hookIndex >= 0 && hookIndex < elfHooks.size()) {
+                            runElfHookAction(elfHooks.get(hookIndex), file);
+                        }
+                        return;
+                    }
                     int action = which;
                     if (hasArm64) {
                         if (action == 0) {
@@ -1213,6 +1277,110 @@ public class FileOpener {
         dialogUtil.styleAlertDialog(dialog);
     }
 
+    /**
+     * Runs one dialog.elf.extra hook entry against the ELF. The file is
+     * resolved to a host-readable source, then shared strictly as a read-only
+     * content URI through the shared file-action runner (same code path as
+     * the file menu). When the source sits outside the FileProvider roots, a
+     * sanitized private cache copy is staged instead and deleted on the
+     * result, cancel included. Grants are intent-flag-only (one-shot,
+     * Android-managed); no raw path and no persistent grant crosses over.
+     */
+    private void runElfHookAction(ExternalActions.Entry entry, File file) {
+        if (entry == null || entry.plugin == null || file == null) return;
+        withReadableCopy(file, readable -> {
+            File fallbackCopy = null;
+            boolean handedOff = false;
+            try {
+                if (readable == null || !readable.isFile()) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+                List<File> files = new ArrayList<>();
+                files.add(readable);
+                List<Uri> uris = ExternalActions.stageUris(context, files);
+                if (uris == null || uris.size() != 1) {
+                    fallbackCopy = stagePrivateReadableCopy(readable);
+                    if (fallbackCopy == null || fileProviderUri(fallbackCopy) == null) {
+                        if (fallbackCopy != null) {
+                            try { fallbackCopy.delete(); } catch (Exception ignored) {}
+                        }
+                        Extensions.showMessage(context, R.string.cannot_open_item);
+                        return;
+                    }
+                    List<Uri> single = new ArrayList<>();
+                    single.add(fileProviderUri(fallbackCopy));
+                    uris = single;
+                }
+                final File cleanupCopy = fallbackCopy;
+                MainFilesArrayAdapter.runExternalFileAction(context, entry, files, uris,
+                        cleanupCopy == null ? null : () -> {
+                            try { cleanupCopy.delete(); } catch (Exception ignored) {}
+                        });
+                handedOff = true;
+            } catch (Exception ignored) {
+            } finally {
+                if (!handedOff && fallbackCopy != null) {
+                    try { fallbackCopy.delete(); } catch (Exception ignored) {}
+                }
+            }
+        });
+    }
+
+    /**
+     * Private cache staging fallback for sources the FileProvider cannot
+     * describe: collision-safe sanitized name, plain stream copy. The copy
+     * stays host-private until the shared runner shares it as a read-only
+     * content URI scoped to the clicked plugin, and the caller deletes it on
+     * result.
+     */
+    private File stagePrivateReadableCopy(File source) {
+        try {
+            if (source == null || !source.isFile()) return null;
+            String name = source.getName() == null ? "file" : source.getName();
+            name = name.replace('/', '_').replace('\\', '_');
+            String base = name;
+            String ext = "";
+            int dot = name.lastIndexOf('.');
+            if (dot >= 0) {
+                base = name.substring(0, dot);
+                ext = name.substring(dot);
+            }
+            if (base.length() > 48) base = base.substring(0, 48);
+            if (base.isEmpty()) base = "file";
+            File stageDir = new File(context.getCacheDir(), "elf_hook_stage");
+            if (!stageDir.exists() && !stageDir.mkdirs()) return null;
+            File out = new File(stageDir, "elf_stage_"
+                    + UUID.randomUUID().toString().substring(0, 8) + "_" + base + ext);
+            try (InputStream in = new FileInputStream(source);
+                 FileOutputStream fout = new FileOutputStream(out)) {
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) != -1) fout.write(buf, 0, n);
+            }
+            return out;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Fires the consented file.opened event after a user-initiated open has
+     * actually dispatched (viewer/editor/activity started). Metadata only:
+     * display name plus extension-derived mime; never a path, URI or file
+     * content. Placed at the leaf launch points so dialogs, menu builds and
+     * failed opens never emit.
+     */
+    private void notifyFileOpened(File opened) {
+        try {
+            String name = opened == null ? null : opened.getName();
+            if (name == null || name.isEmpty()) return;
+            PluginEvents.fileOpened(context, name,
+                    MimeUtil.getMimeTypeFromExtension(name));
+        } catch (Exception ignored) {
+        }
+    }
+
     private void openArm64Disassembler(File file, File originalFile) {
         File orig = originalFile != null ? originalFile : file;
         File stagedArchive = DexTools.archiveForStagedFile(orig.getPath());
@@ -1227,6 +1395,7 @@ public class FileOpener {
         } else {
             context.startActivity(intent);
         }
+        notifyFileOpened(file);
     }
 
     public static boolean isKernelFile(File file, String fileName) {
@@ -1708,6 +1877,7 @@ public class FileOpener {
                     // "Failure from system" (TransactionTooLargeException).
                     context.startActivity(rootAwareEditorIntent(readable, file)
                             .putExtra("path", readable.getPath()));
+                    notifyFileOpened(readable);
                 } catch (Exception e) {
                     new ErrorUtil(context).showError(e);
                 }
@@ -1719,13 +1889,18 @@ public class FileOpener {
                 } else {
                     context.openImageViewer(readable.getPath());
                 }
+                notifyFileOpened(readable);
             });
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
-            withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
+            withReadableCopy(file, readable -> {
+                context.playMediaFile(readable.getPath());
+                notifyFileOpened(readable);
+            });
         } else if ((ext.equals(".apk"))) {
             withReadableCopy(file, readable -> {
                 if (apkTools != null) apkTools.showApkInfoDialog(readable, fileName);
                 else openWithDefaultOrDialog(readable, fileName);
+                notifyFileOpened(readable);
             });
         } else {
             if (fileName.endsWith(".arsc")) {
@@ -2499,9 +2674,11 @@ public class FileOpener {
     }
 
     private void openTextEditorRootAware(File file) {
-        withReadableCopy(file, readable ->
-                context.startActivity(rootAwareEditorIntent(readable, file)
-                        .putExtra("path", readable.getAbsolutePath())));
+        withReadableCopy(file, readable -> {
+            context.startActivity(rootAwareEditorIntent(readable, file)
+                    .putExtra("path", readable.getAbsolutePath()));
+            notifyFileOpened(readable);
+        });
     }
 
     private void openTextEditorWithOriginal(File readable, File original) {
@@ -2512,6 +2689,7 @@ public class FileOpener {
         File orig = original != null ? original : readable;
         context.startActivity(rootAwareEditorIntent(readable, orig)
                 .putExtra("path", readable.getAbsolutePath()));
+        notifyFileOpened(readable);
     }
 
     private void openHexEditorWithOriginal(File readable, File original) {
@@ -2534,6 +2712,7 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.opened_with_root);
         }
         context.startActivity(i);
+        notifyFileOpened(readable);
     }
 
     /**
@@ -2573,6 +2752,7 @@ public class FileOpener {
                 Extensions.showMessage(context, R.string.opened_with_root);
             }
             context.startActivity(i);
+            notifyFileOpened(readable);
         });
     }
 

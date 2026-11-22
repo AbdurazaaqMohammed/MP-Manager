@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">플러그인 작업</string>
+    <string name="plugin_show_action">작업 표시</string>
+    <string name="plugin_hide_action">작업 숨기기</string>
+    <string name="plugin_move_up">위로 이동</string>
+    <string name="plugin_move_down">아래로 이동</string>
+    <string name="plugin_action_hidden">숨김: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">자동 이벤트 허용</string>
+    <string name="plugin_events_disable">자동 이벤트 사용 중지</string>
+    <string name="plugin_events_trust_first">자동 이벤트를 허용하기 전에 이 플러그인을 신뢰하세요.</string>
+    <string name="plugin_events_consent">MP Manager 사용 중에 %1$s이(가) 이러한 이벤트를 수신하도록 허용하시겠습니까?\n\n%2$s\n\n이벤트에는 현재 팔레트가 포함되며 file.opened의 경우 파일 표시 이름과 MIME 유형이 포함됩니다. 파일 콘텐츠, 파일 경로, 편집기 텍스트 또는 파일 액세스 권한 부여는 포함되지 않습니다. 이는 탭한 작업 실행 권한과는 별개입니다.</string>
+    <string name="plugin_apply_theme">플러그인 테마를 적용할까요?</string>
+    <string name="plugin_apply_theme_message">%1$s이(가) 설치된 테마 “%2$s”을(를) 요청합니다. MP Manager은(는) 검증된 모양 데이터만 가져옵니다. MP Manager에서는 플러그인 코드가 실행되지 않습니다.</string>
+    <string name="plugin_apply_theme_failed">요청한 플러그인 테마를 적용할 수 없습니다.</string>
+</resources>

@@ -52,6 +52,9 @@ import io.github.abdurazaaqmohammed.ui.common.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginHooks;
+import io.github.abdurazaaqmohammed.plugins.ipc.HookRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.HookOrder;
 import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
@@ -262,21 +265,39 @@ public class ToolsHubActivity extends BaseActivity {
                     PluginContracts.ACTION_SETTING_CONFIG,
                     PluginContracts.ACTION_FILE_MENU,
                     PluginContracts.ACTION_EDITOR,
-                    PluginContracts.ACTION_APK};
+                    PluginContracts.ACTION_APK,
+                    PluginContracts.ACTION_HOOK};
             for (String action : actions) {
-                for (PluginHost.ExternalPlugin p : PluginHost.query(this, action)) {
-                    boolean seen = false;
-                    for (PluginHost.ExternalPlugin q : installedExternal) {
-                        if (q.packageName.equals(p.packageName)) {
-                            seen = true;
-                            break;
-                        }
-                    }
-                    if (!seen) installedExternal.add(p);
+                for (PluginHost.ExternalPlugin p : PluginHost.queryIncludingDisabled(this, action)) {
+                    addExternalPlugin(p);
                 }
+            }
+            for (PluginHost.ExternalPlugin receiver : PluginHost.queryEventReceivers(this, true)) {
+                addExternalPlugin(receiver);
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private void addExternalPlugin(PluginHost.ExternalPlugin plugin) {
+        for (PluginHost.ExternalPlugin installed : installedExternal) {
+            if (installed.packageName.equals(plugin.packageName)) return;
+        }
+        installedExternal.add(plugin);
+    }
+
+    private List<String> externalEvents(String packageName) {
+        List<String> events = new ArrayList<>();
+        for (PluginHost.ExternalPlugin receiver : PluginHost.queryEventReceivers(this, true)) {
+            if (!packageName.equals(receiver.packageName)
+                    || !HookRegistry.supportsVersion(receiver)) continue;
+            for (String hook : PluginHooks.parse(
+                    io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.metaString(
+                            receiver, PluginContracts.META_HOOKS, ""))) {
+                if (PluginHooks.isEvent(hook) && !events.contains(hook)) events.add(hook);
+            }
+        }
+        return events;
     }
 
     private void showExternalDialog(PluginHost.ExternalPlugin ext) {
@@ -312,16 +333,61 @@ public class ToolsHubActivity extends BaseActivity {
             } else {
                 builder.setPositiveButton(R.string.tools_hub_trust, (d, w) -> {
                     String fresh = PluginHost.certDigest(this, ext.packageName);
-                    if (fresh != null) {
+                    if (fresh != null && fresh.equals(digest)) {
                         PluginHost.setTrusted(this, ext.packageName, fresh,
                                 String.valueOf(ext.label), true);
                         rebuildPacks();
                     }
                 });
             }
+            boolean hasHooks = !HookRegistry.packageEntries(this, ext.packageName).isEmpty();
+            List<String> events = externalEvents(ext.packageName);
+            if (hasHooks || !events.isEmpty()) {
+                LinearLayout controls = new LinearLayout(this);
+                controls.setOrientation(LinearLayout.VERTICAL);
+                int padding = Math.round(24 * getResources().getDisplayMetrics().density);
+                controls.setPadding(padding, 0, padding, 0);
+                if (hasHooks) {
+                    MaterialButton actions = new MaterialButton(this);
+                    actions.setText(R.string.plugin_hook_actions);
+                    actions.setOnClickListener(v -> HookOrder.showManager(this, ext.packageName));
+                    controls.addView(actions);
+                }
+                if (!events.isEmpty()) {
+                    MaterialButton notifications = new MaterialButton(this);
+                    notifications.setText(PluginHost.eventsEnabled(this, ext.packageName)
+                            ? R.string.plugin_events_disable : R.string.plugin_events_enable);
+                    notifications.setOnClickListener(v -> showEventConsent(ext, events));
+                    controls.addView(notifications);
+                }
+                builder.setView(controls);
+            }
             builder.show();
         } catch (Exception ignored) {
         }
+    }
+
+    private void showEventConsent(PluginHost.ExternalPlugin ext, List<String> events) {
+        if (PluginHost.eventsEnabled(this, ext.packageName)) {
+            PluginHost.setEventsEnabled(this, ext.packageName, false);
+            rebuildPacks();
+            return;
+        }
+        if (!PluginHost.isTrusted(this, ext.packageName)) {
+            Toast.makeText(this, R.string.plugin_events_trust_first, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String digest = PluginHost.certDigest(this, ext.packageName);
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.plugin_events_enable)
+                .setMessage(getString(R.string.plugin_events_consent,
+                        ext.packageName, String.join(", ", events)))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    if (digest != null && digest.equals(PluginHost.certDigest(this, ext.packageName))) {
+                        PluginHost.setEventsEnabled(this, ext.packageName, true, events);
+                        rebuildPacks();
+                    }
+                }).show();
     }
 
     private String shortDigest(String hex) {

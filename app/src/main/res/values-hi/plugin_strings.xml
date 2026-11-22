@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">प्लगइन कार्रवाइयाँ</string>
+    <string name="plugin_show_action">कार्रवाई दिखाएँ</string>
+    <string name="plugin_hide_action">कार्रवाई छिपाएँ</string>
+    <string name="plugin_move_up">ऊपर ले जाएँ</string>
+    <string name="plugin_move_down">नीचे ले जाएँ</string>
+    <string name="plugin_action_hidden">छिपाया गया: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">स्वचालित इवेंट की अनुमति दें</string>
+    <string name="plugin_events_disable">स्वचालित इवेंट अक्षम करें</string>
+    <string name="plugin_events_trust_first">स्वचालित इवेंट की अनुमति देने से पहले इस प्लगइन पर भरोसा करें।</string>
+    <string name="plugin_events_consent">क्या %1$s को MP Manager के उपयोग के दौरान ये इवेंट प्राप्त करने की अनुमति देनी है?\n\n%2$s\n\nइवेंट में सक्रिय पैलेट शामिल है और file.opened के लिए फ़ाइल का प्रदर्शन नाम और MIME प्रकार। इनमें फ़ाइल सामग्री, फ़ाइल पथ, संपादक टेक्स्ट या फ़ाइल एक्सेस अनुदान शामिल नहीं हैं। यह किसी दबाई गई कार्रवाई को चलाने की अनुमति से अलग है।</string>
+    <string name="plugin_apply_theme">प्लगइन थीम लागू करें?</string>
+    <string name="plugin_apply_theme_message">%1$s द्वारा इंस्टॉल की गई थीम “%2$s” का अनुरोध किया जाता है। MP Manager केवल सत्यापित रूप-रंग डेटा आयात करेगा। MP Manager में कोई प्लगइन कोड नहीं चलेगा।</string>
+    <string name="plugin_apply_theme_failed">अनुरोधित प्लगइन थीम लागू नहीं की जा सकी।</string>
+</resources>

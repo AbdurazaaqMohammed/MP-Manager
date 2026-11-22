@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Ações de plugins</string>
+    <string name="plugin_show_action">Mostrar ação</string>
+    <string name="plugin_hide_action">Ocultar ação</string>
+    <string name="plugin_move_up">Mover para cima</string>
+    <string name="plugin_move_down">Mover para baixo</string>
+    <string name="plugin_action_hidden">Oculto: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Permitir eventos automáticos</string>
+    <string name="plugin_events_disable">Desativar eventos automáticos</string>
+    <string name="plugin_events_trust_first">Confie neste plugin antes de permitir eventos automáticos.</string>
+    <string name="plugin_events_consent">Permitir que %1$s receba esses eventos enquanto o MP Manager é usado?\n\n%2$s\n\nOs eventos contêm a paleta ativa e, para file.opened, o nome de exibição do arquivo e o tipo MIME. Eles não incluem o conteúdo dos arquivos, caminhos de arquivos, texto do editor ou concessões de acesso a arquivos. Isso é separado da permissão para executar uma ação em que você toca.</string>
+    <string name="plugin_apply_theme">Aplicar tema do plugin?</string>
+    <string name="plugin_apply_theme_message">%1$s solicita o tema instalado “%2$s”. O MP Manager importará apenas dados de aparência validados. Nenhum código de plugin será executado no MP Manager.</string>
+    <string name="plugin_apply_theme_failed">Não foi possível aplicar o tema do plugin solicitado.</string>
+</resources>

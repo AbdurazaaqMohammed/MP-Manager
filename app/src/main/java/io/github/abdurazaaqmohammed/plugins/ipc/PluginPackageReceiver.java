@@ -33,7 +33,8 @@ public class PluginPackageReceiver extends BroadcastReceiver {
             // Sidebar/file-menu entry caches (60s TTL) would otherwise show a
             // stale plugin list after installs/uninstalls/replacements.
             try {
-                ExternalActions.clearSidebarCache();
+                ExternalActions.clearAllCaches();
+                HookRegistry.invalidate();
             } catch (Exception ignored) {
             }
         } catch (Exception ignored) {

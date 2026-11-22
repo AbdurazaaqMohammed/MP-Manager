@@ -73,8 +73,9 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
-import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginThemeRequests;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.*;
 
 /*
@@ -241,9 +242,11 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			
 			for (int i = 0; i < jsonArray.length(); i++) {
 				JSONObject item = jsonArray.getJSONObject(i);
-				// Only add if not disabled
+				// Only add if not disabled; dedup so a duplicated persisted id
+				// can never render two identical buttons.
 				if (!item.optBoolean("disabled", false)) {
-					menuItems.add(item.getString("id"));
+					String id = item.getString("id");
+					if (id != null && !menuItems.contains(id)) menuItems.add(id);
 				}
 			}
 			if (!menuItems.contains("id_btn") || !menuItems.contains("goto_id_btn")) {
@@ -386,8 +389,12 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		allButtons.put("customize_btn", new ButtonConfig(R.drawable.ic_setting_mt, R.string.customize));
 		
 		// Create buttons in JSON-defined order
+		int pluginButtons = 0;
 		for (String buttonId : menuItems) {
 			ButtonConfig config = allButtons.get(buttonId);
+			// Bound the floating toolbar: built-ins first, then at most
+			// MAX_PLUGIN_TOOLBAR_ITEMS third-party buttons.
+			if (config == null && pluginButtons >= MAX_PLUGIN_TOOLBAR_ITEMS) continue;
 			String pluginTitle = null;
 			int pluginIcon = 0;
 			if (config == null) {
@@ -410,6 +417,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 				if (ext == null && entry == null) {
 					continue; // Skip unknown button IDs
 				}
+				pluginButtons++;
 				if (ext != null) {
 					pluginTitle = ext.title() == null || ext.title().isEmpty() ? buttonId : ext.title();
 					pluginIcon = ExtensionIcons.resId(context, ext.iconName(), R.drawable.ic_setting_mt);
@@ -561,6 +569,12 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 
 	private Consumer<Intent> externalRunner;
 
+	/** Source entry of the plugin the last request was dispatched to. */
+	private ExternalActions.Entry pendingExternalEntry;
+
+	/** Upper bound of plugin buttons rendered in the floating toolbar. */
+	private static final int MAX_PLUGIN_TOOLBAR_ITEMS = 24;
+
 	/** Bridge for external editor plugins (set by the hosting fragment). */
 	public void setExternalRunner(Consumer<Intent> runner) {
 		this.externalRunner = runner;
@@ -595,10 +609,28 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			if (!(ctx instanceof Activity)) return false;
 			Activity activity = (Activity) ctx;
 			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
-			Intent intent = PluginHost.explicitIntent(entry.plugin,
+			String selected = handle.selectedText();
+			// The plugin result replaces the whole selection, so an oversized
+			// selection must not be sent truncated: decline the launch with a
+			// message instead of an unsafe transform. Selection and full text
+			// are capped independently (150 KiB each), keeping the combined
+			// extras well under the binder budget.
+			if (selected != null && selected.getBytes(StandardCharsets.UTF_8).length
+					> PluginContracts.MAX_FULL_TEXT_BYTES) {
+				try {
+					Extensions.showMessage(activity,
+							"Selection too large to send to the plugin");
+				} catch (Exception ignored) {
+				}
+				return true;
+			}
+			// Shared builder picks the entry's own public action (generic hook
+			// or legacy editor action) plus plugin/hook/contract and theme
+			// extras; the same selection/full-text bounds as before apply.
+			Intent intent = ExternalActions.intent(ctx, entry,
 					PluginContracts.ACTION_EDITOR);
-			intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, entry.plugin.pluginId);
-			intent.putExtra(PluginContracts.EXTRA_SELECTED_TEXT, handle.selectedText());
+			intent.putExtra(PluginContracts.EXTRA_SELECTED_TEXT,
+					selected == null ? "" : selected);
 			String full = handle.fullText();
 			if (full != null && full.getBytes(StandardCharsets.UTF_8).length
 					<= PluginContracts.MAX_FULL_TEXT_BYTES) {
@@ -606,6 +638,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			}
 			PluginTrust.ensureTrusted(activity, entry.plugin, () -> {
 				try {
+					pendingExternalEntry = entry;
 					externalRunner.accept(intent);
 				} catch (Exception ignored) {
 				}
@@ -619,7 +652,16 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	/** Applies an external editor plugin result (called by the fragment). */
 	public void applyExternalEditorResult(int resultCode, Intent data) {
 		try {
-			if (resultCode != Activity.RESULT_OK || data == null) return;
+			Context ctx = codeEditor.getContext();
+			ExternalActions.Entry source = pendingExternalEntry;
+			pendingExternalEntry = null;
+			// The plugin result may request its own installed theme; the
+			// parent handler gates on trust and asks before importing.
+            if (resultCode != Activity.RESULT_OK || data == null) return;
+            if (ctx instanceof Activity && source != null) {
+                PluginThemeRequests.handle((Activity) ctx, source, data);
+            }
+
 			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
 			if (data.hasExtra(PluginContracts.EXTRA_REPLACE_SELECTION)) {
 				String replacement = data.getStringExtra(PluginContracts.EXTRA_REPLACE_SELECTION);

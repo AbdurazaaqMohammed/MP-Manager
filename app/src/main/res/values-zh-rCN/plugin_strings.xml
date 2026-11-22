@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">插件操作</string>
+    <string name="plugin_show_action">显示操作</string>
+    <string name="plugin_hide_action">隐藏操作</string>
+    <string name="plugin_move_up">上移</string>
+    <string name="plugin_move_down">下移</string>
+    <string name="plugin_action_hidden">已隐藏：%1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">允许自动事件</string>
+    <string name="plugin_events_disable">停用自动事件</string>
+    <string name="plugin_events_trust_first">在允许自动事件之前，请先信任此插件。</string>
+    <string name="plugin_events_consent">是否允许 %1$s 在您使用 MP Manager 期间接收这些事件？\n\n%2$s\n\n事件包含当前使用的调色板；对于 file.opened，还包含文件的显示名称和 MIME 类型。事件不包含文件内容、文件路径、编辑器文本或文件访问授权。这与运行您点按的操作的权限是分开的。</string>
+    <string name="plugin_apply_theme">应用插件主题？</string>
+    <string name="plugin_apply_theme_message">%1$s 请求应用其已安装的主题“%2$s”。MP Manager 将仅导入经过验证的外观数据。MP Manager 中不会运行任何插件代码。</string>
+    <string name="plugin_apply_theme_failed">无法应用所请求的插件主题。</string>
+</resources>

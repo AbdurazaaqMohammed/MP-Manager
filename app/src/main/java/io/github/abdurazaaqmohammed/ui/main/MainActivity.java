@@ -44,6 +44,7 @@ import android.os.Process;
 import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -54,6 +55,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -105,8 +107,6 @@ import io.github.abdurazaaqmohammed.feature.files.SortFilterController;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.core.view.GravityCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.preference.PreferenceManager;
@@ -154,6 +154,12 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.github.abdurazaaqmohammed.feature.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.plugins.ipc.HookRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginEvents;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginThemeRequests;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.ui.main.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.ui.main.HistoryAdapter;
@@ -899,11 +905,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     /** Launches an external file-plugin activity; result goes to cb (may be null). */
     public void launchExternalFile(Intent intent, Consumer<ActivityResult> cb) {
+        if (pendingExternalFile != null) {
+            if (cb != null) cb.accept(null);
+            return;
+        }
         try {
             pendingExternalFile = cb;
             externalFileLauncher.launch(intent);
         } catch (Exception ignored) {
             pendingExternalFile = null;
+            if (cb != null) cb.accept(null);
         }
     }
 
@@ -921,21 +932,31 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     /** Launches an external APK-plugin activity; result goes to cb (may be null). */
     public void launchExternalApk(Intent intent, Consumer<ActivityResult> cb) {
+        if (pendingExternalApk != null) {
+            if (cb != null) cb.accept(null);
+            return;
+        }
         try {
             pendingExternalApk = cb;
             externalApkLauncher.launch(intent);
         } catch (Exception ignored) {
             pendingExternalApk = null;
+            if (cb != null) cb.accept(null);
         }
     }
 
     /** Launches an external setting config activity; result goes to cb (may be null). */
     public void launchExternalSetting(Intent intent, Consumer<ActivityResult> cb) {
+        if (pendingExternalSetting != null) {
+            if (cb != null) cb.accept(null);
+            return;
+        }
         try {
             pendingExternalSetting = cb;
             externalSettingLauncher.launch(intent);
         } catch (Exception ignored) {
             pendingExternalSetting = null;
+            if (cb != null) cb.accept(null);
         }
     }
 
@@ -951,40 +972,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }});
 
     private void setupSystemBars() {
-        // Global insets are applied in BaseActivity.
-
-
-        boolean lightBars;
-        String pluginId = ThemeRegistry.appliedBaseId(this);
-        if (pluginId == null || BuiltInThemes.SYSTEM_DEFAULT_ID.equals(pluginId)) {
-            lightBars = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                    == Configuration.UI_MODE_NIGHT_NO;
-        } else {
-            lightBars = BuiltInThemes.LIGHT_ID.equals(pluginId) || theme == R.style.Theme_MyApp_Light;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            int surfaceColor = BuiltInThemes.BLACK_ID.equals(pluginId) ? Color.BLACK : MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
-            getWindow().setStatusBarColor(ThemeRegistry.packColor(this, "status_bar", surfaceColor));
-            // Light navigation icons are only renderable on API 26+ (flag) and
-            // reliably on 27+; below that a surface-colored bar shows white
-            // icons on white, so use a dark bar to keep the buttons visible.
-            boolean lightNavSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1;
-            if (lightBars && !lightNavSupported) {
-                getWindow().setNavigationBarColor(MaterialColors.getColor(this,
-                        com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
-            } else {
-                getWindow().setNavigationBarColor(ThemeRegistry.packColor(this, "nav_bar", surfaceColor));
-            }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
-                // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
-                int darkBar = MaterialColors.getColor(this, android.R.attr.colorPrimary, surfaceColor);
-                getWindow().setStatusBarColor(darkBar);
-                getWindow().setNavigationBarColor(darkBar);
-            }
-        }
-        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        controller.setAppearanceLightStatusBars(lightBars);
-        controller.setAppearanceLightNavigationBars(lightBars);
+        // Global insets are applied in BaseActivity; status/navigation bar
+        // tinting and light-icon appearance come from the shared ThemeRegistry
+        // implementation so every activity renders bars identically.
+        ThemeRegistry.applySystemBars(this);
     }
 
     /**
@@ -1458,6 +1449,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             View moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
             moreOptionsMenu.setOnLongClickListener(this::showMsgOnLongPress);
             moreOptionsMenu.setOnClickListener(v -> toggleRightMenuDrawer());
+            setupPluginToolbarButton();
 
             View upButton = findViewById(R.id.upButton);
             upButton.setOnLongClickListener(this::showMsgOnLongPress);
@@ -1484,6 +1476,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 // it ships GONE so building it eagerly only delayed first frame.
                 setupNavigationButtons();
                 refreshSidebar(getSidebarSectionOrder());
+                // Main UI is attached: fire the once-per-process launch event
+                // (guard lives in PluginEvents) and evaluate the toolbar hook.
+                try {
+                    PluginEvents.appLaunched(getApplicationContext());
+                } catch (Exception ignored) {
+                }
+                refreshPluginToolbarButton();
                 boolean restored = false;
                 if (TextUtils.isEmpty(locate) && startupState != null
                         && (startupState.containsKey("pane1_path") || startupState.containsKey("pane2_path"))) {
@@ -2723,6 +2722,132 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         return false;
     }
 
+    // ---------- native toolbar.actions hook surface ----------
+
+    /** Programmatic top-bar button hosting the generic toolbar.actions hook. */
+    private ImageView pluginToolbarButton;
+
+    /**
+     * Adds the native plugin-actions button to the top toolbar: metrics
+     * identical to the more-options icon (44dp, 10dp padding), inserted
+     * immediately before it so existing icons are never moved, restyled or
+     * removed. Ships GONE; {@link #refreshPluginToolbarButton()} makes it
+     * visible only when toolbar.actions hook entries exist, so hosts without
+     * such plugins render the toolbar exactly as before.
+     */
+    private void setupPluginToolbarButton() {
+        try {
+            LinearLayout topBar = findViewById(R.id.topBar);
+            View moreOptions = findViewById(R.id.moreOptionsMenu);
+            if (topBar == null || moreOptions == null || pluginToolbarButton != null) return;
+            float density = getResources().getDisplayMetrics().density;
+            ImageView button = new ImageView(this);
+            button.setDuplicateParentStateEnabled(false);
+            int pad = (int) (10 * density + 0.5f);
+            button.setPadding(pad, pad, pad, pad);
+            button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            TypedValue outValue = new TypedValue();
+            getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+            if (outValue.resourceId != 0) button.setBackgroundResource(outValue.resourceId);
+            button.setImageResource(R.drawable.tools_24px);
+            button.setContentDescription(getString(R.string.plugin_hook_actions));
+            button.setVisibility(View.GONE);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    (int) (44 * density + 0.5f), (int) (44 * density + 0.5f));
+            int index = topBar.indexOfChild(moreOptions);
+            if (index < 0) index = topBar.getChildCount();
+            topBar.addView(button, index, lp);
+            button.setOnClickListener(v -> showToolbarActionsMenu(v));
+            button.setOnLongClickListener(this::showMsgOnLongPress);
+            pluginToolbarButton = button;
+        } catch (Exception ignored) {
+            pluginToolbarButton = null;
+        }
+    }
+
+    /**
+     * Visibility refresh driven off the UI thread: discovery goes through the
+     * parent registry (cached, bounded, PackageManager only on a worker), then
+     * the view update posts back to the main thread. Called from onResume so
+     * installs/uninstalls are picked up when the host is shown again.
+     */
+    public void refreshPluginToolbarButton() {
+        new Thread(() -> {
+            final boolean hasEntries;
+            try {
+                hasEntries = !HookRegistry.visibleEntries(this,
+                        PluginContracts.HOOK_TOOLBAR_ACTIONS).isEmpty();
+            } catch (Exception e) {
+                return;
+            }
+            handler.post(() -> {
+                try {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (pluginToolbarButton == null) setupPluginToolbarButton();
+                    if (pluginToolbarButton != null) {
+                        pluginToolbarButton.setVisibility(
+                                hasEntries ? View.VISIBLE : View.GONE);
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+        }, "plugin-toolbar-lookup").start();
+    }
+
+    /**
+     * Native popup listing toolbar.actions hook entries. Order, hiding and
+     * disabled-package filtering already come from the parent registry, so the
+     * popup only dedups by stable id and dispatches via
+     * {@link ExternalActions#intent} (hook's own public action plus
+     * plugin/hook/contract extras — never raw paths or legacy string actions).
+     */
+    private void showToolbarActionsMenu(View anchor) {
+        try {
+            List<ExternalActions.Entry> entries =
+                    HookRegistry.visibleEntries(this, PluginContracts.HOOK_TOOLBAR_ACTIONS);
+            if (entries == null || entries.isEmpty()) return;
+            final List<ExternalActions.Entry> shown = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
+            for (ExternalActions.Entry entry : entries) {
+                if (entry == null || entry.id == null || entry.plugin == null) continue;
+                if (!seen.add(entry.id)) continue;
+                shown.add(entry);
+            }
+            if (shown.isEmpty()) return;
+            PopupMenu popup = new PopupMenu(this, anchor);
+            Menu menu = popup.getMenu();
+            for (int i = 0; i < shown.size(); i++) {
+                ExternalActions.Entry entry = shown.get(i);
+                String label = entry.title == null || entry.title.isEmpty()
+                        ? entry.id : entry.title;
+                final int index = i;
+                MenuItem item = menu.add(0, i, i, label);
+                item.setOnMenuItemClickListener(
+                        menuItem -> {
+                            dispatchHookEntry(shown.get(index));
+                            return true;
+                        });
+            }
+            popup.show();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Consented launch of one hook entry; optional theme apply on its result. */
+    private void dispatchHookEntry(ExternalActions.Entry entry) {
+        if (entry == null || entry.plugin == null) return;
+        try {
+            Intent intent = ExternalActions.intent(this, entry, PluginContracts.ACTION_HOOK);
+            PluginTrust.ensureTrusted(this, entry.plugin, () ->
+                    launchExternalFile(intent, result -> {
+                        if (result != null && result.getResultCode() == RESULT_OK) {
+                            PluginThemeRequests.handle(this, entry, result.getData());
+                        }
+                    }));
+        } catch (Exception ignored) {
+        }
+    }
+
     public void reloadCurrentFolder() {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             handler.post(this::reloadCurrentFolder);
@@ -3394,6 +3519,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         super.onResume();
         isBackPressedToExit = false;
         handler.removeCallbacks(resetExitPrompt);
+        // Toolbar hook entries may have changed (install/uninstall while away).
+        try {
+            refreshPluginToolbarButton();
+        } catch (Exception ignored) {
+        }
         if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
             isRightDrawerOpen = true;
             startBatteryMonitor();

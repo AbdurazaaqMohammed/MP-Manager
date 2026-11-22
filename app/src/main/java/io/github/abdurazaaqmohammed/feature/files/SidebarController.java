@@ -65,7 +65,6 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
-import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.feature.system.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.feature.system.ToolRunnerActivity;
@@ -772,15 +771,21 @@ public class SidebarController {
         activity.startActivity(intent);
     }
 
-    /** Launches an external (out-of-process) sidebar plugin after consent. */
+    /**
+     * Launches an external (out-of-process) sidebar plugin after consent.
+     * Covers both legacy SIDEBAR_OPEN entries and generic sidebar.footer hook
+     * entries: the shared builder picks the entry's own public action plus
+     * plugin/hook/contract and theme extras; hook ids carry the stable
+     * {@code ext:pkg/pluginId@sidebar.footer} form, so saved drag order and
+     * hidden state apply to hook rows like built-ins.
+     */
     private void openExternalSidebar(String id) {
         try {
             ExternalActions.Entry found = ExternalActions.findById(
                     ExternalActions.sidebarEntries(activity), id);
             if (found == null) return;
-            Intent intent = PluginHost.explicitIntent(found.plugin,
+            Intent intent = ExternalActions.intent(activity, found,
                     PluginContracts.ACTION_SIDEBAR_OPEN);
-            intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, found.plugin.pluginId);
             PluginTrust.ensureTrusted(activity, found.plugin, () -> {
                 try {
                     activity.startActivity(intent);

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Plugin-Aktionen</string>
+    <string name="plugin_show_action">Aktion anzeigen</string>
+    <string name="plugin_hide_action">Aktion ausblenden</string>
+    <string name="plugin_move_up">Nach oben</string>
+    <string name="plugin_move_down">Nach unten</string>
+    <string name="plugin_action_hidden">Ausgeblendet: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Automatische Ereignisse zulassen</string>
+    <string name="plugin_events_disable">Automatische Ereignisse deaktivieren</string>
+    <string name="plugin_events_trust_first">Vertraue diesem Plugin, bevor du automatische Ereignisse zulässt.</string>
+    <string name="plugin_events_consent">%1$s erlauben, diese Ereignisse zu empfangen, während du MP Manager verwendest?\n\n%2$s\n\nEreignisse enthalten die aktive Farbpalette und bei file.opened den Anzeigenamen und den MIME-Typ der Datei. Sie enthalten keine Dateiinhalte, Dateipfade, Editortexte oder Dateizugriffsberechtigungen. Das ist unabhängig von der Berechtigung, eine angetippte Aktion auszuführen.</string>
+    <string name="plugin_apply_theme">Plugin-Design anwenden?</string>
+    <string name="plugin_apply_theme_message">%1$s fordert das installierte Design „%2$s“ an. MP Manager importiert ausschließlich validierte Erscheinungsdaten. In MP Manager wird kein Plugin-Code ausgeführt.</string>
+    <string name="plugin_apply_theme_failed">Das angeforderte Plugin-Design konnte nicht angewendet werden.</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Tindakan plugin</string>
+    <string name="plugin_show_action">Tampilkan tindakan</string>
+    <string name="plugin_hide_action">Sembunyikan tindakan</string>
+    <string name="plugin_move_up">Pindah ke atas</string>
+    <string name="plugin_move_down">Pindah ke bawah</string>
+    <string name="plugin_action_hidden">Disembunyikan: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Izinkan peristiwa otomatis</string>
+    <string name="plugin_events_disable">Nonaktifkan peristiwa otomatis</string>
+    <string name="plugin_events_trust_first">Percayai plugin ini sebelum mengizinkan peristiwa otomatis.</string>
+    <string name="plugin_events_consent">Izinkan %1$s menerima peristiwa ini saat MP Manager digunakan?\n\n%2$s\n\nPeristiwa berisi palet aktif dan, untuk file.opened, nama tampilan file dan jenis MIME. Peristiwa tidak berisi isi file, jalur file, teks editor, atau izin akses file. Ini terpisah dari izin untuk menjalankan tindakan yang diketuk.</string>
+    <string name="plugin_apply_theme">Terapkan tema plugin?</string>
+    <string name="plugin_apply_theme_message">%1$s meminta tema terpasangnya “%2$s”. MP Manager hanya akan mengimpor data tampilan yang tervalidasi. Tidak ada kode plugin yang dijalankan di MP Manager.</string>
+    <string name="plugin_apply_theme_failed">Tidak dapat menerapkan tema plugin yang diminta.</string>
+</resources>

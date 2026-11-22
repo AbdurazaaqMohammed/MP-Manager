@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Действия плагинов</string>
+    <string name="plugin_show_action">Показать действие</string>
+    <string name="plugin_hide_action">Скрыть действие</string>
+    <string name="plugin_move_up">Переместить вверх</string>
+    <string name="plugin_move_down">Переместить вниз</string>
+    <string name="plugin_action_hidden">Скрыто: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Разрешить автоматические события</string>
+    <string name="plugin_events_disable">Отключить автоматические события</string>
+    <string name="plugin_events_trust_first">Доверяйте этому плагину, прежде чем разрешать автоматические события.</string>
+    <string name="plugin_events_consent">Разрешить %1$s получать эти события, пока используется MP Manager?\n\n%2$s\n\nСобытия содержат активную палитру, а для file.opened — отображаемое имя файла и тип MIME. Они не содержат содержимого файлов, путей к файлам, текста редактора или прав доступа к файлам. Это отдельно от разрешения запускать действие, на которое вы нажимаете.</string>
+    <string name="plugin_apply_theme">Применить тему плагина?</string>
+    <string name="plugin_apply_theme_message">%1$s запрашивает установленную тему «%2$s». MP Manager импортирует только проверенные данные оформления. Код плагина не будет выполняться в MP Manager.</string>
+    <string name="plugin_apply_theme_failed">Не удалось применить запрошенную тему плагина.</string>
+</resources>

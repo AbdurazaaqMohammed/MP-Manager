@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">การทำงานของปลั๊กอิน</string>
+    <string name="plugin_show_action">แสดงการทำงาน</string>
+    <string name="plugin_hide_action">ซ่อนการทำงาน</string>
+    <string name="plugin_move_up">ย้ายขึ้น</string>
+    <string name="plugin_move_down">ย้ายลง</string>
+    <string name="plugin_action_hidden">ซ่อนอยู่: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">อนุญาตเหตุการณ์อัตโนมัติ</string>
+    <string name="plugin_events_disable">ปิดเหตุการณ์อัตโนมัติ</string>
+    <string name="plugin_events_trust_first">ไว้ใจปลั๊กอินนี้ก่อนจึงจะอนุญาตเหตุการณ์อัตโนมัติ</string>
+    <string name="plugin_events_consent">อนุญาตให้ %1$s รับเหตุการณ์เหล่านี้ขณะใช้ MP Manager หรือไม่\n\n%2$s\n\nเหตุการณ์ประกอบด้วยพาเลตที่ใช้งานอยู่ และสำหรับ file.opened จะรวมชื่อที่แสดงของไฟล์และประเภท MIME โดยไม่มีเนื้อหาไฟล์ เส้นทางไฟล์ ข้อความในตัวแก้ไข หรือสิทธิ์การเข้าถึงไฟล์ ซึ่งแยกจากการอนุญาตให้เรียกใช้การทำงานที่คุณแตะ</string>
+    <string name="plugin_apply_theme">ใช้ธีมของปลั๊กอินหรือไม่</string>
+    <string name="plugin_apply_theme_message">%1$s ขอธีมที่ติดตั้งไว้ “%2$s” MP Manager จะนำเข้าเฉพาะข้อมูลลักษณะที่ผ่านการตรวจสอบเท่านั้น และจะไม่มีโค้ดปลั๊กอินทำงานใน MP Manager</string>
+    <string name="plugin_apply_theme_failed">ไม่สามารถใช้ธีมของปลั๊กอินที่ขอได้</string>
+</resources>

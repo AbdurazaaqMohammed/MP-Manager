@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">اقدام‌های افزونه</string>
+    <string name="plugin_show_action">نمایش اقدام</string>
+    <string name="plugin_hide_action">پنهان کردن اقدام</string>
+    <string name="plugin_move_up">انتقال به بالا</string>
+    <string name="plugin_move_down">انتقال به پایین</string>
+    <string name="plugin_action_hidden">پنهان‌شده: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">اجازه دادن به رویدادهای خودکار</string>
+    <string name="plugin_events_disable">غیرفعال کردن رویدادهای خودکار</string>
+    <string name="plugin_events_trust_first">پیش از اجازه دادن به رویدادهای خودکار، به این افزونه اعتماد کنید.</string>
+    <string name="plugin_events_consent">آیا اجازه می‌دهید %1$s هنگام استفاده از MP Manager این رویدادها را دریافت کند؟\n\n%2$s\n\nرویدادها شامل پالت رنگ فعال و برای file.opened نام نمایشی فایل و نوع MIME هستند. آن‌ها شامل محتوای فایل‌ها، مسیر فایل‌ها، متن ویرایشگر یا مجوزهای دسترسی به فایل نیستند. این جدا از اجازه اجرای اقدامی است که روی آن ضربه می‌زنید.</string>
+    <string name="plugin_apply_theme">اعمال تم افزونه؟</string>
+    <string name="plugin_apply_theme_message">%1$s تم نصب‌شده «%2$s» را درخواست می‌کند. MP Manager فقط داده‌های ظاهری اعتبارسنجی‌شده را وارد می‌کند. هیچ کد افزونه‌ای در MP Manager اجرا نمی‌شود.</string>
+    <string name="plugin_apply_theme_failed">تم درخواستی افزونه اعمال نشد.</string>
+</resources>

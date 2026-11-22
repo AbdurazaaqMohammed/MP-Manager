@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_hook_actions">Eklenti işlemleri</string>
+    <string name="plugin_show_action">İşlemi göster</string>
+    <string name="plugin_hide_action">İşlemi gizle</string>
+    <string name="plugin_move_up">Yukarı taşı</string>
+    <string name="plugin_move_down">Aşağı taşı</string>
+    <string name="plugin_action_hidden">Gizli: %1$s — %2$s</string>
+    <string name="plugin_action_slot">%1$s — %2$s</string>
+    <string name="plugin_events_enable">Otomatik etkinliklere izin ver</string>
+    <string name="plugin_events_disable">Otomatik etkinlikleri kapat</string>
+    <string name="plugin_events_trust_first">Otomatik etkinliklere izin vermeden önce bu eklentiye güvenin.</string>
+    <string name="plugin_events_consent">%1$s, MP Manager kullanılırken bu etkinlikleri alabilir mi?\n\n%2$s\n\nEtkinlikler etkin paleti ve file.opened için dosyanın görünen adını ve MIME türünü içerir. Dosya içerikleri, dosya yolları, düzenleyici metni veya dosya erişim izinleri içermezler. Bu, dokunduğunuz bir işlemi çalıştırma izninden ayrıdır.</string>
+    <string name="plugin_apply_theme">Eklenti teması uygulansın mı?</string>
+    <string name="plugin_apply_theme_message">%1$s, yüklü olan “%2$s” temasını istiyor. MP Manager yalnızca doğrulanmış görünüm verilerini içe aktarır. MP Manager içinde hiçbir eklenti kodu çalıştırılmaz.</string>
+    <string name="plugin_apply_theme_failed">İstenen eklenti teması uygulanamadı.</string>
+</resources>
