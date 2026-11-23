@@ -372,7 +372,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 return Unit.INSTANCE;
             });
             symbolInputView.setOnOpenSettingsListener(() -> {
-                openSymbolDrawerScreen(true);
+                openSymbolDrawerScreen(false);
                 return Unit.INSTANCE;
             });
             symbolInputView.setOnSymbolActionListener((symbol, longPress) -> {
