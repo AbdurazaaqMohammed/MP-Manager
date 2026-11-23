@@ -293,11 +293,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	}
 	
 	public static boolean showIndentGuide(Context context) {
-		return getPrefs(context).getBoolean(KEY_SHOW_INDENT, true);
+		return getPrefs(context).getBoolean("pref_show_indent_guides", getPrefs(context).getBoolean(KEY_SHOW_INDENT, true));
 	}
 	
 	public static boolean showLineNumbers(Context context) {
-		return getPrefs(context).getBoolean(KEY_SHOW_LINE_NUM, true);
+		return getPrefs(context).getBoolean("pref_show_line_numbers", getPrefs(context).getBoolean(KEY_SHOW_LINE_NUM, true));
 	}
 	
 	public static boolean shouldEditAiPrompt(Context context) {

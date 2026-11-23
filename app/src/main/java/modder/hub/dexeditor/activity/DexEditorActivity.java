@@ -906,7 +906,8 @@ public class DexEditorActivity extends BaseActivity {
             MenuItem wrapItem = menu.findItem(R.id.wrap_text);
             if (wrapItem != null) {
                 wrapItem.setVisible(!isGraph);
-                wrapItem.setChecked(getSharedPreferences("editor_prefs", MODE_PRIVATE).getBoolean("wrap_text", false));
+                android.content.SharedPreferences ep = getSharedPreferences("editor_prefs", MODE_PRIVATE);
+                wrapItem.setChecked(ep.getBoolean("wrap_text", ep.getBoolean("pref_word_wrap", false)));
             }
             handleUndoRedo();
         }
@@ -1036,8 +1037,10 @@ public class DexEditorActivity extends BaseActivity {
                 return true;
             } else if (id == R.id.wrap_text) {
                 item.setChecked(!item.isChecked());
-                editor.setWordwrap(item.isChecked());
-                getSharedPreferences("editor_prefs", MODE_PRIVATE).edit().putBoolean("wrap_text", item.isChecked()).apply();
+                android.content.SharedPreferences ep = getSharedPreferences("editor_prefs", MODE_PRIVATE);
+                boolean antiWordBreak = ep.getBoolean("pref_wrap_without_splitting_words", true);
+                editor.setWordwrap(item.isChecked(), antiWordBreak, true);
+                ep.edit().putBoolean("wrap_text", item.isChecked()).putBoolean("pref_word_wrap", item.isChecked()).apply();
                 return true;
             } else if (id == R.id.read_only) {
                 tab.isReadOnly = !tab.isReadOnly;
