@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurface">
+
+    <!-- Crescent Moon -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9.37,5.51A7.35,7.35 0 0,0 9.1,7.5A7.5,7.5 0 0,0 16.6,15A7.35,7.35 0 0,0 18.59,14.73A8.5,8.5 0 1,1 9.37,5.51Z"/>
+
+    <!-- Sparkle Star 1 -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M19,3L19.7,4.5L21.2,5.2L19.7,5.9L19,7.4L18.3,5.9L16.8,5.2L18.3,4.5Z"/>
+
+    <!-- Sparkle Star 2 -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M15,1.5L15.4,2.5L16.4,2.9L15.4,3.3L15,4.3L14.6,3.3L13.6,2.9L14.6,2.5Z"/>
+
+</vector>

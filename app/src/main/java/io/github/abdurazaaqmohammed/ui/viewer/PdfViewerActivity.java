@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.ui.viewer;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -8,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +19,8 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -31,6 +36,8 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.card.MaterialCardView;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
@@ -40,15 +47,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Full-screen horizontal PDF viewer with page swiping, open-with dispatch,
- * and persistent eye-comfort warm reading mode.
+ * High-performance PDF Viewer Activity featuring:
+ * - Edge-to-edge fit-width rendering with two-finger pinch-to-zoom (in/out) and double-tap zoom.
+ * - Hardware-accelerated Night Mode (Invert Matrix) turning background AMOLED black and blue headers gold.
+ * - Persistent Eye Protection reading mode with floating action button (FAB) and feedback pill.
+ * - Immersive fullscreen toggle, file sharing, open-with, and marquee title display.
  */
 public class PdfViewerActivity extends BaseActivity {
 
     public static final String EXTRA_FILE_PATH = "file_path";
     public static final String EXTRA_FILE_NAME = "file_name";
+
+    private static final String PREF_NIGHT_MODE = "pdf_night_mode_enabled";
+    private static final String PREF_EYE_PROTECTION = "pdf_eye_protection_enabled";
     private static final String PREF_EYE_COMFORT_INTENSITY = "pdf_eye_comfort_intensity";
-    private static final long EYE_COMFORT_AUTO_DISMISS_MS = 2000L;
+    private static final long EYE_COMFORT_AUTO_DISMISS_MS = 2500L;
+    private static final long PILL_AUTO_DISMISS_MS = 1800L;
 
     private File pdfFile;
     private ParcelFileDescriptor pfd;
@@ -60,18 +74,32 @@ public class PdfViewerActivity extends BaseActivity {
     private Toolbar toolbar;
     private TextView toolbarTitle;
     private TextView pageInfo;
-    private ImageButton btnEyeComfort;
+    private ImageButton btnNightMode;
+    private ImageButton btnShare;
+    private ImageButton btnFullscreen;
     private ImageButton btnOpenWith;
+
+    private View contentArea;
     private ViewPager2 viewPager;
+    private PdfPageAdapter pageAdapter;
+
     private View eyeComfortOverlay;
-    private View eyeComfortBar;
+    private MaterialCardView fabEyeComfort;
+    private MaterialCardView eyeComfortPill;
+    private TextView eyeComfortPillText;
+    private MaterialCardView eyeComfortBar;
     private SeekBar eyeComfortSeekBar;
     private TextView eyeComfortPercent;
 
     private SharedPreferences prefs;
-    private int eyeComfortIntensity = 0;
-    private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
-    private final Runnable hideEyeComfortRunnable = this::hideEyeComfortBar;
+    private boolean isNightMode = false;
+    private boolean isEyeProtection = false;
+    private int eyeComfortIntensity = 30;
+    private boolean isFullscreen = false;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable hideEyeComfortBarRunnable = this::hideEyeComfortBar;
+    private final Runnable hidePillRunnable = this::hideEyePill;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -129,8 +157,9 @@ public class PdfViewerActivity extends BaseActivity {
         }
 
         initViews(name);
-        setupEyeComfort();
+        loadPreferences();
         setupViewPager();
+        setupActions();
     }
 
     private void initViews(String fileName) {
@@ -142,28 +171,59 @@ public class PdfViewerActivity extends BaseActivity {
         toolbarTitle.setSelected(true);
 
         pageInfo = findViewById(R.id.pageInfo);
-        btnEyeComfort = findViewById(R.id.btnEyeComfort);
+        btnNightMode = findViewById(R.id.btnNightMode);
+        btnShare = findViewById(R.id.btnShare);
+        btnFullscreen = findViewById(R.id.btnFullscreen);
         btnOpenWith = findViewById(R.id.btnOpenWith);
+
+        contentArea = findViewById(R.id.contentArea);
         viewPager = findViewById(R.id.viewPager);
         eyeComfortOverlay = findViewById(R.id.eyeComfortOverlay);
+
+        fabEyeComfort = findViewById(R.id.fabEyeComfort);
+        eyeComfortPill = findViewById(R.id.eyeComfortPill);
+        eyeComfortPillText = findViewById(R.id.eyeComfortPillText);
+
         eyeComfortBar = findViewById(R.id.eyeComfortBar);
         eyeComfortSeekBar = findViewById(R.id.eyeComfortSeekBar);
         eyeComfortPercent = findViewById(R.id.eyeComfortPercent);
-
-        btnOpenWith.setOnClickListener(v -> openWithExternalApp());
     }
 
-    private void setupEyeComfort() {
+    private void loadPreferences() {
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        eyeComfortIntensity = prefs.getInt(PREF_EYE_COMFORT_INTENSITY, 0);
-        applyEyeComfort(eyeComfortIntensity);
+        isNightMode = prefs.getBoolean(PREF_NIGHT_MODE, false);
+        isEyeProtection = prefs.getBoolean(PREF_EYE_PROTECTION, false);
+        eyeComfortIntensity = prefs.getInt(PREF_EYE_COMFORT_INTENSITY, 30);
 
-        btnEyeComfort.setOnClickListener(v -> {
+        applyNightMode(isNightMode, false);
+        applyEyeProtection(isEyeProtection);
+    }
+
+    private void setupActions() {
+        btnNightMode.setOnClickListener(v -> {
+            isNightMode = !isNightMode;
+            prefs.edit().putBoolean(PREF_NIGHT_MODE, isNightMode).apply();
+            applyNightMode(isNightMode, true);
+        });
+
+        btnShare.setOnClickListener(v -> sharePdfFile());
+        btnFullscreen.setOnClickListener(v -> toggleFullscreen());
+        btnOpenWith.setOnClickListener(v -> openWithExternalApp());
+
+        fabEyeComfort.setOnClickListener(v -> {
+            isEyeProtection = !isEyeProtection;
+            prefs.edit().putBoolean(PREF_EYE_PROTECTION, isEyeProtection).apply();
+            applyEyeProtection(isEyeProtection);
+            showEyePill(isEyeProtection ? "Eye protection on" : "Eye protection off");
+        });
+
+        fabEyeComfort.setOnLongClickListener(v -> {
             if (eyeComfortBar.getVisibility() == View.VISIBLE) {
                 hideEyeComfortBar();
             } else {
                 showEyeComfortBar();
             }
+            return true;
         });
 
         eyeComfortSeekBar.setProgress(eyeComfortIntensity);
@@ -173,8 +233,10 @@ public class PdfViewerActivity extends BaseActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 eyeComfortIntensity = progress;
-                applyEyeComfort(progress);
                 eyeComfortPercent.setText(progress + "%");
+                if (isEyeProtection) {
+                    updateEyeOverlayAlpha(progress);
+                }
                 if (fromUser) {
                     prefs.edit().putInt(PREF_EYE_COMFORT_INTENSITY, progress).apply();
                     resetEyeComfortDismissTimer();
@@ -183,7 +245,7 @@ public class PdfViewerActivity extends BaseActivity {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                autoHideHandler.removeCallbacks(hideEyeComfortRunnable);
+                handler.removeCallbacks(hideEyeComfortBarRunnable);
             }
 
             @Override
@@ -193,16 +255,57 @@ public class PdfViewerActivity extends BaseActivity {
         });
     }
 
-    private void applyEyeComfort(int intensity) {
-        if (intensity <= 0) {
-            eyeComfortOverlay.setVisibility(View.GONE);
-            btnEyeComfort.clearColorFilter();
+    private void applyNightMode(boolean night, boolean notifyAdapter) {
+        if (night) {
+            contentArea.setBackgroundColor(Color.BLACK);
+            viewPager.setBackgroundColor(Color.BLACK);
+            btnNightMode.setColorFilter(Color.parseColor("#FFD54F"));
         } else {
+            contentArea.setBackgroundColor(Color.WHITE);
+            viewPager.setBackgroundColor(Color.WHITE);
+            btnNightMode.clearColorFilter();
+        }
+
+        if (notifyAdapter && pageAdapter != null) {
+            pageAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void applyEyeProtection(boolean enabled) {
+        if (enabled) {
+            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#D32F2F"));
             eyeComfortOverlay.setVisibility(View.VISIBLE);
-            // Intensity ranges 1..70; map to alpha 20..185
-            int alpha = (int) (intensity * 2.55f);
-            eyeComfortOverlay.setBackgroundColor(Color.argb(alpha, 255, 215, 120));
-            btnEyeComfort.setColorFilter(Color.parseColor("#FFB300"));
+            updateEyeOverlayAlpha(eyeComfortIntensity);
+        } else {
+            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#212121"));
+            eyeComfortOverlay.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateEyeOverlayAlpha(int intensity) {
+        int alpha = (int) (intensity * 2.55f);
+        if (alpha < 35) alpha = 35;
+        if (alpha > 190) alpha = 190;
+        eyeComfortOverlay.setBackgroundColor(Color.argb(alpha, 255, 185, 90));
+    }
+
+    private void showEyePill(String message) {
+        handler.removeCallbacks(hidePillRunnable);
+        eyeComfortPillText.setText(message);
+        eyeComfortPill.setAlpha(0f);
+        eyeComfortPill.setVisibility(View.VISIBLE);
+        eyeComfortPill.animate().alpha(1f).setDuration(180).setListener(null).start();
+        handler.postDelayed(hidePillRunnable, PILL_AUTO_DISMISS_MS);
+    }
+
+    private void hideEyePill() {
+        if (eyeComfortPill != null && eyeComfortPill.getVisibility() == View.VISIBLE) {
+            eyeComfortPill.animate().alpha(0f).setDuration(200).setListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    eyeComfortPill.setVisibility(View.GONE);
+                }
+            }).start();
         }
     }
 
@@ -214,44 +317,59 @@ public class PdfViewerActivity extends BaseActivity {
     }
 
     private void hideEyeComfortBar() {
-        autoHideHandler.removeCallbacks(hideEyeComfortRunnable);
+        handler.removeCallbacks(hideEyeComfortBarRunnable);
         if (eyeComfortBar != null) {
             eyeComfortBar.setVisibility(View.GONE);
         }
     }
 
     private void resetEyeComfortDismissTimer() {
-        autoHideHandler.removeCallbacks(hideEyeComfortRunnable);
-        autoHideHandler.postDelayed(hideEyeComfortRunnable, EYE_COMFORT_AUTO_DISMISS_MS);
+        handler.removeCallbacks(hideEyeComfortBarRunnable);
+        handler.postDelayed(hideEyeComfortBarRunnable, EYE_COMFORT_AUTO_DISMISS_MS);
     }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (ev.getAction() == MotionEvent.ACTION_DOWN && eyeComfortBar != null && eyeComfortBar.getVisibility() == View.VISIBLE) {
-            Rect barRect = new Rect();
-            eyeComfortBar.getGlobalVisibleRect(barRect);
-            Rect btnRect = new Rect();
-            btnEyeComfort.getGlobalVisibleRect(btnRect);
-            int x = (int) ev.getRawX();
-            int y = (int) ev.getRawY();
-            if (!barRect.contains(x, y) && !btnRect.contains(x, y)) {
-                hideEyeComfortBar();
+    private void toggleFullscreen() {
+        isFullscreen = !isFullscreen;
+        if (isFullscreen) {
+            toolbar.setVisibility(View.GONE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                    controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            } else {
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            }
+        } else {
+            toolbar.setVisibility(View.VISIBLE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.show(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                }
+            } else {
+                getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
             }
         }
-        return super.dispatchTouchEvent(ev);
     }
 
-    private void setupViewPager() {
-        viewPager.setOrientation(ViewPager2.ORIENTATION_HORIZONTAL);
-        viewPager.setAdapter(new PdfPageAdapter());
-        pageInfo.setText("1 / " + pageCount);
-
-        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                pageInfo.setText((position + 1) + " / " + pageCount);
-            }
-        });
+    private void sharePdfFile() {
+        if (pdfFile == null) return;
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", pdfFile);
+            Intent intent = new Intent(Intent.ACTION_SEND)
+                    .setType("application/pdf")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
+            startActivity(Intent.createChooser(intent, getString(R.string.share)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.cannot_open_item, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openWithExternalApp() {
@@ -268,6 +386,36 @@ public class PdfViewerActivity extends BaseActivity {
         }
     }
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getAction() == MotionEvent.ACTION_DOWN && eyeComfortBar != null && eyeComfortBar.getVisibility() == View.VISIBLE) {
+            Rect barRect = new Rect();
+            eyeComfortBar.getGlobalVisibleRect(barRect);
+            Rect fabRect = new Rect();
+            fabEyeComfort.getGlobalVisibleRect(fabRect);
+            int x = (int) ev.getRawX();
+            int y = (int) ev.getRawY();
+            if (!barRect.contains(x, y) && !fabRect.contains(x, y)) {
+                hideEyeComfortBar();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private void setupViewPager() {
+        viewPager.setOrientation(ViewPager2.ORIENTATION_HORIZONTAL);
+        pageAdapter = new PdfPageAdapter();
+        viewPager.setAdapter(pageAdapter);
+        pageInfo.setText("1 / " + pageCount);
+
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                pageInfo.setText((position + 1) + " / " + pageCount);
+            }
+        });
+    }
+
     private class PdfPageAdapter extends RecyclerView.Adapter<PdfPageAdapter.PageViewHolder> {
 
         @NonNull
@@ -281,7 +429,13 @@ public class PdfViewerActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull PageViewHolder holder, int position) {
             holder.pageLoading.setVisibility(View.VISIBLE);
             holder.pageImageView.setImageBitmap(null);
+            holder.pageImageView.setNightMode(isNightMode);
             final int pos = position;
+
+            holder.pageImageView.setScaleChangeListener(scale -> {
+                // Disable ViewPager2 horizontal intercept when zoomed in so user can pan freely
+                viewPager.setUserInputEnabled(scale <= 1.05f);
+            });
 
             renderExecutor.execute(() -> {
                 Bitmap bitmap = null;
@@ -291,7 +445,8 @@ public class PdfViewerActivity extends BaseActivity {
                         PdfRenderer.Page page = renderer.openPage(pos);
                         int screenW = getResources().getDisplayMetrics().widthPixels;
                         if (screenW <= 0) screenW = 1080;
-                        int targetW = screenW;
+                        // High-DPI target resolution for crystal clear text when zoomed
+                        int targetW = Math.min((int) (screenW * 1.5f), 2048);
                         int targetH = (int) ((float) page.getHeight() / page.getWidth() * targetW);
 
                         bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888);
@@ -319,6 +474,7 @@ public class PdfViewerActivity extends BaseActivity {
         public void onViewRecycled(@NonNull PageViewHolder holder) {
             super.onViewRecycled(holder);
             holder.pageImageView.setImageBitmap(null);
+            holder.pageImageView.resetZoom();
             holder.pageLoading.setVisibility(View.VISIBLE);
         }
 
@@ -328,7 +484,7 @@ public class PdfViewerActivity extends BaseActivity {
         }
 
         class PageViewHolder extends RecyclerView.ViewHolder {
-            final ImageView pageImageView;
+            final PdfZoomImageView pageImageView;
             final ProgressBar pageLoading;
 
             PageViewHolder(@NonNull View itemView) {
@@ -358,7 +514,8 @@ public class PdfViewerActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        autoHideHandler.removeCallbacks(hideEyeComfortRunnable);
+        handler.removeCallbacks(hideEyeComfortBarRunnable);
+        handler.removeCallbacks(hidePillRunnable);
         renderExecutor.shutdown();
         cleanupRenderer();
         super.onDestroy();
