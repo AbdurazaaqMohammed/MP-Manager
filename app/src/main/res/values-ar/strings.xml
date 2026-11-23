@@ -224,6 +224,8 @@
     <string name="pdf_viewer">عارض PDF</string>
     <string name="not_an_apk">ليس ملف APK</string>
     <string name="cannot_open_item">لا يمكن فتح هذا العنصر بالوظيفة المحددة</string>
+    <string name="eye_protection_on">وضع راحة العين مفعل</string>
+    <string name="eye_protection_off">تم إيقاف وضع راحة العين</string>
     <string name="fix_mime_type">إصلاح نوع MIME قبل المشاركة/الفتح (اكتشاف من البايتات)</string>
     <string name="reported_mime">MIME المُبلغ عنه</string>
     <string name="real_mime">MIME الحقيقي</string>

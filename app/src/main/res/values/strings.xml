@@ -252,6 +252,8 @@
     <string name="html_warning_message">You are about to render an HTML file in the built-in browser.\n\nThis file is UNTRUSTED content. Although the preview disables JavaScript, cookies and storage, the browser engine itself can be exploited by a malicious page to run code, read files or steal data. This risk is much higher on older Android versions, whose system WebView no longer receives security updates.\n\nOnly continue if you trust the source of this file. When in doubt, open it as text instead.</string>
     <string name="not_an_apk">Not an APK file</string>
     <string name="cannot_open_item">This item cannot be opened with the selected function</string>
+    <string name="eye_protection_on">Eye protection on</string>
+    <string name="eye_protection_off">Eye protection off</string>
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>

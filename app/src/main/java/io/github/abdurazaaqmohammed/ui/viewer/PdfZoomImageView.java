@@ -98,6 +98,8 @@ public class PdfZoomImageView extends AppCompatImageView {
                 float current = getCurrentScale();
                 if (current * factor > MAX_SCALE) {
                     factor = MAX_SCALE / current;
+                } else if (current * factor < 0.75f) {
+                    factor = 0.75f / current;
                 }
                 suppMatrix.postScale(factor, factor, detector.getFocusX(), detector.getFocusY());
                 clampAndApplyMatrix();

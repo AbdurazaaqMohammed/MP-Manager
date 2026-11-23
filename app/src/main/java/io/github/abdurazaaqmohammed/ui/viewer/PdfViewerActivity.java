@@ -44,6 +44,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -233,7 +234,7 @@ public class PdfViewerActivity extends BaseActivity {
             }
             prefs.edit().putBoolean(PREF_EYE_PROTECTION, isEyeProtection).apply();
             applyEyeProtection(isEyeProtection);
-            showEyePill(isEyeProtection ? "Eye protection on" : "Eye protection off");
+            showEyePill(getString(isEyeProtection ? R.string.eye_protection_on : R.string.eye_protection_off));
         });
 
         fabEyeComfort.setOnLongClickListener(v -> {
@@ -488,19 +489,32 @@ public class PdfViewerActivity extends BaseActivity {
                 Bitmap bitmap = null;
                 synchronized (rendererLock) {
                     if (renderer == null || isFinishing() || isDestroyed()) return;
+                    PdfRenderer.Page page = null;
                     try {
-                        PdfRenderer.Page page = renderer.openPage(pos);
+                        page = renderer.openPage(pos);
+                        int pw = page.getWidth();
+                        int ph = page.getHeight();
+                        if (pw <= 0 || ph <= 0) {
+                            pw = 1080;
+                            ph = 1920;
+                        }
                         int screenW = getResources().getDisplayMetrics().widthPixels;
                         if (screenW <= 0) screenW = 1080;
                         // High-DPI target resolution for crystal clear text when zoomed
                         int targetW = Math.min((int) (screenW * 1.5f), 2048);
-                        int targetH = (int) ((float) page.getHeight() / page.getWidth() * targetW);
+                        int targetH = Math.max(1, (int) ((float) ph / pw * targetW));
 
                         bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888);
                         bitmap.eraseColor(Color.WHITE);
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-                        page.close();
-                    } catch (Exception ignored) {}
+                    } catch (Throwable ignored) {
+                    } finally {
+                        if (page != null) {
+                            try {
+                                page.close();
+                            } catch (Exception ignored) {}
+                        }
+                    }
                 }
 
                 final Bitmap renderedBitmap = bitmap;
