@@ -184,7 +184,13 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private Runnable pendingHexSearchRunnable;
     private MaterialButton btnPatchModeToggle;
     private MaterialButton btnHexColsToggle;
+    private final Object hexRafLock = new Object();
     private RandomAccessFile hexRaf;
+    private Thread hexSearchThread;
+    private int hexSearchSeq = 0;
+    private int filterFunctionsSeq = 0;
+    private int filterStringsSeq = 0;
+    private int filterTreeSeq = 0;
     private int hexBytesPerRow = 16;
     private boolean isPatchMode = false;
     private long hexFileSize = 0;
@@ -260,9 +266,16 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (hexRaf != null) {
-            try { hexRaf.close(); } catch (Exception ignored) {}
-            hexRaf = null;
+        searchHandler.removeCallbacksAndMessages(null);
+        if (hexSearchThread != null && hexSearchThread.isAlive()) {
+            hexSearchThread.interrupt();
+            hexSearchThread = null;
+        }
+        synchronized (hexRafLock) {
+            if (hexRaf != null) {
+                try { hexRaf.close(); } catch (Exception ignored) {}
+                hexRaf = null;
+            }
         }
     }
 
@@ -1118,8 +1131,10 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 // Metadata, Hashes & Structure extraction
                 elfEntryPoint = elf.entry;
                 hexFileSize = soFile.length();
-                if (hexRaf == null) {
-                    try { hexRaf = new RandomAccessFile(soFile, "r"); } catch (Exception ignored) {}
+                synchronized (hexRafLock) {
+                    if (hexRaf == null) {
+                        try { hexRaf = new RandomAccessFile(soFile, "r"); } catch (Exception ignored) {}
+                    }
                 }
                 elfBuildId = elf.buildId();
                 elfExportHash = elf.exportHash();
@@ -1317,6 +1332,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     }
 
     private void filterFunctionsAsync(String query) {
+        final int seq = ++filterFunctionsSeq;
         new Thread(() -> {
             List<Arm64Function> temp = new ArrayList<>();
             synchronized (allFunctions) {
@@ -1330,7 +1346,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     boolean filterLocal = "local".equals(q);
 
                     for (Arm64Function f : allFunctions) {
-                        if (filterJni && (f.name.startsWith("Java_") || f.name.contains("JNI_"))) {
+                        if (f == null) continue;
+                        String fName = f.name != null ? f.name : "";
+                        if (filterJni && (fName.startsWith("Java_") || fName.contains("JNI_"))) {
                             temp.add(f);
                         } else if (filterExport && f.isExported) {
                             temp.add(f);
@@ -1338,10 +1356,10 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                             temp.add(f);
                         } else if (filterLocal && "LOCAL".equalsIgnoreCase(f.bindName)) {
                             temp.add(f);
-                        } else if (f.name.toLowerCase(Locale.ROOT).contains(q) ||
+                        } else if (fName.toLowerCase(Locale.ROOT).contains(q) ||
                                 (f.demangledName != null && f.demangledName.toLowerCase(Locale.ROOT).contains(q)) ||
-                                f.getFormattedAddress().toLowerCase(Locale.ROOT).contains(q) ||
-                                f.getFormattedOffset().toLowerCase(Locale.ROOT).contains(q) ||
+                                (f.getFormattedAddress() != null && f.getFormattedAddress().toLowerCase(Locale.ROOT).contains(q)) ||
+                                (f.getFormattedOffset() != null && f.getFormattedOffset().toLowerCase(Locale.ROOT).contains(q)) ||
                                 (f.bindName != null && f.bindName.toLowerCase(Locale.ROOT).contains(q))) {
                             temp.add(f);
                         }
@@ -1349,11 +1367,14 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 }
             }
             runOnUiThread(() -> {
+                if (seq != filterFunctionsSeq) return;
                 synchronized (filteredFunctions) {
                     filteredFunctions.clear();
                     filteredFunctions.addAll(temp);
                 }
-                functionsAdapter.notifyDataSetChanged();
+                if (functionsAdapter != null) {
+                    functionsAdapter.notifyDataSetChanged();
+                }
             });
         }).start();
     }
@@ -2478,11 +2499,17 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            Arm64Function f = filteredFunctions.get(position);
+            Arm64Function f;
+            synchronized (filteredFunctions) {
+                if (position < 0 || position >= filteredFunctions.size()) return;
+                f = filteredFunctions.get(position);
+            }
+            if (f == null) return;
             holder.tvName.setText(f.getDisplayName());
             holder.tvSubtitle.setText(f.getSubtitle());
 
-            if (f.name.startsWith("Java_") || f.name.contains("JNI_")) {
+            String fName = f.name != null ? f.name : "";
+            if (fName.startsWith("Java_") || fName.contains("JNI_")) {
                 holder.tvName.setTextColor(0xFF4FC3F7); // JNI blue
             } else if (f.demangledName != null && !f.demangledName.equals(f.name)) {
                 holder.tvName.setTextColor(0xFF80CBC4); // Demangled teal
@@ -2501,7 +2528,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
         @Override
         public int getItemCount() {
-            return filteredFunctions.size();
+            synchronized (filteredFunctions) {
+                return filteredFunctions.size();
+            }
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
@@ -2747,7 +2776,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             }
 
             byte[] rowData = new byte[countToRead];
-            synchronized (Arm64DisassemblerActivity.this) {
+            synchronized (hexRafLock) {
                 if (hexRaf != null) {
                     try {
                         hexRaf.seek(rowOffset);
@@ -2859,7 +2888,11 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             }
 
             holder.itemView.setOnClickListener(v -> {
-                showHexPatchDialog(rowOffset, countToRead, rowData);
+                if (isPatchMode) {
+                    showHexPatchDialog(rowOffset, countToRead, rowData);
+                } else {
+                    showHexRowActionDialog(rowOffset, countToRead, rowData);
+                }
             });
             holder.itemView.setOnLongClickListener(v -> {
                 showHexRowActionDialog(rowOffset, countToRead, rowData);
@@ -2869,7 +2902,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
         @Override
         public int getItemCount() {
-            if (hexFileSize <= 0) return 0;
+            if (hexFileSize <= 0 || hexBytesPerRow <= 0) return 0;
             return (int) Math.min(Integer.MAX_VALUE, (hexFileSize + hexBytesPerRow - 1) / hexBytesPerRow);
         }
 
@@ -3216,8 +3249,10 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     }
 
     private void jumpToHexOffset(long offset) {
-        if (rvHex == null || hexBytesPerRow <= 0) return;
-        int targetRow = (int) (offset / hexBytesPerRow);
+        if (rvHex == null || hexBytesPerRow <= 0 || hexFileSize <= 0) return;
+        long targetRowLong = offset / hexBytesPerRow;
+        int maxRow = (int) Math.max(0, (hexFileSize + hexBytesPerRow - 1) / hexBytesPerRow - 1);
+        int targetRow = (int) Math.max(0, Math.min(targetRowLong, maxRow));
         LinearLayoutManager lm = (LinearLayoutManager) rvHex.getLayoutManager();
         if (lm != null) {
             lm.scrollToPositionWithOffset(targetRow, dp(40));
@@ -3575,6 +3610,10 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     }
 
     private void performHexSearchAsync(String query) {
+        final int searchId = ++hexSearchSeq;
+        if (hexSearchThread != null && hexSearchThread.isAlive()) {
+            hexSearchThread.interrupt();
+        }
         if (TextUtils.isEmpty(query)) {
             synchronized (hexMatchOffsets) {
                 hexMatchOffsets.clear();
@@ -3589,7 +3628,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             return;
         }
 
-        new Thread(() -> {
+        hexSearchThread = new Thread(() -> {
             try {
                 byte[] targetBytes = parseHexSearchQuery(query);
                 if (targetBytes == null || targetBytes.length == 0) {
@@ -3609,18 +3648,25 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 List<Long> matches = new ArrayList<>();
                 boolean capped = false;
                 final int MAX_MATCHES = 500;
+                final int targetLen = targetBytes.length;
 
-                synchronized (Arm64DisassemblerActivity.this) {
-                    if (hexRaf != null && hexFileSize > 0) {
-                        byte[] buf = new byte[65536];
+                if (soFile != null && soFile.exists() && hexFileSize > 0) {
+                    try (RandomAccessFile searchRaf = new RandomAccessFile(soFile, "r")) {
+                        int bufSize = Math.max(65536, targetLen * 2);
+                        byte[] buf = new byte[bufSize];
                         long pos = 0;
                         while (pos < hexFileSize && matches.size() < MAX_MATCHES) {
-                            hexRaf.seek(pos);
-                            int read = hexRaf.read(buf);
-                            if (read <= 0) break;
-                            for (int i = 0; i <= read - targetBytes.length; i++) {
+                            if (Thread.currentThread().isInterrupted() || searchId != hexSearchSeq) {
+                                return;
+                            }
+                            searchRaf.seek(pos);
+                            int read = searchRaf.read(buf);
+                            if (read < targetLen) {
+                                break;
+                            }
+                            for (int i = 0; i <= read - targetLen; i++) {
                                 boolean match = true;
-                                for (int j = 0; j < targetBytes.length; j++) {
+                                for (int j = 0; j < targetLen; j++) {
                                     if (buf[i + j] != targetBytes[j]) {
                                         match = false;
                                         break;
@@ -3635,14 +3681,20 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                                 }
                             }
                             if (capped) break;
-                            pos += (read - targetBytes.length + 1);
+                            long step = read - targetLen + 1;
+                            if (step <= 0) break;
+                            pos += step;
                         }
                     }
                 }
 
+                if (Thread.currentThread().isInterrupted() || searchId != hexSearchSeq) {
+                    return;
+                }
+
                 final boolean isCapped = capped;
-                final int targetLen = targetBytes.length;
                 runOnUiThread(() -> {
+                    if (searchId != hexSearchSeq) return;
                     synchronized (hexMatchOffsets) {
                         hexMatchOffsets.clear();
                         hexMatchOffsets.addAll(matches);
@@ -3666,27 +3718,30 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
-                    if (tvHexMatchCount != null) tvHexMatchCount.setText("0/0");
-                });
+                if (searchId == hexSearchSeq) {
+                    runOnUiThread(() -> {
+                        if (tvHexMatchCount != null) tvHexMatchCount.setText("0/0");
+                    });
+                }
             }
-        }).start();
+        });
+        hexSearchThread.start();
     }
 
     private byte[] parseHexSearchQuery(String query) {
         if (query == null) return null;
         String q = query.trim();
         if (q.isEmpty()) return null;
-        if (q.matches("^[0-9a-fA-F\\s]+$") && q.replace(" ", "").length() >= 2) {
-            String clean = q.replace(" ", "");
-            if (clean.length() % 2 == 0) {
+        String clean = q.replaceAll("(?i)0x", "").replace(" ", "");
+        if (clean.matches("^[0-9a-fA-F]+$") && clean.length() >= 2 && clean.length() % 2 == 0) {
+            try {
                 int len = clean.length() / 2;
                 byte[] res = new byte[len];
                 for (int i = 0; i < len; i++) {
                     res[i] = (byte) Integer.parseInt(clean.substring(i * 2, i * 2 + 2), 16);
                 }
                 return res;
-            }
+            } catch (Exception ignored) {}
         }
         return q.getBytes(StandardCharsets.UTF_8);
     }
@@ -3697,10 +3752,12 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             int size = hexMatchOffsets.size();
             currentHexMatchIndex = ((currentHexMatchIndex + dir) % size + size) % size;
             long targetOffset = hexMatchOffsets.get(currentHexMatchIndex);
+            final int currIdx = currentHexMatchIndex;
+            final boolean capped = hexSearchCapped;
             runOnUiThread(() -> {
                 if (tvHexMatchCount != null) {
                     tvHexMatchCount.setText(String.format(Locale.ROOT, "%d/%d%s",
-                            currentHexMatchIndex + 1, size, hexSearchCapped ? "+" : ""));
+                            currIdx + 1, size, capped ? "+" : ""));
                 }
                 jumpToHexOffset(targetOffset);
                 if (hexAdapter != null) {
@@ -3989,6 +4046,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     }
 
     private void filterStringsAsync(String query) {
+        final int seq = ++filterStringsSeq;
         new Thread(() -> {
             List<ElfParser.ElfString> result = new ArrayList<>();
             String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
@@ -3997,15 +4055,16 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     result.addAll(allStrings);
                 } else {
                     for (ElfParser.ElfString s : allStrings) {
-                        if (s.value.toLowerCase(Locale.ROOT).contains(q)
+                        if (s != null && s.value != null && (s.value.toLowerCase(Locale.ROOT).contains(q)
                                 || Long.toHexString(s.vaddr).contains(q)
-                                || Long.toHexString(s.fileOffset).contains(q)) {
+                                || Long.toHexString(s.fileOffset).contains(q))) {
                             result.add(s);
                         }
                     }
                 }
             }
             runOnUiThread(() -> {
+                if (seq != filterStringsSeq) return;
                 synchronized (filteredStrings) {
                     filteredStrings.clear();
                     filteredStrings.addAll(result);
@@ -4021,20 +4080,22 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     }
 
     private void filterTreeAsync(String query) {
+        final int seq = ++filterTreeSeq;
         new Thread(() -> {
             List<ElfTreeItem> result = new ArrayList<>();
             String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
             synchronized (allTreeItems) {
                 for (ElfTreeItem item : allTreeItems) {
+                    if (item == null) continue;
                     if (selectedTreeCategory != null) {
                         if ("Programme".equals(selectedTreeCategory)) {
-                            if (item.title.contains("Import") || item.title.contains("Export")) continue;
+                            if (item.title != null && (item.title.contains("Import") || item.title.contains("Export"))) continue;
                             if (item.permissions != null && (item.permissions.contains("Import") || item.permissions.contains("Export"))) continue;
                         } else if ("Imports".equals(selectedTreeCategory)) {
-                            boolean isImp = item.title.contains("Import") || (item.permissions != null && item.permissions.contains("Import"));
+                            boolean isImp = (item.title != null && item.title.contains("Import")) || (item.permissions != null && item.permissions.contains("Import"));
                             if (!isImp) continue;
                         } else if ("Exports".equals(selectedTreeCategory)) {
-                            boolean isExp = item.title.contains("Export") || (item.permissions != null && item.permissions.contains("Export"));
+                            boolean isExp = (item.title != null && item.title.contains("Export")) || (item.permissions != null && item.permissions.contains("Export"));
                             if (!isExp) continue;
                         } else if ("SECTIONS_ONLY".equals(selectedTreeCategory)) {
                             if (item.itemType == ElfTreeItem.ItemType.SYMBOL) continue;
@@ -4046,7 +4107,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     } else {
                         if (item.itemType == ElfTreeItem.ItemType.HEADER) {
                             result.add(item);
-                        } else if (item.title.toLowerCase(Locale.ROOT).contains(q)
+                        } else if ((item.title != null && item.title.toLowerCase(Locale.ROOT).contains(q))
                                 || (item.subtitle != null && item.subtitle.toLowerCase(Locale.ROOT).contains(q))
                                 || (item.address >= 0 && String.format(Locale.ROOT, "0x%x", item.address).contains(q))) {
                             result.add(item);
@@ -4055,6 +4116,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 }
             }
             runOnUiThread(() -> {
+                if (seq != filterTreeSeq) return;
                 synchronized (filteredTreeItems) {
                     filteredTreeItems.clear();
                     filteredTreeItems.addAll(result);
