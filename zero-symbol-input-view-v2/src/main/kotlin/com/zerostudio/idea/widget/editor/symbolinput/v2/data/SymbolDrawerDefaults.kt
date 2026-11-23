@@ -110,8 +110,37 @@ object SymbolDrawerDefaults {
             entry(37, "\t", SymbolAction.InsertText("\t")),
             entry(38, "\\", SymbolAction.InsertText("\\")),
             entry(39, "settings", SymbolAction.OpenManager)
-        ))
+        )),
+        createSmaliModdingGroup()
     )
+
+    fun createSmaliModdingGroup(): SymbolGroup = SymbolGroup(
+        id = "smaliModding",
+        title = "Smali Modding",
+        symbols = listOf(
+            smaliPreset(1001, "True ✅", "const/4\\s+(v\\d+),\\s*0x0", "const/4 $1, 0x1", "rca"),
+            smaliPreset(1002, "False ❌", "const/4\\s+(v\\d+),\\s*0x1", "const/4 $1, 0x0", "rca"),
+            smaliPreset(1003, "Return ✅", "return(-.*)?", "return-void", "ra"),
+            smaliPreset(1004, "Time ⏰", "invoke-static\\s*\\{\\},\\s*Ljava/lang/System;->currentTimeMillis\\(\\)J", "const-wide/16 v0, 0x0", "ra"),
+            smaliPreset(1005, "Money Games 🎮", "const/4\\s+(v\\d+),\\s*0x0\\s*\\n\\s*return\\s+\\1", "const/4 $1, 0x1\\n    return $1", "ra"),
+            smaliPreset(1006, "Boolean 🐧", "const/4\\s+(v\\d+),\\s*0x0", "const/4 $1, 0x1", "ra"),
+            smaliPreset(1007, "Iput-boolean 🌚", "iput-boolean\\s+(v\\d+),\\s*(v\\d+),\\s*(L[^;]+;->[^:]+:Z)", "const/4 $1, 0x1\\n    iput-boolean $1, $2, $3", "ra"),
+            smaliPreset(1008, "iget-boolean 👻", "iget-boolean\\s+(v\\d+),\\s*(v\\d+),\\s*(L[^;]+;->[^:]+:Z)", "const/4 $1, 0x1", "ra"),
+            smaliPreset(1009, "RemoveCode ❌", "^[ \\t]*invoke-static[^\\n]*\\n", "", "ra")
+        )
+    )
+
+    private fun smaliPreset(id: Long, label: String, find: String, replace: String, options: String): SymbolEntry {
+        val payload = MpManagerFindReplaceEnvelope.encodePayload(find, replace, options)
+        val action = SymbolAction.Extension(MpManagerFindReplaceEnvelope.EXTENSION_ID, payload)
+        return SymbolEntry(
+            id = id,
+            label = label,
+            shortAction = action,
+            legacyShortActionId = 101,
+            legacyShortText = find
+        )
+    }
 
     private fun entry(
         id: Long,
@@ -142,6 +171,7 @@ object SymbolDrawerDefaults {
             CursorTarget.DOCUMENT_END -> 24
         }
         SymbolAction.OpenManager -> 22
-        else -> error("Default symbol action is not part of the V1 action catalog")
+        is SymbolAction.Extension -> if (action.extensionId == MpManagerFindReplaceEnvelope.EXTENSION_ID) 101 else 0
+        else -> 0
     }
 }
