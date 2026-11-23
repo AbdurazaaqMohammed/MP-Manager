@@ -1032,6 +1032,9 @@ public class DexEditorActivity extends BaseActivity {
             } else if (id == R.id.toggle_comment) {
                 toggleComment(editorFragment);
                 return true;
+            } else if (id == R.id.customize_edit_menu) {
+                startActivity(new Intent(DexEditorActivity.this, EditFloatingMenusActivity.class));
+                return true;
             } else if (id == R.id.jumpToLine) {
                 showJumpToLineDialog(editorFragment);
                 return true;

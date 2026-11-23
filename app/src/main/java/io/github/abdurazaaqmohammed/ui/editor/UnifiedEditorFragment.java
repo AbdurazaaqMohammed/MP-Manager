@@ -115,6 +115,7 @@ import modder.hub.dexeditor.utils.SmaliSearchText;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 
@@ -1359,6 +1360,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (isSmali) {
             popupMenu.getMenu().add(0, 12, 0, R.string.toggle_comment).setIcon(R.drawable.ic_hash_mt);
         }
+        popupMenu.getMenu().add(0, 13, 0, R.string.customize).setIcon(R.drawable.ic_setting_mt);
         popupMenu.setOnMenuItemClickListener(item -> {
             executeEditAction(item.getItemId());
             return true;
@@ -1422,6 +1424,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 break;
             case 12:
                 toggleComment();
+                break;
+            case 13:
+                startActivity(new Intent(requireContext(), EditFloatingMenusActivity.class));
                 break;
         }
     }
