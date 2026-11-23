@@ -103,6 +103,11 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback {
             mAdapter.onRowClear(myViewHolder);
 		}
 	}
+
+	@Override
+	public int interpolateOutOfBoundsScroll(RecyclerView recyclerView, int viewSize, int viewSizeOutOfBounds, int totalSize, long msSinceStartScroll) {
+		return io.github.abdurazaaqmohammed.ui.common.util.ProgressiveEdgeScroller.interpolateOutOfBoundsScroll(viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll);
+	}
 	
 	public interface ItemTouchHelperContract {
 		

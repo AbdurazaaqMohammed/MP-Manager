@@ -48,6 +48,7 @@ package com.zerostudio.idea.widget.editor.symbolinput.v2.manager
 import com.zerostudio.idea.widget.editor.symbolinput.v2.R
 
 import android.content.Context
+import android.content.ClipData
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -477,8 +478,18 @@ class SymbolDrawerManagerScreen(
         val previousUsage = snapshotUsageState()
         val previousSelection = selectedGroupId
         val imported = SymbolGroupBundleCodec.decode(json)
-        manager.replaceAll(imported)
-        selectedGroupId = imported.firstOrNull()?.id
+        val merged = if (previous.isNotEmpty()) {
+            val existingIds = previous.map { it.id }.toSet()
+            val newGroups = imported.map { group ->
+                if (existingIds.contains(group.id)) group.copy(id = "group_${System.currentTimeMillis()}_${(100..999).random()}")
+                else group
+            }
+            previous + newGroups
+        } else {
+            imported
+        }
+        manager.replaceAll(merged)
+        selectedGroupId = merged.lastOrNull()?.id
         refresh()
         showUndo(context.getString(R.string.symbol_drawer_097)) {
             manager.replaceAll(previous)
@@ -543,6 +554,14 @@ class SymbolDrawerManagerScreen(
             }
             true
         }
+        menu.menu.add("Import (JSON / MT Manager)").setOnMenuItemClickListener {
+            promptImport()
+            true
+        }
+        menu.menu.add("Export").setOnMenuItemClickListener {
+            promptExport()
+            true
+        }
         val filters = menu.menu.addSubMenu(context.getString(R.string.symbol_drawer_191))
         buildList {
             add(ManagerSymbolFilter.ALL to context.getString(R.string.symbol_drawer_035))
@@ -562,6 +581,68 @@ class SymbolDrawerManagerScreen(
     private fun setActiveFilter(filter: ManagerSymbolFilter) {
         activeFilter = filter
         refreshSymbols()
+    }
+
+    fun promptImport() {
+        val options = arrayOf("Select JSON File", "Paste JSON from Clipboard")
+        MaterialAlertDialogBuilder(context)
+            .setTitle("Import (JSON / MT Manager)")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_GET_CONTENT).apply {
+                            type = "*/*"
+                            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                        }
+                        val act = context as? android.app.Activity
+                        if (act != null) {
+                            act.startActivityForResult(intent, 2001)
+                        } else {
+                            toast("Cannot open file picker")
+                        }
+                    }
+                    1 -> {
+                        val input = TextInputEditText(context)
+                        val layout = TextInputLayout(context).apply {
+                            hint = "Paste JSON here"
+                            addView(input)
+                            setPadding(dp(16), dp(8), dp(16), 0)
+                        }
+                        MaterialAlertDialogBuilder(context)
+                            .setTitle("Paste JSON")
+                            .setView(layout)
+                            .setPositiveButton(android.R.string.ok) { _, _ ->
+                                val text = input.text?.toString()?.trim().orEmpty()
+                                if (text.isNotEmpty()) {
+                                    runCatching {
+                                        importBundle(text)
+                                        toast("Imported successfully")
+                                    }.onFailure { err ->
+                                        toast("Import failed: ${err.message}")
+                                    }
+                                }
+                            }
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    fun promptExport() {
+        val options = arrayOf("Export MT Manager JSON (FunctionBar.json)", "Export Full V2 Backup JSON")
+        MaterialAlertDialogBuilder(context)
+            .setTitle("Export")
+            .setItems(options) { _, which ->
+                val json = if (which == 0) exportMtManagerJson() else exportBundle()
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("SymbolDrawer", json))
+                toast("Exported and copied to clipboard")
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun buildGroupControls() {

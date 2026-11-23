@@ -27,11 +27,27 @@
             android:defaultValue="14"
             app:useSimpleSummaryProvider="true" />
 
+        <ListPreference
+            android:key="pref_line_spacing"
+            android:title="@string/edpref_line_spacing"
+            android:entries="@array/line_spacing_entries"
+            android:entryValues="@array/line_spacing_values"
+            android:defaultValue="1.1"
+            android:summary="@string/edpref_line_spacing_summary"
+            app:useSimpleSummaryProvider="true" />
+
         <SwitchPreferenceCompat
             android:key="pref_show_line_numbers"
             android:title="@string/edpref_show_line_numbers"
             android:summary="@string/edpref_show_line_numbers_summary"
             android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_pin_line_numbers"
+            android:title="@string/edpref_pin_line_numbers"
+            android:summary="@string/edpref_pin_line_numbers_summary"
+            android:defaultValue="false"
+            app:dependency="pref_show_line_numbers"/>
 
         <SwitchPreferenceCompat
             android:key="pref_word_wrap"
@@ -40,9 +56,53 @@
             android:defaultValue="false"/>
 
         <SwitchPreferenceCompat
+            android:key="pref_wrap_without_splitting_words"
+            android:title="@string/edpref_wrap_without_splitting_words"
+            android:summary="@string/edpref_wrap_without_splitting_words_summary"
+            android:defaultValue="true"
+            app:dependency="pref_word_wrap"/>
+
+        <SwitchPreferenceCompat
             android:key="pref_syntax_highlight"
             android:title="@string/edpref_syntax_highlight"
             android:summary="@string/edpref_syntax_highlight_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_highlight_current_line"
+            android:title="@string/edpref_highlight_current_line"
+            android:summary="@string/edpref_highlight_current_line_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_show_indent_guides"
+            android:title="@string/edpref_show_indent_guides"
+            android:summary="@string/edpref_show_indent_guides_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_show_blank_symbols"
+            android:title="@string/edpref_show_blank_symbols"
+            android:summary="@string/edpref_show_blank_symbols_summary"
+            android:defaultValue="false"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_hide_single_space"
+            android:title="@string/edpref_hide_single_space"
+            android:summary="@string/edpref_hide_single_space_summary"
+            android:defaultValue="true"
+            app:dependency="pref_show_blank_symbols"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_show_invisible_characters"
+            android:title="@string/edpref_show_invisible_characters"
+            android:summary="@string/edpref_show_invisible_characters_summary"
+            android:defaultValue="false"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_sticky_scroll"
+            android:title="@string/edpref_sticky_scroll"
+            android:summary="@string/edpref_sticky_scroll_summary"
             android:defaultValue="true"/>
     </PreferenceCategory>
 
@@ -64,6 +124,32 @@
             android:title="@string/edpref_auto_indent"
             android:summary="@string/edpref_auto_indent_summary"
             android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_auto_pair_brackets"
+            android:title="@string/edpref_auto_pair_brackets"
+            android:summary="@string/edpref_auto_pair_brackets_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="auto_complete"
+            android:title="@string/edpref_auto_complete"
+            android:summary="@string/edpref_auto_complete_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="auto_complete_new_line_only"
+            android:title="@string/edpref_auto_complete_new_line_only"
+            android:summary="@string/edpref_auto_complete_new_line_only_summary"
+            android:defaultValue="false"
+            app:dependency="auto_complete"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_completion_on_enter"
+            android:title="@string/edpref_completion_on_enter"
+            android:summary="@string/edpref_completion_on_enter_summary"
+            android:defaultValue="true"
+            app:dependency="auto_complete"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/edpref_advanced">

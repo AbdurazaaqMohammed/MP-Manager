@@ -77,6 +77,10 @@
                 android:id="@+id/toggle_comment"
                 android:icon="@drawable/ic_hash_mt"
                 android:title="Toggle comment" />
+            <item
+                android:id="@+id/customize_edit_menu"
+                android:icon="@drawable/ic_setting_mt"
+                android:title="@string/customize" />
         </menu>
     </item>
     <item

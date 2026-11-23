@@ -13,7 +13,12 @@ object SymbolDrawerMigration {
     @JvmStatic
     fun migrate(context: Context) {
         BottomBarMigration.migrateIfNeeded(context)
-        LegacySymbolDataMigration.importIfV2Empty(context, SharedPreferencesSymbolGroupRepository(context))
+        val groupRepo = SharedPreferencesSymbolGroupRepository(context)
+        LegacySymbolDataMigration.importIfV2Empty(context, groupRepo)
+        val currentGroups = groupRepo.loadGroups()
+        if (currentGroups.isNotEmpty() && currentGroups.none { it.id == "smaliModding" }) {
+            groupRepo.saveGroups(currentGroups + listOf(com.zerostudio.idea.widget.editor.symbolinput.v2.data.SymbolDrawerDefaults.createSmaliModdingGroup()))
+        }
         val repository = SharedPreferencesSymbolDrawerSettingsRepository(context)
         if (repository.hasStoredSettings()) return
         val old = context.getSharedPreferences("advanced_symbol_prefs", Context.MODE_PRIVATE)

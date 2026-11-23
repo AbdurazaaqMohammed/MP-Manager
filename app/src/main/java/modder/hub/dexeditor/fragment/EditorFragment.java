@@ -96,10 +96,11 @@ import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
-import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.smali.SmaliCursorUtils;
-import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.smali.SmaliHelper;
+import modder.hub.dexeditor.utils.EditorHelper;
+import modder.hub.dexeditor.utils.EditorPositionManager;
+import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.views.TextActionWindow;
 
 
@@ -205,6 +206,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         // in place before anything else. Only rebuilds schemes; never touches
         // text/selection/scroll.
         maybeApplyThemeInPlace();
+        loadEditorSettings(false);
         Activity activity = getActivity();
         if (activity instanceof DexEditorActivity) {
             DexEditorActivity.EditorTab tab = ((DexEditorActivity) activity).getTabForClassName(className);
@@ -317,6 +319,9 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 positionManager.savePosition(className, position, smaliEditor.getCursor().getLeftColumn());
             }
             isReload = false;
+            if (editor_prefs != null && editor_prefs.getBoolean("pref_show_invisible_characters", false)) {
+                EditorHelper.updateInvisibleCharacters(smaliEditor, true);
+            }
         });
 
         smaliEditor.subscribeEvent(SelectionChangeEvent.class, (event, unsubscribe) -> {
@@ -559,9 +564,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     public void loadEditorSettings(boolean loadTypeface) {
         smaliEditor.setTextSize(SettingsFragment.getFontSize(requireContext()));
         smaliEditor.setLineNumberEnabled(SettingsFragment.showLineNumbers(requireContext()));
-        smaliEditor.setLineSpacing(2.0f, 1.1f);
         smaliEditor.setLineNumberMarginLeft(2f);
-        smaliEditor.setWordwrap(editor_prefs.getBoolean("wrap_text", false));
         if (loadTypeface) {
             Typeface typeface = savedFont.equals("normal") ? Typeface.DEFAULT : Typeface.MONOSPACE;
             smaliEditor.setTypefaceText(typeface);
@@ -576,6 +579,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 reloadText();
             }
         }
+        EditorHelper.applyCommonEditorPreferences(smaliEditor, editor_prefs);
         smaliEditor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(smaliEditor, new TextActionCallback(className)));
     }
 

@@ -56,6 +56,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.HapticFeedbackConstants
+import android.graphics.Paint
 import android.widget.FrameLayout
 import androidx.viewpager2.widget.ViewPager2
 import com.zerostudio.idea.widget.editor.symbolinput.v2.R
@@ -170,6 +171,7 @@ class SymbolDrawerView @JvmOverloads constructor(
     internal val isSettingsDialogShowing: Boolean get() = settingsDialog?.isShowing == true
     private val indicator = SymbolGroupIndicator(context) { selectGroup(it, true) }.apply {
         onSettingsClick = { if (isBuiltInFeatureVisible(SymbolDrawerBuiltInFeatures.SETTINGS)) openSettings() }
+        onGroupReordered = { from, to -> reorderGroups(from, to) }
     }
     private val indicatorHost = FrameLayout(context).apply {
         addView(indicator, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -256,6 +258,7 @@ class SymbolDrawerView @JvmOverloads constructor(
             override fun onPageSelected(position: Int) {
                 if (suppressPageCallbacks) return
                 setIndicatorSelectedIndex(position)
+                requestLayout()
                 onGroupChangedListener?.invoke(position, groups.getOrNull(position))
                 val legacyGroup = legacyGroupAt(position)
                 extensions.lifecycleExtensions().forEach { extension ->
@@ -885,6 +888,21 @@ class SymbolDrawerView @JvmOverloads constructor(
         repository.saveGroups(groups)
     }
 
+    fun reorderGroups(fromIndex: Int, toIndex: Int) {
+        if (fromIndex !in groups.indices || toIndex !in groups.indices || fromIndex == toIndex) return
+        val mutable = groups.toMutableList()
+        val moved = mutable.removeAt(fromIndex)
+        mutable.add(toIndex, moved)
+        groups = mutable.toList()
+        saveGroups()
+        suppressPageCallbacks = true
+        submitGroups(groups, preserveSelectedGroup = false)
+        suppressPageCallbacks = false
+        pager.setCurrentItem(toIndex, false)
+        setIndicatorSelectedIndex(toIndex)
+        requestLayout()
+    }
+
     fun getGroups(): List<SymbolGroup> = groups.toList()
     fun getCurrentGroupIndex(): Int = pager.currentItem
     fun isExpanded(): Boolean = expansion >= 0.5f
@@ -951,9 +969,44 @@ class SymbolDrawerView @JvmOverloads constructor(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(indicatorHeight, MeasureSpec.EXACTLY)
         )
+        val currentGroup = groups.getOrNull(pager.currentItem)
+        val activeGroupSymbols = currentGroup?.symbols ?: emptyList()
+        val hasTextLabels = activeGroupSymbols.any {
+            it.shortAction != SymbolAction.OpenManager &&
+            (it.label.length > 2 || it.label.any { c -> c.isLetter() })
+        }
+        val density = resources.displayMetrics.density.coerceAtLeast(0.1f)
+        val availableW = (if (width > 1) width else resources.displayMetrics.widthPixels).coerceAtLeast(1)
+        val activeCols = if (hasTextLabels) {
+            val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = settings.symbolLabelTextSizeSp * 0.75f * resources.displayMetrics.scaledDensity
+            }
+            val longest = activeGroupSymbols.asSequence()
+                .filter { it.shortAction != SymbolAction.OpenManager }
+                .map { paint.measureText(it.label) }
+                .maxOrNull() ?: 0f
+            val minCellWidthPx = maxOf(settings.minimumTouchTargetDp.toFloat() * density, longest + 12f * density)
+            (availableW / minCellWidthPx).toInt().coerceIn(1, minOf(config.columns, 4))
+        } else {
+            val minCellWidthPx = maxOf(36f, settings.minimumTouchTargetDp.toFloat()) * density
+            (availableW / minCellWidthPx).toInt().coerceIn(1, config.columns)
+        }.coerceAtLeast(1)
+
+        val activeRows = if (activeGroupSymbols.isNotEmpty()) {
+            kotlin.math.ceil(activeGroupSymbols.size.toDouble() / activeCols).toInt().coerceAtLeast(1)
+        } else {
+            1
+        }
+        val naturalPageHeight = DrawerGeometry.gridHeightPx(activeRows, config, resources.displayMetrics.density)
+        val activePagerHeight = if (expansion >= 0.5f) {
+            naturalPageHeight
+        } else {
+            minOf(pagerHeight, naturalPageHeight)
+        }
+
         pager.measure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(pagerHeight, MeasureSpec.EXACTLY)
+            MeasureSpec.makeMeasureSpec(activePagerHeight, MeasureSpec.EXACTLY)
         )
         val desiredHeight = indicatorHost.measuredHeight + pager.measuredHeight
         val resolvedHeight = resolveSize(desiredHeight, heightMeasureSpec)

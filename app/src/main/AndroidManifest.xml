@@ -495,6 +495,10 @@
                 android:configChanges="orientation|screenSize|keyboardHidden"
                 android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
             <activity
+                android:name="io.github.abdurazaaqmohammed.ui.viewer.PdfViewerActivity"
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+            <activity
                 android:name="io.github.ratul.topactivity.ui.ClipboardActivity"
                 android:exported="false"
                 android:noHistory="true"

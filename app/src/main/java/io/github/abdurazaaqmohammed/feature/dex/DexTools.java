@@ -910,56 +910,85 @@ public class DexTools {
         }
     }
 
-    public void handleZipEntryClick(ZipEntryInfo zipEntry) {        File zipFile = zipEntry.getZipFile();
+    public void handleZipEntryClick(ZipEntryInfo zipEntry) {
+        File zipFile = zipEntry.getZipFile();
         String fullPath = zipEntry.getFullPath();
         if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
-        else new Thread(() -> {
-            try {
+        else {
             final String name = zipEntry.getName();
-            String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
-            File tempFolder = new File(outputDir);
-            tempFolder.mkdir();
-            File tempFile = new File(tempFolder, name);
-            tempFile.createNewFile();
-            // One generic stage covers every browsable archive format; the
-            // special cases below work on the staged copy.
-            ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
-            context.handler.post(() -> openWith.openWithDefaults(tempFile, name, zipFile, fullPath, () -> {
-            if(name.endsWith(".dex")) {
-                if (ArchiveBrowseUtil.isZipLike(zipFile))
-                    preExtractAllDex(context, zipFile, false);
-                context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
-            } else if (name.endsWith(".xml")) {
-                if (ApkDrawableRenderer.isDrawableXmlEntry(zipFile, fullPath)) {
-                    // res/drawable* / res/mipmap* / res/color* XMLs are
-                    // pictures, not documents: show the rendered preview and
-                    // keep the AXML editor one button away.
-                    context.handler.post(() -> DrawablePreviewDialog.show(
-                            context, zipFile, fullPath,
-                            () -> openXmlInEditor(tempFile, zipFile, fullPath)));
-                } else {
-                    openXmlInEditor(tempFile, zipFile, fullPath);
-                }
-            } else if (name.endsWith(".smali")) {
-                context.startActivityForResult(new Intent(context, TextEditorActivity.class)
-                        .putExtra("zf", zipFile.getPath())
-                        .putExtra("zipEntryPath", fullPath)
-                        .putExtra("path", tempFile.getPath()), 757);
-            } else if (name.equals("resources.arsc")) {
-                context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
-            } else if (HashUtil.isChecksumFile(name)) {
-                // Tapping a .sfv/.md5 entry verifies it against its sibling
-                // archive entries instead of falling through to open-with.
-                context.handler.post(() -> new ChecksumDialogs(context, dialogUtil)
-                        .showZipChecksumVerifyDialog(zipFile, fullPath));
-            } else {
-                openWith.open(tempFile, name, zipFile, fullPath);
+            final boolean isPayloadCandidate = "payload.bin".equalsIgnoreCase(name)
+                    || name.endsWith(".payload")
+                    || (name.endsWith(".bin") && (fullPath.toLowerCase(java.util.Locale.ROOT).contains("payload") || name.toLowerCase(java.util.Locale.ROOT).contains("payload")));
+            final ProgressManager[] pmHolder = new ProgressManager[1];
+            if (isPayloadCandidate) {
+                context.runOnUiThread(() -> {
+                    ProgressManager pm = new ProgressManager(context, true);
+                    pm.setText(context.getString(R.string.extracting) + " " + name + "...");
+                    pm.show();
+                    pmHolder[0] = pm;
+                });
             }
-            }));
-        } catch (Exception e) {
-            new ErrorUtil(context).showError(e);
+            new Thread(() -> {
+                try {
+                    String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
+                    File tempFolder = new File(outputDir);
+                    tempFolder.mkdir();
+                    File tempFile = new File(tempFolder, name);
+                    tempFile.createNewFile();
+                    // One generic stage covers every browsable archive format; the
+                    // special cases below work on the staged copy.
+                    ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
+                    if (isPayloadCandidate) {
+                        context.runOnUiThread(() -> {
+                            if (pmHolder[0] != null) pmHolder[0].dismiss();
+                        });
+                        if (io.github.abdurazaaqmohammed.feature.payload.PayloadParser.isPayload(tempFile)) {
+                            context.handler.post(() -> io.github.abdurazaaqmohammed.feature.payload.PayloadDialog.showForPayload(context, tempFile, pane1));
+                            return;
+                        }
+                    }
+                    context.handler.post(() -> openWith.openWithDefaults(tempFile, name, zipFile, fullPath, () -> {
+                    if(name.endsWith(".dex")) {
+                        if (ArchiveBrowseUtil.isZipLike(zipFile))
+                            preExtractAllDex(context, zipFile, false);
+                        context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
+                    } else if (name.endsWith(".xml")) {
+                        if (ApkDrawableRenderer.isDrawableXmlEntry(zipFile, fullPath)) {
+                            // res/drawable* / res/mipmap* / res/color* XMLs are
+                            // pictures, not documents: show the rendered preview and
+                            // keep the AXML editor one button away.
+                            context.handler.post(() -> DrawablePreviewDialog.show(
+                                    context, zipFile, fullPath,
+                                    () -> openXmlInEditor(tempFile, zipFile, fullPath)));
+                        } else {
+                            openXmlInEditor(tempFile, zipFile, fullPath);
+                        }
+                    } else if (name.endsWith(".smali")) {
+                        context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                                .putExtra("zf", zipFile.getPath())
+                                .putExtra("zipEntryPath", fullPath)
+                                .putExtra("path", tempFile.getPath()), 757);
+                    } else if (name.equals("resources.arsc")) {
+                        context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
+                    } else if (HashUtil.isChecksumFile(name)) {
+                        // Tapping a .sfv/.md5 entry verifies it against its sibling
+                        // archive entries instead of falling through to open-with.
+                        context.handler.post(() -> new ChecksumDialogs(context, dialogUtil)
+                                .showZipChecksumVerifyDialog(zipFile, fullPath));
+                    } else {
+                        openWith.open(tempFile, name, zipFile, fullPath);
+                    }
+                    }));
+                } catch (Exception e) {
+                    if (isPayloadCandidate) {
+                        context.runOnUiThread(() -> {
+                            if (pmHolder[0] != null) pmHolder[0].dismiss();
+                        });
+                    }
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
         }
-        }).start();
     }
 
     /**

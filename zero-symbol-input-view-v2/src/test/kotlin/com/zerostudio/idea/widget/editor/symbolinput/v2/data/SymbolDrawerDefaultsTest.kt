@@ -53,7 +53,7 @@ import org.junit.Test
 
 class SymbolDrawerDefaultsTest {
     @Test fun preservesCompleteV1FallbackSymbolSet() {
-        val group = SymbolDrawerDefaults.createGroups().single()
+        val group = SymbolDrawerDefaults.createGroups().first()
         assertEquals("Common", group.title)
         assertEquals(39, group.symbols.size)
         assertEquals(SymbolAction.MoveCursor(CursorTarget.LINE_START), group.symbols[0].longAction)
@@ -65,9 +65,20 @@ class SymbolDrawerDefaultsTest {
     }
 
     @Test fun newlineTabAndDollarDefaultsKeepTheirActualCharacters() {
-        val symbols = SymbolDrawerDefaults.createGroups().single().symbols
+        val symbols = SymbolDrawerDefaults.createGroups().first().symbols
         assertEquals("\n", (symbols[35].shortAction as SymbolAction.InsertText).template)
         assertEquals("\t", (symbols[36].shortAction as SymbolAction.InsertText).template)
         assertEquals("\$\$", (symbols[31].shortAction as SymbolAction.InsertText).template)
+    }
+
+    @Test fun providesSmaliModdingPresets() {
+        val groups = SymbolDrawerDefaults.createGroups()
+        assertTrue(groups.size >= 2)
+        val smaliGroup = groups.first { it.id == "smaliModding" }
+        assertEquals("Smali Modding", smaliGroup.title)
+        assertEquals(9, smaliGroup.symbols.size)
+        assertEquals("True ✅", smaliGroup.symbols[0].label)
+        assertEquals("False ❌", smaliGroup.symbols[1].label)
+        assertEquals("Return ✅", smaliGroup.symbols[2].label)
     }
 }

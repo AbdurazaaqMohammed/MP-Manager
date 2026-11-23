@@ -143,11 +143,12 @@ class SymbolGroupBundleCodecTest {
         val encoded = SymbolGroupStorageCodec.encode(defaults)
         val restored = SymbolGroupStorageCodec.decode(encoded)
 
-        assertEquals(defaults.single().title, restored.single().title)
-        assertEquals(defaults.single().symbols.map { it.label }, restored.single().symbols.map { it.label })
-        assertEquals(defaults.single().symbols.map { it.shortAction to it.longAction }, restored.single().symbols.map { it.shortAction to it.longAction })
-        assertTrue(restored.single().symbols.any { it.label == "\n" })
-        assertTrue(restored.single().symbols.any { it.label == "\t" })
+        assertEquals(defaults.first().title, restored.first().title)
+        assertEquals(defaults.first().symbols.map { it.label }, restored.first().symbols.map { it.label })
+        assertEquals(defaults.first().symbols.map { it.shortAction to it.longAction }, restored.first().symbols.map { it.shortAction to it.longAction })
+        assertTrue(restored.first().symbols.any { it.label == "\n" })
+        assertTrue(restored.first().symbols.any { it.label == "\t" })
+        assertEquals(defaults.size, restored.size)
     }
 
     @Test fun legacyExportUsesCurrentTypedActionInsteadOfStalePayloadMetadata() {
@@ -393,4 +394,32 @@ class SymbolGroupBundleCodecTest {
         assertEquals("const-string v0, \"\"", groups[1].symbols[3].legacyShortText)
     }
 
+    @Test fun importsMtManagerFunctionBarJson() {
+        val mtJson = """[
+            {
+                "name": "True ✅",
+                "search": "const/4\\s+(v\\d+),\\s*0x0",
+                "replace": "const/4 $1, 0x1",
+                "isRegex": true
+            },
+            {
+                "name": "False ❌",
+                "search": "const/4\\s+(v\\d+),\\s*0x1",
+                "replace": "const/4 $1, 0x0",
+                "isRegex": true
+            },
+            {
+                "name": "Return ✅",
+                "insert": "return-void"
+            }
+        ]"""
+        val groups = SymbolGroupBundleCodec.decode(mtJson)
+        assertEquals(1, groups.size)
+        assertEquals("MT Manager", groups[0].title)
+        assertEquals(3, groups[0].symbols.size)
+        assertEquals("True ✅", groups[0].symbols[0].label)
+        assertTrue(groups[0].symbols[0].shortAction is SymbolAction.Extension)
+        assertEquals("Return ✅", groups[0].symbols[2].label)
+        assertTrue(groups[0].symbols[2].shortAction is SymbolAction.InsertText)
+    }
 }

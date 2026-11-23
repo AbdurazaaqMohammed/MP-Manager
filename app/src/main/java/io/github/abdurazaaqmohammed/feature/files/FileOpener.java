@@ -234,6 +234,10 @@ public class FileOpener {
             showElfOptionsDialog(file, fileName, file);
             return;
         }
+        if (("payload.bin".equalsIgnoreCase(fileName) || (fileName != null && (fileName.endsWith(".bin") || fileName.endsWith(".payload")))) && io.github.abdurazaaqmohammed.feature.payload.PayloadParser.isPayload(file)) {
+            io.github.abdurazaaqmohammed.feature.payload.PayloadDialog.showForPayload(context, file, pane1);
+            return;
+        }
         showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
     }
 
@@ -1062,129 +1066,10 @@ public class FileOpener {
                 Extensions.showMessage(context, R.string.cannot_open_item);
                 return;
             }
-            ParcelFileDescriptor pfd = null;
-            PdfRenderer renderer = null;
-            try {
-                pfd = ParcelFileDescriptor.open(readable, ParcelFileDescriptor.MODE_READ_ONLY);
-                renderer = new PdfRenderer(pfd);
-                int pageCount = renderer.getPageCount();
-                if (pageCount <= 0) {
-                    renderer.close();
-                    pfd.close();
-                    Extensions.showMessage(context, R.string.cannot_open_item);
-                    return;
-                }
-
-                final PdfRenderer finalRenderer = renderer;
-                final ParcelFileDescriptor finalPfd = pfd;
-
-                int[] currentPage = new int[]{0};
-
-                LinearLayout root = new LinearLayout(context);
-                root.setOrientation(LinearLayout.VERTICAL);
-                root.setGravity(Gravity.CENTER_HORIZONTAL);
-                int pad = (int) (12 * context.getResources().getDisplayMetrics().density + 0.5f);
-                root.setPadding(pad, pad, pad, pad);
-
-                TextView pageInfo = new TextView(context);
-                pageInfo.setGravity(Gravity.CENTER);
-                pageInfo.setTextSize(15);
-                pageInfo.setPadding(0, 0, 0, pad / 2);
-                root.addView(pageInfo);
-
-                ImageView pageImageView = new ImageView(context);
-                pageImageView.setAdjustViewBounds(true);
-                pageImageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                root.addView(pageImageView, new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-                LinearLayout navLayout = new LinearLayout(context);
-                navLayout.setOrientation(LinearLayout.HORIZONTAL);
-                navLayout.setGravity(Gravity.CENTER);
-                navLayout.setPadding(0, pad, 0, 0);
-
-                Button prevBtn = new Button(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                prevBtn.setText("◀ Prev");
-                Button nextBtn = new Button(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                nextBtn.setText("Next ▶");
-
-                navLayout.addView(prevBtn);
-                navLayout.addView(nextBtn);
-                root.addView(navLayout);
-
-                final Bitmap[] currentBitmap = new Bitmap[1];
-
-                Runnable renderPage = () -> {
-                    try {
-                        PdfRenderer.Page page = finalRenderer.openPage(currentPage[0]);
-                        int screenWidth = context.getResources().getDisplayMetrics().widthPixels - (pad * 4);
-                        if (screenWidth <= 0) screenWidth = 800;
-                        int targetWidth = screenWidth;
-                        int targetHeight = (int) ((float) page.getHeight() / page.getWidth() * targetWidth);
-
-                        Bitmap bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
-                        bitmap.eraseColor(Color.WHITE);
-                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-                        page.close();
-
-                        if (currentBitmap[0] != null && !currentBitmap[0].isRecycled()) {
-                            currentBitmap[0].recycle();
-                        }
-                        currentBitmap[0] = bitmap;
-
-                        pageImageView.setImageBitmap(bitmap);
-                        pageInfo.setText((currentPage[0] + 1) + " / " + pageCount);
-                        prevBtn.setEnabled(currentPage[0] > 0);
-                        nextBtn.setEnabled(currentPage[0] < pageCount - 1);
-                    } catch (Exception e) {
-                        new ErrorUtil(context).showError(e);
-                    }
-                };
-
-                prevBtn.setOnClickListener(v -> {
-                    if (currentPage[0] > 0) {
-                        currentPage[0]--;
-                        renderPage.run();
-                    }
-                });
-
-                nextBtn.setOnClickListener(v -> {
-                    if (currentPage[0] < pageCount - 1) {
-                        currentPage[0]++;
-                        renderPage.run();
-                    }
-                });
-
-                renderPage.run();
-
-                ScrollView scroll = new ScrollView(context);
-                scroll.addView(root);
-
-                AlertDialog dialog = dialogUtil.getDialogBuilder()
-                        .setTitle(fileName)
-                        .setView(scroll)
-                        .setNeutralButton(R.string.open_with, (d, which) -> showAppsForMime(readable, fileName, "application/pdf"))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .create();
-
-                dialog.setOnDismissListener(d -> {
-                    try {
-                        if (currentBitmap[0] != null && !currentBitmap[0].isRecycled()) {
-                            currentBitmap[0].recycle();
-                        }
-                        finalRenderer.close();
-                        finalPfd.close();
-                    } catch (Exception ignored) {}
-                });
-
-                dialogUtil.styleAlertDialog(dialog);
-            } catch (Exception e) {
-                try {
-                    if (renderer != null) renderer.close();
-                    if (pfd != null) pfd.close();
-                } catch (Exception ignored) {}
-                new ErrorUtil(context).showError(e);
-            }
+            Intent intent = new Intent(context, io.github.abdurazaaqmohammed.ui.viewer.PdfViewerActivity.class)
+                    .putExtra(io.github.abdurazaaqmohammed.ui.viewer.PdfViewerActivity.EXTRA_FILE_PATH, readable.getAbsolutePath())
+                    .putExtra(io.github.abdurazaaqmohammed.ui.viewer.PdfViewerActivity.EXTRA_FILE_NAME, fileName);
+            context.startActivity(intent);
         });
     }
 
@@ -1944,28 +1829,25 @@ public class FileOpener {
     }
 
     private void promptUnsparseImage(File file, String fileName) {
-        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.SparseInfo sInfo =
                 SystemImageEngine.readSparseInfo(file);
         long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
-        String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
+        String sizeStr = uncompressedSize > 0 ? context.getString(R.string.unsparse_size_prefix,
                 FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
 
-        String msg = (isAr
-                ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"
-                : "This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?") + sizeStr;
+        String msg = context.getString(R.string.unsparse_image_msg) + sizeStr;
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle(isAr ? "فك ضغط Sparse Image" : "Unsparse Image")
+                .setTitle(R.string.unsparse_image_title)
                 .setMessage(msg)
-                .setPositiveButton(isAr ? "📂 فك الضغط" : "📂 Unsparse", (d, w) -> {
+                .setPositiveButton(R.string.unsparse_btn, (d, w) -> {
                     String baseName = fileName;
                     int dotIdx = baseName.lastIndexOf('.');
                     if (dotIdx > 0) baseName = baseName.substring(0, dotIdx);
                     File outRaw = new File(file.getParentFile(), baseName + "_raw.img");
 
                     ProgressManager pm = new ProgressManager(context, false).show();
-                    pm.setText(isAr ? ("جاري فك ضغط " + fileName + "...") : ("Unsparsing " + fileName + "..."));
+                    pm.setText(context.getString(R.string.unsparsing_progress, fileName));
 
                     new Thread(() -> {
                         try {
@@ -1992,7 +1874,7 @@ public class FileOpener {
                                     context.runOnUiThread(() -> {
                                         pm.dismiss();
                                         Toast.makeText(context,
-                                                (isAr ? "تم فك الضغط بنجاح: " : "Unsparsed successfully: ") + result.getName(),
+                                                context.getString(R.string.unsparsed_success, result.getName()),
                                                 Toast.LENGTH_LONG).show();
                                         context.reloadCurrentFolder();
                                     });
