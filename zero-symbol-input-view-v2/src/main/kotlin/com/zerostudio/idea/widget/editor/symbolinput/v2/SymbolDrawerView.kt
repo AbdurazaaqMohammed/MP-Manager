@@ -56,6 +56,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.HapticFeedbackConstants
+import android.graphics.Paint
 import android.widget.FrameLayout
 import androidx.viewpager2.widget.ViewPager2
 import com.zerostudio.idea.widget.editor.symbolinput.v2.R
@@ -970,9 +971,13 @@ class SymbolDrawerView @JvmOverloads constructor(
         )
         val currentGroup = groups.getOrNull(pager.currentItem)
         val activeGroupSymbols = currentGroup?.symbols ?: emptyList()
-        val hasTextLabels = activeGroupSymbols.any { it.label.length > 2 || it.label.any { c -> c.isLetter() } }
+        val hasTextLabels = activeGroupSymbols.any {
+            it.shortAction != SymbolAction.OpenManager &&
+            (it.label.length > 2 || it.label.any { c -> c.isLetter() })
+        }
+        val density = resources.displayMetrics.density.coerceAtLeast(0.1f)
+        val availableW = (if (width > 1) width else resources.displayMetrics.widthPixels).coerceAtLeast(1)
         val activeCols = if (hasTextLabels) {
-            val density = resources.displayMetrics.density.coerceAtLeast(0.1f)
             val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = settings.symbolLabelTextSizeSp * 0.75f * resources.displayMetrics.scaledDensity
             }
@@ -981,10 +986,10 @@ class SymbolDrawerView @JvmOverloads constructor(
                 .map { paint.measureText(it.label) }
                 .maxOrNull() ?: 0f
             val minCellWidthPx = maxOf(settings.minimumTouchTargetDp.toFloat() * density, longest + 12f * density)
-            val availableW = (if (width > 1) width else resources.displayMetrics.widthPixels).coerceAtLeast(1)
             (availableW / minCellWidthPx).toInt().coerceIn(1, minOf(config.columns, 4))
         } else {
-            config.columns
+            val minCellWidthPx = maxOf(36f, settings.minimumTouchTargetDp.toFloat()) * density
+            (availableW / minCellWidthPx).toInt().coerceIn(1, config.columns)
         }.coerceAtLeast(1)
 
         val activeRows = if (activeGroupSymbols.isNotEmpty()) {

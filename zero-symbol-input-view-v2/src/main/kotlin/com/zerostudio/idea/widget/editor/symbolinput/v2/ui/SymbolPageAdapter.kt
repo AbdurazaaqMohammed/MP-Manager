@@ -274,12 +274,25 @@ internal class SymbolPageAdapter(
             symbolsAdapter.submitList(symbols.toList()) {
                 if (groupChanged) symbolsAdapter.refreshItemExtensions()
             }
-            val hasTextLabels = symbols.any { it.label.length > 2 || it.label.any { c -> c.isLetter() } }
-            if ((!settings.showFullSymbolLabels || !settings.showSymbolLabels) && !hasTextLabels) {
-                spacingState.fullLabelMinimumCellWidthDp = 0f
-                return
+            val hasTextLabels = symbols.any {
+                it.shortAction != SymbolAction.OpenManager &&
+                (it.label.length > 2 || it.label.any { c -> c.isLetter() })
             }
             val density = grid.resources.displayMetrics.density.coerceAtLeast(0.1f)
+            val availableWidth = (if (grid.width > 1) {
+                grid.width - grid.paddingLeft - grid.paddingRight
+            } else {
+                grid.resources.displayMetrics.widthPixels
+            }).coerceAtLeast(1)
+
+            if ((!settings.showFullSymbolLabels || !settings.showSymbolLabels) && !hasTextLabels) {
+                spacingState.fullLabelMinimumCellWidthDp = 0f
+                val minCellWidthPx = maxOf(36f, settings.minimumTouchTargetDp.toFloat()) * density
+                val cols = (availableWidth / minCellWidthPx).toInt().coerceIn(1, config.columns)
+                val manager = grid.layoutManager as? GridLayoutManager
+                if (manager != null && manager.spanCount != cols) manager.spanCount = cols
+                return
+            }
             val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = settings.symbolLabelTextSizeSp * 0.75f *
                     grid.resources.displayMetrics.scaledDensity
@@ -293,11 +306,6 @@ internal class SymbolPageAdapter(
                 longest / density + 12f
             )
             val updateSpan = {
-                val availableWidth = (if (grid.width > 1) {
-                    grid.width - grid.paddingLeft - grid.paddingRight
-                } else {
-                    grid.resources.displayMetrics.widthPixels
-                }).coerceAtLeast(1)
                 val minimumWidthPx = spacingState.fullLabelMinimumCellWidthDp * density
                 val maxCols = if (minimumWidthPx > 0) {
                     (availableWidth / minimumWidthPx).toInt().coerceIn(1, if (hasTextLabels) minOf(config.columns, 4) else config.columns)
@@ -479,7 +487,13 @@ internal class SymbolPageAdapter(
                     holder.label.contentDescription = holder.label.context.getString(R.string.symbol_drawer_accessibility_settings)
                 } else {
                     holder.label.setCompoundDrawables(null, null, null, null)
-                    holder.label.text = if (settings.showSymbolLabels) item.label else item.icon?.takeIf { it.isNotBlank() } ?: item.label
+                    holder.label.text = if (settings.showSymbolLabels) {
+                        when (item.label) {
+                            "\n" -> "↵"
+                            "\t" -> "⇥"
+                            else -> item.label
+                        }
+                    } else item.icon?.takeIf { it.isNotBlank() } ?: item.label
                     holder.label.contentDescription = if (settings.showActionHints) {
                         "${item.label}, ${item.shortAction}"
                     } else item.label
