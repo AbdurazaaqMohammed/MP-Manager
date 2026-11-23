@@ -267,6 +267,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Generation per pane: a stale background listing never overwrites a newer pane. */
     private volatile long paneLoadGen1;
     private volatile long paneLoadGen2;
+    /** Folder counts can finish after a newer pane or archive has been selected. */
+    private final java.util.concurrent.atomic.AtomicLong folderHeaderGeneration =
+            new java.util.concurrent.atomic.AtomicLong();
     private String pendingDirToLoad;
     private String pendingHighlightName;
 
@@ -1869,7 +1872,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             clearGreen(pane1);
             if (!pane1) clearDiffColors();
         }
-        File[] files = listPlainFolder(folder, pane1);
+        File[] files = listPlainFolder(folder, pane1, pane1 ? paneLoadGen1 : paneLoadGen2);
         if (files == null) return;
         Arrays.sort(files);
         sortFiles(files, folder.getPath());
@@ -2049,7 +2052,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * @return the unsorted listing, or null when the folder cannot be listed
      *         (the user has already been notified in that case).
      */
-    private File[] listPlainFolder(File folder, boolean pane1) {
+    private File[] listPlainFolder(File folder, boolean pane1, long generation) {
         boolean shizukuDir = PrivilegeManager.Shizuku.isAndroidDataPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
@@ -2057,6 +2060,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (rootListingPath && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT && PrivilegeManager.Files.fileOpsOn(this)) {
             files = PrivilegeManager.Files.listWithStat(this, folder.getAbsolutePath());
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
+        }
+        if (files == null && shizukuDir && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.SHIZUKU) {
+            // Scoped storage can return a nonempty but incomplete listing (for
+            // example only this app's own directory), so do not wait for the
+            // normal listing to be empty before asking the selected backend.
+            File[] listed = PrivilegeManager.Shizuku.tryList(this, folder);
+            if (listed != null) files = Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
+        }
+        if (files == null && folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile) {
+            // File.listFiles(FileFilter) recreates plain Files and discards the
+            // Shizuku listing's cached directory/type metadata.
+            File[] listed = folder.listFiles();
+            if (listed != null) files = Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
         // A folder the app cannot read may still be listable (read-only) through the shell:
@@ -2067,7 +2083,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
         if (appListingIncomplete) {
             File[] viaShizuku = PrivilegeManager.Shizuku.tryList(this, folder);
-            if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) files = viaShizuku;
+            if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) {
+                files = Arrays.stream(viaShizuku).filter(this::isNotHidden).toArray(File[]::new);
+            }
         }
         if (files == null || (files.length == 0 && appListingIncomplete)) {
             boolean elevated = PrivilegeManager.Files.fileOpsOn(this);
@@ -2112,7 +2130,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 try { rootAvailable = PrivilegeManager.Root.isRootAvailable(this); } catch (Exception ignored) {}
                 if (!rootAvailable) runOnUiThread(() -> {
                     try {
-                        showShizukuGuideOnce(folder, pane1);
+                        if (isNetworkPaneLoadCurrent(pane1, generation)) showShizukuGuideOnce(folder, pane1);
                     } catch (Exception ignored) {
                     }
                 });
@@ -2129,13 +2147,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     }
                     if (fallback != null && (fallback.exists() || PrivilegeManager.Files.exists(this, fallback.getAbsolutePath())) && !fallback.equals(folder)) {
                         final File validFallback = fallback;
-                        runOnUiThread(() -> loadFolderInPaneAsync(validFallback, pane1, false));
+                        runOnUiThread(() -> {
+                            if (isNetworkPaneLoadCurrent(pane1, generation)) loadFolderInPaneAsync(validFallback, pane1, false);
+                        });
                         return null;
                     }
                 }
                 runOnUiThread(() -> {
                     try {
-                        Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
+                        if (isNetworkPaneLoadCurrent(pane1, generation))
+                            Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
                     } catch (Exception ignored) {
                     }
                 });
@@ -2245,6 +2266,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             });
         } else buildButton.setVisibility(View.GONE);
 
+        // Build and attach the replacement before publishing its path. If
+        // adapter creation fails, the old listing and its path stay together.
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        File parent = BootInspectManager.getParentOrImageOrigin(folder);
+        if (parent == null || parent.equals(folder.getParentFile())) {
+            File imgParent = SystemImageMountManager.getParentOrImageOrigin(folder);
+            if (imgParent != null) parent = imgParent;
+        }
+        if (parent == null) parent = folder;
+        MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
+        pane.setAdapter(adapter);
+
         if (pane1) {
             currentPane1Files = files;
             pane1Folder = folder;
@@ -2259,15 +2292,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
         }
         if (pane1 == (lastPaneSelected == 1)) setCurrentFolder(folder, files);
-        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-        File parent = BootInspectManager.getParentOrImageOrigin(folder);
-        if (parent == null || parent.equals(folder.getParentFile())) {
-            File imgParent = SystemImageMountManager.getParentOrImageOrigin(folder);
-            if (imgParent != null) parent = imgParent;
-        }
-        if (parent == null) parent = folder;
-        MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
-        pane.setAdapter(adapter);
         
         try {
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
@@ -2574,8 +2598,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         listingExecutor.execute(() -> {
             final File[] files;
             try {
-                files = listPlainFolder(folder, pane1);
-            } catch (Exception ignored) {
+                files = listPlainFolder(folder, pane1, gen);
+            } catch (Exception e) {
+                handler.post(() -> {
+                    if (!isFinishing() && !isDestroyed() && gen == (pane1 ? paneLoadGen1 : paneLoadGen2))
+                        new ErrorUtil(this).showError(e);
+                });
                 return;
             }
             if (files == null) return;
@@ -2589,7 +2617,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     if (isFinishing() || isDestroyed()) return;
                     if (gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
                     bindListedFolder(folder, files, pane1, addToHistory);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    new ErrorUtil(this).showError(e);
                     return;
                 }
                 if (saved != null) restorePaneScroll(pane1, saved);
@@ -3370,8 +3399,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void setCurrentFolder(File curr, File[] files) {
+        final long headerGeneration = folderHeaderGeneration.incrementAndGet();
         if (files == null) {
-            updateFolderCount(0, 0, curr);
+            updateFolderCount(0, 0, curr, headerGeneration);
             return;
         }
         // Count from the already-listed array (root listings carry
@@ -3406,11 +3436,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             }
             int listed = files.length - (skipFirst ? 1 : 0);
-            updateFolderCount(foldersCount, listed - foldersCount, folder);
+            updateFolderCount(foldersCount, listed - foldersCount, folder, headerGeneration);
         });
     }
 
-    private void updateFolderCount(int foldersCount, int totalCount, File curr) {
+    private void updateFolderCount(int foldersCount, int totalCount, File curr, long headerGeneration) {
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
         final int finalFoldersCount = foldersCount;
         final int finalTotalCount = totalCount;
@@ -3419,6 +3449,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 : (curr instanceof FTPFileWrapper ftpFolder ? ftpFolder.displayPath()
                 : (curr instanceof SafFile ? ((SafFile) curr).getDisplayPath() : curr.getPath())));
         handler.post(() -> {
+            if (headerGeneration != folderHeaderGeneration.get()) return;
             currentFolderPath.setText(path);
             uiHelper.scrollTextView(currentFolderPath);
             this.<TextView>findViewById(R.id.folderCount)
@@ -3464,6 +3495,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void setCurrentFolder(String path, List<?> files) {
+        final long headerGeneration = folderHeaderGeneration.incrementAndGet();
         new Thread(() -> {
 
             //CollectionsUtils.removeIf(files, (Predicate<Object>) o -> o instanceof ZipEntryInfo && ((ZipEntryInfo) o).isDirectory());
@@ -3479,6 +3511,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             int finalFoldersCount = foldersCount;
             handler.post(() -> {
+                if (headerGeneration != folderHeaderGeneration.get()) return;
                 TextView currentFolderPath = findViewById(R.id.currentFolderPath);
                 currentFolderPath.setText(path);
                 uiHelper.scrollTextView(currentFolderPath);
@@ -3490,6 +3523,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void setCurrentFolderFromSelected(File curr, Set<File> files) {
+        folderHeaderGeneration.incrementAndGet();
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
         currentFolderPath.setText(SafFile.displayPathOf(curr));
         uiHelper.scrollTextView(currentFolderPath);
