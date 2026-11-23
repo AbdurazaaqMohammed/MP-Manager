@@ -234,6 +234,10 @@ public class FileOpener {
             showElfOptionsDialog(file, fileName, file);
             return;
         }
+        if (("payload.bin".equalsIgnoreCase(fileName) || (fileName != null && (fileName.endsWith(".bin") || fileName.endsWith(".payload")))) && io.github.abdurazaaqmohammed.feature.payload.PayloadParser.isPayload(file)) {
+            io.github.abdurazaaqmohammed.feature.payload.PayloadDialog.showForPayload(context, file, pane1);
+            return;
+        }
         showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
     }
 

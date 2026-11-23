@@ -969,13 +969,35 @@ class SymbolDrawerView @JvmOverloads constructor(
             MeasureSpec.makeMeasureSpec(indicatorHeight, MeasureSpec.EXACTLY)
         )
         val currentGroup = groups.getOrNull(pager.currentItem)
-        val activeRows = if (currentGroup != null && currentGroup.symbols.isNotEmpty()) {
-            kotlin.math.ceil(currentGroup.symbols.size.toDouble() / config.columns.coerceAtLeast(1)).toInt().coerceAtLeast(1)
+        val activeGroupSymbols = currentGroup?.symbols ?: emptyList()
+        val hasTextLabels = activeGroupSymbols.any { it.label.length > 2 || it.label.any { c -> c.isLetter() } }
+        val activeCols = if (hasTextLabels) {
+            val density = resources.displayMetrics.density.coerceAtLeast(0.1f)
+            val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = settings.symbolLabelTextSizeSp * 0.75f * resources.displayMetrics.scaledDensity
+            }
+            val longest = activeGroupSymbols.asSequence()
+                .filter { it.shortAction != SymbolAction.OpenManager }
+                .map { paint.measureText(it.label) }
+                .maxOrNull() ?: 0f
+            val minCellWidthPx = maxOf(settings.minimumTouchTargetDp.toFloat() * density, longest + 12f * density)
+            val availableW = (if (width > 1) width else resources.displayMetrics.widthPixels).coerceAtLeast(1)
+            (availableW / minCellWidthPx).toInt().coerceIn(1, minOf(config.columns, 4))
+        } else {
+            config.columns
+        }.coerceAtLeast(1)
+
+        val activeRows = if (activeGroupSymbols.isNotEmpty()) {
+            kotlin.math.ceil(activeGroupSymbols.size.toDouble() / activeCols).toInt().coerceAtLeast(1)
         } else {
             1
         }
         val naturalPageHeight = DrawerGeometry.gridHeightPx(activeRows, config, resources.displayMetrics.density)
-        val activePagerHeight = minOf(pagerHeight, naturalPageHeight)
+        val activePagerHeight = if (expansion >= 0.5f) {
+            naturalPageHeight
+        } else {
+            minOf(pagerHeight, naturalPageHeight)
+        }
 
         pager.measure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),

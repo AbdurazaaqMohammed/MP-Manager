@@ -121,12 +121,45 @@ public class ChecksumDialogs {
         title.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         title.setPadding(0, dp(10), 0, dp(4));
         container.addView(title);
+        LinearLayout inputRow = new LinearLayout(context);
+        inputRow.setOrientation(LinearLayout.HORIZONTAL);
+        inputRow.setGravity(Gravity.CENTER_VERTICAL);
+
         EditText input = new EditText(context);
         input.setHint(R.string.verify_hash_hint);
         input.setTypeface(Typeface.MONOSPACE);
         input.setTextSize(13);
         input.setSingleLine(false);
-        container.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        inputRow.addView(input, inputParams);
+
+        MaterialButton pasteBtn = new MaterialButton(
+                context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        pasteBtn.setText(android.R.string.paste);
+        pasteBtn.setTextSize(12);
+        LinearLayout.LayoutParams pasteParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pasteParams.setMarginStart(dp(6));
+        inputRow.addView(pasteBtn, pasteParams);
+
+        pasteBtn.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                        context.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence clipText = cm.getPrimaryClip().getItemAt(0).getText();
+                    if (clipText != null) {
+                        input.setText(clipText.toString().trim());
+                        input.setSelection(input.getText().length());
+                    }
+                }
+            } catch (Exception ignored) {}
+        });
+
+        container.addView(inputRow, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         MaterialButton verifyBtn = new MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         verifyBtn.setText(R.string.verify);

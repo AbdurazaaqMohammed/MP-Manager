@@ -293,14 +293,18 @@ internal class SymbolPageAdapter(
                 longest / density + 12f
             )
             val updateSpan = {
-                val width = (grid.width - grid.paddingLeft - grid.paddingRight).coerceAtLeast(1)
-                if (width > 1) {
-                    val minimumWidthPx = spacingState.fullLabelMinimumCellWidthDp * density
-                    val maxCols = (width / minimumWidthPx).toInt().coerceIn(1, config.columns)
-                    val cols = if (symbols.size in 1..maxCols) symbols.size else maxCols
-                    val manager = grid.layoutManager as? GridLayoutManager
-                    if (manager != null && manager.spanCount != cols) manager.spanCount = cols
-                }
+                val availableWidth = (if (grid.width > 1) {
+                    grid.width - grid.paddingLeft - grid.paddingRight
+                } else {
+                    grid.resources.displayMetrics.widthPixels
+                }).coerceAtLeast(1)
+                val minimumWidthPx = spacingState.fullLabelMinimumCellWidthDp * density
+                val maxCols = if (minimumWidthPx > 0) {
+                    (availableWidth / minimumWidthPx).toInt().coerceIn(1, if (hasTextLabels) minOf(config.columns, 4) else config.columns)
+                } else config.columns
+                val cols = if (symbols.size in 1..maxCols) symbols.size else maxCols
+                val manager = grid.layoutManager as? GridLayoutManager
+                if (manager != null && manager.spanCount != cols) manager.spanCount = cols
             }
             updateSpan()
             grid.post(updateSpan)

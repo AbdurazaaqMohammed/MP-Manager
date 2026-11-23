@@ -551,7 +551,7 @@ class SymbolDrawerSettingsScreen(
                 gravity = Gravity.CENTER_VERTICAL
             }
             pair.forEachIndexed { index, action ->
-                row.addView(actionButton(action.first, action.second), LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                row.addView(actionButton(action.first, action.second), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     if (index == 0) marginEnd = spaceDp(5) else marginStart = spaceDp(5)
                 })
             }
@@ -785,15 +785,27 @@ class SymbolDrawerSettingsScreen(
     }
 
     private fun promptJson(title: String, message: String, imported: (String) -> Unit) {
+        val clipText = try {
+            val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            if (cm != null && cm.hasPrimaryClip() && (cm.primaryClip?.itemCount ?: 0) > 0) {
+                cm.primaryClip?.getItemAt(0)?.text?.toString().orEmpty().trim()
+            } else ""
+        } catch (e: Exception) { "" }
+
         val field = TextInputLayout(context, null, com.google.android.material.R.attr.textInputStyle).apply {
             hint = context.getString(R.string.symbol_drawer_192)
             boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            val editText = TextInputEditText(context).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                minLines = 6
+                gravity = Gravity.TOP
+                if (clipText.isNotBlank()) {
+                    setText(clipText)
+                    setSelection(clipText.length)
+                }
+            }
             addView(
-                TextInputEditText(context).apply {
-                    inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                    minLines = 6
-                    gravity = Gravity.TOP
-                },
+                editText,
                 LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
             )
         }
@@ -837,6 +849,15 @@ class SymbolDrawerSettingsScreen(
                 runCatching {
                     groupRepository.saveGroups(imported)
                     onGroupsChanged?.invoke(imported)
+                    toast(context.getString(R.string.symbol_drawer_190))
+                }.onFailure(::reportFailure)
+            }
+            .setNeutralButton("Append") { _, _ ->
+                runCatching {
+                    val existing = groupRepository.loadGroups()
+                    val combined = existing + imported
+                    groupRepository.saveGroups(combined)
+                    onGroupsChanged?.invoke(combined)
                     toast(context.getString(R.string.symbol_drawer_190))
                 }.onFailure(::reportFailure)
             }
