@@ -96,10 +96,9 @@ import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
-import modder.hub.dexeditor.utils.Notify_MT;
-import modder.hub.dexeditor.smali.SmaliCursorUtils;
-import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.smali.SmaliHelper;
+import modder.hub.dexeditor.utils.EditorHelper;
+import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.views.TextActionWindow;
 
 

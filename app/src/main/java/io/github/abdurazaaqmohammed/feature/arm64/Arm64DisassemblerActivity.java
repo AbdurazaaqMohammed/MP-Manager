@@ -885,9 +885,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         btnTreeCollapse.setLayoutParams(pColl);
         btnTreeCollapse.setOnClickListener(v -> {
             synchronized (allTreeItems) {
-                String root = (originalPath != null) ? new File(originalPath).getName() : "";
+                String rootName = (originalPath != null) ? new File(originalPath).getName() : "";
                 for (ElfTreeItem item : allTreeItems) {
-                    if (item.itemType == ElfTreeItem.ItemType.HEADER && item.title != null && !item.title.equals(root)) {
+                    if (item.itemType == ElfTreeItem.ItemType.HEADER && item.title != null && !item.title.equals(rootName)) {
                         collapsedTreeGroups.add(item.title);
                     }
                 }
