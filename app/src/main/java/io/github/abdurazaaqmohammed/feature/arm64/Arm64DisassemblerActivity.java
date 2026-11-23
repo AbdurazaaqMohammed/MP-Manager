@@ -203,6 +203,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
     private TextView tvTreeImports;
     private TextView tvTreeExports;
     private TextView tvTreeItemsCount;
+    private TextView btnTreeExpand;
+    private TextView btnTreeCollapse;
+    private final Set<String> collapsedTreeGroups = new HashSet<>();
     private String selectedTreeCategory = null;
     private EditText etTreeSearch;
     private RecyclerView rvElfTree;
@@ -867,25 +870,32 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         tvTreeItemsCount.setTextColor(0xFF8E8E93);
         countBar.addView(tvTreeItemsCount, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
 
-        TextView btnExpand = createSmallPillButton("EXPAND");
-        btnExpand.setOnClickListener(v -> {
-            selectedTreeCategory = null;
-            updateTreeChipsUI();
+        btnTreeExpand = createSmallPillButton("EXPAND");
+        btnTreeExpand.setOnClickListener(v -> {
+            collapsedTreeGroups.clear();
+            updateExpandCollapseButtonsUI();
             filterTreeAsync(etTreeSearch != null ? etTreeSearch.getText().toString() : "");
         });
-        countBar.addView(btnExpand);
+        countBar.addView(btnTreeExpand);
 
-        TextView btnCollapse = createSmallPillButton("COLLAPSE");
+        btnTreeCollapse = createSmallPillButton("COLLAPSE");
         LinearLayout.LayoutParams pColl = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         pColl.leftMargin = dp(8);
-        btnCollapse.setLayoutParams(pColl);
-        btnCollapse.setOnClickListener(v -> {
-            selectedTreeCategory = "SECTIONS_ONLY";
-            updateTreeChipsUI();
+        btnTreeCollapse.setLayoutParams(pColl);
+        btnTreeCollapse.setOnClickListener(v -> {
+            synchronized (allTreeItems) {
+                String root = (originalPath != null) ? new File(originalPath).getName() : "";
+                for (ElfTreeItem item : allTreeItems) {
+                    if (item.itemType == ElfTreeItem.ItemType.HEADER && item.title != null && !item.title.equals(root)) {
+                        collapsedTreeGroups.add(item.title);
+                    }
+                }
+            }
+            updateExpandCollapseButtonsUI();
             filterTreeAsync(etTreeSearch != null ? etTreeSearch.getText().toString() : "");
         });
-        countBar.addView(btnCollapse);
+        countBar.addView(btnTreeCollapse);
 
         treeContainer.addView(countBar);
 
@@ -1240,6 +1250,14 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     treeList.addAll(importItems);
                 }
 
+                String curGroup = rootName;
+                for (ElfTreeItem it : treeList) {
+                    if (it.itemType == ElfTreeItem.ItemType.HEADER) {
+                        curGroup = it.title;
+                    }
+                    it.groupName = curGroup;
+                }
+
                 synchronized (allTreeItems) {
                     allTreeItems.clear();
                     allTreeItems.addAll(treeList);
@@ -1288,6 +1306,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     if (stringsAdapter != null) stringsAdapter.notifyDataSetChanged();
                     if (hexAdapter != null) hexAdapter.notifyDataSetChanged();
                     if (elfTreeAdapter != null) elfTreeAdapter.notifyDataSetChanged();
+                    updateExpandCollapseButtonsUI();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -2920,6 +2939,8 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LinearLayout row = new LinearLayout(Arm64DisassemblerActivity.this);
+            row.setLayoutParams(new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setMinimumHeight(dp(36));
@@ -3009,7 +3030,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
             if (item.itemType == ElfTreeItem.ItemType.HEADER) {
                 holder.itemView.setBackgroundColor(0x14FFFFFF);
-                holder.itemView.setClickable(false);
+                String root = (originalPath != null) ? new File(originalPath).getName() : "";
+                boolean isRoot = item.title != null && item.title.equals(root);
+                holder.itemView.setClickable(!isRoot);
                 holder.tvTitle.setTextColor(0xFF22C55E);
                 holder.tvTitle.setText(item.title);
                 holder.tvPerm.setVisibility(View.GONE);
@@ -3017,7 +3040,26 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 holder.tvSize.setVisibility(View.VISIBLE);
                 holder.tvSize.setText(item.subtitle);
                 holder.tvSize.setTextColor(0xFF8E8E93);
-                holder.tvChevron.setVisibility(View.GONE);
+
+                if (!isRoot) {
+                    boolean isCollapsed = collapsedTreeGroups.contains(item.title);
+                    holder.tvChevron.setVisibility(View.VISIBLE);
+                    holder.tvChevron.setText(isCollapsed ? "▶" : "▼");
+                    holder.tvChevron.setTextSize(12);
+                    holder.tvChevron.setTextColor(0xFF8E8E93);
+                    holder.itemView.setOnClickListener(v -> {
+                        if (collapsedTreeGroups.contains(item.title)) {
+                            collapsedTreeGroups.remove(item.title);
+                        } else {
+                            collapsedTreeGroups.add(item.title);
+                        }
+                        updateExpandCollapseButtonsUI();
+                        filterTreeAsync(etTreeSearch != null ? etTreeSearch.getText().toString() : "");
+                    });
+                } else {
+                    holder.tvChevron.setVisibility(View.GONE);
+                    holder.itemView.setOnClickListener(null);
+                }
 
                 holder.tvTag.setVisibility(View.VISIBLE);
                 if (item.title.contains("Segment")) {
@@ -3061,6 +3103,9 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             holder.tvTitle.setText(item.title);
             holder.tvTitle.setTextColor(MaterialColors.getColor(holder.tvTitle, android.R.attr.textColorPrimary, 0xFFFFFFFF));
             holder.tvChevron.setVisibility(item.isClickable ? View.VISIBLE : View.GONE);
+            holder.tvChevron.setText("›");
+            holder.tvChevron.setTextSize(15);
+            holder.tvChevron.setTextColor(0xFF8E8E93);
 
             if (item.itemType == ElfTreeItem.ItemType.SEGMENT) {
                 holder.tvTag.setText("▪");
@@ -3197,6 +3242,45 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         bg.setCornerRadius(dp(10));
         tv.setBackground(bg);
         return tv;
+    }
+
+    private void updateExpandCollapseButtonsUI() {
+        if (btnTreeExpand == null || btnTreeCollapse == null) return;
+        boolean allCollapsed = true;
+        boolean noneCollapsed = collapsedTreeGroups.isEmpty();
+
+        String root = (originalPath != null) ? new File(originalPath).getName() : "";
+        int headerCount = 0;
+        synchronized (allTreeItems) {
+            for (ElfTreeItem item : allTreeItems) {
+                if (item.itemType == ElfTreeItem.ItemType.HEADER && item.title != null && !item.title.equals(root)) {
+                    headerCount++;
+                    if (!collapsedTreeGroups.contains(item.title)) {
+                        allCollapsed = false;
+                    }
+                }
+            }
+        }
+        if (headerCount == 0) {
+            allCollapsed = false;
+        }
+
+        styleSmallPillButton(btnTreeExpand, noneCollapsed);
+        styleSmallPillButton(btnTreeCollapse, allCollapsed);
+    }
+
+    private void styleSmallPillButton(TextView tv, boolean active) {
+        if (tv == null) return;
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(10));
+        if (active) {
+            bg.setColor(0x3322C55E);
+            tv.setTextColor(0xFF22C55E);
+        } else {
+            bg.setColor(0x18888888);
+            tv.setTextColor(0xFF8E8E93);
+        }
+        tv.setBackground(bg);
     }
 
     private void onTreeItemClicked(ElfTreeItem item) {
@@ -4084,25 +4168,34 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         new Thread(() -> {
             List<ElfTreeItem> result = new ArrayList<>();
             String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
+            boolean isSearching = !TextUtils.isEmpty(q);
+            String rootName = (originalPath != null) ? new File(originalPath).getName() : "";
+
             synchronized (allTreeItems) {
                 for (ElfTreeItem item : allTreeItems) {
                     if (item == null) continue;
-                    if (selectedTreeCategory != null) {
-                        if ("Programme".equals(selectedTreeCategory)) {
-                            if (item.title != null && (item.title.contains("Import") || item.title.contains("Export"))) continue;
-                            if (item.permissions != null && (item.permissions.contains("Import") || item.permissions.contains("Export"))) continue;
-                        } else if ("Imports".equals(selectedTreeCategory)) {
-                            boolean isImp = (item.title != null && item.title.contains("Import")) || (item.permissions != null && item.permissions.contains("Import"));
-                            if (!isImp) continue;
-                        } else if ("Exports".equals(selectedTreeCategory)) {
-                            boolean isExp = (item.title != null && item.title.contains("Export")) || (item.permissions != null && item.permissions.contains("Export"));
-                            if (!isExp) continue;
-                        } else if ("SECTIONS_ONLY".equals(selectedTreeCategory)) {
-                            if (item.itemType == ElfTreeItem.ItemType.SYMBOL) continue;
+
+                    // 1. Group Collapse Check (only when not searching)
+                    if (!isSearching && item.itemType != ElfTreeItem.ItemType.HEADER) {
+                        if (item.groupName != null && collapsedTreeGroups.contains(item.groupName)) {
+                            continue;
                         }
                     }
 
-                    if (TextUtils.isEmpty(q)) {
+                    // 2. Chip Category Filter (Programme, Imports, Exports)
+                    if (selectedTreeCategory != null) {
+                        boolean isRoot = item.title != null && item.title.equals(rootName);
+                        if ("Programme".equals(selectedTreeCategory)) {
+                            if ("Imports".equals(item.groupName) || "Exports".equals(item.groupName)) continue;
+                        } else if ("Imports".equals(selectedTreeCategory)) {
+                            if (!"Imports".equals(item.groupName) && !isRoot) continue;
+                        } else if ("Exports".equals(selectedTreeCategory)) {
+                            if (!"Exports".equals(item.groupName) && !isRoot) continue;
+                        }
+                    }
+
+                    // 3. Search Matching
+                    if (!isSearching) {
                         result.add(item);
                     } else {
                         if (item.itemType == ElfTreeItem.ItemType.HEADER) {

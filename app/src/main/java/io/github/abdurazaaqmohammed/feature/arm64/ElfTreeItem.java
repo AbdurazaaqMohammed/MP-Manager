@@ -22,6 +22,7 @@ public class ElfTreeItem {
     public final long fileOffset;
     public final long size;
     public final boolean isClickable;
+    public String groupName;
 
     public ElfTreeItem(ItemType itemType, String title, String subtitle, String permissions,
                        long address, long fileOffset, long size, boolean isClickable) {
