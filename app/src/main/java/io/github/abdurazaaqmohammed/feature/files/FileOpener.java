@@ -1829,28 +1829,25 @@ public class FileOpener {
     }
 
     private void promptUnsparseImage(File file, String fileName) {
-        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.SparseInfo sInfo =
                 SystemImageEngine.readSparseInfo(file);
         long uncompressedSize = (sInfo != null) ? sInfo.uncompressedSizeBytes : 0;
-        String sizeStr = uncompressedSize > 0 ? ("\n\n" + (isAr ? "الحجم بعد فك الضغط: " : "Uncompressed Size: ") +
+        String sizeStr = uncompressedSize > 0 ? context.getString(R.string.unsparse_size_prefix,
                 FileSize.getHumanReadableFileSize(uncompressedSize)) : "";
 
-        String msg = (isAr
-                ? "هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟"
-                : "This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?") + sizeStr;
+        String msg = context.getString(R.string.unsparse_image_msg) + sizeStr;
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle(isAr ? "فك ضغط Sparse Image" : "Unsparse Image")
+                .setTitle(R.string.unsparse_image_title)
                 .setMessage(msg)
-                .setPositiveButton(isAr ? "📂 فك الضغط" : "📂 Unsparse", (d, w) -> {
+                .setPositiveButton(R.string.unsparse_btn, (d, w) -> {
                     String baseName = fileName;
                     int dotIdx = baseName.lastIndexOf('.');
                     if (dotIdx > 0) baseName = baseName.substring(0, dotIdx);
                     File outRaw = new File(file.getParentFile(), baseName + "_raw.img");
 
                     ProgressManager pm = new ProgressManager(context, false).show();
-                    pm.setText(isAr ? ("جاري فك ضغط " + fileName + "...") : ("Unsparsing " + fileName + "..."));
+                    pm.setText(context.getString(R.string.unsparsing_progress, fileName));
 
                     new Thread(() -> {
                         try {
@@ -1877,7 +1874,7 @@ public class FileOpener {
                                     context.runOnUiThread(() -> {
                                         pm.dismiss();
                                         Toast.makeText(context,
-                                                (isAr ? "تم فك الضغط بنجاح: " : "Unsparsed successfully: ") + result.getName(),
+                                                context.getString(R.string.unsparsed_success, result.getName()),
                                                 Toast.LENGTH_LONG).show();
                                         context.reloadCurrentFolder();
                                     });

@@ -226,6 +226,12 @@
     <string name="cannot_open_item">لا يمكن فتح هذا العنصر بالوظيفة المحددة</string>
     <string name="eye_protection_on">وضع راحة العين مفعل</string>
     <string name="eye_protection_off">تم إيقاف وضع راحة العين</string>
+    <string name="unsparse_image_title">فك ضغط Sparse Image</string>
+    <string name="unsparse_image_msg">هذا الملف عبارة عن صورة أندرويد مضغوطة (Android Sparse Image).\nهل تريد فك ضغطها إلى صورة خام Raw Image (.img)؟</string>
+    <string name="unsparse_size_prefix">\n\nالحجم بعد فك الضغط: %1$s</string>
+    <string name="unsparse_btn">📂 فك الضغط</string>
+    <string name="unsparsing_progress">جاري فك ضغط %1$s…</string>
+    <string name="unsparsed_success">تم فك الضغط بنجاح: %1$s</string>
     <string name="fix_mime_type">إصلاح نوع MIME قبل المشاركة/الفتح (اكتشاف من البايتات)</string>
     <string name="reported_mime">MIME المُبلغ عنه</string>
     <string name="real_mime">MIME الحقيقي</string>

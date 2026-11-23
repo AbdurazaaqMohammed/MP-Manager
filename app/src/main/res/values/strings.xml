@@ -254,6 +254,12 @@
     <string name="cannot_open_item">This item cannot be opened with the selected function</string>
     <string name="eye_protection_on">Eye protection on</string>
     <string name="eye_protection_off">Eye protection off</string>
+    <string name="unsparse_image_title">Unsparse Image</string>
+    <string name="unsparse_image_msg">This file is a compressed Android Sparse Image.\nWould you like to unsparse it into a raw image (.img)?</string>
+    <string name="unsparse_size_prefix">\n\nUncompressed Size: %1$s</string>
+    <string name="unsparse_btn">📂 Unsparse</string>
+    <string name="unsparsing_progress">Unsparsing %1$s…</string>
+    <string name="unsparsed_success">Unsparsed successfully: %1$s</string>
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>
