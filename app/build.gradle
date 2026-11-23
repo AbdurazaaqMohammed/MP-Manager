@@ -93,6 +93,10 @@ android {
         resources.excludes.add("META-INF/DEPENDENCIES")
         resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
+        // Android 10+ forbids executing binaries copied to writable app storage.
+        // Extract the bundled command-line executable into nativeLibraryDir instead.
+        jniLibs.useLegacyPackaging = true
+        jniLibs.keepDebugSymbols.add("**/libmp_aapt2.so")
     }
 }
 

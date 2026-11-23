@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="aapt2_optimize">Optimize resources (AAPT2)</string>
+    <string name="aapt2_densities">Screen densities</string>
+    <string name="aapt2_densities_help">Comma-separated, for example xhdpi,xxhdpi. Empty keeps all densities.</string>
+    <string name="aapt2_configurations">Resource configurations</string>
+    <string name="aapt2_configurations_help">Comma-separated qualifiers, for example en,fr. Empty keeps all configurations.</string>
+    <string name="aapt2_abis">Native library architectures</string>
+    <string name="aapt2_abis_help">Comma-separated ABIs to retain, for example arm64-v8a. Empty keeps all.</string>
+    <string name="aapt2_min_sdk">Minimum SDK</string>
+    <string name="aapt2_target_sdk">Target SDK</string>
+    <string name="aapt2_sdk_help">Leave empty to preserve the APK value.</string>
+    <string name="aapt2_opt_warning">A new APK will be created. Removing resources or libraries and changing SDK levels can break compatibility. The original signature is invalidated; sign the result with a compatible key before installing. Stored native libraries are aligned to 4 KB, which may not work on devices requiring 16 KB alignment.</string>
+    <string name="aapt2_opt_done">Optimized APK created: %1$s</string>
+</resources>

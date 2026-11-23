@@ -707,6 +707,8 @@ public class ApkInfoDialogs {
                                     .show();
                         } else startOpt.run();
                     }).show();
+        } else if (ApkMoreMenuOrder.AAPT2_OPT.equals(actionId)) {
+            Aapt2OptimizeDialog.show(context, uiHelper, file);
         } else if (ApkMoreMenuOrder.DECOMPILE.equals(actionId)) {
             showDecompileOptionsDialog(file, fileName);
         } else if (ApkMoreMenuOrder.JADX_JAVA.equals(actionId)) {

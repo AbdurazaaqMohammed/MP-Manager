@@ -18,6 +18,7 @@ public final class ApkMoreMenuOrder {
 
     public static final String SIGN = "sign";
     public static final String OPT = "opt";
+    public static final String AAPT2_OPT = "aapt2_opt";
     public static final String DECOMPILE = "decompile";
     public static final String JADX_JAVA = "jadx_java";
     public static final String REFACTOR = "refactor";
@@ -39,7 +40,7 @@ public final class ApkMoreMenuOrder {
     public static final String PRIVACY = "privacy";
 
     public static final String[] DEFAULT_ORDER = {
-            SIGN, OPT, DECOMPILE, JADX_JAVA, REFACTOR, PROTECT, CLONE,
+            SIGN, OPT, AAPT2_OPT, DECOMPILE, JADX_JAVA, REFACTOR, PROTECT, CLONE,
             ADD_TOAST, REMOVE_TOASTS, REMOVE_SIG, SIG_HEALTH,
             MANIFEST_TOGGLES, PERMISSIONS, XPOSED_PATCH, MULTIPLEX,
             IL2CPP, PATCH_LIBS, FLUTTER, FRIDA, JIAGU, PRIVACY
@@ -117,6 +118,7 @@ public final class ApkMoreMenuOrder {
         switch (id) {
             case SIGN: return context.getString(R.string.sign_apk);
             case OPT: return context.getString(R.string.optimize_apk);
+            case AAPT2_OPT: return context.getString(R.string.aapt2_optimize);
             case DECOMPILE: return context.getString(R.string.decompile_reandroid_apkeditor);
             case JADX_JAVA: return context.getString(R.string.decompile_to_java_jadx);
             case REFACTOR: return context.getString(R.string.refactor_obfuscated_resource_names);
@@ -157,6 +159,7 @@ public final class ApkMoreMenuOrder {
         switch (id) {
             case SIGN: return R.drawable.baseline_check_circle_24;
             case OPT: return R.drawable.gavel_24px;
+            case AAPT2_OPT: return R.drawable.gavel_24px;
             case DECOMPILE: return R.drawable.code_24px;
             case JADX_JAVA: return R.drawable.code_24px;
             case REFACTOR: return R.drawable.baseline_drive_file_rename_outline_24;
