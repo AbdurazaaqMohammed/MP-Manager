@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.ui.editor.symbols.SymbolDrawerMigration;
 import kotlin.Unit;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity;
+import modder.hub.dexeditor.utils.EditorHelper;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
 import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
@@ -503,6 +504,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             if (callback != null) {
                 callback.onContentModified(className);
                 callback.onUndoRedoChanged(editor.canUndo(), editor.canRedo());
+            }
+            if (editorPrefs != null && editorPrefs.getBoolean("pref_show_invisible_characters", false)) {
+                EditorHelper.updateInvisibleCharacters(editor, true);
             }
         });
         editor.subscribeEvent(SelectionChangeEvent.class, (event, unsubscribe) -> {
@@ -934,13 +938,19 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         savedFont = fontType;
         String fontSizeStr = editorPrefs.getString("font_size", editorPrefs.getString("pref_font_size", "14"));
         try { editor.setTextSize(Float.parseFloat(fontSizeStr)); } catch (Exception ignored) {}
-        int tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
+        int tabSize = 4;
+        try {
+            tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
+        } catch (Exception ignored) {}
         editor.setTabWidth(tabSize);
         editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
-        // The options-menu toggle stores "wrap_text"; fall back to the legacy
-        // "pref_word_wrap" key so either one sticks across onResume/minimize.
-        boolean wordWrap = editorPrefs.getBoolean("wrap_text", editorPrefs.getBoolean("pref_word_wrap", false));
-        editor.setWordwrap(!largeFileMode && wordWrap);
+        
+        // Apply unified editor preferences (line spacing, indent guides, current line highlight,
+        // pinned line numbers, word wrap with anti-word-break, blank symbols, invisible chars, auto-indent/brackets)
+        EditorHelper.applyCommonEditorPreferences(editor, editorPrefs);
+        if (largeFileMode) {
+            editor.setWordwrap(false);
+        }
     }
 
     /** Use the current editor preference throughout initialization; retain the legacy fallback. */

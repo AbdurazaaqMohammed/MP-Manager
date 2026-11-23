@@ -56,6 +56,11 @@ public class EditorSettingsActivity extends BaseActivity {
                 });
             }
 
+            EditTextPreference tabSizePref = findPreference("pref_tab_size");
+            if (tabSizePref != null) {
+                tabSizePref.setOnBindEditTextListener(et -> et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER));
+            }
+
             PreferenceCategory aiCategory = findPreference("gemini_ai_category");
             if (aiCategory != null) {
                 if (requireActivity().getIntent().getBooleanExtra("from_dex", false)) {
