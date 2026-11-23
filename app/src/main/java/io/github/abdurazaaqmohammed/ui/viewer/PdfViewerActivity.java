@@ -58,6 +58,7 @@ public class PdfViewerActivity extends BaseActivity {
     private final ExecutorService renderExecutor = Executors.newFixedThreadPool(2);
 
     private Toolbar toolbar;
+    private TextView toolbarTitle;
     private TextView pageInfo;
     private ImageButton btnEyeComfort;
     private ImageButton btnOpenWith;
@@ -134,8 +135,11 @@ public class PdfViewerActivity extends BaseActivity {
 
     private void initViews(String fileName) {
         toolbar = findViewById(R.id.toolbar);
-        toolbar.setTitle(fileName);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        toolbarTitle = findViewById(R.id.toolbarTitle);
+        toolbarTitle.setText(fileName);
+        toolbarTitle.setSelected(true);
 
         pageInfo = findViewById(R.id.pageInfo);
         btnEyeComfort = findViewById(R.id.btnEyeComfort);
@@ -192,13 +196,13 @@ public class PdfViewerActivity extends BaseActivity {
     private void applyEyeComfort(int intensity) {
         if (intensity <= 0) {
             eyeComfortOverlay.setVisibility(View.GONE);
-            btnEyeComfort.setColorFilter(null);
+            btnEyeComfort.clearColorFilter();
         } else {
             eyeComfortOverlay.setVisibility(View.VISIBLE);
             // Intensity ranges 1..70; map to alpha 20..185
             int alpha = (int) (intensity * 2.55f);
             eyeComfortOverlay.setBackgroundColor(Color.argb(alpha, 255, 215, 120));
-            btnEyeComfort.setColorFilter(0xFFFFB300);
+            btnEyeComfort.setColorFilter(Color.parseColor("#FFB300"));
         }
     }
 
