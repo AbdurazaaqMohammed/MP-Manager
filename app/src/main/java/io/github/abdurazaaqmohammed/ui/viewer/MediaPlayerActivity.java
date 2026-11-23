@@ -64,7 +64,8 @@ public class MediaPlayerActivity extends BaseActivity implements
     private View toolbar;
     private ImageView artworkView;
     private TextView trackTitle, trackArtist, trackAlbum, currentTime, totalTime, speedLabel, errorMessage, bufferingIndicator, subtitleView;
-    private ImageButton btnPlayPause, btnNext, btnPrevious, btnRewind, btnFastForward, btnRepeat, btnShuffle, btnMute, btnQueue, btnLock, btnSettings, btnAspect, btnUnlock;
+    private ImageButton btnPlayPause, btnNext, btnPrevious, btnRewind, btnFastForward, btnRepeat, btnShuffle, btnMute, btnQueue, btnLock, btnSettings, btnAspect, btnUnlock, btnMinimize;
+    private boolean isMinimizing;
     private Button btnSetA, btnSetB;
     private ImageButton btnClearAB;
     private SeekBar seekBar, speedSeekBar, volumeSeekBar;
@@ -164,6 +165,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         btnMute = findViewById(R.id.btnMute);
         btnQueue = findViewById(R.id.btnQueue);
         btnLock = findViewById(R.id.btnLock);
+        btnMinimize = findViewById(R.id.btnMinimize);
         btnSettings = findViewById(R.id.btnSettings);
         btnAspect = findViewById(R.id.btnAspect);
         btnUnlock = findViewById(R.id.btnUnlock);
@@ -211,6 +213,13 @@ public class MediaPlayerActivity extends BaseActivity implements
         });
 
         btnLock.setOnClickListener(v -> setLocked(!controlsLocked));
+
+        if (btnMinimize != null) {
+            btnMinimize.setOnClickListener(v -> {
+                isMinimizing = true;
+                finish();
+            });
+        }
 
         btnUnlock.setOnClickListener(v -> setLocked(false));
 
@@ -1083,10 +1092,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         playerManager.setVideoSizeChangedListener(null);
         autoHideHandler.removeCallbacks(autoHideRunnable);
         playerManager.setSurface(null);
-        if (isFinishing() && playerManager.getState() != PlayerManager.PlayState.PLAYING) {
-            // Backed out while paused/idle: release the engine and don't leave
-            // the foreground service lingering with nothing happening. Actively
-            // playing audio is left alone so background playback keeps working.
+        if (isFinishing() && !isMinimizing) {
             try {
                 playerManager.stop();
             } catch (Exception ignored) {

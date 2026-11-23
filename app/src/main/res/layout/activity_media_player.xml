@@ -153,6 +153,15 @@
         app:subtitleTextColor="@android:color/darker_gray">
 
         <ImageButton
+            android:id="@+id/btnMinimize"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_down_mt"
+            android:contentDescription="@string/minimize" />
+
+        <ImageButton
             android:id="@+id/btnLock"
             android:layout_width="40dp"
             android:layout_height="40dp"
