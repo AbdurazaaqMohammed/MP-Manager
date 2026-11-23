@@ -1643,6 +1643,12 @@ Strings are sent to the external service you configured.</string>
     <string name="smali_to_java">Smali to Java</string>
     <string name="ai_explanation">AI Explanation</string>
     <string name="clear_method">Clear method</string>
+    <string name="copy_as_frida_snippet">Copy as frida snippet</string>
+    <string name="copy_as_xposed_snippet">Copy as xposed snippet</string>
+    <string name="nav_section_class">Class</string>
+    <string name="nav_section_fields">Fields</string>
+    <string name="nav_section_method">Method</string>
+    <string name="nav_menu_title">Menu</string>
     <string name="antisplit_merge_and_share">Antisplit merge and share</string>
     <string name="antisplit_merge_and_save">Antisplit merge and save</string>
     <string name="save_split_apks">Save split APKS</string>

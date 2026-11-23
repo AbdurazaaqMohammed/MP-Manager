@@ -1368,6 +1368,12 @@
     <string name="smali_to_java">Smali إلى Java</string>
     <string name="ai_explanation">شرح بالذكاء الاصطناعي</string>
     <string name="clear_method">مسح الدالة</string>
+    <string name="copy_as_frida_snippet">نسخ كـ Frida Snippet</string>
+    <string name="copy_as_xposed_snippet">نسخ كـ Xposed Snippet</string>
+    <string name="nav_section_class">الفئة (Class)</string>
+    <string name="nav_section_fields">الحقول (Fields)</string>
+    <string name="nav_section_method">الدوال (Method)</string>
+    <string name="nav_menu_title">القائمة</string>
     <string name="antisplit_merge_and_share">دمج Antisplit ومشاركة</string>
     <string name="antisplit_merge_and_save">دمج Antisplit وحفظ</string>
     <string name="save_split_apks">حفظ ملفات APK المقسمة</string>

@@ -9,6 +9,11 @@
         app:showAsAction="always" />
     <item
         app:showAsAction="always"
+        android:icon="@drawable/ic_edit_mt"
+        android:id="@+id/nav_menu_settings"
+        android:title="@string/nav_menu_title"/>
+    <item
+        app:showAsAction="always"
         android:icon="@drawable/baseline_swap_horiz_24"
         android:id="@+id/strings_list"
         android:title="Show Strings"/>    

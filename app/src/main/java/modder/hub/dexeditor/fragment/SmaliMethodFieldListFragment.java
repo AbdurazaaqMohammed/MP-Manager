@@ -46,6 +46,11 @@ import modder.hub.dexeditor.views.AlertCircularProgress;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.widget.ScrollView;
+import androidx.appcompat.widget.SwitchCompat;
+import java.util.LinkedHashMap;
+import modder.hub.dexeditor.utils.HookSnippetGenerator;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -200,6 +205,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         // comparison never matched and the icons were always white - invisible
         // on the light dialog surface.
         int tint = onSurfaceColor();
+        MenuItem navSettings = menu.findItem(R.id.nav_menu_settings);
+        if (navSettings != null && navSettings.getIcon() != null) {
+            DrawableCompat.setTint(navSettings.getIcon(), tint);
+        }
         DrawableCompat.setTint(menu.findItem(R.id.strings_list).getIcon(), tint);
         DrawableCompat.setTint(menu.findItem(R.id.close).getIcon(), tint);
         DrawableCompat.setTint(searchItem.getIcon(), tint);
@@ -245,6 +254,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
 
         toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.nav_menu_settings) {
+                showNavMenuPreferencesDialog();
+                return true;
+            }
             if (item.getItemId() == R.id.close) {
                 saveCurrentState(); // Save state before dismissing
                 dismiss();
@@ -461,6 +474,114 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         } else if (getActivity() instanceof DialogLineNumberListener) {
             ((DialogLineNumberListener) getActivity())._updateEditorLineNumber(lineNumber);
         }
+    }
+
+    private void showNavMenuPreferencesDialog() {
+        Activity activity = getActivity();
+        if (activity == null || activity.isFinishing()) return;
+
+        SharedPreferences prefs = activity.getSharedPreferences("smali_nav_menu_prefs", Context.MODE_PRIVATE);
+        Map<String, SwitchCompat> switchMap = new LinkedHashMap<>();
+
+        ScrollView scrollView = new ScrollView(activity);
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dpToPx(16);
+        root.setPadding(pad, dpToPx(8), pad, dpToPx(16));
+
+        // 1. Class section
+        addNavSectionHeader(root, getString(R.string.nav_section_class));
+        addNavSwitchRow(root, switchMap, "nav_class_find_usages", getString(R.string.find_usages), prefs.getBoolean("nav_class_find_usages", true));
+        addNavSwitchRow(root, switchMap, "nav_class_find_subclasses", getString(R.string.find_subclasses), prefs.getBoolean("nav_class_find_subclasses", true));
+        addNavSwitchRow(root, switchMap, "nav_class_copy_signature", getString(R.string.copy_class_signature), prefs.getBoolean("nav_class_copy_signature", true));
+        addNavSwitchRow(root, switchMap, "nav_class_copy_frida", getString(R.string.copy_as_frida_snippet), prefs.getBoolean("nav_class_copy_frida", true));
+        addNavSwitchRow(root, switchMap, "nav_class_copy_xposed", getString(R.string.copy_as_xposed_snippet), prefs.getBoolean("nav_class_copy_xposed", true));
+
+        // 2. Fields section
+        addNavSectionHeader(root, getString(R.string.nav_section_fields));
+        addNavSwitchRow(root, switchMap, "nav_field_find_usages", getString(R.string.find_usages), prefs.getBoolean("nav_field_find_usages", true));
+        addNavSwitchRow(root, switchMap, "nav_field_copy_signature", getString(R.string.copy_field_signature), prefs.getBoolean("nav_field_copy_signature", true));
+        addNavSwitchRow(root, switchMap, "nav_field_copy_get_code", getString(R.string.copy_field_get_code), prefs.getBoolean("nav_field_copy_get_code", true));
+        addNavSwitchRow(root, switchMap, "nav_field_copy_put_code", getString(R.string.copy_field_put_code), prefs.getBoolean("nav_field_copy_put_code", true));
+        addNavSwitchRow(root, switchMap, "nav_field_copy_frida", getString(R.string.copy_as_frida_snippet), prefs.getBoolean("nav_field_copy_frida", true));
+        addNavSwitchRow(root, switchMap, "nav_field_copy_xposed", getString(R.string.copy_as_xposed_snippet), prefs.getBoolean("nav_field_copy_xposed", true));
+
+        // 3. Method section
+        addNavSectionHeader(root, getString(R.string.nav_section_method));
+        addNavSwitchRow(root, switchMap, "nav_method_find_usages", getString(R.string.find_usages), prefs.getBoolean("nav_method_find_usages", true));
+        addNavSwitchRow(root, switchMap, "nav_method_find_overrides", getString(R.string.find_overriding_methods), prefs.getBoolean("nav_method_find_overrides", true));
+        addNavSwitchRow(root, switchMap, "nav_method_copy_signature", getString(R.string.copy_method_signature), prefs.getBoolean("nav_method_copy_signature", true));
+        addNavSwitchRow(root, switchMap, "nav_method_copy_code", getString(R.string.copy_method_code), prefs.getBoolean("nav_method_copy_code", true));
+        addNavSwitchRow(root, switchMap, "nav_method_copy_invoke_code", getString(R.string.copy_method_invoke_code), prefs.getBoolean("nav_method_copy_invoke_code", true));
+        addNavSwitchRow(root, switchMap, "nav_method_copy_frida", getString(R.string.copy_as_frida_snippet), prefs.getBoolean("nav_method_copy_frida", true));
+        addNavSwitchRow(root, switchMap, "nav_method_copy_xposed", getString(R.string.copy_as_xposed_snippet), prefs.getBoolean("nav_method_copy_xposed", true));
+        addNavSwitchRow(root, switchMap, "nav_method_view_flowchart", getString(R.string.view_flowchart), prefs.getBoolean("nav_method_view_flowchart", true));
+        addNavSwitchRow(root, switchMap, "nav_method_smali_to_java", getString(R.string.smali_to_java), prefs.getBoolean("nav_method_smali_to_java", true));
+        addNavSwitchRow(root, switchMap, "nav_method_clear_code", getString(R.string.clear_method), prefs.getBoolean("nav_method_clear_code", true));
+
+        scrollView.addView(root);
+
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(R.string.nav_menu_title)
+                .setView(scrollView)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    SharedPreferences.Editor editor = prefs.edit();
+                    for (Map.Entry<String, SwitchCompat> entry : switchMap.entrySet()) {
+                        editor.putBoolean(entry.getKey(), entry.getValue().isChecked());
+                    }
+                    editor.apply();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void addNavSectionHeader(LinearLayout root, String title) {
+        TextView tv = new TextView(root.getContext());
+        tv.setText(title);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setTextSize(15);
+        int primary = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF3860AF);
+        tv.setTextColor(primary);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, dpToPx(14), 0, dpToPx(6));
+        tv.setLayoutParams(lp);
+        root.addView(tv);
+    }
+
+    private void addNavSwitchRow(LinearLayout root, Map<String, SwitchCompat> switchMap,
+                                 String key, String title, boolean isChecked) {
+        Context context = root.getContext();
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dpToPx(8), 0, dpToPx(8));
+
+        TextView tv = new TextView(context);
+        tv.setText(title);
+        tv.setTextSize(14);
+        tv.setTextColor(onSurfaceColor());
+        LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        tv.setLayoutParams(textLp);
+
+        SwitchCompat sw = new SwitchCompat(context);
+        sw.setChecked(isChecked);
+        sw.setClickable(false);
+        sw.setFocusable(false);
+
+        row.addView(tv);
+        row.addView(sw);
+
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(v -> sw.setChecked(!sw.isChecked()));
+
+        root.addView(row);
+        switchMap.put(key, sw);
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     // Generate and display a flowchart for the given method
@@ -1112,34 +1233,83 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 // Create a popup menu attached to the clicked view
                 PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
                 Menu menu = popupMenu.getMenu();
+                SharedPreferences navPrefs = requireContext().getSharedPreferences("smali_nav_menu_prefs", Context.MODE_PRIVATE);
 
                 // Check if this is a class signature (starts with L and ends with ;)
                 if (methodOrFieldName1.startsWith("L") && methodOrFieldName1.endsWith(";")) {
-                    menu.add(20, 20, 20, R.string.find_usages);
-                    menu.add(21, 21, 21, R.string.find_subclasses);
-                    menu.add(1, 1, 1, R.string.copy_class_signature);
+                    if (navPrefs.getBoolean("nav_class_find_usages", true)) {
+                        menu.add(20, 20, 20, R.string.find_usages);
+                    }
+                    if (navPrefs.getBoolean("nav_class_find_subclasses", true)) {
+                        menu.add(21, 21, 21, R.string.find_subclasses);
+                    }
+                    if (navPrefs.getBoolean("nav_class_copy_signature", true)) {
+                        menu.add(1, 1, 1, R.string.copy_class_signature);
+                    }
+                    if (navPrefs.getBoolean("nav_class_copy_frida", true)) {
+                        menu.add(30, 30, 30, R.string.copy_as_frida_snippet);
+                    }
+                    if (navPrefs.getBoolean("nav_class_copy_xposed", true)) {
+                        menu.add(31, 31, 31, R.string.copy_as_xposed_snippet);
+                    }
                     menu.add(2, 2, 2, R.string.copy_subclass_signature);
                 }
 
                 // Check if this is a field (contains :)
                 if (methodOrFieldName1.contains(":")) {
-                    menu.add(22, 22, 22, R.string.find_usages);
-                    menu.add(3, 3, 3, R.string.copy_field_signature);
-                    menu.add(9, 9, 9, R.string.copy_field_get_code);  // Generate smali get instruction
-                    menu.add(10, 10, 10, R.string.copy_field_put_code); // Generate smali put instruction
+                    if (navPrefs.getBoolean("nav_field_find_usages", true)) {
+                        menu.add(22, 22, 22, R.string.find_usages);
+                    }
+                    if (navPrefs.getBoolean("nav_field_copy_signature", true)) {
+                        menu.add(3, 3, 3, R.string.copy_field_signature);
+                    }
+                    if (navPrefs.getBoolean("nav_field_copy_get_code", true)) {
+                        menu.add(9, 9, 9, R.string.copy_field_get_code);  // Generate smali get instruction
+                    }
+                    if (navPrefs.getBoolean("nav_field_copy_put_code", true)) {
+                        menu.add(10, 10, 10, R.string.copy_field_put_code); // Generate smali put instruction
+                    }
+                    if (navPrefs.getBoolean("nav_field_copy_frida", true)) {
+                        menu.add(32, 32, 32, R.string.copy_as_frida_snippet);
+                    }
+                    if (navPrefs.getBoolean("nav_field_copy_xposed", true)) {
+                        menu.add(33, 33, 33, R.string.copy_as_xposed_snippet);
+                    }
                 }
 
                 // Check if this is a method (contains ( but not :)
                 if (methodOrFieldName1.contains("(") && !methodOrFieldName1.contains(":")) {
-                    menu.add(26, 26, 26, R.string.find_usages);
-                    menu.add(27, 27, 27, R.string.find_overriding_methods);
-                    menu.add(4, 4, 4, R.string.copy_method_signature);
-                    menu.add(5, 5, 5, R.string.copy_method_code);      // Get full method body
-                    menu.add(6, 6, 6, R.string.copy_method_invoke_code); // Generate invoke instruction
-                    menu.add(7, 7, 7, R.string.view_flowchart);       // Show method flowchart
-                    menu.add(8, 8, 8, R.string.smali_to_java).setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
+                    if (navPrefs.getBoolean("nav_method_find_usages", true)) {
+                        menu.add(26, 26, 26, R.string.find_usages);
+                    }
+                    if (navPrefs.getBoolean("nav_method_find_overrides", true)) {
+                        menu.add(27, 27, 27, R.string.find_overriding_methods);
+                    }
+                    if (navPrefs.getBoolean("nav_method_copy_signature", true)) {
+                        menu.add(4, 4, 4, R.string.copy_method_signature);
+                    }
+                    if (navPrefs.getBoolean("nav_method_copy_code", true)) {
+                        menu.add(5, 5, 5, R.string.copy_method_code);      // Get full method body
+                    }
+                    if (navPrefs.getBoolean("nav_method_copy_invoke_code", true)) {
+                        menu.add(6, 6, 6, R.string.copy_method_invoke_code); // Generate invoke instruction
+                    }
+                    if (navPrefs.getBoolean("nav_method_copy_frida", true)) {
+                        menu.add(34, 34, 34, R.string.copy_as_frida_snippet);
+                    }
+                    if (navPrefs.getBoolean("nav_method_copy_xposed", true)) {
+                        menu.add(35, 35, 35, R.string.copy_as_xposed_snippet);
+                    }
+                    if (navPrefs.getBoolean("nav_method_view_flowchart", true)) {
+                        menu.add(7, 7, 7, R.string.view_flowchart);       // Show method flowchart
+                    }
+                    if (navPrefs.getBoolean("nav_method_smali_to_java", true)) {
+                        menu.add(8, 8, 8, R.string.smali_to_java).setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
+                    }
                     menu.add(11, 11, 11, R.string.ai_explanation).setEnabled(Build.VERSION.SDK_INT > 20);
-                    menu.add(28, 28, 28, R.string.clear_method);
+                    if (navPrefs.getBoolean("nav_method_clear_code", true)) {
+                        menu.add(28, 28, 28, R.string.clear_method);
+                    }
                 }
                 // Set click listener for popup menu items
                 popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -1238,6 +1408,30 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                             case 28:  // Clear method
                                 clearMethod(item);
+                                return true;
+
+                            case 30:  // Copy as frida snippet (class)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateFridaClass(methodOrFieldName1));
+                                return true;
+
+                            case 31:  // Copy as xposed snippet (class)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateXposedClass(methodOrFieldName1));
+                                return true;
+
+                            case 32:  // Copy as frida snippet (field)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateFridaField(fullClassName, methodOrFieldName1));
+                                return true;
+
+                            case 33:  // Copy as xposed snippet (field)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateXposedField(fullClassName, methodOrFieldName1));
+                                return true;
+
+                            case 34:  // Copy as frida snippet (method)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateFridaMethod(fullClassName, methodOrFieldName1));
+                                return true;
+
+                            case 35:  // Copy as xposed snippet (method)
+                                CopyUtil.copyToClipboard(requireActivity(), HookSnippetGenerator.generateXposedMethod(fullClassName, methodOrFieldName1));
                                 return true;
 
                             default:
