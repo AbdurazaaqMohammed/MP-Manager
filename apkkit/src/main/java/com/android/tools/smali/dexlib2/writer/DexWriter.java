@@ -1319,11 +1319,36 @@ public abstract class DexWriter<
      * start of the code section depends solely on the code items before it. That makes the code
      * items encodable in parallel - see {@link #writeCodeItems}.
      */
+    private static class ByteArrayKey {
+        private final byte[] bytes;
+        private final int hash;
+
+        public ByteArrayKey(byte[] bytes) {
+            this.bytes = bytes;
+            this.hash = Arrays.hashCode(bytes);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof ByteArrayKey)) return false;
+            return Arrays.equals(this.bytes, ((ByteArrayKey) obj).bytes);
+        }
+    }
+
     private void writeDebugAndCodeItems(@Nonnull DexDataWriter offsetWriter,
                                         @Nonnull DeferredOutputStreamFactory tempFactory) throws IOException {
         debugSectionOffset = offsetWriter.getPosition();
+        ByteArrayOutputStream debugItemBuffer = new ByteArrayOutputStream(256);
+        DexDataWriter tempDexWriter = new DexDataWriter(debugItemBuffer, 0);
         DebugWriter<StringKey, TypeKey> debugWriter =
-                new DebugWriter<>(stringSection, typeSection, offsetWriter);
+                new DebugWriter<>(stringSection, typeSection, tempDexWriter);
+        Map<ByteArrayKey, Integer> debugItemOffsetCache = new HashMap<>();
 
         // Flatten the (class -> direct methods -> virtual methods) traversal once, on this thread, in
         // exactly the order the dex requires. Every pass below then only has to read from the pools.
@@ -1340,7 +1365,7 @@ public abstract class DexWriter<
         int[] debugItemOffsets = new int[methodCount];
         for (int i = 0; i < methodCount; i++) {
             MethodKey methodKey = methods.get(i);
-            debugItemOffsets[i] = writeDebugItem(offsetWriter, debugWriter,
+            debugItemOffsets[i] = writeDebugItem(offsetWriter, tempDexWriter, debugWriter, debugItemBuffer, debugItemOffsetCache,
                     classSection.getParameterNames(methodKey), classSection.getDebugItems(methodKey));
         }
 
@@ -1582,8 +1607,11 @@ public abstract class DexWriter<
         }
     }
 
-    private int writeDebugItem(@Nonnull DexDataWriter writer,
+    private int writeDebugItem(@Nonnull DexDataWriter realWriter,
+                               @Nonnull DexDataWriter tempDexWriter,
                                @Nonnull DebugWriter<StringKey, TypeKey> debugWriter,
+                               @Nonnull ByteArrayOutputStream tempBuf,
+                               @Nonnull Map<ByteArrayKey, Integer> offsetCache,
                                @Nullable Iterable<? extends StringKey> parameterNames,
                                @Nullable Iterable<? extends DebugItem> debugItems) throws IOException {
         int parameterCount = 0;
@@ -1604,9 +1632,8 @@ public abstract class DexWriter<
             return NO_OFFSET;
         }
 
-        numDebugInfoItems++;
+        tempBuf.reset();
 
-        int debugItemOffset = writer.getPosition();
         int startingLineNumber = 0;
 
         if (debugItems != null) {
@@ -1617,9 +1644,9 @@ public abstract class DexWriter<
                 }
             }
         }
-        writer.writeUleb128(startingLineNumber);
+        tempDexWriter.writeUleb128(startingLineNumber);
 
-        writer.writeUleb128(parameterCount);
+        tempDexWriter.writeUleb128(parameterCount);
         if (parameterNames != null) {
             int index = 0;
             for (StringKey parameterName: parameterNames) {
@@ -1627,7 +1654,7 @@ public abstract class DexWriter<
                     break;
                 }
                 index++;
-                writer.writeUleb128(stringSection.getNullableItemIndex(parameterName) + 1);
+                tempDexWriter.writeUleb128(stringSection.getNullableItemIndex(parameterName) + 1);
             }
         }
 
@@ -1639,8 +1666,20 @@ public abstract class DexWriter<
             }
         }
         // write an END_SEQUENCE opcode, to end the debug item
-        writer.write(0);
+        tempDexWriter.write(0);
+        tempDexWriter.flush();
 
+        byte[] bytes = tempBuf.toByteArray();
+        ByteArrayKey key = new ByteArrayKey(bytes);
+        Integer cachedOffset = offsetCache.get(key);
+        if (cachedOffset != null) {
+            return cachedOffset;
+        }
+
+        numDebugInfoItems++;
+        int debugItemOffset = realWriter.getPosition();
+        realWriter.write(bytes);
+        offsetCache.put(key, debugItemOffset);
         return debugItemOffset;
     }
 
