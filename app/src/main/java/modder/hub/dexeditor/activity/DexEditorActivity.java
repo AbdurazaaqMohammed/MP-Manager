@@ -752,6 +752,11 @@ public class DexEditorActivity extends BaseActivity {
             public int getSwipeDirs(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
                 return 0;
             }
+
+            @Override
+            public int interpolateOutOfBoundsScroll(@NonNull RecyclerView recyclerView, int viewSize, int viewSizeOutOfBounds, int totalSize, long msSinceStartScroll) {
+                return io.github.abdurazaaqmohammed.ui.common.util.ProgressiveEdgeScroller.interpolateOutOfBoundsScroll(viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll);
+            }
         };
         new ItemTouchHelper(callback).attachToRecyclerView(tabsRecyclerView);
     }

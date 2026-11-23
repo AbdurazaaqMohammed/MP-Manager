@@ -79,6 +79,11 @@ public final class ApkMoreMenuCustomizer {
             public boolean isLongPressDragEnabled() {
                 return true;
             }
+
+            @Override
+            public int interpolateOutOfBoundsScroll(@NonNull RecyclerView recyclerView, int viewSize, int viewSizeOutOfBounds, int totalSize, long msSinceStartScroll) {
+                return io.github.abdurazaaqmohammed.ui.common.util.ProgressiveEdgeScroller.interpolateOutOfBoundsScroll(viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll);
+            }
         });
         helper.attachToRecyclerView(list);
         adapter.setTouchHelper(helper);

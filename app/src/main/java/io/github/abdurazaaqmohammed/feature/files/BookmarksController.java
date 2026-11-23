@@ -769,6 +769,11 @@ public class BookmarksController {
                     }
 
                     @Override
+                    public int interpolateOutOfBoundsScroll(@NonNull RecyclerView recyclerView, int viewSize, int viewSizeOutOfBounds, int totalSize, long msSinceStartScroll) {
+                        return io.github.abdurazaaqmohammed.ui.common.util.ProgressiveEdgeScroller.interpolateOutOfBoundsScroll(viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll);
+                    }
+
+                    @Override
                     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
                         super.onSelectedChanged(viewHolder, actionState);
                          if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
