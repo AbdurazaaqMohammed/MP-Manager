@@ -116,6 +116,12 @@ public class PdfZoomImageView extends AppCompatImageView {
 
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
+            public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
+                performClick();
+                return true;
+            }
+
+            @Override
             public boolean onDoubleTap(@NonNull MotionEvent e) {
                 float current = getCurrentScale();
                 float target = (current > 1.3f) ? MIN_SCALE : DOUBLE_TAP_TARGET_SCALE;
@@ -325,8 +331,8 @@ public class PdfZoomImageView extends AppCompatImageView {
                         drawMatrix.mapRect(rect);
 
                         if (rect.height() > getHeight()) {
-                            // If user is dragging predominantly vertically, handle vertical page scroll
-                            if (Math.abs(dy) > Math.abs(dx)) {
+                            // If user starts or is dragging vertically, lock into vertical page scroll
+                            if (isDragging || Math.abs(dy) > Math.abs(dx)) {
                                 if (getParent() != null) {
                                     getParent().requestDisallowInterceptTouchEvent(true);
                                 }

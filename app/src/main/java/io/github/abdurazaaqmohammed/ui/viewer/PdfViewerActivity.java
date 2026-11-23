@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -51,6 +52,7 @@ import java.util.concurrent.Executors;
  * - Edge-to-edge fit-width rendering with two-finger pinch-to-zoom (in/out) and double-tap zoom.
  * - Hardware-accelerated Night Mode (Invert Matrix) turning background AMOLED black and blue headers gold.
  * - Persistent Eye Protection reading mode with floating action button (FAB) and feedback pill.
+ * - In-memory LruCache for instantaneous page navigation without re-rendering lag.
  * - Immersive fullscreen toggle, file sharing, open-with, and marquee title display.
  */
 public class PdfViewerActivity extends BaseActivity {
@@ -63,6 +65,7 @@ public class PdfViewerActivity extends BaseActivity {
     private static final String PREF_EYE_COMFORT_INTENSITY = "pdf_eye_comfort_intensity";
     private static final long EYE_COMFORT_AUTO_DISMISS_MS = 2500L;
     private static final long PILL_AUTO_DISMISS_MS = 1800L;
+    private static final int BITMAP_CACHE_CAPACITY = 8;
 
     private File pdfFile;
     private ParcelFileDescriptor pfd;
@@ -70,6 +73,7 @@ public class PdfViewerActivity extends BaseActivity {
     private int pageCount = 0;
     private final Object rendererLock = new Object();
     private final ExecutorService renderExecutor = Executors.newFixedThreadPool(2);
+    private final LruCache<Integer, Bitmap> bitmapCache = new LruCache<>(BITMAP_CACHE_CAPACITY);
 
     private Toolbar toolbar;
     private TextView toolbarTitle;
@@ -181,6 +185,11 @@ public class PdfViewerActivity extends BaseActivity {
         eyeComfortOverlay = findViewById(R.id.eyeComfortOverlay);
 
         fabEyeComfort = findViewById(R.id.fabEyeComfort);
+        ImageView fabIcon = findViewById(R.id.fabEyeComfortIcon);
+        if (fabIcon != null) {
+            fabIcon.setColorFilter(Color.WHITE);
+        }
+
         eyeComfortPill = findViewById(R.id.eyeComfortPill);
         eyeComfortPillText = findViewById(R.id.eyeComfortPillText);
 
@@ -195,15 +204,20 @@ public class PdfViewerActivity extends BaseActivity {
         isEyeProtection = prefs.getBoolean(PREF_EYE_PROTECTION, false);
         eyeComfortIntensity = prefs.getInt(PREF_EYE_COMFORT_INTENSITY, 30);
 
-        applyNightMode(isNightMode, false);
+        applyNightMode(isNightMode);
         applyEyeProtection(isEyeProtection);
     }
 
     private void setupActions() {
         btnNightMode.setOnClickListener(v -> {
             isNightMode = !isNightMode;
+            if (isNightMode && isEyeProtection) {
+                isEyeProtection = false;
+                prefs.edit().putBoolean(PREF_EYE_PROTECTION, false).apply();
+                applyEyeProtection(false);
+            }
             prefs.edit().putBoolean(PREF_NIGHT_MODE, isNightMode).apply();
-            applyNightMode(isNightMode, true);
+            applyNightMode(isNightMode);
         });
 
         btnShare.setOnClickListener(v -> sharePdfFile());
@@ -212,6 +226,11 @@ public class PdfViewerActivity extends BaseActivity {
 
         fabEyeComfort.setOnClickListener(v -> {
             isEyeProtection = !isEyeProtection;
+            if (isEyeProtection && isNightMode) {
+                isNightMode = false;
+                prefs.edit().putBoolean(PREF_NIGHT_MODE, false).apply();
+                applyNightMode(false);
+            }
             prefs.edit().putBoolean(PREF_EYE_PROTECTION, isEyeProtection).apply();
             applyEyeProtection(isEyeProtection);
             showEyePill(isEyeProtection ? "Eye protection on" : "Eye protection off");
@@ -255,7 +274,7 @@ public class PdfViewerActivity extends BaseActivity {
         });
     }
 
-    private void applyNightMode(boolean night, boolean notifyAdapter) {
+    private void applyNightMode(boolean night) {
         if (night) {
             contentArea.setBackgroundColor(Color.BLACK);
             viewPager.setBackgroundColor(Color.BLACK);
@@ -266,8 +285,16 @@ public class PdfViewerActivity extends BaseActivity {
             btnNightMode.clearColorFilter();
         }
 
-        if (notifyAdapter && pageAdapter != null) {
-            pageAdapter.notifyDataSetChanged();
+        // Instant update on all visible attached page views without re-rendering bitmaps
+        RecyclerView rv = (RecyclerView) viewPager.getChildAt(0);
+        if (rv != null) {
+            for (int i = 0; i < rv.getChildCount(); i++) {
+                View child = rv.getChildAt(i);
+                PdfZoomImageView img = child.findViewById(R.id.pageImageView);
+                if (img != null) {
+                    img.setNightMode(night);
+                }
+            }
         }
     }
 
@@ -357,6 +384,15 @@ public class PdfViewerActivity extends BaseActivity {
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        if (isFullscreen) {
+            toggleFullscreen();
+            return;
+        }
+        super.onBackPressed();
+    }
+
     private void sharePdfFile() {
         if (pdfFile == null) return;
         try {
@@ -412,6 +448,8 @@ public class PdfViewerActivity extends BaseActivity {
             @Override
             public void onPageSelected(int position) {
                 pageInfo.setText((position + 1) + " / " + pageCount);
+                // Ensure page swiping is enabled on newly selected page
+                viewPager.setUserInputEnabled(true);
             }
         });
     }
@@ -427,15 +465,24 @@ public class PdfViewerActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull PageViewHolder holder, int position) {
-            holder.pageLoading.setVisibility(View.VISIBLE);
-            holder.pageImageView.setImageBitmap(null);
             holder.pageImageView.setNightMode(isNightMode);
+            holder.pageImageView.setOnClickListener(v -> toggleFullscreen());
             final int pos = position;
 
             holder.pageImageView.setScaleChangeListener(scale -> {
                 // Disable ViewPager2 horizontal intercept when zoomed in so user can pan freely
                 viewPager.setUserInputEnabled(scale <= 1.05f);
             });
+
+            Bitmap cached = bitmapCache.get(pos);
+            if (cached != null && !cached.isRecycled()) {
+                holder.pageLoading.setVisibility(View.GONE);
+                holder.pageImageView.setImageBitmap(cached);
+                return;
+            }
+
+            holder.pageLoading.setVisibility(View.VISIBLE);
+            holder.pageImageView.setImageBitmap(null);
 
             renderExecutor.execute(() -> {
                 Bitmap bitmap = null;
@@ -457,6 +504,10 @@ public class PdfViewerActivity extends BaseActivity {
                 }
 
                 final Bitmap renderedBitmap = bitmap;
+                if (renderedBitmap != null) {
+                    bitmapCache.put(pos, renderedBitmap);
+                }
+
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
                         if (holder.getBindingAdapterPosition() == pos) {
@@ -517,6 +568,7 @@ public class PdfViewerActivity extends BaseActivity {
         handler.removeCallbacks(hideEyeComfortBarRunnable);
         handler.removeCallbacks(hidePillRunnable);
         renderExecutor.shutdown();
+        bitmapCache.evictAll();
         cleanupRenderer();
         super.onDestroy();
     }
