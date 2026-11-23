@@ -300,13 +300,22 @@ public class PdfViewerActivity extends BaseActivity {
                 final Bitmap renderedBitmap = bitmap;
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
-                        holder.pageLoading.setVisibility(View.GONE);
-                        if (renderedBitmap != null) {
-                            holder.pageImageView.setImageBitmap(renderedBitmap);
+                        if (holder.getBindingAdapterPosition() == pos) {
+                            holder.pageLoading.setVisibility(View.GONE);
+                            if (renderedBitmap != null) {
+                                holder.pageImageView.setImageBitmap(renderedBitmap);
+                            }
                         }
                     }
                 });
             });
+        }
+
+        @Override
+        public void onViewRecycled(@NonNull PageViewHolder holder) {
+            super.onViewRecycled(holder);
+            holder.pageImageView.setImageBitmap(null);
+            holder.pageLoading.setVisibility(View.VISIBLE);
         }
 
         @Override

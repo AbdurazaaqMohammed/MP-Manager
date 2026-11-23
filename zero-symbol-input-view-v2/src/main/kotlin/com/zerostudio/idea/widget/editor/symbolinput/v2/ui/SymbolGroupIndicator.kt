@@ -248,6 +248,23 @@ private class IndicatorRenderer(
             GroupIndicatorStyle.DIGITAL_COUNTER ->
                 drawCards(canvas, slot, horizontalInset, centerY, h, style)
         }
+        if (isDraggingReorder && dragCurrentIndex in groups.indices) {
+            val dragCx = horizontalInset + slot * (dragCurrentIndex + 0.5f)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = dp(2f)
+            paint.color = primary
+            paint.alpha = 255
+            canvas.drawRoundRect(
+                dragCx - slot * 0.44f,
+                centerY - h * 0.38f,
+                dragCx + slot * 0.44f,
+                centerY + h * 0.38f,
+                dp(6f),
+                dp(6f),
+                paint
+            )
+            paint.style = Paint.Style.FILL
+        }
     }
     private fun drawTextTabs(c: Canvas, slot: Float, inset: Float, h: Float) {
         groups.forEachIndexed { i, group ->
