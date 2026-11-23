@@ -50,6 +50,25 @@
             app:dependency="pref_show_line_numbers"/>
 
         <SwitchPreferenceCompat
+            android:key="pref_word_wrap"
+            android:title="@string/edpref_word_wrap"
+            android:summary="@string/edpref_word_wrap_summary"
+            android:defaultValue="false"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_wrap_without_splitting_words"
+            android:title="@string/edpref_wrap_without_splitting_words"
+            android:summary="@string/edpref_wrap_without_splitting_words_summary"
+            android:defaultValue="true"
+            app:dependency="pref_word_wrap"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_syntax_highlight"
+            android:title="@string/edpref_syntax_highlight"
+            android:summary="@string/edpref_syntax_highlight_summary"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
             android:key="pref_highlight_current_line"
             android:title="@string/edpref_highlight_current_line"
             android:summary="@string/edpref_highlight_current_line_summary"
@@ -85,27 +104,6 @@
             android:title="@string/edpref_sticky_scroll"
             android:summary="@string/edpref_sticky_scroll_summary"
             android:defaultValue="true"/>
-
-        <SwitchPreferenceCompat
-            android:key="pref_syntax_highlight"
-            android:title="@string/edpref_syntax_highlight"
-            android:summary="@string/edpref_syntax_highlight_summary"
-            android:defaultValue="true"/>
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/edpref_wrapping">
-        <SwitchPreferenceCompat
-            android:key="pref_word_wrap"
-            android:title="@string/edpref_word_wrap"
-            android:summary="@string/edpref_word_wrap_summary"
-            android:defaultValue="false"/>
-
-        <SwitchPreferenceCompat
-            android:key="pref_wrap_without_splitting_words"
-            android:title="@string/edpref_wrap_without_splitting_words"
-            android:summary="@string/edpref_wrap_without_splitting_words_summary"
-            android:defaultValue="true"
-            app:dependency="pref_word_wrap"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/edpref_editing">
@@ -132,9 +130,7 @@
             android:title="@string/edpref_auto_pair_brackets"
             android:summary="@string/edpref_auto_pair_brackets_summary"
             android:defaultValue="true"/>
-    </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/edpref_code_completion">
         <SwitchPreferenceCompat
             android:key="auto_complete"
             android:title="@string/edpref_auto_complete"

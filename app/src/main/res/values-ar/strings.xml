@@ -1682,14 +1682,12 @@
     <string name="edpref_hide_single_space_summary">إخفاء رمز المسافة المفردة بين الكلمات لتجنب تشتيت العين</string>
     <string name="edpref_show_invisible_characters">كشف المحارف غير المرئية (مكافحة التمويه)</string>
     <string name="edpref_show_invisible_characters_summary">كشف وإبراز محارف اليونيكود المخفية (مثل المسافة الصفرية ZWSP و NBSP)</string>
-    <string name="edpref_wrapping">التفاف الأسطر والمحاذاة</string>
     <string name="edpref_wrap_without_splitting_words">الالتفاف دون كسر الكلمات</string>
     <string name="edpref_wrap_without_splitting_words_summary">الحفاظ على الكلمات البرمجية كاملة عند الالتفاف للسطر التالي</string>
     <string name="edpref_auto_pair_brackets">الإغلاق التلقائي للأقواس والاقتباسات</string>
     <string name="edpref_auto_pair_brackets_summary">إدراج رمز الإغلاق المقابل تلقائياً عند كتابة الأقواس أو علامات التنصيص</string>
     <string name="edpref_sticky_scroll">تثبيت ترويسة النطاق (Sticky Scroll)</string>
     <string name="edpref_sticky_scroll_summary">تثبيت ترويسة الكلاس والدالة في أعلى الشاشة أثناء تمرير الأكواد الطويلة</string>
-    <string name="edpref_code_completion">الإكمال التلقائي للكود</string>
     <string name="edpref_auto_complete">الإكمال التلقائي</string>
     <string name="edpref_auto_complete_summary">إظهار نافذة منبثقة باقتراحات الكود أثناء الكتابة</string>
     <string name="edpref_auto_complete_new_line_only">الإكمال في بداية الأسطر فقط</string>

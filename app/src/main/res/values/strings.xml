@@ -1962,14 +1962,12 @@ Strings are sent to the external service you configured.</string>
     <string name="edpref_hide_single_space_summary">Hide solitary spaces between words to prevent visual clutter</string>
     <string name="edpref_show_invisible_characters">Show Invisible Characters</string>
     <string name="edpref_show_invisible_characters_summary">Detect and badge hidden Unicode control characters (ZWSP, NBSP, etc.)</string>
-    <string name="edpref_wrapping">Word Wrap &amp; Flow</string>
     <string name="edpref_wrap_without_splitting_words">Wrap Without Splitting Words</string>
     <string name="edpref_wrap_without_splitting_words_summary">Keep complete words together when wrapping lines to next line</string>
     <string name="edpref_auto_pair_brackets">Auto-Pair Brackets &amp; Quotes</string>
     <string name="edpref_auto_pair_brackets_summary">Automatically insert matching closing brackets and quotation marks</string>
     <string name="edpref_sticky_scroll">Sticky Scroll</string>
     <string name="edpref_sticky_scroll_summary">Pin enclosing class and method headers at the top while scrolling</string>
-    <string name="edpref_code_completion">Code Completion</string>
     <string name="edpref_auto_complete">Auto-Complete</string>
     <string name="edpref_auto_complete_summary">Show code suggestion popups while typing</string>
     <string name="edpref_auto_complete_new_line_only">Auto-Complete on New Lines Only</string>
