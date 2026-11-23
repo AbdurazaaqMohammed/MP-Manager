@@ -53,7 +53,9 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.HapticFeedbackConstants
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -87,7 +89,7 @@ internal class SymbolGroupIndicator(
         isClickable = true
         isFocusable = true
         scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-        setPadding(dp(12), dp(12), dp(12), dp(12))
+        setPadding(dp(4), dp(2), dp(4), dp(2))
         val selectable = TypedValue()
         if (context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, selectable, true) && selectable.resourceId != 0) {
             setBackgroundResource(selectable.resourceId)
@@ -95,6 +97,9 @@ internal class SymbolGroupIndicator(
         setImageDrawable(MaterialSettingsDrawable(HostThemeColors.onSurface(context)))
         setOnClickListener { onSettingsClick?.invoke() }
     }
+    var onGroupReordered: ((Int, Int) -> Unit)?
+        get() = renderer.onGroupReordered
+        set(value) { renderer.onGroupReordered = value }
     init {
         clipChildren = false
         clipToPadding = false
@@ -402,11 +407,111 @@ private class IndicatorRenderer(
             }
         }
     }
+
+    var onGroupReordered: ((Int, Int) -> Unit)? = null
+    private var isDraggingReorder = false
+    private var dragCurrentIndex = -1
+    private var downX = 0f
+    private var downY = 0f
+    private var lastTouchX = 0f
+    private val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+    private var isLongPressed = false
+    private var edgeScrollStartTime = 0L
+
+    private val edgeScrollRunnable = object : Runnable {
+        override fun run() {
+            if (!isDraggingReorder || groups.size <= 1) return
+            val edgeZone = dp(32f)
+            val elapsed = System.currentTimeMillis() - edgeScrollStartTime
+            if (lastTouchX >= width - edgeZone && dragCurrentIndex < groups.lastIndex) {
+                val next = dragCurrentIndex + 1
+                onGroupReordered?.invoke(dragCurrentIndex, next)
+                dragCurrentIndex = next
+                selected = next
+                invalidate()
+                val delay = (320L - (elapsed / 4L)).coerceIn(70L, 320L)
+                postDelayed(this, delay)
+            } else if (lastTouchX <= edgeZone && dragCurrentIndex > 0) {
+                val prev = dragCurrentIndex - 1
+                onGroupReordered?.invoke(dragCurrentIndex, prev)
+                dragCurrentIndex = prev
+                selected = prev
+                invalidate()
+                val delay = (320L - (elapsed / 4L)).coerceIn(70L, 320L)
+                postDelayed(this, delay)
+            }
+        }
+    }
+
+    private val longPressRunnable = Runnable {
+        if (groups.size > 1 && dragCurrentIndex in groups.indices) {
+            isLongPressed = true
+            isDraggingReorder = true
+            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            parent?.requestDisallowInterceptTouchEvent(true)
+            invalidate()
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        lastTouchX = event.x
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> return true
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                isLongPressed = false
+                isDraggingReorder = false
+                edgeScrollStartTime = 0L
+                removeCallbacks(longPressRunnable)
+                removeCallbacks(edgeScrollRunnable)
                 if (groups.isNotEmpty()) {
+                    val inset = dp(10f)
+                    val slot = (width - inset * 2).coerceAtLeast(1f) / groups.size
+                    dragCurrentIndex = ((event.x - inset) / slot).toInt().coerceIn(groups.indices)
+                    postDelayed(longPressRunnable, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                }
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!isLongPressed) {
+                    val dx = kotlin.math.abs(event.x - downX)
+                    val dy = kotlin.math.abs(event.y - downY)
+                    if (dx > touchSlop || dy > touchSlop) {
+                        removeCallbacks(longPressRunnable)
+                    }
+                } else if (isDraggingReorder && groups.size > 1) {
+                    val inset = dp(10f)
+                    val slot = (width - inset * 2).coerceAtLeast(1f) / groups.size
+                    val targetIndex = ((event.x - inset) / slot).toInt().coerceIn(groups.indices)
+                    if (targetIndex != dragCurrentIndex) {
+                        onGroupReordered?.invoke(dragCurrentIndex, targetIndex)
+                        dragCurrentIndex = targetIndex
+                        selected = targetIndex
+                        invalidate()
+                    }
+                    val edgeZone = dp(32f)
+                    if (event.x >= width - edgeZone || event.x <= edgeZone) {
+                        if (edgeScrollStartTime == 0L) {
+                            edgeScrollStartTime = System.currentTimeMillis()
+                            removeCallbacks(edgeScrollRunnable)
+                            postDelayed(edgeScrollRunnable, 140L)
+                        }
+                    } else {
+                        edgeScrollStartTime = 0L
+                        removeCallbacks(edgeScrollRunnable)
+                    }
+                }
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                removeCallbacks(longPressRunnable)
+                removeCallbacks(edgeScrollRunnable)
+                if (isDraggingReorder) {
+                    isDraggingReorder = false
+                    isLongPressed = false
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                    invalidate()
+                } else if (!isLongPressed && groups.isNotEmpty()) {
                     val inset = dp(10f)
                     val slot = (width - inset * 2).coerceAtLeast(1f) / groups.size
                     val index = ((event.x - inset) / slot).toInt().coerceIn(groups.indices)
@@ -415,15 +520,27 @@ private class IndicatorRenderer(
                 }
                 return true
             }
-            MotionEvent.ACTION_CANCEL -> return true
+            MotionEvent.ACTION_CANCEL -> {
+                removeCallbacks(longPressRunnable)
+                removeCallbacks(edgeScrollRunnable)
+                isDraggingReorder = false
+                isLongPressed = false
+                parent?.requestDisallowInterceptTouchEvent(false)
+                invalidate()
+                return true
+            }
         }
         return true
     }
+
     override fun performClick(): Boolean {
         super.performClick()
         return true
     }
+
     override fun onDetachedFromWindow() {
+        removeCallbacks(longPressRunnable)
+        removeCallbacks(edgeScrollRunnable)
         animator?.cancel()
         animator = null
         super.onDetachedFromWindow()

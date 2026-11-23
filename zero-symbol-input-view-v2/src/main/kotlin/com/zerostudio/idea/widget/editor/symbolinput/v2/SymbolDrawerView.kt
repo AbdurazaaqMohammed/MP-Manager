@@ -170,6 +170,7 @@ class SymbolDrawerView @JvmOverloads constructor(
     internal val isSettingsDialogShowing: Boolean get() = settingsDialog?.isShowing == true
     private val indicator = SymbolGroupIndicator(context) { selectGroup(it, true) }.apply {
         onSettingsClick = { if (isBuiltInFeatureVisible(SymbolDrawerBuiltInFeatures.SETTINGS)) openSettings() }
+        onGroupReordered = { from, to -> reorderGroups(from, to) }
     }
     private val indicatorHost = FrameLayout(context).apply {
         addView(indicator, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -256,6 +257,7 @@ class SymbolDrawerView @JvmOverloads constructor(
             override fun onPageSelected(position: Int) {
                 if (suppressPageCallbacks) return
                 setIndicatorSelectedIndex(position)
+                requestLayout()
                 onGroupChangedListener?.invoke(position, groups.getOrNull(position))
                 val legacyGroup = legacyGroupAt(position)
                 extensions.lifecycleExtensions().forEach { extension ->
@@ -885,6 +887,21 @@ class SymbolDrawerView @JvmOverloads constructor(
         repository.saveGroups(groups)
     }
 
+    fun reorderGroups(fromIndex: Int, toIndex: Int) {
+        if (fromIndex !in groups.indices || toIndex !in groups.indices || fromIndex == toIndex) return
+        val mutable = groups.toMutableList()
+        val moved = mutable.removeAt(fromIndex)
+        mutable.add(toIndex, moved)
+        groups = mutable.toList()
+        saveGroups()
+        suppressPageCallbacks = true
+        submitGroups(groups, preserveSelectedGroup = false)
+        suppressPageCallbacks = false
+        pager.setCurrentItem(toIndex, false)
+        setIndicatorSelectedIndex(toIndex)
+        requestLayout()
+    }
+
     fun getGroups(): List<SymbolGroup> = groups.toList()
     fun getCurrentGroupIndex(): Int = pager.currentItem
     fun isExpanded(): Boolean = expansion >= 0.5f
@@ -951,9 +968,18 @@ class SymbolDrawerView @JvmOverloads constructor(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(indicatorHeight, MeasureSpec.EXACTLY)
         )
+        val currentGroup = groups.getOrNull(pager.currentItem)
+        val activeRows = if (currentGroup != null && currentGroup.symbols.isNotEmpty()) {
+            kotlin.math.ceil(currentGroup.symbols.size.toDouble() / config.columns.coerceAtLeast(1)).toInt().coerceAtLeast(1)
+        } else {
+            1
+        }
+        val naturalPageHeight = DrawerGeometry.gridHeightPx(activeRows, config, resources.displayMetrics.density)
+        val activePagerHeight = minOf(pagerHeight, naturalPageHeight)
+
         pager.measure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(pagerHeight, MeasureSpec.EXACTLY)
+            MeasureSpec.makeMeasureSpec(activePagerHeight, MeasureSpec.EXACTLY)
         )
         val desiredHeight = indicatorHost.measuredHeight + pager.measuredHeight
         val resolvedHeight = resolveSize(desiredHeight, heightMeasureSpec)

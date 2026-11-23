@@ -17,7 +17,7 @@ object SymbolDrawerMigration {
         LegacySymbolDataMigration.importIfV2Empty(context, groupRepo)
         val currentGroups = groupRepo.loadGroups()
         if (currentGroups.isNotEmpty() && currentGroups.none { it.id == "smaliModding" }) {
-            groupRepo.saveGroups(listOf(com.zerostudio.idea.widget.editor.symbolinput.v2.data.SymbolDrawerDefaults.createSmaliModdingGroup()) + currentGroups)
+            groupRepo.saveGroups(currentGroups + listOf(com.zerostudio.idea.widget.editor.symbolinput.v2.data.SymbolDrawerDefaults.createSmaliModdingGroup()))
         }
         val repository = SharedPreferencesSymbolDrawerSettingsRepository(context)
         if (repository.hasStoredSettings()) return

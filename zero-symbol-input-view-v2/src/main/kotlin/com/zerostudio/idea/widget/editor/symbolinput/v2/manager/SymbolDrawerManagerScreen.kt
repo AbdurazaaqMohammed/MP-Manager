@@ -478,8 +478,18 @@ class SymbolDrawerManagerScreen(
         val previousUsage = snapshotUsageState()
         val previousSelection = selectedGroupId
         val imported = SymbolGroupBundleCodec.decode(json)
-        manager.replaceAll(imported)
-        selectedGroupId = imported.firstOrNull()?.id
+        val merged = if (previous.isNotEmpty()) {
+            val existingIds = previous.map { it.id }.toSet()
+            val newGroups = imported.map { group ->
+                if (existingIds.contains(group.id)) group.copy(id = "group_${System.currentTimeMillis()}_${(100..999).random()}")
+                else group
+            }
+            previous + newGroups
+        } else {
+            imported
+        }
+        manager.replaceAll(merged)
+        selectedGroupId = merged.lastOrNull()?.id
         refresh()
         showUndo(context.getString(R.string.symbol_drawer_097)) {
             manager.replaceAll(previous)
