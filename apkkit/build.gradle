@@ -25,6 +25,6 @@ dependencies {
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'commons-io:commons-io:2.22.0'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.86'
-    implementation files('../app/libs/antlr.jar')
+    implementation 'org.antlr:antlr-runtime:3.5.2'
     implementation files('../app/libs/JCommand.jar')
 }

@@ -107,7 +107,7 @@ dependencies {
     // NIO variant: commons-compress's 7z reader touches java.nio.file (LinkOption
     // et al.) in static initializers, which is missing below API 26 otherwise.
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
-    implementation files('libs/antlr.jar')
+    implementation 'org.antlr:antlr-runtime:3.5.2'
     implementation files('libs/bin-zip.jar')
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.viewpager2:viewpager2:1.1.0'
@@ -121,8 +121,8 @@ dependencies {
     // Zstandard support comes from the vendored zstd compiled per-ABI
     // (app/src/main/cpp) — zstd-jni has no Android natives and aircompressor
     // touches sun.misc.Unsafe fields Android does not have.
-    implementation files('libs/xz-1.9.jar')
-    implementation files('libs/junrar-8.1.2.jar')
+    implementation 'org.tukaani:xz:1.9'
+    implementation 'com.github.junrar:junrar:8.1.2'
     implementation("com.google.android.material:material:1.12.0")
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
     implementation("com.google.guava:guava:33.7.2-android")
@@ -156,7 +156,7 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
     implementation "androidx.window:window:1.5.1"
 
-    implementation files('libs/commons-net-3.11.1.jar')
+    implementation 'commons-net:commons-net:3.11.1'
     // SMB2/3 client; no legacy SMB1 or native binaries.
     implementation 'com.hierynomus:smbj:0.14.0'
     // LSPatch (JingMatrix fork) integrated-mode patcher engine (vendored, see
