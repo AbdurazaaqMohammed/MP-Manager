@@ -82,7 +82,8 @@ public class CompareArscDialog {
     }
 
     private TableBlock loadTableBlock(String path) throws Exception {
-        String lower = path.toLowerCase(Locale.ROOT);
+        String lower = io.github.abdurazaaqmohammed.feature.files.BackupOpenPolicy
+                .originalName(path).toLowerCase(Locale.ROOT);
         if (lower.endsWith(".apk") || lower.endsWith(".zip") || lower.endsWith(".jar")) {
             try (ZipFile zf = new ZipFile(path)) {
                 ZipEntry ze = zf.getEntry("resources.arsc");

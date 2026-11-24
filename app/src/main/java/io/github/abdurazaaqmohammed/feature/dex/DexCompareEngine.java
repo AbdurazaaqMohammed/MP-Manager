@@ -424,7 +424,9 @@ public final class DexCompareEngine {
         pruneExtractionCache(cacheDir);
         List<File> dexFiles = new ArrayList<>();
         for (File file : files) {
-            if (file.getName().toLowerCase(Locale.ROOT).endsWith(".apk")) {
+            String originalLower = io.github.abdurazaaqmohammed.feature.files.BackupOpenPolicy
+                    .originalName(file.getName()).toLowerCase(Locale.ROOT);
+            if (originalLower.endsWith(".apk")) {
                 dexFiles.addAll(extractDexFiles(file, cacheDir));
             } else {
                 dexFiles.add(file);
