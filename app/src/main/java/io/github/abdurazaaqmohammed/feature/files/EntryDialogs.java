@@ -367,6 +367,8 @@ public class EntryDialogs {
                             toBin = recycleCb != null && recycleCb.isChecked();
                             RecycleBin.setLastChoice(context, toBin);
                         }
+                        long binStartMs = System.currentTimeMillis() - 1000L;
+                        List<String> binnedOrigins = new ArrayList<>();
                         if (!isInZip) {
                             List<File> selectedFiles = new ArrayList<>();
                             if (multi) {
@@ -375,6 +377,9 @@ public class EntryDialogs {
                                 }
                             } else if (file != null) {
                                 selectedFiles.add(file);
+                            }
+                            if (toBin) {
+                                for (File sf : selectedFiles) binnedOrigins.add(sf.getAbsolutePath());
                             }
                             deletePlainFiles(pm, selectedFiles, toBin, useElevatedForDelete, filesToDisplay);
                         } else if (multi) {
@@ -405,7 +410,15 @@ public class EntryDialogs {
                             context.handler.post(state::clearSelection);
                         }
                         pm.dismiss();
-                        if (toBin) {
+                        if (toBin && !binnedOrigins.isEmpty()) {
+                            context.handler.post(() -> Extensions.showMessageWithAction(
+                                    context, R.string.moved_to_recycle_bin, R.string.undo, () ->
+                                            new Thread(() -> {
+                                                if (RecycleBin.restoreByOrigins(context, binnedOrigins, binStartMs) > 0) {
+                                                    context.handler.post(() -> context.refreshPaneAfterChange(pane1, null));
+                                                }
+                                            }).start()));
+                        } else if (toBin) {
                             context.handler.post(() ->
                                     Extensions.showMessage(context, R.string.moved_to_recycle_bin));
                         }

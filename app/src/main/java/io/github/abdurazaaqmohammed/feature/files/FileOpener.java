@@ -1546,7 +1546,7 @@ public class FileOpener {
                             ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                             if (cm != null) {
                                 cm.setPrimaryClip(ClipData.newPlainText("Kernel Info", infoText));
-                                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(context, R.string.copied);
                             }
                         })
                         .show();
@@ -2000,9 +2000,8 @@ public class FileOpener {
                                 public void onSuccess(File result) {
                                     context.runOnUiThread(() -> {
                                         pm.dismiss();
-                                        Toast.makeText(context,
-                                                context.getString(R.string.unsparsed_success, result.getName()),
-                                                Toast.LENGTH_LONG).show();
+                                        Extensions.showMessage(context,
+                                                context.getString(R.string.unsparsed_success, result.getName()));
                                         context.reloadCurrentFolder();
                                     });
                                 }

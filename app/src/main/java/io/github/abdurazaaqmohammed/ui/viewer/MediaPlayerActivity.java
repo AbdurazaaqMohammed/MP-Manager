@@ -955,16 +955,16 @@ public class MediaPlayerActivity extends BaseActivity implements
             picker.setDialogSelectionListener(files -> {
                 if (files == null || files.length == 0 || files[0] == null) return;
                 if (playerManager.setExternalSubtitle(files[0])) {
-                    Toast.makeText(this, getString(R.string.subtitle_loaded,
-                            new File(files[0]).getName()), Toast.LENGTH_SHORT).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, getString(R.string.subtitle_loaded,
+                            new File(files[0]).getName()));
                     showControlsTemporarily();
                 } else {
-                    Toast.makeText(this, R.string.subtitle_unsupported, Toast.LENGTH_SHORT).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.subtitle_unsupported);
                 }
             });
             picker.show();
         } catch (Exception e) {
-            Toast.makeText(this, R.string.subtitle_unsupported, Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.subtitle_unsupported);
         }
     }
 

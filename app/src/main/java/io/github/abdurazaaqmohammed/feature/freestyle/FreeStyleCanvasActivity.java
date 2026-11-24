@@ -78,7 +78,7 @@ public class FreeStyleCanvasActivity extends BaseActivity {
             // Toggles auto-crop to content bounds or trims canvas
             RectF bounds = canvasView.getLayersBoundingBox();
             if (bounds == null) {
-                Toast.makeText(this, "No images on canvas", Toast.LENGTH_SHORT).show();
+                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, "No images on canvas");
                 return;
             }
             saveCanvasCollage(true);
@@ -149,7 +149,7 @@ public class FreeStyleCanvasActivity extends BaseActivity {
     private void saveCanvasCollage(boolean autoCropToBounds) {
         Bitmap output = canvasView.renderToBitmap(autoCropToBounds);
         if (output == null) {
-            Toast.makeText(this, "Failed to capture canvas", Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, "Failed to capture canvas");
             return;
         }
 
@@ -193,9 +193,10 @@ public class FreeStyleCanvasActivity extends BaseActivity {
             final String finalSavedPath = savedPath;
             mainHandler.post(() -> {
                 if (finalSuccess) {
-                    Toast.makeText(this, getString(R.string.collage_saved, finalSavedPath), Toast.LENGTH_LONG).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(
+                            this, getString(R.string.collage_saved, finalSavedPath));
                 } else {
-                    Toast.makeText(this, "Error saving collage", Toast.LENGTH_SHORT).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, "Error saving collage");
                 }
             });
         });
