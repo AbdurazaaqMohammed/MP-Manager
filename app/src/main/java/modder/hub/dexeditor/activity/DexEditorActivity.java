@@ -1930,7 +1930,7 @@ public class DexEditorActivity extends BaseActivity {
     public void saveMultipleTabs(final List<EditorTab> modifiedTabs, final boolean[] checked, final Runnable onProceed) {
         final List<TabSaveEntry> toSave = new ArrayList<>();
         for (int i = 0; i < modifiedTabs.size(); i++) {
-            if (checked != null && !checked[i]) continue;
+            if (checked != null && (i >= checked.length || !checked[i])) continue;
             EditorTab tab = modifiedTabs.get(i);
             if (tab == null) continue;
             UnifiedEditorFragment fragment = (UnifiedEditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
@@ -1951,6 +1951,7 @@ public class DexEditorActivity extends BaseActivity {
 
         new Thread(() -> {
             boolean hasChange = false;
+            final List<TabSaveEntry> savedEntries = new ArrayList<>();
             try {
                 for (int i = 0; i < toSave.size(); i++) {
                     TabSaveEntry entry = toSave.get(i);
@@ -1962,32 +1963,41 @@ public class DexEditorActivity extends BaseActivity {
                         classTree.saveClassDefIfChanged(Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion), code);
                         hasChange = true;
                     }
-                    tab.isModified = false;
-                    tab.content = code;
-                    tab.originalContent = code;
+                    savedEntries.add(entry);
                 }
                 final boolean changed = hasChange;
                 runOnUiThread(() -> {
                     pd.dismiss();
-                    if (changed) {
-                        isChanged = true;
-                        needsModifiedTreeRebuild = true;
-                        refreshExplorerPage(1);
-                    }
-                    if (tabsAdapter != null) {
-                        tabsAdapter.notifyDataSetChanged();
-                    }
-                    handleUndoRedo();
+                    applySavedTabsState(savedEntries, changed);
                     if (onProceed != null) onProceed.run();
                 });
             } catch (final Throwable e) {
+                final boolean changed = hasChange;
                 final String detail = e.getMessage() != null ? e.getMessage() : e.toString();
                 runOnUiThread(() -> {
                     pd.dismiss();
+                    applySavedTabsState(savedEntries, changed);
                     Notify_MT.Notify(DexEditorActivity.this, "Error saving tabs", detail, "Close");
                 });
             }
         }).start();
+    }
+
+    private void applySavedTabsState(List<TabSaveEntry> savedEntries, boolean changed) {
+        for (TabSaveEntry entry : savedEntries) {
+            entry.tab.isModified = false;
+            entry.tab.content = entry.code;
+            entry.tab.originalContent = entry.code;
+        }
+        if (changed) {
+            isChanged = true;
+            needsModifiedTreeRebuild = true;
+            refreshExplorerPage(1);
+        }
+        if (tabsAdapter != null) {
+            tabsAdapter.notifyDataSetChanged();
+        }
+        handleUndoRedo();
     }
 
     // main method for saving a single tab
