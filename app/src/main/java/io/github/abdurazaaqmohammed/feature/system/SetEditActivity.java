@@ -59,6 +59,7 @@ import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Settings Editor (SetEdit): browse, search, edit, add, and delete Android
@@ -326,11 +327,11 @@ public class SetEditActivity extends BaseActivity {
         if (propsLoaded || isLoadingProps) return;
         isLoadingProps = true;
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<SettingEntry> propList = new ArrayList<>(3500);
             queryProperties(propList);
             Collections.sort(propList, (a, b) -> a.key.compareToIgnoreCase(b.key));
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 propsLoaded = true;
                 isLoadingProps = false;
                 progressBar.setVisibility(View.GONE);
@@ -340,7 +341,7 @@ public class SetEditActivity extends BaseActivity {
                 updateCounts();
                 applyFilter();
             });
-        }).start();
+        });
     }
 
     private void updateCounts() {
@@ -370,7 +371,7 @@ public class SetEditActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         tvEmpty.setVisibility(View.GONE);
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<SettingEntry> gList = new ArrayList<>(600);
             List<SettingEntry> sList = new ArrayList<>(500);
             List<SettingEntry> sysList = new ArrayList<>(400);
@@ -403,7 +404,7 @@ public class SetEditActivity extends BaseActivity {
             loaded.addAll(propList);
             Collections.sort(loaded, (a, b) -> a.key.compareToIgnoreCase(b.key));
 
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 propsLoaded = true;
                 isLoadingProps = false;
                 allEntries.clear();
@@ -417,7 +418,7 @@ public class SetEditActivity extends BaseActivity {
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
             });
-        }).start();
+        });
     }
 
     public static String executeSu(String cmd) {
@@ -731,7 +732,7 @@ public class SetEditActivity extends BaseActivity {
 
     private void saveSetting(SettingEntry entry, String newValue) {
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String cmd;
             if (entry.type == SettingType.PROP) {
                 cmd = "setprop " + escape(entry.key) + " " + escape(newValue);
@@ -740,7 +741,7 @@ public class SetEditActivity extends BaseActivity {
             }
             executeSu(cmd);
 
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 entry.value = newValue;
                 if (!allEntries.contains(entry)) {
                     allEntries.add(entry);
@@ -756,7 +757,7 @@ public class SetEditActivity extends BaseActivity {
                 applyFilter();
                 Extensions.showMessage(this, R.string.saved);
             });
-        }).start();
+        });
     }
 
     private void deleteSetting(SettingEntry entry) {
@@ -765,10 +766,10 @@ public class SetEditActivity extends BaseActivity {
             return;
         }
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String cmd = "settings delete " + entry.type.alias + " " + escape(entry.key);
             executeSu(cmd);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 allEntries.remove(entry);
                 List<SettingEntry> byType = entriesByType.get(entry.type);
                 if (byType != null) byType.remove(entry);
@@ -777,7 +778,7 @@ public class SetEditActivity extends BaseActivity {
                 applyFilter();
                 Extensions.showMessage(this, isAr() ? "تم الحذف بنجاح" : "Deleted successfully");
             });
-        }).start();
+        });
     }
 
     private String escape(String s) {

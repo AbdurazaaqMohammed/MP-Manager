@@ -50,10 +50,10 @@ public final class PrivacyAuditDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Auditing APK privacy...");
 
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 PrivacyAuditReport report = PrivacyScannerEngine.scanApk(apkFile);
-                context.runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     if (report.threats.isEmpty()) {
                         Extensions.showMessage(context, context.getString(R.string.privacy_no_threats));
@@ -62,12 +62,12 @@ public final class PrivacyAuditDialog {
                     displayDialog(context, apkFile, report);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private static void displayDialog(MainActivity context, File apkFile, PrivacyAuditReport report) {
@@ -269,7 +269,7 @@ public final class PrivacyAuditDialog {
         Runnable doSanitize = () -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
                 try {
                     pm.setText("Sanitizing DEX bytecode...");
                     PrivacyAuditReport auditResult = PrivacyBytecodeEngine.sanitizeApkWithAudit(apkFile, outFile, options, logger);
@@ -283,16 +283,17 @@ public final class PrivacyAuditDialog {
                     }
 
                     pm.dismiss();
-                    context.runOnUiThread(() -> {
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                         Extensions.showMessage(context, context.getString(
                                 R.string.privacy_done, stats.totalMutations()));
                         context.refreshAllPanes();
                     });
                 } catch (Exception e) {
                     pm.dismiss();
-                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context,
+                            () -> new ErrorUtil(context).showError(e));
                 }
-            }).start();
+            });
         };
 
         if (doSign) {

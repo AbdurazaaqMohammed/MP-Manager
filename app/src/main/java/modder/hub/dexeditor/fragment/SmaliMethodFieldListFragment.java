@@ -57,7 +57,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
-import android.os.AsyncTask;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -1537,48 +1537,34 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             this.methodName = methodName;
         }
 
-        @SuppressLint("StaticFieldLeak")
         @Override
         public void run() {
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 pd = new AlertCircularProgress(activity);
                 pd.setMessage(activity.getString(R.string.decompiling));
                 pd.show();
             });
 
-            new AsyncTask<Void, Void, String>() {
-                @Override
-                protected String doInBackground(Void... voids) {
-                    try {
-                        // Parse the Smali method and convert it to Java
-                        SmaliMethodBody smaliMethodBody = new SmaliMethodBody(smaliFilePath, new String[]{methodName}, true);
-                        return Smali2Java.translate(smaliMethodBody.parseClassInSmali(), dexVersion);
-                    } catch (final Exception e) {
-                        activity.runOnUiThread(() -> {
-                            if (pd != null) pd.dismiss();
-                            showExceptionDlg(activity, e);
-                        });
-                        return null;
-                    }
-                }
-
-                @Override
-                protected void onPostExecute(String javaCode) {
-                    activity.runOnUiThread(() -> {
+            AppExecutors.io().execute(() -> {
+                try {
+                    // Parse the Smali method and convert it to Java
+                    SmaliMethodBody smaliMethodBody = new SmaliMethodBody(smaliFilePath, new String[]{methodName}, true);
+                    String javaCode = Smali2Java.translate(smaliMethodBody.parseClassInSmali(), dexVersion);
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         if (pd != null) pd.dismiss();
+                        if (javaCode != null && activity instanceof DexEditorActivity dexActivity) {
+                            String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
+                            String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
+                            dexActivity.addTab(cleanedClassName, title, javaCode, 1);
+                        }
                     });
-                    
-                    if (javaCode != null) {
-                        activity.runOnUiThread(() -> {
-                            if (activity instanceof DexEditorActivity dexActivity) {
-                                String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
-                                String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
-                                dexActivity.addTab(cleanedClassName, title, javaCode, 1);
-                            }
-                        });
-                    }
+                } catch (final Exception e) {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
+                        if (pd != null) pd.dismiss();
+                        showExceptionDlg(activity, e);
+                    });
                 }
-            }.execute();
+            });
         }
     }
 

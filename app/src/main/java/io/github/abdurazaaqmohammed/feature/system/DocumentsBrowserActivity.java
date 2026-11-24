@@ -111,7 +111,7 @@ public class DocumentsBrowserActivity extends BaseActivity {
 
     private void loadLocations() {
         progress.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             List<Row> out = new ArrayList<>();
             for (String value : grantedTrees()) {
                 Uri uri;
@@ -126,14 +126,14 @@ public class DocumentsBrowserActivity extends BaseActivity {
                 row.subtitle = uri.getAuthority();
                 out.add(row);
             }
-            handler.post(() -> {
+            io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                 progress.setVisibility(View.GONE);
                 adapter.submitList(out);
                 boolean empty = out.isEmpty();
                 emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
                 list.setVisibility(empty ? View.GONE : View.VISIBLE);
             });
-        }).start();
+        });
     }
 
     /** Root title from the provider, falling back to its root summary and authority. */
