@@ -19,10 +19,13 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("release.keystore")
-            storePassword "000000"
-            keyAlias "mido"
-            keyPassword "000000"
+            def keystoreFile = file("release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("RELEASE_STORE_PASSWORD") ?: (project.findProperty("RELEASE_STORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: "")
+                keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: (project.findProperty("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: "")
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: (project.findProperty("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: "")
+            }
         }
     }
 
@@ -35,7 +38,9 @@ android {
             }
         }
         release {
-            signingConfig signingConfigs.release
+            if (signingConfigs.release.storeFile?.exists() && signingConfigs.release.storePassword) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
