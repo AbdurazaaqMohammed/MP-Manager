@@ -10,4 +10,6 @@
     <item name="compress_path_pending" type="id" />
     <!-- Settings: dynamically added Plugins section card (made collapsible) -->
     <item name="sectionPluginsCard" type="id" />
+    <!-- AAPT2 dialog: scanned APK specs, attached to the dialog view tag -->
+    <item name="aapt2_specs_tag" type="id" />
 </resources>

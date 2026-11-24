@@ -4,13 +4,11 @@ import android.content.Context;
 
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -26,10 +24,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.feature.apk.deepopt.AbiFilter;
+import io.github.abdurazaaqmohammed.util.archive.Aapt2Jni;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 
-/** Resource optimization with the bundled Android AAPT2, followed by an aligned repack. */
+/** Resource optimization with the on-demand Android AAPT2, followed by an aligned repack. */
 public final class Aapt2Optimizer {
     private Aapt2Optimizer() {}
 
@@ -80,12 +79,15 @@ public final class Aapt2Optimizer {
 
     /** Writes a new unsigned APK beside the input; the input is never overwritten. */
     public static File optimize(Context context, File input, Options options) throws Exception {
-        File binary = new File(context.getApplicationInfo().nativeLibraryDir, "libmp_aapt2.so");
-        return optimize(binary, context.getCacheDir(), input, options);
+        File binary = Aapt2BinaryManager.binary(context);
+        if (binary == null) throw new IOException("AAPT2 is not installed on this device");
+        return optimize(binary, context.getCacheDir(), input, options,
+                Aapt2BinaryManager.mainOffset(context));
     }
 
-    /** Separated from Context so the complete pipeline can also be tested on a host. */
-    static File optimize(File binary, File cacheDir, File input, Options options) throws Exception {
+    /** Separated from Context so the complete pipeline can also be tested on the host. */
+    static File optimize(File binary, File cacheDir, File input, Options options,
+                         long mainOffset) throws Exception {
         if (input == null || !input.isFile()) throw new IOException("Input APK is unavailable");
         if (binary == null || !binary.isFile()) throw new IOException("AAPT2 is unavailable for this device");
         if (options == null) throw new IllegalArgumentException("Missing optimization options");
@@ -113,7 +115,7 @@ public final class Aapt2Optimizer {
                 aaptInput = prepared;
             }
             List<String> command = new ArrayList<>();
-            command.add(binary.getAbsolutePath());
+            command.add("aapt2");
             command.add("optimize");
             command.add("-o");
             command.add(optimized.getAbsolutePath());
@@ -126,7 +128,7 @@ public final class Aapt2Optimizer {
                 command.add(options.configurations);
             }
             command.add(aaptInput.getAbsolutePath());
-            run(command);
+            run(binary, mainOffset, cacheDir, command);
             if (!optimized.isFile() || optimized.length() == 0) throw new IOException("AAPT2 produced no output");
 
             String name = input.getName();
@@ -218,20 +220,35 @@ public final class Aapt2Optimizer {
         return skip;
     }
 
-    private static void run(List<String> command) throws Exception {
-        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (output.length() < 65536) output.append(line).append('\n');
+    private static void run(File binary, long mainOffset, File cacheDir, List<String> command)
+            throws Exception {
+        File log = File.createTempFile("aapt2-log-", ".txt", cacheDir);
+        try {
+            int exit = Aapt2Jni.run(binary, command.toArray(new String[0]), log, cacheDir, mainOffset);
+            String output = readLog(log);
+            if (exit == 0) return;
+            String detail = output.isEmpty() ? "no output" : output;
+            if (exit == -100) throw new IOException("AAPT2 runner could not load the binary: " + detail);
+            if (exit == -101) throw new IOException("AAPT2 entry point was not found: " + detail);
+            if (exit < 0) throw new IOException("AAPT2 runner failed (" + exit + "): " + detail);
+            throw new IOException("AAPT2 failed (exit " + exit + "): " + detail);
+        } finally {
+            log.delete();
+        }
+    }
+
+    private static String readLog(File log) {
+        if (log == null || !log.isFile()) return "";
+        try (FileInputStream in = new FileInputStream(log)) {
+            byte[] buffer = new byte[(int) Math.min(log.length(), 65536)];
+            int count = 0;
+            int read;
+            while (count < buffer.length && (read = in.read(buffer, count, buffer.length - count)) != -1) {
+                count += read;
             }
-            int exit = process.waitFor();
-            if (exit != 0) throw new IOException("AAPT2 failed (exit " + exit + "): " + output.toString().trim());
-        } catch (InterruptedException e) {
-            process.destroy();
-            Thread.currentThread().interrupt();
-            throw new IOException("AAPT2 was interrupted", e);
+            return new String(buffer, 0, count, "UTF-8").trim();
+        } catch (Exception ignored) {
+            return "";
         }
     }
 }

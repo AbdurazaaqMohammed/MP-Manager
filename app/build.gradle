@@ -99,9 +99,9 @@ android {
         resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
         // Android 10+ forbids executing binaries copied to writable app storage.
-        // Extract the bundled command-line executable into nativeLibraryDir instead.
+        // The AAPT2 binary is downloaded on demand and run through the JNI
+        // wrapper, so only the small wrapper is packaged here.
         jniLibs.useLegacyPackaging = true
-        jniLibs.keepDebugSymbols.add("**/libmp_aapt2.so")
     }
 }
 
