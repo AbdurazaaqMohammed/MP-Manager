@@ -1261,12 +1261,40 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     Extensions.showMessage(this, R.string.network_browse_hint);
                     return;
                 }
-                View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);//new TextInputLayout(this, null, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox);
+                View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);
                 EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
-                input.setText(((TextView) v).getText());
+                String currentPathText = ((TextView) v).getText().toString();
+                input.setText(currentPathText);
+                LinearLayout container = new LinearLayout(this);
+                container.setOrientation(LinearLayout.VERTICAL);
+                container.addView(textInputLayout);
+                AlertDialog[] dialogRef = new AlertDialog[1];
+                boolean inZip = getCurrentPane() != null
+                        && getCurrentPane().getAdapter() instanceof MainFilesArrayAdapter a && a.isInZip;
+                if (!inZip && currentPathText.startsWith("/")) {
+                    android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(this);
+                    hsv.setHorizontalScrollBarEnabled(false);
+                    int padH = io.github.codehasan.colorpicker.extensions.Extensions.dp2px(this, 16);
+                    int padTop = io.github.codehasan.colorpicker.extensions.Extensions.dp2px(this, 8);
+                    hsv.setPadding(padH, padTop, padH, 0);
+                    com.google.android.material.chip.ChipGroup chips = new com.google.android.material.chip.ChipGroup(this);
+                    chips.setSingleLine(true);
+                    chips.setChipSpacingHorizontal(io.github.codehasan.colorpicker.extensions.Extensions.dp2px(this, 6));
+                    String[] parts = currentPathText.split("/");
+                    StringBuilder acc = new StringBuilder();
+                    addBreadcrumbChip(chips, "/", "/", input, dialogRef);
+                    for (String part : parts) {
+                        if (part.isEmpty()) continue;
+                        acc.append('/').append(part);
+                        addBreadcrumbChip(chips, part, acc.toString(), input, dialogRef);
+                    }
+                    hsv.addView(chips);
+                    hsv.post(() -> hsv.fullScroll(View.FOCUS_RIGHT));
+                    container.addView(hsv, 0);
+                }
                 AlertDialog ad = dialogUtil.getDialogBuilder()
                         .setTitle(R.string.path)
-                        .setView(textInputLayout)
+                        .setView(container)
                         .setNegativeButton(android.R.string.cancel, null)
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -1292,6 +1320,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 Extensions.showMessage(MainActivity.this, getString(R.string.navigate_create_failed, inputPath));
                             }
                         }).create();
+                dialogRef[0] = ad;
                 KeyboardUtil.focusOnShow(ad, input, true);
                 dialogUtil.styleAlertDialog(ad);
                 ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
@@ -3466,6 +3495,38 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             this.<TextView>findViewById(R.id.folderCount)
                     .setText(rss.getString(R.string.folders_files_x, finalFoldersCount, finalTotalCount));
         });
+    }
+
+    private void addBreadcrumbChip(com.google.android.material.chip.ChipGroup chips,
+                                   String label,
+                                   String fullPath,
+                                   EditText input,
+                                   AlertDialog[] dialogRef) {
+        com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(this);
+        chip.setText(label);
+        chip.setEnsureMinTouchTargetSize(false);
+        chip.setOnClickListener(v -> {
+            File target = new File(fullPath);
+            boolean accessible = target.exists() && target.isDirectory();
+            if (!accessible) {
+                try {
+                    accessible = PrivilegeManager.Files.exists(this, fullPath)
+                            && PrivilegeManager.Files.isDirectory(this, fullPath);
+                } catch (Exception ignored) {
+                }
+            }
+            if (!accessible) {
+                input.setText(fullPath);
+                input.setSelection(fullPath.length());
+                return;
+            }
+            boolean isPane1 = lastPaneSelected == 1;
+            if (isPane1) pane1Folder = target;
+            else pane2Folder = target;
+            if (dialogRef[0] != null) dialogRef[0].dismiss();
+            loadFolderInPane(target, isPane1);
+        });
+        chips.addView(chip);
     }
 
     public void setCurrentPane(int pane) {

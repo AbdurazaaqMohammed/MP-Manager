@@ -102,7 +102,8 @@
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="4dp"
-            android:background="#3DFFFFFF" />
+            android:alpha="0.6"
+            android:background="?attr/colorOutlineVariant" />
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/sw_remember_options"

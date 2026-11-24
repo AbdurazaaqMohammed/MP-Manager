@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:textColor="#42A5F5"/>
+        android:textColor="?attr/colorPrimary"/>
 
     <TextView
         android:id="@+id/content_text"

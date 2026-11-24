@@ -525,7 +525,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="12dp"
-                    android:background="#22000000" />
+                    android:alpha="0.6"
+                    android:background="?attr/colorOutlineVariant" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -588,7 +589,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="12dp"
-                    android:background="#22000000" />
+                    android:alpha="0.6"
+                    android:background="?attr/colorOutlineVariant" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -654,7 +656,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="12dp"
-                    android:background="#22000000" />
+                    android:alpha="0.6"
+                    android:background="?attr/colorOutlineVariant" />
 
                 <TextView
                     android:layout_width="match_parent"

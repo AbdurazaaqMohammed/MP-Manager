@@ -300,11 +300,13 @@ public class PdfViewerActivity extends BaseActivity {
 
     private void applyEyeProtection(boolean enabled) {
         if (enabled) {
-            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#D32F2F"));
+            fabEyeComfort.setCardBackgroundColor(com.google.android.material.color.MaterialColors.getColor(
+                    this, com.google.android.material.R.attr.colorError, 0xFFD32F2F));
             eyeComfortOverlay.setVisibility(View.VISIBLE);
             updateEyeOverlayAlpha(eyeComfortIntensity);
         } else {
-            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#212121"));
+            fabEyeComfort.setCardBackgroundColor(com.google.android.material.color.MaterialColors.getColor(
+                    this, com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFF212121));
             eyeComfortOverlay.setVisibility(View.GONE);
         }
     }

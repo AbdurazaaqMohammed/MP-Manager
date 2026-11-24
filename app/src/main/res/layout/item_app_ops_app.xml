@@ -57,7 +57,7 @@
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="1dp"
                 android:textSize="10.5sp"
-                android:background="#22888888"
+                android:background="?attr/colorSurfaceVariant"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
