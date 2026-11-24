@@ -12,6 +12,7 @@ import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 import io.github.abdurazaaqmohammed.ui.common.util.KeyboardUtil;
 import io.github.abdurazaaqmohammed.feature.apk.SignWrapper;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
+import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
 import io.github.abdurazaaqmohammed.util.misc.UpdateUtil;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -3536,6 +3537,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         .append(files.size() - foldersCount));
     }
 
+    private void checkPendingEditorResult(Intent intent) {
+        if (intent != null && intent.hasExtra("pending_editor_request")) {
+            int req = intent.getIntExtra("pending_editor_request", -1);
+            int code = intent.getIntExtra("pending_editor_code", RESULT_CANCELED);
+            Intent data = intent.getParcelableExtra("pending_editor_data");
+            intent.removeExtra("pending_editor_request");
+            intent.removeExtra("pending_editor_code");
+            intent.removeExtra("pending_editor_data");
+            if (req >= 0) {
+                EditorTasks.getAndClearPendingResult();
+                handler.post(() -> dispatchEditorResult(req, code, data));
+                return;
+            }
+        }
+        EditorTasks.Result res = EditorTasks.getAndClearPendingResult();
+        if (res != null && res.request >= 0) {
+            handler.post(() -> dispatchEditorResult(res.request, res.code, res.data));
+        }
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -3546,11 +3567,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             setIntent(intent);
         } catch (Exception ignored) {
         }
+        checkPendingEditorResult(intent);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        checkPendingEditorResult(getIntent());
         isBackPressedToExit = false;
         handler.removeCallbacks(resetExitPrompt);
         // Toolbar hook entries may have changed (install/uninstall while away).

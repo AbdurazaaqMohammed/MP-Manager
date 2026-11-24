@@ -20,13 +20,20 @@ public final class EditorTasks {
     private static final String RESULT = "mp.editor.result";
     private static final Map<String, WeakReference<BaseActivity>> owners = new HashMap<>();
     private static final Map<String, Result> results = new HashMap<>();
+    private static volatile Result pendingResult;
 
-    private static final class Result {
-        final String owner;
-        final int request;
-        int code = Activity.RESULT_CANCELED;
-        Intent data;
-        Result(String owner, int request) { this.owner = owner; this.request = request; }
+    public static final class Result {
+        public final String owner;
+        public final int request;
+        public int code = Activity.RESULT_CANCELED;
+        public Intent data;
+        public Result(String owner, int request) { this.owner = owner; this.request = request; }
+    }
+
+    public static Result getAndClearPendingResult() {
+        Result res = pendingResult;
+        pendingResult = null;
+        return res;
     }
 
     private EditorTasks() {}
@@ -84,18 +91,29 @@ public final class EditorTasks {
     }
 
     public static void finished(Activity activity) {
-        Result result = results.remove(activity.getIntent().getStringExtra(RESULT));
+        if (activity == null || activity.getIntent() == null) return;
+        String key = activity.getIntent().getStringExtra(RESULT);
+        Result result = key != null ? results.remove(key) : null;
         if (result == null) return;
+        pendingResult = result;
         WeakReference<BaseActivity> ref = owners.get(result.owner);
         BaseActivity owner = ref != null ? ref.get() : null;
         if (owner != null && !owner.isFinishing() && !owner.isDestroyed()) {
-            owner.getWindow().getDecorView().post(() ->
-                    owner.dispatchEditorResult(result.request, result.code, result.data));
+            try {
+                owner.getWindow().getDecorView().post(() -> {
+                    if (pendingResult == result) {
+                        pendingResult = null;
+                        owner.dispatchEditorResult(result.request, result.code, result.data);
+                    }
+                });
+            } catch (Exception ignored) {
+            }
         }
     }
 
     public static void returnToMain(Activity activity) {
         if (activity == null) return;
+        Result res = pendingResult;
         try {
             ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
             if (am != null) {
@@ -116,6 +134,11 @@ public final class EditorTasks {
         try {
             Intent main = new Intent(activity, MainActivity.class);
             main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            if (res != null && res.data != null) {
+                main.putExtra("pending_editor_request", res.request);
+                main.putExtra("pending_editor_code", res.code);
+                main.putExtra("pending_editor_data", res.data);
+            }
             activity.startActivity(main);
         } catch (Exception ignored) {
         }
