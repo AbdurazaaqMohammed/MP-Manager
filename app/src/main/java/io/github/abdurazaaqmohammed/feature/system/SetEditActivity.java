@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.system;
 
+
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -203,7 +205,7 @@ public class SetEditActivity extends BaseActivity {
         String msg = added
                 ? (isAr() ? "تمت الإضافة للمفضلة ❤️" : "Added to favorites ❤️")
                 : (isAr() ? "تمت الإزالة من المفضلة" : "Removed from favorites");
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, msg);
     }
 
     private void initViews() {
@@ -752,14 +754,14 @@ public class SetEditActivity extends BaseActivity {
                 updateCounts();
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
-                Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, R.string.saved);
             });
         }).start();
     }
 
     private void deleteSetting(SettingEntry entry) {
         if (entry.type == SettingType.PROP) {
-            Toast.makeText(this, isAr() ? "لا يمكن حذف خصائص النظام" : "System properties cannot be deleted", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, isAr() ? "لا يمكن حذف خصائص النظام" : "System properties cannot be deleted");
             return;
         }
         progressBar.setVisibility(View.VISIBLE);
@@ -773,7 +775,7 @@ public class SetEditActivity extends BaseActivity {
                 updateCounts();
                 progressBar.setVisibility(View.GONE);
                 applyFilter();
-                Toast.makeText(this, isAr() ? "تم الحذف بنجاح" : "Deleted successfully", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, isAr() ? "تم الحذف بنجاح" : "Deleted successfully");
             });
         }).start();
     }

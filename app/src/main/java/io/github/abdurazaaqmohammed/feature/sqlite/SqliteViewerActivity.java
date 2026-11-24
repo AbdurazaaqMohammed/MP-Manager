@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
@@ -320,7 +321,7 @@ public class SqliteViewerActivity extends BaseActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(SqliteViewerActivity.this, "Query error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(SqliteViewerActivity.this, "Query error: " + e.getMessage());
                 });
             }
         }).start();
@@ -451,12 +452,12 @@ public class SqliteViewerActivity extends BaseActivity {
                 if (affected > 0) {
                     markModifiedAndSync();
                     runOnUiThread(() -> {
-                        Toast.makeText(this, "Updated successfully", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Updated successfully");
                         loadTableData();
                     });
                 }
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Extensions.showMessage(this, "Update failed: " + e.getMessage()));
             }
         }).start();
     }
@@ -488,12 +489,12 @@ public class SqliteViewerActivity extends BaseActivity {
                             if (deleted > 0) {
                                 markModifiedAndSync();
                                 runOnUiThread(() -> {
-                                    Toast.makeText(this, "Row deleted", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(this, "Row deleted");
                                     loadTableData();
                                 });
                             }
                         } catch (Exception e) {
-                            runOnUiThread(() -> Toast.makeText(this, "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                            runOnUiThread(() -> Extensions.showMessage(this, "Delete failed: " + e.getMessage()));
                         }
                     }).start();
                 })
@@ -563,13 +564,13 @@ public class SqliteViewerActivity extends BaseActivity {
                     runOnUiThread(() -> {
                         // Display results or reload
                         loadTableData();
-                        Toast.makeText(this, "Query executed", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Query executed");
                     });
                 } else {
                     db.execSQL(query);
                     markModifiedAndSync();
                     runOnUiThread(() -> {
-                        Toast.makeText(this, "SQL executed successfully", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "SQL executed successfully");
                         loadTableData();
                     });
                 }
@@ -623,7 +624,7 @@ public class SqliteViewerActivity extends BaseActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("SQL Data", text));
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, msg);
         }
     }
 

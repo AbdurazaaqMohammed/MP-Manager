@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.arm64;
 
+
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -704,7 +706,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             isPatchMode = !isPatchMode;
             btnPatchModeToggle.setText(isPatchMode ? "PATCH: ON" : "PATCH: OFF");
             btnPatchModeToggle.setTextColor(isPatchMode ? 0xFF22C55E : 0xFF888888);
-            Toast.makeText(this, isPatchMode ? "Patch mode enabled (tap a row to edit bytes)" : "Patch mode disabled", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, isPatchMode ? "Patch mode enabled (tap a row to edit bytes)" : "Patch mode disabled");
         });
         hexControls.addView(btnPatchModeToggle);
 
@@ -1477,7 +1479,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Disassembly Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Extensions.showMessage(this, "Disassembly Error: " + e.getMessage());
                 });
             }
         }).start();
@@ -1548,7 +1550,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Load More Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Load More Error: " + e.getMessage());
                 });
             }
         }).start();
@@ -1639,7 +1641,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                         long target = Long.parseLong(text, 16);
                         jumpToAddressOrOffset(target);
                     } catch (NumberFormatException e) {
-                        Toast.makeText(this, "Invalid hex number", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Invalid hex number");
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null);
@@ -1675,7 +1677,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 if (offset < 0 || offset >= soFile.length()) {
                     runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(this, "Target offset out of bounds: 0x" + Long.toHexString(target), Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Target offset out of bounds: 0x" + Long.toHexString(target));
                     });
                     return;
                 }
@@ -1692,7 +1694,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Extensions.showMessage(this, "Error: " + e.getMessage());
                 });
             }
         }).start();
@@ -1752,7 +1754,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 ((LinearLayoutManager) rvInstructions.getLayoutManager()).scrollToPositionWithOffset(targetPos, dp(30));
             }
         }
-        Toast.makeText(this, "<- Back to 0x" + Long.toHexString(prev.address).toUpperCase(Locale.ROOT), Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, "<- Back to 0x" + Long.toHexString(prev.address).toUpperCase(Locale.ROOT));
         return true;
     }
 
@@ -1776,7 +1778,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         if (pos >= 0) {
             ((LinearLayoutManager) rvInstructions.getLayoutManager()).scrollToPositionWithOffset(pos, dp(30));
             instructionsAdapter.notifyItemChanged(pos);
-            Toast.makeText(this, String.format(Locale.ROOT, "Jumped to 0x%08X (line %d)", targetAddr, pos + 1), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, String.format(Locale.ROOT, "Jumped to 0x%08X (line %d)", targetAddr, pos + 1));
             return;
         }
 
@@ -1789,7 +1791,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                         ((LinearLayoutManager) rvInstructions.getLayoutManager()).scrollToPositionWithOffset(p, dp(30));
                     }
                 });
-                Toast.makeText(this, "Jumped to: " + f.getDisplayName(), Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, "Jumped to: " + f.getDisplayName());
                 return;
             }
         }
@@ -1972,7 +1974,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 .setPositiveButton("Apply", (d, w) -> {
                     byte[] parsed = parseHexInput(etHex.getText().toString());
                     if (parsed == null || parsed.length != 4) {
-                        Toast.makeText(this, "Invalid hex bytes! Must be 8 characters.", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Invalid hex bytes! Must be 8 characters.");
                         return;
                     }
                     applyInstructionPatch(inst, parsed, position);
@@ -2026,16 +2028,16 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 }
 
                 final File finalOut = outFile;
-                runOnUiThread(() -> Toast.makeText(this, "Exported: " + finalOut.getName() + " to Download", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Extensions.showMessage(this, "Exported: " + finalOut.getName() + " to Download"));
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Extensions.showMessage(this, "Export failed: " + e.getMessage()));
             }
         }).start();
     }
 
     private void applyReturnFunctionPatch(Arm64Instruction inst, int position, boolean returnTrue, androidx.appcompat.app.AlertDialog dialog) {
         if (position + 1 >= currentInstructions.size()) {
-            Toast.makeText(this, "Cannot apply Return preset: needs 2 instruction slots (MOV+RET), but instruction is at the end of section.", Toast.LENGTH_LONG).show();
+            Extensions.showMessage(this, "Cannot apply Return preset: needs 2 instruction slots (MOV+RET), but instruction is at the end of section.");
             return;
         }
 
@@ -2073,7 +2075,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         instructionsAdapter.notifyItemChanged(position);
         updateSaveButtonUi();
         if (showToast) {
-            Toast.makeText(this, "Patch applied: " + inst.fullAsm, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Patch applied: " + inst.fullAsm);
         }
     }
 
@@ -2093,7 +2095,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
         instructionsAdapter.notifyItemChanged(position);
         updateSaveButtonUi();
-        Toast.makeText(this, "Reverted to original", Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, "Reverted to original");
     }
 
     private void updateSaveButtonUi() {
@@ -2115,7 +2117,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
     private void showReviewPatchesDialog() {
         if (pendingPatches.isEmpty()) {
-            Toast.makeText(this, "No pending patches to review", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "No pending patches to review");
             return;
         }
 
@@ -2223,7 +2225,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 if (!pendingPatches.isEmpty()) {
                     showReviewPatchesDialog();
                 } else {
-                    Toast.makeText(this, "All patches reverted", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "All patches reverted");
                 }
             });
             btnRow.addView(btnDrop);
@@ -2248,7 +2250,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     pendingPatches.clear();
                     updateSaveButtonUi();
                     instructionsAdapter.notifyDataSetChanged();
-                    Toast.makeText(this, "Discarded all patches", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Discarded all patches");
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2360,7 +2362,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     progressBar.setVisibility(View.GONE);
                     updateSaveButtonUi();
                     instructionsAdapter.notifyDataSetChanged();
-                    Toast.makeText(this, "Saved " + count + " patch(es) successfully!", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Saved " + count + " patch(es) successfully!");
                     if (onComplete != null) onComplete.run();
                 });
             } catch (Exception e) {
@@ -2420,7 +2422,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Export failed: " + e.getMessage());
                 });
             }
         }).start();
@@ -2465,7 +2467,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText(label, text));
-            Toast.makeText(this, "Copied: " + text, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Copied: " + text);
         }
     }
 
@@ -3656,7 +3658,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                     updateSaveButtonUi();
                     if (hexAdapter != null) hexAdapter.notifyItemChanged((int) (rowOffset / hexBytesPerRow));
                     if (instructionsAdapter != null) instructionsAdapter.notifyDataSetChanged();
-                    Toast.makeText(this, "Patched " + patchedCount + " bytes at 0x" + Long.toHexString(displayAddr), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Patched " + patchedCount + " bytes at 0x" + Long.toHexString(displayAddr));
                 })
                 .setNegativeButton("CANCEL", null)
                 .show();
@@ -3664,7 +3666,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
 
     private void undoLastPatch() {
         if (pendingPatches.isEmpty()) {
-            Toast.makeText(this, "No patches to undo", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "No patches to undo");
             return;
         }
         Long lastKey = null;
@@ -3676,7 +3678,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             updateSaveButtonUi();
             if (hexAdapter != null) hexAdapter.notifyDataSetChanged();
             if (instructionsAdapter != null) instructionsAdapter.notifyDataSetChanged();
-            Toast.makeText(this, "Reverted patch at 0x" + Long.toHexString(lastKey), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Reverted patch at 0x" + Long.toHexString(lastKey));
         }
     }
 
@@ -3697,7 +3699,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                         long offset = Long.parseLong(text, 16);
                         jumpToHexOffset(offset);
                     } catch (NumberFormatException e) {
-                        Toast.makeText(this, "Invalid offset: " + text, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Invalid offset: " + text);
                     }
                 })
                 .setNegativeButton("Cancel", null)
@@ -3962,7 +3964,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                 btnPatchModeToggle.setText(isPatchMode ? "PATCH: ON" : "PATCH: OFF");
                 btnPatchModeToggle.setTextColor(isPatchMode ? 0xFF22C55E : 0xFF888888);
             }
-            Toast.makeText(this, "Patch mode: " + (isPatchMode ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Patch mode: " + (isPatchMode ? "ON" : "OFF"));
             if (instructionsAdapter != null) instructionsAdapter.notifyDataSetChanged();
         }));
 
@@ -4045,7 +4047,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
             }
         }
         copyToClipboard(sb.toString(), "Function Disassembly");
-        Toast.makeText(this, "Copied analysis to clipboard", Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, "Copied analysis to clipboard");
     }
 
     private void showDisasmSearchDialog() {
@@ -4082,12 +4084,12 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                                 if (rvInstructions != null) {
                                     ((LinearLayoutManager) rvInstructions.getLayoutManager()).scrollToPositionWithOffset(targetPos, dp(30));
                                 }
-                                Toast.makeText(this, "Match found at line " + (targetPos + 1), Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(this, "Match found at line " + (targetPos + 1));
                                 return;
                             }
                         }
                     }
-                    Toast.makeText(this, "No match found for: " + text, Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "No match found for: " + text);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
