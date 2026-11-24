@@ -8,6 +8,8 @@ import android.os.Bundle;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,7 +22,7 @@ public final class EditorTasks {
     private static final String RESULT = "mp.editor.result";
     private static final Map<String, WeakReference<BaseActivity>> owners = new HashMap<>();
     private static final Map<String, Result> results = new HashMap<>();
-    private static volatile Result pendingResult;
+    private static final Map<Integer, Result> pendingResults = new LinkedHashMap<>();
 
     public static final class Result {
         public final String owner;
@@ -31,9 +33,23 @@ public final class EditorTasks {
     }
 
     public static Result getAndClearPendingResult() {
-        Result res = pendingResult;
-        pendingResult = null;
-        return res;
+        synchronized (pendingResults) {
+            if (pendingResults.isEmpty()) return null;
+            Result latest = null;
+            Integer latestKey = null;
+            for (Map.Entry<Integer, Result> entry : pendingResults.entrySet()) {
+                latestKey = entry.getKey();
+                latest = entry.getValue();
+            }
+            if (latestKey != null) pendingResults.remove(latestKey);
+            return latest;
+        }
+    }
+
+    public static Result getAndClearPendingResult(int request) {
+        synchronized (pendingResults) {
+            return pendingResults.remove(request);
+        }
     }
 
     private EditorTasks() {}
@@ -95,14 +111,22 @@ public final class EditorTasks {
         String key = activity.getIntent().getStringExtra(RESULT);
         Result result = key != null ? results.remove(key) : null;
         if (result == null) return;
-        pendingResult = result;
+        synchronized (pendingResults) {
+            pendingResults.put(result.request, result);
+        }
         WeakReference<BaseActivity> ref = owners.get(result.owner);
         BaseActivity owner = ref != null ? ref.get() : null;
         if (owner != null && !owner.isFinishing() && !owner.isDestroyed()) {
             try {
                 owner.getWindow().getDecorView().post(() -> {
-                    if (pendingResult == result) {
-                        pendingResult = null;
+                    boolean shouldDispatch;
+                    synchronized (pendingResults) {
+                        shouldDispatch = pendingResults.get(result.request) == result;
+                        if (shouldDispatch) {
+                            pendingResults.remove(result.request);
+                        }
+                    }
+                    if (shouldDispatch) {
                         owner.dispatchEditorResult(result.request, result.code, result.data);
                     }
                 });
@@ -113,7 +137,13 @@ public final class EditorTasks {
 
     public static void returnToMain(Activity activity) {
         if (activity == null) return;
-        Result res = pendingResult;
+        Result res = null;
+        synchronized (pendingResults) {
+            Iterator<Result> it = pendingResults.values().iterator();
+            while (it.hasNext()) {
+                res = it.next();
+            }
+        }
         try {
             ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
             if (am != null) {
