@@ -24,6 +24,7 @@ import android.content.pm.ApplicationInfo;
 import android.os.ParcelFileDescriptor;
 import androidx.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.util.LruCache;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -1770,8 +1771,8 @@ public class RootManager {
     private record ListCacheEntry(File[] files, long at) {
     }
 
-    private final Map<String, ListCacheEntry> listCache = new HashMap<>();
-    private static final long LIST_CACHE_TTL = 8000L;
+    private final LruCache<String, ListCacheEntry> listCache = new LruCache<>(160);
+    private static final long LIST_CACHE_TTL = 30000L;
     private static final long STATIC_DIR_CACHE_TTL = 15L * 60 * 1000L; // 15 minutes for static system dirs
 
     private static boolean isStaticSystemDir(String dir) {
@@ -1802,15 +1803,22 @@ public class RootManager {
                 listCache.remove(dirPath);
                 return;
             }
-            if (listCache.size() > 60) listCache.clear();
             listCache.put(dirPath, new ListCacheEntry(files.clone(), System.currentTimeMillis()));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public synchronized void invalidatePath(String dirPath) {
+        if (dirPath == null) return;
+        try {
+            listCache.remove(dirPath);
         } catch (Exception ignored) {
         }
     }
 
     public synchronized void invalidateListCache() {
         try {
-            listCache.clear();
+            listCache.evictAll();
         } catch (Exception ignored) {
         }
     }
