@@ -88,6 +88,14 @@ public final class EditorTasks {
                 || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
     }
 
+    private static boolean isSecondaryTask(ActivityManager.RecentTaskInfo info) {
+        if (info == null || info.baseIntent == null || info.baseIntent.getComponent() == null) {
+            return false;
+        }
+        String cls = info.baseIntent.getComponent().getClassName();
+        return !MainActivity.class.getName().equals(cls);
+    }
+
     public static boolean showEditorTasksInRecents(Context context) {
         if (context == null) return false;
         return PreferenceManager.getDefaultSharedPreferences(context)
@@ -101,8 +109,27 @@ public final class EditorTasks {
             if (am == null) return;
             for (ActivityManager.AppTask task : am.getAppTasks()) {
                 ActivityManager.RecentTaskInfo info = task.getTaskInfo();
-                if (info != null && info.baseIntent != null && isEditor(info.baseIntent)) {
+                if (info != null && info.baseIntent != null
+                        && (isEditor(info.baseIntent) || isSecondaryTask(info))) {
                     task.setExcludeFromRecents(!showInRecents);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void syncActivityTaskRecents(Activity activity) {
+        if (activity == null || activity instanceof MainActivity) return;
+        boolean exclude = !showEditorTasksInRecents(activity);
+        try {
+            ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return;
+            int taskId = activity.getTaskId();
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info != null && info.taskId == taskId && isSecondaryTask(info)) {
+                    task.setExcludeFromRecents(exclude);
+                    break;
                 }
             }
         } catch (Exception ignored) {
