@@ -2580,4 +2580,5 @@
 <string name="boot_image_inspector">فاحص صور البوت</string>
 <string name="customize_open_with">ترتيب قائمة فتح بواسطة</string>
 <string name="customize_open_with_hint">اضغط مطولاً للسحب وإعادة الترتيب، أو المس العين للإخفاء والإظهار</string>
+<string name="empty_folder">المجلد فارغ</string>
 </resources>

@@ -2000,6 +2000,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // Without a parent the ".." row points at the folder itself, which
         // goUp recognizes as a no-op.
         pane.setAdapter(new MainFilesArrayAdapter(this, files, parent != null ? parent : folder, pane1, false, null));
+        updatePaneEmptyState(pane1, files.length == 0);
         UiPrefs.playFolderTransition(pane);
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
@@ -2023,6 +2024,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(folder, false, null));
                     RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
                     pane.setAdapter(new RemoteFilesArrayAdapter(this, folder, files, pane1));
+                    updatePaneEmptyState(pane1, files.length == 0);
                     network.refreshSpace(folder.connection);
                     UiPrefs.playFolderTransition(pane);
                     if (pane1 == (lastPaneSelected == 1)) {
@@ -2060,6 +2062,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         System.arraycopy(files, 0, rows, 1, files.length);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         pane.setAdapter(new FtpFilesArrayAdapter(this, rows, pane1, folder.client));
+        updatePaneEmptyState(pane1, files.length == 0);
         UiPrefs.playFolderTransition(pane);
         if (pane1 == (lastPaneSelected == 1)) { setMultiSelectModeUI(false); setCurrentFolder(folder, files); }
         updateNavigationButtons();
@@ -2317,6 +2320,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (parent == null) parent = folder;
         MainFilesArrayAdapter adapter = new MainFilesArrayAdapter(this, files, parent, pane1, false, null);
         pane.setAdapter(adapter);
+        updatePaneEmptyState(pane1, files.length == 0);
 
         if (pane1) {
             currentPane1Files = files;
@@ -2577,10 +2581,25 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (pane != null) {
             boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
             pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), parent, pane1, true, path));
+            boolean hasRealEntry = false;
+            for (ZipEntryInfo z : entries) {
+                if (z != null && z.getFullPath() != null) {
+                    hasRealEntry = true;
+                    break;
+                }
+            }
+            updatePaneEmptyState(pane1, !hasRealEntry);
             UiPrefs.playFolderTransition(pane);
             // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
             if (isCurrentPane) setMultiSelectModeUI(false);
             updateNavigationButtons();
+        }
+    }
+
+    private void updatePaneEmptyState(boolean pane1, boolean empty) {
+        View emptyView = findViewById(pane1 ? R.id.emptyPane1 : R.id.emptyPane2);
+        if (emptyView != null) {
+            emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
         }
     }
 

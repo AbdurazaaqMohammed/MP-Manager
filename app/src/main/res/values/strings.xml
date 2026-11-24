@@ -2646,4 +2646,5 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="boot_image_inspector">Boot image inspector</string>
     <string name="customize_open_with">Open with order</string>
     <string name="customize_open_with_hint">Long-press to drag items; tap eye icon to hide or show</string>
+    <string name="empty_folder">Empty folder</string>
 </resources>

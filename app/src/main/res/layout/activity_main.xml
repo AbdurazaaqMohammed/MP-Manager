@@ -90,10 +90,45 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1">
 
-                    <modder.hub.dexeditor.views.FastScrollerRecyclerView
-                        android:id="@+id/listViewPane1"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
+                        android:layout_height="match_parent">
+
+                        <modder.hub.dexeditor.views.FastScrollerRecyclerView
+                            android:id="@+id/listViewPane1"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <LinearLayout
+                            android:id="@+id/emptyPane1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:alpha="0.55"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="16dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/folder_24px"
+                                app:tint="?attr/colorOnSurfaceVariant" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center"
+                                android:text="@string/empty_folder"
+                                android:textAppearance="?attr/textAppearanceBodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
+                    </FrameLayout>
                 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
                 <View
@@ -109,10 +144,45 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1">
 
-                    <modder.hub.dexeditor.views.FastScrollerRecyclerView
-                        android:id="@+id/listViewPane2"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
+                        android:layout_height="match_parent">
+
+                        <modder.hub.dexeditor.views.FastScrollerRecyclerView
+                            android:id="@+id/listViewPane2"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <LinearLayout
+                            android:id="@+id/emptyPane2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:alpha="0.55"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="16dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/folder_24px"
+                                app:tint="?attr/colorOnSurfaceVariant" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center"
+                                android:text="@string/empty_folder"
+                                android:textAppearance="?attr/textAppearanceBodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
+                    </FrameLayout>
                 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
             </LinearLayout>
             <com.google.android.material.floatingactionbutton.FloatingActionButton
