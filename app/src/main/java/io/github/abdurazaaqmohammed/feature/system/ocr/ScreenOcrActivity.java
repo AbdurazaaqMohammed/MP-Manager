@@ -29,7 +29,6 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.util.Patterns;
 import android.text.Editable;
 import android.text.TextWatcher;

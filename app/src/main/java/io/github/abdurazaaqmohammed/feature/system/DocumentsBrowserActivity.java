@@ -5,8 +5,6 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -66,8 +64,6 @@ public class DocumentsBrowserActivity extends BaseActivity {
             DocumentsContract.Root.COLUMN_TITLE,
             DocumentsContract.Root.COLUMN_SUMMARY,
     };
-
-    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private RecyclerView list;
     private TextView emptyView;
@@ -274,7 +270,12 @@ public class DocumentsBrowserActivity extends BaseActivity {
         @NonNull
         @Override
         public RowHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new RowHolder(inflater.inflate(android.R.layout.simple_list_item_2, parent, false));
+            View v = inflater.inflate(android.R.layout.simple_list_item_2, parent, false);
+            android.util.TypedValue tv = new android.util.TypedValue();
+            if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
+                v.setBackgroundResource(tv.resourceId);
+            }
+            return new RowHolder(v);
         }
 
         @Override

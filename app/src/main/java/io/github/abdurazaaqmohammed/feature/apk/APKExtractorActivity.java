@@ -1033,6 +1033,10 @@ public class APKExtractorActivity extends BaseActivity {
                                     @Override
                                     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                                         View v = getLayoutInflater().inflate(android.R.layout.simple_list_item_1, parent, false);
+                                        android.util.TypedValue tv = new android.util.TypedValue();
+                                        if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
+                                            v.setBackgroundResource(tv.resourceId);
+                                        }
                                         return new RecyclerView.ViewHolder(v) {};
                                     }
 
