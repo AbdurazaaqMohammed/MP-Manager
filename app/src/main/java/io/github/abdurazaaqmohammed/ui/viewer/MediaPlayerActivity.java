@@ -1071,17 +1071,21 @@ public class MediaPlayerActivity extends BaseActivity implements
         videoContainer.post(this::fitVideo);
     }
 
+    private void stopPlaybackAndService() {
+        try {
+            playerManager.stop();
+        } catch (Exception ignored) {
+        }
+        try {
+            stopService(new Intent(this, MusicService.class));
+        } catch (Exception ignored) {
+        }
+    }
+
     @Override
     public void finish() {
         if (!isMinimizing) {
-            try {
-                playerManager.stop();
-            } catch (Exception ignored) {
-            }
-            try {
-                stopService(new Intent(this, MusicService.class));
-            } catch (Exception ignored) {
-            }
+            stopPlaybackAndService();
         }
         super.finish();
     }
@@ -1092,14 +1096,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         playerManager.decrementUIVisible();
         autoHideHandler.removeCallbacks(autoHideRunnable);
         if (isFinishing() && !isMinimizing) {
-            try {
-                playerManager.stop();
-            } catch (Exception ignored) {
-            }
-            try {
-                stopService(new Intent(this, MusicService.class));
-            } catch (Exception ignored) {
-            }
+            stopPlaybackAndService();
         } else if (playerManager.isPlayingVideo() && !playerManager.isVideoBackgroundPlay() && playerManager.getState() == PlayerManager.PlayState.PLAYING) {
             playerManager.pause();
             pausedForBackground = true;

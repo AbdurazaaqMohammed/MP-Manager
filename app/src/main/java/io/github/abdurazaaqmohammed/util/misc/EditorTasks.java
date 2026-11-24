@@ -6,8 +6,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.preference.PreferenceManager;
+
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,11 +20,12 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
 /** Gives each editor its own task without breaking activity-result callers. */
 public final class EditorTasks {
+    public static final String PREF_SHOW_EDITOR_TASKS_IN_RECENTS = "show_editor_tasks_in_recents";
     private static final String OWNER = "mp.editor.owner";
     private static final String RESULT = "mp.editor.result";
     private static final Map<String, WeakReference<BaseActivity>> owners = new HashMap<>();
     private static final Map<String, Result> results = new HashMap<>();
-    private static volatile Result pendingResult;
+    private static final Map<Integer, Result> pendingResults = new LinkedHashMap<>();
 
     public static final class Result {
         public final String owner;
@@ -31,9 +36,23 @@ public final class EditorTasks {
     }
 
     public static Result getAndClearPendingResult() {
-        Result res = pendingResult;
-        pendingResult = null;
-        return res;
+        synchronized (pendingResults) {
+            if (pendingResults.isEmpty()) return null;
+            Result latest = null;
+            Integer latestKey = null;
+            for (Map.Entry<Integer, Result> entry : pendingResults.entrySet()) {
+                latestKey = entry.getKey();
+                latest = entry.getValue();
+            }
+            if (latestKey != null) pendingResults.remove(latestKey);
+            return latest;
+        }
+    }
+
+    public static Result getAndClearPendingResult(int request) {
+        synchronized (pendingResults) {
+            return pendingResults.remove(request);
+        }
     }
 
     private EditorTasks() {}
@@ -69,11 +88,67 @@ public final class EditorTasks {
                 || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
     }
 
+    private static boolean isSecondaryTask(ActivityManager.RecentTaskInfo info) {
+        if (info == null || info.baseIntent == null || info.baseIntent.getComponent() == null) {
+            return false;
+        }
+        String cls = info.baseIntent.getComponent().getClassName();
+        return !MainActivity.class.getName().equals(cls);
+    }
+
+    public static boolean showEditorTasksInRecents(Context context) {
+        if (context == null) return false;
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(PREF_SHOW_EDITOR_TASKS_IN_RECENTS, false);
+    }
+
+    public static void updateRecentsVisibility(Context context, boolean showInRecents) {
+        if (context == null) return;
+        try {
+            ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return;
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info != null && info.baseIntent != null
+                        && (isEditor(info.baseIntent) || isSecondaryTask(info))) {
+                    task.setExcludeFromRecents(!showInRecents);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void syncActivityTaskRecents(Activity activity) {
+        if (activity == null || activity instanceof MainActivity) return;
+        boolean exclude = !showEditorTasksInRecents(activity);
+        try {
+            ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return;
+            int taskId = activity.getTaskId();
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info != null && info.taskId == taskId && isSecondaryTask(info)) {
+                    task.setExcludeFromRecents(exclude);
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     public static Intent prepare(Intent source, String owner, int request) {
+        return prepare(null, source, owner, request);
+    }
+
+    public static Intent prepare(Context context, Intent source, String owner, int request) {
         Intent intent = new Intent(source);
-        intent.setFlags((intent.getFlags() & ~(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        int flags = (intent.getFlags() & ~(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
+        if (!showEditorTasksInRecents(context)) {
+            flags |= Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS;
+        }
+        intent.setFlags(flags);
         // NEW_TASK cancels Android's native result link. Keep a process-local link
         // instead, including ActivityResultRegistry's generated request codes.
         intent.removeExtra(RESULT);
@@ -95,14 +170,22 @@ public final class EditorTasks {
         String key = activity.getIntent().getStringExtra(RESULT);
         Result result = key != null ? results.remove(key) : null;
         if (result == null) return;
-        pendingResult = result;
+        synchronized (pendingResults) {
+            pendingResults.put(result.request, result);
+        }
         WeakReference<BaseActivity> ref = owners.get(result.owner);
         BaseActivity owner = ref != null ? ref.get() : null;
         if (owner != null && !owner.isFinishing() && !owner.isDestroyed()) {
             try {
                 owner.getWindow().getDecorView().post(() -> {
-                    if (pendingResult == result) {
-                        pendingResult = null;
+                    boolean shouldDispatch;
+                    synchronized (pendingResults) {
+                        shouldDispatch = pendingResults.get(result.request) == result;
+                        if (shouldDispatch) {
+                            pendingResults.remove(result.request);
+                        }
+                    }
+                    if (shouldDispatch) {
                         owner.dispatchEditorResult(result.request, result.code, result.data);
                     }
                 });
@@ -113,7 +196,13 @@ public final class EditorTasks {
 
     public static void returnToMain(Activity activity) {
         if (activity == null) return;
-        Result res = pendingResult;
+        Result res = null;
+        synchronized (pendingResults) {
+            Iterator<Result> it = pendingResults.values().iterator();
+            while (it.hasNext()) {
+                res = it.next();
+            }
+        }
         try {
             ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
             if (am != null) {

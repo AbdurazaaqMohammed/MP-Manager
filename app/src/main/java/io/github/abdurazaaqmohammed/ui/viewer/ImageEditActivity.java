@@ -63,7 +63,7 @@ import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 public class ImageEditActivity extends BaseActivity {
 
-    static String sessionPath;
+    public static String sessionPath;
 
     private String originalPath;
     private File workingFile;

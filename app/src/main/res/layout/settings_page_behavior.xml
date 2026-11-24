@@ -196,6 +196,21 @@
                     android:alpha="0.7"
                     android:text="@string/show_restore_dialog_desc" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/showEditorTasksInRecentsToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/show_editor_tasks_in_recents" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:alpha="0.7"
+                    android:text="@string/show_editor_tasks_in_recents_desc" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

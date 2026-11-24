@@ -62,6 +62,8 @@ public class CompareTextActivity extends BaseActivity {
     private static final int BG_INSERTED = 0x3334A853;
 
     private static final int REQUEST_EXPORT_DIFF = 4201;
+    private static final String PREF_FILE = "compare_text_prefs";
+    private static final String PREF_WORD_WRAP = "word_wrap";
 
     /** Layout used by the diff view. */
     private enum ViewMode {AUTO, SIDE_BY_SIDE, UNIFIED}
@@ -71,10 +73,14 @@ public class CompareTextActivity extends BaseActivity {
     private final List<TextDiffEngine.DiffLine> visibleLines = new ArrayList<>();
     /** Positions inside {@link #visibleLines} that are actual differences. */
     private final List<Integer> diffPositions = new ArrayList<>();
+    private final List<TextDiffEngine.DiffHunk> visibleHunks = new ArrayList<>();
+    private final List<Integer> diffHunkIndices = new ArrayList<>();
+    private int currentDiffHunkCursor = -1;
 
     private TextDiffEngine.IgnoreMode ignoreMode = TextDiffEngine.IgnoreMode.NONE;
     private TextDiffEngine.FilterMode filterMode = TextDiffEngine.FilterMode.ALL;
     private boolean matchCase = true;
+    private boolean wordWrap = true;
     private ViewMode viewMode = ViewMode.SIDE_BY_SIDE;
 
     private int lastSearchIndex = -1;
@@ -92,6 +98,7 @@ public class CompareTextActivity extends BaseActivity {
     private MaterialToolbar toolbar;
     private View diffContainer;
     private ProgressBar progressBar;
+    private DualDiffCanvasView diffCanvasView;
     private RecyclerView diffListView;
     private TextView emptyView;
     private DiffAdapter diffAdapter;
@@ -114,6 +121,9 @@ public class CompareTextActivity extends BaseActivity {
 
         diffContainer = findViewById(R.id.text_diff_container);
         progressBar = findViewById(R.id.text_compare_progress);
+        diffCanvasView = findViewById(R.id.text_diff_canvas);
+        wordWrap = getSharedPreferences(PREF_FILE, MODE_PRIVATE).getBoolean(PREF_WORD_WRAP, true);
+        diffCanvasView.setWordWrap(wordWrap);
         diffListView = findViewById(R.id.text_diff_list);
         emptyView = findViewById(R.id.text_diff_empty);
         searchBar = findViewById(R.id.text_search_bar);
@@ -281,22 +291,51 @@ public class CompareTextActivity extends BaseActivity {
         visibleLines.clear();
         visibleLines.addAll(TextDiffEngine.filter(diffLines, filterMode));
         diffPositions.clear();
+        visibleHunks.clear();
+        diffHunkIndices.clear();
+        currentDiffHunkCursor = -1;
+
+        List<DualDiffCanvasView.PaneLine> leftPane = new ArrayList<>();
+        List<DualDiffCanvasView.PaneLine> rightPane = new ArrayList<>();
         for (int i = 0; i < visibleLines.size(); i++) {
-            if (visibleLines.get(i).tag != DiffRow.Tag.EQUAL) diffPositions.add(i);
+            TextDiffEngine.DiffLine line = visibleLines.get(i);
+            if (line.tag != DiffRow.Tag.EQUAL) diffPositions.add(i);
+            if (line.oldNumber > 0) {
+                leftPane.add(new DualDiffCanvasView.PaneLine(line.oldLine, line.oldNumber));
+            }
+            if (line.newNumber > 0) {
+                rightPane.add(new DualDiffCanvasView.PaneLine(line.newLine, line.newNumber));
+            }
         }
+        visibleHunks.addAll(TextDiffEngine.buildHunks(visibleLines));
+        for (int i = 0; i < visibleHunks.size(); i++) {
+            if (visibleHunks.get(i).tag != DiffRow.Tag.EQUAL) {
+                diffHunkIndices.add(i);
+            }
+        }
+
+        diffCanvasView.setData(leftPane, rightPane, visibleHunks);
         diffAdapter.setUnified(isUnified());
         diffAdapter.notifyDataSetChanged();
+        syncActiveViewVisibility();
+
+        lastSearchIndex = -1;
+        activeSearchQuery = "";
+        diffCanvasView.setSearchQuery("", matchCase);
+        invalidateOptionsMenu();
+    }
+
+    private void syncActiveViewVisibility() {
         boolean empty = visibleLines.isEmpty();
-        diffListView.setVisibility(empty ? View.GONE : View.VISIBLE);
+        boolean unified = isUnified();
+        diffCanvasView.setVisibility(!empty && !unified ? View.VISIBLE : View.GONE);
+        diffListView.setVisibility(!empty && unified ? View.VISIBLE : View.GONE);
         emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
         if (empty) {
             emptyView.setText(filterMode == TextDiffEngine.FilterMode.DIFFERENT
                     ? R.string.compare_text_no_differences
                     : R.string.compare_text_filter_empty);
         }
-        lastSearchIndex = -1;
-        activeSearchQuery = "";
-        invalidateOptionsMenu();
     }
 
     // ==========================================
@@ -331,6 +370,7 @@ public class CompareTextActivity extends BaseActivity {
         searchBar.setVisibility(View.GONE);
         lastSearchIndex = -1;
         activeSearchQuery = "";
+        diffCanvasView.setSearchQuery("", matchCase);
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm != null) imm.hideSoftInputFromWindow(searchInput.getWindowToken(), 0);
     }
@@ -368,6 +408,7 @@ public class CompareTextActivity extends BaseActivity {
         if (!query.equals(activeSearchQuery)) {
             activeSearchQuery = query;
             lastSearchIndex = direction > 0 ? -1 : visibleLines.size();
+            diffCanvasView.setSearchQuery(query, matchCase);
             SearchHistoryHelper.push(this, SearchHistoryHelper.KEY_COMPARE_TEXT, query);
         }
         String needle = matchCase ? query : query.toLowerCase(Locale.ROOT);
@@ -427,6 +468,14 @@ public class CompareTextActivity extends BaseActivity {
 
     private void scrollToDiffLine(int index) {
         if (index < 0 || index >= visibleLines.size()) return;
+        if (!isUnified()) {
+            TextDiffEngine.DiffLine row = visibleLines.get(index);
+            int targetNum = row.oldNumber > 0 ? row.oldNumber : row.newNumber;
+            if (targetNum > 0) {
+                diffCanvasView.scrollToLineNumber(targetNum);
+            }
+            return;
+        }
         if (diffListView.getLayoutManager() instanceof LinearLayoutManager lm) {
             lm.scrollToPositionWithOffset(index, 0);
         } else {
@@ -440,6 +489,13 @@ public class CompareTextActivity extends BaseActivity {
 
     /** Scrolls to the first difference below the top of the view, wrapping to the start. */
     private void gotoNextDifference() {
+        if (!isUnified()) {
+            if (diffHunkIndices.isEmpty()) return;
+            currentDiffHunkCursor = (currentDiffHunkCursor + 1) % diffHunkIndices.size();
+            diffCanvasView.scrollToHunk(diffHunkIndices.get(currentDiffHunkCursor));
+            updateDiffCounterSubtitle();
+            return;
+        }
         if (diffPositions.isEmpty()) return;
         int first = firstVisibleDiffLine();
         for (int position : diffPositions) {
@@ -453,6 +509,15 @@ public class CompareTextActivity extends BaseActivity {
 
     /** Scrolls to the last difference above the top of the view, wrapping to the end. */
     private void gotoPreviousDifference() {
+        if (!isUnified()) {
+            if (diffHunkIndices.isEmpty()) return;
+            currentDiffHunkCursor = currentDiffHunkCursor <= 0
+                    ? diffHunkIndices.size() - 1
+                    : currentDiffHunkCursor - 1;
+            diffCanvasView.scrollToHunk(diffHunkIndices.get(currentDiffHunkCursor));
+            updateDiffCounterSubtitle();
+            return;
+        }
         if (diffPositions.isEmpty()) return;
         int first = firstVisibleDiffLine();
         for (int i = diffPositions.size() - 1; i >= 0; i--) {
@@ -463,6 +528,17 @@ public class CompareTextActivity extends BaseActivity {
             }
         }
         scrollToDiffLine(diffPositions.get(diffPositions.size() - 1));
+    }
+
+    private void updateDiffCounterSubtitle() {
+        ActionBar bar = getSupportActionBar();
+        if (bar == null) return;
+        String base = (names2 != null && !names2.isEmpty()) ? (names1 + " ⟷ " + names2) : names1;
+        if (currentDiffHunkCursor >= 0 && !diffHunkIndices.isEmpty()) {
+            bar.setSubtitle("[" + (currentDiffHunkCursor + 1) + "/" + diffHunkIndices.size() + "]  " + base);
+        } else {
+            bar.setSubtitle(base);
+        }
     }
 
     private int firstVisibleDiffLine() {
@@ -580,6 +656,8 @@ public class CompareTextActivity extends BaseActivity {
 
         MenuItem match = menu.findItem(R.id.action_match_case);
         if (match != null) match.setChecked(matchCase);
+        MenuItem wrap = menu.findItem(R.id.action_word_wrap);
+        if (wrap != null) wrap.setChecked(wordWrap);
 
         MenuItem prevDiff = menu.findItem(R.id.action_prev_diff);
         MenuItem nextDiff = menu.findItem(R.id.action_next_diff);
@@ -640,6 +718,15 @@ public class CompareTextActivity extends BaseActivity {
             rebuildDiff();
             return true;
         }
+        if (id == R.id.action_word_wrap) {
+            wordWrap = !wordWrap;
+            item.setChecked(wordWrap);
+            getSharedPreferences(PREF_FILE, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_WORD_WRAP, wordWrap).apply();
+            diffCanvasView.setWordWrap(wordWrap);
+            diffAdapter.notifyDataSetChanged();
+            return true;
+        }
         if (id == R.id.action_filter_all) {
             item.setChecked(true);
             setFilterMode(TextDiffEngine.FilterMode.ALL);
@@ -682,6 +769,7 @@ public class CompareTextActivity extends BaseActivity {
         viewMode = mode;
         diffAdapter.setUnified(isUnified());
         diffAdapter.notifyDataSetChanged();
+        syncActiveViewVisibility();
         invalidateOptionsMenu();
     }
 
@@ -700,6 +788,7 @@ public class CompareTextActivity extends BaseActivity {
     private void rebuildDiff() {
         if (textLeft == null || textRight == null) return;
         progressBar.setVisibility(View.VISIBLE);
+        diffCanvasView.setVisibility(View.GONE);
         diffListView.setVisibility(View.GONE);
         new Thread(() -> {
             try {
@@ -710,12 +799,11 @@ public class CompareTextActivity extends BaseActivity {
                     diffLines.addAll(built);
                     applyFilter();
                     progressBar.setVisibility(View.GONE);
-                    diffListView.setVisibility(View.VISIBLE);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    diffListView.setVisibility(View.VISIBLE);
+                    syncActiveViewVisibility();
                     new ErrorUtil(CompareTextActivity.this).showError(e);
                 });
             }
@@ -757,8 +845,8 @@ public class CompareTextActivity extends BaseActivity {
             if (holder instanceof SideHolder side) {
                 side.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
                 side.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
-                side.old.setText(line.oldLine);
-                side.newText.setText(line.newLine);
+                side.old.setText(DualDiffCanvasView.sanitizeDisplayText(line.oldLine));
+                side.newText.setText(DualDiffCanvasView.sanitizeDisplayText(line.newLine));
                 side.old.setBackgroundColor(backgroundColor(line.tag, true));
                 side.newText.setBackgroundColor(backgroundColor(line.tag, false));
             } else if (holder instanceof UnifiedHolder unifiedHolder) {
@@ -808,7 +896,7 @@ public class CompareTextActivity extends BaseActivity {
             holder.rowOld.setVisibility(View.VISIBLE);
             holder.numOld.setText(line.oldNumber == 0 ? "" : String.valueOf(line.oldNumber));
             holder.markerOld.setText(marker);
-            holder.textOld.setText(line.oldLine);
+            holder.textOld.setText(DualDiffCanvasView.sanitizeDisplayText(line.oldLine));
             holder.rowOld.setBackgroundColor(background);
         }
 
@@ -816,7 +904,7 @@ public class CompareTextActivity extends BaseActivity {
             holder.rowNew.setVisibility(View.VISIBLE);
             holder.numNew.setText(line.newNumber == 0 ? "" : String.valueOf(line.newNumber));
             holder.markerNew.setText(marker);
-            holder.textNew.setText(line.newLine);
+            holder.textNew.setText(DualDiffCanvasView.sanitizeDisplayText(line.newLine));
             holder.rowNew.setBackgroundColor(background);
         }
 

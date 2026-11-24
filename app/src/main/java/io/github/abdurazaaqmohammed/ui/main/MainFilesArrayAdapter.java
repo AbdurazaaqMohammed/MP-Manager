@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
+import io.github.abdurazaaqmohammed.feature.files.BackupOpenPolicy;
 import io.github.abdurazaaqmohammed.feature.system.SystemImageMountManager;
 
 
@@ -998,20 +999,20 @@ final View.OnClickListener originalClickListener;
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CHECK, FileMenuOrder.labelFor(context, FileMenuOrder.CHECK, direction)));
 
                 if (!isInZip) {
-                    boolean hasBak = false;
+                    boolean canRestore = false;
                     if (multi) {
+                        canRestore = !selectedPositions.isEmpty();
                         for (int bp : selectedPositions) {
-                            if (bp >= 0 && bp < values.length && values[bp] instanceof File f) {
-                                if (f.getName().toLowerCase().endsWith(".bak")) {
-                                    hasBak = true;
-                                    break;
-                                }
+                            if (bp < 0 || bp >= values.length || !(values[bp] instanceof File f)
+                                    || !BackupOpenPolicy.isBackupName(f.getName())) {
+                                canRestore = false;
+                                break;
                             }
                         }
-                    } else if (file != null && file.getName().toLowerCase().endsWith(".bak")) {
-                        hasBak = true;
+                    } else if (file != null && BackupOpenPolicy.isBackupName(file.getName())) {
+                        canRestore = true;
                     }
-                    if (hasBak) {
+                    if (canRestore) {
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RESTORE, FileMenuOrder.labelFor(context, FileMenuOrder.RESTORE, direction)));
                     }
                 }
@@ -1085,8 +1086,8 @@ final View.OnClickListener originalClickListener;
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
-                List<File> dexCompareFiles1 = null;
-                List<File> dexCompareFiles2 = null;
+                List<Object> dexCompareItems1 = null;
+                List<Object> dexCompareItems2 = null;
                 Object[] pair = null;
 
                 if (selectedPositions.size() == 2) {
@@ -1100,19 +1101,19 @@ final View.OnClickListener originalClickListener;
                             compareFile1 = o1;
                             compareFile2 = o2;
                             pair = new Object[]{o1, o2};
-                            List<File> sameDex1 = singleDexList(o1);
-                            List<File> sameDex2 = singleDexList(o2);
+                            List<Object> sameDex1 = singleDexItemList(o1);
+                            List<Object> sameDex2 = singleDexItemList(o2);
                             if (sameDex1 != null && sameDex2 != null) {
-                                dexCompareFiles1 = sameDex1;
-                                dexCompareFiles2 = sameDex2;
+                                dexCompareItems1 = sameDex1;
+                                dexCompareItems2 = sameDex2;
                                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
                             }
                         }
                     }
                 } else if (a instanceof MainFilesArrayAdapter otherPaneAdapter) {
-                    dexCompareFiles1 = collectDexCompareFiles();
-                    dexCompareFiles2 = otherPaneAdapter.collectDexCompareFiles();
-                    if (dexCompareFiles1 != null && dexCompareFiles2 != null) {
+                    dexCompareItems1 = collectDexCompareItems();
+                    dexCompareItems2 = otherPaneAdapter.collectDexCompareItems();
+                    if (dexCompareItems1 != null && dexCompareItems2 != null) {
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
                     }
                     if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
@@ -1135,8 +1136,8 @@ final View.OnClickListener originalClickListener;
                     Object o2 = pair[1];
                     String name1 = o1 instanceof File ? ((File) o1).getName() : ((ZipEntryInfo) o1).getName();
                     String name2 = o2 instanceof File ? ((File) o2).getName() : ((ZipEntryInfo) o2).getName();
-                    String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
-                    String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
+                    String ext1 = FilenameUtils.getExtension(BackupOpenPolicy.originalName(name1)).toLowerCase(Locale.ROOT);
+                    String ext2 = FilenameUtils.getExtension(BackupOpenPolicy.originalName(name2)).toLowerCase(Locale.ROOT);
                     boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
                     boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
                     boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
@@ -1204,8 +1205,8 @@ final View.OnClickListener originalClickListener;
 
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
-                final List<File> finalDexCompare1 = dexCompareFiles1;
-                final List<File> finalDexCompare2 = dexCompareFiles2;
+                final List<Object> finalDexCompare1 = dexCompareItems1;
+                final List<Object> finalDexCompare2 = dexCompareItems2;
 
                 // Long-press Copy/Move: copy or move the selection into the
                 // SAME pane — the user navigates folders there and pastes via
@@ -1243,7 +1244,21 @@ final View.OnClickListener originalClickListener;
                         switch (actionId) {
                             case FileMenuOrder.CMP_DEX:
                                 if (finalDexCompare1 != null && finalDexCompare2 != null) {
-                                    new CompareDexOptionsDialog(context, finalDexCompare1, finalDexCompare2).show();
+                                    if (allRealFiles(finalDexCompare1) && allRealFiles(finalDexCompare2)) {
+                                        new CompareDexOptionsDialog(context, toFileList(finalDexCompare1), toFileList(finalDexCompare2)).show();
+                                    } else {
+                                        new Thread(() -> {
+                                            try {
+                                                List<File> f1 = resolveCompareFileList(finalDexCompare1);
+                                                List<File> f2 = resolveCompareFileList(finalDexCompare2);
+                                                if (!f1.isEmpty() && !f2.isEmpty()) {
+                                                    context.runOnUiThread(() -> new CompareDexOptionsDialog(context, f1, f2).show());
+                                                }
+                                            } catch (Exception e) {
+                                                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                            }
+                                        }).start();
+                                    }
                                 }
                                 return;
                             case FileMenuOrder.CMP_TEXT:
@@ -1558,24 +1573,33 @@ final View.OnClickListener originalClickListener;
      * more DEX files. Returns null for anything else (kept files, folders, mixed
      * types, archive entries) so the Compare DEX item only shows for valid input.
      */
-    private List<File> collectDexCompareFiles() {
-        if (isInZip || selectedPositions.isEmpty()) return null;
-        List<File> files = new ArrayList<>();
+    private List<Object> collectDexCompareItems() {
+        if (selectedPositions.isEmpty()) return null;
+        List<Object> items = new ArrayList<>();
         boolean hasApk = false;
         for (int position : selectedPositions) {
             if (position < 0 || position >= values.length) return null;
             Object selected = values[position];
-            if (!(selected instanceof File selectedFile) || selectedFile.isDirectory()) return null;
-            String name = selectedFile.getName().toLowerCase(Locale.ROOT);
-            if (name.endsWith(".apk")) {
-                hasApk = true;
-            } else if (!name.endsWith(".dex")) {
+            String rawName;
+            if (selected instanceof File selectedFile) {
+                if (selectedFile.isDirectory()) return null;
+                rawName = selectedFile.getName();
+            } else if (selected instanceof ZipEntryInfo entryInfo) {
+                if (entryInfo.isDirectory()) return null;
+                rawName = entryInfo.getName();
+            } else {
                 return null;
             }
-            files.add(selectedFile);
+            String unwrapped = BackupOpenPolicy.originalName(rawName).toLowerCase(Locale.ROOT);
+            if (selected instanceof File && unwrapped.endsWith(".apk")) {
+                hasApk = true;
+            } else if (!unwrapped.endsWith(".dex")) {
+                return null;
+            }
+            items.add(selected);
         }
-        if (hasApk && files.size() != 1) return null;
-        return files;
+        if (hasApk && items.size() != 1) return null;
+        return items;
     }
 
     private boolean isComparableEntry(Object o) {
@@ -1608,15 +1632,45 @@ final View.OnClickListener originalClickListener;
         return null;
     }
 
-    private List<File> singleDexList(Object o) {
-        if (isInZip) return null;
-        if (!(o instanceof File f)) return null;
+    private static boolean allRealFiles(List<Object> items) {
+        for (Object o : items) {
+            if (!(o instanceof File)) return false;
+        }
+        return true;
+    }
+
+    private static List<File> toFileList(List<Object> items) {
+        List<File> out = new ArrayList<>(items.size());
+        for (Object o : items) out.add((File) o);
+        return out;
+    }
+
+    private List<File> resolveCompareFileList(List<Object> items) throws Exception {
+        List<File> out = new ArrayList<>(items.size());
+        for (Object o : items) {
+            File f = resolveCompareFile(o);
+            if (f != null) out.add(f);
+        }
+        return out;
+    }
+
+    private List<Object> singleDexItemList(Object o) {
+        if (o == null) return null;
         try {
-            if (f.isDirectory()) return null;
-            String n = f.getName().toLowerCase(Locale.ROOT);
-            if (n.endsWith(".apk") || n.endsWith(".dex")) {
-                List<File> l = new ArrayList<>();
-                l.add(f);
+            String rawName;
+            if (o instanceof File f) {
+                if (f.isDirectory()) return null;
+                rawName = f.getName();
+            } else if (o instanceof ZipEntryInfo z) {
+                if (z.isDirectory()) return null;
+                rawName = z.getName();
+            } else {
+                return null;
+            }
+            String unwrapped = BackupOpenPolicy.originalName(rawName).toLowerCase(Locale.ROOT);
+            if ((o instanceof File && unwrapped.endsWith(".apk")) || unwrapped.endsWith(".dex")) {
+                List<Object> l = new ArrayList<>();
+                l.add(o);
                 return l;
             }
         } catch (Exception ignored) {}

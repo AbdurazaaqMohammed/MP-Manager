@@ -42,7 +42,6 @@ import com.android.tools.smali.dexlib2.iface.debug.LineNumber;
 import com.android.tools.smali.dexlib2.iface.debug.RestartLocal;
 import com.android.tools.smali.dexlib2.iface.debug.SetSourceFile;
 import com.android.tools.smali.dexlib2.iface.debug.StartLocal;
-import com.android.tools.smali.dexlib2.util.EncodedValueUtils;
 import com.android.tools.smali.dexlib2.writer.ClassSection;
 import com.android.tools.smali.dexlib2.writer.DebugWriter;
 import com.android.tools.smali.util.AbstractForwardSequentialList;
@@ -148,10 +147,7 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
         return builderClassDef.sourceFile;
     }
 
-    private static final Predicate<Field> HAS_INITIALIZER = input -> {
-        EncodedValue encodedValue = input.getInitialValue();
-        return encodedValue != null && !EncodedValueUtils.isDefaultValue(encodedValue);
-    };
+    private static final Predicate<Field> HAS_INITIALIZER = input -> input.getInitialValue() != null;
 
     private static final Function<BuilderField, BuilderEncodedValue> GET_INITIAL_VALUE =
             input -> {

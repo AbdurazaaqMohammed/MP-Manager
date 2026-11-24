@@ -359,7 +359,7 @@ public class DexTools {
         return single;
     }
 
-    private void openDexPlusFiles(ArrayList<String> paths, Integer openTab) {
+    public void openDexPlusFiles(ArrayList<String> paths, Integer openTab) {
         openDexPlusFiles(paths, openTab, null, null, false);
     }
 
@@ -557,7 +557,7 @@ public class DexTools {
         return dexNames;
     }
 
-    private void openDexPlusInZip(File zipFile, String preselected) {
+    public void openDexPlusInZip(File zipFile, String preselected) {
         openDexPlusInZip(zipFile, preselected, null);
     }
 

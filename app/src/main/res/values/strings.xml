@@ -471,6 +471,8 @@
     <string name="restore">Restore</string>
     <string name="show_restore_dialog">Show restore dialog for .bak files</string>
     <string name="show_restore_dialog_desc">When enabled, tapping an editor backup asks to restore it. Turn off to open the backup with the original file type instead. MIUI and Android backup archives still open normally.</string>
+    <string name="show_editor_tasks_in_recents">Show editor tasks in Recents</string>
+    <string name="show_editor_tasks_in_recents_desc">Keep separate cards for each open or minimized editor in the Android Recents menu. Turn off to show only the main app card while keeping minimized editors accessible from the sidebar.</string>
     <string name="restore_invalid_name">Invalid name for the restored file</string>
     <string name="image_properties">Image Properties</string>
     <string name="player_settings">Player Settings</string>
@@ -2630,4 +2632,9 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="installed_theme_import_failed">Could not import this theme. Your current theme has not changed.</string>
     <string name="installed_theme_selected">%1$s (selected)</string>
     <string name="installed_theme_description">%1$s — %2$s</string>
+    <string name="dex_editor">DEX editor</string>
+    <string name="arm64_disassembler">ARM64 disassembler</string>
+    <string name="boot_image_inspector">Boot image inspector</string>
+    <string name="customize_open_with">Open with order</string>
+    <string name="customize_open_with_hint">Long-press to drag items; tap eye icon to hide or show</string>
 </resources>

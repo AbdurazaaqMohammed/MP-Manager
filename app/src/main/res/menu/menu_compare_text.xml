@@ -76,6 +76,11 @@
         android:icon="@drawable/ic_eye_mt"
         android:title="@string/match_case" />
     <item
+        android:id="@+id/action_word_wrap"
+        android:checkable="true"
+        android:icon="@drawable/baseline_text_snippet_24"
+        android:title="@string/word_wrap" />
+    <item
         android:id="@+id/action_diff_search"
         android:icon="@drawable/baseline_search_24"
         android:title="@string/search" />
