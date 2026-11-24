@@ -53,6 +53,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         ThemeRegistry.addActivityListener(themeListener);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         editorOwnerId = EditorTasks.bind(this, savedInstanceState);
+        EditorTasks.syncActivityTaskRecents(this);
         MinimizedEditors.rebind(this);
         View content = getWindow().getDecorView().findViewById(R.id.content);
         if (content != null) {
@@ -106,6 +107,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        EditorTasks.syncActivityTaskRecents(this);
         if (getIntent() != null && getIntent().getBooleanExtra("restore_progress", false)) {
             getIntent().removeExtra("restore_progress");
             ProgressManager.restoreHidden();
@@ -163,7 +165,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
         if (EditorTasks.isEditor(intent)) {
-            super.startActivityForResult(EditorTasks.prepare(intent, editorOwnerId, requestCode), -1, options);
+            super.startActivityForResult(EditorTasks.prepare(this, intent, editorOwnerId, requestCode), -1, options);
         } else {
             super.startActivityForResult(intent, requestCode, options);
         }

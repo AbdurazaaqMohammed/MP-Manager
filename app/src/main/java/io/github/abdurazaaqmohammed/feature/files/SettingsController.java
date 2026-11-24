@@ -360,6 +360,17 @@ public class SettingsController {
                     settings.edit().putBoolean(UiPrefs.SHOW_RESTORE_DIALOG_KEY, isChecked).apply());
         }
 
+        CompoundButton showEditorTasksInRecentsToggle = settingsDialog.findViewById(R.id.showEditorTasksInRecentsToggle);
+        if (showEditorTasksInRecentsToggle != null) {
+            showEditorTasksInRecentsToggle.setChecked(
+                    settings.getBoolean(io.github.abdurazaaqmohammed.util.misc.EditorTasks.PREF_SHOW_EDITOR_TASKS_IN_RECENTS, false));
+            showEditorTasksInRecentsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                settings.edit().putBoolean(
+                        io.github.abdurazaaqmohammed.util.misc.EditorTasks.PREF_SHOW_EDITOR_TASKS_IN_RECENTS, isChecked).apply();
+                io.github.abdurazaaqmohammed.util.misc.EditorTasks.updateRecentsVisibility(activity, isChecked);
+            });
+        }
+
         EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
         if (searchHistoryLimitEt != null) {
             int limit = settings.getInt("search_history_limit", 50);

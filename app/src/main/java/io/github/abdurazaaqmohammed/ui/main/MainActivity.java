@@ -1866,6 +1866,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
+        String folderPath = folder.getAbsolutePath();
+        if ("/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath)
+                || !folder.canRead() || PrivilegeManager.Shizuku.isAndroidDataPath(folder)) {
+            loadFolderInPaneAsync(folder, pane1, addToHistory);
+            return;
+        }
         saveCurrentPaneScroll(pane1);
         String targetKey = folder == null ? null : "file:" + folder.getAbsolutePath();
         int[] saved = samePlainFolderShown(folder, pane1) ? capturePaneScroll(pane1) : getSavedScrollForLocation(pane1, targetKey);
@@ -2058,9 +2064,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
         boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath);
-        if (rootListingPath && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT && PrivilegeManager.Files.fileOpsOn(this)) {
-            files = PrivilegeManager.Files.listWithStat(this, folder.getAbsolutePath());
-            if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
+        boolean rootActive = PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT;
+        if ((rootListingPath || (rootActive && !folder.canRead())) && rootActive && PrivilegeManager.Files.fileOpsOn(this)) {
+            files = PrivilegeManager.Files.listWithStat(this, folderPath);
+            if (files != null) return Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null && shizukuDir && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.SHIZUKU) {
             // Scoped storage can return a nonempty but incomplete listing (for
@@ -2082,7 +2089,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // listing from a folder it cannot write to (an empty listing there means the OS hid
         // the contents rather than the folder really being empty).
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
-        if (appListingIncomplete) {
+        if (appListingIncomplete && !rootActive) {
             File[] viaShizuku = PrivilegeManager.Shizuku.tryList(this, folder);
             if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) {
                 files = Arrays.stream(viaShizuku).filter(this::isNotHidden).toArray(File[]::new);

@@ -425,6 +425,8 @@
     <string name="restore">استعادة</string>
     <string name="show_restore_dialog">إظهار مربع الاستعادة لملفات .bak</string>
     <string name="show_restore_dialog_desc">عند التفعيل، يؤدي الضغط على نسخة احتياطية للمحرر إلى طلب استعادتها. أوقف الخيار لفتح النسخة وفق نوع الملف الأصلي بدلًا من ذلك. تظل أرشيفات النسخ الاحتياطية لـ MIUI وأندرويد تُفتح كالمعتاد.</string>
+    <string name="show_editor_tasks_in_recents">إظهار نوافذ المحررات في التطبيقات الأخيرة</string>
+    <string name="show_editor_tasks_in_recents_desc">إظهار بطاقة مستقلة لكل محرر مفتوح أو مصغّر في قائمة التطبيقات الأخيرة بالنظام. أوقف الخيار للاكتفاء ببطاقة التطبيق الرئيسية فقط مع بقاء المحررات المصغّرة متاحة من القائمة الجانبية.</string>
     <string name="restore_invalid_name">اسم ملف الاستعادة غير صالح</string>
     <string name="image_properties">خصائص الصورة</string>
     <string name="player_settings">إعدادات المشغل</string>
@@ -2573,4 +2575,9 @@
 <string name="installed_theme_import_failed">تعذر استيراد هذا المظهر. لم يتغير المظهر الحالي.</string>
 <string name="installed_theme_selected">%1$s (محدد)</string>
 <string name="installed_theme_description">%1$s — %2$s</string>
+<string name="dex_editor">محرر DEX</string>
+<string name="arm64_disassembler">مفكك ARM64</string>
+<string name="boot_image_inspector">فاحص صور البوت</string>
+<string name="customize_open_with">ترتيب قائمة فتح بواسطة</string>
+<string name="customize_open_with_hint">اضغط مطولاً للسحب وإعادة الترتيب، أو المس العين للإخفاء والإظهار</string>
 </resources>

@@ -22,35 +22,13 @@ object SymbolDrawerMigration {
         if (currentGroups.isEmpty()) {
             groupRepo.saveGroups(SymbolDrawerDefaults.createDefaultGroups(context))
         } else {
-            val hasCustom = currentGroups.any { it.title.equals("Custom", ignoreCase = true) }
-            val hasSymbols = currentGroups.any { it.title.equals("Symbols", ignoreCase = true) }
-            if (!hasCustom || !hasSymbols) {
-                val missing = mutableListOf<SymbolGroup>()
-                if (!hasCustom) missing.add(SymbolDrawerDefaults.createCustomGroup(context))
-                if (!hasSymbols) missing.add(SymbolDrawerDefaults.createSymbolsGroup(context))
-
-                val usedSymbolIds = currentGroups.asSequence()
-                    .flatMap { it.symbols.asSequence() }
-                    .mapTo(mutableSetOf()) { it.id }
-                val reservedIds = (usedSymbolIds + missing.asSequence().flatMap { it.symbols.asSequence() }.map { it.id }).toMutableSet()
-                var candidate = 1L
-
-                val sanitizedMissing = missing.map { group ->
-                    val sanitizedSymbols = group.symbols.map { symbol ->
-                        if (symbol.id != 0L && usedSymbolIds.add(symbol.id)) {
-                            symbol
-                        } else {
-                            while (candidate == 0L || candidate in reservedIds || candidate in usedSymbolIds) {
-                                candidate++
-                            }
-                            val assigned = candidate++
-                            usedSymbolIds += assigned
-                            symbol.copy(id = assigned)
-                        }
-                    }
-                    group.copy(symbols = sanitizedSymbols)
-                }
-                groupRepo.saveGroups(sanitizedMissing + currentGroups)
+            val updatedGroups = ensureDefaultGroups(
+                currentGroups = currentGroups,
+                createCustomGroup = { SymbolDrawerDefaults.createCustomGroup(context) },
+                createSymbolsGroup = { SymbolDrawerDefaults.createSymbolsGroup(context) }
+            )
+            if (updatedGroups !== currentGroups) {
+                groupRepo.saveGroups(updatedGroups)
             }
         }
         val repository = SharedPreferencesSymbolDrawerSettingsRepository(context)
@@ -77,5 +55,59 @@ object SymbolDrawerMigration {
             context.getSharedPreferences("symbol_drawer_v2_settings", Context.MODE_PRIVATE).edit()
                 .putBoolean("remembered_expanded_state", old.getBoolean("symbol_last_expanded", false)).apply()
         }
+    }
+
+    internal fun ensureDefaultGroups(
+        currentGroups: List<SymbolGroup>,
+        createCustomGroup: () -> SymbolGroup = { SymbolDrawerDefaults.createCustomGroup() },
+        createSymbolsGroup: () -> SymbolGroup = { SymbolDrawerDefaults.createSymbolsGroup() }
+    ): List<SymbolGroup> {
+        if (currentGroups.isEmpty()) return currentGroups
+
+        val hasCustomByIdOrDefault = currentGroups.any {
+            it.id.equals("custom", ignoreCase = true) || it.title.equals("Custom", ignoreCase = true)
+        }
+        val hasSymbolsByIdOrDefault = currentGroups.any {
+            it.id.equals("symbols", ignoreCase = true) || it.title.equals("Symbols", ignoreCase = true)
+        }
+
+        val missing = mutableListOf<SymbolGroup>()
+        if (!hasCustomByIdOrDefault) {
+            val customGroup = createCustomGroup()
+            if (currentGroups.none { it.title.equals(customGroup.title, ignoreCase = true) }) {
+                missing.add(customGroup)
+            }
+        }
+        if (!hasSymbolsByIdOrDefault) {
+            val symbolsGroup = createSymbolsGroup()
+            if (currentGroups.none { it.title.equals(symbolsGroup.title, ignoreCase = true) }) {
+                missing.add(symbolsGroup)
+            }
+        }
+
+        if (missing.isEmpty()) return currentGroups
+
+        val usedSymbolIds = currentGroups.asSequence()
+            .flatMap { it.symbols.asSequence() }
+            .mapTo(mutableSetOf()) { it.id }
+        val reservedIds = (usedSymbolIds + missing.asSequence().flatMap { it.symbols.asSequence() }.map { it.id }).toMutableSet()
+        var candidate = 1L
+
+        val sanitizedMissing = missing.map { group ->
+            val sanitizedSymbols = group.symbols.map { symbol ->
+                if (symbol.id != 0L && usedSymbolIds.add(symbol.id)) {
+                    symbol
+                } else {
+                    while (candidate == 0L || candidate in reservedIds || candidate in usedSymbolIds) {
+                        candidate++
+                    }
+                    val assigned = candidate++
+                    usedSymbolIds += assigned
+                    symbol.copy(id = assigned)
+                }
+            }
+            group.copy(symbols = sanitizedSymbols)
+        }
+        return sanitizedMissing + currentGroups
     }
 }
