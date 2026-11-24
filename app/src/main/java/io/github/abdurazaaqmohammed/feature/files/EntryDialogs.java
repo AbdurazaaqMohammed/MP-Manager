@@ -582,20 +582,16 @@ public class EntryDialogs {
     }
 
     public void showRestoreDialog(int position, File file, boolean multi) {
-        if (!multi && file != null && file.getName().toLowerCase(Locale.ROOT).endsWith(".bak")) {
-            showBackupRestoreDialog(context, dialogUtil, pane1, file);
-            return;
-        }
         Object[] values = state.values();
         List<File> targets = new ArrayList<>();
         if (multi) {
             for (int i : state.selectedPositions()) {
                 if (values != null && i >= 0 && i < values.length && values[i] instanceof File) {
                     File f = (File) values[i];
-                    if (f.getName().toLowerCase().endsWith(".bak")) targets.add(f);
+                    if (f.getName().toLowerCase(Locale.ROOT).endsWith(".bak")) targets.add(f);
                 }
             }
-        } else if (file != null && file.getName().toLowerCase().endsWith(".bak")) {
+        } else if (file != null && file.getName().toLowerCase(Locale.ROOT).endsWith(".bak")) {
             targets.add(file);
         }
         if (targets.isEmpty()) return;
@@ -604,6 +600,7 @@ public class EntryDialogs {
             boolean applyToAll = false;
             int rememberedAction = -1;
             boolean anyRenamed = false;
+            String lastRestoredName = null;
             boolean useElevated = PrivilegeManager.Files.fileOpsOn(context);
 
             for (File src : targets) {
@@ -612,8 +609,19 @@ public class EntryDialogs {
                 String srcName = src.getName();
                 String destName = srcName.substring(0, srcName.length() - 4);
                 File dest = new File(parent, destName);
+                if (parent instanceof SafFile) {
+                    File[] children = parent.listFiles();
+                    if (children != null) {
+                        for (File child : children) {
+                            if (destName.equals(child.getName())) {
+                                dest = child;
+                                break;
+                            }
+                        }
+                    }
+                }
 
-                if (dest.exists() && !RenameHelper.sameFile(src, dest)) {
+                if (dirHasEntry(context, parent, dest.getName(), useElevated) && !RenameHelper.sameFile(src, dest)) {
                     int action;
                     if (applyToAll && rememberedAction != -1) {
                         action = rememberedAction;
@@ -644,25 +652,31 @@ public class EntryDialogs {
                         String newName = getDuplicateRestoreName(context, destName, parent, useElevated);
                         dest = new File(parent, newName);
                     } else if (action == CopyConflictDialog.ACTION_REPLACE) {
-                        if (!dest.delete()) {
-                            if (useElevated) {
-                                try {
-                                    PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
-                                } catch (Exception ignored) {}
+                        try {
+                            removeTargetForRestoreReplace(context, dest, useElevated);
+                            if (dirHasEntry(context, parent, dest.getName(), useElevated)) {
+                                throw new java.io.IOException("Cannot replace " + dest.getName());
                             }
+                        } catch (Exception e) {
+                            String detail = e.getMessage() != null ? e.getMessage() : e.toString();
+                            context.handler.post(() -> Extensions.showMessage(context, detail));
+                            continue;
                         }
                     }
                 }
 
                 if (RenameHelper.renameFile(context, src, dest)) {
                     anyRenamed = true;
+                    lastRestoredName = dest.getName();
                 }
             }
 
             if (anyRenamed) {
+                final String highlight = targets.size() == 1 ? lastRestoredName : null;
                 context.handler.post(() -> {
                     state.clearSelection();
-                    context.refreshPaneAfterChange(pane1, null);
+                    context.refreshPaneAfterChange(pane1, highlight);
+                    if (highlight != null) context.flashPaneItem(pane1, highlight);
                 });
             }
         }).start();
@@ -801,9 +815,7 @@ public class EntryDialogs {
                 if (action == CopyConflictDialog.ACTION_KEEP_BOTH) {
                     dest = new File(parent, getDuplicateRestoreName(context, dest.getName(), parent, useElevated));
                 } else if (action == CopyConflictDialog.ACTION_REPLACE) {
-                    if (!dest.delete() && useElevated) {
-                        PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
-                    }
+                    removeTargetForRestoreReplace(context, dest, useElevated);
                     if (dirHasEntry(context, parent, dest.getName(), useElevated)) {
                         throw new java.io.IOException("Cannot replace " + dest.getName());
                     }
@@ -823,6 +835,32 @@ public class EntryDialogs {
             }
         } catch (Exception e) {
             context.handler.post(() -> new ErrorUtil(context).showError(e));
+        }
+    }
+
+    private static boolean shouldUseRecycleBinOnReplace(Context context, File target) {
+        if (target == null || target instanceof SafFile) return false;
+        String mode = RecycleBin.mode(context);
+        if (RecycleBin.MODE_NEVER.equals(mode)) return false;
+        if (RecycleBin.isInsideBin(context, target)) return false;
+        return RecycleBin.MODE_ALWAYS.equals(mode) || RecycleBin.lastChoiceEnabled(context);
+    }
+
+    private static void removeTargetForRestoreReplace(Context context, File dest, boolean useElevated) throws java.io.IOException {
+        if (shouldUseRecycleBinOnReplace(context, dest)) {
+            if (!RecycleBin.moveToBin(context, dest, "replace")) {
+                throw new java.io.IOException(context.getString(R.string.recycle_bin_move_failed, dest.getName()));
+            }
+            return;
+        }
+        if (dest instanceof SafFile saf) {
+            SafFs.delete(saf);
+            return;
+        }
+        if (!dest.delete() && useElevated) {
+            try {
+                PrivilegeManager.Files.delete(context, dest.getAbsolutePath(), true);
+            } catch (Exception ignored) {}
         }
     }
 
