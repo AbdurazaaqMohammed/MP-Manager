@@ -261,97 +261,17 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
         }
-        List<String> actionIds = new ArrayList<>(Arrays.asList(
-                BUILTIN_TEXT, BUILTIN_ARCHIVE, BUILTIN_IMAGE,
-                BUILTIN_HEX, BUILTIN_MEDIA, BUILTIN_APK));
-        List<String> actionNames = new ArrayList<>(Arrays.asList(
-                context.getString(R.string.text_editor),
-                context.getString(R.string.archive_viewer),
-                context.getString(R.string.image_viewer),
-                context.getString(R.string.hex_editor),
-                context.getString(R.string.media_player),
-                context.getString(R.string.apk_info)));
-        List<Integer> actionIcons = new ArrayList<>(Arrays.asList(
-                R.drawable.baseline_text_snippet_24,
-                R.drawable.baseline_folder_zip_24,
-                R.drawable.image_24px,
-                R.drawable.ic_hash_mt,
-                R.drawable.video_24px,
-                R.drawable.apk_document_24px));
-        List<Runnable> actionHandlers = new ArrayList<>(Arrays.asList(
-                () -> runBuiltinTool(BUILTIN_TEXT, file, fileName, zipFile, zipEntryPath),
-                () -> runBuiltinTool(BUILTIN_ARCHIVE, file, fileName, zipFile, zipEntryPath),
-                () -> runBuiltinTool(BUILTIN_IMAGE, file, fileName, zipFile, zipEntryPath),
-                () -> runBuiltinTool(BUILTIN_HEX, file, fileName, zipFile, zipEntryPath),
-                () -> runBuiltinTool(BUILTIN_MEDIA, file, fileName, zipFile, zipEntryPath),
-                () -> runBuiltinTool(BUILTIN_APK, file, fileName, zipFile, zipEntryPath)));
-        if (zipFile == null && originalFile != null && file != null
-                && !originalFile.getAbsolutePath().equals(file.getAbsolutePath())) {
-            actionHandlers.set(0, () -> openTextEditorWithOriginal(file, originalFile));
-            actionHandlers.set(3, () -> openHexEditorWithOriginal(file, originalFile));
-        }
-        String lower = fileName.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".ttf") || lower.endsWith(".otf") || lower.endsWith(".woff") || lower.endsWith(".woff2")) {
-            actionIds.add(BUILTIN_FONT);
-            actionNames.add(context.getString(R.string.font_preview));
-            actionIcons.add(R.drawable.uppercase_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_FONT, file, fileName, zipFile, zipEntryPath));
-        }
-        if (lower.endsWith(".pdf")) {
-            actionIds.add(BUILTIN_PDF);
-            actionNames.add(context.getString(R.string.pdf_viewer));
-            actionIcons.add(R.drawable.pdf_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_PDF, file, fileName, zipFile, zipEntryPath));
-        }
-        if (FileUtils.matchExt("." + FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT), FileUtils.HTML_EXTS)) {
-            actionIds.add(BUILTIN_HTML);
-            actionNames.add(context.getString(R.string.html_viewer));
-            actionIcons.add(R.drawable.language_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_HTML, file, fileName, zipFile, zipEntryPath));
-        }
-        if (lower.endsWith(".arsc")) {
-            actionIds.add(BUILTIN_ARSC);
-            actionNames.add(context.getString(R.string.arsc_functions));
-            actionIcons.add(R.drawable.apk_document_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_ARSC, file, fileName, zipFile, zipEntryPath));
-        }
-        if (lower.endsWith(".xml")) {
-            actionIds.add(BUILTIN_XML);
-            actionNames.add(context.getString(R.string.xml_functions));
-            actionIcons.add(R.drawable.code_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_XML, file, fileName, zipFile, zipEntryPath));
-        }
-        // A drawable XML is a picture, not a document. Offer the rendered
-        // preview wherever an XML file can be opened (archive entries keep
-        // their full res/ path, loose files are sniffed by root tag).
-        if (lower.endsWith(".xml") && isDrawableXml(file, zipFile, zipEntryPath)) {
-            actionIds.add(BUILTIN_DRAWABLE);
-            actionNames.add(context.getString(R.string.drawable_preview));
-            actionIcons.add(R.drawable.image_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_DRAWABLE, file, fileName,
-                    zipFile, zipEntryPath));
-        }
-        String keyExt = FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT);
-        if (keyExt.equals("jks") || keyExt.equals("keystore") || keyExt.equals("p12")
-                || keyExt.equals("pfx") || keyExt.equals("pk8") || keyExt.equals("pem")) {
-            actionIds.add(BUILTIN_SIG);
-            actionNames.add(context.getString(R.string.import_signature));
-            actionIcons.add(R.drawable.lock_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_SIG, file, fileName, zipFile, zipEntryPath));
-        }
-        if (keyExt.equals("db") || keyExt.equals("sqlite") || keyExt.equals("sqlite3") || keyExt.equals("db3")) {
-            actionIds.add(BUILTIN_SQLITE);
-            actionNames.add(context.getString(R.string.sqlite_viewer));
-            actionIcons.add(R.drawable.ic_disk_drive_24px);
-            actionHandlers.add(() -> runBuiltinTool(BUILTIN_SQLITE, file, fileName, zipFile, zipEntryPath));
-        }
+        final List<OpenWithOrder.Option> visibleOptions = new ArrayList<>();
+        final List<String> actionIds = new ArrayList<>();
+        final List<String> actionNames = new ArrayList<>();
+        final List<Integer> actionIcons = new ArrayList<>();
 
         GridView gridView = new GridView(context);
         gridView.setNumColumns(3);
         gridView.setBackgroundColor(Color.TRANSPARENT);
         gridView.setPadding(16, 16, 16, 16);
         gridView.setVerticalSpacing(24);
-        gridView.setAdapter(new ArrayAdapter<>(context, 0, actionNames) {
+        ArrayAdapter<String> gridAdapter = new ArrayAdapter<>(context, 0, actionNames) {
             @NonNull
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -380,7 +300,56 @@ public class FileOpener {
                 item.addView(labelView);
                 return item;
             }
-        });
+        };
+
+        Runnable populateOptions = () -> {
+            visibleOptions.clear();
+            visibleOptions.addAll(OpenWithOrder.visibleOptions(context));
+            actionIds.clear();
+            actionNames.clear();
+            actionIcons.clear();
+            for (OpenWithOrder.Option opt : visibleOptions) {
+                actionIds.add(opt.id);
+                actionNames.add(context.getString(opt.labelRes));
+                actionIcons.add(opt.iconRes);
+            }
+            gridAdapter.notifyDataSetChanged();
+        };
+        populateOptions.run();
+        gridView.setAdapter(gridAdapter);
+
+        float density = context.getResources().getDisplayMetrics().density;
+        LinearLayout header = new LinearLayout(context);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding((int) (24 * density), (int) (16 * density), (int) (12 * density), (int) (8 * density));
+
+        TextView titleView = new TextView(context);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        titleView.setLayoutParams(titleLp);
+        titleView.setText(context.rss.getString(R.string.open_with) + ": " + fileName);
+        titleView.setTextSize(16);
+        titleView.setTypeface(titleView.getTypeface(), Typeface.BOLD);
+        titleView.setSingleLine(true);
+        titleView.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+        TypedValue titleColor = new TypedValue();
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, titleColor, true);
+        titleView.setTextColor(titleColor.data);
+        header.addView(titleView);
+
+        android.widget.ImageButton editButton = new android.widget.ImageButton(context);
+        int btnSize = (int) (36 * density + 0.5f);
+        int btnPad = (int) (6 * density + 0.5f);
+        editButton.setLayoutParams(new LinearLayout.LayoutParams(btnSize, btnSize));
+        editButton.setPadding(btnPad, btnPad, btnPad, btnPad);
+        TypedValue bgTv = new TypedValue();
+        context.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, bgTv, true);
+        editButton.setBackgroundResource(bgTv.resourceId);
+        editButton.setImageResource(R.drawable.edit_24px);
+        editButton.setContentDescription(context.getString(R.string.edit));
+        ColorUtil.changeImageColor(editButton.getDrawable(), titleColor.data);
+        editButton.setOnClickListener(v -> OpenWithOrder.showCustomizer(context, populateOptions));
+        header.addView(editButton);
 
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -415,7 +384,7 @@ public class FileOpener {
         }).start();
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
-                .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName)
+                .setCustomTitle(header)
                 .setView(content)
                 .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> withReadableCopy(file,
                         readable -> showAppsForMime(readable, fileName, useActualSwitch.isChecked())))
@@ -424,7 +393,9 @@ public class FileOpener {
         gridView.setOnItemClickListener((parent1, view1, position1, id1) -> {
             dialog.dismiss();
             try {
-                actionHandlers.get(position1).run();
+                if (position1 >= 0 && position1 < actionIds.size()) {
+                    runBuiltinTool(actionIds.get(position1), file, fileName, zipFile, zipEntryPath, originalFile);
+                }
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
@@ -440,7 +411,7 @@ public class FileOpener {
             popup.setOnMenuItemClickListener(item -> {
                 if (isDef) longPrefs.edit().remove(key).apply();
                 else longPrefs.edit().putString(key, id).apply();
-                ((ArrayAdapter<?>) gridView.getAdapter()).notifyDataSetChanged();
+                gridAdapter.notifyDataSetChanged();
                 return true;
             });
             popup.show();
@@ -453,20 +424,24 @@ public class FileOpener {
         return MimeUtil.defaultAppKey(mime);
     }
 
-    private static final String BUILTIN_TEXT = "text";
-    private static final String BUILTIN_ARCHIVE = "archive";
-    private static final String BUILTIN_IMAGE = "image";
-    private static final String BUILTIN_HEX = "hex";
-    private static final String BUILTIN_MEDIA = "media";
-    private static final String BUILTIN_APK = "apk";
-    private static final String BUILTIN_FONT = "font";
-    private static final String BUILTIN_PDF = "pdf";
-    private static final String BUILTIN_HTML = "html";
-    private static final String BUILTIN_ARSC = "arsc";
-    private static final String BUILTIN_XML = "xml";
-    private static final String BUILTIN_SIG = "sig";
-    private static final String BUILTIN_DRAWABLE = "drawable_preview";
-    private static final String BUILTIN_SQLITE = "sqlite";
+    private static final String BUILTIN_TEXT = OpenWithOrder.BUILTIN_TEXT;
+    private static final String BUILTIN_ARCHIVE = OpenWithOrder.BUILTIN_ARCHIVE;
+    private static final String BUILTIN_IMAGE = OpenWithOrder.BUILTIN_IMAGE;
+    private static final String BUILTIN_IMAGE_EDITOR = OpenWithOrder.BUILTIN_IMAGE_EDITOR;
+    private static final String BUILTIN_HEX = OpenWithOrder.BUILTIN_HEX;
+    private static final String BUILTIN_MEDIA = OpenWithOrder.BUILTIN_MEDIA;
+    private static final String BUILTIN_APK = OpenWithOrder.BUILTIN_APK;
+    private static final String BUILTIN_DEX = OpenWithOrder.BUILTIN_DEX;
+    private static final String BUILTIN_FONT = OpenWithOrder.BUILTIN_FONT;
+    private static final String BUILTIN_PDF = OpenWithOrder.BUILTIN_PDF;
+    private static final String BUILTIN_HTML = OpenWithOrder.BUILTIN_HTML;
+    private static final String BUILTIN_ARSC = OpenWithOrder.BUILTIN_ARSC;
+    private static final String BUILTIN_XML = OpenWithOrder.BUILTIN_XML;
+    private static final String BUILTIN_SIG = OpenWithOrder.BUILTIN_SIG;
+    private static final String BUILTIN_DRAWABLE = OpenWithOrder.BUILTIN_DRAWABLE;
+    private static final String BUILTIN_SQLITE = OpenWithOrder.BUILTIN_SQLITE;
+    private static final String BUILTIN_ARM64 = OpenWithOrder.BUILTIN_ARM64;
+    private static final String BUILTIN_BOOT = OpenWithOrder.BUILTIN_BOOT;
 
     private static boolean isDrawableXml(File file, File zipFile, String zipEntryPath) {
         if (zipEntryPath != null) {
@@ -488,8 +463,19 @@ public class FileOpener {
     }
 
     private void runBuiltinTool(String id, File file, String fileName, File zipFile, String zipEntryPath) {
+        runBuiltinTool(id, file, fileName, zipFile, zipEntryPath, null);
+    }
+
+    private void runBuiltinTool(String id, File file, String fileName, File zipFile,
+                                String zipEntryPath, File originalFile) {
+        boolean hasOriginalAlias = zipFile == null && originalFile != null && file != null
+                && !originalFile.getAbsolutePath().equals(file.getAbsolutePath());
         switch (id) {
             case BUILTIN_TEXT:
+                if (hasOriginalAlias) {
+                    openTextEditorWithOriginal(file, originalFile);
+                    return;
+                }
                 if (file == null || !file.isFile()) {
                     Extensions.showMessage(context, R.string.cannot_open_item);
                     return;
@@ -512,7 +498,20 @@ public class FileOpener {
                     notifyFileOpened(readable);
                 });
                 return;
+            case BUILTIN_IMAGE_EDITOR:
+                if (file == null) return;
+                withReadableCopy(file, readable -> {
+                    io.github.abdurazaaqmohammed.ui.viewer.ImageEditActivity.sessionPath = readable.getAbsolutePath();
+                    context.startActivity(new Intent(context,
+                            io.github.abdurazaaqmohammed.ui.viewer.ImageEditActivity.class));
+                    notifyFileOpened(readable);
+                });
+                return;
             case BUILTIN_HEX:
+                if (hasOriginalAlias) {
+                    openHexEditorWithOriginal(file, originalFile);
+                    return;
+                }
                 if (file == null || !file.isFile()) {
                     Extensions.showMessage(context, R.string.cannot_open_item);
                     return;
@@ -527,33 +526,52 @@ public class FileOpener {
                 });
                 return;
             case BUILTIN_APK: {
-                if (fileName == null) return;
-                String lowerExt = fileName.toLowerCase(Locale.ROOT);
-                if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
-                    Extensions.showMessage(context, R.string.not_an_apk);
-                    return;
-                }
+                if (file == null) return;
                 withReadableCopy(file, readable -> {
+                    if (!ArchiveBrowseUtil.isBrowsable(readable)) {
+                        Extensions.showMessage(context, R.string.not_an_apk);
+                        return;
+                    }
                     if (apkTools != null) apkTools.showApkInfoDialog(readable, fileName);
                     else openWithDefaultOrDialog(readable, fileName);
                     notifyFileOpened(readable);
                 });
                 return;
             }
+            case BUILTIN_DEX:
+                if (file == null) return;
+                withReadableCopy(file, readable -> {
+                    DexTools dt = new DexTools(context, dialogUtil, pane1, this::openWithForFile);
+                    if (ArchiveBrowseUtil.isBrowsable(readable)) {
+                        dt.openDexPlusInZip(readable, null);
+                    } else {
+                        ArrayList<String> single = new ArrayList<>();
+                        single.add(readable.getAbsolutePath());
+                        dt.openDexPlusFiles(single, null, zipFile, zipEntryPath, false);
+                    }
+                    notifyFileOpened(readable);
+                });
+                return;
             case BUILTIN_FONT:
                 if (file == null) return;
-                showFontPreview(file, fileName);
-                notifyFileOpened(file);
+                withReadableCopy(file, readable -> {
+                    showFontPreview(readable, fileName);
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_PDF:
                 if (file == null) return;
-                showPdfViewer(file, fileName);
-                notifyFileOpened(file);
+                withReadableCopy(file, readable -> {
+                    showPdfViewer(readable, fileName);
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_HTML:
                 if (file == null) return;
-                showHtmlViewer(file, fileName);
-                notifyFileOpened(file);
+                withReadableCopy(file, readable -> {
+                    showHtmlViewer(readable, fileName);
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_ARSC:
                 if (file == null) return;
@@ -564,20 +582,24 @@ public class FileOpener {
                 return;
             case BUILTIN_XML:
                 if (file == null) return;
-                showXmlFunctions(file, fileName);
-                notifyFileOpened(file);
+                withReadableCopy(file, readable -> {
+                    showXmlFunctions(readable, fileName);
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_SIG:
                 if (file == null) return;
-                importSignature(file, fileName);
-                notifyFileOpened(file);
+                withReadableCopy(file, readable -> {
+                    importSignature(readable, fileName);
+                    notifyFileOpened(readable);
+                });
                 return;
             case BUILTIN_DRAWABLE:
                 if (file == null) return;
                 if (zipFile != null && zipEntryPath != null) {
                     DrawablePreviewDialog.show(context, zipFile, zipEntryPath);
                 } else {
-                    DrawablePreviewDialog.showFile(context, file);
+                    withReadableCopy(file, readable -> DrawablePreviewDialog.showFile(context, readable));
                 }
                 notifyFileOpened(file);
                 return;
@@ -585,6 +607,28 @@ public class FileOpener {
                 if (file == null) return;
                 openSqliteViewer(file);
                 notifyFileOpened(file);
+                return;
+            case BUILTIN_ARM64:
+                if (file == null) return;
+                withReadableCopy(file, readable -> {
+                    if (isValidElfFile(readable)) {
+                        openArm64Disassembler(readable, originalFile != null ? originalFile : file);
+                        notifyFileOpened(readable);
+                    } else {
+                        Extensions.showMessage(context, R.string.cannot_open_item);
+                    }
+                });
+                return;
+            case BUILTIN_BOOT:
+                if (file == null) return;
+                withReadableCopy(file, readable -> {
+                    if (BootImageEngine.isBootImage(readable)) {
+                        BootInspectManager.openBootImage(context, readable, pane1);
+                        notifyFileOpened(readable);
+                    } else {
+                        Extensions.showMessage(context, R.string.cannot_open_item);
+                    }
+                });
                 return;
             default:
                 return;
@@ -628,9 +672,11 @@ public class FileOpener {
             case BUILTIN_TEXT:
             case BUILTIN_ARCHIVE:
             case BUILTIN_IMAGE:
+            case BUILTIN_IMAGE_EDITOR:
             case BUILTIN_HEX:
             case BUILTIN_MEDIA:
             case BUILTIN_APK:
+            case BUILTIN_DEX:
             case BUILTIN_FONT:
             case BUILTIN_PDF:
             case BUILTIN_HTML:
@@ -639,6 +685,8 @@ public class FileOpener {
             case BUILTIN_SIG:
             case BUILTIN_DRAWABLE:
             case BUILTIN_SQLITE:
+            case BUILTIN_ARM64:
+            case BUILTIN_BOOT:
                 runBuiltinTool(def, file, fileName, zipFile, zipEntryPath);
                 return true;
             default:
