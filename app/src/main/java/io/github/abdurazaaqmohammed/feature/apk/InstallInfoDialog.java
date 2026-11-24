@@ -115,7 +115,7 @@ public final class InstallInfoDialog {
                 dialog.dismiss();
                 if (keepData) {
                     if (!PrivilegeManager.Root.isRootMode(activity)) {
-                        new AlertDialog.Builder(activity)
+                        new MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.install_enable_root_mode_title)
                                 .setMessage(R.string.install_enable_root_mode_msg)
                                 .setPositiveButton(android.R.string.ok, (d, which) -> {

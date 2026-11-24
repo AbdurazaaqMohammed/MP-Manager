@@ -44,6 +44,7 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.reflect.TypeToken;
 
@@ -1053,7 +1054,7 @@ public class SidebarController {
                 Extensions.showMessage(activity, R.string.restored);
             } else {
                 // Empty bin
-                new AlertDialog.Builder(activity)
+                new MaterialAlertDialogBuilder(activity)
                         .setTitle(R.string.empty_recycle_bin)
                         .setMessage(R.string.empty_recycle_bin_confirm)
                         .setPositiveButton(R.string.delete, (d, w) -> {
@@ -1090,7 +1091,7 @@ public class SidebarController {
         actionRightBtn.setOnClickListener(v -> {
             if (!selectedEntries.isEmpty()) {
                 // Delete selected
-                new AlertDialog.Builder(activity)
+                new MaterialAlertDialogBuilder(activity)
                         .setTitle(R.string.delete_forever)
                         .setMessage(activity.getString(R.string.confirm_delete_f, selectedEntries.size() + " items"))
                         .setPositiveButton(R.string.delete, (d, w) -> {
@@ -1291,7 +1292,7 @@ public class SidebarController {
         details.append(activity.getString(R.string.show_last_updated)).append(": ").append(modStr).append("\n");
         details.append(activity.getString(R.string.sort_by_deletion_time)).append(": ").append(delStr);
 
-        new AlertDialog.Builder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(entry.displayName())
                 .setMessage(details.toString())
                 .setNeutralButton(R.string.delete, (d, w) -> {
@@ -1326,7 +1327,7 @@ public class SidebarController {
         input.setText(entry.displayName());
         input.setSingleLine(true);
         input.setSelection(0, entry.displayName().lastIndexOf('.') > 0 ? entry.displayName().lastIndexOf('.') : entry.displayName().length());
-        new AlertDialog.Builder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.rename)
                 .setView(input)
                 .setPositiveButton(R.string.rename, (d, w) -> {
@@ -1428,7 +1429,7 @@ public class SidebarController {
         });
         layout.addView(purgeBtn);
 
-        new AlertDialog.Builder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.recycle_bin_options)
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, null)

@@ -17,7 +17,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -206,36 +206,32 @@ public class BatchImageTools {
                     int x = (dims[0] - w) / 2;
                     int y = (dims[1] - h) / 2;
                     backupImage(f);
-                    if (isJpegPath(f.getName()) && useJni && !forceLossy) {
-                        x -= x % 16;
-                        y -= y % 16;
-                        w -= w % 16;
-                        h -= h % 16;
-                        if (w <= 0 || h <= 0) {
-                            skipped++;
-                            continue;
+                    boolean jpeg = isJpegPath(f.getName());
+                    boolean cropped = false;
+                    if (jpeg && useJni && !forceLossy) {
+                        // Lossless crop works on whole iMCU blocks (16 px is safe
+                        // for every subsampling mode). If the selection is too
+                        // small to align, fall back to a standard crop.
+                        int lx = x - x % 16;
+                        int ly = y - y % 16;
+                        int lw = w - w % 16;
+                        int lh = h - h % 16;
+                        if (lw > 0 && lh > 0) {
+                            File tmp = null;
+                            try {
+                                tmp = File.createTempFile("batchcrop-", ".jpg", context.getCacheDir());
+                                PrivilegeManager.Native.runJpegtranJni(context, JpegtranJni.OP_CROP,
+                                        f.getAbsolutePath(), tmp.getAbsolutePath(), lw, lh, lx, ly);
+                                FileUtils.copyFile(tmp, f);
+                                cropped = true;
+                            } catch (Throwable ignored) {
+                                // Keep the original file and use the standard crop.
+                            } finally {
+                                if (tmp != null) tmp.delete();
+                            }
                         }
-                        File tmp = new File(context.getCacheDir(), "batchcrop_" + System.currentTimeMillis() + ".jpg");
-                        String[] err = new String[1];
-                        int rc = JpegtranJni.transform(f.getAbsolutePath(), tmp.getAbsolutePath(),
-                                JpegtranJni.OP_CROP, w, h, x, y, err);
-                        if (rc != 0) {
-                            tmp.delete();
-                            skipped++;
-                            continue;
-                        }
-                        FileUtils.copyFile(tmp, f);
-                        tmp.delete();
-                        try {
-                            ExifInterface exif =
-                                    new ExifInterface(f.getAbsolutePath());
-                            exif.setAttribute(ExifInterface.TAG_ORIENTATION,
-                                    String.valueOf(ExifInterface.ORIENTATION_NORMAL));
-                            exif.saveAttributes();
-                        } catch (Exception ignored) {
-                        }
-                    } else {
-                        boolean jpeg = isJpegPath(f.getName());
+                    }
+                    if (!cropped) {
                         BitmapFactory.Options bitmapOpts = new BitmapFactory.Options();
                         bitmapOpts.inPreferredConfig = Bitmap.Config.ARGB_8888;
                         Bitmap src = BitmapFactory.decodeFile(f.getAbsolutePath(), bitmapOpts);
@@ -258,15 +254,15 @@ public class BatchImageTools {
                             if (out != src) out.recycle();
                             src.recycle();
                         }
-                        if (jpeg) {
-                            try {
-                                ExifInterface exif =
-                                        new ExifInterface(f.getAbsolutePath());
-                                exif.setAttribute(ExifInterface.TAG_ORIENTATION,
-                                        String.valueOf(ExifInterface.ORIENTATION_NORMAL));
-                                exif.saveAttributes();
-                            } catch (Exception ignored) {
-                            }
+                    }
+                    if (jpeg) {
+                        try {
+                            ExifInterface exif =
+                                    new ExifInterface(f.getAbsolutePath());
+                            exif.setAttribute(ExifInterface.TAG_ORIENTATION,
+                                    String.valueOf(ExifInterface.ORIENTATION_NORMAL));
+                            exif.saveAttributes();
+                        } catch (Exception ignored) {
                         }
                     }
                     done++;

@@ -36,7 +36,6 @@ package mt.signature.generate;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -100,6 +99,7 @@ import java.util.Random;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
+import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
@@ -109,7 +109,6 @@ public class KeyStoreMakerDialog extends DialogFragment {
     private static final String PREF_NAME = "KeyStore";
 
     private SharedPreferences s;
-    private ProgressDialog progress;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // Views
@@ -150,6 +149,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
     private EditText country;
     private ImageView fab_icon;
     private TextView fab_text;
+    private ProgressManager progress;
 
     private OnKeyGeneratedListener listener;
 
@@ -358,10 +358,8 @@ public class KeyStoreMakerDialog extends DialogFragment {
     }
 
     private void showProgress() {
-        progress = new ProgressDialog(requireContext());
-        progress.setMessage(getString(R.string.generating));
-        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        progress.setCancelable(false);
+        progress = new ProgressManager(getActivity(), false);
+        progress.setText(getString(R.string.generating));
         progress.show();
     }
 

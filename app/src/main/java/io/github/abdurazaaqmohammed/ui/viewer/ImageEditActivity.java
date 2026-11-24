@@ -55,7 +55,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.archive.JpegMetaStrip;
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
@@ -1281,21 +1281,34 @@ public class ImageEditActivity extends BaseActivity {
                     int y = Math.round(crop.top);
                     int w = Math.round(crop.width());
                     int h = Math.round(crop.height());
+                    boolean cropped = false;
                     if (isJpeg && !lossy) {
                         ensureJniBlocking();
-                        x -= x % 16;
-                        y -= y % 16;
-                        w -= w % 16;
-                        h -= h % 16;
-                        File tmp = new File(getCacheDir(), "crop_" + System.currentTimeMillis() + ".jpg");
-                        PrivilegeManager.Native.runJpegtranJni(this, JpegtranJni.OP_CROP,
-                                workingFile.getAbsolutePath(), tmp.getAbsolutePath(), w, h, x, y);
-                        copyFile(tmp, workingFile);
-                        tmp.delete();
-                    } else if (isJpeg) {
-                        applyLossyCrop(workingFile, x, y, w, h);
-                    } else {
-                        applyBitmapOp(null, new int[]{x, y, w, h});
+                        int lx = x - x % 16;
+                        int ly = y - y % 16;
+                        int lw = w - w % 16;
+                        int lh = h - h % 16;
+                        if (lw > 0 && lh > 0) {
+                            File tmp = null;
+                            try {
+                                tmp = File.createTempFile("crop-", ".jpg", getCacheDir());
+                                PrivilegeManager.Native.runJpegtranJni(this, JpegtranJni.OP_CROP,
+                                        workingFile.getAbsolutePath(), tmp.getAbsolutePath(), lw, lh, lx, ly);
+                                copyFile(tmp, workingFile);
+                                cropped = true;
+                            } catch (Throwable ignored) {
+                                // Keep the original and use the standard crop below.
+                            } finally {
+                                if (tmp != null) tmp.delete();
+                            }
+                        }
+                    }
+                    if (!cropped) {
+                        if (isJpeg) {
+                            applyLossyCrop(workingFile, x, y, w, h);
+                        } else {
+                            applyBitmapOp(null, new int[]{x, y, w, h});
+                        }
                     }
                     resetOrientationTag();
                 }

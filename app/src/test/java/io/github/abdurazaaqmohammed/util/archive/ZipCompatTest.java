@@ -2,7 +2,7 @@ package io.github.abdurazaaqmohammed.util.archive;
 
 import io.github.abdurazaaqmohammed.util.archive.MpZstdOutputStream;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
-import io.github.abdurazaaqmohammed.util.archive.ZstdBridge;
+import io.github.abdurazaaqmohammed.utils.ZstdBridge;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

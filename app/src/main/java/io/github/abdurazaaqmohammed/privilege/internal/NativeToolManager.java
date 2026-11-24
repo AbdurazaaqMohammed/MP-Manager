@@ -2,7 +2,7 @@ package io.github.abdurazaaqmohammed.privilege.internal;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import io.github.abdurazaaqmohammed.util.archive.JpegtranJni;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 
 import android.app.Activity;
 import android.content.Context;
@@ -172,7 +172,16 @@ public class NativeToolManager {
                                       int cropW, int cropH, int cropX, int cropY) throws Exception {
         if (!loadJpegtranJni(context)) throw new IOException("JNI library not installed");
         String[] err = new String[1];
-        int rc = JpegtranJni.transform(src, dst, op, cropW, cropH, cropX, cropY, err);
+        int rc;
+        try {
+            rc = JpegtranJni.transform(src, dst, op, cropW, cropH, cropX, cropY, err);
+        } catch (UnsatisfiedLinkError e) {
+            // The library loaded but does not export the JNI symbol expected by
+            // this build (e.g. an outdated native pack). Surface it as a normal
+            // failure so callers can fall back instead of crashing the thread.
+            throw new IOException("jpegtran JNI is incompatible with this app build; "
+                    + "reinstall the native tools", e);
+        }
         if (rc != 0) {
             String message = err[0] == null || err[0].isEmpty() ? "Transform failed" : err[0];
             throw new IOException(message);

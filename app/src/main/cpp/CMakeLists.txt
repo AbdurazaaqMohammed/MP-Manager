@@ -38,3 +38,13 @@ target_compile_options(mp_zstd PRIVATE
 
 target_link_options(mp_zstd PRIVATE -Wl,--gc-sections)
 target_link_libraries(mp_zstd log)
+
+# JNI runner for the on-demand AAPT2 PIE binary. The binary is downloaded at
+# runtime; this tiny wrapper dlopen()s it (after DF_1_PIE is cleared) and calls
+# its main() in a forked child.
+add_library(mp_aapt2_jni SHARED aapt2_jni.c)
+target_compile_options(mp_aapt2_jni PRIVATE -Oz -fvisibility=hidden)
+target_link_options(mp_aapt2_jni PRIVATE
+        -Wl,--gc-sections
+        -Wl,-z,max-page-size=16384)
+target_link_libraries(mp_aapt2_jni dl log)

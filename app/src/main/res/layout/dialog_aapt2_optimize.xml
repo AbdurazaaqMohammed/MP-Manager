@@ -13,46 +13,88 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/aapt2_opt_warning" />
+
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:hint="@string/aapt2_profile">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/aapt2_profile" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aapt2_manage_profiles"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:contentDescription="@string/aapt2_profile_manage"
+                app:icon="@drawable/baseline_settings_24" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/aapt2_profile_warning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="?attr/colorError"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:hint="@string/aapt2_densities"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             app:helperText="@string/aapt2_densities_help">
-            <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/aapt2_densities" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="textNoSuggestions" />
+                android:layout_height="wrap_content" android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:hint="@string/aapt2_configurations"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             app:helperText="@string/aapt2_configurations_help">
-            <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/aapt2_configurations" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="textNoSuggestions" />
+                android:layout_height="wrap_content" android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:hint="@string/aapt2_abis"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             app:helperText="@string/aapt2_abis_help">
-            <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/aapt2_abis" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="textNoSuggestions" />
+                android:layout_height="wrap_content" android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
-        <com.google.android.material.textfield.TextInputLayout
+
+        <LinearLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:hint="@string/aapt2_min_sdk"
-            app:helperText="@string/aapt2_sdk_help">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/aapt2_min_sdk" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="number" />
-        </com.google.android.material.textfield.TextInputLayout>
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:hint="@string/aapt2_target_sdk"
-            app:helperText="@string/aapt2_sdk_help">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/aapt2_target_sdk" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="number" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="8dp" android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:hint="@string/aapt2_min_sdk"
+                app:helperText="@string/aapt2_sdk_help">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/aapt2_min_sdk" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:hint="@string/aapt2_target_sdk"
+                app:helperText="@string/aapt2_sdk_help">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/aapt2_target_sdk" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:gravity="center_vertical"

@@ -2,7 +2,7 @@ package io.github.abdurazaaqmohammed.util.archive;
 
 import io.github.abdurazaaqmohammed.util.archive.ArchiveBrowseUtil;
 import io.github.abdurazaaqmohammed.util.archive.ArchiveUtil;
-import io.github.abdurazaaqmohammed.util.archive.ZstdBridge;
+import io.github.abdurazaaqmohammed.utils.ZstdBridge;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

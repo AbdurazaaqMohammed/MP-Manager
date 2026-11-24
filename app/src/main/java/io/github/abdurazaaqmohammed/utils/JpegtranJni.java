@@ -1,8 +1,14 @@
-package io.github.abdurazaaqmohammed.util.archive;
+package io.github.abdurazaaqmohammed.utils;
 
 import java.util.HashSet;
 import java.util.Set;
 
+/** JNI binding for the downloaded jpegtran helper.
+ *
+ * <p>The package/class name is part of the native symbol
+ * ({@code Java_io_github_abdurazaaqmohammed_utils_JpegtranJni_transform}) exported
+ * by {@code libjpegtran_jni.so}. Do not move or rename this class without
+ * rebuilding the native library.</p> */
 public class JpegtranJni {
     public static final int OP_ROT_90 = 0;
     public static final int OP_ROT_270 = 1;

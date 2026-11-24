@@ -197,3 +197,14 @@
 #     references it, so R8 deleted it -> "MPManagerDocumentsProvider is
 #     missing from MP-Manager's own dex" on the Il2Cpp+docs-provider path.
 -keep class mpmanager.dump.** { *; }
+
+# --- JNI bridges: symbol names are derived from package + class + method ---
+# Both native libraries were built with these exact package/class names.
+# Renaming these classes (or their native methods) makes the VM look up
+# Java_<mangled> symbols that do not exist -> UnsatisfiedLinkError.
+-keepclasseswithmembernames,includedescriptorclasses class * { native <methods>; }
+-keep class io.github.abdurazaaqmohammed.utils.JpegtranJni { *; }
+-keep class io.github.abdurazaaqmohammed.utils.ZstdBridge { *; }
+-keep class io.github.abdurazaaqmohammed.util.archive.Aapt2Jni { *; }
+# AAPT2 profiles are stored as JSON by Gson.
+-keep class io.github.abdurazaaqmohammed.feature.apk.Aapt2Profile { *; }
