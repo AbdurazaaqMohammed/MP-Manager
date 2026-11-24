@@ -163,7 +163,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
         if (EditorTasks.isEditor(intent)) {
-            super.startActivityForResult(EditorTasks.prepare(intent, editorOwnerId, requestCode), -1, options);
+            super.startActivityForResult(EditorTasks.prepare(this, intent, editorOwnerId, requestCode), -1, options);
         } else {
             super.startActivityForResult(intent, requestCode, options);
         }

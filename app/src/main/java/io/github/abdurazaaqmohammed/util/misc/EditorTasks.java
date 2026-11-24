@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.preference.PreferenceManager;
+
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,6 +20,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
 /** Gives each editor its own task without breaking activity-result callers. */
 public final class EditorTasks {
+    public static final String PREF_SHOW_EDITOR_TASKS_IN_RECENTS = "show_editor_tasks_in_recents";
     private static final String OWNER = "mp.editor.owner";
     private static final String RESULT = "mp.editor.result";
     private static final Map<String, WeakReference<BaseActivity>> owners = new HashMap<>();
@@ -85,11 +88,40 @@ public final class EditorTasks {
                 || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
     }
 
+    public static boolean showEditorTasksInRecents(Context context) {
+        if (context == null) return false;
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(PREF_SHOW_EDITOR_TASKS_IN_RECENTS, false);
+    }
+
+    public static void updateRecentsVisibility(Context context, boolean showInRecents) {
+        if (context == null) return;
+        try {
+            ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return;
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info != null && info.baseIntent != null && isEditor(info.baseIntent)) {
+                    task.setExcludeFromRecents(!showInRecents);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     public static Intent prepare(Intent source, String owner, int request) {
+        return prepare(null, source, owner, request);
+    }
+
+    public static Intent prepare(Context context, Intent source, String owner, int request) {
         Intent intent = new Intent(source);
-        intent.setFlags((intent.getFlags() & ~(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        int flags = (intent.getFlags() & ~(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
+        if (!showEditorTasksInRecents(context)) {
+            flags |= Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS;
+        }
+        intent.setFlags(flags);
         // NEW_TASK cancels Android's native result link. Keep a process-local link
         // instead, including ActivityResultRegistry's generated request codes.
         intent.removeExtra(RESULT);
