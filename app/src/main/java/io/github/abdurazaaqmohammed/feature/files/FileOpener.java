@@ -1081,13 +1081,15 @@ public class FileOpener {
 
 
     private void openElfFileDefault(File file, String fileName, File originalFile) {
+        boolean isElf = false;
         boolean isArm64 = false;
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
              ElfParser elf = new ElfParser(raf)) {
+            isElf = true;
             isArm64 = (elf.is64 && elf.machine == 0xB7);
         } catch (Exception ignored) {}
 
-        if (isArm64) {
+        if (isArm64 || isElf) {
             openArm64Disassembler(file, originalFile);
         } else {
             openHexEditorWithOriginal(file, originalFile);
@@ -1098,14 +1100,16 @@ public class FileOpener {
     private static final int MAX_ELF_HOOK_OPTIONS = 16;
 
     private void showElfOptionsDialog(File file, String fileName, File originalFile) {
+        boolean isElf = false;
         boolean isArm64 = false;
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
              ElfParser elf = new ElfParser(raf)) {
+            isElf = true;
             isArm64 = (elf.is64 && elf.machine == 0xB7);
         } catch (Exception ignored) {}
 
         List<String> optionsList = new ArrayList<>();
-        if (isArm64) {
+        if (isArm64 || isElf) {
             optionsList.add("ARM64 Disassembler");
         }
         optionsList.add(context.getString(R.string.hex_editor));

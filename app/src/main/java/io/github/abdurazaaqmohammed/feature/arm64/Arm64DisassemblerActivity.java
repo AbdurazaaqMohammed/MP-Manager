@@ -10,6 +10,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import java.io.InputStream;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.SpannableStringBuilder;
@@ -1085,6 +1088,20 @@ public class Arm64DisassemblerActivity extends BaseActivity {
                             }
                             cur += read;
                         }
+                    }
+                }
+
+                if (elf.entry > 0 && !funcMap.containsKey(elf.entry)) {
+                    long entryOffset = elf.addrToOffset(elf.entry);
+                    if (entryOffset >= 0) {
+                        Arm64Function entryFunc = new Arm64Function();
+                        entryFunc.vaddr = elf.entry;
+                        entryFunc.fileOffset = entryOffset;
+                        entryFunc.name = "_start";
+                        entryFunc.demangledName = "_start";
+                        entryFunc.bindName = "GLOBAL";
+                        entryFunc.isExported = true;
+                        funcMap.put(elf.entry, entryFunc);
                     }
                 }
 
