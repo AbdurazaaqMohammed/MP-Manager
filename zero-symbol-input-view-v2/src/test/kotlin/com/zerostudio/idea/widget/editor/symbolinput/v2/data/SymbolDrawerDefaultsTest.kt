@@ -70,15 +70,4 @@ class SymbolDrawerDefaultsTest {
         assertEquals("\t", (symbols[36].shortAction as SymbolAction.InsertText).template)
         assertEquals("\$\$", (symbols[31].shortAction as SymbolAction.InsertText).template)
     }
-
-    @Test fun providesSmaliModdingPresets() {
-        val groups = SymbolDrawerDefaults.createGroups()
-        assertTrue(groups.size >= 2)
-        val smaliGroup = groups.first { it.id == "smaliModding" }
-        assertEquals("Smali Modding", smaliGroup.title)
-        assertEquals(9, smaliGroup.symbols.size)
-        assertEquals("True ✅", smaliGroup.symbols[0].label)
-        assertEquals("False ❌", smaliGroup.symbols[1].label)
-        assertEquals("Return ✅", smaliGroup.symbols[2].label)
-    }
 }

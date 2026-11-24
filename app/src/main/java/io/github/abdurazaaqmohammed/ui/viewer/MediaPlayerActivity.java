@@ -1072,11 +1072,35 @@ public class MediaPlayerActivity extends BaseActivity implements
     }
 
     @Override
+    public void finish() {
+        if (!isMinimizing) {
+            try {
+                playerManager.stop();
+            } catch (Exception ignored) {
+            }
+            try {
+                stopService(new Intent(this, MusicService.class));
+            } catch (Exception ignored) {
+            }
+        }
+        super.finish();
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         playerManager.decrementUIVisible();
         autoHideHandler.removeCallbacks(autoHideRunnable);
-        if (playerManager.isPlayingVideo() && !playerManager.isVideoBackgroundPlay() && playerManager.getState() == PlayerManager.PlayState.PLAYING) {
+        if (isFinishing() && !isMinimizing) {
+            try {
+                playerManager.stop();
+            } catch (Exception ignored) {
+            }
+            try {
+                stopService(new Intent(this, MusicService.class));
+            } catch (Exception ignored) {
+            }
+        } else if (playerManager.isPlayingVideo() && !playerManager.isVideoBackgroundPlay() && playerManager.getState() == PlayerManager.PlayState.PLAYING) {
             playerManager.pause();
             pausedForBackground = true;
         }

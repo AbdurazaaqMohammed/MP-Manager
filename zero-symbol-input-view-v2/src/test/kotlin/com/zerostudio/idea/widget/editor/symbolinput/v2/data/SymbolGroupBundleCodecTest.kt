@@ -422,4 +422,34 @@ class SymbolGroupBundleCodecTest {
         assertEquals("Return ✅", groups[0].symbols[2].label)
         assertTrue(groups[0].symbols[2].shortAction is SymbolAction.InsertText)
     }
+
+    @Test fun importsRealMtManagerFunctionBarWithAbfKeys() {
+        val json = """[
+            {
+                "a": 27,
+                "b": "True ✅",
+                "d": 0,
+                "e": "const/4 v0, 0x1 ",
+                "f": {
+                    "a": "move-result ([vp]\\d+)",
+                    "b": "const/4 $1, 0x1",
+                    "c": false,
+                    "d": 1,
+                    "e": 1
+                }
+            },
+            {
+                "a": 22,
+                "b": "Settings"
+            }
+        ]"""
+        val groups = SymbolGroupBundleCodec.decode(json)
+        assertEquals(1, groups.size)
+        assertEquals(2, groups[0].symbols.size)
+        assertEquals("True ✅", groups[0].symbols[0].label)
+        assertTrue(groups[0].symbols[0].shortAction is SymbolAction.Extension)
+        assertEquals(SymbolAction.InsertText("const/4 v0, 0x1 "), groups[0].symbols[0].longAction)
+        assertEquals("Settings", groups[0].symbols[1].label)
+        assertEquals(SymbolAction.OpenManager, groups[0].symbols[1].shortAction)
+    }
 }

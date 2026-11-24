@@ -1917,36 +1917,80 @@ public class DexEditorActivity extends BaseActivity {
         MinimizedEditors.minimize(this, R.string.dex_editor_plus, source);
     }
 
-    // method for saviing multiple tabs
-    // it will save tabs one by one
-    // look the next method fo details
-    public void saveMultipleTabs(final List<EditorTab> modifiedTabs, final boolean[] checked, final Runnable onProceed) {
-        int totalToSave = 0;
-        for (boolean b : checked) if (b) totalToSave++;
-        if (totalToSave == 0) {
-            onProceed.run();
-            return;
-        }
-
-        final int[] count = {0};
-        final int finalTotalToSave = totalToSave;
-        for (int i = 0; i < modifiedTabs.size(); i++) {
-            if (checked[i]) {
-                final EditorTab tab = modifiedTabs.get(i);
-                // save one after one
-                saveTab(tab, () -> {
-                    synchronized (count) {
-                        count[0]++;
-                        if (count[0] == finalTotalToSave) {
-                            runOnUiThread(onProceed);
-                        }
-                    }
-                });
-            }
+    private static class TabSaveEntry {
+        final EditorTab tab;
+        final String code;
+        TabSaveEntry(EditorTab tab, String code) {
+            this.tab = tab;
+            this.code = code;
         }
     }
 
-    // main method for saving tabs
+    // method for saving multiple tabs sequentially on a background thread
+    public void saveMultipleTabs(final List<EditorTab> modifiedTabs, final boolean[] checked, final Runnable onProceed) {
+        final List<TabSaveEntry> toSave = new ArrayList<>();
+        for (int i = 0; i < modifiedTabs.size(); i++) {
+            if (checked != null && !checked[i]) continue;
+            EditorTab tab = modifiedTabs.get(i);
+            if (tab == null) continue;
+            UnifiedEditorFragment fragment = (UnifiedEditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
+            if (fragment != null && fragment.getEditor() != null) {
+                toSave.add(new TabSaveEntry(tab, fragment.getEditor().getText().toString()));
+            } else if (tab.content != null) {
+                toSave.add(new TabSaveEntry(tab, tab.content));
+            }
+        }
+        if (toSave.isEmpty()) {
+            if (onProceed != null) onProceed.run();
+            return;
+        }
+
+        final AlertCircularProgress pd = new AlertCircularProgress(this);
+        pd.setMessage(getString(R.string.saving_x, toSave.get(0).tab.title));
+        pd.show();
+
+        new Thread(() -> {
+            boolean hasChange = false;
+            try {
+                for (int i = 0; i < toSave.size(); i++) {
+                    TabSaveEntry entry = toSave.get(i);
+                    final EditorTab tab = entry.tab;
+                    final String code = entry.code;
+                    runOnUiThread(() -> pd.setMessage(getString(R.string.saving_x, tab.title)));
+
+                    if (!classTree.isSameAsCachedSmali(tab.className, code)) {
+                        classTree.saveClassDefIfChanged(Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion), code);
+                        hasChange = true;
+                    }
+                    tab.isModified = false;
+                    tab.content = code;
+                    tab.originalContent = code;
+                }
+                final boolean changed = hasChange;
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    if (changed) {
+                        isChanged = true;
+                        needsModifiedTreeRebuild = true;
+                        refreshExplorerPage(1);
+                    }
+                    if (tabsAdapter != null) {
+                        tabsAdapter.notifyDataSetChanged();
+                    }
+                    handleUndoRedo();
+                    if (onProceed != null) onProceed.run();
+                });
+            } catch (final Throwable e) {
+                final String detail = e.getMessage() != null ? e.getMessage() : e.toString();
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    Notify_MT.Notify(DexEditorActivity.this, "Error saving tabs", detail, "Close");
+                });
+            }
+        }).start();
+    }
+
+    // main method for saving a single tab
     // @tab the tab to be saved, @onSaved used for proper task to detect if the saving completed or not
     private void saveTab(final EditorTab tab, final Runnable onSaved) {
         if (tab == null) {
@@ -1955,18 +1999,19 @@ public class DexEditorActivity extends BaseActivity {
         }
 
         final UnifiedEditorFragment fragment = (UnifiedEditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
-        if (fragment == null) {
+        if (fragment == null || fragment.getEditor() == null) {
             if (onSaved != null) onSaved.run();
             return;
         }
 
+        final String code = fragment.getEditor().getText().toString();
+
         final AlertCircularProgress pd = new AlertCircularProgress(this);
-        pd.setMessage(getString(R.string.saving_x,tab.title));
+        pd.setMessage(getString(R.string.saving_x, tab.title));
         pd.show();
 
         new Thread(() -> {
             try {
-                final String code = fragment.getEditor().getText().toString();
                 if (classTree.isSameAsCachedSmali(tab.className, code)) {
                     runOnUiThread(() -> {
                         pd.dismiss();
@@ -1974,7 +2019,7 @@ public class DexEditorActivity extends BaseActivity {
                         tab.content = code;
                         tab.originalContent = code;
                         int currentIndex = tabs.indexOf(tab);
-                        if (currentIndex != -1) {
+                        if (currentIndex != -1 && tabsAdapter != null) {
                             tabsAdapter.notifyItemChanged(currentIndex + 1);
                         }
                         handleUndoRedo();
@@ -1989,7 +2034,7 @@ public class DexEditorActivity extends BaseActivity {
                     tab.content = code;
                     tab.originalContent = code;
                     int currentIndex = tabs.indexOf(tab);
-                    if (currentIndex != -1) {
+                    if (currentIndex != -1 && tabsAdapter != null) {
                         tabsAdapter.notifyItemChanged(currentIndex + 1); // Fixed index: home is at 0
                     }
                     isChanged = true;
@@ -3236,7 +3281,10 @@ public class DexEditorActivity extends BaseActivity {
                             //SketchwareUtil.showMessage(getApplicationContext(), "Success");
                             Intent resultIntent = new Intent();
                             List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
-                            resultIntent.setData(Uri.fromFile(new File(dexPaths.get(0))));
+                            if (dexPaths != null && !dexPaths.isEmpty()) {
+                                resultIntent.setData(Uri.fromFile(new File(dexPaths.get(0))));
+                                resultIntent.putStringArrayListExtra("SelectedDexFiles", new ArrayList<>(dexPaths));
+                            }
                             resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             // Hand the archive back with the result as well. The caller
                             // needs it to offer the "update the APK/ZIP?" prompt, and

@@ -45,6 +45,7 @@
 
 package com.zerostudio.idea.widget.editor.symbolinput.v2.data
 
+import com.zerostudio.idea.widget.editor.symbolinput.v2.model.ClipboardOperation
 import com.zerostudio.idea.widget.editor.symbolinput.v2.model.CursorTarget
 import com.zerostudio.idea.widget.editor.symbolinput.v2.model.SymbolAction
 import com.zerostudio.idea.widget.editor.symbolinput.v2.model.SymbolEntry
@@ -65,7 +66,7 @@ object SymbolDrawerDefaults {
     fun createGroups(context: Context): List<SymbolGroup> =
         createGroups(context.getString(R.string.symbol_drawer_default_group_common))
 
-    private fun createGroups(groupTitle: String): List<SymbolGroup> = listOf(
+    fun createCommonGroup(groupTitle: String = "Common"): SymbolGroup =
         SymbolGroup("commonlyUsed", groupTitle, listOf(
             entry(1, "←", SymbolAction.MoveCursor(CursorTarget.LEFT),
                 SymbolAction.MoveCursor(CursorTarget.LINE_START)),
@@ -110,37 +111,71 @@ object SymbolDrawerDefaults {
             entry(37, "\t", SymbolAction.InsertText("\t")),
             entry(38, "\\", SymbolAction.InsertText("\\")),
             entry(39, "settings", SymbolAction.OpenManager)
-        )),
-        createSmaliModdingGroup()
-    )
+        ))
 
-    fun createSmaliModdingGroup(): SymbolGroup = SymbolGroup(
-        id = "smaliModding",
-        title = "Smali Modding",
-        symbols = listOf(
-            smaliPreset(1001, "True ✅", "const/4\\s+(v\\d+),\\s*0x0", "const/4 $1, 0x1", "rca"),
-            smaliPreset(1002, "False ❌", "const/4\\s+(v\\d+),\\s*0x1", "const/4 $1, 0x0", "rca"),
-            smaliPreset(1003, "Return ✅", "return(-.*)?", "return-void", "ra"),
-            smaliPreset(1004, "Time ⏰", "invoke-static\\s*\\{\\},\\s*Ljava/lang/System;->currentTimeMillis\\(\\)J", "const-wide/16 v0, 0x0", "ra"),
-            smaliPreset(1005, "Money Games 🎮", "const/4\\s+(v\\d+),\\s*0x0\\s*\\n\\s*return\\s+\\1", "const/4 $1, 0x1\\n    return $1", "ra"),
-            smaliPreset(1006, "Boolean 🐧", "const/4\\s+(v\\d+),\\s*0x0", "const/4 $1, 0x1", "ra"),
-            smaliPreset(1007, "Iput-boolean 🌚", "iput-boolean\\s+(v\\d+),\\s*(v\\d+),\\s*(L[^;]+;->[^:]+:Z)", "const/4 $1, 0x1\\n    iput-boolean $1, $2, $3", "ra"),
-            smaliPreset(1008, "iget-boolean 👻", "iget-boolean\\s+(v\\d+),\\s*(v\\d+),\\s*(L[^;]+;->[^:]+:Z)", "const/4 $1, 0x1", "ra"),
-            smaliPreset(1009, "RemoveCode ❌", "^[ \\t]*invoke-static[^\\n]*\\n", "", "ra")
-        )
-    )
+    fun createCustomGroup(context: Context? = null): SymbolGroup =
+        SymbolGroup("custom", "Custom", listOf(
+            entry(1001, "Search", SymbolAction.Extension("legacy.action.100", null)),
+            entry(1002, "Copy", SymbolAction.Clipboard(ClipboardOperation.COPY)),
+            entry(1003, "Cut", SymbolAction.Clipboard(ClipboardOperation.CUT)),
+            entry(1004, "Paste", SymbolAction.Clipboard(ClipboardOperation.PASTE))
+        ))
 
-    private fun smaliPreset(id: Long, label: String, find: String, replace: String, options: String): SymbolEntry {
-        val payload = MpManagerFindReplaceEnvelope.encodePayload(find, replace, options)
-        val action = SymbolAction.Extension(MpManagerFindReplaceEnvelope.EXTENSION_ID, payload)
-        return SymbolEntry(
-            id = id,
-            label = label,
-            shortAction = action,
-            legacyShortActionId = 101,
-            legacyShortText = find
+    fun createSymbolsGroup(context: Context? = null): SymbolGroup =
+        SymbolGroup("symbols", "Symbols", listOf(
+            entry(1005, "(", SymbolAction.InsertText("("), SymbolAction.InsertText("()")),
+            entry(1006, ")", SymbolAction.InsertText(")")),
+            entry(1007, "[", SymbolAction.InsertText("["), SymbolAction.InsertText("[]")),
+            entry(1008, "]", SymbolAction.InsertText("]")),
+            entry(1009, "{", SymbolAction.InsertText("{"), SymbolAction.InsertText("{}")),
+            entry(1010, "}", SymbolAction.InsertText("}")),
+            entry(1011, "\"", SymbolAction.InsertText("\"")),
+            entry(1012, "'", SymbolAction.InsertText("'")),
+            entry(1013, "//", SymbolAction.InsertText("//")),
+            entry(1014, "/*", SymbolAction.InsertText("/*")),
+            entry(1015, "*/", SymbolAction.InsertText("*/")),
+            entry(1016, ";", SymbolAction.InsertText(";")),
+            entry(1017, ":", SymbolAction.InsertText(":")),
+            entry(1018, ",", SymbolAction.InsertText(",")),
+            entry(1019, ".", SymbolAction.InsertText(".")),
+            entry(1020, "=", SymbolAction.InsertText("=")),
+            entry(1021, "+", SymbolAction.InsertText("+")),
+            entry(1022, "-", SymbolAction.InsertText("-")),
+            entry(1023, "*", SymbolAction.InsertText("*")),
+            entry(1024, "/", SymbolAction.InsertText("/")),
+            entry(1025, "<", SymbolAction.InsertText("<")),
+            entry(1026, ">", SymbolAction.InsertText(">")),
+            entry(1027, "!", SymbolAction.InsertText("!")),
+            entry(1028, "?", SymbolAction.InsertText("?")),
+            entry(1029, "&", SymbolAction.InsertText("&")),
+            entry(1030, "|", SymbolAction.InsertText("|")),
+            entry(1031, "\\", SymbolAction.InsertText("\\")),
+            entry(1032, "$", SymbolAction.InsertText("$")),
+            entry(1033, "@", SymbolAction.InsertText("@")),
+            entry(1034, "#", SymbolAction.InsertText("#")),
+            entry(1035, "←", SymbolAction.MoveCursor(CursorTarget.LEFT), SymbolAction.MoveCursor(CursorTarget.LINE_START)),
+            entry(1036, "↑", SymbolAction.MoveCursor(CursorTarget.UP), SymbolAction.MoveCursor(CursorTarget.DOCUMENT_START)),
+            entry(1037, "→", SymbolAction.MoveCursor(CursorTarget.RIGHT), SymbolAction.MoveCursor(CursorTarget.LINE_END)),
+            entry(1038, "↓", SymbolAction.MoveCursor(CursorTarget.DOWN), SymbolAction.MoveCursor(CursorTarget.DOCUMENT_END)),
+            entry(1039, "↵", SymbolAction.InsertText("\n")),
+            entry(1040, "↹", SymbolAction.InsertText("\t")),
+            entry(1041, "⤺", SymbolAction.EditorCommand("history.undo")),
+            entry(1042, "⤻", SymbolAction.EditorCommand("history.redo")),
+            entry(1043, "⚙", SymbolAction.OpenManager)
+        ))
+
+    fun createDefaultGroups(context: Context? = null): List<SymbolGroup> {
+        val commonTitle = context?.getString(R.string.symbol_drawer_default_group_common) ?: "Common"
+        return listOf(
+            createCustomGroup(context),
+            createSymbolsGroup(context),
+            createCommonGroup(commonTitle)
         )
     }
+
+    private fun createGroups(groupTitle: String): List<SymbolGroup> = listOf(
+        createCommonGroup(groupTitle)
+    )
 
     private fun entry(
         id: Long,
@@ -171,7 +206,17 @@ object SymbolDrawerDefaults {
             CursorTarget.DOCUMENT_END -> 24
         }
         SymbolAction.OpenManager -> 22
-        is SymbolAction.Extension -> if (action.extensionId == MpManagerFindReplaceEnvelope.EXTENSION_ID) 101 else 0
+        is SymbolAction.Clipboard -> when (action.operation) {
+            ClipboardOperation.COPY -> 28
+            ClipboardOperation.CUT -> 29
+            ClipboardOperation.PASTE -> 30
+        }
+        is SymbolAction.EditorCommand -> when (action.commandId) {
+            "history.undo" -> 55
+            "history.redo" -> 56
+            else -> 0
+        }
+        is SymbolAction.Extension -> if (action.extensionId == "legacy.action.100") 100 else if (action.extensionId == MpManagerFindReplaceEnvelope.EXTENSION_ID) 101 else 0
         else -> 0
     }
 }

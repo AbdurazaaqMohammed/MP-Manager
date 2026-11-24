@@ -174,21 +174,20 @@ public class FileUtils {
         if (path == null) return false;
         String lower = path.toLowerCase(Locale.ROOT);
         for (String ext : ELF_EXTS) {
-            if (lower.endsWith(ext)) return true;
+            if (lower.endsWith(ext) || lower.contains(ext + ".")) return true;
         }
         return false;
     }
 
     public static boolean isElfFile(File file) {
         if (file == null || !file.exists() || !file.isFile() || file.length() < 4) return false;
-        if (isElf(file.getName())) return true;
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] header = new byte[4];
             if (fis.read(header) == 4) {
                 return header[0] == 0x7F && header[1] == 'E' && header[2] == 'L' && header[3] == 'F';
             }
         } catch (Exception ignored) {}
-        return false;
+        return isElf(file.getName());
     }
 
     private static boolean containsSubarray(byte[] data, int dataLen, byte[] sub) {

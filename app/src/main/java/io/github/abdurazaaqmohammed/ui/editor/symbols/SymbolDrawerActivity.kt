@@ -65,8 +65,7 @@ class SymbolDrawerActivity : BaseActivity() {
         if (requestCode == 2001 && resultCode == RESULT_OK && data?.data != null) {
             runCatching {
                 contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use { it.readText() }?.let { json ->
-                    managerScreen?.importBundle(json)
-                    Toast.makeText(this, "Imported successfully", Toast.LENGTH_SHORT).show()
+                    managerScreen?.promptImportGroupNameAndAdd(json)
                 }
             }.onFailure { err ->
                 Toast.makeText(this, "Import failed: ${err.message}", Toast.LENGTH_SHORT).show()
