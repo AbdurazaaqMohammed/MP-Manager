@@ -9,6 +9,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressActionReceiver;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 
+import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -24,7 +25,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -79,7 +79,7 @@ public class ProgressManager {
     /** Determinate byte bars are scaled to this to avoid int overflow past 2 GB. */
     private static final int BYTE_BAR_SCALE = 1000;
 
-    private final AppCompatActivity activity;
+    private final Activity activity;
     private final Handler handler;
     /** True when the caller has no idea about sizes yet (spinner until proven otherwise). */
     private final boolean indeterminate;
@@ -239,7 +239,7 @@ public class ProgressManager {
         return null;
     }
 
-    public ProgressManager(AppCompatActivity activity, boolean indeterminate) {
+    public ProgressManager(Activity activity, boolean indeterminate) {
         this.activity = activity;
         this.handler = new Handler(Looper.getMainLooper());
         this.indeterminate = indeterminate;

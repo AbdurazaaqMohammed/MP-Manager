@@ -1,13 +1,11 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import android.app.ProgressDialog;
-import android.content.Context;
+
 import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -25,7 +23,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -45,21 +42,20 @@ final class Aapt2OptimizeDialog {
     }
 
     static void show(MainActivity activity, UIHelper uiHelper, File input) {
-        ProgressDialog scanning = ProgressDialog.show(activity, null,
-                activity.getString(R.string.aapt2_scanning), true, false);
+        ProgressManager pm = new ProgressManager(activity, true).setText(activity.getString(R.string.aapt2_scanning)).show();
         new Thread(() -> {
             Aapt2ApkSpecs.Specs specs;
             try {
                 specs = Aapt2ApkSpecs.scan(input);
             } catch (Throwable e) {
                 activity.handler.post(() -> {
-                    scanning.dismiss();
+                    pm.dismiss();
                     new ErrorUtil(activity).showError(e);
                 });
                 return;
             }
             activity.handler.post(() -> {
-                scanning.dismiss();
+                pm.dismiss();
                 if (activity.isFinishing()) return;
                 showDialog(activity, uiHelper, input, specs);
             });
@@ -418,16 +414,13 @@ final class Aapt2OptimizeDialog {
 
     private static void downloadAndStart(MainActivity activity, File input,
                                          Aapt2Optimizer.Options options, boolean shouldSign) {
-        ProgressDialog progress = new ProgressDialog(activity);
-        progress.setTitle(R.string.aapt2_installing);
-        progress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        progress.setMax(1000);
-        progress.setCancelable(false);
+        ProgressManager progress = new ProgressManager(activity, false);
+        progress.setText(activity.getString(R.string.aapt2_installing));
         progress.show();
         new Thread(() -> {
             try {
                 Aapt2BinaryManager.download(activity, (done, total) -> activity.handler.post(() -> {
-                    if (total > 0) progress.setProgress((int) Math.min(1000, done * 1000 / total));
+                    if (total > 0) progress.setProgress((int) Math.min(1000, done * 1000 / total), 1000);
                 }));
                 activity.handler.post(() -> {
                     progress.dismiss();

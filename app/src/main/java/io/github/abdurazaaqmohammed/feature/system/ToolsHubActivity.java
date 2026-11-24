@@ -309,8 +309,7 @@ public class ToolsHubActivity extends BaseActivity {
             msg.append("\n\n").append(getString(R.string.tools_hub_certificate)).append("\n").append(shortDigest(digest));
             msg.append("\n\n").append(getString(R.string.tools_hub_status)).append(" ")
                     .append(getString(trusted ? R.string.tools_hub_trusted : R.string.tools_hub_not_trusted));
-            AlertDialog.Builder builder =
-                    new MaterialAlertDialogBuilder(this)
+            AlertDialog.Builder builder =  new MaterialAlertDialogBuilder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
