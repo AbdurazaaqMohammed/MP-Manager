@@ -339,7 +339,8 @@ public class FileOpener {
             actionIcons.add(R.drawable.lock_24px);
             actionHandlers.add(() -> runBuiltinTool(BUILTIN_SIG, file, fileName, zipFile, zipEntryPath));
         }
-        if (keyExt.equals("db") || keyExt.equals("sqlite") || keyExt.equals("sqlite3") || keyExt.equals("db3")) {
+        if (keyExt.equals("db") || keyExt.equals("sqlite") || keyExt.equals("sqlite3") || keyExt.equals("db3")
+                || isDatabaseFile(file, fileName)) {
             actionIds.add(BUILTIN_SQLITE);
             actionNames.add(context.getString(R.string.sqlite_viewer));
             actionIcons.add(R.drawable.ic_disk_drive_24px);
@@ -589,6 +590,19 @@ public class FileOpener {
             default:
                 return;
         }
+    }
+
+    /**
+     * App databases often have no extension ("settings", "user"), so an
+     * extension-only check hides the advertised editor exactly where users
+     * need it. Anything inside an app's databases/ folder is a DB candidate;
+     * SQLite journal sidecars are not.
+     */
+    private static boolean isDatabaseFile(File file, String name) {
+        if (file == null || name == null) return false;
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (lower.endsWith("-wal") || lower.endsWith("-shm") || lower.endsWith("-journal")) return false;
+        return file.getAbsolutePath().replace('\\', '/').contains("/databases/");
     }
 
     private void openSqliteViewer(File file) {
@@ -1819,7 +1833,8 @@ public class FileOpener {
                 });
             } else if (fileName.equals("libapp.so") || fileName.equals("libflutter.so")) {
                 withReadableCopy(file, readable -> FlutterToolsDialog.showForLibrary(context, readable, fileName));
-            } else if (ext.equals(".db") || ext.equals(".sqlite") || ext.equals(".sqlite3") || ext.equals(".db3")) {
+            } else if (ext.equals(".db") || ext.equals(".sqlite") || ext.equals(".sqlite3") || ext.equals(".db3")
+                    || isDatabaseFile(file, fileName)) {
                 openSqliteViewer(file);
             } else if (ArchiveBrowseUtil.isBrowsable(file)) {
                 // Unhandled extension but the bytes are an archive (zip/7z/rar/

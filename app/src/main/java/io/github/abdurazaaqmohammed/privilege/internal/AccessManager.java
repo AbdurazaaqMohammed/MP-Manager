@@ -179,7 +179,19 @@ public final class AccessManager {
             return RootManager.getInstance(context).listRootFilesWithStat(dirPath);
         }
         if (backend == Backend.SHIZUKU) {
-            return ShizukuManager.listWithStat(context, dirPath);
+            File[] listed = ShizukuManager.listWithStat(context, dirPath);
+            // Shizuku's ADB shell is uid 2000. Since Android 14+/16 it cannot
+            // read /data even though it can still read Android/data, so a
+            // root-only path comes back null/empty. If the device is rooted,
+            // use root for that path instead of showing an empty folder.
+            if ((listed == null || listed.length == 0)
+                    && PathGuards.isRootOnlyPath(dirPath)
+                    && context != null
+                    && RootManager.getInstance(context).isRootAvailable()) {
+                File[] viaRoot = RootManager.getInstance(context).listRootFilesWithStat(dirPath);
+                if (viaRoot != null && viaRoot.length > 0) return viaRoot;
+            }
+            return listed;
         }
         if (context != null && RootManager.getInstance(context).isRootAvailable()) {
             return RootManager.getInstance(context).listRootFilesWithStat(dirPath);

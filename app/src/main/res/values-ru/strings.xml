@@ -2430,7 +2430,11 @@
     <string name="shell_mode_status">Режим работы: %s</string>
     <string name="show_restore_dialog">Показывать диалог восстановления для файлов .bak</string>
     <string name="show_restore_dialog_desc">Если включено, нажатие на резервную копию редактора предлагает её восстановить. Выключите, чтобы открывать копию как файл исходного типа. Резервные архивы MIUI и Android по-прежнему открываются нормально.</string>
-    <string name="sqlite_viewer">Просмотр SQLite</string>
+    <string name="sqlite_viewer">Редактор баз SQLite</string>
+    <string name="tool_sqlite_subtitle">Базы данных приложений в /data с прямым редактированием</string>
+    <string name="sqlite_saved_to_original">База сохранена в исходном расположении</string>
+    <string name="sqlite_save_failed">Не удалось сохранить базу: %1$s</string>
+    <string name="shizuku_root_data_unavailable">ADB-оболочка Shizuku не может читать этот системный каталог в этой версии Android. Запустите Shizuku с root или переключитесь в режим root.</string>
     <string name="system_settings">Системные</string>
     <string name="tab_files">Файлы</string>
     <string name="tab_shell">&gt;_ Shell</string>

@@ -2482,7 +2482,11 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="compare_folders_result">Comparison complete: %1$d Added (Green), %2$d Modified (Yellow), %3$d Identical</string>
 
     <!-- SQLite Database Viewer & Editor -->
-    <string name="sqlite_viewer">SQLite Viewer</string>
+    <string name="sqlite_viewer">SQLite database editor</string>
+    <string name="tool_sqlite_subtitle">Browse app databases in /data and edit them in place</string>
+    <string name="sqlite_saved_to_original">Database saved back to its original location</string>
+    <string name="sqlite_save_failed">Could not save database: %1$s</string>
+    <string name="shizuku_root_data_unavailable">The Shizuku ADB shell cannot read this system directory on this Android version. Start Shizuku with root, or switch to root mode, to browse it.</string>
 
     <!-- App Ops & Permission Inspector -->
     <string name="app_ops">App Ops</string>

@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 
 
@@ -18,6 +19,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -45,6 +48,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
@@ -55,7 +60,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
  * - Row and Cell click to inspect & edit values via SQL UPDATE
  * - Row deletion via SQL DELETE
  * - Custom SQL query console (SELECT / UPDATE / INSERT / DELETE)
- * - Safe root file staging and automatic writeback on edit
+ * - Safe root file staging and automatic writeback when the editor closes
  */
 public class SqliteViewerActivity extends BaseActivity {
 
@@ -81,6 +86,9 @@ public class SqliteViewerActivity extends BaseActivity {
     private int currentPage = 0;
     private static final int PAGE_SIZE = 100;
     private int totalRows = 0;
+
+    /** One write-back at a time; editing a large DB must not block the UI thread. */
+    private static final ExecutorService WRITE_BACK_EXECUTOR = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -576,15 +584,39 @@ public class SqliteViewerActivity extends BaseActivity {
     }
 
     private void markModifiedAndSync() {
+        // Write-back is deferred until onDestroy, after db.close(). Copying a
+        // staged database while SQLite still holds it open misses WAL-journal
+        // changes, and doing it after every cell edit raced with the writer.
         isModified = true;
-        // If staged from root / protected path, sync back to original location
-        if (!TextUtils.isEmpty(originalPath) && !originalPath.equals(dbPath)) {
+    }
+
+    /** Copies the edited staged file back to its privileged original path. */
+    private void writeBackOnClose() {
+        if (!isModified || TextUtils.isEmpty(originalPath) || originalPath.equals(dbPath)) return;
+        final String staged = dbPath;
+        final String target = originalPath;
+        WRITE_BACK_EXECUTOR.execute(() -> {
+            boolean ok = false;
+            String error = null;
             try {
-                PrivilegeManager.Files.uploadFile(this, new File(dbPath), originalPath);
+                // Staging.writeBack handles SAF documents and the Shizuku shell
+                // fallback; Files.uploadFile did neither and failed silently.
+                PrivilegeManager.Staging.writeBack(getApplicationContext(), new File(staged), target);
+                ok = true;
             } catch (Exception e) {
-                // Staged fallback
+                error = e.getMessage();
             }
-        }
+            final boolean saved = ok;
+            final String failure = error;
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (saved) {
+                    Toast.makeText(this, R.string.sqlite_saved_to_original, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, getString(R.string.sqlite_save_failed, failure),
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        });
     }
 
     private void copyToClipboard(String text, String msg) {
@@ -612,9 +644,10 @@ public class SqliteViewerActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         if (db != null && db.isOpen()) {
             db.close();
         }
+        writeBackOnClose();
+        super.onDestroy();
     }
 }

@@ -196,9 +196,12 @@ public final class ShizukuManager {
     private static File[] listWithShell(String dirPath) {
         try {
             String arg = shellArg(dirPath);
+            // Keep stderr: a shell that cannot read a root-only path reports the
+            // reason there. Discarding it used to turn "Permission denied" into
+            // an empty directory, which callers treated as a successful listing.
             ShizukuShell.Result r = ShizukuShell.exec(
-                    "test -d " + arg + " || exit 4; LC_ALL=C ls -laH -- " + arg + " 2>/dev/null", 30);
-            if (r == null || !r.success || r.stdout == null) return null;
+                    "test -d " + arg + " || exit 4; LC_ALL=C ls -laH -- " + arg, 30);
+            if (r == null || !r.success || r.exitCode != 0 || r.stdout == null) return null;
             List<File> files = new ArrayList<>();
             for (String line : r.stdout.split("\\r?\\n")) {
                 if (line.trim().isEmpty() || line.startsWith("total ")) continue;

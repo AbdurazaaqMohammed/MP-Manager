@@ -1829,7 +1829,12 @@ public class RootManager {
             if (portable != null && portable.length > 0) return remapParent(portable, dirPath);
             return primary != null ? remapParent(primary, dirPath) : portable;
         }
-        if (primary != null && primary.length >= 30) return remapParent(primary, dirPath);
+        // The real directory listing is authoritative no matter how small it is.
+        // A short /data/data on a test device, or a ROM that only exposes part of
+        // it, is still more truthful than the package-manager reconstruction
+        // below. The old >= 30 threshold threw away a valid listing and replaced
+        // it with only the handful of packages visible to this app.
+        if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
         File[] explicit = listAppDataDirsExplicit(actual);
         File[] merged = unionRootFiles(primary, explicit);
         if (merged != null && merged.length > 0) return remapParent(merged, dirPath);
@@ -2047,16 +2052,38 @@ public class RootManager {
         String base = dirPath.endsWith("/") && dirPath.length() > 1
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         List<String> pkgs = new ArrayList<>();
+        // Enumerate the filesystem, not PackageManager. getInstalledApplications()
+        // only sees packages visible to this app and for the current user, so on
+        // devices with restricted package visibility /data/data ended up showing
+        // just a few directories even though root could see every app dir. Names
+        // found here are also passed to stat, so stale app dirs survive.
         try {
-            List<ApplicationInfo> apps =
-                    context.getPackageManager().getInstalledApplications(0);
-            if (apps != null) {
-                for (ApplicationInfo app : apps) {
-                    if (app != null && PackageGuards.isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
+            ShellResult found = executeFs("find " + ShellQuote.escapeShellArg(base)
+                    + " -mindepth 1 -maxdepth 1 -print", 30);
+            if (found != null && found.isSuccess() && found.output() != null) {
+                for (String line : found.output().split("\\r?\\n")) {
+                    String full = line.trim();
+                    if (full.isEmpty()) continue;
+                    String name = full.substring(full.lastIndexOf('/') + 1);
+                    if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+                    pkgs.add(name);
                 }
             }
-        } catch (Exception e) {
-            return null;
+        } catch (Exception ignored) {
+        }
+        // Only if the shell cannot enumerate the directory at all, fall back to
+        // the installed package list (it is still better than nothing).
+        if (pkgs.isEmpty()) {
+            try {
+                List<ApplicationInfo> apps =
+                        context.getPackageManager().getInstalledApplications(0);
+                if (apps != null) {
+                    for (ApplicationInfo app : apps) {
+                        if (app != null && PackageGuards.isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
         }
         if (pkgs.isEmpty()) return null;
         List<File> out = new ArrayList<>();

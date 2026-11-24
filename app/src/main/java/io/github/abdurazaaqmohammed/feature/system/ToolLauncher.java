@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.JiaguDumpDialog;
+import io.github.abdurazaaqmohammed.feature.files.BookmarkShortcuts;
 import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.feature.freestyle.FreeStylePickerActivity;
 import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
@@ -77,13 +78,23 @@ public final class ToolLauncher {
             case "free_style" -> FreeStylePickerActivity.class;
             case "tools", "partition_dumper", "jiagu_dumper" -> ToolsHubActivity.class;
             case "recycle_bin", "ftp_server", "network_client", "layout", "color_picker" -> MainActivity.class;
+            // No standalone DB browser activity exists: open the file browser at
+            // /data/data, where tapping a database opens the editor automatically.
+            case "sqlite_editor" -> MainActivity.class;
             default -> null;
         };
         if (destination == null) return null;
         Intent intent = new Intent(context, destination);
         if (destination == MainActivity.class) {
-            intent.putExtra(EXTRA_MAIN_TOOL, id)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            if ("sqlite_editor".equals(id)) {
+                intent.setAction(BookmarkShortcuts.ACTION_OPEN)
+                        .putExtra(BookmarkShortcuts.EXTRA_PATH, "/data/data")
+                        .putExtra(BookmarkShortcuts.EXTRA_DIRECTORY, true)
+                        .putExtra("locatePath", "/data/data");
+            } else {
+                intent.putExtra(EXTRA_MAIN_TOOL, id);
+            }
         } else if (destination == ToolsHubActivity.class && !"tools".equals(id)) {
             intent.putExtra(EXTRA_HUB_TOOL, id);
         } else if (destination == LogcatActivity.class || destination == FridaConsoleActivity.class) {

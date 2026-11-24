@@ -47,6 +47,8 @@ public final class ToolRegistry {
                     R.drawable.terminal_24px, R.string.cat_network, null, false, false),
             new Definition("mcp_server", R.string.mcp_server, R.string.mcp_subtitle,
                     R.drawable.code_24px, R.string.cat_network, "plugins", true, false),
+            new Definition("sqlite_editor", R.string.sqlite_viewer, R.string.tool_sqlite_subtitle,
+                    R.drawable.ic_disk_drive_24px, R.string.cat_storage, "tools", false, false),
             new Definition("partition_dumper", R.string.tool_partition_dumper, R.string.tool_partition_dumper_subtitle,
                     R.drawable.ic_disk_drive_24px, R.string.cat_device, "tools", false, false),
             new Definition("app_ops", R.string.app_ops, R.string.app_ops_subtitle,

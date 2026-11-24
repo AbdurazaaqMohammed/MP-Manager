@@ -138,6 +138,8 @@ public class FileIconLoader {
     private final boolean showPerms;
     /** always: recursive sizes everywhere; archive: zip metadata only; never: no sizes. */
     private final String folderSizeMode;
+    /** Backend readiness snapshotted once per listing; a binder ping per row stuttered scroll. */
+    private final boolean elevatedStatsAvailable;
     /** Per-listing memo of [isDir, length, mtime] so rebinds do not re-stat. */
     private final Map<String, long[]> metaMemo = new ConcurrentHashMap<>();
     /**
@@ -199,6 +201,11 @@ public class FileIconLoader {
         } catch (Exception ignored) {
         }
         this.elevatedFileOps = elevated;
+        // Ready checks are binder IPC on Shizuku (pingBinder + checkSelfPermission).
+        // One loader serves one listing, so decide once rather than on every bind.
+        this.elevatedStatsAvailable = elevated
+                || PrivilegeManager.Root.isRootAvailable(context)
+                || PrivilegeManager.Shizuku.ready();
         ensureCachedIcons(context, context.theme);
     }
 
@@ -474,9 +481,7 @@ public class FileIconLoader {
     }
 
     private boolean canElevateStats() {
-        return elevatedFileOps
-                || (context != null && PrivilegeManager.Root.isRootAvailable(context))
-                || PrivilegeManager.Shizuku.ready();
+        return elevatedStatsAvailable;
     }
 
     /**

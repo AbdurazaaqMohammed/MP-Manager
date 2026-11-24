@@ -146,7 +146,11 @@ public class SwipeTouchListener implements View.OnTouchListener {
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        context.setCurrentPane(pane);
+        // Only move the highlight here. setCurrentPane() re-counts the folder
+        // and can trigger a synchronous listFiles() for shell-only paths; doing
+        // that on every ACTION_DOWN delayed the tap ripple in Shizuku mode.
+        // The gesture callbacks below select the full pane on an actual tap.
+        context.setSelectedPane(pane);
         gestureDetector.onTouchEvent(event);
 
         switch (event.getActionMasked()) {

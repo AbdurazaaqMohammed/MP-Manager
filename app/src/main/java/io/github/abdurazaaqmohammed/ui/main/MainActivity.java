@@ -2154,10 +2154,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         return null;
                     }
                 }
+                final boolean shizukuOnlyRootPath = rootListingPath
+                        && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.SHIZUKU;
                 runOnUiThread(() -> {
                     try {
-                        if (isNetworkPaneLoadCurrent(pane1, generation))
-                            Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
+                        if (isNetworkPaneLoadCurrent(pane1, generation)) {
+                            Extensions.showMessage(this, shizukuOnlyRootPath
+                                    ? getString(R.string.shizuku_root_data_unavailable)
+                                    : getString(R.string.open_folder_failed, folder.getName()));
+                        }
                     } catch (Exception ignored) {
                     }
                 });
@@ -3478,7 +3483,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 File curr = pane == 1 ? pane1Folder : pane2Folder;
                 // ShizukuFile.listFiles() can't list; reuse the entries the adapter already shows.
                 File[] shown = adapter.getShownFiles();
-                setCurrentFolder(curr, shown != null ? shown : curr.listFiles());
+                if (shown == null) shown = paneFiles(pane == 1);
+                // Never list here: this runs on the UI thread on every tap and
+                // ShizukuFile.listFiles() spawns a shell process. The cached
+                // pane array is the same data the adapter is already showing.
+                setCurrentFolder(curr, shown);
             }
         } else if (a instanceof RemoteFilesArrayAdapter remote) {
             setCurrentFolder(remote.folder, remote.files);
