@@ -1847,9 +1847,25 @@ public class ClassTree {
         @Override @Nonnull public String getName() { return delegate.getName(); }
         @Override @Nonnull public List<? extends MethodParameter> getParameters() {
             if (options.removeDebugParam || options.removeAllDebug) {
-                List<MethodParameter> params = new ArrayList<>();
-                for (MethodParameter p : delegate.getParameters()) {
-                    params.add(new ImmutableMethodParameter(p.getType(), p.getAnnotations(), null));
+                List<? extends MethodParameter> orig = delegate.getParameters();
+                if (orig == null || orig.isEmpty()) return Collections.emptyList();
+                boolean hasName = false;
+                for (MethodParameter p : orig) {
+                    if (p.getName() != null) {
+                        hasName = true;
+                        break;
+                    }
+                }
+                // Nothing to strip: keep the originals so even exotic parameter
+                // implementations (and their annotations) survive untouched.
+                if (!hasName) return orig;
+                List<MethodParameter> params = new ArrayList<>(orig.size());
+                for (MethodParameter p : orig) {
+                    // IMPORTANT: keep p.getAnnotations(). .param blocks can contain
+                    // runtime annotations (e.g. Retrofit @Query) in addition to the
+                    // debug name; passing null here drops them and breaks reflection.
+                    params.add(p.getName() == null ? p
+                            : new ImmutableMethodParameter(p.getType(), p.getAnnotations(), null));
                 }
                 return params;
             }

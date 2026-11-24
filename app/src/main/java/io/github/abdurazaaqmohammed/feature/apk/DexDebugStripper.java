@@ -117,6 +117,9 @@ public final class DexDebugStripper {
             }
             List<MethodParameter> params = new ArrayList<>(orig.size());
             for (MethodParameter p : orig) {
+                // Keep the annotations: a .param block may carry runtime annotations
+                // (e.g. Retrofit @Query) nested alongside the debug name. Dropping
+                // them here erases them from the rewritten DEX.
                 params.add(p.getName() == null ? p : new ImmutableMethodParameter(p.getType(), p.getAnnotations(), null));
             }
             return params;
