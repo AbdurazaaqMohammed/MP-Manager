@@ -32,7 +32,8 @@
                     android:padding="10dp"
                     android:scaleType="centerInside"
                     android:contentDescription="@string/menu"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="?attr/colorOnSurface"
                     android:src="@drawable/baseline_menu_24" />
 
                 <LinearLayout
@@ -58,7 +59,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:layout_marginEnd="8dp"/>
                 </LinearLayout>
 
@@ -70,7 +71,8 @@
                     android:scaleType="centerInside"
                     android:src="@drawable/baseline_more_vert_24"
                     android:contentDescription="@string/more"
-                    android:background="?attr/selectableItemBackground" />
+                    app:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
             </LinearLayout>
 
             <LinearLayout
@@ -93,6 +95,13 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
                 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+                <View
+                    android:id="@+id/panesDivider"
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:alpha="0.45"
+                    android:background="?attr/colorOutlineVariant" />
 
                 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
                     android:id="@+id/swipeRefreshPane2"
@@ -156,11 +165,12 @@
                     android:id="@+id/bottomBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="48dp"
                     android:orientation="horizontal"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:background="?attr/colorSurface"
                     android:elevation="@dimen/mp_elevation"
                     android:gravity="center"
@@ -168,10 +178,12 @@
 
                     <ImageView
                         android:id="@+id/backButton"
-                        android:background="?attr/selectableItemBackground"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="44dp"
                         android:layout_weight="1"
+                        android:scaleType="centerInside"
+                        app:tint="?attr/colorOnSurface"
                         android:src="@drawable/chevron_left_24px"
                         android:contentDescription="@string/back"
                         android:padding="8dp"
@@ -179,10 +191,12 @@
 
                     <ImageView
                         android:id="@+id/forwardButton"
-                        android:background="?attr/selectableItemBackground"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="44dp"
                         android:layout_weight="1"
+                        android:scaleType="centerInside"
+                        app:tint="?attr/colorOnSurface"
                         android:src="@drawable/chevron_right_24px"
                         android:contentDescription="@string/forward"
                         android:padding="8dp"
@@ -190,10 +204,12 @@
 
                     <ImageView
                         android:id="@+id/addButton"
-                        android:background="?attr/selectableItemBackground"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="44dp"
                         android:layout_weight="1"
+                        android:scaleType="centerInside"
+                        app:tint="?attr/colorOnSurface"
                         android:src="@drawable/add_24px"
                         android:contentDescription="@string/newFileOrFolder"
                         android:padding="8dp"
@@ -201,10 +217,12 @@
 
                     <ImageView
                         android:id="@+id/syncPaneButton"
-                        android:background="?attr/selectableItemBackground"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="44dp"
                         android:layout_weight="1"
+                        android:scaleType="centerInside"
+                        app:tint="?attr/colorOnSurface"
                         android:src="@drawable/baseline_swap_horiz_24"
                         android:contentDescription="@string/sync"
                         android:padding="8dp"
@@ -212,10 +230,12 @@
 
                     <ImageView
                         android:id="@+id/upButton"
-                        android:background="?attr/selectableItemBackground"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="44dp"
                         android:layout_weight="1"
+                        android:scaleType="centerInside"
+                        app:tint="?attr/colorOnSurface"
                         android:src="@drawable/arrow_drop_up_24px"
                         android:contentDescription="@string/parent_dir"
                         android:padding="8dp"
