@@ -32,7 +32,6 @@ package com.android.tools.smali.dexlib2.writer.util;
 
 import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.immutable.value.ImmutableEncodedValueFactory;
-import com.android.tools.smali.dexlib2.util.EncodedValueUtils;
 import com.android.tools.smali.util.AbstractForwardSequentialList;
 import com.android.tools.smali.util.CollectionUtils;
 import com.google.common.base.Function;
@@ -78,10 +77,7 @@ public class StaticInitializerUtil {
         return null;
     }
 
-    private static final Predicate<Field> HAS_INITIALIZER = input -> {
-        EncodedValue encodedValue = input.getInitialValue();
-        return encodedValue != null && !EncodedValueUtils.isDefaultValue(encodedValue);
-    };
+    private static final Predicate<Field> HAS_INITIALIZER = input -> input.getInitialValue() != null;
 
     private static final Function<Field, EncodedValue> GET_INITIAL_VALUE = input -> {
         EncodedValue initialValue = input.getInitialValue();
