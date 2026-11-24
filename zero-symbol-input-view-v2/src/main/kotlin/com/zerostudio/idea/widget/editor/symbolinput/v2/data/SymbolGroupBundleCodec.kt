@@ -258,10 +258,11 @@ object SymbolGroupBundleCodec {
         val first = itemsArray[0]
         if (!first.isJsonObject) return null
         val firstObj = first.asJsonObject
-        if (firstObj.has("n") || firstObj.has("d") || (firstObj.has("t") && firstObj.has("s"))) {
+        if (firstObj.has("n") || (firstObj.has("d") && !firstObj.has("b")) || (firstObj.has("t") && firstObj.has("s"))) {
             return null
         }
-        val isMtCandidate = firstObj.has("name") || firstObj.has("title") || firstObj.has("label") ||
+        val isMtCandidate = (firstObj.has("b") && (firstObj.has("a") || firstObj.has("f") || firstObj.has("e"))) ||
+            firstObj.has("name") || firstObj.has("title") || firstObj.has("label") ||
             firstObj.has("regex") || firstObj.has("search") || firstObj.has("find") ||
             firstObj.has("shortPress") || firstObj.has("action") || firstObj.has("type")
 
@@ -274,6 +275,7 @@ object SymbolGroupBundleCodec {
             val item = elem.asJsonObject
 
             val name = when {
+                item.has("b") && item.get("b").isJsonPrimitive -> item.get("b").asString
                 item.has("name") && item.get("name").isJsonPrimitive -> item.get("name").asString
                 item.has("title") && item.get("title").isJsonPrimitive -> item.get("title").asString
                 item.has("label") && item.get("label").isJsonPrimitive -> item.get("label").asString
@@ -282,7 +284,9 @@ object SymbolGroupBundleCodec {
             }
 
             val action = parseMtAction(item) ?: continue
-            val longAction = if (item.has("longPress") && item.get("longPress").isJsonObject) {
+            val longAction = if (item.has("e") && item.get("e").isJsonPrimitive && !item.get("e").asString.isNullOrBlank() && item.has("f")) {
+                SymbolAction.InsertText(item.get("e").asString)
+            } else if (item.has("longPress") && item.get("longPress").isJsonObject) {
                 parseMtAction(item.getAsJsonObject("longPress"))
             } else if (item.has("longClick") && item.get("longClick").isJsonObject) {
                 parseMtAction(item.getAsJsonObject("longClick"))
@@ -304,6 +308,36 @@ object SymbolGroupBundleCodec {
     }
 
     private fun parseMtAction(item: JsonObject): SymbolAction? {
+        if (item.has("f") && item.get("f").isJsonObject) {
+            val f = item.getAsJsonObject("f")
+            val search = if (f.has("a") && f.get("a").isJsonPrimitive) f.get("a").asString else ""
+            val replace = if (f.has("b") && f.get("b").isJsonPrimitive) f.get("b").asString else ""
+            val matchCase = if (f.has("c") && f.get("c").isJsonPrimitive) f.get("c").asBoolean else false
+            val isRegex = if (f.has("d") && f.get("d").isJsonPrimitive) {
+                if (f.get("d").asJsonPrimitive.isNumber) f.get("d").asInt == 1 else f.get("d").asBoolean
+            } else true
+            val replaceAll = if (f.has("e") && f.get("e").isJsonPrimitive) {
+                if (f.get("e").asJsonPrimitive.isNumber) f.get("e").asInt == 1 else f.get("e").asBoolean
+            } else true
+
+            val options = StringBuilder().apply {
+                if (isRegex) append('r')
+                if (matchCase) append('c')
+                if (replaceAll) append('a')
+            }.toString()
+
+            val payload = MpManagerFindReplaceEnvelope.encodePayload(search, replace, options)
+            return SymbolAction.Extension(MpManagerFindReplaceEnvelope.EXTENSION_ID, payload)
+        }
+
+        if (item.has("a") && item.get("a").isJsonPrimitive && item.get("a").asInt == 22) {
+            return SymbolAction.OpenManager
+        }
+
+        if (item.has("e") && item.get("e").isJsonPrimitive && !item.get("e").asString.isNullOrBlank()) {
+            return SymbolAction.InsertText(item.get("e").asString)
+        }
+
         if (item.has("shortPress") && item.get("shortPress").isJsonObject) {
             val nested = parseMtAction(item.getAsJsonObject("shortPress"))
             if (nested != null) return nested
