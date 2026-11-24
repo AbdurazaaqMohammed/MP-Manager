@@ -38,6 +38,11 @@
         <item name="android:navigationBarColor">@color/mp_nav_bar_legacy</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="android:windowContentTransitions">true</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.MPManager.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MPManager.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MPManager.Large</item>
     </style>
     <style name="Theme.MyApp.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
         <item name="android:statusBarColor">?attr/colorSurface</item>
@@ -50,7 +55,7 @@
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MPManager.Medium</item>
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MPManager.Large</item>
     </style>
-    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.MaterialComponents">
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.Material3">
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="tint">?attr/colorOnSurface</item>
     </style>
@@ -58,10 +63,11 @@
         <item name="android:windowEnterAnimation">@anim/anim_text_action_popup_enter</item>
         <item name="android:windowExitAnimation">@anim/anim_text_action_popup_exit</item>
     </style>
-    <style name="TabTextAppearance" parent="TextAppearance.Design.Tab">
+    <style name="TabTextAppearance" parent="TextAppearance.Material3.TitleSmall">
         <item name="android:textStyle">normal</item>
+        <item name="textAllCaps">false</item>
     </style>
-    <style name="ToolbarSmallSubtitle" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+    <style name="ToolbarSmallSubtitle" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textSize">10sp</item>
         <item name="textSize">10sp</item>
     </style>

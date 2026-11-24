@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.reandroid.apk.APKLogger;
@@ -325,7 +326,8 @@ public final class PrivacyAuditDialog {
     private static View createDivider(MainActivity context) {
         View v = new View(context);
         v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(context, 1)));
-        v.setBackgroundColor(Color.parseColor("#33888888"));
+        v.setBackgroundColor(MaterialColors.getColor(
+                context, com.google.android.material.R.attr.colorOutlineVariant, 0x33888888));
         int m = Extensions.dp2px(context, 8);
         ((LinearLayout.LayoutParams) v.getLayoutParams()).setMargins(0, m, 0, m);
         return v;
