@@ -46,9 +46,6 @@ While some people use arguments like "AI only helps unskilled people" as insults
 
 So far I didn't spend any money on AI in development of MP Manager. You can use AI to directly contribute to the development of MP Manager yourself.
 Some free AI services have referral program that can give me more free usage, you can help me by sign up for these programs with my referral code/link:
-  * [AgentRouter](https://agentrouter.org/register?aff=STIB) gives 175$ credit for GPT6.1 Sol
-    * Just login with GitHub, you can use it in OpenCode or other programs
-      * You can use OpenCode in termux https://github.com/bd-loser/opencode-bionic or https://github.com/Hope2333/opencode-termux
   * [WorkBuddy](https://workbuddy.ai/invite?code=KGGFX6GZ) gives free monthly credits and limited free promotions with models like DeepSeek 4.1 Flash, GLM5.3 Flash, MiniMax M3.1 Flash and more available.
     * You have to download the program and send at least one message (no charge) for me to get credits.
   * [ZCode](https://zcode.z.ai/invite/CW3JK87H) offers GLM 5.3/Flash with regular free promotions like 500 million free tokens on weekends.
