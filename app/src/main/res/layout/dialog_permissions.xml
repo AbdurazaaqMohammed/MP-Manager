@@ -40,10 +40,9 @@
             android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <ListView
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/permList"
         android:layout_width="match_parent"
         android:layout_height="320dp"
-        android:layout_marginTop="8dp"
-        android:choiceMode="multipleChoice" />
+        android:layout_marginTop="8dp" />
 </LinearLayout>

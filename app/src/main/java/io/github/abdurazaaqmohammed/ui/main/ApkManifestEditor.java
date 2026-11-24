@@ -1414,11 +1414,35 @@ public class ApkManifestEditor {
                 autosign.setOnCheckedChangeListener((buttonView, isChecked) ->
                         settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                 permDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-                ListView permList = permDialog.findViewById(R.id.permList);
-                permList.setAdapter(new ArrayAdapter<>(context,
-                        android.R.layout.simple_list_item_multiple_choice, labels));
-                permList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-                for (int i = 0; i < keep.length; i++) permList.setItemChecked(i, keep[i]);
+                androidx.recyclerview.widget.RecyclerView permList = permDialog.findViewById(R.id.permList);
+                permList.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(context));
+                boolean[] checkedState = java.util.Arrays.copyOf(keep, keep.length);
+                permList.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+                    @NonNull
+                    @Override
+                    public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                        View v = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_multiple_choice, parent, false);
+                        return new androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {};
+                    }
+
+                    @Override
+                    public void onBindViewHolder(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder holder, int position) {
+                        android.widget.CheckedTextView ctv = (android.widget.CheckedTextView) holder.itemView;
+                        ctv.setText(labels[position]);
+                        ctv.setChecked(checkedState[position]);
+                        ctv.setOnClickListener(v -> {
+                            int pos = holder.getBindingAdapterPosition();
+                            if (pos == androidx.recyclerview.widget.RecyclerView.NO_POSITION) return;
+                            checkedState[pos] = !checkedState[pos];
+                            ctv.setChecked(checkedState[pos]);
+                        });
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return labels.length;
+                    }
+                });
 
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
@@ -1429,7 +1453,7 @@ public class ApkManifestEditor {
                             List<String> toDisable = new ArrayList<>();
                             List<String> toEnable = new ArrayList<>();
                             for (int i = 0; i < perms.length; i++) {
-                                boolean wantEnabled = permList.isItemChecked(i);
+                                boolean wantEnabled = checkedState[i];
                                 boolean isDisabled = perms[i] != null
                                         && perms[i].startsWith(DISABLED_PREFIX);
                                 String base = baseNames[i];
@@ -1445,7 +1469,7 @@ public class ApkManifestEditor {
                         .setNeutralButton(rss.getString(R.string.remove), (d, which) -> {
                             List<String> toRemove = new ArrayList<>();
                             for (int i = 0; i < perms.length; i++) {
-                                if (permList.isItemChecked(i)) continue;
+                                if (checkedState[i]) continue;
                                 String base = baseNames[i];
                                 if (base == null || base.isEmpty()) continue;
                                 toRemove.add(base);
