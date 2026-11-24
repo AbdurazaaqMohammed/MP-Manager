@@ -1080,16 +1080,17 @@ public class FileOpener {
     }
 
 
-    private void openElfFileDefault(File file, String fileName, File originalFile) {
-        boolean isElf = false;
-        boolean isArm64 = false;
+    private boolean isValidElfFile(File file) {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
-             ElfParser elf = new ElfParser(raf)) {
-            isElf = true;
-            isArm64 = (elf.is64 && elf.machine == 0xB7);
-        } catch (Exception ignored) {}
+             ElfParser ignored = new ElfParser(raf)) {
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
 
-        if (isArm64 || isElf) {
+    private void openElfFileDefault(File file, String fileName, File originalFile) {
+        if (isValidElfFile(file)) {
             openArm64Disassembler(file, originalFile);
         } else {
             openHexEditorWithOriginal(file, originalFile);
@@ -1100,16 +1101,9 @@ public class FileOpener {
     private static final int MAX_ELF_HOOK_OPTIONS = 16;
 
     private void showElfOptionsDialog(File file, String fileName, File originalFile) {
-        boolean isElf = false;
-        boolean isArm64 = false;
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r");
-             ElfParser elf = new ElfParser(raf)) {
-            isElf = true;
-            isArm64 = (elf.is64 && elf.machine == 0xB7);
-        } catch (Exception ignored) {}
-
+        final boolean hasDisassembler = isValidElfFile(file);
         List<String> optionsList = new ArrayList<>();
-        if (isArm64 || isElf) {
+        if (hasDisassembler) {
             optionsList.add("ARM64 Disassembler");
         }
         optionsList.add(context.getString(R.string.hex_editor));
@@ -1135,7 +1129,6 @@ public class FileOpener {
         }
 
         String[] options = optionsList.toArray(new String[0]);
-        final boolean hasArm64 = isArm64;
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle("ELF: " + fileName)
@@ -1148,7 +1141,7 @@ public class FileOpener {
                         return;
                     }
                     int action = which;
-                    if (hasArm64) {
+                    if (hasDisassembler) {
                         if (action == 0) {
                             openArm64Disassembler(file, originalFile);
                             return;
