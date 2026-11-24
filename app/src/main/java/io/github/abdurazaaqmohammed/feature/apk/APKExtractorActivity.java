@@ -40,6 +40,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
@@ -51,6 +52,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
@@ -61,8 +63,12 @@ import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
-import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -677,21 +683,21 @@ public class APKExtractorActivity extends BaseActivity {
             }
 
             View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_extract_options, null);
-            ListView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
-            gridView.setAdapter(new ExtractOptionAdapter(this,
-                    displayList.toArray(new String[0]),
-                    iconList.stream().mapToInt(Integer::intValue).toArray()));
+            RecyclerView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
+            gridView.setLayoutManager(new LinearLayoutManager(this));
 
             AlertDialog alertDialog = new MaterialAlertDialogBuilder(this)
                     .setView(dialogView)
                     .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> cur.clearSelection())
                     .create();
+            gridView.setAdapter(new ExtractOptionAdapter(this,
+                    displayList.toArray(new String[0]),
+                    iconList.stream().mapToInt(Integer::intValue).toArray(),
+                    which -> {
+                        alertDialog.dismiss();
+                        performAction(idList.get(which), cur);
+                    }));
             styleAlertDialog(alertDialog);
-
-            gridView.setOnItemClickListener((parent2, view2, which, id2) -> {
-                alertDialog.dismiss();
-                performAction(idList.get(which), cur);
-            });
         });
 
         TabLayout tabLayout = findViewById(R.id.tabLayout);
@@ -1008,18 +1014,42 @@ public class APKExtractorActivity extends BaseActivity {
 
                                 AlertDialog dialog = builder.create();
 
-                                ArrayList<String> filtered = new ArrayList<>(labelsList);
-                                ArrayAdapter<String> finalAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, filtered);
+                                RecyclerView lv = dialogView.findViewById(R.id.listView);
+                                lv.setLayoutManager(new LinearLayoutManager(this));
+                                lv.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+                                ListAdapter<String, RecyclerView.ViewHolder> finalAdapter = new ListAdapter<>(
+                                        new DiffUtil.ItemCallback<String>() {
+                                            @Override
+                                            public boolean areItemsTheSame(@NonNull String a, @NonNull String b) {
+                                                return a.equals(b);
+                                            }
 
-                                ListView lv = dialogView.findViewById(R.id.listView);
+                                            @Override
+                                            public boolean areContentsTheSame(@NonNull String a, @NonNull String b) {
+                                                return a.equals(b);
+                                            }
+                                        }) {
+                                    @NonNull
+                                    @Override
+                                    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                                        View v = getLayoutInflater().inflate(android.R.layout.simple_list_item_1, parent, false);
+                                        return new RecyclerView.ViewHolder(v) {};
+                                    }
+
+                                    @Override
+                                    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                                        String selected = getItem(position);
+                                        TextView tv = holder.itemView.findViewById(android.R.id.text1);
+                                        tv.setText(selected);
+                                        holder.itemView.setOnClickListener(v -> {
+                                            dialog.dismiss();
+                                            Intent intent = new Intent().setComponent(new ComponentName(packageName, selected)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            startActivity(intent);
+                                        });
+                                    }
+                                };
                                 lv.setAdapter(finalAdapter);
-
-                                lv.setOnItemClickListener((parent1, view1, position1, id1) -> {
-                                    dialog.dismiss();
-                                    String selected = filtered.get(position1);
-                                    Intent intent = new Intent().setComponent(new ComponentName(packageName, selected)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    startActivity(intent);
-                                });
+                                finalAdapter.submitList(new ArrayList<>(labelsList));
 
                                 searchEt.addTextChangedListener(new TextWatcher() {
                                     @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -1027,10 +1057,10 @@ public class APKExtractorActivity extends BaseActivity {
 
                                     @Override public void afterTextChanged(Editable s) {
                                         String q = s.toString().toLowerCase().trim();
-                                        filtered.clear();
+                                        ArrayList<String> filtered = new ArrayList<>();
                                         if (q.isEmpty()) filtered.addAll(labelsList);
                                         else for (String label : labelsList) if (label.toLowerCase().contains(q)) filtered.add(label);
-                                        finalAdapter.notifyDataSetChanged();
+                                        finalAdapter.submitList(filtered);
                                     }
                                 });
 

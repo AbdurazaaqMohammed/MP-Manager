@@ -4,51 +4,63 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 
-public class ExtractOptionAdapter extends BaseAdapter {
+public class ExtractOptionAdapter extends RecyclerView.Adapter<ExtractOptionAdapter.OptionHolder> {
 
-    private final Context context;
+    public interface OnOptionClickListener {
+        void onOptionClick(int position);
+    }
+
+    private final LayoutInflater inflater;
     private final String[] options;
     private final int[] icons;
+    private final OnOptionClickListener listener;
 
-    public ExtractOptionAdapter(Context context, String[] options, int[] icons) {
-        this.context = context;
+    public ExtractOptionAdapter(Context context, String[] options, int[] icons, OnOptionClickListener listener) {
+        this.inflater = LayoutInflater.from(context);
         this.options = options;
         this.icons = icons;
+        this.listener = listener;
+    }
+
+    @NonNull
+    @Override
+    public OptionHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        return new OptionHolder(inflater.inflate(R.layout.item_dropdown_option, parent, false));
     }
 
     @Override
-    public int getCount() {
+    public void onBindViewHolder(@NonNull OptionHolder holder, int position) {
+        holder.icon.setImageResource(icons[position]);
+        holder.text.setText(options[position]);
+        holder.itemView.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION && listener != null) {
+                listener.onOptionClick(pos);
+            }
+        });
+    }
+
+    @Override
+    public int getItemCount() {
         return options.length;
     }
 
-    @Override
-    public Object getItem(int position) {
-        return options[position];
-    }
+    static final class OptionHolder extends RecyclerView.ViewHolder {
+        final ImageView icon;
+        final TextView text;
 
-    @Override
-    public long getItemId(int position) {
-        return position;
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(R.layout.item_dropdown_option, parent, false);
+        OptionHolder(@NonNull View itemView) {
+            super(itemView);
+            icon = itemView.findViewById(R.id.optionIcon);
+            text = itemView.findViewById(R.id.optionText);
         }
-
-        ImageView icon = convertView.findViewById(R.id.optionIcon);
-        TextView text = convertView.findViewById(R.id.optionText);
-
-        icon.setImageResource(icons[position]);
-        text.setText(options[position]);
-
-        return convertView;
     }
 }

@@ -12,13 +12,16 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -28,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import android.content.Context;
@@ -64,9 +68,8 @@ public class DocumentsBrowserActivity extends BaseActivity {
     };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final List<Row> rows = new ArrayList<>();
 
-    private ListView list;
+    private RecyclerView list;
     private TextView emptyView;
     private ProgressBar progress;
     private RowAdapter adapter;
@@ -79,35 +82,14 @@ public class DocumentsBrowserActivity extends BaseActivity {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
         list = findViewById(R.id.docs_list);
+        list.setLayoutManager(new LinearLayoutManager(this));
+        list.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
         emptyView = findViewById(R.id.docs_empty);
         progress = findViewById(R.id.docs_progress);
         MaterialButton add = findViewById(R.id.docs_add);
         add.setOnClickListener(v -> pickTree());
         adapter = new RowAdapter();
         list.setAdapter(adapter);
-        list.setOnItemClickListener((parent, view, position, id) -> openInPane(rows.get(position).treeUri));
-        list.setOnItemLongClickListener((parent, view, position, id) -> {
-            Row row = rows.get(position);
-            String pin = SidebarPins.SAF_PREFIX + row.treeUri;
-            boolean pinnedNow = SidebarPins.isPinned(this, pin);
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle(row.title)
-                    .setItems(new String[]{
-                            getString(pinnedNow ? R.string.unpin_from_sidebar : R.string.pin_to_sidebar),
-                            getString(R.string.docs_forget)},
-                            (d, which) -> {
-                                if (which == 0) {
-                                    if (pinnedNow) SidebarPins.remove(this, pin);
-                                    else SidebarPins.add(this, pin);
-                                    refreshMainSidebar();
-                                } else {
-                                    forgetTree(row.treeUri);
-                                }
-                            })
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
-            return true;
-        });
         SafFs.init(this);
         loadLocations();
     }
@@ -146,10 +128,8 @@ public class DocumentsBrowserActivity extends BaseActivity {
             }
             handler.post(() -> {
                 progress.setVisibility(View.GONE);
-                rows.clear();
-                rows.addAll(out);
-                adapter.notifyDataSetChanged();
-                boolean empty = rows.isEmpty();
+                adapter.submitList(out);
+                boolean empty = out.isEmpty();
                 emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
                 list.setVisibility(empty ? View.GONE : View.VISIBLE);
             });
@@ -271,36 +251,72 @@ public class DocumentsBrowserActivity extends BaseActivity {
         String subtitle;
     }
 
-    private final class RowAdapter extends BaseAdapter {
+    private static final DiffUtil.ItemCallback<Row> ROW_DIFF = new DiffUtil.ItemCallback<>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Row oldItem, @NonNull Row newItem) {
+            return Objects.equals(oldItem.treeUri, newItem.treeUri);
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Row oldItem, @NonNull Row newItem) {
+            return Objects.equals(oldItem.title, newItem.title)
+                    && Objects.equals(oldItem.subtitle, newItem.subtitle);
+        }
+    };
+
+    private final class RowAdapter extends ListAdapter<Row, RowAdapter.RowHolder> {
         private final LayoutInflater inflater = LayoutInflater.from(DocumentsBrowserActivity.this);
 
-        @Override
-        public int getCount() {
-            return rows.size();
-        }
-
-        @Override
-        public Row getItem(int position) {
-            return rows.get(position);
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
+        RowAdapter() {
+            super(ROW_DIFF);
         }
 
         @NonNull
         @Override
-        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            View view = convertView != null ? convertView
-                    : inflater.inflate(android.R.layout.simple_list_item_2, parent, false);
+        public RowHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new RowHolder(inflater.inflate(android.R.layout.simple_list_item_2, parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull RowHolder holder, int position) {
             Row row = getItem(position);
-            ((TextView) view.findViewById(android.R.id.text1)).setText(row.title);
-            TextView subtitle = view.findViewById(android.R.id.text2);
+            holder.title.setText(row.title);
             boolean hasSubtitle = !TextUtils.isEmpty(row.subtitle);
-            subtitle.setVisibility(hasSubtitle ? View.VISIBLE : View.GONE);
-            subtitle.setText(row.subtitle);
-            return view;
+            holder.subtitle.setVisibility(hasSubtitle ? View.VISIBLE : View.GONE);
+            holder.subtitle.setText(row.subtitle);
+            holder.itemView.setOnClickListener(v -> openInPane(row.treeUri));
+            holder.itemView.setOnLongClickListener(v -> {
+                String pin = SidebarPins.SAF_PREFIX + row.treeUri;
+                boolean pinnedNow = SidebarPins.isPinned(DocumentsBrowserActivity.this, pin);
+                new MaterialAlertDialogBuilder(DocumentsBrowserActivity.this)
+                        .setTitle(row.title)
+                        .setItems(new String[]{
+                                getString(pinnedNow ? R.string.unpin_from_sidebar : R.string.pin_to_sidebar),
+                                getString(R.string.docs_forget)},
+                                (d, which) -> {
+                                    if (which == 0) {
+                                        if (pinnedNow) SidebarPins.remove(DocumentsBrowserActivity.this, pin);
+                                        else SidebarPins.add(DocumentsBrowserActivity.this, pin);
+                                        refreshMainSidebar();
+                                    } else {
+                                        forgetTree(row.treeUri);
+                                    }
+                                })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return true;
+            });
+        }
+
+        final class RowHolder extends RecyclerView.ViewHolder {
+            final TextView title;
+            final TextView subtitle;
+
+            RowHolder(@NonNull View itemView) {
+                super(itemView);
+                title = itemView.findViewById(android.R.id.text1);
+                subtitle = itemView.findViewById(android.R.id.text2);
+            }
         }
     }
 }
