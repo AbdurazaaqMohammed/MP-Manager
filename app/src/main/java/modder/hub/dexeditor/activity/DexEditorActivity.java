@@ -936,10 +936,10 @@ public class DexEditorActivity extends BaseActivity {
             isJavaMode = !isJavaMode;
             if (isJavaMode) {
                 setTitle(getString(R.string.dex_editor_plus) + " [" + getString(R.string.java_mode) + "]");
-                Toast.makeText(this, R.string.java_mode, Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, R.string.java_mode);
             } else {
                 setTitle(R.string.dex_editor_plus);
-                Toast.makeText(this, R.string.smali_mode, Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, R.string.smali_mode);
             }
             invalidateOptionsMenu();
             return true;

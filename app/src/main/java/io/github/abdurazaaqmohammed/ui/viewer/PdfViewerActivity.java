@@ -407,7 +407,7 @@ public class PdfViewerActivity extends BaseActivity {
             intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
             startActivity(Intent.createChooser(intent, getString(R.string.share)));
         } catch (Exception e) {
-            Toast.makeText(this, R.string.cannot_open_item, Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.cannot_open_item);
         }
     }
 
@@ -421,7 +421,7 @@ public class PdfViewerActivity extends BaseActivity {
             intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
             startActivity(Intent.createChooser(intent, getString(R.string.open_with)));
         } catch (Exception e) {
-            Toast.makeText(this, R.string.cannot_open_item, Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.cannot_open_item);
         }
     }
 

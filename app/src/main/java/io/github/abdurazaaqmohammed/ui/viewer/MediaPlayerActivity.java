@@ -469,7 +469,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         aspectMode = (aspectMode + 1) % 4;
         prefs.edit().putInt("video_aspect_mode", aspectMode).apply();
         fitVideo();
-        Toast.makeText(this, getString(R.string.aspect_mode, aspectName()), Toast.LENGTH_SHORT).show();
+        io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, getString(R.string.aspect_mode, aspectName()));
         showControlsTemporarily();
     }
 

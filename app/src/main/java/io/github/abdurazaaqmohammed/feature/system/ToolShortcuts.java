@@ -6,10 +6,10 @@ import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.drawable.Icon;
 import android.os.Build;
-import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public final class ToolShortcuts {
     public static final String EXTRA_TOOL_ID = "tool_id";
@@ -26,12 +26,12 @@ public final class ToolShortcuts {
 
     private static void pin(Activity activity, String id, String title, String subtitle, int icon) {
         if (Build.VERSION.SDK_INT < 26) {
-            Toast.makeText(activity, R.string.plugin_shortcut_old_android, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(activity, R.string.plugin_shortcut_old_android);
             return;
         }
         ShortcutManager manager = activity.getSystemService(ShortcutManager.class);
         if (manager == null || !manager.isRequestPinShortcutSupported()) {
-            Toast.makeText(activity, R.string.plugin_shortcut_unsupported, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(activity, R.string.plugin_shortcut_unsupported);
             return;
         }
         try {
@@ -41,10 +41,10 @@ public final class ToolShortcuts {
                     .setShortLabel(title).setLongLabel(title + " — " + subtitle)
                     .setIcon(Icon.createWithResource(activity, icon)).setIntent(intent).build();
             boolean requested = manager.requestPinShortcut(shortcut, null);
-            Toast.makeText(activity, requested ? R.string.plugin_shortcut_done
-                    : R.string.plugin_shortcut_unsupported, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(activity, requested ? R.string.plugin_shortcut_done
+                    : R.string.plugin_shortcut_unsupported);
         } catch (Exception error) {
-            Toast.makeText(activity, R.string.plugin_shortcut_unsupported, Toast.LENGTH_LONG).show();
+            Extensions.showMessage(activity, R.string.plugin_shortcut_unsupported);
         }
     }
 }

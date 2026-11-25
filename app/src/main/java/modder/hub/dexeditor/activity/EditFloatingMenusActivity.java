@@ -39,7 +39,6 @@ package modder.hub.dexeditor.activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -101,7 +100,7 @@ public class EditFloatingMenusActivity extends BaseActivity implements StartDrag
 
     private void initializeLogic() {
         setTitle(getString(R.string.edit_floating_menus));
-        Toast.makeText(this, R.string.menu_seq, Toast.LENGTH_LONG).show();
+        io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.menu_seq);
         _load_shortcut_keys();
     }
 

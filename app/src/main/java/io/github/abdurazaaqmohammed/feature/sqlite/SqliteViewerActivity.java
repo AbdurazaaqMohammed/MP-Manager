@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.feature.sqlite;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 
@@ -613,12 +614,11 @@ public class SqliteViewerActivity extends BaseActivity {
             }
             final boolean saved = ok;
             final String failure = error;
-            new Handler(Looper.getMainLooper()).post(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 if (saved) {
-                    Toast.makeText(this, R.string.sqlite_saved_to_original, Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, R.string.sqlite_saved_to_original);
                 } else {
-                    Toast.makeText(this, getString(R.string.sqlite_save_failed, failure),
-                            Toast.LENGTH_LONG).show();
+                    Extensions.showMessage(this, getString(R.string.sqlite_save_failed, failure));
                 }
             });
         });

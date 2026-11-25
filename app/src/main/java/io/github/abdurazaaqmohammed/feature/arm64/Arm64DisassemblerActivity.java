@@ -2053,7 +2053,7 @@ public class Arm64DisassemblerActivity extends BaseActivity {
         instructionsAdapter.notifyItemRangeChanged(position, 2);
 
         if (dialog != null) dialog.dismiss();
-        Toast.makeText(this, returnTrue ? "Patched: Return 1 (MOV W0, #1; RET)" : "Patched: Return 0 (MOV W0, #0; RET)", Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, returnTrue ? "Patched: Return 1 (MOV W0, #1; RET)" : "Patched: Return 0 (MOV W0, #0; RET)");
     }
 
     private void applyInstructionPatch(Arm64Instruction inst, byte[] newBytes, int position) {

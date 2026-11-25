@@ -20,7 +20,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -1238,16 +1237,16 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     private void toast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Extensions.showMessage(this, message);
     }
 
     private void toast(int res) {
-        Toast.makeText(this, res, Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, res);
     }
 
     @SuppressWarnings("SameParameterValue")
     private void showError(String message) {
-        Toast.makeText(this, message == null ? "Error" : message, Toast.LENGTH_LONG).show();
+        Extensions.showMessage(this, message == null ? "Error" : message);
     }
 
     private int themeColor(int attr, int fallback) {
