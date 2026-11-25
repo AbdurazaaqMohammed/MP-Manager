@@ -96,6 +96,7 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import rikka.shizuku.Shizuku;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class SettingsController {
 
@@ -140,7 +141,7 @@ public class SettingsController {
     private void showInstalledThemes(MaterialButton button, MaterialButtonToggleGroup builtIns) {
         button.setEnabled(false);
         Context app = activity.getApplicationContext();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             var entries = ThemePacks.discover(app);
             activity.runOnUiThread(() -> {
                 button.setEnabled(true);
@@ -176,7 +177,7 @@ public class SettingsController {
                     button.setEnabled(false);
                     builtIns.setSelectionRequired(false);
                     for (int i = 0; i < builtIns.getChildCount(); i++) builtIns.getChildAt(i).setEnabled(false);
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         boolean imported = ThemePacks.importAndSelect(app, entries.get(index));
                         activity.runOnUiThread(() -> {
                             if (activity.isFinishing() || activity.isDestroyed()) return;
@@ -191,10 +192,10 @@ public class SettingsController {
                             updateInstalledThemeButton(button, ThemePacks.active(activity));
                             refreshTheme();
                         });
-                    }, "theme-import").start();
+                    });
                 }).show();
             });
-        }, "theme-discovery").start();
+        });
     }
 
     public void attach(ViewFinder settingsDialog) {
@@ -1220,7 +1221,7 @@ public class SettingsController {
             if (picked.equals(labelRoot)) {
                 workingModeTv.setText(labelRoot, false);
                 Extensions.showMessage(activity, "Checking root…");
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     boolean ok = PrivilegeManager.Root.isRootAvailable(activity);
                     handler.post(() -> {
                         if (ok) {
@@ -1232,7 +1233,7 @@ public class SettingsController {
                         }
                         applyModeUi.run();
                     });
-                }).start();
+                });
                 return;
             }
             if (picked.equals(labelShizuku)) {
@@ -1243,7 +1244,7 @@ public class SettingsController {
                 }
                 WorkingModePrefs.set(activity, WorkingModePrefs.WorkingMode.SHIZUKU);
                 applyModeUi.run();
-                new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
+                AppExecutors.io().execute(() -> PrivilegeManager.Shizuku.warmUp(activity));
                 if (!PrivilegeManager.Shizuku.hasPermission()) {
                     requestShizukuPerm(applyModeUi);
                 }
@@ -1282,7 +1283,7 @@ public class SettingsController {
         shizukuSilentToggle.setChecked(settings.getBoolean("shizuku_silent_install", false));
         shizukuSilentToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_silent_install", checked).apply();
-            if (checked) new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
+            if (checked) AppExecutors.io().execute(() -> PrivilegeManager.Shizuku.warmUp(activity));
         });
 
         String labelSelf = activity.getString(R.string.installer_source_self);
@@ -1369,7 +1370,7 @@ public class SettingsController {
         shizukuFileOpsToggle.setOnCheckedChangeListener((v, checked) -> {
             settings.edit().putBoolean("shizuku_file_ops", checked).apply();
             final Context app = activity.getApplicationContext();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 // Read the latest value so rapid toggle changes cannot leave a
                 // service running after the user has disabled file operations.
                 synchronized (shizukuFileOpsToggle) {
@@ -1382,7 +1383,7 @@ public class SettingsController {
                 app.getContentResolver().notifyChange(
                         android.provider.DocumentsContract.buildRootsUri(
                                 app.getPackageName() + ".documents"), null);
-            }, "shizuku-file-ops").start();
+            });
         });
 
         rootExtractorToggle.setChecked(settings.getBoolean("root_extractor", false));
@@ -1405,7 +1406,7 @@ public class SettingsController {
             PrivilegeManager.Shizuku.removePermissionListener(holder[0]);
             handler.post(() -> {
                 if (result == PackageManager.PERMISSION_GRANTED) {
-                    new Thread(() -> PrivilegeManager.Shizuku.warmUp(activity)).start();
+                    AppExecutors.io().execute(() -> PrivilegeManager.Shizuku.warmUp(activity));
                 } else {
                     Extensions.showMessage(activity, R.string.shizuku_running_no_perm);
                 }
@@ -1616,7 +1617,7 @@ public class SettingsController {
         updateCacheSizeDisplay(cacheDesc);
 
         btnClear.setOnClickListener(v -> {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 long totalBytes = calculateTotalCacheBytes();
                 activity.runOnUiThread(() -> {
                     if (totalBytes <= 0) {
@@ -1631,13 +1632,13 @@ public class SettingsController {
                             .setNegativeButton(android.R.string.cancel, null)
                             .show();
                 });
-            }).start();
+            });
         });
     }
 
     private void updateCacheSizeDisplay(TextView cacheDesc) {
         if (cacheDesc == null) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             long totalBytes = calculateTotalCacheBytes();
             activity.runOnUiThread(() -> {
                 if (totalBytes > 0) {
@@ -1646,7 +1647,7 @@ public class SettingsController {
                     cacheDesc.setText(R.string.clear_cache_desc);
                 }
             });
-        }).start();
+        });
     }
 
     private long calculateTotalCacheBytes() {
@@ -1711,7 +1712,7 @@ public class SettingsController {
     }
 
     private void performClearCache(TextView cacheDesc) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             long before = calculateTotalCacheBytes();
             try {
                 deleteCleanableDirContents(activity.getCacheDir());
@@ -1725,6 +1726,6 @@ public class SettingsController {
                 Extensions.showMessage(activity, activity.getString(R.string.clear_cache_success, freedStr));
                 updateCacheSizeDisplay(cacheDesc);
             });
-        }).start();
+        });
     }
 }

@@ -77,6 +77,7 @@ import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import io.github.abdurazaaqmohammed.util.io.TransferControl;
 import io.github.abdurazaaqmohammed.util.io.TransferCancelledException;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FilePropertiesDialog {
 
@@ -234,7 +235,7 @@ public class FilePropertiesDialog {
             if (displayMtime > 0) modifiedView.setTag(formatFullTimestamp(displayMtime));
             modifiedHolder[0] = modifiedView;
             if (displayMtime <= 0 && !multi && file != null) {
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     long m = 0;
                     try {
                         m = PrivilegeManager.Files.getMtime(context, file.getAbsolutePath());
@@ -257,7 +258,7 @@ public class FilePropertiesDialog {
                         } catch (Exception ignored) {
                         }
                     });
-                }).start();
+                });
             }
 
             if (hasAnyImages) {
@@ -309,7 +310,7 @@ public class FilePropertiesDialog {
             }
 
             if (hasDirectories) {
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     try {
                         DirectoryStats total = new DirectoryStats(0, 0, 0, 0, 0);
                         for (File f : selectedFilesList) {
@@ -333,13 +334,13 @@ public class FilePropertiesDialog {
                         });
                     } catch (TransferCancelledException ignored) {
                     }
-                }, "properties-stats").start();
+                });
             } else if (multi && fileCount != null) {
                 fileCount.setText(NumberFormat.getIntegerInstance().format(selectedFilesList.size()));
                 folderCount.setText("0");
             }
         } else if (isInZip && !multi && entry.isDirectory()) {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     String prefix = entry.getFullPath();
                     if (!prefix.endsWith("/")) prefix += "/";
@@ -361,7 +362,7 @@ public class FilePropertiesDialog {
                         folderCount.setText(NumberFormat.getIntegerInstance().format(folders.size()));
                     });
                 } catch (Exception ignored) {}
-            }, "archive-properties-stats").start();
+            });
         } else if (isInZip && !multi && !entry.isDirectory()) {
             long modTime = entry.getLastModified();
             if (modTime > 0) {
@@ -402,7 +403,7 @@ public class FilePropertiesDialog {
             ownerViewHolder[0] = ownerView;
             ownerView.setTypeface(Typeface.MONOSPACE);
 
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 String symbolic = null;
                 String numeric = null;
                 String ownerStr = null;
@@ -444,7 +445,7 @@ public class FilePropertiesDialog {
                         addPropertyRow(propRows, context.getString(R.string.property_image_type), identity.getDisplayName(isAr));
                     });
                 }
-            }).start();
+            });
         }
 
         var dialogBuilder = dialogUtil.getDialogBuilder()
@@ -470,7 +471,7 @@ public class FilePropertiesDialog {
     }
 
     private void showOwnerDialog(File file, TextView ownerView) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String currentOwner = PrivilegeManager.Root.getOwner(context, file.getAbsolutePath());
             if (currentOwner == null || currentOwner.isEmpty()) currentOwner = "root:root";
             File parent = file.getParentFile();
@@ -511,7 +512,7 @@ public class FilePropertiesDialog {
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             if (checkedItem[0] >= 0 && checkedItem[0] < ownerList.size()) {
                                 String selectedOwner = ownerList.get(checkedItem[0]);
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         PrivilegeManager.Root.executeFs(context,
                                                 "chown " + selectedOwner + " " + ShellQuote.escapeShellArg(file.getAbsolutePath()), 30);
@@ -523,28 +524,28 @@ public class FilePropertiesDialog {
                                     } catch (Exception e) {
                                         context.handler.post(() -> new ErrorUtil(context).showError(e));
                                     }
-                                }).start();
+                                });
                             }
                         })
                         .create();
                 dialogUtil.styleAlertDialog(ownerDialog);
                 ownerDialog.show();
             });
-        }).start();
+        });
     }
 
     private void showPermissionsDialog(File file, TextView permView) {
         PermissionsEditorHelper editor = new PermissionsEditorHelper(context);
         View editorView = editor.createPermissionsEditor("0000");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String perms = PrivilegeManager.Root.getPermissions(context, file.getAbsolutePath());
             context.handler.post(() -> {
                 if (perms != null && !perms.isEmpty()) {
                     editor.applyNumericPerms(perms);
                 }
             });
-        }).start();
+        });
 
         AlertDialog permDialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.permissions))
@@ -553,7 +554,7 @@ public class FilePropertiesDialog {
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     if (!editor.isReady()) return;
                     String permsStr = String.valueOf(editor.getNumericValue());
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             PrivilegeManager.Root.chmodFs(context, file.getAbsolutePath(), permsStr);
                             PrivilegeManager.Root.invalidateListCache(context);
@@ -566,7 +567,7 @@ public class FilePropertiesDialog {
                         } catch (Exception e) {
                             context.handler.post(() -> new ErrorUtil(context).showError(e));
                         }
-                    }).start();
+                    });
                 })
                 .create();
         dialogUtil.styleAlertDialog(permDialog);
@@ -581,10 +582,10 @@ public class FilePropertiesDialog {
         addPropertyRow(layout, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
         TextView realMimeView = addPropertyRow(layout, context.getString(R.string.real_mime), "…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String realMime = MimeUtil.getRealMimeType(file);
             context.handler.post(() -> realMimeView.setText(realMime != null ? realMime : "—"));
-        }).start();
+        });
 
         AlertDialog mimeDialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.mime))
@@ -693,7 +694,7 @@ public class FilePropertiesDialog {
     }
 
     private void applyMtime(List<File> files, TextView modifiedView, long newTime) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int successCount = 0;
             for (File file : files) {
                 if (FileUtils.matchExt('.' + FilenameUtils.getExtension(file.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
@@ -719,7 +720,7 @@ public class FilePropertiesDialog {
                     Extensions.showMessage(context, context.getString(R.string.mtime_failed));
                 }
             });
-        }).start();
+        });
     }
 
     private void showEditDateTakenDialog(List<File> files, TextView dateTakenView) {
@@ -796,7 +797,7 @@ public class FilePropertiesDialog {
     }
 
     private void applyExifDateTaken(List<File> files, TextView dateTakenView, long millis) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int imageCount = 0;
             for (File file : files) {
                 if (!file.isFile() || !FileUtils.matchExt('.' + FilenameUtils.getExtension(file.getName()).toLowerCase(), FileUtils.IMAGE_EXTS)) {
@@ -845,7 +846,7 @@ public class FilePropertiesDialog {
                     Extensions.showMessage(context, context.getString(R.string.mtime_failed));
                 }
             });
-        }).start();
+        });
     }
 
     private static long parseExifDate(String exifDate) {
@@ -1096,7 +1097,7 @@ public class FilePropertiesDialog {
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String newTarget = input.getText() == null ? "" : input.getText().toString().trim();
                     if (newTarget.isEmpty() || newTarget.equals(currentTarget)) return;
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         boolean updated = false;
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             try {
@@ -1142,7 +1143,7 @@ public class FilePropertiesDialog {
                                 Extensions.showMessage(context, "Failed to update symlink");
                             }
                         });
-                    }).start();
+                    });
                 })
                 .create();
         KeyboardUtil.focusOnShow(editDialog, input, false);

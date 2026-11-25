@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
 
@@ -412,7 +413,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             context.loadFolderInPaneAsync(f, pane1);
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             final boolean dir = resolveDirViaBackend(f);
             context.handler.post(() -> {
                 try {
@@ -432,7 +433,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 } catch (Exception ignored) {
                 }
             });
-        }).start();
+        });
     }
 
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
@@ -909,7 +910,7 @@ final View.OnClickListener originalClickListener;
         } else if (file != null)
             context.setCurrentFolder(file.getParentFile(), getOldValues());
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
@@ -1247,7 +1248,7 @@ final View.OnClickListener originalClickListener;
                                     if (allRealFiles(finalDexCompare1) && allRealFiles(finalDexCompare2)) {
                                         new CompareDexOptionsDialog(context, toFileList(finalDexCompare1), toFileList(finalDexCompare2)).show();
                                     } else {
-                                        new Thread(() -> {
+                                        AppExecutors.io().execute(() -> {
                                             try {
                                                 List<File> f1 = resolveCompareFileList(finalDexCompare1);
                                                 List<File> f2 = resolveCompareFileList(finalDexCompare2);
@@ -1257,7 +1258,7 @@ final View.OnClickListener originalClickListener;
                                             } catch (Exception e) {
                                                 context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
                                             }
-                                        }).start();
+                                        });
                                     }
                                 }
                                 return;
@@ -1278,7 +1279,7 @@ final View.OnClickListener originalClickListener;
                                 ).show();
                                 return;
                             case FileMenuOrder.CMP_ARSC:
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         File f1 = resolveCompareFile(finalCompareFile1);
                                         File f2 = resolveCompareFile(finalCompareFile2);
@@ -1288,7 +1289,7 @@ final View.OnClickListener originalClickListener;
                                     } catch (Exception e) {
                                         context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
                                     }
-                                }).start();
+                                });
                                 return;
                             case FileMenuOrder.CMP_HASH:
                                 checksumDialogs.showCompareHashesDialog((File) finalCompareFile1, (File) finalCompareFile2);
@@ -1562,7 +1563,7 @@ final View.OnClickListener originalClickListener;
                 } catch (Exception ignored) {
                 }
             }
-        }).start();
+        });
     }
 
     private void updateFolderCountOnMainScreen(int position) {

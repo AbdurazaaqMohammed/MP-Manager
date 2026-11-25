@@ -34,6 +34,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.archive.SplitArchiveUtil;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Interactive dialogs for splitting archives/files into parts and merging parts back together.
@@ -289,7 +290,7 @@ public final class SplitDialog {
                     ProgressManager pm = new ProgressManager(context, true).show();
                     pm.setText(context.getString(R.string.split_in_progress, file.getName()));
 
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             List<File> result = SplitArchiveUtil.splitFile(file, file.getParentFile(), partSizeBytes, namingStyle, pm != null ? pm.listener() : null);
                             if (del && file.exists()) {
@@ -306,7 +307,7 @@ public final class SplitDialog {
                                 Extensions.showMessage(context, "Split failed: " + e.getMessage());
                             });
                         }
-                    }).start();
+                    });
                 })
                 .create();
         new DialogUtil(context).styleAlertDialog(dialog);
@@ -399,7 +400,7 @@ public final class SplitDialog {
                     ProgressManager pm = new ProgressManager(context, true).show();
                     pm.setText(context.getString(R.string.merge_in_progress));
 
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             SplitArchiveUtil.mergeParts(toMerge, outFile, pm != null ? pm.listener() : null);
                             if (del) {
@@ -418,7 +419,7 @@ public final class SplitDialog {
                                 Extensions.showMessage(context, "Merge failed: " + e.getMessage());
                             });
                         }
-                    }).start();
+                    });
                 })
                 .create();
         new DialogUtil(context).styleAlertDialog(dialog);

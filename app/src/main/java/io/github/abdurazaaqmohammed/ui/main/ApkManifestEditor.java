@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ApkManifestEditor {
 
@@ -260,7 +261,7 @@ public class ApkManifestEditor {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(rss.getString(R.string.loading));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             ManifestData manifestData = decodeManifestWithRes(apkFile);
             List<XMLEntry> loadedEntries = manifestData != null ? manifestData.entries : null;
             if (loadedEntries == null) loadedEntries = decodeManifest(apkFile);
@@ -272,7 +273,7 @@ public class ApkManifestEditor {
                 return;
             }
             context.handler.post(() -> showQuickEditDialog(apkFile, finalEntries, data));
-        }).start();
+        });
     }
 
     private void showQuickEditDialog(File apkFile, List<XMLEntry> entries, ManifestData manifestData) {
@@ -579,7 +580,7 @@ public class ApkManifestEditor {
         fpd.setTitle(context.rss.getString(R.string.select_icon));
         ProgressManager pm = new ProgressManager(context, true);
 
-        fpd.setDialogSelectionListener(files -> new Thread(() -> {
+        fpd.setDialogSelectionListener(files -> AppExecutors.io().execute(() -> {
             IconTargets targets = resolveIconTargets(apkFile);
 
             byte[] iconBytes;
@@ -614,7 +615,7 @@ public class ApkManifestEditor {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
-        }).start());
+        }));
         fpd.show();
     }
 
@@ -971,7 +972,7 @@ public class ApkManifestEditor {
     }
 
     public void editAllManifestEntries(File apkFile) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
                 if (entries == null) {
@@ -982,7 +983,7 @@ public class ApkManifestEditor {
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     @SuppressLint("SetTextI18n")
@@ -1335,7 +1336,7 @@ public class ApkManifestEditor {
                                  boolean[] sign, SignWrapper[] wrapper) {
         Runnable doEdit = () -> {
             ProgressManager pm2 = new ProgressManager(context, true).show();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     int changed;
                     try {
@@ -1359,7 +1360,7 @@ public class ApkManifestEditor {
                     pm2.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         };
         if (sign[0]) SignWrapper.requireAuth(context, sw -> {
             wrapper[0] = sw;
@@ -1370,7 +1371,7 @@ public class ApkManifestEditor {
 
     public void showPermissionsDialog(File apkFile) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String[] perms;
             try {
                 PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
@@ -1491,7 +1492,7 @@ public class ApkManifestEditor {
                         }).create();
                 dialogUtil.styleAlertDialog(dialog);
             });
-        }).start();
+        });
     }
 
     public void showManifestTogglesDialog(File apkFile) {
@@ -1499,7 +1500,7 @@ public class ApkManifestEditor {
                 "android:requestLegacyExternalStorage", "android:largeHeap"};
         String[] labels = {rss.getString(R.string.me_tog_debug), rss.getString(R.string.me_tog_backup), rss.getString(R.string.me_tog_cleartext), rss.getString(R.string.me_tog_legacy), rss.getString(R.string.me_tog_heap)};
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean[] current = new boolean[attrs.length];
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
@@ -1548,7 +1549,7 @@ public class ApkManifestEditor {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doEdit = () -> {
                                 ProgressManager pm2 = new ProgressManager(context, true).show();
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         int changed = 0;
                                         for (int i = 0; i < attrs.length; i++) {
@@ -1573,7 +1574,7 @@ public class ApkManifestEditor {
                                         pm2.dismiss();
                                         new ErrorUtil(context).showError(e);
                                     }
-                                }).start();
+                                });
                             };
                             if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                                 wrapper[0] = sw;
@@ -1582,7 +1583,7 @@ public class ApkManifestEditor {
                             else doEdit.run();
                         }).create());
             });
-        }).start();
+        });
     }
 
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries) throws Exception {

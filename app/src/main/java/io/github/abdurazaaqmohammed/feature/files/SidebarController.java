@@ -89,6 +89,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Sidebar drawer: setup, organize-mode drag & drop, section order,
@@ -458,7 +459,7 @@ public class SidebarController {
      */
     public void refreshSidebarAsync(List<String> sectionOrder) {
         if (sidebarAdapter == null || !sidebarDataReady) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             final SidebarData data;
             try {
                 data = loadSidebarData(sectionOrder);
@@ -476,7 +477,7 @@ public class SidebarController {
                 });
             } catch (Exception ignored) {
             }
-        }, "sidebar-refresh").start();
+        });
     }
 
     /**
@@ -487,7 +488,7 @@ public class SidebarController {
     public void ensureSidebarData() {
         if (sidebarAdapter == null || sidebarDataReady) return;
         sidebarDataReady = true;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Warm the plugin caches off-main so the bind below rarely
                 // hits PackageManager on the UI thread.
@@ -518,7 +519,7 @@ public class SidebarController {
                 });
             } catch (Exception ignored) {
             }
-        }, "sidebar-load").start();
+        });
     }
 
     /**
@@ -1064,7 +1065,7 @@ public class SidebarController {
                             pm.setOperation(R.string.op_deleting);
                             pm.setTotal(toDel.size());
                             pm.show();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 for (int i = 0; i < toDel.size(); i++) {
                                     RecycleBin.Entry entry = toDel.get(i);
                                     pm.setFile(entry.displayName());
@@ -1081,7 +1082,7 @@ public class SidebarController {
                                     sortAndRefresh.run();
                                     Extensions.showMessage(activity, R.string.recycle_bin_emptied);
                                 });
-                            }).start();
+                            });
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -1101,7 +1102,7 @@ public class SidebarController {
                             pm.setOperation(R.string.op_deleting);
                             pm.setTotal(toDel.size());
                             pm.show();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 for (int i = 0; i < toDel.size(); i++) {
                                     RecycleBin.Entry entry = toDel.get(i);
                                     pm.setFile(entry.displayName());
@@ -1119,7 +1120,7 @@ public class SidebarController {
                                     sortAndRefresh.run();
                                     Extensions.showMessage(activity, R.string.item_deleted);
                                 });
-                            }).start();
+                            });
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -1297,13 +1298,13 @@ public class SidebarController {
                 .setMessage(details.toString())
                 .setNeutralButton(R.string.delete, (d, w) -> {
                     d.dismiss();
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         RecycleBin.deleteEntry(activity, entry);
                         activity.runOnUiThread(() -> {
                             Extensions.showMessage(activity, R.string.item_deleted);
                             if (onUpdated != null) onUpdated.run();
                         });
-                    }).start();
+                    });
                 })
                 .setPositiveButton(R.string.action_jump, (d, w) -> {
                     d.dismiss();

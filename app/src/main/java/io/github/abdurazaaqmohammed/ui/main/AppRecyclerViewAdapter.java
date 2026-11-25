@@ -44,6 +44,7 @@ import java.util.Map;
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.feature.apk.AppInfo;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerViewAdapter.ViewHolder> implements Filterable {
 
@@ -192,7 +193,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
                 final String expectedPkg = appInfo.packageName;
                 final int expectedVc = appInfo.getVersionCode();
                 holder.appIconView.setTag(expectedPkg);
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     Drawable diskOrLoaded = act.iconCache.getDisk(act, expectedPkg, expectedVc);
                     if (diskOrLoaded == null) {
                         try {
@@ -217,7 +218,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
                             }
                         });
                     }
-                }).start();
+                });
             }
         }
 
@@ -427,7 +428,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
 
         // Calculate SHA-256 hash asynchronously ONLY after long click dialog opens
         if (!sameVersionStatusViews.isEmpty() && appInfo.filePath != null && new File(appInfo.filePath).exists()) {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File installedFile = new File(appInfo.filePath);
                     String installedHash = HashUtil.hashFile(installedFile, "SHA-256");
@@ -449,7 +450,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
                         } catch (Exception ignored) {}
                     }
                 } catch (Exception ignored) {}
-            }).start();
+            });
         }
     }
 }

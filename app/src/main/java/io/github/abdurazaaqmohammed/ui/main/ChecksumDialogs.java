@@ -48,6 +48,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ChecksumDialogs {
 
@@ -208,7 +209,7 @@ public class ChecksumDialogs {
     public void startChecksumComputation(LinearLayout container, File file, Map<String, String> out) {
         Map<String, TextView> views = new HashMap<>();
         for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Map<String, String> hashes = HashUtil.hashAll(file);
                 if (out != null) {
@@ -227,7 +228,7 @@ public class ChecksumDialogs {
                 });
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     public void addCrc32Row(LinearLayout container, long crc32Value) {
@@ -243,7 +244,7 @@ public class ChecksumDialogs {
     public void startZipEntryChecksumComputation(LinearLayout container, File zipFile, String entryPath, Map<String, String> out) {
         Map<String, TextView> views = new HashMap<>();
         for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             File tmpFile = null;
             try {
                 tmpFile = File.createTempFile("zip_entry_", ".tmp", context.getCacheDir());
@@ -267,13 +268,13 @@ public class ChecksumDialogs {
             } finally {
                 if (tmpFile != null) tmpFile.delete();
             }
-        }).start();
+        });
     }
 
     public void showChecksumsDialog(List<File> files) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.computing_checksums));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<Map<String, String>> results = new ArrayList<>();
                 for (File f : files) {
@@ -313,7 +314,7 @@ public class ChecksumDialogs {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     public void showZipEntryChecksumsDialog(ZipEntryInfo entry) {
@@ -411,7 +412,7 @@ public class ChecksumDialogs {
     private void startManifestGeneration(List<File> files, File target, boolean sfv) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.checksum_generating, target.getName()));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String text = sfv ? HashUtil.generateSfv(files) : HashUtil.generateMd5(files);
                 writeManifestFile(target, text);
@@ -426,7 +427,7 @@ public class ChecksumDialogs {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     /**
@@ -522,7 +523,7 @@ public class ChecksumDialogs {
     public void showHashVerifyDialog(File checksumFile, File baseDir) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.verify_progress));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<HashUtil.CheckResult> results = HashUtil.verifyChecksumFile(checksumFile,
                         entryOpener(context, baseDir));
@@ -534,7 +535,7 @@ public class ChecksumDialogs {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     /**
@@ -563,7 +564,7 @@ public class ChecksumDialogs {
     public void showZipChecksumVerifyDialog(File archive, String manifestEntryPath) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.verify_progress));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String algorithm = HashUtil.algorithmForChecksumFile(manifestEntryPath);
                 List<HashUtil.CheckResult> results = new ArrayList<>();
@@ -607,7 +608,7 @@ public class ChecksumDialogs {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     /** Buffered stream over a temp file that removes the file when closed. */
@@ -654,7 +655,7 @@ public class ChecksumDialogs {
     public void showCompareHashesDialog(File file1, File file2) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.computing_checksums));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Map<String, String> h1 = HashUtil.hashAll(file1);
                 Map<String, String> h2 = HashUtil.hashAll(file2);
@@ -714,7 +715,7 @@ public class ChecksumDialogs {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private int dp(int dp) {
