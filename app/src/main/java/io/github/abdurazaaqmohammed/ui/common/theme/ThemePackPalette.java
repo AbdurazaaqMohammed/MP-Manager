@@ -49,6 +49,7 @@ final class ThemePackPalette {
             new Slot("colorOutlineVariant", R.color.theme_pack_outline_variant, R.style.ThemePackOutlineVariant),
             new Slot("colorError", R.color.theme_pack_error, R.style.ThemePackError),
             new Slot("colorOnError", R.color.theme_pack_on_error, R.style.ThemePackOnError),
+            new Slot("colorAccent", R.color.theme_pack_accent, R.style.ThemePackAccent),
     };
 
     /** Per-Resources ownership state (pure, JVM-tested). */

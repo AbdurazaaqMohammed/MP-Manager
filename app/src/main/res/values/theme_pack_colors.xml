@@ -130,4 +130,9 @@
     <style name="ThemePackSurfaceBright">
         <item name="colorSurfaceBright">@color/theme_pack_surface_bright</item>
     </style>
+    <color name="theme_pack_accent">#00000000</color>
+    <style name="ThemePackAccent">
+        <item name="colorAccent">@color/theme_pack_accent</item>
+        <item name="android:colorAccent">@color/theme_pack_accent</item>
+    </style>
 </resources>
