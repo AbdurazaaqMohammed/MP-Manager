@@ -121,4 +121,15 @@
     <string name="dialog_title_rename_group">重命名分组</string>
     <string name="dialog_confirm_delete_group">确认永久删除该分组和其内全部符号？</string>
     <string name="symbol_macro_help">$$ 表示$ \n $S 设置开始选中的位置 \n $E 设置结束选中的位置 \n $T 表示当前选中文本 \n 示例：{$S$T$E}</string>
+    <string name="hint_find_text">查找</string>
+    <string name="hint_replace_text">替换为</string>
+    <string name="option_regex">正则</string>
+    <string name="option_case_sensitive">区分大小写</string>
+    <string name="option_replace_all">全部替换</string>
+    <string name="settings_max_label_title">标签最大长度</string>
+    <string name="settings_max_label_desc">按钮标签超过此字符数时显示省略号（0 表示不截断）</string>
+    <string name="settings_max_label_off">关闭</string>
+    <string name="action_custom_search">搜索（编辑器）</string>
+    <string name="action_custom_regex_replace">查找并替换</string>
+    <string name="action_custom_replace_line">用剪贴板内容替换该行</string>
 </resources>
