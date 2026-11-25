@@ -28,6 +28,7 @@ public final class ApkMoreMenuOrder {
     public static final String REMOVE_TOASTS = "remove_toasts";
     public static final String REMOVE_SIG = "remove_sig";
     public static final String SIG_HEALTH = "sig_health";
+    public static final String QUICK_EDIT = "quick_edit";
     public static final String MANIFEST_TOGGLES = "manifest_toggles";
     public static final String PERMISSIONS = "permissions";
     public static final String XPOSED_PATCH = "npatch";
@@ -42,7 +43,7 @@ public final class ApkMoreMenuOrder {
     public static final String[] DEFAULT_ORDER = {
             SIGN, OPT, AAPT2_OPT, DECOMPILE, JADX_JAVA, REFACTOR, PROTECT, CLONE,
             ADD_TOAST, REMOVE_TOASTS, REMOVE_SIG, SIG_HEALTH,
-            MANIFEST_TOGGLES, PERMISSIONS, XPOSED_PATCH, MULTIPLEX,
+            QUICK_EDIT, MANIFEST_TOGGLES, PERMISSIONS, XPOSED_PATCH, MULTIPLEX,
             IL2CPP, PATCH_LIBS, FLUTTER, FRIDA, JIAGU, PRIVACY
     };
 
@@ -128,6 +129,7 @@ public final class ApkMoreMenuOrder {
             case REMOVE_TOASTS: return context.getString(R.string.remove_all_toasts);
             case REMOVE_SIG: return context.getString(R.string.remove_signature);
             case SIG_HEALTH: return context.getString(R.string.signature_health);
+            case QUICK_EDIT: return context.getString(R.string.quick_edit);
             case MANIFEST_TOGGLES: return context.getString(R.string.manifest_toggles);
             case PERMISSIONS: return context.getString(R.string.permissions);
             case XPOSED_PATCH: return context.getString(R.string.npatch_integrated);
@@ -169,6 +171,7 @@ public final class ApkMoreMenuOrder {
             case REMOVE_TOASTS: return R.drawable.baseline_remove_circle_24;
             case REMOVE_SIG: return R.drawable.lock_open_24px;
             case SIG_HEALTH: return R.drawable.baseline_info_24;
+            case QUICK_EDIT: return R.drawable.edit_24px;
             case MANIFEST_TOGGLES: return R.drawable.baseline_settings_24;
             case PERMISSIONS: return R.drawable.baseline_info_24;
             case XPOSED_PATCH: return R.drawable.tools_24px;

@@ -577,7 +577,9 @@ public class ApkInfoDialogs {
     }
 
     private void dispatchApkMoreAction(String actionId, File file, String fileName, String filePath, boolean pane1) {
-        if (ApkMoreMenuOrder.SIGN.equals(actionId)) {
+        if (ApkMoreMenuOrder.QUICK_EDIT.equals(actionId)) {
+            manifestEditor.showEditManifestDialog(file);
+        } else if (ApkMoreMenuOrder.SIGN.equals(actionId)) {
             SignatureKeyDialog.show(context, file, false);
         } else if (ApkMoreMenuOrder.OPT.equals(actionId)) {
             View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
@@ -1314,7 +1316,7 @@ public class ApkInfoDialogs {
     @SuppressLint("RequestInstallPackagesPolicy")
     public void showApkInfoDialog(File file, String fileName, boolean isApksSplit) {
         String filePath = file.getPath();
-        View display = LayoutInflater.from(context).inflate(R.layout.apk_display, null, false);
+        View display = LayoutInflater.from(context).inflate(R.layout.dialog_apk_info, null, false);
         ImageView apkIcon = display.findViewById(R.id.apkIcon);
         TextView apkTitle = display.findViewById(R.id.apkTitle);
         TextView apkVersionName = display.findViewById(R.id.apkVersionName);
@@ -1370,12 +1372,26 @@ public class ApkInfoDialogs {
 
 
         MaterialAlertDialogBuilder adBuilder = dialogUtil.getDialogBuilder()
-                .setView(display)
-                .setNeutralButton(R.string.more, (dialog, which) -> showApkMoreDialog(file, fileName, filePath, pane1))
-                .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
-                .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file));
+                .setView(display);
 
         AlertDialog ad = adBuilder.create();
+
+        MaterialButton moreBtn = display.findViewById(R.id.apkDialogMore);
+        MaterialButton installBtn = display.findViewById(R.id.apkDialogInstall);
+        MaterialButton viewBtn = display.findViewById(R.id.apkDialogView);
+        moreBtn.setOnClickListener(v -> {
+            ad.dismiss();
+            showApkMoreDialog(file, fileName, filePath, pane1);
+        });
+        installBtn.setOnClickListener(v -> {
+            ad.dismiss();
+            InstallUtil.installApkWithDialog(context, file);
+        });
+        viewBtn.setOnClickListener(v -> {
+            ad.dismiss();
+            openZipFile(file);
+        });
+
         dialogUtil.styleAlertDialog(ad);
         LinearLayout rootInfoSection = display.findViewById(R.id.rootInfoSection);
         LinearLayout rootInfoHeader = display.findViewById(R.id.rootInfoHeader);
@@ -1497,30 +1513,12 @@ public class ApkInfoDialogs {
             });
         }
 
-        View quickEditBtn = display.findViewById(R.id.quickEdit);
-        if (quickEditBtn != null) {
-            if (isApksSplit) {
-                quickEditBtn.setEnabled(false);
-                quickEditBtn.setAlpha(0.4f);
-            } else {
-                quickEditBtn.setOnClickListener(v7 -> {
-                    ad.dismiss();
-                    manifestEditor.showEditManifestDialog(file);
-                });
-            }
-        }
         ad.show();
         if (isApksSplit) {
-            View installBtn = ad.getButton(AlertDialog.BUTTON_POSITIVE);
-            if (installBtn != null) {
-                installBtn.setEnabled(false);
-                installBtn.setAlpha(0.4f);
-            }
-            View moreBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
-            if (moreBtn != null) {
-                moreBtn.setEnabled(false);
-                moreBtn.setAlpha(0.4f);
-            }
+            installBtn.setEnabled(false);
+            installBtn.setAlpha(0.4f);
+            moreBtn.setEnabled(false);
+            moreBtn.setAlpha(0.4f);
         }
 
         new Thread(() -> {
