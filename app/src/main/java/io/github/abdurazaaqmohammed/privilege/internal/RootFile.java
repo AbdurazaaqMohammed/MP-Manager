@@ -37,7 +37,7 @@ public class RootFile extends File {
                     long length,
                     long lastModified,
                     String mode) {
-        this(pathname, exists, isDirectory, isFile, length, lastModified, mode, mode != null && (mode.startsWith("l") || mode.charAt(0) == 'l'));
+        this(pathname, exists, isDirectory, isFile, length, lastModified, mode, mode != null && mode.startsWith("l"));
     }
 
     public RootFile(String pathname,
@@ -66,7 +66,7 @@ public class RootFile extends File {
                     long length,
                     long lastModified,
                     String mode) {
-        this(parent, child, exists, isDirectory, isFile, length, lastModified, mode, mode != null && (mode.startsWith("l") || mode.charAt(0) == 'l'));
+        this(parent, child, exists, isDirectory, isFile, length, lastModified, mode, mode != null && mode.startsWith("l"));
     }
 
     public RootFile(String parent, String child,
@@ -102,7 +102,7 @@ public class RootFile extends File {
     }
 
     public boolean isLink() {
-        return isLink || (statMode != null && (statMode.startsWith("l") || statMode.charAt(0) == 'l'));
+        return isLink || (statMode != null && statMode.startsWith("l"));
     }
 
     public boolean hasRootStat() {

@@ -46,9 +46,61 @@ public final class NativeRootManager {
     private static final String BIN_NAME = "mpio";
     private static volatile String cachedMpioPath = null;
     private static final Object extractLock = new Object();
+    private static final Object serveInitLock = new Object();
+    private static volatile MpioServeClient serveClient;
 
     public interface ProgressCallback {
         void onProgress(long filesDone, long bytesDone, String currentItem);
+    }
+
+    private static MpioServeClient getServeClient(Context context) {
+        if (serveClient == null && context != null) {
+            final Context app = context.getApplicationContext();
+            synchronized (serveInitLock) {
+                if (serveClient == null) {
+                    serveClient = new MpioServeClient(globalNs -> {
+                        String cmd = "exec " + ShellQuote.escapeShellArg(getMpioPath(app)) + " serve";
+                        return new ProcessBuilder(RootManager.suCommandForNs(app, cmd, globalNs))
+                                .redirectErrorStream(false)
+                                .start();
+                    });
+                }
+            }
+        }
+        return serveClient;
+    }
+
+    /**
+     * Lists directory entries via the persistent {@code mpio serve} root daemon.
+     * Returns {@code null} when the daemon is unavailable, lacks {@code serve},
+     * or cannot open {@code dirPath}.
+     */
+    public static java.io.File[] listDir(Context context, String dirPath) {
+        if (context == null) return null;
+        RootManager rm = RootManager.getInstance(context);
+        if (!rm.isRootMode() || !rm.isRootAvailable()) return null;
+        MpioServeClient client = getServeClient(context);
+        if (client == null || client.isUnsupported()) return null;
+        return client.listDir(dirPath, rm.prefersGlobalNs());
+    }
+
+    /**
+     * Stats a single path via the persistent {@code mpio serve} daemon.
+     * Returns {@code null} when the daemon is unavailable or permission requires fallback.
+     */
+    public static RootManager.RootEntry stat(Context context, String path) {
+        if (context == null) return null;
+        RootManager rm = RootManager.getInstance(context);
+        if (!rm.isRootMode() || !rm.isRootAvailable()) return null;
+        MpioServeClient client = getServeClient(context);
+        if (client == null || client.isUnsupported()) return null;
+        return client.stat(path, rm.prefersGlobalNs());
+    }
+
+    /** Tears down the cached {@code mpio serve} process so the next call starts fresh. */
+    public static void resetServe() {
+        MpioServeClient client = serveClient;
+        if (client != null) client.reset();
     }
 
     /**

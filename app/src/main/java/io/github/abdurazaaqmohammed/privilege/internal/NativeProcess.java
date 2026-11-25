@@ -11,6 +11,17 @@ final class NativeProcess {
         catch (IllegalThreadStateException running) { return true; }
     }
 
+    private static final java.lang.reflect.Method DESTROY_FORCIBLY;
+
+    static {
+        java.lang.reflect.Method m = null;
+        try {
+            m = Process.class.getMethod("destroyForcibly");
+        } catch (Throwable ignored) {
+        }
+        DESTROY_FORCIBLY = m;
+    }
+
     static boolean await(Process process, long timeoutMs) throws InterruptedException {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (isAlive(process)) {
@@ -18,5 +29,20 @@ final class NativeProcess {
             Thread.sleep(25);
         }
         return true;
+    }
+
+    static void destroy(Process process) {
+        if (process == null) return;
+        if (DESTROY_FORCIBLY != null) {
+            try {
+                DESTROY_FORCIBLY.invoke(process);
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+        try {
+            process.destroy();
+        } catch (Throwable ignored) {
+        }
     }
 }
