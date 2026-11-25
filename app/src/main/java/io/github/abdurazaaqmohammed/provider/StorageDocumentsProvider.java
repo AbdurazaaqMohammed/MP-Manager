@@ -2,6 +2,13 @@ package io.github.abdurazaaqmohammed.provider;
 
 
 import android.content.Context;
+import android.content.SharedPreferences;
+
+import androidx.preference.PreferenceManager;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import rikka.shizuku.Shizuku;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.os.CancellationSignal;
@@ -27,11 +34,9 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 /**
  * MP Manager as a {@link DocumentsProvider}.
  *
- * <p>This is the "documents provider" other file managers show up with: the
- * system Files app lists it in the left sidebar, and any app that opens the
- * Storage Access Framework picker (Telegram, mail clients, browsers) can pick
- * MP Manager as the place to choose a file from. Once declared, the platform
- * automatically starts us when the picker asks for providers.</p>
+ * <p>The provider backs the content URIs returned by MP Manager's picker.
+ * Available privileged storage is also advertised in DocumentsUI, whose
+ * roots are shared between OPEN_DOCUMENT and GET_CONTENT.</p>
  *
  * <p>Unlike the providers that patchers inject into other apps, this one runs
  * in MP Manager's own process, so it can use the elevated backends the rest of
@@ -39,26 +44,21 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
  * is what makes {@code /storage/emulated/0/Android/data}, which a normal app
  * cannot even list, browsable from another app through this provider.</p>
  *
- * <p>Three roots are exported, the last two only when they are actually usable:</p>
- * <ul>
- *   <li>Internal storage — always;</li>
- *   <li>Android data — Android/{data,obb,media} through root/Shizuku;</li>
- *   <li>Root filesystem — {@code /}, when root file operations are enabled.</li>
- * </ul>
+ * <p>The selected, enabled backend exposes either the root filesystem or
+ * Android data through Shizuku. Internal-storage URIs from the activity remain
+ * readable without advertising a duplicate internal-storage sidebar root.</p>
  *
  * <p>Document ids are absolute paths. Every incoming id is resolved through
  * {@code getCanonicalPath()} and checked against the exported bases, so a
  * crafted {@code ../} id or a symlink cannot walk outside them.</p>
  *
- * <p>Reads stream through {@link AccessManager#openReadFd}: a path this UID can
- * open is handed out directly, an elevated one is pumped into a pipe by
- * root/Shizuku, so nothing is copied into the cache first and files of any size
- * work. Writes are supported where the app itself can write; elevated paths are
- * exposed read-only rather than pretending to accept writes.</p>
+ * <p>Directly readable files return a file descriptor. Elevated reads are
+ * staged privately and return a seekable descriptor after the copy succeeds.
+ * Writes are supported where the app itself can write; elevated paths are
+ * exposed read-only.</p>
  */
 public class StorageDocumentsProvider extends DocumentsProvider {
 
-    private static final String ROOT_INTERNAL = "internal";
     private static final String ROOT_APPDATA = "appdata";
     private static final String ROOT_FS = "root";
 
@@ -88,9 +88,63 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         return a.getName().compareToIgnoreCase(b.getName());
     };
 
+    private SharedPreferences preferences;
+    private final AtomicBoolean checkingRoot =
+            new AtomicBoolean();
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener =
+            (prefs, key) -> {
+                if ("su_command".equals(key)) {
+                    PrivilegeManager.Root.refreshRootCache(getContext());
+                }
+                if ("working_mode".equals(key) || "root_file_ops".equals(key)
+                        || "shizuku_file_ops".equals(key) || "su_command".equals(key)) {
+                    notifyRootsChanged();
+                }
+            };
+    private final Shizuku.OnBinderReceivedListener binderReceivedListener = this::notifyRootsChanged;
+    private final Shizuku.OnBinderDeadListener binderDeadListener = this::notifyRootsChanged;
+    private final Shizuku.OnRequestPermissionResultListener permissionListener =
+            (requestCode, grantResult) -> notifyRootsChanged();
+
     @Override
     public boolean onCreate() {
+        Context context = getContext();
+        if (context == null) return false;
+        preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        preferences.registerOnSharedPreferenceChangeListener(preferenceListener);
+        Shizuku.addBinderReceivedListener(binderReceivedListener);
+        Shizuku.addBinderDeadListener(binderDeadListener);
+        Shizuku.addRequestPermissionResultListener(permissionListener);
         return true;
+    }
+
+    @Override
+    public void shutdown() {
+        if (preferences != null) preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener);
+        Shizuku.removeBinderReceivedListener(binderReceivedListener);
+        Shizuku.removeBinderDeadListener(binderDeadListener);
+        Shizuku.removeRequestPermissionResultListener(permissionListener);
+        super.shutdown();
+    }
+
+    private void notifyRootsChanged() {
+        Context context = getContext();
+        if (context != null) context.getContentResolver().notifyChange(
+                DocumentsContract.buildRootsUri(context.getPackageName() + ".documents"), null);
+    }
+
+    private void checkRootInBackground(Context context) {
+        if (!PrivilegeManager.Root.isRootFileOpsEnabled(context)
+                || PrivilegeManager.Root.isRootAvailableCached(context)
+                || !checkingRoot.compareAndSet(false, true)) return;
+        // Never block DocumentsUI's shared roots cache on a su process.
+        new Thread(() -> {
+            try {
+                PrivilegeManager.Root.isRootAvailable(context);
+            } finally {
+                checkingRoot.set(false);
+            }
+        }, "document-roots").start();
     }
 
     // ======== roots ========
@@ -102,14 +156,13 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         Context context = getContext();
         if (context == null) return result;
         String internal = internalRoot();
+        checkRootInBackground(context);
         try {
-            addRoot(result, context, ROOT_INTERNAL,
-                    context.getString(R.string.storage_provider_label),
-                    context.getString(R.string.storage_provider_internal), internal);
-            if (androidDataReachable(context)) {
+            if (PrivilegeManager.active(context) == PrivilegeManager.Backend.SHIZUKU
+                    && androidDataReachable(context)) {
                 addRoot(result, context, ROOT_APPDATA,
                         context.getString(R.string.storage_provider_label)
-                                + " (Android data)",
+                                + " (Shizuku)",
                         context.getString(R.string.storage_provider_appdata),
                         internal + "/Android/data");
             }
@@ -131,7 +184,6 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         row.add(DocumentsContract.Root.COLUMN_ROOT_ID, id);
         row.add(DocumentsContract.Root.COLUMN_FLAGS,
                 DocumentsContract.Root.FLAG_LOCAL_ONLY
-                        | DocumentsContract.Root.FLAG_SUPPORTS_CREATE
                         | DocumentsContract.Root.FLAG_SUPPORTS_IS_CHILD);
         row.add(DocumentsContract.Root.COLUMN_TITLE, title);
         row.add(DocumentsContract.Root.COLUMN_SUMMARY, summary);
@@ -142,9 +194,11 @@ public class StorageDocumentsProvider extends DocumentsProvider {
     /** Android/{data,obb,media} is only listable as root or as the shell user. */
     private static boolean androidDataReachable(Context context) {
         try {
-            // DocumentsUI waits for every provider's roots. Never ping Shizuku
-            // or start a privileged service while its shared roots cache is locked.
-            return PrivilegeManager.Files.fileOpsConfigured(context);
+            if (!PrivilegeManager.Files.fileOpsConfigured(context)) return false;
+            if (PrivilegeManager.active(context) == PrivilegeManager.Backend.ROOT) {
+                return PrivilegeManager.Root.isRootAvailableCached(context);
+            }
+            return PrivilegeManager.Shizuku.ready();
         } catch (Throwable e) {
             return false;
         }
@@ -152,10 +206,8 @@ public class StorageDocumentsProvider extends DocumentsProvider {
 
     private static boolean rootReachable(Context context) {
         try {
-            // running it inside queryRoots held the whole picker up for seconds -
-            // which is exactly how the root entry ended up missing. If su really
-            // is unavailable the listing comes back empty instead.
-            return PrivilegeManager.Root.isRootFileOpsEnabled(context);
+            return PrivilegeManager.Root.isRootFileOpsEnabled(context)
+                    && PrivilegeManager.Root.isRootAvailableCached(context);
         } catch (Throwable e) {
             return false;
         }
@@ -179,7 +231,8 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         if (context != null && androidDataReachable(context)) {
             bases.add(new File(internal + "/Android/data"));
         }
-        if (context != null && rootReachable(context)) {
+        if (context != null && PrivilegeManager.Root.isRootFileOpsEnabled(context)
+                && PrivilegeManager.Files.fileOpsOn(context)) {
             bases.add(new File("/"));
         }
         return bases;
@@ -229,7 +282,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         }
         Context context = getContext();
         try {
-            return PrivilegeManager.Files.openReadFd(context, file.getAbsolutePath());
+            return PrivilegeManager.Files.openReadFd(context, file.getAbsolutePath(), signal);
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to open " + documentId + ": " + e.getMessage());
         }
@@ -334,6 +387,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
             return getContext() == null ? file.getName()
                     : getContext().getString(R.string.storage_provider_label);
         }
+        if (path.equals("/")) return getContext().getString(R.string.storage_provider_root);
         if (path.equals(internalRoot() + "/Android/data")) return "data";
         return file.getName();
     }
@@ -349,7 +403,14 @@ public class StorageDocumentsProvider extends DocumentsProvider {
             children = parent.listFiles();
         } catch (Throwable ignored) {
         }
-        if (children == null || children.length == 0) {
+        boolean needsStat = children == null || children.length == 0;
+        if (children != null) {
+            for (File entry : children) {
+                if (!entry.isDirectory() && !entry.isFile()) needsStat = true;
+            }
+        }
+        if (needsStat && PrivilegeManager.Files.fileOpsConfigured(getContext())
+                && PrivilegeManager.Files.fileOpsOn(getContext())) {
             try {
                 File[] elevated = PrivilegeManager.Files.listWithStat(getContext(), path);
                 if (elevated != null && elevated.length > 0) children = elevated;
@@ -371,7 +432,19 @@ public class StorageDocumentsProvider extends DocumentsProvider {
             String canonical = file.getCanonicalPath();
             for (File base : exportedBases()) {
                 String root = base.getCanonicalPath();
-                if (canonical.equals(root) || canonical.startsWith(prefixOf(root))) return file;
+                if (canonical.equals(root) || canonical.startsWith(prefixOf(root))) {
+                    // File.length/isDirectory on an app-UID File report zero/false
+                    // for privileged paths. Keep the backend's stat information.
+                    if (!file.canRead() && file.getParent() != null) {
+                        File[] siblings = PrivilegeManager.Files.listWithStat(getContext(), file.getParent());
+                        if (siblings != null) {
+                            for (File sibling : siblings) {
+                                if (sibling.getName().equals(file.getName())) return sibling;
+                            }
+                        }
+                    }
+                    return file;
+                }
             }
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to resolve " + documentId + ": " + e.getMessage());

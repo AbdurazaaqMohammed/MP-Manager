@@ -53,7 +53,8 @@ public class PickerIconLoader {
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
-        if (file.isFile()) {
+        fileIconView.setTag(file.getPath());
+        if (!file.isDirectory()) {
             fileDateView.setVisibility(View.VISIBLE);
             SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd HH:mm", Locale.US);
             String formattedDate = sdf.format(new Date(file.lastModified()));

@@ -875,6 +875,7 @@ Layout Inspector
     <string name="dhizuku_granted">Dhizuku permission granted</string>
     <string name="dhizuku_denied">Dhizuku permission denied</string>
     <string name="shizuku_file_operations">Shizuku file operations (Android/data, obb, media)</string>
+    <string name="pick_file_activity_label">MP Manager</string>
     <string name="storage_provider_label">MP Manager</string>
     <string name="storage_provider_internal">Internal storage</string>
     <string name="storage_provider_appdata">Android data (root/Shizuku)</string>

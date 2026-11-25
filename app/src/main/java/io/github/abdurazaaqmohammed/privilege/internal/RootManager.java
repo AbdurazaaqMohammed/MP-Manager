@@ -51,7 +51,7 @@ public class RootManager {
 
     private static volatile RootManager instance;
     private final Context context;
-    private Boolean rootAvailable = null;
+    private volatile Boolean rootAvailable = null;
     private Process suProcess;
     private DataOutputStream suStdin;
     private BufferedReader suStdout;
@@ -132,13 +132,28 @@ public class RootManager {
     }
 
     public boolean isRootAvailable() {
-        if (rootAvailable != null) return rootAvailable;
-        rootAvailable = checkRoot();
-        return rootAvailable;
+        Boolean cached = rootAvailable;
+        if (cached != null) return cached;
+        boolean available = checkRoot();
+        rootAvailable = available;
+        notifyDocumentRootsChanged();
+        return available;
+    }
+
+    /** Availability already confirmed by the app; never starts su. */
+    public boolean isRootAvailableCached() {
+        return Boolean.TRUE.equals(rootAvailable);
+    }
+
+    private void notifyDocumentRootsChanged() {
+        context.getContentResolver().notifyChange(
+                android.provider.DocumentsContract.buildRootsUri(
+                        context.getPackageName() + ".documents"), null);
     }
 
     public void refreshRootCache() {
         rootAvailable = null;
+        notifyDocumentRootsChanged();
     }
 
     public boolean isSilentInstallEnabled() {

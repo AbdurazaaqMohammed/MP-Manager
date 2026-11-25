@@ -15,37 +15,56 @@ import androidx.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 
+import io.github.abdurazaaqmohammed.MPManager.BuildConfig;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
-import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 
 /**
  * MP Manager as the picker window itself.
  *
- * <p>When another app asks the system for a file — {@code ACTION_GET_CONTENT},
- * {@code ACTION_OPEN_DOCUMENT}, {@code ACTION_PICK} or
- * {@code ACTION_OPEN_DOCUMENT_TREE} — MP Manager is offered alongside the
- * system Files app. Choosing it opens the same {@link FilePickerDialog} the
- * rest of the app uses, so the user browses with the app's own list, including
- * folders that need root or Shizuku to be read at all.</p>
+ * <p>When another app asks for a file through an activity resolver —
+ * {@code ACTION_GET_CONTENT} or {@code ACTION_PICK} — MP Manager can be
+ * selected as the built-in picker. Choosing it opens the same
+ * {@link FilePickerDialog} the rest of the app uses, so the user browses with
+ * the app's own list, including folders that need root or Shizuku to be read
+ * at all. The provider also exposes available privileged storage roots in
+ * the system document picker.</p>
  *
  * <p>The picked path is returned as a {@code content://} document URI under
  * {@link io.github.abdurazaaqmohammed.provider.StorageDocumentsProvider}, with
  * a read grant attached. The caller therefore reads the bytes through that
- * provider, which streams them straight out of root/Shizuku when needed — no
- * copy has to be made before the file is handed over, and a file in
- * {@code Android/data} is as openable as one on the sdcard.</p>
+ * provider. Elevated files are staged privately before a seekable descriptor is
+ * returned, so callers can read and seek through the complete contents.</p>
  */
 public class PickFileActivity extends BaseActivity {
 
     /** Must match the authority declared for the provider in the manifest. */
-    public static final String AUTHORITY = "io.github.abdurazaaqmohammed.MPManager.documents";
+    public static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".documents";
+
+    public static final String EXTRA_INITIAL_DIRECTORY = "initial_directory";
+    private static final String STATE_LOCATION = "picker_location";
 
     private boolean delivered;
+    private String location;
+    private FilePickerDialog picker;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        location = savedInstanceState == null ? getIntent().getStringExtra(EXTRA_INITIAL_DIRECTORY)
+                : savedInstanceState.getString(STATE_LOCATION);
+        showPicker(location);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_LOCATION,
+                picker == null ? location : picker.getCurrentDirectory());
+    }
+
+    private void showPicker(String initialDirectory) {
+        location = initialDirectory;
         Intent intent = getIntent();
         String action = intent == null ? null : intent.getAction();
         boolean tree = Intent.ACTION_OPEN_DOCUMENT_TREE.equals(action);
@@ -60,10 +79,12 @@ public class PickFileActivity extends BaseActivity {
         props.selection_mode = multiple
                 ? FilePickerDialog.MULTI_MODE : FilePickerDialog.SINGLE_MODE;
         props.root = startDirectory();
+        if (initialDirectory != null) props.offset = new File(initialDirectory);
         props.extensions = extensionsFor(intent);
         props.preferenceKey = "saf_pick";
+        props.restoreLastPath = initialDirectory == null;
 
-        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker = new FilePickerDialog(this, props);
         picker.setTitle(getString(R.string.select));
         picker.setOnCancelListener(() -> {
             if (delivered) return;
@@ -72,6 +93,12 @@ public class PickFileActivity extends BaseActivity {
         });
         picker.setDialogSelectionListener(files -> deliver(files, tree, document));
         picker.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (picker != null) picker.dismiss();
+        super.onDestroy();
     }
 
     /** Turns the picked path(s) into a result the calling app can read. */

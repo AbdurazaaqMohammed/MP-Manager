@@ -80,6 +80,7 @@ public class FilePickerDialog {
         public File offset;
         public String[] extensions;
         public String preferenceKey;
+        public boolean restoreLastPath = true;
     }
 
     private final Context context;
@@ -157,7 +158,7 @@ public class FilePickerDialog {
                     .setPositiveButton(android.R.string.ok, null).show();
             ad.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v1 -> {
                 File inputPath = new File(input.getText().toString());
-                if (inputPath.exists() && inputPath.isDirectory()) {
+                if (isAccessibleDirectory(inputPath)) {
                     loadDirectory(inputPath);
                     ad.dismiss();
                 } else {
@@ -212,14 +213,25 @@ public class FilePickerDialog {
     }
 
     private File resolveStartDir() {
-        String saved = settings.getString(prefLastPath(), null);
+        String saved = props.restoreLastPath ? settings.getString(prefLastPath(), null) : null;
         if (saved != null) {
             File savedDir = new File(saved);
-            if (savedDir.isDirectory()) return savedDir;
+            if (isAccessibleDirectory(savedDir)) return savedDir;
         }
-        if (props.offset != null && props.offset.isDirectory()) return props.offset;
-        if (props.root != null && props.root.isDirectory()) return props.root;
+        if (props.offset != null && isAccessibleDirectory(props.offset)) return props.offset;
+        if (props.root != null && isAccessibleDirectory(props.root)) return props.root;
         return Environment.getExternalStorageDirectory();
+    }
+
+    private boolean isAccessibleDirectory(File directory) {
+        if (directory.isDirectory() && directory.canRead()) return true;
+        return PrivilegeManager.Files.fileOpsConfigured(context)
+                && PrivilegeManager.Files.fileOpsOn(context)
+                && PrivilegeManager.Files.isDirectory(context, directory.getAbsolutePath());
+    }
+
+    public String getCurrentDirectory() {
+        return currentDir == null ? null : currentDir.getAbsolutePath();
     }
 
     private String prefLastPath() {
@@ -230,12 +242,20 @@ public class FilePickerDialog {
         currentDir = dir;
         entries.clear();
         File[] files = dir.listFiles();
-        if (files == null || files.length == 0) {
+        boolean needsStat = files == null || files.length == 0;
+        if (files != null) {
+            for (File entry : files) {
+                if (!entry.isDirectory() && !entry.isFile()) needsStat = true;
+            }
+        }
+        if (needsStat && PrivilegeManager.Files.fileOpsConfigured(context)
+                && PrivilegeManager.Files.fileOpsOn(context)) {
             // Android/data, /data and friends cannot be listed by this uid;
             // borrow the root/Shizuku backend so the picker browses exactly the
             // folders the file manager does.
             try {
-                files = PrivilegeManager.Files.listWithStat(context, dir.getAbsolutePath());
+                File[] elevated = PrivilegeManager.Files.listWithStat(context, dir.getAbsolutePath());
+                if (elevated != null) files = elevated;
             } catch (Exception ignored) {
             }
         }
@@ -343,6 +363,11 @@ public class FilePickerDialog {
 
     private void reloadCurrent() {
         loadDirectory(currentDir);
+    }
+
+    public void dismiss() {
+        cancelListener = null;
+        if (dialog != null) dialog.dismiss();
     }
 
     public void refresh() {

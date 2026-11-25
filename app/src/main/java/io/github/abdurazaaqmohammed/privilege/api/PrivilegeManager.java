@@ -208,6 +208,8 @@ public final class PrivilegeManager {
 
         public static ParcelFileDescriptor openReadFd(Context context, String absPath) throws IOException { return AccessManager.openReadFd(context, absPath); }
 
+        public static ParcelFileDescriptor openReadFd(Context context, String absPath, android.os.CancellationSignal signal) throws IOException { return AccessManager.openReadFd(context, absPath, signal); }
+
         public static void preserveTime(Context context, String srcAbs, String dstAbs) { AccessManager.preserveTime(context, srcAbs, dstAbs); }
 
     }
@@ -402,6 +404,8 @@ public final class PrivilegeManager {
     public static final class Root {
 
         public static boolean isRootAvailable(Context context) { return RootManager.getInstance(context).isRootAvailable(); }
+
+        public static boolean isRootAvailableCached(Context context) { return RootManager.getInstance(context).isRootAvailableCached(); }
 
         public static boolean isRootMode(Context context) { return RootManager.getInstance(context).isRootMode(); }
 

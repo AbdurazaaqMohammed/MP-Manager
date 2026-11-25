@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.privilege.internal;
 
+import io.github.abdurazaaqmohammed.util.io.DocumentReadCache;
 import io.github.abdurazaaqmohammed.util.io.DirectoryStats;
 
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
@@ -1088,15 +1089,14 @@ public final class AccessManager {
         return false;
     }
 
-    /**
-     * Opens {@code absPath} for reading as a file descriptor, for the Documents
-     * provider.
-     *
-     * <p>A path this uid can open is handed out directly. A root/Shizuku path is
-     * pumped into a pipe by the elevated backend, so no staging copy is made
-     * first and files of any size can be passed to another app.
-     */
+    /** Opens a seekable document descriptor, staging privileged reads privately. */
     public static ParcelFileDescriptor openReadFd(Context context, String absPath) throws IOException {
+        return openReadFd(context, absPath, null);
+    }
+
+    public static ParcelFileDescriptor openReadFd(Context context, String absPath,
+                                                android.os.CancellationSignal signal) throws IOException {
+        if (signal != null) signal.throwIfCanceled();
         if (absPath == null || !absPath.startsWith("/")) {
             throw new IOException("Refusing to open non-absolute path");
         }
@@ -1110,13 +1110,15 @@ public final class AccessManager {
             if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
                 throw new IOException("Root file access is disabled or unavailable");
             }
-            return rm.openReadPipe(absPath);
+            return DocumentReadCache.open(context.getCacheDir(), signal,
+                    out -> rm.streamFromRoot(absPath, out, Long.MAX_VALUE));
         }
         if (backend == Backend.SHIZUKU) {
             if (!canUseShizuku(context)) {
                 throw new IOException("Shizuku file access is disabled or unavailable");
             }
-            return ShizukuManager.openReadPipe(context, absPath);
+            return DocumentReadCache.open(context.getCacheDir(), signal,
+                    out -> ShizukuManager.streamFrom(context, absPath, out, Long.MAX_VALUE));
         }
         throw new IOException("Not readable: " + absPath);
     }

@@ -216,12 +216,11 @@
             android:label="@string/free_style"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection" />
-        <!-- Picker entry point: apps that ask the system for a file can choose
-             MP Manager and browse with the app's own FilePickerDialog. -->
+        <!-- Direct picker entry point for resolvers that offer activities. -->
         <activity
             android:name="io.github.abdurazaaqmohammed.ui.editor.PickFileActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:label="MP Manager"
+            android:label="@string/pick_file_activity_label"
             android:exported="true"
             android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection">
@@ -230,16 +229,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
                 <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.OPEN_DOCUMENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.OPENABLE" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.PICK" />
@@ -402,10 +391,7 @@
                    android:name="android.support.FILE_PROVIDER_PATHS"
                    android:resource="@xml/paths"/>
            </provider>
-           <!-- Storage Access Framework entry: the system Files app lists this
-                provider in its sidebar, and any app's document picker can use
-                it to choose a file from MP Manager. MANAGE_DOCUMENTS keeps it
-                bound to the system document UI only. -->
+           <!-- URI backend and privileged storage roots for DocumentsUI. -->
            <provider
                android:name="io.github.abdurazaaqmohammed.provider.StorageDocumentsProvider"
                android:authorities="${applicationId}.documents"
