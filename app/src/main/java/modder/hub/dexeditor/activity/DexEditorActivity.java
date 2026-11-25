@@ -161,6 +161,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import com.android.tools.smali.dexlib2.iface.ClassDef;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 /**
  * DexEditorActivity: The main entry point for the DEX editor.
  * Re-sequenced and refactored for better clarity and utility.
@@ -440,7 +441,7 @@ public class DexEditorActivity extends BaseActivity {
         final ClassTree.CompilationOptions options = classTree != null
                 ? classTree.getCompilationOptions() : sessionOptions;
         final ClassTree tree = classTree;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             // Fail safe: any scan trouble falls back to prompting.
             boolean effective = true;
             try {
@@ -449,14 +450,14 @@ public class DexEditorActivity extends BaseActivity {
                 t.printStackTrace();
             }
             final boolean finalEffective = effective;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                 progress.dismiss();
                 optionsEffectCacheKey = key;
                 optionsEffectCacheValue = finalEffective;
                 if (finalEffective) showExitConfirmation();
                 else promptDoublePressExit();
             });
-        }, "dex-options-check").start();
+        });
     }
 
 
@@ -646,10 +647,10 @@ public class DexEditorActivity extends BaseActivity {
 
     private void initializeLogic() {
         // Pre-initialize heavy components in background to avoid lag on first editor open
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             SmaliInstructionHelper.init(getApplicationContext());
             UnifiedEditorFragment.ensureLanguageInitialized(getApplicationContext());
-        }).start();
+        });
 
         tabs.clear();
         tabNavigationHistory.clear();
@@ -684,7 +685,7 @@ public class DexEditorActivity extends BaseActivity {
         fabDelete.hide();
 
         if (dexPaths != null && !dexPaths.isEmpty()) {
-            new LoadDexThread().start();
+            AppExecutors.io().execute(new LoadDexTask());
         } else {
             showErrorDialog("No DEX files provided");
             finish();
@@ -696,11 +697,11 @@ public class DexEditorActivity extends BaseActivity {
         if (stringsLoading) return;
         stringsLoading = true;
         showProcessingProgress(true);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 final List<String> strings = classTree.getAllStrings();
                 Collections.sort(strings);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     stringsLoading = false;
                     stringList.clear();
                     stringList.addAll(strings);
@@ -711,13 +712,13 @@ public class DexEditorActivity extends BaseActivity {
                     showProcessingProgress(false);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     stringsLoading = false;
                     showProcessingProgress(false);
                     showErrorDialog("Failed to load strings: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private void setupTabsTouchHelper() {
@@ -1162,20 +1163,20 @@ public class DexEditorActivity extends BaseActivity {
         AlertCircularProgress pd = new AlertCircularProgress(this);
         pd.setMessage(getString(R.string.decompiling));
         pd.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 final String java = Smali2Java.translate(code, dexVersion);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     addTab(className, title, java, 1); // adding the java item in the recent opened classes list
                 });
             } catch (final Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     Notify_MT.Notify(DexEditorActivity.this, getString(R.string.error), e.toString(), getString(R.string.close));
                 });
             }
-        }).start();
+        });
     }
 
     // smali toggle comment
@@ -1405,7 +1406,7 @@ public class DexEditorActivity extends BaseActivity {
         AlertCircularProgress pd = new AlertCircularProgress(this);
         pd.setMessage(getString(R.string.decompiling));
         pd.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ClassDef def = classTree != null && classTree.classMap != null ? classTree.classMap.get(className) : null;
                 int ver = dexVersion;
@@ -1423,17 +1424,17 @@ public class DexEditorActivity extends BaseActivity {
                 }
 
                 final String finalJava = java;
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     addTab(className, SmaliHelper.extractSimpleName(className) + ".java", finalJava, 1);
                 });
             } catch (final Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     Notify_MT.Notify(DexEditorActivity.this, getString(R.string.error), e.toString(), getString(R.string.close));
                 });
             }
-        }).start();
+        });
     }
 
     public void openClassInSmali(String className) {
@@ -1949,7 +1950,7 @@ public class DexEditorActivity extends BaseActivity {
         pd.setMessage(getString(R.string.saving_x, toSave.get(0).tab.title));
         pd.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean hasChange = false;
             final List<TabSaveEntry> savedEntries = new ArrayList<>();
             try {
@@ -1957,7 +1958,7 @@ public class DexEditorActivity extends BaseActivity {
                     TabSaveEntry entry = toSave.get(i);
                     final EditorTab tab = entry.tab;
                     final String code = entry.code;
-                    runOnUiThread(() -> pd.setMessage(getString(R.string.saving_x, tab.title)));
+                    AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> pd.setMessage(getString(R.string.saving_x, tab.title)));
 
                     if (!classTree.isSameAsCachedSmali(tab.className, code)) {
                         classTree.saveClassDefIfChanged(Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion), code);
@@ -1966,7 +1967,7 @@ public class DexEditorActivity extends BaseActivity {
                     savedEntries.add(entry);
                 }
                 final boolean changed = hasChange;
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     applySavedTabsState(savedEntries, changed);
                     if (onProceed != null) onProceed.run();
@@ -1974,13 +1975,13 @@ public class DexEditorActivity extends BaseActivity {
             } catch (final Throwable e) {
                 final boolean changed = hasChange;
                 final String detail = e.getMessage() != null ? e.getMessage() : e.toString();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     applySavedTabsState(savedEntries, changed);
                     Notify_MT.Notify(DexEditorActivity.this, "Error saving tabs", detail, "Close");
                 });
             }
-        }).start();
+        });
     }
 
     private void applySavedTabsState(List<TabSaveEntry> savedEntries, boolean changed) {
@@ -2020,10 +2021,10 @@ public class DexEditorActivity extends BaseActivity {
         pd.setMessage(getString(R.string.saving_x, tab.title));
         pd.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (classTree.isSameAsCachedSmali(tab.className, code)) {
-                    runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                         pd.dismiss();
                         tab.isModified = false;
                         tab.content = code;
@@ -2038,7 +2039,7 @@ public class DexEditorActivity extends BaseActivity {
                     return;
                 }
                 classTree.saveClassDefIfChanged(Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion), code);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     tab.isModified = false;
                     tab.content = code;
@@ -2055,13 +2056,13 @@ public class DexEditorActivity extends BaseActivity {
                 });
             } catch (final Throwable e) {
                 final String detail = e.getMessage() != null ? e.getMessage() : e.toString();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     Notify_MT.Notify(DexEditorActivity.this, "Error saving " + tab.title, detail, "Close");
                     if (onSaved != null) onSaved.run();
                 });
             }
-        }).start();
+        });
     }
 
     private void exitActivity() {
@@ -2936,24 +2937,24 @@ public class DexEditorActivity extends BaseActivity {
         AlertCircularProgress pd = new AlertCircularProgress(this);
         pd.setMessage(getString(R.string.decompiling));
         pd.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 int ver = dexVersion;
                 try {
                     if (classTree != null) ver = classTree.getOpenedDexVersion();
                 } catch (Exception ignored) {}
                 final String java = Smali2Java.translate(smaliCode, ver);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     addTab(className, title, java, 1);
                 });
             } catch (final Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     pd.dismiss();
                     Notify_MT.Notify(DexEditorActivity.this, getString(R.string.error), e.toString(), getString(R.string.close));
                 });
             }
-        }).start();
+        });
     }
 
     public void searchMethodOverrides(String slashClass, String methodName, String proto) {
@@ -3064,7 +3065,7 @@ public class DexEditorActivity extends BaseActivity {
                 }
             }
 
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 List<ClassDef> classes;
                 synchronized (activity.classTree.classMap) {
                     classes = new ArrayList<>(activity.classTree.classMap.values());
@@ -3137,7 +3138,7 @@ public class DexEditorActivity extends BaseActivity {
                     activity.refreshExplorerPage(1);
                     if (onDone != null) onDone.run();
                 });
-            }).start();
+            });
         }
 
         private String applyRules(String literal) {
@@ -3157,8 +3158,8 @@ public class DexEditorActivity extends BaseActivity {
         }
     }
 
-    // Thread to load DEX file
-    private class LoadDexThread extends Thread {
+    // Task to load DEX file
+    private class LoadDexTask implements Runnable {
         @Override
         public void run() {
             try {
@@ -3190,7 +3191,7 @@ public class DexEditorActivity extends BaseActivity {
                 if (loadedDexVer <= 0) loadedDexVer = dexPref.getInt("dexVer", 35);
                 final int finalVer = loadedDexVer > 0 ? loadedDexVer : 35;
 
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     if (isDestroyed() || session.isClosed()) return;
                     try {
                         dexVersion = finalVer;
@@ -3219,7 +3220,7 @@ public class DexEditorActivity extends BaseActivity {
                 });
             } catch (final Exception e) {
                 showProcessingProgress(false);
-                runOnUiThread(() -> showErrorDialog(e));
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> showErrorDialog(e));
             } finally {
                 if (!isDestroyed()) showProcessingProgress(false);
             }
@@ -3258,109 +3259,112 @@ public class DexEditorActivity extends BaseActivity {
             // session started and whenever the options dialog is OKed); re-applying
             // sessionOptions here could clobber them with stale/reset values.
 
-            new Thread() {
-                @Override
-                public void run() {
-                    Looper.prepare();
-                    try {
-                        classTree.saveAllDexFiles(new ClassTree.DexSaveProgress() {
-                            @Override
-                            public void onProgress(final int progress, final int total) {
-                                runOnUiThread(() -> alertProgress.setProgress(progress, total));
-                            }
+            AppExecutors.io().execute(() -> {
+                try {
+                    classTree.saveAllDexFiles(new ClassTree.DexSaveProgress() {
+                        @Override
+                        public void onProgress(final int progress, final int total) {
+                            AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> alertProgress.setProgress(progress, total));
+                        }
 
-                            @Override
-                            public void onTitle(final String title) {
-                                runOnUiThread(() -> alertProgress.setTitle(title));
-                            }
+                        @Override
+                        public void onTitle(final String title) {
+                            AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> alertProgress.setTitle(title));
+                        }
 
-                            @Override
-                            public void onMessage(final String message) {
-                                if (isStopped) throw new ClassTree.SaveCancelledException();
-                                runOnUiThread(() -> alertProgress.setMessage(message));
-                            }
-                        });
-                        if (isStopped) {
-                            runOnUiThread(() -> Extensions.showMessage(DexEditorActivity.this,  R.string.cancelled));
+                        @Override
+                        public void onMessage(final String message) {
+                            if (isStopped) throw new ClassTree.SaveCancelledException();
+                            AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> alertProgress.setMessage(message));
+                        }
+                    });
+                    if (isStopped) {
+                        AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                            Extensions.showMessage(DexEditorActivity.this, R.string.cancelled);
                             alertProgress.dismiss();
-                            return;
-                        }
-                        runOnUiThread(() -> {
-                            // Clear editor positions JSON on success
-                            EditorPositionManager.getInstance(DexEditorActivity.this).clear();
-                            //SketchwareUtil.showMessage(getApplicationContext(), "Success");
-                            Intent resultIntent = new Intent();
-                            List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
-                            if (dexPaths != null && !dexPaths.isEmpty()) {
-                                resultIntent.setData(Uri.fromFile(new File(dexPaths.get(0))));
-                                resultIntent.putStringArrayListExtra("SelectedDexFiles", new ArrayList<>(dexPaths));
-                            }
-                            resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            // Hand the archive back with the result as well. The caller
-                            // needs it to offer the "update the APK/ZIP?" prompt, and
-                            // relying on the caller having passed it on the way in is
-                            // what made the prompt appear only on some paths.
-                            Intent launch = getIntent();
-                            if (launch != null) {
-                                String zf = launch.getStringExtra("zipFilePath");
-                                String ze = launch.getStringExtra("zipEntryPath");
-                                if (zf != null) resultIntent.putExtra("zipFilePath", zf);
-                                if (ze != null) resultIntent.putExtra("zipEntryPath", ze);
-                            }
-                            session.keepResult();
-                            setEditorResult(757, resultIntent);
-                            finish();
                         });
-                    } catch (final Throwable e) {
-                        if (e instanceof ClassTree.SaveCancelledException || "CANCELLED".equals(e.getMessage())) {
-                            runOnUiThread(() -> Extensions.showMessage(DexEditorActivity.this, "Operation Cancelled"));
-                            alertProgress.dismiss();
-                            return;
-                        }
-                        final String msg = e.getMessage();
-                        if (msg != null && msg.startsWith("COMPILE_ERROR:")) {
-                            String[] parts = msg.split(":", 3);
-                            final String faultyClass = parts[1];
-                            final String error = parts[2];
-
-                            // Parse line and column info [line,column]
-                            int line = -1;
-                            int column = -1;
-                            try {
-                                Matcher matcher = Pattern.compile("\\[(\\d+),(\\d+)]").matcher(error);
-                                if (matcher.find()) {
-                                    line = Integer.parseInt(Objects.requireNonNull(matcher.group(1))) - 1; // 0-based
-                                    column = Integer.parseInt(Objects.requireNonNull(matcher.group(2))) - 1; // 0-based
-                                }
-                            } catch (Exception ignored) {
-                            }
-
-                            final int finalLine = line;
-                            final int finalColumn = column;
-
-                            runOnUiThread(() -> {
-                                // detect compile error from spceific classes and navigate to the class for fix
-                                new MaterialAlertDialogBuilder(DexEditorActivity.this)
-                                        .setTitle(R.string.compile_error)
-                                        .setMessage("Class: " + faultyClass + "\n\n" + error)
-                                        .setPositiveButton(R.string.fix, (d, w) -> {
-                                            if (finalLine != -1) {
-                                                openClassAtLine(faultyClass, finalLine, finalColumn, null);
-                                            } else {
-                                                openClass(faultyClass);
-                                            }
-                                        })
-                                        .setNegativeButton(android.R.string.cancel, null)
-                                        .show();
-                            });
-                        } else {
-                            runOnUiThread(() -> showErrorDialog("An error occurred while processing dex\n\n---StackTrace---\n\n" + e));
-                        }
+                        return;
                     }
-                    alertProgress.dismiss();
-                    Looper.loop();
+                    AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                        alertProgress.dismiss();
+                        // Clear editor positions JSON on success
+                        EditorPositionManager.getInstance(DexEditorActivity.this).clear();
+                        //SketchwareUtil.showMessage(getApplicationContext(), "Success");
+                        Intent resultIntent = new Intent();
+                        List<String> dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
+                        if (dexPaths != null && !dexPaths.isEmpty()) {
+                            resultIntent.setData(Uri.fromFile(new File(dexPaths.get(0))));
+                            resultIntent.putStringArrayListExtra("SelectedDexFiles", new ArrayList<>(dexPaths));
+                        }
+                        resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        // Hand the archive back with the result as well. The caller
+                        // needs it to offer the "update the APK/ZIP?" prompt, and
+                        // relying on the caller having passed it on the way in is
+                        // what made the prompt appear only on some paths.
+                        Intent launch = getIntent();
+                        if (launch != null) {
+                            String zf = launch.getStringExtra("zipFilePath");
+                            String ze = launch.getStringExtra("zipEntryPath");
+                            if (zf != null) resultIntent.putExtra("zipFilePath", zf);
+                            if (ze != null) resultIntent.putExtra("zipEntryPath", ze);
+                        }
+                        session.keepResult();
+                        setEditorResult(757, resultIntent);
+                        finish();
+                    });
+                } catch (final Throwable e) {
+                    if (e instanceof ClassTree.SaveCancelledException || "CANCELLED".equals(e.getMessage())) {
+                        AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                            Extensions.showMessage(DexEditorActivity.this, "Operation Cancelled");
+                            alertProgress.dismiss();
+                        });
+                        return;
+                    }
+                    final String msg = e.getMessage();
+                    if (msg != null && msg.startsWith("COMPILE_ERROR:")) {
+                        String[] parts = msg.split(":", 3);
+                        final String faultyClass = parts[1];
+                        final String error = parts[2];
+
+                        // Parse line and column info [line,column]
+                        int line = -1;
+                        int column = -1;
+                        try {
+                            Matcher matcher = Pattern.compile("\\[(\\d+),(\\d+)]").matcher(error);
+                            if (matcher.find()) {
+                                line = Integer.parseInt(Objects.requireNonNull(matcher.group(1))) - 1; // 0-based
+                                column = Integer.parseInt(Objects.requireNonNull(matcher.group(2))) - 1; // 0-based
+                            }
+                        } catch (Exception ignored) {
+                        }
+
+                        final int finalLine = line;
+                        final int finalColumn = column;
+
+                        AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                            alertProgress.dismiss();
+                            // detect compile error from spceific classes and navigate to the class for fix
+                            new MaterialAlertDialogBuilder(DexEditorActivity.this)
+                                    .setTitle(R.string.compile_error)
+                                    .setMessage("Class: " + faultyClass + "\n\n" + error)
+                                    .setPositiveButton(R.string.fix, (d, w) -> {
+                                        if (finalLine != -1) {
+                                            openClassAtLine(faultyClass, finalLine, finalColumn, null);
+                                        } else {
+                                            openClass(faultyClass);
+                                        }
+                                    })
+                                    .setNegativeButton(android.R.string.cancel, null)
+                                    .show();
+                        });
+                    } else {
+                        AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                            alertProgress.dismiss();
+                            showErrorDialog("An error occurred while processing dex\n\n---StackTrace---\n\n" + e);
+                        });
+                    }
                 }
-            }.start();
+            });
         }
     }
 
@@ -3414,40 +3418,37 @@ public class DexEditorActivity extends BaseActivity {
         progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.setMessage(getString(R.string.exporting));
         progressDialog.show();
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    List<String> types = DexBatchExporter.resolveTypes(classTree, selected);
-                    if (types.isEmpty()) throw new Exception(getString(R.string.dex_export_none));
-                    int version = classTree.getOpenedDexVersion();
-                    Map<String, ClassDef> defs = DexBatchExporter.resolveDefs(classTree, types, version);
-                    String done;
-                    if (format == DexBatchExporter.FORMAT_DEX) {
-                        File out = DexBatchExporter.exportDex(defs, version, destDir, "classes");
-                        done = getString(R.string.exported_to_X, out.getAbsolutePath());
-                    } else if (format == DexBatchExporter.FORMAT_JAR) {
-                        File out = DexBatchExporter.exportJar(defs, version, getCacheDir(), destDir, "classes");
-                        done = getString(R.string.exported_to_X, out.getAbsolutePath());
-                    } else {
-                        File smaliDir = new File(destDir, "smali");
-                        smaliDir.mkdirs();
-                        int n = DexBatchExporter.exportSmali(classTree, defs, smaliDir);
-                        done = getString(R.string.exported_to_X, smaliDir.getAbsolutePath()) + " (" + n + ")";
-                    }
-                    String finalDone = done;
-                    runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        Extensions.showMessage(DexEditorActivity.this, finalDone);
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        showErrorDialog(e.toString());
-                    });
+        AppExecutors.io().execute(() -> {
+            try {
+                List<String> types = DexBatchExporter.resolveTypes(classTree, selected);
+                if (types.isEmpty()) throw new Exception(getString(R.string.dex_export_none));
+                int version = classTree.getOpenedDexVersion();
+                Map<String, ClassDef> defs = DexBatchExporter.resolveDefs(classTree, types, version);
+                String done;
+                if (format == DexBatchExporter.FORMAT_DEX) {
+                    File out = DexBatchExporter.exportDex(defs, version, destDir, "classes");
+                    done = getString(R.string.exported_to_X, out.getAbsolutePath());
+                } else if (format == DexBatchExporter.FORMAT_JAR) {
+                    File out = DexBatchExporter.exportJar(defs, version, getCacheDir(), destDir, "classes");
+                    done = getString(R.string.exported_to_X, out.getAbsolutePath());
+                } else {
+                    File smaliDir = new File(destDir, "smali");
+                    smaliDir.mkdirs();
+                    int n = DexBatchExporter.exportSmali(classTree, defs, smaliDir);
+                    done = getString(R.string.exported_to_X, smaliDir.getAbsolutePath()) + " (" + n + ")";
                 }
+                String finalDone = done;
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                    progressDialog.dismiss();
+                    Extensions.showMessage(DexEditorActivity.this, finalDone);
+                });
+            } catch (Exception e) {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
+                    progressDialog.dismiss();
+                    showErrorDialog(e.toString());
+                });
             }
-        }.start();
+        });
     }
 
     // batch class deletion function
@@ -3459,48 +3460,45 @@ public class DexEditorActivity extends BaseActivity {
             progressDialog.setCanceledOnTouchOutside(false);
             progressDialog.setMessage(getString(R.string.deleting_classes));
             progressDialog.show();
-            new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + explorerViewPager.getCurrentItem()));
-                        if (currentFragment instanceof ExplorerPageFragment) {
-                            RecyclerView rv = ((ExplorerPageFragment) currentFragment).rv;
-                            if (rv != null && rv.getAdapter() instanceof TreeAdapter adapter) {
-                                List<TreeNode> selected = adapter.getSelectedNodes();
-                                List<String> namesToDelete = new ArrayList<>();
-                                EditorPositionManager posManager = EditorPositionManager.getInstance(DexEditorActivity.this);
-                                for (TreeNode node : selected) {
-                                    String fullName = node.getFullName();
-                                    namesToDelete.add(fullName + (node.isDirectory() ? "/" : ""));
-                                    posManager.removePosition(fullName);
-                                    final String nameForTabRemoval = fullName;
-                                    final boolean isDirForTabRemoval = node.isDirectory();
-                                    runOnUiThread(() -> removeTabsForClass(nameForTabRemoval, isDirForTabRemoval));
-                                }
-                                classTree.removeClasses(namesToDelete);
-                                runOnUiThread(new Runnable() {
-                                    @SuppressLint("NotifyDataSetChanged")
-                                    @Override
-                                    public void run() {
-                                        adapter.removeSelectedNodes();
-                                        adapter.setSelectionMode(false);
-                                        showMultipleFabs(false);
-                                        fabDelete.hide();
-                                        isChanged = true;
-                                        needsModifiedTreeRebuild = true;
-                                        refreshExplorerPage(1);
-                                        tabsAdapter.notifyDataSetChanged();
-                                    }
-                                });
+            AppExecutors.io().execute(() -> {
+                try {
+                    Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + explorerViewPager.getCurrentItem()));
+                    if (currentFragment instanceof ExplorerPageFragment) {
+                        RecyclerView rv = ((ExplorerPageFragment) currentFragment).rv;
+                        if (rv != null && rv.getAdapter() instanceof TreeAdapter adapter) {
+                            List<TreeNode> selected = adapter.getSelectedNodes();
+                            List<String> namesToDelete = new ArrayList<>();
+                            EditorPositionManager posManager = EditorPositionManager.getInstance(DexEditorActivity.this);
+                            for (TreeNode node : selected) {
+                                String fullName = node.getFullName();
+                                namesToDelete.add(fullName + (node.isDirectory() ? "/" : ""));
+                                posManager.removePosition(fullName);
+                                final String nameForTabRemoval = fullName;
+                                final boolean isDirForTabRemoval = node.isDirectory();
+                                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> removeTabsForClass(nameForTabRemoval, isDirForTabRemoval));
                             }
+                            classTree.removeClasses(namesToDelete);
+                            AppExecutors.runOnUiIfAlive(DexEditorActivity.this, new Runnable() {
+                                @SuppressLint("NotifyDataSetChanged")
+                                @Override
+                                public void run() {
+                                    adapter.removeSelectedNodes();
+                                    adapter.setSelectionMode(false);
+                                    showMultipleFabs(false);
+                                    fabDelete.hide();
+                                    isChanged = true;
+                                    needsModifiedTreeRebuild = true;
+                                    refreshExplorerPage(1);
+                                    tabsAdapter.notifyDataSetChanged();
+                                }
+                            });
                         }
-                    } catch (Exception e) {
-                        runOnUiThread(() -> showErrorDialog(e.toString()));
                     }
-                    runOnUiThread(() -> progressDialog.dismiss());
+                } catch (Exception e) {
+                    AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> showErrorDialog(e.toString()));
                 }
-            }.start();
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> progressDialog.dismiss());
+            });
         }
     }
 
@@ -3611,7 +3609,7 @@ public class DexEditorActivity extends BaseActivity {
         progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.setMessage("Adding class...");
         progressDialog.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 int targetVer = dexVersion > 0 ? dexVersion : (classTree != null ? classTree.getOpenedDexVersion() : 35);
                 if (targetVer <= 0) targetVer = 35;
@@ -3625,7 +3623,7 @@ public class DexEditorActivity extends BaseActivity {
                 final String classToOpen = actualClass;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     treeRoots.clear();
                     treeRoots.addAll(roots);
                     modifiedNodes.clear();
@@ -3640,12 +3638,12 @@ public class DexEditorActivity extends BaseActivity {
                     openClass(classToOpen);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     progressDialog.dismiss();
                     showErrorDialog(e.getMessage() != null ? e.getMessage() : e.toString());
                 });
             }
-        }).start();
+        });
     }
 
     private static class ImportItem {
@@ -3710,7 +3708,7 @@ public class DexEditorActivity extends BaseActivity {
         progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.setMessage("Importing...");
         progressDialog.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int imported = 0;
             String firstImportedClass = null;
             String firstImportedCode = null;
@@ -3771,7 +3769,7 @@ public class DexEditorActivity extends BaseActivity {
                 final String codeToOpen = firstImportedCode;
                 final List<TreeNode> roots = classTree.buildFullTree();
                 final List<TreeNode> modified = classTree.buildEditedFullTree();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     treeRoots.clear();
                     treeRoots.addAll(roots);
                     modifiedNodes.clear();
@@ -3789,12 +3787,12 @@ public class DexEditorActivity extends BaseActivity {
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(DexEditorActivity.this, () -> {
                     progressDialog.dismiss();
                     showErrorDialog(e.getMessage() != null ? e.getMessage() : e.toString());
                 });
             }
-        }).start();
+        });
     }
 
     private class TabAdapter extends FragmentStateAdapter {

@@ -23,6 +23,7 @@ import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public final class JadxDecompileHelper {
 
@@ -69,7 +70,7 @@ public final class JadxDecompileHelper {
             pm.setText(activity.getString(R.string.decompiling));
         }
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             JadxArgs args = new JadxArgs();
             args.setInputFiles(dexFiles);
             args.setSkipResources(true);
@@ -170,6 +171,6 @@ public final class JadxDecompileHelper {
                     decompiler.close();
                 } catch (Exception ignored) {}
             }
-        }).start();
+        });
     }
 }

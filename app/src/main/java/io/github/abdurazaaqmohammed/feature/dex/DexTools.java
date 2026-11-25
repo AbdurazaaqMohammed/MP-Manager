@@ -92,6 +92,7 @@ import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.activity.TranslationModeActivity;
 
 import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * DEX/ARSC toolkit extracted from FileOperationsHelper.
@@ -330,7 +331,7 @@ public class DexTools {
     }
 
     private void proceedWithDexToJava(File zipFile, DexPreExtract session, List<String> selectedNames, String entryPath) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 session.done.await();
             } catch (InterruptedException e) {
@@ -350,7 +351,7 @@ public class DexTools {
             String base = zipFile.getName().replaceFirst("\\.[^.]+$", "");
             context.runOnUiThread(() -> JadxDecompileHelper.promptDecompileAction(context, files, zipFile, base,
                     () -> openDexPlusFiles(paths, null, zipFile, entryPath, true)));
-        }).start();
+        });
     }
 
     private static ArrayList<String> singleDexList(File dexFile) {
@@ -467,7 +468,7 @@ public class DexTools {
         DexPreExtract session = new DexPreExtract(zipFile, extraction.directory);
         dexPreExtracts.put(key, session);
         pruneDexPreExtracts();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             // Extracted with the platform ZipFile instead of zip4j: zip4j
             // applies stored permissions/timestamps to every extracted entry
             // through the desugared java.nio.file, whose POSIX attribute view
@@ -508,7 +509,7 @@ public class DexTools {
                 session.done.countDown();
                 extraction.close();
             }
-        }).start();
+        });
         return session;
     }
 
@@ -656,7 +657,7 @@ public class DexTools {
         int total = Math.max(1, selectedNames.size());
         pm.setProgress(0, total);
         pm.setText(context.rss.getString(R.string.extracting, selectedNames.get(0)));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             while (waitSession.done.getCount() > 0) {
                 int done = Math.min(waitSession.extracted, total);
                 context.handler.post(() -> {
@@ -681,7 +682,7 @@ public class DexTools {
                     launchLease.close();
                 }
             });
-        }).start();
+        });
     }
 
     private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
@@ -727,7 +728,7 @@ public class DexTools {
     private void repairDex(File dexFile, File zipFile) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (zipFile == null) {
                     if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
@@ -757,13 +758,13 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void showDexProperties(File dexFile) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 byte[] head = new byte[64];
                 try (FileInputStream fis = new FileInputStream(dexFile)) {
@@ -812,7 +813,7 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void dexToSmali(File dexFile, File zipFile) {
@@ -821,7 +822,7 @@ public class DexTools {
         File outZip = FileUtils.getUnusedFile(new File(base, dexBaseName + "_smali.zip"));
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 byte[] bytes;
                 try (FileInputStream fis = new FileInputStream(dexFile);
@@ -897,7 +898,7 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private static class FastSmaliEntry {
@@ -928,7 +929,7 @@ public class DexTools {
                     pmHolder[0] = pm;
                 });
             }
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
                     File tempFolder = new File(outputDir);
@@ -987,7 +988,7 @@ public class DexTools {
                     }
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         }
     }
 
@@ -998,7 +999,7 @@ public class DexTools {
      * "XML source" button of the drawable preview.
      */
     private void openXmlInEditor(File tempFile, File zipFile, String fullPath) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean isAxml;
             try (InputStream is = new FileInputStream(tempFile)) {
                 isAxml = FileUtils.isAxml(is);
@@ -1029,7 +1030,7 @@ public class DexTools {
                 }
                 context.startActivityForResult(intent, 757);
             });
-        }, "xml-editor-stage").start();
+        });
     }
 
     private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {
@@ -1069,7 +1070,7 @@ public class DexTools {
     private void runDexStringReplace(File dexFile, File zipFileOrNull, String find, String replacement, boolean matchCase) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File tmpOut = File.createTempFile("dexstr", ".dex", context.getCacheDir());
                 int count = DexStringUtil.replaceStrings(dexFile, tmpOut, find, replacement, matchCase);
@@ -1083,13 +1084,13 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void applyDexStringReplace(File dexFile, File zipFileOrNull, File tmpOut) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (zipFileOrNull != null) {
                     FileUtils.copyFile(tmpOut, dexFile);
@@ -1110,7 +1111,7 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void showDexStringDecryptDialog(File dexFile, File zipFileOrNull) {
@@ -1167,7 +1168,7 @@ public class DexTools {
     private void runDexAntiConfuse(File dexFile, File zipFileOrNull) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             File tmpOut = null;
             try {
                 tmpOut = File.createTempFile("dexanti", ".dex", context.getCacheDir());
@@ -1203,13 +1204,13 @@ public class DexTools {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
-        }).start();
+        });
     }
 
     private void runDexStringDecrypt(File dexFile, File zipFileOrNull, String customSig) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File tmpOut = File.createTempFile("dexdec", ".dex", context.getCacheDir());
                 int count = DexStringDecryptor.decryptDexStrings(dexFile, tmpOut, customSig);
@@ -1228,13 +1229,13 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void mergeDexOption(File dexFile, File zipFile) {
         ProgressManager pm = new ProgressManager(context, true);
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (zipFile != null) {
                     File tmpDir = new File(context.getCacheDir(), "dexmerge" + UUID.randomUUID());
@@ -1303,7 +1304,7 @@ public class DexTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private int detectDexApi(File dexFile) {

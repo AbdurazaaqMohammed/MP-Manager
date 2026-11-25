@@ -119,6 +119,7 @@ import modder.hub.dexeditor.utils.SmaliSearchText;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import io.github.abdurazaaqmohammed.ui.editor.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 // Author : @developer-krushna
 // Got some LOGICS from AI but thought , idea other resources copied from mt manager interface
@@ -940,7 +941,7 @@ public class SearchFragment extends Fragment {
                 if (isFinalized.compareAndSet(false, true)) {
                     isStopped = true;
                     if (executor != null) executor.shutdownNow();
-                    new Thread(() -> finalizeResults(results)).start();
+                    AppExecutors.io().execute(() -> finalizeResults(results));
                 }
             });
             progressDialog.show();
@@ -956,7 +957,7 @@ public class SearchFragment extends Fragment {
                     }
                 }
             }
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 if (editorActivity.classTree == null) {
                     mainHandler.post(() -> onPostExecute(new ArrayList<>()));
                     return;
@@ -1025,7 +1026,7 @@ public class SearchFragment extends Fragment {
                 } catch (InterruptedException ignored) {
                 }
                 if (isFinalized.compareAndSet(false, true)) finalizeResults(results);
-            }).start();
+            });
         }
 
         private void runHierarchy(List<TreeNode> results, DexEditorActivity activity) {
@@ -1497,7 +1498,7 @@ public class SearchFragment extends Fragment {
             int numThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors() - 1));
             ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 if (editorActivity.classTree == null) {
                     mainHandler.post(() -> progressDialog.dismiss());
                     return;
@@ -1666,7 +1667,7 @@ public class SearchFragment extends Fragment {
                 }
 
                 mainHandler.post(() -> onPostExecute(activity));
-            }).start();
+            });
         }
 
         private int countOccurrences(String text, String find) {
@@ -1892,7 +1893,7 @@ public class SearchFragment extends Fragment {
                     isStopped = true;
                     if (executor != null) executor.shutdownNow();
                     // On cancel/back press, show what was found so far
-                    new Thread(() -> finalizeResults(results)).start();
+                    AppExecutors.io().execute(() -> finalizeResults(results));
                 }
             });
             progressDialog.show();
@@ -1914,7 +1915,7 @@ public class SearchFragment extends Fragment {
                 }
             }
 
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 if (editorActivity.classTree == null) {
                     mainHandler.post(() -> onPostExecute(new ArrayList<>()));
                     return;
@@ -2281,7 +2282,7 @@ public class SearchFragment extends Fragment {
                 if (isFinalized.compareAndSet(false, true)) {
                     finalizeResults(results);
                 }
-            }).start();
+            });
         }
 
         private void finalizeResults(List<TreeNode> results) {

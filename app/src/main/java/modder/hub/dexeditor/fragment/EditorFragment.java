@@ -102,6 +102,7 @@ import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.views.TextActionWindow;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 // Author - @developer-krushna (Krushna Chandra developer of Modder Hub)
@@ -363,7 +364,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private void loadSmaliInBackground() {
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Activity activity = getActivity();
                 if (activity instanceof DexEditorActivity dexActivity) {
@@ -401,7 +402,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                     Notify_MT.Notify(getContext(), getString(R.string.error), e.toString(), getString(R.string.close));
                 });
             }
-        }).start();
+        });
     }
 
     private void postInitialize(boolean skipRestorePosition) {
@@ -953,10 +954,10 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         }
 
         void execute() {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 final TextLocation location = doInBackground();
                 mainHandler.post(() -> onPostExecute(location));
-            }).start();
+            });
         }
 
         protected TextLocation doInBackground() {
