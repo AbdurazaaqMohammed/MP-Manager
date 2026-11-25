@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Root Jiagu Dumper (tools hub). UI over {@link JiaguDumpEngine}: dump the real
@@ -143,7 +144,7 @@ public final class JiaguDumpDialog {
             final int waitSec = waitSecTmp;
             final String apkPath = apkInput.getText() == null ? "" : apkInput.getText().toString().trim();
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File outDir = JiaguDumpEngine.dump(activity, pkg, waitSec, sink);
                     if (!TextUtils.isEmpty(apkPath)) {
@@ -157,7 +158,7 @@ public final class JiaguDumpDialog {
                             if (PreferenceManager.getDefaultSharedPreferences(activity)
                                     .getBoolean("autosign", true)) {
                                 activity.runOnUiThread(() -> SignWrapper.requireAuth(activity, wrapper -> {
-                                    new Thread(() -> {
+                                    AppExecutors.io().execute(() -> {
                                         try {
                                             wrapper.signApk(rebuilt);
                                             sink.log("Signed " + rebuilt.getName());
@@ -165,7 +166,7 @@ public final class JiaguDumpDialog {
                                             sink.log("Signing failed: " + e.getMessage());
                                         }
                                         busy.set(false);
-                                    }, "jiagu-sign").start();
+                                    });
                                 }));
                                 return;
                             }
@@ -180,7 +181,7 @@ public final class JiaguDumpDialog {
                         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
                     } catch (Exception ignored) {}
                 });
-            }, "jiagu-dump").start();
+            });
         });
     }
 

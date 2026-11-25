@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ApkInstallDialogHelper {
 
@@ -108,7 +109,7 @@ public class ApkInstallDialogHelper {
             installPrivilegedOrFallback(apkFiles, appName, firstApk);
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             ApkInstallAnalysis analysis;
             try {
                 analysis = ApkInstallAnalysis.analyze(activity, firstApk);
@@ -125,7 +126,7 @@ public class ApkInstallDialogHelper {
                 InstallInfoDialog.show(activity, new DialogUtil(activity), appName, result,
                         () -> installPrivilegedOrFallback(apkFiles, appName, firstApk));
             });
-        }).start();
+        });
     }
 
     private void installPrivilegedOrFallback(List<File> apkFiles, String appName, File firstApk) {
@@ -175,7 +176,7 @@ public class ApkInstallDialogHelper {
             finishInstall(fallback, pm, appName, firstApk);
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String recorded = fallback;
             for (int i = 0; i < 20; i++) {
                 String now = PrivilegeManager.Installer.readRecordedInstaller(activity, packageName);
@@ -192,7 +193,7 @@ public class ApkInstallDialogHelper {
             }
             final String shown = recorded;
             activity.runOnUiThread(() -> finishInstall(shown, pm, appName, firstApk));
-        }).start();
+        });
     }
 
     private void finishInstall(String recorded, ProgressManager pm, String appName, File firstApk) {

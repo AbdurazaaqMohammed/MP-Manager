@@ -20,6 +20,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * APK menu entry for the offline Jiagu unpacker: rebuilds an installable APK
@@ -30,7 +31,7 @@ public final class JiaguUnpackDialog {
     private JiaguUnpackDialog() {}
 
     public static void show(MainActivity context, File file) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String pkg = null;
             boolean jiagu;
             try {
@@ -87,13 +88,13 @@ public final class JiaguUnpackDialog {
                     .setPositiveButton(R.string.jiagu_unpack, (d, w) ->
                             run(context, file, dexes, autosign))
                     .show());
-        }, "jiagu-check").start();
+        });
     }
 
     private static void run(MainActivity context, File file, List<File> dexes, boolean autosign) {
         ProgressManager pm = new ProgressManager(context, true).show();
         APKLogger logger = pm.getLogger();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 JiaguUnpackEngine.Result result = JiaguUnpackEngine.unpack(context, file, dexes, logger);
                 for (String line : result.log) logger.logMessage(line);
@@ -102,7 +103,7 @@ public final class JiaguUnpackDialog {
                     context.handler.post(() -> SignWrapper.requireAuth(context, wrapper -> {
                         ProgressManager signPm = new ProgressManager(context, true)
                                 .setText(context.getString(R.string.signing, result.apk.getName())).show();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 wrapper.signApk(result.apk);
                                 signPm.dismiss();
@@ -116,7 +117,7 @@ public final class JiaguUnpackDialog {
                                 signPm.dismiss();
                                 new ErrorUtil(context).showError(e);
                             }
-                        }, "jiagu-sign").start();
+                        });
                     }));
                 } else {
                     context.handler.post(() -> {
@@ -130,6 +131,6 @@ public final class JiaguUnpackDialog {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }, "jiagu-unpack").start();
+        });
     }
 }

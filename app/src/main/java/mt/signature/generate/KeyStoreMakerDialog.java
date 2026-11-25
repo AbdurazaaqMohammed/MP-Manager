@@ -103,6 +103,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.hash.PasswordEncryptor;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class KeyStoreMakerDialog extends DialogFragment {
 
@@ -329,7 +330,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
             showProgress();
 
             Activity c = getActivity();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     KeyParam keyParam = save();
                     mainHandler.post(() -> {
@@ -353,7 +354,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
                         new ErrorUtil(c).showError(e);
                     });
                 }
-            }).start();
+            });
         }
     }
 

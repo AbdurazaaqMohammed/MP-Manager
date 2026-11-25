@@ -78,6 +78,7 @@ import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Toast/dialog overlay injection UI extracted from ApkToolsHandler.
@@ -166,7 +167,7 @@ public class ApkOverlayTools {
     }
 
     private void decodePickedImage(Uri uri, ImagePicked cb) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Bitmap bitmap = decodeSampledBitmap(uri, 512);
                 if (bitmap == null) throw new IOException("Cannot decode image");
@@ -188,7 +189,7 @@ public class ApkOverlayTools {
             } catch (Exception e) {
                 context.handler.post(() -> Extensions.showMessage(context, "Image failed: " + e.getMessage()));
             }
-        }).start();
+        });
     }
     private void loadOverlayImage(Uri uri) {
         decodePickedImage(uri, (thumb, b64) -> {
@@ -1121,7 +1122,7 @@ public class ApkOverlayTools {
     }
 
     private void onFontFilePicked(File src, FontPicked cb) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (src == null || !src.isFile()) throw new IOException("Not a file");
                 String lower = src.getName().toLowerCase(Locale.ROOT);
@@ -1152,7 +1153,7 @@ public class ApkOverlayTools {
             } catch (Exception e) {
                 context.handler.post(() -> Extensions.showMessage(context, "Font failed: " + e.getMessage()));
             }
-        }).start();
+        });
     }
 
     private static String baseName(String path) {
@@ -2455,7 +2456,7 @@ public class ApkOverlayTools {
         Runnable doAdd = () -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File result = OverlayInjectorUtil.addOverlayToActivities(context, file, selectedActivities, toast, dialog, logger);
                     if (sign) wrapper[0].signApk(result);
@@ -2465,7 +2466,7 @@ public class ApkOverlayTools {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         };
         if (sign) SignWrapper.requireAuth(context, sw -> {
             wrapper[0] = sw;
@@ -2506,7 +2507,7 @@ public class ApkOverlayTools {
         Runnable doRemove = () -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File result = ToastInjectorUtil.removeAllToasts(context, file, logger);
                     if (sign) wrapper[0].signApk(result);
@@ -2516,7 +2517,7 @@ public class ApkOverlayTools {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         };
         if (sign) SignWrapper.requireAuth(context, sw -> {
             wrapper[0] = sw;

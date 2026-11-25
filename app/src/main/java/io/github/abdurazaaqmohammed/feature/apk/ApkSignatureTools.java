@@ -28,6 +28,7 @@ import java.io.File;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * APK signature workflows: kill verification, strip, health report,
@@ -56,7 +57,7 @@ public class ApkSignatureTools {
         SignWrapper.requireAuth(context, sw -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     List<File> signed = new ArrayList<>();
                     for (int i = 0; i < apks.size(); i++) {
@@ -77,7 +78,7 @@ public class ApkSignatureTools {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         });
     }
 
@@ -91,7 +92,7 @@ public class ApkSignatureTools {
 
     public void removeSignature(File apk) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean ok = SignatureStripUtil.strip(apk);
             boolean stillSigned = ok && SignatureStripUtil.hasSignature(apk);
             boolean done = ok && !stillSigned;
@@ -100,12 +101,12 @@ public class ApkSignatureTools {
                 Extensions.showMessage(context, context.rss.getString(done ? R.string.signature_removed : R.string.failed_to_remove_signature));
                 if (done) context.refreshAllPanes();
             });
-        }).start();
+        });
     }
 
     public void showSignatureHealthDialog(File apk) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String report = buildSignatureHealthReport(apk);
             pm.dismiss();
             context.handler.post(() -> {
@@ -125,7 +126,7 @@ public class ApkSignatureTools {
                         .setNeutralButton(R.string.re_sign, (d, w) -> SignatureKeyDialog.show(context, apk, false))
                         .setPositiveButton(R.string.fix_alignment, (d, w) -> {
                             ProgressManager pm2 = new ProgressManager(context, true).show();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 try {
                                     ApkZipAlignUtil.ensureInstallable(apk);
                                     pm2.dismiss();
@@ -134,11 +135,11 @@ public class ApkSignatureTools {
                                     pm2.dismiss();
                                     new ErrorUtil(context).showError(e);
                                 }
-                            }).start();
+                            });
                         })
                         .show());
             });
-        }).start();
+        });
     }
 
     private String buildSignatureHealthReport(File apk) {

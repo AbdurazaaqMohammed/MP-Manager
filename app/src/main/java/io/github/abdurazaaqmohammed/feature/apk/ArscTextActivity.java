@@ -47,6 +47,7 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import modder.hub.dexeditor.views.TextActionWindow;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ArscTextActivity extends BaseActivity {
 
@@ -223,7 +224,7 @@ public class ArscTextActivity extends BaseActivity {
         final String highlight = currentHighlight;
         final int token = ++loadToken;
         Extensions.showMessage(this, R.string.loading);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String text = ArscData.typeBlockText(tb, ArscData.TEXT_ENTRY_CAP);
             int count = 0;
             try {
@@ -232,7 +233,7 @@ public class ArscTextActivity extends BaseActivity {
             }
             final String loaded = text;
             final int entryCount = count;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> {
                 if (token != loadToken || block != tb || fragment == null) return;
                 loadingText = true;
                 try {
@@ -261,7 +262,7 @@ public class ArscTextActivity extends BaseActivity {
                 }
                 Extensions.showMessage(this, entryCount + " entries");
             });
-        }).start();
+        });
     }
 
     private void applyText(Runnable onDone) {
@@ -277,10 +278,10 @@ public class ArscTextActivity extends BaseActivity {
         final TypeBlock tb = block;
         final String content = text;
         Extensions.showMessage(this, "Applying…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ArscData.TextApplyResult r = data.applyTypeBlockText(tb, content);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> {
                     if (r.updated + r.created > 0) {
                         applied = true;
                         bufferDirty = false;
@@ -302,9 +303,9 @@ public class ArscTextActivity extends BaseActivity {
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private void finishWithResult() {

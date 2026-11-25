@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 public class ShizukuFileService extends IFileService.Stub {
@@ -535,7 +536,7 @@ public class ShizukuFileService extends IFileService.Stub {
             final ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
             final File src = f;
             final long cap = maxBytes;
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try (InputStream in = new FileInputStream(src);
                      OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
                     byte[] buf = new byte[65536];
@@ -548,7 +549,7 @@ public class ShizukuFileService extends IFileService.Stub {
                     }
                 } catch (Exception ignored) {
                 }
-            }).start();
+            });
             return pipe[0];
         } catch (Exception e) {
             fail(e.getMessage());

@@ -26,6 +26,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import java.io.File;
 import java.util.List;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * APK compare + batch optimize/sign workflows extracted from ApkToolsHandler.
@@ -46,7 +47,7 @@ public class ApkBatchTools {
 
     public void showCompareApksDialog(File f1, File f2) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String report = ApkCompareUtil.compare(context, f1, f2);
                 pm.dismiss();
@@ -71,7 +72,7 @@ public class ApkBatchTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     public void batchOptimizeApks(List<File> apks) {
@@ -87,7 +88,7 @@ public class ApkBatchTools {
         APKLogger logger = pm.getLogger();
         boolean deepOpt = settings.getBoolean("deep_optimize", false);
         Set<String> filesToDelete = delFiles ? settings.getStringSet("filesToDelete", null) : null;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int failed = 0;
             StringBuilder failures = new StringBuilder();
             for (int i = 0; i < apks.size(); i++) {
@@ -124,7 +125,7 @@ public class ApkBatchTools {
                 }
                 context.refreshAllPanes();
             });
-        }).start();
+        });
     }
 
     private int dp(int dp) {

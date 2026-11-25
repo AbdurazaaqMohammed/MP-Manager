@@ -45,6 +45,7 @@ import java.util.zip.ZipInputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class NativeToolManager {
 
@@ -253,7 +254,7 @@ public class NativeToolManager {
         final boolean[] cancelled = {false};
         dialog.setOnDismissListener(d -> cancelled[0] = true);
         String base = baseUrl(activity);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Map<String, String[]> manifest = fetchManifest(base);
                 for (int idx : missing) {
@@ -298,7 +299,7 @@ public class NativeToolManager {
                     //cb.onError(e.getMessage() != null ? e.getMessage() : e.toString());
                 });
             }
-        }).start();
+        });
     }
 
     private static Map<String, String[]> fetchManifest(String base) {

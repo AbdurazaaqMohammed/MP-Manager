@@ -61,6 +61,7 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ArscEditorActivity extends BaseActivity {
 
@@ -221,22 +222,22 @@ public class ArscEditorActivity extends BaseActivity {
 
     private void loadAsync(File arsc, File apk, String entryPath) {
         Extensions.showMessage(this, getString(R.string.arsc_loading));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ArscData loaded = ArscData.load(arsc, apk, entryPath);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                     data = loaded;
                     stack.clear();
                     stack.push(new Root());
                     render(true);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                     new ErrorUtil(this).showError(e);
                     finish();
                 });
             }
-        }).start();
+        });
     }
 
 
@@ -275,20 +276,20 @@ public class ArscEditorActivity extends BaseActivity {
             adapter.setRows(configRows((Configs) s, filter));
         } else if (s instanceof Entries es) {
             Extensions.showMessage(this, getString(R.string.arsc_loading_short));
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 List<Row> rows = entryRows(es, filter);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                     if (current() == es) adapter.setRows(rows);
                 });
-            }).start();
+            });
         } else if (s instanceof Pool) {
             Extensions.showMessage(this, getString(R.string.arsc_loading_short));
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 List<Row> rows = poolRows(filter);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                     if (current() == s) adapter.setRows(rows);
                 });
-            }).start();
+            });
         } else if (s instanceof Results rs) {
             adapter.setRows(resultRows(rs, filter));
         }
@@ -673,13 +674,13 @@ public class ArscEditorActivity extends BaseActivity {
     private void runSimpleSearch(String query, int kind) {
         if (data == null) return;
         Extensions.showMessage(this, getString(R.string.arsc_searching));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<ArscData.SimpleHit> hits = data.searchSimple(query, kind);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                 push(new Results(query, kind, hits));
                 Extensions.showMessage(this, getString(R.string.arsc_results_n, hits.size()));
             });
-        }).start();
+        });
     }
 
 
@@ -733,10 +734,10 @@ public class ArscEditorActivity extends BaseActivity {
             return;
         }
         Extensions.showMessage(this, getString(R.string.arsc_saving));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 data.save();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> {
                     dirty = false;
                     if (data.apkFile != null) savedThisSession = true;
                     toolbar.setSubtitle(fileName);
@@ -745,9 +746,9 @@ public class ArscEditorActivity extends BaseActivity {
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     void finishWithApkResult() {
@@ -778,14 +779,14 @@ public class ArscEditorActivity extends BaseActivity {
 
     private void backupNow() {
         if (data == null) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File bak = data.backup();
-                runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.arsc_backup_x, bak.getName())));
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> Extensions.showMessage(this, getString(R.string.arsc_backup_x, bak.getName())));
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscEditorActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private void confirmExit() {

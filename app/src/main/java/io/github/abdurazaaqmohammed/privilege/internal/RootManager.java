@@ -46,6 +46,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class RootManager {
 
@@ -418,7 +419,7 @@ public class RootManager {
             }
         }
         if (!start) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean global = false;
             try {
                 global = probeNamespaces();
@@ -428,7 +429,7 @@ public class RootManager {
                 nsWinner = global ? 2 : 1;
                 nsProbing = false;
             }
-        }).start();
+        });
     }
 
     public boolean prefersGlobalNs() {

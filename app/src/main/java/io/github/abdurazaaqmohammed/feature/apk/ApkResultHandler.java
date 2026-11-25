@@ -57,6 +57,7 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Re-injects editor-modified files back into the open APK/ZIP.
@@ -172,7 +173,7 @@ public class ApkResultHandler {
                                 }
                                 ProgressManager pm = new ProgressManager(activity, true).show();
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try (DexWorkspaceStore.Lease writeLease = DexWorkspaceStore.retain(new File(path))) {
                                     List<String> addedNames = new ArrayList<>();
                                     byte[] preservedSigBlock = isApk ? ApkSignaturePreserver.extractSigningBlock(zipFile) : null;
@@ -269,7 +270,7 @@ public class ApkResultHandler {
                                     } finally {
                                         resultLease.close();
                                     }
-                                }).start();
+                                });
                             };
                             if (sign[0]) SignWrapper.requireAuth(activity, sw -> {
                                 wrapper[0] = sw;
@@ -317,7 +318,7 @@ public class ApkResultHandler {
                     Runnable apply = () -> {
                         ProgressManager pm = new ProgressManager(activity, true).show();
                         pm.setText(activity.rss.getString(R.string.adding, innerName));
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try (ZipFile zf = new ZipFile(parent.outerZip())) {
                                 // An unchanged inner archive must not rewrite the
                                 // outer one or trigger a pointless re-sign.
@@ -344,7 +345,7 @@ public class ApkResultHandler {
                                 pm.dismiss();
                                 new ErrorUtil(activity).showError(e);
                             }
-                        }).start();
+                        });
                     };
                     if (sign && outerApk && wrapper[0] == null) {
                         SignWrapper.requireAuth(activity, sw -> {

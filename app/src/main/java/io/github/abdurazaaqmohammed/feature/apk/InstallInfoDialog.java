@@ -35,6 +35,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Pre-install comparison sheet.
@@ -470,7 +471,7 @@ public final class InstallInfoDialog {
             onInstall.run();
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String backup = null;
             String dataOwner = null;
             if (keepData) {
@@ -496,7 +497,7 @@ public final class InstallInfoDialog {
             activity.runOnUiThread(() -> AppReinstaller.uninstall(activity, pkg, () -> {
                 onInstall.run();
                 if (archive == null) return;
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     // Give the package manager a moment to finish removing the
                     // old data directory before putting the archive back.
                     try {
@@ -513,9 +514,9 @@ public final class InstallInfoDialog {
                     } finally {
                         AppReinstaller.deleteBackup(activity, archive);
                     }
-                }).start();
+                });
             }));
-        }).start();
+        });
     }
 
     private static String shortHash(String full) {

@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import com.reandroid.apk.APKLogger;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Injects the Frida Hook Engine into an APK (frida-hook-engine-main, Path B):
@@ -461,7 +462,7 @@ public final class FridaGadgetPatcher {
         dialog.show();
         final boolean[] cancelled = {false};
         dialog.setOnDismissListener(d -> cancelled[0] = true);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 downloadFile(url, tmp, (done, total) -> activity.runOnUiThread(() -> {
                     if (total > 0) {
@@ -494,7 +495,7 @@ public final class FridaGadgetPatcher {
                 });
                 future.completeExceptionally(e);
             }
-        }).start();
+        });
         return future;
     }
 
