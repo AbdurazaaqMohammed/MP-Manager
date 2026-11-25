@@ -64,13 +64,10 @@ import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
-import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1691,11 +1688,7 @@ public class SearchFragment extends Fragment {
 
         private String generateSmali(ClassDef classDef) throws Exception {
             if (editorActivity.classTree != null) return editorActivity.classTree.getSmaliByType(classDef);
-            StringWriter sw = new StringWriter(16 * 1024);
-            BaksmaliWriter bw = new BaksmaliWriter(sw);
-            new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(bw);
-            bw.close();
-            return sw.toString();
+            return SharedSmaliUtils.disassembleClass(classDef);
         }
 
         @SuppressLint("NotifyDataSetChanged")
@@ -2618,11 +2611,7 @@ public class SearchFragment extends Fragment {
         }
 
         private String generateSmaliOptimized(ClassDef classDef) throws Exception {
-            StringWriter sw = new StringWriter(16 * 1024);
-            BaksmaliWriter bw = new BaksmaliWriter(sw);
-            new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(bw);
-            bw.close();
-            String body = sw.toString();
+            String body = SharedSmaliUtils.disassembleClass(classDef);
 
             String dexFileName = "unknown.dex";
             if (editorActivity.classTree != null) {
