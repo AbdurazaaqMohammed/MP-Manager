@@ -2581,4 +2581,9 @@
 <string name="customize_open_with">ترتيب قائمة فتح بواسطة</string>
 <string name="customize_open_with_hint">اضغط مطولاً للسحب وإعادة الترتيب، أو المس العين للإخفاء والإظهار</string>
 <string name="empty_folder">المجلد فارغ</string>
+<string name="mount_invalid_filesystem">الملف ليس نظام ملفات صالحاً للتصفح</string>
+<string name="mounting_image">جاري فتح وتثبيت صورة %s…</string>
+<string name="image_options_message">نوع الصورة: %1$s%2$s\n\nهل ترغب في استعراض وتصفح محتويات النظام، أو فتحها بتطبيق خارجي؟</string>
+<string name="image_explorer_title">استعراض صورة النظام</string>
+<string name="image_browse_files">استعراض وتصفح</string>
 </resources>

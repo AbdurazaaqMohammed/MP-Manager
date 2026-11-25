@@ -50,9 +50,6 @@ public class PickFileActivity extends BaseActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applySaved(this);
-        io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyAccent(this);
-        io.github.abdurazaaqmohammed.ui.common.util.AppFont.installFactory(this);
         super.onCreate(savedInstanceState);
         location = savedInstanceState == null ? getIntent().getStringExtra(EXTRA_INITIAL_DIRECTORY)
                 : savedInstanceState.getString(STATE_LOCATION);

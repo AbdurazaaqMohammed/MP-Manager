@@ -2647,4 +2647,9 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="customize_open_with">Open with order</string>
     <string name="customize_open_with_hint">Long-press to drag items; tap eye icon to hide or show</string>
     <string name="empty_folder">Empty folder</string>
+    <string name="mount_invalid_filesystem">File is not a valid filesystem image</string>
+    <string name="mounting_image">Mounting %s…</string>
+    <string name="image_options_message">Image Type: %1$s%2$s\n\nWould you like to browse and explore the filesystem contents or open with an external app?</string>
+    <string name="image_explorer_title">System Image Explorer</string>
+    <string name="image_browse_files">Browse Files</string>
 </resources>

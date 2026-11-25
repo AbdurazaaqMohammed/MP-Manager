@@ -2,9 +2,6 @@ package io.github.abdurazaaqmohammed.feature.system;
 
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 
-import android.os.Handler;
-import android.os.Looper;
-
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
@@ -92,15 +89,14 @@ public final class SystemImageMountManager {
      */
     public static void openFilesystemImage(MainActivity context, File imageFile, boolean pane1) {
         if (imageFile == null) return;
-        boolean isAr = Locale.getDefault().getLanguage().startsWith("ar");
         SystemImageEngine.ImageIdentity id = SystemImageEngine.identifyImage(imageFile);
         if (id == null || !id.isFilesystem) {
-            Extensions.showMessage(context, isAr ? "الملف ليس نظام ملفات صالح للتصفح" : "File is not a valid filesystem image");
+            Extensions.showMessage(context, R.string.mount_invalid_filesystem);
             return;
         }
 
         ProgressManager pm = new ProgressManager(context, true);
-        pm.setText(isAr ? ("جاري فتح وتثبيت صورة " + imageFile.getName() + "...") : ("Mounting " + imageFile.getName() + "..."));
+        pm.setText(context.getString(R.string.mounting_image, imageFile.getName()));
         pm.show();
 
         AppExecutors.io().execute(() -> {
@@ -148,12 +144,12 @@ public final class SystemImageMountManager {
                 MountSession session = new MountSession(imageFile, mountPoint, fsType, isBlockDev);
                 activeSessions.put(mountPoint.getAbsolutePath(), session);
 
-                new Handler(Looper.getMainLooper()).post(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     context.loadFolderInPaneAsync(mountPoint, pane1, true);
                 });
             } catch (Exception e) {
-                new Handler(Looper.getMainLooper()).post(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 });
@@ -170,14 +166,12 @@ public final class SystemImageMountManager {
         String desc = id != null ? id.getDisplayName(isAr) : fileName;
         String details = (id != null && id.details != null && !id.details.isEmpty()) ? (" (" + id.details + ")") : "";
 
-        String msg = (isAr
-                ? "نوع الصورة: " + desc + details + "\n\nهل ترغب في استعراض وتصفح محتويات النظام، أو فتحها بتطبيق خارجي؟"
-                : "Image Type: " + desc + details + "\n\nWould you like to browse and explore the filesystem contents or open with an external app?");
+        String msg = context.getString(R.string.image_options_message, desc, details);
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle(isAr ? "استعراض صورة النظام" : "System Image Explorer")
+                .setTitle(R.string.image_explorer_title)
                 .setMessage(msg)
-                .setPositiveButton(isAr ? "📂 استعراض وتصفح" : "📂 Browse Files", (dialog, which) -> {
+                .setPositiveButton(R.string.image_browse_files, (dialog, which) -> {
                     openFilesystemImage(context, file, pane1);
                 })
                 .setNeutralButton(R.string.open_with, (dialog, which) -> {
