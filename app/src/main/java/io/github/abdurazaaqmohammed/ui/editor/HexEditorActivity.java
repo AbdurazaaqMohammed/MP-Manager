@@ -335,6 +335,25 @@ public class HexEditorActivity extends BaseActivity {
             return;
         }
 
+        ParkedHexState parked = takeParkedState(ParkedHexState.class);
+        if (parked != null && parked.originalSize == originalSize) {
+            mods.putAll(parked.mods);
+            structural = parked.structural;
+            size = parked.size;
+            chunks.clear();
+            chunks.addAll(parked.chunks);
+            if (structural) rebuildIndex();
+            undoStack.addAll(parked.undoStack);
+            redoStack.addAll(parked.redoStack);
+            cursorPos = parked.cursorPos;
+            nibbleHigh = parked.nibbleHigh;
+            selStart = parked.selStart;
+            selEnd = parked.selEnd;
+            pendingRootWrite = parked.pendingRootWrite;
+            readOnly = parked.readOnly;
+            viewport.resize(size);
+        }
+
         MaterialToolbar toolbar = findViewById(R.id.hexToolbar);
         toolbar.setTitle(R.string.hex_editor);
         toolbar.setSubtitle(rootOriginalPath != null
@@ -420,10 +439,20 @@ public class HexEditorActivity extends BaseActivity {
 
         updateStatus();
 
-        long initialOffset = getIntent().getLongExtra("offset", -1);
-        if (readOnly && writable) Extensions.showMessage(this, R.string.editor_large_read_only);
-        if (initialOffset >= 0) {
-            recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
+        if (parked != null) {
+            adapter.notifyDataSetChanged();
+            long target = Math.min(Math.max(0, parked.cursorPos), Math.max(0, size - 1));
+            boolean restoredNibble = parked.nibbleHigh;
+            recycler.post(() -> {
+                setCursor(target, true);
+                nibbleHigh = restoredNibble;
+            });
+        } else {
+            long initialOffset = getIntent().getLongExtra("offset", -1);
+            if (readOnly && writable) Extensions.showMessage(this, R.string.editor_large_read_only);
+            if (initialOffset >= 0) {
+                recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
+            }
         }
     }
 
@@ -1744,6 +1773,72 @@ public class HexEditorActivity extends BaseActivity {
                 .setPositiveButton(R.string.save, (d, w) -> saveChanges(this::finish))
                 .setNeutralButton(R.string.delete, (d, w) -> finish())
                 .show();
+    }
+
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.hex_editor, getHexMinimizeTitle());
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        return new ParkedHexState(
+                new TreeMap<>(mods),
+                structural,
+                size,
+                originalSize,
+                new ArrayList<>(chunks),
+                new ArrayDeque<>(undoStack),
+                new ArrayDeque<>(redoStack),
+                cursorPos,
+                nibbleHigh,
+                selStart,
+                selEnd,
+                pendingRootWrite,
+                readOnly);
+    }
+
+    private static final class ParkedHexState implements MinimizedEditors.ParkedState {
+        final TreeMap<Long, Integer> mods;
+        final boolean structural;
+        final long size;
+        final long originalSize;
+        final List<Chunk> chunks;
+        final ArrayDeque<EditOp> undoStack;
+        final ArrayDeque<EditOp> redoStack;
+        final long cursorPos;
+        final boolean nibbleHigh;
+        final long selStart;
+        final long selEnd;
+        final boolean pendingRootWrite;
+        final boolean readOnly;
+
+        ParkedHexState(TreeMap<Long, Integer> mods, boolean structural, long size, long originalSize,
+                       List<Chunk> chunks, ArrayDeque<EditOp> undoStack, ArrayDeque<EditOp> redoStack,
+                       long cursorPos, boolean nibbleHigh, long selStart, long selEnd,
+                       boolean pendingRootWrite, boolean readOnly) {
+            this.mods = mods;
+            this.structural = structural;
+            this.size = size;
+            this.originalSize = originalSize;
+            this.chunks = chunks;
+            this.undoStack = undoStack;
+            this.redoStack = redoStack;
+            this.cursorPos = cursorPos;
+            this.nibbleHigh = nibbleHigh;
+            this.selStart = selStart;
+            this.selEnd = selEnd;
+            this.pendingRootWrite = pendingRootWrite;
+            this.readOnly = readOnly;
+        }
+
+        @Override
+        public void discard() {
+            mods.clear();
+            chunks.clear();
+            undoStack.clear();
+            redoStack.clear();
+        }
     }
 
     private String getHexMinimizeTitle() {

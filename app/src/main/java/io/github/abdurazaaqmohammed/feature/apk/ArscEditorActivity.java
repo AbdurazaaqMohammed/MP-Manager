@@ -163,7 +163,18 @@ public class ArscEditorActivity extends BaseActivity {
         }
         fileName = new File(path).getName();
         buildShell();
-        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        ParkedArscState parked = takeParkedState(ParkedArscState.class);
+        if (parked != null && parked.data != null) {
+            data = parked.data;
+            dirty = parked.dirty;
+            savedThisSession = parked.savedThisSession;
+            stack.clear();
+            stack.addAll(parked.stack);
+            if (stack.isEmpty()) stack.push(new Root());
+            render(true);
+        } else {
+            loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        }
     }
 
     private void buildShell() {
@@ -803,28 +814,39 @@ public class ArscEditorActivity extends BaseActivity {
                 .show();
     }
 
-    private void minimizeThis() {
-        String name = null;
-        String parent = null;
-        Intent intent = getIntent();
-        if (intent != null) {
-            String apk = intent.getStringExtra("apkPath");
-            if (apk == null) apk = intent.getStringExtra("zipFilePath");
-            if (apk != null && !apk.isEmpty()) parent = new File(apk).getName();
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.arsc_editor,
+                MinimizedEditors.archiveOrFileDetail(getIntent()));
+    }
 
-            name = intent.getStringExtra("zipEntryPath");
-            if (name == null) {
-                String path = intent.getStringExtra("path");
-                if (path != null) {
-                    File f = new File(path);
-                    name = f.getName();
-                    if (parent == null && f.getParentFile() != null) {
-                        parent = f.getParentFile().getName();
-                    }
-                }
-            }
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        if (data == null) return null;
+        return new ParkedArscState(data, dirty, savedThisSession, new ArrayDeque<>(stack));
+    }
+
+    private static final class ParkedArscState implements MinimizedEditors.ParkedState {
+        final ArscData data;
+        final boolean dirty;
+        final boolean savedThisSession;
+        final Deque<Screen> stack;
+
+        ParkedArscState(ArscData data, boolean dirty, boolean savedThisSession, Deque<Screen> stack) {
+            this.data = data;
+            this.dirty = dirty;
+            this.savedThisSession = savedThisSession;
+            this.stack = stack;
         }
-        MinimizedEditors.minimize(this, R.string.arsc_editor, name, parent);
+
+        @Override
+        public void discard() {
+            stack.clear();
+        }
+    }
+
+    private void minimizeThis() {
+        MinimizedEditors.minimize(this, getMinimizeTitle());
     }
 
     private int dp(int v) {

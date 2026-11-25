@@ -25,6 +25,7 @@ public class DexEditorSession extends ViewModel {
     private volatile ClassTree tree;
     private volatile boolean closed;
     private volatile boolean finishedCleanly;
+    private volatile boolean parked;
 
     public synchronized void initialize(Context context, Intent intent, Bundle state) throws IOException {
         if (workspace != null) return;
@@ -76,12 +77,46 @@ public class DexEditorSession extends ViewModel {
         finishedCleanly = finished;
     }
 
+    public void setParked(boolean parked) {
+        this.parked = parked;
+    }
+
+    /** Transfers live workspace leases and loaded ClassTree from a minimized session. */
+    public synchronized void adoptFrom(DexEditorSession other) {
+        if (other == null || other == this || workspace != null) return;
+        synchronized (other) {
+            synchronized (other.loadLock) {
+                synchronized (loadLock) {
+                    if (other.closed || other.workspace == null) return;
+                    this.workspace = other.workspace;
+                    this.inputs.addAll(other.inputs);
+                    this.paths = other.paths != null ? new ArrayList<>(other.paths) : null;
+                    this.tree = other.tree;
+                    other.workspace = null;
+                    other.inputs.clear();
+                    other.tree = null;
+                    other.parked = false;
+                    this.parked = false;
+                    this.finishedCleanly = false;
+                    this.closed = false;
+                }
+            }
+        }
+    }
+
+    public void discardParked() {
+        parked = false;
+        finishedCleanly = true;
+        onCleared();
+    }
+
     public synchronized void keepResult() {
         if (paths != null) for (String path : paths) DexWorkspaceStore.keepForResult(new File(path));
     }
 
     @Override
     protected void onCleared() {
+        if (parked) return;
         closed = true;
         // Loading or a final autosave may still own the tree; never block the UI to join it.
         AppExecutors.io().execute(() -> {

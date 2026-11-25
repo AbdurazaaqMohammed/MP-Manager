@@ -155,8 +155,25 @@ public class ArscEditorPlusActivity extends BaseActivity {
             finish();
             return;
         }
-        buildShell(new File(path).getName());
-        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        String name = new File(path).getName();
+        buildShell(name);
+        ParkedArscPlusState parked = takeParkedState(ParkedArscPlusState.class);
+        if (parked != null && parked.data != null) {
+            data = parked.data;
+            dirty = parked.dirty;
+            batchRemove = parked.batchRemove;
+            savedThisSession = parked.savedThisSession;
+            if (dirty) markDirty();
+            else toolbar.setSubtitle(name);
+            rebuildTree();
+            refreshStrings();
+            historyAdapter.refresh();
+            if (pager != null && parked.selectedTab >= 0) {
+                pager.setCurrentItem(parked.selectedTab, false);
+            }
+        } else {
+            loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        }
     }
 
     private void buildShell(String fileName) {
@@ -901,28 +918,46 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .show();
     }
 
-    private void minimizeThis() {
-        String name = null;
-        String parent = null;
-        Intent intent = getIntent();
-        if (intent != null) {
-            String apk = intent.getStringExtra("apkPath");
-            if (apk == null) apk = intent.getStringExtra("zipFilePath");
-            if (apk != null && !apk.isEmpty()) parent = new File(apk).getName();
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.arsc_editor_plus,
+                MinimizedEditors.archiveOrFileDetail(getIntent()));
+    }
 
-            name = intent.getStringExtra("zipEntryPath");
-            if (name == null) {
-                String path = intent.getStringExtra("path");
-                if (path != null) {
-                    File f = new File(path);
-                    name = f.getName();
-                    if (parent == null && f.getParentFile() != null) {
-                        parent = f.getParentFile().getName();
-                    }
-                }
-            }
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        if (data == null) return null;
+        return new ParkedArscPlusState(
+                data,
+                dirty,
+                batchRemove,
+                savedThisSession,
+                pager != null ? pager.getCurrentItem() : 0);
+    }
+
+    private static final class ParkedArscPlusState implements MinimizedEditors.ParkedState {
+        final ArscData data;
+        final boolean dirty;
+        final boolean batchRemove;
+        final boolean savedThisSession;
+        final int selectedTab;
+
+        ParkedArscPlusState(ArscData data, boolean dirty, boolean batchRemove,
+                            boolean savedThisSession, int selectedTab) {
+            this.data = data;
+            this.dirty = dirty;
+            this.batchRemove = batchRemove;
+            this.savedThisSession = savedThisSession;
+            this.selectedTab = selectedTab;
         }
-        MinimizedEditors.minimize(this, R.string.arsc_editor_plus, name, parent);
+
+        @Override
+        public void discard() {
+        }
+    }
+
+    private void minimizeThis() {
+        MinimizedEditors.minimize(this, getMinimizeTitle());
     }
 
     @Override

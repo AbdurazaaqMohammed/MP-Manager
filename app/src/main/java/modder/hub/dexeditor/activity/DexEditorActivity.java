@@ -243,6 +243,20 @@ public class DexEditorActivity extends BaseActivity {
         initialize(savedInstanceState);
         session = new ViewModelProvider(this).get(DexEditorSession.class);
         retainedView = new ViewModelProvider(this).get(EditorViewState.class);
+        ParkedDexState parked = takeParkedState(ParkedDexState.class);
+        if (parked != null) {
+            session.adoptFrom(parked.session);
+            retainedView.tabs.clear();
+            retainedView.tabs.addAll(parked.tabs);
+            retainedView.history.clear();
+            retainedView.history.addAll(parked.history);
+            retainedView.selectedTab = parked.selectedTab;
+            retainedView.explorerTab = parked.explorerTab;
+            retainedView.editorVisible = parked.editorVisible;
+            retainedView.changed = parked.changed;
+            retainedView.saved = parked.saved;
+            retainedView.initialized = true;
+        }
         try {
             session.initialize(this, getIntent(), savedInstanceState);
             initializeLogic();
@@ -315,11 +329,67 @@ public class DexEditorActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        if (session != null) session.setFinishedCleanly(isFinishing());
-        if (!isFinishing()) retainViewState();
-        if (isFinishing() && classTree != null) classTree.saveStateListener = (changed, saved) -> {};
+        boolean discard = shouldDiscardStateOnDestroy();
+        if (session != null) session.setFinishedCleanly(discard);
+        if (!discard) retainViewState();
+        if (discard && classTree != null) classTree.saveStateListener = (changed, saved) -> {};
         super.onDestroy();
         UnifiedEditorFragment.clearCache();
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        if (session == null) return null;
+        for (int i = 0; i < tabs.size(); i++) {
+            EditorTab tab = tabs.get(i);
+            UnifiedEditorFragment fragment = getFragmentAtIndex(i);
+            if (fragment != null && fragment.getEditor() != null) {
+                String currentText = fragment.getEditor().getText().toString();
+                tab.content = currentText;
+                tab.isModified = !currentText.equals(tab.originalContent);
+            }
+        }
+        session.setParked(true);
+        return new ParkedDexState(
+                session,
+                new ArrayList<>(tabs),
+                new ArrayList<>(historyNodes),
+                currentTabIndex,
+                explorerViewPager != null ? explorerViewPager.getCurrentItem() : 0,
+                viewPager != null && viewPager.getVisibility() == View.VISIBLE,
+                isChanged,
+                isSaved);
+    }
+
+    private static final class ParkedDexState implements MinimizedEditors.ParkedState {
+        final DexEditorSession session;
+        final List<EditorTab> tabs;
+        final List<TreeNode> history;
+        final int selectedTab;
+        final int explorerTab;
+        final boolean editorVisible;
+        final boolean changed;
+        final boolean saved;
+
+        ParkedDexState(DexEditorSession session, List<EditorTab> tabs, List<TreeNode> history,
+                       int selectedTab, int explorerTab, boolean editorVisible,
+                       boolean changed, boolean saved) {
+            this.session = session;
+            this.tabs = tabs;
+            this.history = history;
+            this.selectedTab = selectedTab;
+            this.explorerTab = explorerTab;
+            this.editorVisible = editorVisible;
+            this.changed = changed;
+            this.saved = saved;
+        }
+
+        @Override
+        public void discard() {
+            session.discardParked();
+            tabs.clear();
+            history.clear();
+        }
     }
 
     private void retainViewState() {
@@ -1898,7 +1968,8 @@ public class DexEditorActivity extends BaseActivity {
         builder.show();
     }
 
-    public void minimizeThis() {
+    @Override
+    protected String getMinimizeTitle() {
         String source = null;
         Intent launch = getIntent();
         if (launch != null) {
@@ -1915,7 +1986,11 @@ public class DexEditorActivity extends BaseActivity {
                 }
             }
         }
-        MinimizedEditors.minimize(this, R.string.dex_editor_plus, source);
+        return MinimizedEditors.composeLabel(this, R.string.dex_editor_plus, source);
+    }
+
+    public void minimizeThis() {
+        MinimizedEditors.minimize(this, getMinimizeTitle());
     }
 
     private static class TabSaveEntry {

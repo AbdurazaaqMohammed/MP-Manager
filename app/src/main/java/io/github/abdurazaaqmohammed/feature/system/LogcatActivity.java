@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -103,6 +104,11 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
     /** Highest line id already shown, so the snapshot + live batches don't overlap. */
     private long lastSeenId = -1;
     private final Runnable searchRunnable = this::applyFilters;
+
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.sidebar_logcat, getString(modeSubtitle()));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

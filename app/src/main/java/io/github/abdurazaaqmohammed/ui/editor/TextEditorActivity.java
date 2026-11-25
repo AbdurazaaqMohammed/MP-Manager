@@ -142,13 +142,26 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         initViews();
         setupListeners();
         initEditorFragment();
-        restoreSession();
-        // handleIntent() is what selects and loads the tab for whatever was
-        // requested. Selecting the restored tab here as well started a read for
-        // it even when the user was opening something else, which surfaced that
-        // tab's failure (a gone share-menu file, a revoked permission) as an
-        // error next to the file actually being opened.
-        handleIntent(getIntent());
+        ParkedTextState parked = takeParkedState(ParkedTextState.class);
+        if (parked != null) {
+            tabs.clear();
+            tabs.addAll(parked.tabs);
+            int target = Math.max(0, Math.min(parked.currentIndex, tabs.size() - 1));
+            if (!tabs.isEmpty()) {
+                selectTab(target);
+                updateTabsList();
+            } else {
+                handleIntent(getIntent());
+            }
+        } else {
+            restoreSession();
+            // handleIntent() is what selects and loads the tab for whatever was
+            // requested. Selecting the restored tab here as well started a read for
+            // it even when the user was opening something else, which surfaced that
+            // tab's failure (a gone share-menu file, a revoked permission) as an
+            // error next to the file actually being opened.
+            handleIntent(getIntent());
+        }
     }
 
     @Override
@@ -158,6 +171,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         handleIntent(intent);
     }
 
+
     @Override
     protected void onThemeChanged() {
         // Keep the live tabs and their unsaved buffers; rebuilding the activity reloads them.
@@ -165,6 +179,68 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyEditorChrome(this);
         UnifiedEditorFragment fragment = getFragment();
         if (fragment != null) fragment.applyThemeInPlace();
+    }
+
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.text_editor, getTabMinimizeTitle(getCurrentTab()));
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        UnifiedEditorFragment f = getFragment();
+        EditorTab cur = getCurrentTab();
+        if (f != null && f.getEditor() != null && cur != null) {
+            cur.document = f.getEditor().getText();
+            cur.readOnly = !f.getEditor().isEditable();
+        }
+        List<EditorTab> parkedTabs = new ArrayList<>(tabs.size());
+        for (EditorTab t : tabs) {
+            EditorTab copy = new EditorTab();
+            copy.title = t.title;
+            copy.file = t.file;
+            copy.fileUri = t.fileUri;
+            copy.rootOriginalPath = t.rootOriginalPath;
+            copy.zipFilePath = t.zipFilePath;
+            copy.zipEntryPath = t.zipEntryPath;
+            copy.axml = t.axml;
+            copy.abx = t.abx;
+            copy.resEntries = t.resEntries;
+            copy.poolEncoding = t.poolEncoding;
+            copy.allowLargeText = t.allowLargeText;
+            copy.readOnly = t.readOnly;
+            copy.lightweight = t.lightweight;
+            copy.fileSize = t.fileSize;
+            copy.modified = t.modified;
+            copy.pendingArchiveUpdate = t.pendingArchiveUpdate;
+            copy.exportedCopyPath = t.exportedCopyPath;
+            String text = t.document != null ? t.document.toString()
+                    : (t.content != null ? t.content : t.pendingDecoded);
+            copy.pendingDecoded = text;
+            parkedTabs.add(copy);
+        }
+        return new ParkedTextState(parkedTabs, currentIndex, sessionFile());
+    }
+
+    private static final class ParkedTextState implements MinimizedEditors.ParkedState {
+        final List<EditorTab> tabs;
+        final int currentIndex;
+        final File sessionFile;
+
+        ParkedTextState(List<EditorTab> tabs, int currentIndex, File sessionFile) {
+            this.tabs = tabs;
+            this.currentIndex = currentIndex;
+            this.sessionFile = sessionFile;
+        }
+
+        @Override
+        public void discard() {
+            tabs.clear();
+            if (sessionFile != null && sessionFile.isFile()) {
+                //noinspection ResultOfMethodCallIgnored
+                sessionFile.delete();
+            }
+        }
     }
 
     @Override
@@ -178,6 +254,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     @Override
     protected void onStop() {
         super.onStop();
+        if (wasMinimizedFinish()) return;
         UnifiedEditorFragment f = getFragment();
         EditorTab t = getCurrentTab();
         if (f != null && f.getEditor() != null && t != null) {
@@ -1603,7 +1680,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         UnifiedEditorFragment f = getFragment();
         if (f != null && f.getEditor() != null) {
             EditorTab t = getCurrentTab();
-            if (!manualFinish && t != null && t.modified && t.exportedCopyPath == null) {
+            if (!manualFinish && !wasMinimizedFinish() && t != null && t.modified && t.exportedCopyPath == null) {
                 boolean isFromFile = currentFile != null;
                 if (isFromFile) {
                     // Write to a temporary first and only then rename: the cache

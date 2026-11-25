@@ -32,6 +32,9 @@ public abstract class BaseActivity extends AppCompatActivity {
     private String editorOwnerId;
     private Runnable themeListener;
     private volatile boolean resumed;
+    private boolean explicitFinish;
+    private boolean minimizedFinish;
+    private MinimizedEditors.ParkedState pendingParkedState;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -43,6 +46,9 @@ public abstract class BaseActivity extends AppCompatActivity {
         AppFont.installFactory(this);
         appliedFontEpoch = AppFont.currentEpoch();
         super.onCreate(savedInstanceState);
+        if (savedInstanceState == null) {
+            pendingParkedState = MinimizedEditors.takePendingParkedState(getIntent());
+        }
         // Capture the shared theme revision once the theme is fully applied;
         // later bumps (selection change, import/refresh, accent) recreate us.
         appliedThemeEpoch = ThemeRegistry.currentEpoch();
@@ -103,11 +109,42 @@ public abstract class BaseActivity extends AppCompatActivity {
         return true;
     }
 
+    protected final boolean wasExplicitlyFinished() {
+        return explicitFinish;
+    }
+
+    protected final boolean shouldDiscardStateOnDestroy() {
+        return !minimizedFinish && explicitFinish;
+    }
+
+    protected final <T extends MinimizedEditors.ParkedState> T takeParkedState(Class<T> type) {
+        if (type != null && type.isInstance(pendingParkedState)) {
+            T state = type.cast(pendingParkedState);
+            pendingParkedState = null;
+            return state;
+        }
+        return null;
+    }
+
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        return null;
+    }
+
+    protected String getMinimizeTitle() {
+        CharSequence title = getTitle();
+        return title != null ? title.toString() : null;
+    }
+
+    protected boolean shouldAutoMinimize() {
+        return EditorTasks.isSecondaryTaskRoot(this);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         resumed = true;
         EditorTasks.syncActivityTaskRecents(this);
+        MinimizedEditors.unregister(this);
         if (getIntent() != null && getIntent().getBooleanExtra("restore_progress", false)) {
             getIntent().removeExtra("restore_progress");
             ProgressManager.restoreHidden();
@@ -138,6 +175,15 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        if (!explicitFinish && !minimizedFinish && !isFinishing()
+                && !isChangingConfigurations() && shouldAutoMinimize()) {
+            MinimizedEditors.minimizeSilently(this, getMinimizeTitle());
+        }
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (intent != null && intent.getBooleanExtra("restore_progress", false)) {
@@ -147,9 +193,13 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // A minimized editor keeps its registry entry until it really exits;
-        // configuration recreations (isFinishing == false) don't count.
-        if (isFinishing()) MinimizedEditors.unregister(this);
+        // Explicit user exits unregister immediately; OS background evictions keep
+        // reopenIntent entries intact, and minimized pops keep their parked state.
+        if (explicitFinish && !minimizedFinish) MinimizedEditors.unregister(this);
+        if (!isChangingConfigurations() && pendingParkedState != null) {
+            pendingParkedState.discard();
+            pendingParkedState = null;
+        }
         EditorTasks.unbind(editorOwnerId, this);
         ThemeRegistry.removeActivityListener(themeListener);
         themeListener = null;
@@ -165,7 +215,11 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
         if (EditorTasks.isEditor(intent)) {
-            super.startActivityForResult(EditorTasks.prepare(this, intent, editorOwnerId, requestCode), -1, options);
+            if (EditorTasks.showEditorTasksInRecents(this)) {
+                super.startActivityForResult(EditorTasks.prepare(this, intent, editorOwnerId, requestCode), -1, options);
+            } else {
+                super.startActivityForResult(EditorTasks.prepareSingleTask(intent, requestCode), requestCode, options);
+            }
         } else {
             super.startActivityForResult(intent, requestCode, options);
         }
@@ -182,16 +236,72 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     public final void setEditorResult(int code) { setEditorResult(code, null); }
 
-    @Override
-    public void finish() {
+    /** Pops a minimized activity back down to its caller inside the same task without discarding state. */
+    public final void finishMinimizedToParent() {
+        minimizedFinish = true;
+        setResult(RESULT_CANCELED);
+        super.finish();
+        overridePendingTransition(0, 0);
+    }
+
+    /** Closes a background minimized task silently without bringing MainActivity over itself. */
+    public final void finishQuietlyFromMinimized() {
+        explicitFinish = true;
+        MinimizedEditors.unregister(this);
         EditorTasks.finished(this);
-        if (EditorTasks.isEditor(this)) {
-            EditorTasks.returnToMain(this);
-            finishAndRemoveTask();
+        if (EditorTasks.isSecondaryTaskRoot(this)) {
+            super.finishAndRemoveTask();
             overridePendingTransition(0, 0);
         } else {
             super.finish();
         }
+    }
+
+    @Override
+    public void finish() {
+        if (minimizedFinish) {
+            super.finish();
+            return;
+        }
+        explicitFinish = true;
+        MinimizedEditors.unregister(this);
+        EditorTasks.finished(this);
+        if (EditorTasks.isSecondaryTaskRoot(this)) {
+            boolean shouldReturnToMain = EditorTasks.isEditor(this)
+                    || (getIntent() != null && getIntent().getBooleanExtra(EditorTasks.EXTRA_RESTORED_FROM_MINIMIZED, false));
+            if (shouldReturnToMain) EditorTasks.returnToMain(this);
+            super.finishAndRemoveTask();
+            overridePendingTransition(0, 0);
+        } else {
+            super.finish();
+        }
+    }
+
+    @Override
+    public void finishAndRemoveTask() {
+        if (!minimizedFinish) {
+            explicitFinish = true;
+            MinimizedEditors.unregister(this);
+        }
+        super.finishAndRemoveTask();
+    }
+
+    @Override
+    public void finishAffinity() {
+        if (!minimizedFinish) {
+            explicitFinish = true;
+            MinimizedEditors.unregister(this);
+        }
+        super.finishAffinity();
+    }
+
+    @Override
+    public void finishAfterTransition() {
+        if (!minimizedFinish) {
+            explicitFinish = true;
+            MinimizedEditors.unregister(this);
+        }
+        super.finishAfterTransition();
     }
 
     /**

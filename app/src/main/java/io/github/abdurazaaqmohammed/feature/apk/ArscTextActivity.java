@@ -61,6 +61,12 @@ public class ArscTextActivity extends BaseActivity {
         return new Intent(context, ArscTextActivity.class).putExtra("arscTextSession", key);
     }
 
+    public static void discardSession(Intent intent) {
+        if (intent == null) return;
+        String key = intent.getStringExtra("arscTextSession");
+        if (key != null) sessions.remove(key);
+    }
+
     private ArscData data;
     private TypeBlock block;
     private MaterialToolbar toolbar;
@@ -216,7 +222,65 @@ public class ArscTextActivity extends BaseActivity {
         });
         final TypeBlock tb = block;
         currentHighlight = highlight;
-        loadBlockText();
+        ParkedArscTextState parked = takeParkedState(ParkedArscTextState.class);
+        if (parked != null && parked.draftText != null) {
+            selHandler.post(() -> {
+                if (isFinishing() || isDestroyed() || fragment == null) return;
+                loadingText = true;
+                try {
+                    fragment.setText(parked.draftText);
+                } catch (Exception ignored) {
+                }
+                loadingText = false;
+                bufferDirty = parked.dirty;
+                applied = parked.applied;
+                ensureMenuSubscribed();
+            });
+        } else {
+            loadBlockText();
+        }
+    }
+
+    @Override
+    protected String getMinimizeTitle() {
+        String baseTitle = toolbar != null && toolbar.getTitle() != null
+                ? toolbar.getTitle().toString() : getString(R.string.arsc_editor);
+        String parentName = null;
+        if (data != null) {
+            if (data.apkFile != null) parentName = data.apkFile.getName();
+            else if (data.arscFile != null) parentName = data.arscFile.getName();
+        }
+        return MinimizedEditors.formatTitle(baseTitle, parentName);
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        String sessionKey = getIntent().getStringExtra("arscTextSession");
+        String draft = null;
+        try {
+            if (fragment != null) draft = fragment.getCode();
+        } catch (Exception ignored) {
+        }
+        return new ParkedArscTextState(sessionKey, draft, bufferDirty, applied);
+    }
+
+    private static final class ParkedArscTextState implements MinimizedEditors.ParkedState {
+        final String sessionKey;
+        final String draftText;
+        final boolean dirty;
+        final boolean applied;
+
+        ParkedArscTextState(String sessionKey, String draftText, boolean dirty, boolean applied) {
+            this.sessionKey = sessionKey;
+            this.draftText = draftText;
+            this.dirty = dirty;
+            this.applied = applied;
+        }
+
+        @Override
+        public void discard() {
+            if (sessionKey != null) sessions.remove(sessionKey);
+        }
     }
 
     private void loadBlockText() {
@@ -324,15 +388,7 @@ public class ArscTextActivity extends BaseActivity {
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
-                .setNeutralButton(R.string.minimize, (d, w) -> {
-                    String baseTitle = toolbar.getTitle() != null ? toolbar.getTitle().toString() : getString(R.string.arsc_editor);
-                    String parentName = null;
-                    if (data != null) {
-                        if (data.apkFile != null) parentName = data.apkFile.getName();
-                        else if (data.arscFile != null) parentName = data.arscFile.getName();
-                    }
-                    MinimizedEditors.minimize(this, MinimizedEditors.formatTitle(baseTitle, parentName));
-                })
+                .setNeutralButton(R.string.minimize, (d, w) -> MinimizedEditors.minimize(this, getMinimizeTitle()))
                 .show();
     }
 
@@ -700,7 +756,7 @@ public class ArscTextActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         dismissIdPopup();
-        if (isFinishing()) sessions.remove(getIntent().getStringExtra("arscTextSession"));
+        if (shouldDiscardStateOnDestroy()) sessions.remove(getIntent().getStringExtra("arscTextSession"));
         try {
             if (fragment != null && fragment.getEditor() != null) fragment.getEditor().release();
         } catch (Exception ignored) {

@@ -3721,6 +3721,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.END)) {
             isRightDrawerOpen = true;
             startBatteryMonitor();
+            refreshRightMenuDrawer();
         } else {
             isRightDrawerOpen = false;
             stopBatteryMonitor();
