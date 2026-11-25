@@ -1,7 +1,5 @@
 package io.github.abdurazaaqmohammed.privilege.internal;
 
-import io.github.abdurazaaqmohammed.privilege.internal.RootFile;
-
 import io.github.abdurazaaqmohammed.privilege.internal.RootManager;
 import io.github.abdurazaaqmohammed.privilege.internal.ShellBatchControl;
 import io.github.abdurazaaqmohammed.privilege.api.ShellProgress;
@@ -28,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.privilege.internal.ShizukuShell;
@@ -126,6 +123,54 @@ public final class ShizukuManager {
         return s;
     }
 
+    /** Returns the bound user service without long waits, briefly awaiting initial bind if ready. */
+    private static IFileService readServiceFast(Context context) {
+        if (!ready()) return null;
+        IFileService s = ShizukuConnection.peek();
+        if (s == null && context != null) {
+            s = ShizukuConnection.await(context, 1500);
+        }
+        return s;
+    }
+
+    static Boolean existsBinderIfConnected(String path) {
+        if (path == null || !ready()) return null;
+        IFileService s = ShizukuConnection.peek();
+        if (s == null) return null;
+        try {
+            return s.pathExists(path);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    static Boolean isDirectoryBinderIfConnected(String path) {
+        if (path == null || !ready()) return null;
+        IFileService s = ShizukuConnection.peek();
+        if (s == null) return null;
+        try {
+            return s.pathIsDir(path);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    static File[] listBinderAsShizukuFiles(Context context, String dirPath) {
+        return listWithBinder(context, dirPath, true);
+    }
+
+    private static File[] listWithBinder(Context context, String dirPath, boolean asShizukuFile) {
+        IFileService s = readServiceFast(context);
+        if (s == null) return null;
+        try {
+            List<String> lines = s.dirStat(dirPath);
+            if (lines == null) return null;
+            return LsListingSupport.parseDirStatLines(dirPath, lines, asShizukuFile);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     private static String serviceError(IFileService s) {
         try {
             String e = s.lastError();
@@ -179,10 +224,8 @@ public final class ShizukuManager {
     }
 
     /**
-     * The user service only ever opens the app-private Android/{data,obb,media}
-     * trees. Shizuku itself runs as the shell user, which can read much more
-     * (/data, /vendor, /odm, ...), so anything the service refuses is handled
-     * over the shell instead of being reported as inaccessible.
+     * Write, openRead, and shell commands keep using the shell fallback outside
+     * app-private Android/{data,obb,media} trees so security boundaries stay intact.
      */
     private static boolean useShell(String path) {
         return !isAllowed(path);
@@ -195,38 +238,12 @@ public final class ShizukuManager {
     /** Directory listing over the shell, in the same shape {@link #listWithStat} returns. */
     private static File[] listWithShell(String dirPath) {
         try {
-            String arg = shellArg(dirPath);
-            // Keep stderr: a shell that cannot read a root-only path reports the
-            // reason there. Discarding it used to turn "Permission denied" into
-            // an empty directory, which callers treated as a successful listing.
             ShizukuShell.Result r = ShizukuShell.exec(
-                    "test -d " + arg + " || exit 4; LC_ALL=C ls -laH -- " + arg, 30);
+                    LsListingSupport.buildSingleCallLsCommand(dirPath), 30);
             if (r == null || !r.success || r.exitCode != 0 || r.stdout == null) return null;
-            List<File> files = new ArrayList<>();
-            for (String line : r.stdout.split("\\r?\\n")) {
-                if (line.trim().isEmpty() || line.startsWith("total ")) continue;
-                Matcher matcher = RootManager.LS_LONG_LINE.matcher(line);
-                if (!matcher.matches()) continue;
-                String mode = matcher.group(1);
-                char type = mode.charAt(0);
-                if (type != '-' && type != 'd' && type != 'l') continue;
-                String name = matcher.group(4);
-                int arrow = name.indexOf(" -> ");
-                if (arrow > 0) name = name.substring(0, arrow);
-                if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
-                long size;
-                try {
-                    size = Long.parseLong(matcher.group(2));
-                } catch (NumberFormatException e) {
-                    size = 0L;
-                }
-                long mtime = RootManager.parseLsDateTimeFlexible(matcher.group(3));
-                boolean isDir = type == 'd';
-                files.add(new RootFile(dirPath, name, true, isDir, type != 'd',
-                        isDir ? 0L : Math.max(0L, size), mtime,
-                        mode.length() > 1 ? mode.substring(1) : null, type == 'l'));
-            }
-            return files.toArray(new File[0]);
+            String clean = (dirPath.endsWith("/") && dirPath.length() > 1)
+                    ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+            return LsListingSupport.parseLsWithLinksOutput(clean, r.stdout, false);
         } catch (Throwable e) {
             return null;
         }
@@ -348,55 +365,64 @@ public final class ShizukuManager {
     public static boolean exists(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            IFileService s = readServiceFast(context);
+            if (s != null) return s.pathExists(path);
             if (!isAllowed(path)) return shellTest(path, "-e");
-            requireAllowed(path);
-            return serviceFast().pathExists(path);
-        } catch (Throwable e) {
             return false;
+        } catch (Throwable e) {
+            return !isAllowed(path) && shellTest(path, "-e");
         }
     }
 
     public static boolean isDirectory(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            IFileService s = readServiceFast(context);
+            if (s != null) return s.pathIsDir(path);
             if (!isAllowed(path)) return shellTest(path, "-d");
-            requireAllowed(path);
-            return serviceFast().pathIsDir(path);
-        } catch (Throwable e) {
             return false;
+        } catch (Throwable e) {
+            return !isAllowed(path) && shellTest(path, "-d");
         }
     }
 
     public static boolean isFile(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            IFileService s = readServiceFast(context);
+            if (s != null) return s.pathIsFile(path);
             if (!isAllowed(path)) return !shellTest(path, "-d") && shellTest(path, "-e");
-            requireAllowed(path);
-            return serviceFast().pathIsFile(path);
-        } catch (Throwable e) {
             return false;
+        } catch (Throwable e) {
+            return !isAllowed(path) && !shellTest(path, "-d") && shellTest(path, "-e");
         }
     }
 
     public static long getFileSize(Context context, String path) {
         try {
+            IFileService s = readServiceFast(context);
+            if (s != null) return s.pathSize(path);
             if (!isAllowed(path)) return shellStat(path, "%s");
-            requireAllowed(path);
-            return serviceFast().pathSize(path);
-        } catch (Throwable e) {
             return -1;
+        } catch (Throwable e) {
+            return !isAllowed(path) ? shellStat(path, "%s") : -1;
         }
     }
 
     public static long getMtime(Context context, String path) {
         try {
+            IFileService s = readServiceFast(context);
+            if (s != null) return s.pathMtime(path);
             if (!isAllowed(path)) {
                 long m = shellStat(path, "%Y");
-                return m < 0 ? 0 : m;
+                return m < 0 ? 0 : m * 1000L;
             }
-            requireAllowed(path);
-            return serviceFast().pathMtime(path);
+            return 0;
         } catch (Throwable e) {
+            if (!isAllowed(path)) {
+                long m = shellStat(path, "%Y");
+                return m < 0 ? 0 : m * 1000L;
+            }
             return 0;
         }
     }
@@ -520,38 +546,17 @@ public final class ShizukuManager {
     }
 
     public static File[] listWithStat(Context context, String dirPath) {
-        if (useShell(dirPath)) return listWithShell(dirPath);
-        try {
-            requireAllowed(dirPath);
-            List<String> lines = serviceSync(context).dirStat(dirPath);
-            if (lines == null) return null;
-            List<File> files = new ArrayList<>();
-            for (String line : lines) {
-                if (line == null || line.isEmpty()) continue;
-                String[] parts = line.split("\037", -1);
-                if (parts.length < 4) continue;
-                String name = parts[0];
-                if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
-                boolean dir = "1".equals(parts[1].trim());
-                long size;
-                long mtime;
-                try {
-                    size = Long.parseLong(parts[2].trim());
-                } catch (NumberFormatException e) {
-                    size = 0L;
-                }
-                try {
-                    mtime = Long.parseLong(parts[3].trim());
-                } catch (NumberFormatException e) {
-                    mtime = 0L;
-                }
-                files.add(new RootFile(dirPath, name, true, dir, !dir,
-                        dir ? 0L : Math.max(0L, size), mtime, null));
+        if (dirPath == null || dirPath.isEmpty()) return null;
+        IFileService s = readServiceFast(context);
+        if (s != null) {
+            try {
+                List<String> lines = s.dirStat(dirPath);
+                if (lines == null) return null;
+                return LsListingSupport.parseDirStatLines(dirPath, lines, false);
+            } catch (Throwable ignored) {
             }
-            return files.toArray(new File[0]);
-        } catch (Throwable e) {
-            return null;
         }
+        return useShell(dirPath) ? listWithShell(dirPath) : null;
     }
 
     public static long streamFrom(Context context, String srcPath, OutputStream out, long maxBytes) throws IOException {
