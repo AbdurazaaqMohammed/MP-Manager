@@ -786,6 +786,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
             }
             ColorPreviewHelper.syncScheme(ecs);
+            ThemePackEditorColors.applyIndentGuideColors(ecs, false);
             editor.setColorScheme(ecs); // fresh per-call instance: safe to theme
         }
         applyPackEditorColors();
@@ -917,6 +918,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
         }
         ColorPreviewHelper.syncScheme(scheme);
+        ThemePackEditorColors.applyIndentGuideColors(scheme, false);
         return scheme;
     }
 
@@ -945,6 +947,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
         } catch (Exception ignored) {}
         editor.setTabWidth(tabSize);
+        syncLanguageTabSize(editor.getEditorLanguage(), tabSize);
         editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
         
         // Apply unified editor preferences (line spacing, indent guides, current line highlight,
@@ -952,6 +955,18 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         EditorHelper.applyCommonEditorPreferences(editor, editorPrefs);
         if (largeFileMode) {
             editor.setWordwrap(false);
+        }
+    }
+
+    private static void syncLanguageTabSize(Language lang, int tabSize) {
+        if (lang instanceof ColorPreviewLanguageWrapper) {
+            lang = ((ColorPreviewLanguageWrapper) lang).getDelegate();
+        }
+        if (lang instanceof CustomAutoComplete) {
+            lang = ((CustomAutoComplete) lang).getWrappedLanguage();
+        }
+        if (lang instanceof TextMateLanguage) {
+            ((TextMateLanguage) lang).setTabSize(tabSize);
         }
     }
 
@@ -1807,7 +1822,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void setTextMateLanguage(TextMateLanguage language, ThemeRegistry sourceRegistry, int generation) {
         if (editor == null || language == null) return;
-        Language wrapper = new ColorPreviewLanguageWrapper(language, editor);
+        Language wrapper = new ColorPreviewLanguageWrapper(
+                language, editor, io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forScope(syntaxPolicy.requestedScope()));
+        syncLanguageTabSize(wrapper, editor.getTabWidth());
         editor.setEditorLanguage(wrapper);
         // Record what is actually live on the editor so the next applySyntax call
         // can verify it instead of trusting a previously requested scope.
@@ -1827,16 +1844,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private void ensureTextMateScheme(ThemeRegistry sourceRegistry) {
         if (editor == null) return;
         try {
-            ThemeRegistry registry = sourceRegistry != null
-                    ? sourceRegistry : ThemeRegistry.getInstance();
-            TextMateColorScheme scheme = TextMateColorScheme.create(registry);
-            if (!ThemePackEditorColors.hasEditorToken(requireContext(),
-                    ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
-                scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
-                        ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
-            }
-            ColorPreviewHelper.syncScheme(scheme);
-            editor.setColorScheme(scheme);
+            editor.setColorScheme(createEditorColorScheme(requireContext(), sourceRegistry));
             applyPackEditorColors();
             recordAppliedThemeSignature();
         } catch (Exception e) {

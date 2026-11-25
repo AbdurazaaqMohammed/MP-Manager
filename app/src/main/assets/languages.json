@@ -2,41 +2,49 @@
   "languages": [
     {
       "grammar": "syntaxes/grammars/xml.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/xml-like.json",
       "name": "XML",
       "scopeName": "text.xml"
     },
     {
       "grammar": "syntaxes/grammars/rust.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/c-like.json",
       "name": "Rust",
       "scopeName": "source.rust"
     },
     {
       "grammar": "syntaxes/grammars/java.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/c-like.json",
       "name": "Java",
       "scopeName": "source.java"
     },
     {
       "grammar": "syntaxes/grammars/c.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/c-like.json",
       "name": "C",
       "scopeName": "source.c"
     },
     {
       "grammar": "syntaxes/grammars/cpp.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/c-like.json",
       "name": "C++",
       "scopeName": "source.cpp"
     },
     {
       "grammar": "syntaxes/grammars/python.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/offside.json",
       "name": "Python",
       "scopeName": "source.python"
     },
     {
       "grammar": "syntaxes/grammars/javascript.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/c-like.json",
       "name": "JavaScript",
       "scopeName": "source.js"
     },
     {
       "grammar": "syntaxes/grammars/html.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/xml-like.json",
       "name": "HTML",
       "scopeName": "text.html.basic",
       "embeddedLanguages": {
@@ -46,31 +54,37 @@
     },
     {
       "grammar": "syntaxes/grammars/css.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/css.json",
       "name": "CSS",
       "scopeName": "source.css"
     },
     {
       "grammar": "syntaxes/grammars/markdown.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/offside.json",
       "name": "Markdown",
       "scopeName": "text.html.markdown"
     },
     {
       "grammar": "syntaxes/grammars/json.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/json.json",
       "name": "JSON",
       "scopeName": "source.json"
     },
     {
       "grammar": "syntaxes/grammars/shellscript.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/offside.json",
       "name": "Shell",
       "scopeName": "source.shell"
     },
     {
       "grammar": "syntaxes/grammars/prop.tmLanguage.json",
+      "languageConfiguration": "syntaxes/configs/offside.json",
       "name": "Prop",
       "scopeName": "source.prop"
     },
     {
       "grammar": "smali/syntaxes/smali.tmLanguage.json",
+      "languageConfiguration": "smali/language-configuration.json",
       "name": "Smali",
       "scopeName": "source.smali"
     }

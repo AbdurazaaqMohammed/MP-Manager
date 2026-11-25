@@ -33,11 +33,18 @@
     ["'", "'"],
     ["<", ">"]
   ],
+  "comments": {
+    "lineComment": "#"
+  },
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(?:\\.method\\b.*|\\.param\\b.*|\\.annotation\\b.*|\\.subannotation\\b.*|\\.packed-switch\\b.*|\\.sparse-switch\\b.*|\\.array-data\\b.*|:try_start_\\S*|.*\\{\\s*)$",
+    "decreaseIndentPattern": "^\\s*(?:\\.end\\s+(?:method|field|annotation|subannotation|param|packed-switch|sparse-switch|array-data)\\b|:try_end_\\S*|\\})"
+  },
   "folding": {
-    "offSide": false,
+    "offSide": true,
     "markers": {
-      "start": "^\\s*//\\s*#region",
-      "end": "^\\s*//\\s*#endregion"
+      "start": "^\\s*#\\s*region\\b",
+      "end": "^\\s*#\\s*endregion\\b"
     }
   }
 }
