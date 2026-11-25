@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import java.io.File;
 import java.io.InputStream;
@@ -42,7 +43,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class FreeStylePickerActivity extends AppCompatActivity {
+public class FreeStylePickerActivity extends BaseActivity {
 
     private static final int PERMISSION_REQ_CODE = 1001;
 

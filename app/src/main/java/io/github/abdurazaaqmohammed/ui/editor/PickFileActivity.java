@@ -17,6 +17,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 
 /**
@@ -36,7 +37,7 @@ import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
  * copy has to be made before the file is handed over, and a file in
  * {@code Android/data} is as openable as one on the sdcard.</p>
  */
-public class PickFileActivity extends AppCompatActivity {
+public class PickFileActivity extends BaseActivity {
 
     /** Must match the authority declared for the provider in the manifest. */
     public static final String AUTHORITY = "io.github.abdurazaaqmohammed.MPManager.documents";

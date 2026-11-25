@@ -45,13 +45,14 @@ import androidx.appcompat.widget.Toolbar;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import modder.hub.dexeditor.fragment.SettingsFragment;
 
 /*
 Author @developer-krushna
 */
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
     @Override
 	protected void onCreate(Bundle _savedInstanceState) {
