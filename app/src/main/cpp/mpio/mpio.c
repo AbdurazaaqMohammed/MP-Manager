@@ -611,6 +611,258 @@ static int do_delete(int count, char *paths[]) {
     return 0;
 }
 
+static int64_t stat_mtime_ms(const struct stat *st) {
+    int64_t ms = (int64_t)st->st_mtim.tv_sec * 1000LL
+               + (int64_t)(st->st_mtim.tv_nsec / 1000000LL);
+    return ms < 0 ? 0 : ms;
+}
+
+static DIR *open_target_dir(const char *raw_path, int *out_errno) {
+    char fast_path[4096];
+    DIR *dir = NULL;
+    if (resolve_fast_path(raw_path, fast_path, sizeof(fast_path)) == 0) {
+        dir = opendir(fast_path);
+        if (dir) return dir;
+        *out_errno = errno;
+        if (strcmp(fast_path, raw_path) == 0) return NULL;
+    } else {
+        *out_errno = errno;
+    }
+    dir = opendir(raw_path);
+    if (!dir) *out_errno = errno;
+    return dir;
+}
+
+static int lstat_target_path(const char *raw_path, char *chosen_path, size_t chosen_cap,
+                             struct stat *lst, int *out_errno) {
+    if (resolve_fast_path(raw_path, chosen_path, chosen_cap) == 0) {
+        if (lstat(chosen_path, lst) == 0) return 0;
+        *out_errno = errno;
+        if (strcmp(chosen_path, raw_path) == 0) return -1;
+    } else {
+        *out_errno = errno;
+    }
+    if (snprintf(chosen_path, chosen_cap, "%s", raw_path) >= (int)chosen_cap) {
+        *out_errno = ENAMETOOLONG;
+        return -1;
+    }
+    if (lstat(chosen_path, lst) == 0) return 0;
+    *out_errno = errno;
+    return -1;
+}
+
+static void write_nul_str(const char *s) {
+    size_t len = strlen(s);
+    if (len > 0) fwrite(s, 1, len, stdout);
+    putchar('\0');
+}
+
+static void emit_err_code(int err) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", err);
+    write_nul_str("ERR");
+    write_nul_str(buf);
+}
+
+static int emit_list_dir(const char *raw_path) {
+    if (!raw_path || raw_path[0] == '\0') {
+        emit_err_code(EINVAL);
+        return 1;
+    }
+    int open_err = 0;
+    DIR *dir = open_target_dir(raw_path, &open_err);
+    if (!dir) {
+        emit_err_code(open_err);
+        return 1;
+    }
+
+    int dfd = dirfd(dir);
+    size_t count = 0;
+    int read_err = 0;
+    for (;;) {
+        errno = 0;
+        struct dirent *entry = readdir(dir);
+        if (!entry) {
+            if (errno != 0) read_err = errno;
+            break;
+        }
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+
+        struct stat lst;
+        bool is_dir = false;
+        bool is_file = false;
+        bool is_link = false;
+        uint64_t size = 0;
+        int64_t mtime_ms = 0;
+        char mode_str[16] = "-";
+
+        if (dfd >= 0 && fstatat(dfd, entry->d_name, &lst, AT_SYMLINK_NOFOLLOW) == 0) {
+            is_link = S_ISLNK(lst.st_mode);
+            if (!is_link && !S_ISDIR(lst.st_mode) && !S_ISREG(lst.st_mode)) {
+                continue;
+            }
+            if (is_link) {
+                struct stat st;
+                if (fstatat(dfd, entry->d_name, &st, 0) == 0) {
+                    is_dir = S_ISDIR(st.st_mode);
+                    is_file = !is_dir;
+                    size = (!is_dir && S_ISREG(st.st_mode)) ? (uint64_t)st.st_size : 0ULL;
+                    mtime_ms = stat_mtime_ms(&st);
+                    snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(st.st_mode & 07777));
+                } else {
+                    is_dir = false;
+                    is_file = true;
+                    size = 0ULL;
+                    mtime_ms = stat_mtime_ms(&lst);
+                    snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(lst.st_mode & 07777));
+                }
+            } else {
+                is_dir = S_ISDIR(lst.st_mode);
+                is_file = S_ISREG(lst.st_mode);
+                size = is_dir ? 0ULL : (uint64_t)lst.st_size;
+                mtime_ms = stat_mtime_ms(&lst);
+                snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(lst.st_mode & 07777));
+            }
+        } else {
+            if (entry->d_type == DT_DIR) {
+                is_dir = true;
+            } else if (entry->d_type == DT_LNK) {
+                is_link = true;
+                is_file = true;
+            } else if (entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) {
+                is_file = true;
+            } else {
+                continue;
+            }
+        }
+
+        printf("E %d %d %d %" PRIu64 " %" PRId64 " %s",
+               is_dir ? 1 : 0, is_file ? 1 : 0, is_link ? 1 : 0,
+               size, mtime_ms, mode_str);
+        putchar('\0');
+        write_nul_str(entry->d_name);
+        count++;
+    }
+    closedir(dir);
+
+    if (read_err != 0 && count == 0) {
+        emit_err_code(read_err);
+        return 1;
+    }
+    write_nul_str("OK");
+    return 0;
+}
+
+static int emit_stat_path(const char *raw_path) {
+    if (!raw_path || raw_path[0] == '\0') {
+        emit_err_code(EINVAL);
+        return 1;
+    }
+    char target[4096];
+    struct stat lst;
+    int err = 0;
+    if (lstat_target_path(raw_path, target, sizeof(target), &lst, &err) != 0) {
+        emit_err_code(err);
+        return 1;
+    }
+
+    bool is_link = S_ISLNK(lst.st_mode);
+    bool is_dir = false;
+    bool is_file = false;
+    uint64_t size = 0;
+    int64_t mtime_ms = 0;
+    char mode_str[16];
+
+    if (is_link) {
+        struct stat st;
+        if (stat(target, &st) == 0) {
+            is_dir = S_ISDIR(st.st_mode);
+            is_file = !is_dir && (S_ISREG(st.st_mode) || !S_ISFIFO(st.st_mode));
+            size = (!is_dir && S_ISREG(st.st_mode)) ? (uint64_t)st.st_size : 0ULL;
+            mtime_ms = stat_mtime_ms(&st);
+            snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(st.st_mode & 07777));
+        } else {
+            is_dir = false;
+            is_file = true;
+            size = 0ULL;
+            mtime_ms = stat_mtime_ms(&lst);
+            snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(lst.st_mode & 07777));
+        }
+    } else {
+        is_dir = S_ISDIR(lst.st_mode);
+        is_file = S_ISREG(lst.st_mode);
+        size = is_dir ? 0ULL : (is_file ? (uint64_t)lst.st_size : 0ULL);
+        mtime_ms = stat_mtime_ms(&lst);
+        snprintf(mode_str, sizeof(mode_str), "%o", (unsigned int)(lst.st_mode & 07777));
+    }
+
+    printf("S 1 %d %d %d %" PRIu64 " %" PRId64 " %s",
+           is_dir ? 1 : 0, is_file ? 1 : 0, is_link ? 1 : 0,
+           size, mtime_ms, mode_str);
+    putchar('\0');
+    return 0;
+}
+
+// Reads a single NUL-terminated token. Returns 1 on success, 0 on clean EOF, -1 if oversized.
+static int read_nul_token(char *buf, size_t cap) {
+    size_t len = 0;
+    for (;;) {
+        int ch = getchar();
+        if (ch == EOF) return 0;
+        if (ch == '\0') {
+            buf[len] = '\0';
+            return 1;
+        }
+        if (len + 1 < cap) {
+            buf[len++] = (char)ch;
+        } else {
+            // Drain the remainder of the oversized token so stream stays synchronized.
+            while ((ch = getchar()) != EOF && ch != '\0') {}
+            return ch == EOF ? 0 : -1;
+        }
+    }
+}
+
+static int do_serve(void) {
+    static char out_buf[65536];
+    setvbuf(stdout, out_buf, _IOFBF, sizeof(out_buf));
+    printf("MPIO_SERVE 1\n");
+    fflush(stdout);
+
+    char op[16];
+    char path[4096];
+    for (;;) {
+        int r_op = read_nul_token(op, sizeof(op));
+        if (r_op == 0) break;
+        if (r_op < 0) {
+            emit_err_code(EINVAL);
+            fflush(stdout);
+            continue;
+        }
+        if (strcmp(op, "Q") == 0) {
+            write_nul_str("BYE");
+            fflush(stdout);
+            return 0;
+        }
+        if (strcmp(op, "L") == 0 || strcmp(op, "S") == 0) {
+            int r_path = read_nul_token(path, sizeof(path));
+            if (r_path == 0) break;
+            if (r_path < 0) {
+                emit_err_code(ENAMETOOLONG);
+            } else if (op[0] == 'L') {
+                emit_list_dir(path);
+            } else {
+                emit_stat_path(path);
+            }
+            fflush(stdout);
+            continue;
+        }
+        emit_err_code(EINVAL);
+        fflush(stdout);
+    }
+    return 0;
+}
+
 // A NUL-delimited list avoids Android's per-argument limit for large selections
 // and preserves spaces, quotes and newlines without invoking a shell per file.
 static int from_path_list(const char *command, const char *list_path) {
@@ -647,8 +899,11 @@ int main(int argc, char *argv[]) {
     signal(SIGXFSZ, SIG_IGN); // Surface EFBIG as a copy error instead of dying mid-file.
 
     if (argc < 2) {
-        fprintf(stderr, "MPIO v1.0 Native I/O Daemon for MP-Manager\n");
+        fprintf(stderr, "MPIO v1.1 Native I/O Daemon for MP-Manager\n");
         fprintf(stderr, "Usage:\n");
+        fprintf(stderr, "  %s serve\n", argv[0]);
+        fprintf(stderr, "  %s list <dir>\n", argv[0]);
+        fprintf(stderr, "  %s stat <path>\n", argv[0]);
         fprintf(stderr, "  %s scan <path1> [path2 ...]\n", argv[0]);
         fprintf(stderr, "  %s copy <src> <dst>\n", argv[0]);
         fprintf(stderr, "  %s delete <path1> [path2 ...]\n", argv[0]);
@@ -656,6 +911,19 @@ int main(int argc, char *argv[]) {
     }
 
     const char *cmd = argv[1];
+    if (strcmp(cmd, "serve") == 0) {
+        return do_serve();
+    } else if (strcmp(cmd, "list") == 0) {
+        if (argc < 3) return 1;
+        int rc = emit_list_dir(argv[2]);
+        fflush(stdout);
+        return rc;
+    } else if (strcmp(cmd, "stat") == 0) {
+        if (argc < 3) return 1;
+        int rc = emit_stat_path(argv[2]);
+        fflush(stdout);
+        return rc;
+    }
     if (argc == 4 && strcmp(argv[2], "--list") == 0
             && (strcmp(cmd, "scan") == 0 || strcmp(cmd, "delete") == 0)) {
         return from_path_list(cmd, argv[3]);
