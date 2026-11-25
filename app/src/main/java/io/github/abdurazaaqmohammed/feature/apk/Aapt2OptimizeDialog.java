@@ -7,9 +7,10 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -18,6 +19,7 @@ import androidx.preference.PreferenceManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -84,8 +86,8 @@ final class Aapt2OptimizeDialog {
                 .setOnClickListener(v -> {
                     final Aapt2Optimizer.Options options;
                     try {
-                        options = new Aapt2Optimizer.Options(text(view, R.id.aapt2_densities),
-                                text(view, R.id.aapt2_configurations), text(view, R.id.aapt2_abis),
+                        options = new Aapt2Optimizer.Options(selected(view, R.id.aapt2_densities),
+                                selected(view, R.id.aapt2_configurations), selected(view, R.id.aapt2_abis),
                                 text(view, R.id.aapt2_min_sdk), text(view, R.id.aapt2_target_sdk));
                     } catch (IllegalArgumentException e) {
                         Extensions.showMessage(activity, e.getMessage());
@@ -118,11 +120,14 @@ final class Aapt2OptimizeDialog {
     private static void setupFields(MainActivity activity, View view,
                                     Aapt2ProfileManager profiles, Aapt2ApkSpecs.Specs specs) {
         view.setTag(R.id.aapt2_specs_tag, specs);
-        setupMultiSelect(activity, view, R.id.aapt2_densities,
+        setupMultiSelect(activity, view, R.id.aapt2_densities, R.id.aapt2_densities_layout,
+                R.string.aapt2_densities,
                 new Aapt2MultiSelectAdapter(activity, new ArrayList<>(specs.densities)));
-        setupMultiSelect(activity, view, R.id.aapt2_configurations,
+        setupMultiSelect(activity, view, R.id.aapt2_configurations, R.id.aapt2_configurations_layout,
+                R.string.aapt2_configurations,
                 new Aapt2MultiSelectAdapter(activity, new ArrayList<>(specs.languages)));
-        setupMultiSelect(activity, view, R.id.aapt2_abis,
+        setupMultiSelect(activity, view, R.id.aapt2_abis, R.id.aapt2_abis_layout,
+                R.string.aapt2_abis,
                 new Aapt2MultiSelectAdapter(activity, new ArrayList<>(specs.abis)));
 
         List<Aapt2Profile> list = profiles.getProfiles();
@@ -169,25 +174,71 @@ final class Aapt2OptimizeDialog {
                 showProfileManager(activity, profiles, view, profileAdapter, specs));
     }
 
-    private static void setupMultiSelect(MainActivity activity, View view, int fieldId,
-                                         Aapt2MultiSelectAdapter adapter) {
-        MaterialAutoCompleteTextView field = view.findViewById(fieldId);
-        field.setAdapter(adapter);
-        field.setKeyListener(null);
-        field.setText("", false);
-        field.setOnClickListener(v -> field.showDropDown());
-        field.setOnItemClickListener((parent, itemView, position, id) -> {
-            adapter.toggleAt(position);
-            field.setText(adapter.getValue(), false);
-            field.post(field::showDropDown);
-        });
-        field.post(() -> {
-            if (field.getWidth() > 0) field.setDropDownWidth(field.getWidth());
-        });
+    private static void setupMultiSelect(MainActivity activity, View view, int fieldId, int layoutId,
+                                         int titleId, Aapt2MultiSelectAdapter adapter) {
+        TextInputEditText field = view.findViewById(fieldId);
+        TextInputLayout layout = view.findViewById(layoutId);
+        field.setTag(adapter);
+        field.setText("");
+        View.OnClickListener open = v -> showChooser(activity, field, adapter, titleId);
+        field.setOnClickListener(open);
+        layout.setOnClickListener(open);
+        layout.setEndIconOnClickListener(open);
         if (adapter.getCount() == 0) {
-            field.setEnabled(false);
-            field.setText(activity.getString(R.string.aapt2_none_in_apk), false);
+            field.setText(activity.getString(R.string.aapt2_none_in_apk));
+            layout.setEnabled(false);
         }
+    }
+
+    /**
+     * A dialog keeps its scroll position while items are toggled, unlike the
+     * exposed dropdown which re-opens after every selection.
+     */
+    private static void showChooser(MainActivity activity, TextInputEditText field,
+                                    Aapt2MultiSelectAdapter adapter, int titleId) {
+        List<String> values = adapter.getItems();
+        if (values.isEmpty()) return;
+        // A custom ListView keeps the dialog open on every row tap, unlike the
+        // built-in item lists that dismiss themselves and reset the scroll.
+        Aapt2MultiSelectAdapter chooser = new Aapt2MultiSelectAdapter(activity, values);
+        chooser.setSelected(adapter.getSelected());
+        ListView list = new ListView(activity);
+        list.setAdapter(chooser);
+        final Button[] allButton = new Button[1];
+        list.setOnItemClickListener((parent, row, position, id) -> {
+            chooser.toggleAt(position);
+            if (allButton[0] != null) updateSelectAllLabel(allButton[0], chooser);
+        });
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+                .setTitle(titleId)
+                .setView(list)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.aapt2_select_all, null)
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            allButton[0] = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            updateSelectAllLabel(allButton[0], chooser);
+            allButton[0].setOnClickListener(v -> {
+                boolean all = allSelected(chooser);
+                chooser.setSelected(all ? new ArrayList<>() : chooser.getItems());
+                updateSelectAllLabel(allButton[0], chooser);
+            });
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                adapter.setSelected(chooser.getSelected());
+                field.setText(adapter.getValue());
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
+
+    private static boolean allSelected(Aapt2MultiSelectAdapter adapter) {
+        return adapter.getCount() > 0 && adapter.getSelected().size() == adapter.getCount();
+    }
+
+    private static void updateSelectAllLabel(Button button, Aapt2MultiSelectAdapter adapter) {
+        button.setText(allSelected(adapter) ? R.string.aapt2_clear_all : R.string.aapt2_select_all);
     }
 
     private static void applyProfile(Aapt2Profile profile, View view, Aapt2ApkSpecs.Specs specs) {
@@ -277,15 +328,13 @@ final class Aapt2OptimizeDialog {
     }
 
     private static void setMulti(View view, int fieldId, String values) {
-        MaterialAutoCompleteTextView field = view.findViewById(fieldId);
-        ListAdapter adapter = field.getAdapter();
-        if (adapter instanceof Aapt2MultiSelectAdapter) {
-            Aapt2MultiSelectAdapter multi = (Aapt2MultiSelectAdapter) adapter;
-            multi.setSelected(Aapt2ApkSpecs.split(values));
-            field.setText(multi.getCount() == 0
-                    ? view.getContext().getString(R.string.aapt2_none_in_apk)
-                    : multi.getValue(), false);
-        }
+        View field = view.findViewById(fieldId);
+        if (!(field.getTag() instanceof Aapt2MultiSelectAdapter)) return;
+        Aapt2MultiSelectAdapter multi = (Aapt2MultiSelectAdapter) field.getTag();
+        multi.setSelected(Aapt2ApkSpecs.split(values));
+        ((TextInputEditText) field).setText(multi.getCount() == 0
+                ? view.getContext().getString(R.string.aapt2_none_in_apk)
+                : multi.getValue());
     }
 
     private static List<String> profileNames(List<Aapt2Profile> profiles) {
@@ -299,8 +348,8 @@ final class Aapt2OptimizeDialog {
 
     private static Aapt2Profile currentProfile(View view) {
         return new Aapt2Profile(text(view, R.id.aapt2_profile),
-                text(view, R.id.aapt2_densities), text(view, R.id.aapt2_configurations),
-                text(view, R.id.aapt2_abis), text(view, R.id.aapt2_min_sdk),
+                selected(view, R.id.aapt2_densities), selected(view, R.id.aapt2_configurations),
+                selected(view, R.id.aapt2_abis), text(view, R.id.aapt2_min_sdk),
                 text(view, R.id.aapt2_target_sdk), false);
     }
 
@@ -439,6 +488,16 @@ final class Aapt2OptimizeDialog {
                 });
             }
         }, "aapt2-download").start();
+    }
+
+    /** The selection, never the field text: the latter can hold a placeholder. */
+    /** The selection, never the field text: the latter can hold a placeholder. */
+    private static String selected(View view, int id) {
+        View field = view.findViewById(id);
+        if (field != null && field.getTag() instanceof Aapt2MultiSelectAdapter) {
+            return ((Aapt2MultiSelectAdapter) field.getTag()).getValue();
+        }
+        return text(view, id);
     }
 
     private static String text(View view, int id) {

@@ -16,6 +16,8 @@
     <string name="aapt2_profile">Profile</string>
     <string name="aapt2_profile_this_device">This device</string>
     <string name="aapt2_none_in_apk">None in this APK</string>
+    <string name="aapt2_select_all">Select all</string>
+    <string name="aapt2_clear_all">Clear all</string>
     <string name="aapt2_profile_add">Add profile</string>
     <string name="aapt2_profile_delete">Delete profile</string>
     <string name="aapt2_profile_edit">Edit profile</string>

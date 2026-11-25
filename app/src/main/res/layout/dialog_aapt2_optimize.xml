@@ -46,31 +46,49 @@
             android:visibility="gone" />
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/aapt2_densities_layout"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:hint="@string/aapt2_densities"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/baseline_arrow_drop_down_24"
+            app:endIconContentDescription="@string/aapt2_densities"
             app:helperText="@string/aapt2_densities_help">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/aapt2_densities" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="none" />
+                android:layout_height="wrap_content" android:inputType="none"
+                android:focusable="false" android:clickable="false"
+                android:longClickable="false" android:cursorVisible="false" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/aapt2_configurations_layout"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:hint="@string/aapt2_configurations"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/baseline_arrow_drop_down_24"
+            app:endIconContentDescription="@string/aapt2_configurations"
             app:helperText="@string/aapt2_configurations_help">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/aapt2_configurations" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="none" />
+                android:layout_height="wrap_content" android:inputType="none"
+                android:focusable="false" android:clickable="false"
+                android:longClickable="false" android:cursorVisible="false" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/aapt2_abis_layout"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:hint="@string/aapt2_abis"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/baseline_arrow_drop_down_24"
+            app:endIconContentDescription="@string/aapt2_abis"
             app:helperText="@string/aapt2_abis_help">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/aapt2_abis" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="none" />
+                android:layout_height="wrap_content" android:inputType="none"
+                android:focusable="false" android:clickable="false"
+                android:longClickable="false" android:cursorVisible="false" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout

@@ -48,6 +48,10 @@ final class Aapt2MultiSelectAdapter extends BaseAdapter implements Filterable {
         return new ArrayList<>(selected);
     }
 
+    List<String> getItems() {
+        return new ArrayList<>(all);
+    }
+
     String getValue() {
         return String.join(",", selected);
     }
