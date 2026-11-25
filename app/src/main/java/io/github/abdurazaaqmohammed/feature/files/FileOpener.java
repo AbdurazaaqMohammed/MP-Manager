@@ -1537,7 +1537,7 @@ public class FileOpener {
             }
 
             final String infoText = sb.toString();
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 new MaterialAlertDialogBuilder(context)
                         .setTitle("Kernel Info: " + fileName)
@@ -1983,7 +1983,7 @@ public class FileOpener {
                                     new SystemImageEngine.ProgressCallback() {
                                 @Override
                                 public void onProgress(String message, int percent) {
-                                    context.runOnUiThread(() -> {
+                                    AppExecutors.runOnUiIfAlive(context, () -> {
                                         pm.setText(message);
                                         pm.setProgress(percent, 100);
                                     });
@@ -1991,7 +1991,7 @@ public class FileOpener {
 
                                 @Override
                                 public void onError(String error) {
-                                    context.runOnUiThread(() -> {
+                                    AppExecutors.runOnUiIfAlive(context, () -> {
                                         pm.dismiss();
                                         Extensions.showMessage(context, "Error: " + error);
                                     });
@@ -1999,7 +1999,7 @@ public class FileOpener {
 
                                 @Override
                                 public void onSuccess(File result) {
-                                    context.runOnUiThread(() -> {
+                                    AppExecutors.runOnUiIfAlive(context, () -> {
                                         pm.dismiss();
                                         Extensions.showMessage(context,
                                                 context.getString(R.string.unsparsed_success, result.getName()));
@@ -2008,7 +2008,7 @@ public class FileOpener {
                                 }
                             });
                         } catch (Exception e) {
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 pm.dismiss();
                                 Extensions.showMessage(context, "Unsparse failed: " + e.getMessage());
                             });
@@ -2838,15 +2838,15 @@ public class FileOpener {
                                             if (!apkFiles.isEmpty()) {
                                                 InstallUtil.installSplitApksWithDialog(context, apkFiles, displayName);
                                             } else {
-                                                context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
+                                                AppExecutors.runOnUiIfAlive(context, () -> Extensions.showMessage(context, R.string.no_apk_files_found));
                                             }
                                         } catch (OutOfMemoryError oom) {
                                             // Errors are not caught below; a huge
                                             // .apks should fail with a message,
                                             // not a crash.
-                                            context.runOnUiThread(() -> Extensions.showMessage(context, R.string.out_of_memory_operation));
+                                            AppExecutors.runOnUiIfAlive(context, () -> Extensions.showMessage(context, R.string.out_of_memory_operation));
                                         } catch (Exception e) {
-                                            context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                            AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                         }
                                     });
                                 } else {
@@ -2883,14 +2883,14 @@ public class FileOpener {
                                             }
                                             File finalTmpApk = tmpApk;
                                             String baseName = new File(baseHeader.getFileName()).getName();
-                                            context.runOnUiThread(() -> {
+                                            AppExecutors.runOnUiIfAlive(context, () -> {
                                                 if (apkTools != null) apkTools.showApkInfoDialog(finalTmpApk, baseName, true);
                                             });
                                         } else {
-                                            context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
+                                            AppExecutors.runOnUiIfAlive(context, () -> Extensions.showMessage(context, R.string.no_apk_files_found));
                                         }
                                     } catch (Exception e) {
-                                        context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                        AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                     }
                                 });
                                 break;

@@ -262,12 +262,12 @@ public class NativeToolManager {
                     String zipName = zips[idx];
                     String pack = packs[idx];
                     final String fZip = zipName;
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         status.setText(activity.getString(R.string.downloading_x, fZip));
                         bar.setIndeterminate(true);
                     });
                     File tmp = new File(activity.getCacheDir(), fZip + ".part");
-                    downloadFile(base + "/" + zipName, tmp, (done, total) -> activity.runOnUiThread(() -> {
+                    downloadFile(base + "/" + zipName, tmp, (done, total) -> AppExecutors.runOnUiIfAlive(activity, () -> {
                         if (total > 0) {
                             bar.setIndeterminate(false);
                             bar.setProgress((int) (1000 * done / total));
@@ -288,12 +288,12 @@ public class NativeToolManager {
                     writeMarker(dest, version);
                     tmp.delete();
                 }
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     dialog.dismiss();
                     cb.onReady();
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     dialog.dismiss();
                     new ErrorUtil(activity).showError(e);
                     //cb.onError(e.getMessage() != null ? e.getMessage() : e.toString());

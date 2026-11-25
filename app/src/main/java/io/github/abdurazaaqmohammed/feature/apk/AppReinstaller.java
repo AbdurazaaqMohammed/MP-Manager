@@ -265,7 +265,7 @@ public final class AppReinstaller {
                 }
             }
             final boolean removed = done;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (removed) {
                     if (onDone != null) onDone.run();
                 } else {
@@ -294,7 +294,7 @@ public final class AppReinstaller {
                         return;
                     }
                     boolean stillThere = ApkInfoUtil.isInstalled(activity, packageName);
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         if (!stillThere && onDone != null) onDone.run();
                     });
                     if (!stillThere) return;

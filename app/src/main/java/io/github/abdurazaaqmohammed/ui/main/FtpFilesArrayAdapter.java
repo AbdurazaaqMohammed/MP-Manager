@@ -53,6 +53,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdapter.ViewHolder> {
 
@@ -196,7 +197,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                         ftpClient.rename(oldPath, newPath, new OnEZFtpCallBack<>() {
                             @Override
                             public void onSuccess(Void response) {
-                                context.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(context, () -> {
                                     Extensions.showMessage(context, R.string.renamed_successfully);
                                     context.reloadCurrentFolder();
                                 });
@@ -221,7 +222,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                     OnEZFtpCallBack<Void> callback = new OnEZFtpCallBack<>() {
                         @Override
                         public void onSuccess(Void response) {
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 Extensions.showMessage(context, R.string.deleted_successfully);
                                 context.reloadCurrentFolder();
                             });
@@ -322,7 +323,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                     @Override
                     public void onStateChanged(int state) { 
                         if (state == COMPLETED) {
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 context.fetchFtpDirAndLoad(TextUtils.isEmpty(parent) ? File.separator : parent, pane1);
                             });
                         }

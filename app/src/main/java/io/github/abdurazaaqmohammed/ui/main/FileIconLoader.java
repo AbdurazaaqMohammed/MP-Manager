@@ -63,6 +63,7 @@ import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.ratul.topactivity.App;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FileIconLoader {
 
@@ -316,7 +317,7 @@ public class FileIconLoader {
             if (result == null) result = cachedImageIcon;
             final Drawable finalResult = result;
             zipThumbCache.put(key, finalResult);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (key.equals(fileIconView.getTag())) fileIconView.setImageDrawable(finalResult);
             });
         });
@@ -558,7 +559,7 @@ public class FileIconLoader {
             permMemo.put(path, resolved != null ? resolved : "");
             if (!path.equals(view.getTag())) return;
             final String perms = resolved;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (!path.equals(view.getTag())) return;
                 if (perms != null) {
                     if (treatAsFolder(file)) {
@@ -683,7 +684,7 @@ public class FileIconLoader {
             if (size <= 0 && mtime <= 0) return;
             final long finalSize = memo[1];
             final long finalMtime = memo[2];
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag())) showFileStats(file, fileDateView, finalSize, finalMtime);
             });
         });
@@ -806,7 +807,7 @@ public class FileIconLoader {
             long[] memo = metaMemo.get(tag);
             if (memo != null) memo[2] = m;
             final long finalM = m;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag())) {
                     if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
                         fileDateView.setVisibility(View.VISIBLE);
@@ -862,7 +863,7 @@ public class FileIconLoader {
             if (size < 0) return; // walk aborted; leave uncached so it can retry later
             DirSizeCache.record(file, size);
             DirSizeCache.scheduleSave();
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
@@ -1070,7 +1071,7 @@ public class FileIconLoader {
                             }
                             if (icon != null) {
                                 final Drawable finalIcon = icon;
-                                context.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(context, () -> {
                                     if (tag.equals(badgeView.getTag())) {
                                         badgeView.setImageDrawable(finalIcon);
                                         badgeView.setVisibility(View.VISIBLE);
@@ -1092,7 +1093,7 @@ public class FileIconLoader {
                     }
                     if (icon != null) {
                         final Drawable finalIcon = icon;
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (tag.equals(badgeView.getTag())) {
                                 badgeView.setImageDrawable(finalIcon);
                                 badgeView.setVisibility(View.VISIBLE);
@@ -1352,7 +1353,7 @@ public class FileIconLoader {
                 if (magicIcon != null) {
                     iconMemo.put(path, magicIcon);
                     iconCache.put(path, magicIcon);
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(magicIcon);
                     });
                 }
@@ -1448,7 +1449,7 @@ public class FileIconLoader {
                 Drawable icon = ApkIconHelper.getApkIcon(context, path);
                 if (icon != null) {
                     iconCache.put(path, icon);
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                     });
                 }
@@ -1465,7 +1466,7 @@ public class FileIconLoader {
                 if (!path.equals(fileIconView.getTag())) return;
                 Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
                 iconCache.put(path, icon);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                 });
             } else if (!isVideo) {
@@ -1478,12 +1479,12 @@ public class FileIconLoader {
                         Bitmap stickerBm = StickerUtil.renderThumbnailBitmap(f, 160);
                         Drawable icon = stickerBm != null ? new BitmapDrawable(context.getResources(), stickerBm) : cachedStickerIcon;
                         iconCache.put(path, icon);
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                         });
                     } else if (isZipFileFormat(path)) {
                         iconCache.put(path, cachedArchiveIcon);
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
                         });
                     }

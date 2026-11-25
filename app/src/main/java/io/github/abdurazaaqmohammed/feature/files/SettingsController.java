@@ -143,7 +143,7 @@ public class SettingsController {
         Context app = activity.getApplicationContext();
         AppExecutors.io().execute(() -> {
             var entries = ThemePacks.discover(app);
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 button.setEnabled(true);
                 if (activity.isFinishing() || activity.isDestroyed()) return;
                 var dialog = new MaterialAlertDialogBuilder(activity)
@@ -179,7 +179,7 @@ public class SettingsController {
                     for (int i = 0; i < builtIns.getChildCount(); i++) builtIns.getChildAt(i).setEnabled(false);
                     AppExecutors.io().execute(() -> {
                         boolean imported = ThemePacks.importAndSelect(app, entries.get(index));
-                        activity.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(activity, () -> {
                             if (activity.isFinishing() || activity.isDestroyed()) return;
                             button.setEnabled(true);
                             for (int i = 0; i < builtIns.getChildCount(); i++) builtIns.getChildAt(i).setEnabled(true);
@@ -1619,7 +1619,7 @@ public class SettingsController {
         btnClear.setOnClickListener(v -> {
             AppExecutors.io().execute(() -> {
                 long totalBytes = calculateTotalCacheBytes();
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (totalBytes <= 0) {
                         Extensions.showMessage(activity, activity.getString(R.string.clear_cache_empty));
                         return;
@@ -1640,7 +1640,7 @@ public class SettingsController {
         if (cacheDesc == null) return;
         AppExecutors.io().execute(() -> {
             long totalBytes = calculateTotalCacheBytes();
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (totalBytes > 0) {
                     cacheDesc.setText(activity.getString(R.string.clear_cache_desc) + " (" + FileSize.getHumanReadableFileSize(totalBytes) + ")");
                 } else {
@@ -1721,7 +1721,7 @@ public class SettingsController {
             }
             long after = calculateTotalCacheBytes();
             long freed = Math.max(0L, before - after);
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 String freedStr = FileSize.getHumanReadableFileSize(freed > 0 ? freed : before);
                 Extensions.showMessage(activity, activity.getString(R.string.clear_cache_success, freedStr));
                 updateCacheSizeDisplay(cacheDesc);

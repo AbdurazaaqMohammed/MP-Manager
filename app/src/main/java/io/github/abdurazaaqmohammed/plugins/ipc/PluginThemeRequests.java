@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** An action result may request its own installed theme, never silently select one. */
 public final class PluginThemeRequests {
@@ -68,7 +69,7 @@ public final class PluginThemeRequests {
                                 }
                             }
                             boolean success = imported;
-                            activity.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(activity, () -> {
                                 if (!success && !activity.isFinishing() && !activity.isDestroyed()) {
                                     Toast.makeText(activity, R.string.plugin_apply_theme_failed,
                                             Toast.LENGTH_SHORT).show();

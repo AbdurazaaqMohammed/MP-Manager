@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.util.net.AdbFileService;
 import io.github.abdurazaaqmohammed.util.net.AdbSync;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Walks the device over a local ADB session, reaching past this app's sandbox.
@@ -75,7 +76,7 @@ public class AdbBrowserActivity extends BaseActivity {
 
         toolbar = new MaterialToolbar(this);
         toolbar.setTitle("ADB Browser");
-        toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_material);
+        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -161,7 +162,7 @@ public class AdbBrowserActivity extends BaseActivity {
 
     /** Hand a result back to the UI thread, dropping it if the user moved on. */
     private void publish(String path, List<AdbSync.Entry> entries, Exception error, int seq) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(AdbBrowserActivity.this, () -> {
             if (seq != requestSeq) {
                 return; // a newer navigation superseded this reply
             }

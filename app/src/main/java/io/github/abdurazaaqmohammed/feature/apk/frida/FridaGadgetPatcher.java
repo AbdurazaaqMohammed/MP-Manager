@@ -309,7 +309,7 @@ public final class FridaGadgetPatcher {
             cause = cause.getCause();
         }
         final Throwable failure = cause;
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             if (activity.isFinishing() || activity.isDestroyed()) return;
             if (failure instanceof java.net.ConnectException || failure instanceof java.net.UnknownHostException
                     || failure instanceof java.net.SocketTimeoutException
@@ -391,7 +391,7 @@ public final class FridaGadgetPatcher {
                                     }
                                 })
                                 .thenAccept(ready -> {
-                                    if (ready) activity.runOnUiThread(onReady);
+                                    if (ready) AppExecutors.runOnUiIfAlive(activity, onReady);
                                 })
                                 .exceptionally(e -> {
                                     showDownloadError(activity, e);
@@ -427,7 +427,7 @@ public final class FridaGadgetPatcher {
                         }
                     })
                     .thenAccept(ready -> {
-                        if (ready) activity.runOnUiThread(onReady);
+                        if (ready) AppExecutors.runOnUiIfAlive(activity, onReady);
                     })
                     .exceptionally(e -> {
                         showDownloadError(activity, e);
@@ -464,7 +464,7 @@ public final class FridaGadgetPatcher {
         dialog.setOnDismissListener(d -> cancelled[0] = true);
         AppExecutors.io().execute(() -> {
             try {
-                downloadFile(url, tmp, (done, total) -> activity.runOnUiThread(() -> {
+                downloadFile(url, tmp, (done, total) -> AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (total > 0) {
                         bar.setIndeterminate(false);
                         bar.setProgress((int) (1000 * done / total));
@@ -480,14 +480,14 @@ public final class FridaGadgetPatcher {
                     return;
                 }
                 onDownloaded.accept(tmp);
-                activity.runOnUiThread(dialog::dismiss);
+                AppExecutors.runOnUiIfAlive(activity, dialog::dismiss);
                 future.complete(true);
             } catch (Exception e) {
                 tmp.delete();
                 // Complete on the worker thread so dependent stages do not run
                 // inside a UI-thread posted runnable; only the dialog dismissal
                 // is posted to the main thread.
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     try {
                         dialog.dismiss();
                     } catch (Exception ignored) {

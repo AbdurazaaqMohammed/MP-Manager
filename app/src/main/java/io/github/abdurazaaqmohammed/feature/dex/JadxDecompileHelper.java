@@ -82,7 +82,7 @@ public final class JadxDecompileHelper {
                 List<JavaClass> classes = decompiler.getClasses();
                 int total = classes.size();
                 if (total == 0) {
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         pm.dismiss();
                         Toast.makeText(activity, "No classes found", Toast.LENGTH_SHORT).show();
                     });
@@ -154,7 +154,7 @@ public final class JadxDecompileHelper {
                     }
                 }
 
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (pm != null) pm.dismiss();
                     Toast.makeText(activity, activity.getString(R.string.java_saved_to, target.getName()), Toast.LENGTH_LONG).show();
                     if (activity instanceof MainActivity) {
@@ -162,7 +162,7 @@ public final class JadxDecompileHelper {
                     }
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (pm != null) pm.dismiss();
                     new ErrorUtil(activity).showError(e);
                 });

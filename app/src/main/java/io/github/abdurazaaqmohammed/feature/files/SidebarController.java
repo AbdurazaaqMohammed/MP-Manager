@@ -1074,7 +1074,7 @@ public class SidebarController {
                                     RecycleBin.deleteEntry(activity, entry);
                                     pm.setProgress(i + 1, toDel.size());
                                 }
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     pm.dismiss();
                                     allEntries.clear();
                                     filteredEntries.clear();
@@ -1111,7 +1111,7 @@ public class SidebarController {
                                     RecycleBin.deleteEntry(activity, entry);
                                     pm.setProgress(i + 1, toDel.size());
                                 }
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     pm.dismiss();
                                     selectedEntries.clear();
                                     allEntries.clear();
@@ -1300,7 +1300,7 @@ public class SidebarController {
                     d.dismiss();
                     AppExecutors.io().execute(() -> {
                         RecycleBin.deleteEntry(activity, entry);
-                        activity.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(activity, () -> {
                             Extensions.showMessage(activity, R.string.item_deleted);
                             if (onUpdated != null) onUpdated.run();
                         });

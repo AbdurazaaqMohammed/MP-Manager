@@ -305,7 +305,7 @@ public class SignatureKeyDialog {
                                                 }
                                             } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                             pm.dismiss();
-                                            activity.runOnUiThread(() -> {
+                                            AppExecutors.runOnUiIfAlive(activity, () -> {
                                                 Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                                 if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                             });
@@ -355,7 +355,7 @@ public class SignatureKeyDialog {
                                     }
                                 } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                 pm.dismiss();
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                     if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                 });

@@ -438,7 +438,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
                         try {
                             String extractedHash = HashUtil.hashApkOrArchiveBase(extractedFile, "SHA-256");
                             boolean match = installedHash != null && installedHash.equalsIgnoreCase(extractedHash);
-                            apkExtractorActivity.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(apkExtractorActivity, () -> {
                                 if (match) {
                                     iv.setImageResource(R.drawable.ic_circle_filled_green_24);
                                     iv.clearColorFilter();

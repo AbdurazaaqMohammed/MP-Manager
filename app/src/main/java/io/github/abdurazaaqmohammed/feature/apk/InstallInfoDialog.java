@@ -488,13 +488,13 @@ public final class InstallInfoDialog {
                         String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                         msg = activity.getString(R.string.install_backup_failed, reason);
                     }
-                    activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(msg, e)));
+                    AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(new Exception(msg, e)));
                     return;
                 }
             }
             final String archive = backup;
             final String owner = dataOwner;
-            activity.runOnUiThread(() -> AppReinstaller.uninstall(activity, pkg, () -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> AppReinstaller.uninstall(activity, pkg, () -> {
                 onInstall.run();
                 if (archive == null) return;
                 AppExecutors.io().execute(() -> {
@@ -510,7 +510,7 @@ public final class InstallInfoDialog {
                     } catch (Exception e) {
                         String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                         String restoreMsg = activity.getString(R.string.install_restore_failed, reason);
-                        activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(restoreMsg, e)));
+                        AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(new Exception(restoreMsg, e)));
                     } finally {
                         AppReinstaller.deleteBackup(activity, archive);
                     }

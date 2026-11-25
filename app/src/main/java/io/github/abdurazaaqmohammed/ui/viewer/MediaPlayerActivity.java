@@ -50,6 +50,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class MediaPlayerActivity extends BaseActivity implements
         PlayerManager.PlaybackCallback,
@@ -584,7 +585,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onStateChanged(PlayerManager.PlayState newState) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             updatePlayPauseIcon();
             switch (newState) {
                 case PLAYING:
@@ -615,7 +616,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onProgress(int position, int duration) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             currentTime.setText(formatTime(position));
             totalTime.setText(formatTime(duration));
             if (!userIsSeeking && duration > 0) {
@@ -630,7 +631,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onMediaItemChanged(MediaItem item) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             updateUIForCurrentItem();
             updateQueueAdapter();
             startService(new Intent(this, MusicService.class));
@@ -696,7 +697,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onError(String message) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             errorMessage.setVisibility(View.VISIBLE);
             errorMessage.setText(message);
             showControls();
@@ -705,7 +706,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onBufferUpdate(int percent) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             if (percent < 100) {
                 bufferingIndicator.setVisibility(View.VISIBLE);
                 bufferingIndicator.setText(getString(R.string.buffering, percent));
@@ -717,7 +718,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onVideoSizeChanged(int width, int height) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             if (width > 0 && height > 0) {
                 videoW = width;
                 videoH = height;
@@ -728,7 +729,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     @Override
     public void onSubtitleCue(String text) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(MediaPlayerActivity.this, () -> {
             if (subtitleView == null) return;
             if (text == null || text.isEmpty()) {
                 subtitleView.setVisibility(View.GONE);

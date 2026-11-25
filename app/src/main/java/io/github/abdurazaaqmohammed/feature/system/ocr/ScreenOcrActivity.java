@@ -68,6 +68,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** Capture/setup UI stays in the small host APK; all OCR inference lives in the optional pack. */
 public final class ScreenOcrActivity extends BaseActivity {
@@ -329,7 +330,7 @@ public final class ScreenOcrActivity extends BaseActivity {
         imageWorker.execute(() -> {
             try {
                 Bitmap bitmap = decodeImage(uri);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ScreenOcrActivity.this, () -> {
                     loadingImage = false;
                     if (isFinishing() || isDestroyed()) { bitmap.recycle(); return; }
                     OcrSession.setImage(bitmap);

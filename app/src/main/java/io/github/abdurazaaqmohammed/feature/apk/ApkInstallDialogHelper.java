@@ -117,7 +117,7 @@ public class ApkInstallDialogHelper {
                 analysis = null;
             }
             final ApkInstallAnalysis result = analysis;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (activity.isFinishing() || activity.isDestroyed()) return;
                 if (result == null || !InstallInfoDialog.shouldShow(activity, result)) {
                     installPrivilegedOrFallback(apkFiles, appName, firstApk);
@@ -142,7 +142,7 @@ public class ApkInstallDialogHelper {
 
                 @Override
                 public void onError(Exception e) {
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         dismissProgress(pm);
                         new ErrorUtil(activity).showError(e);
                     });
@@ -192,7 +192,7 @@ public class ApkInstallDialogHelper {
                 }
             }
             final String shown = recorded;
-            activity.runOnUiThread(() -> finishInstall(shown, pm, appName, firstApk));
+            AppExecutors.runOnUiIfAlive(activity, () -> finishInstall(shown, pm, appName, firstApk));
         });
     }
 
@@ -375,7 +375,7 @@ public class ApkInstallDialogHelper {
                 }
             })
             .setNegativeButton(android.R.string.ok, null);
-        activity.runOnUiThread(b::show);
+        AppExecutors.runOnUiIfAlive(activity, b::show);
     }
 
     private CharSequence getAppNameForApk(File apkFile) {

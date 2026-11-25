@@ -120,6 +120,17 @@ public class CommandShellActivity extends BaseActivity {
     private boolean isProcessRunning = false;
 
     @Override
+    protected void onDestroy() {
+        mainHandler.removeCallbacksAndMessages(null);
+        if (activeProcess != null) {
+            activeProcess.destroy();
+            activeProcess = null;
+        }
+        executor.shutdownNow();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_command_shell);

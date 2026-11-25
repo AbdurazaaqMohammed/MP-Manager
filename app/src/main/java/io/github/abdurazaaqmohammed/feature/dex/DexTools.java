@@ -338,7 +338,7 @@ public class DexTools {
                 return;
             }
             if (session.error != null) {
-                context.runOnUiThread(() -> new ErrorUtil(context).showError(session.error));
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(session.error));
                 return;
             }
             List<File> files = new ArrayList<>();
@@ -349,7 +349,7 @@ public class DexTools {
                 paths.add(f.getAbsolutePath());
             }
             String base = zipFile.getName().replaceFirst("\\.[^.]+$", "");
-            context.runOnUiThread(() -> JadxDecompileHelper.promptDecompileAction(context, files, zipFile, base,
+            AppExecutors.runOnUiIfAlive(context, () -> JadxDecompileHelper.promptDecompileAction(context, files, zipFile, base,
                     () -> openDexPlusFiles(paths, null, zipFile, entryPath, true)));
         });
     }
@@ -922,7 +922,7 @@ public class DexTools {
                     || (name.endsWith(".bin") && (fullPath.toLowerCase(java.util.Locale.ROOT).contains("payload") || name.toLowerCase(java.util.Locale.ROOT).contains("payload")));
             final ProgressManager[] pmHolder = new ProgressManager[1];
             if (isPayloadCandidate) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     ProgressManager pm = new ProgressManager(context, true);
                     pm.setText(context.getString(R.string.extracting) + " " + name + "...");
                     pm.show();
@@ -940,7 +940,7 @@ public class DexTools {
                     // special cases below work on the staged copy.
                     ArchiveBrowseUtil.extractEntry(zipFile, fullPath, tempFile);
                     if (isPayloadCandidate) {
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (pmHolder[0] != null) pmHolder[0].dismiss();
                         });
                         if (io.github.abdurazaaqmohammed.feature.payload.PayloadParser.isPayload(tempFile)) {
@@ -982,7 +982,7 @@ public class DexTools {
                     }));
                 } catch (Exception e) {
                     if (isPayloadCandidate) {
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (pmHolder[0] != null) pmHolder[0].dismiss();
                         });
                     }

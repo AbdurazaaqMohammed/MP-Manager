@@ -129,7 +129,7 @@ public class TranslationExportDialog {
                 TranslationExporter.ExportResult result = TranslationExporter.exportStrings(
                         activity, selectedApkFile, format.toLowerCase(), outputDir);
 
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (result.success) {
                         Toast.makeText(activity,
                                 activity.getString(R.string.exported_x,
@@ -141,7 +141,7 @@ public class TranslationExportDialog {
                     }
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> new ErrorUtil(activity).showError(e));
+                AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(e));
             }
         });
     }
@@ -158,7 +158,7 @@ public class TranslationExportDialog {
                         extractStringsPreview(apkFile);
                 this.entries = entries.toArray(new TranslationExporter.StringEntry[0]);
 
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (this.entries == null || this.entries.length == 0) {
                         new MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.export_strings)
@@ -196,7 +196,7 @@ public class TranslationExportDialog {
                             .show();
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() ->
+                AppExecutors.runOnUiIfAlive(activity, () ->
                         new ErrorUtil(activity).showError(e));
             }
         });

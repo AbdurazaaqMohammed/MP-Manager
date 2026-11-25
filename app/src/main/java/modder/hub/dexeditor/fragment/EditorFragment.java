@@ -599,9 +599,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     }
 
     private void runOnUiThread(Runnable runnable) {
-        if (getActivity() != null) {
-            getActivity().runOnUiThread(runnable);
-        }
+        AppExecutors.runOnUiIfAlive(getActivity(), runnable);
     }
 
     public void setClosing(boolean closing) {

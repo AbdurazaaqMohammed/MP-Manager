@@ -545,7 +545,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             try {
                 String smaliCode = dexActivity.classTree.getSmaliByType(
                         Objects.requireNonNull(dexActivity.classTree.classMap.get(className)));
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (!isAdded()) return;
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
                     initialContentText = smaliCode;
@@ -555,7 +555,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     postInitialize(false);
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
                 });
             }
@@ -1744,7 +1744,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 syntaxPolicy.onResultDropped(generation);
                 return;
             }
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (!isAdded() || editor == null) {
                     destroyUnused(language);
                     syntaxPolicy.onResultDropped(generation);

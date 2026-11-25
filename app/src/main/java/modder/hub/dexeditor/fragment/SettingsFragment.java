@@ -68,6 +68,7 @@ import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /*
 Author @developer-krushna
@@ -174,7 +175,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		fetchGeminiModels(ctx, models -> {
 			Activity a = getActivity();
 			if (a == null) return;
-			a.runOnUiThread(() -> {
+			AppExecutors.runOnUiIfAlive(a, () -> {
 				if (models.isEmpty()) {
 					Toast.makeText(a, "No Gemini models found", Toast.LENGTH_SHORT).show();
 					return;

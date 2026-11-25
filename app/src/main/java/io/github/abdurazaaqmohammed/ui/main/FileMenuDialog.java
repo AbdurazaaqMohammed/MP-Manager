@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.DialogAdapter;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** Shared file-menu presentation, including the user's order and grid/sheet preference. */
 public final class FileMenuDialog {
@@ -38,7 +39,7 @@ public final class FileMenuDialog {
                             boolean inArchive, Set<String> disabled, Consumer<String> action,
                             Consumer<String> longPressAction) {
         List<FileMenuOrder.MenuItem> items = FileMenuOrder.sortItems(activity, visible);
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             if (activity.isFinishing() || activity.isDestroyed()) return;
             boolean grid = FileMenuOrder.isTwoColumn(activity);
             View view = LayoutInflater.from(activity).inflate(R.layout.dialog_file_menu, null);

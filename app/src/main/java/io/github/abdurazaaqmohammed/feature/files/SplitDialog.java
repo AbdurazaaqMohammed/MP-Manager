@@ -296,13 +296,13 @@ public final class SplitDialog {
                             if (del && file.exists()) {
                                 file.delete();
                             }
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 pm.dismiss();
                                 Extensions.showMessage(context, context.getString(R.string.split_success, result.size()));
                                 context.reloadCurrentFolder();
                             });
                         } catch (Exception e) {
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 pm.dismiss();
                                 Extensions.showMessage(context, "Split failed: " + e.getMessage());
                             });
@@ -408,13 +408,13 @@ public final class SplitDialog {
                                     if (p.exists() && !p.equals(outFile)) p.delete();
                                 }
                             }
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 pm.dismiss();
                                 Extensions.showMessage(context, context.getString(R.string.merge_success, outFile.getName()));
                                 context.reloadCurrentFolder();
                             });
                         } catch (Exception e) {
-                            context.runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(context, () -> {
                                 pm.dismiss();
                                 Extensions.showMessage(context, "Merge failed: " + e.getMessage());
                             });

@@ -63,7 +63,7 @@ public final class SignatureInfoDialog {
                 info = ApkSignatureInfo.analyze(apk);
             } catch (Throwable t) {
                 pm.dismiss();
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     View view = errorView(context, context.getString(android.R.string.unknownName));
                     (dialogUtil != null ? dialogUtil : new DialogUtil(context)).getDialogBuilder()
                             .setTitle(R.string.signature_info)
@@ -74,7 +74,7 @@ public final class SignatureInfoDialog {
                 return;
             }
             pm.dismiss();
-            context.runOnUiThread(() -> displayDialog(context, dialogUtil, info));
+            AppExecutors.runOnUiIfAlive(context, () -> displayDialog(context, dialogUtil, info));
         });
     }
 

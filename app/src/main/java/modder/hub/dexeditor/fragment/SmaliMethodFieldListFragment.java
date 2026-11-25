@@ -849,7 +849,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 }
                 final String doneSmali = newSmali;
                 final int clearedLine = start;
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     try {
                         if (pd != null) pd.dismiss();
                     } catch (Exception ignored) {
@@ -877,7 +877,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 });
             } catch (Throwable e) {
                 final String msg = String.valueOf(e.getMessage());
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     try {
                         if (pd != null) pd.dismiss();
                     } catch (Exception ignored) {
@@ -891,7 +891,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     public void showExceptionDlg(final Activity activity, final Exception e) {        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
-        activity.runOnUiThread(() -> Notify_MT.Notify(activity, activity.getString(R.string.error), e.getMessage(), activity.getString(R.string.close)));
+        AppExecutors.runOnUiIfAlive(activity, () -> Notify_MT.Notify(activity, activity.getString(R.string.error), e.getMessage(), activity.getString(R.string.close)));
     }
 
     public interface DialogLineNumberListener {

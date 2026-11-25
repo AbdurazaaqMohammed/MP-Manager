@@ -1518,7 +1518,7 @@ public class FileSearchController {
                         intent.putExtra("axml", true);
                     }
                 }
-                activity.runOnUiThread(() -> activity.startActivityForResult(intent, 757));
+                AppExecutors.runOnUiIfAlive(activity, () -> activity.startActivityForResult(intent, 757));
             } catch (Exception e) {
                 new ErrorUtil(activity).showError(e);
             }

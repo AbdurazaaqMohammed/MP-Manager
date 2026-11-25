@@ -61,7 +61,7 @@ public final class FlutterToolsDialog {
 
         AppExecutors.io().execute(() -> {
             FlutterInfo info = FlutterInfo.parseFromApk(apkFile);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 displayApkDialog(context, apkFile, fileName, info);
             });
@@ -76,7 +76,7 @@ public final class FlutterToolsDialog {
 
         AppExecutors.io().execute(() -> {
             FlutterInfo info = FlutterInfo.parseFromLibrary(libFile);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 displayLibraryDialog(context, libFile, fileName, info);
             });
@@ -218,19 +218,19 @@ public final class FlutterToolsDialog {
                         if (sw != null) {
                             sw.signApk(outApk);
                         }
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             pm.dismiss();
                             Extensions.showMessage(context, context.getString(R.string.flutter_ssl_unpin_success, outApk.getName()));
                             context.reloadCurrentFolder();
                         });
                     } else {
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             pm.dismiss();
                             Extensions.showMessage(context, "No libflutter.so could be patched (already patched or unknown version)");
                         });
                     }
                 } catch (Exception e) {
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         pm.dismiss();
                         Extensions.showMessage(context, "Patch failed: " + e.getMessage());
                     });
@@ -262,12 +262,12 @@ public final class FlutterToolsDialog {
                         ? DartStringsExtractor.extractFromApk(targetFile, 5)
                         : DartStringsExtractor.extractFromLibrary(targetFile, 5);
 
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     displayStringsList(context, targetFile, items);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction error: " + e.getMessage());
                 });
@@ -416,13 +416,13 @@ public final class FlutterToolsDialog {
                         }
                     }
                 }
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Assets extracted to " + outDir.getName());
                     context.reloadCurrentFolder();
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extract failed: " + e.getMessage());
                 });

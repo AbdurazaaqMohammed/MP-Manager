@@ -1253,10 +1253,10 @@ final View.OnClickListener originalClickListener;
                                                 List<File> f1 = resolveCompareFileList(finalDexCompare1);
                                                 List<File> f2 = resolveCompareFileList(finalDexCompare2);
                                                 if (!f1.isEmpty() && !f2.isEmpty()) {
-                                                    context.runOnUiThread(() -> new CompareDexOptionsDialog(context, f1, f2).show());
+                                                    AppExecutors.runOnUiIfAlive(context, () -> new CompareDexOptionsDialog(context, f1, f2).show());
                                                 }
                                             } catch (Exception e) {
-                                                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                             }
                                         });
                                     }
@@ -1284,10 +1284,10 @@ final View.OnClickListener originalClickListener;
                                         File f1 = resolveCompareFile(finalCompareFile1);
                                         File f2 = resolveCompareFile(finalCompareFile2);
                                         if (f1 != null && f2 != null) {
-                                            context.runOnUiThread(() -> new CompareArscDialog(context, f1.getAbsolutePath(), f2.getAbsolutePath()).show());
+                                            AppExecutors.runOnUiIfAlive(context, () -> new CompareArscDialog(context, f1.getAbsolutePath(), f2.getAbsolutePath()).show());
                                         }
                                     } catch (Exception e) {
-                                        context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                        AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                     }
                                 });
                                 return;
@@ -1429,7 +1429,7 @@ final View.OnClickListener originalClickListener;
                                         if (multi) {
                                             clearSelection();
                                         }
-                                        context.runOnUiThread(() -> {
+                                        AppExecutors.runOnUiIfAlive(context, () -> {
                                             context.reloadCurrentFolder();
                                             if (context.isSameLocationInPanes()) {
                                                 context.reloadPane(!pane1, false);

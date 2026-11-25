@@ -410,7 +410,7 @@ public final class DrawablePreviewDialog {
         }
 
         private void post(Runnable r) {
-            activity.runOnUiThread(r);
+            AppExecutors.runOnUiIfAlive(activity, r);
         }
 
         private boolean alive() {

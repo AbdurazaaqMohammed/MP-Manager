@@ -79,7 +79,7 @@ public class StickerPreviewDialog {
 
         AppExecutors.io().execute(() -> {
             String json = StickerUtil.extractLottieJson(stickerFile);
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (json == null || dialog.isShowing() == false) return;
                 progressBar.setVisibility(View.GONE);
 

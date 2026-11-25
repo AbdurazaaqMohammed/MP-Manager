@@ -55,12 +55,12 @@ public final class PayloadDialog {
         AppExecutors.io().execute(() -> {
             try {
                 PayloadParser.PayloadInfo info = PayloadParser.parse(payloadFile);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     displayDialog(context, payloadFile, info, pane1);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Failed to parse payload: " + e.getMessage());
                 });
@@ -261,7 +261,7 @@ public final class PayloadDialog {
         AppExecutors.io().execute(() -> {
             try {
                 File extracted = PayloadExtractor.extractPartition(payloadFile, info, entry, outputDir, pm);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, context.getString(R.string.payload_extract_success, extracted.getName()));
                     context.reloadCurrentFolder();
@@ -270,7 +270,7 @@ public final class PayloadDialog {
                     }
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction failed: " + e.getMessage());
                 });
@@ -299,16 +299,16 @@ public final class PayloadDialog {
                     PayloadEntry entry = info.partitions.get(i);
                     final String name = entry.getFileName();
                     final int idx = i + 1;
-                    context.runOnUiThread(() -> pm.setText("Extracting [" + idx + "/" + total + "] " + name + "…"));
+                    AppExecutors.runOnUiIfAlive(context, () -> pm.setText("Extracting [" + idx + "/" + total + "] " + name + "…"));
                     PayloadExtractor.extractPartition(payloadFile, info, entry, outputDir, pm);
                 }
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, context.getString(R.string.payload_extract_all_success, total));
                     context.reloadCurrentFolder();
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction error: " + e.getMessage());
                 });

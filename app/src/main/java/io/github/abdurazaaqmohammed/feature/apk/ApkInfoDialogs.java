@@ -1157,9 +1157,9 @@ public class ApkInfoDialogs {
             } catch (InterruptedException e) {
                 return;
             }
-            context.runOnUiThread(pm::dismiss);
+            AppExecutors.runOnUiIfAlive(context, pm::dismiss);
             if (session.error != null) {
-                context.runOnUiThread(() -> new ErrorUtil(context).showError(session.error));
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(session.error));
                 return;
             }
             List<File> dexFiles = new ArrayList<>();
@@ -1172,16 +1172,16 @@ public class ApkInfoDialogs {
                     dexPaths.add(f.getAbsolutePath());
                 }
             } catch (Exception e) {
-                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                 return;
             }
 
             if (dexFiles.isEmpty()) {
-                context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_files_found));
+                AppExecutors.runOnUiIfAlive(context, () -> Extensions.showMessage(context, R.string.no_files_found));
                 return;
             }
 
-            context.runOnUiThread(() -> JadxDecompileHelper.promptDecompileAction(
+            AppExecutors.runOnUiIfAlive(context, () -> JadxDecompileHelper.promptDecompileAction(
                     context, dexFiles, file, baseName,
                     () -> {
                         DexTools dexTools = new DexTools(context, dialogUtil, pane1, null);

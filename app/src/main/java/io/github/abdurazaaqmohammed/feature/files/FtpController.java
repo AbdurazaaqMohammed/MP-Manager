@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * FTP server/client dialogs + pane loading extracted from MainActivity.
@@ -297,7 +298,7 @@ public class FtpController {
                 profile.getPassword(), profile.getSecurityType(), new OnEZFtpCallBack<>() {
                     @Override
                     public void onSuccess(Void response) {
-                        activity.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(activity, () -> {
                             if (closed || activity.isDestroyed()) { client.release(); return; }
                             Extensions.showMessage(activity, activity.rss.getString(R.string.connected_to_ftp));
                             String scheme = profile.getSecurityType() == 0 ? "ftp" : "ftps";
@@ -314,7 +315,7 @@ public class FtpController {
                         client.release();
                         clients.remove(client);
                         sessionProfiles.remove(client);
-                        activity.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(activity, () -> {
                             if (!closed && !activity.isDestroyed()) Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_connect_failed, msg));
                         });
                     }
@@ -361,7 +362,7 @@ public class FtpController {
         long generation = activity.beginNetworkPaneLoad(pane1);
         client.getDirectoryFileList(path, new OnEZFtpCallBack<>() {
             @Override public void onSuccess(List<EZFtpFile> response) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (closed || !activity.isNetworkPaneLoadCurrent(pane1, generation)) return;
                     List<FTPFileWrapper> children = new ArrayList<>();
                     if (response != null) for (EZFtpFile f : response) {

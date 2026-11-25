@@ -59,7 +59,7 @@ public final class FridaGadgetDialog {
             }
             List<String> fAbis = abis;
             List<Il2CppDumperUtil.Target> fTargets = targets;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 if (fAbis.isEmpty()) {
                     Extensions.showMessage(context, context.getString(
@@ -199,7 +199,7 @@ public final class FridaGadgetDialog {
                         wrapper[0].signApk(out);
                     }
                     pm.dismiss();
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         Extensions.showMessage(context, context.getString(
                                 R.string.frida_done, out.getName()));
                         context.refreshAllPanes();

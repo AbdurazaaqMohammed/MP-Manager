@@ -33,7 +33,7 @@ public class ErrorUtil {
                 .setMessage(s)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(s));
-        context.runOnUiThread(b::show);
+        AppExecutors.runOnUiIfAlive(context, b::show);
     }
 
     public void showError(Throwable e) {
@@ -56,7 +56,7 @@ public class ErrorUtil {
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.copy, (dialog, which) -> copyText(stackTrace));
-        context.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(context, () -> {
             (b.setTitle(mainErr).setMessage(stackTrace)).show();
         });
     }

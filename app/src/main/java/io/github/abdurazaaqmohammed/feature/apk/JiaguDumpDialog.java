@@ -115,7 +115,7 @@ public final class JiaguDumpDialog {
             logView.setText(logBuf.toString());
             logScroll.post(() -> logScroll.fullScroll(ScrollView.FOCUS_DOWN));
         };
-        JiaguDumpEngine.LogSink sink = line -> activity.runOnUiThread(() -> {
+        JiaguDumpEngine.LogSink sink = line -> AppExecutors.runOnUiIfAlive(activity, () -> {
             logBuf.append(line).append('\n');
             rerender.run();
         });
@@ -157,7 +157,7 @@ public final class JiaguDumpDialog {
                             sink.log("Built " + rebuilt.getAbsolutePath());
                             if (PreferenceManager.getDefaultSharedPreferences(activity)
                                     .getBoolean("autosign", true)) {
-                                activity.runOnUiThread(() -> SignWrapper.requireAuth(activity, wrapper -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> SignWrapper.requireAuth(activity, wrapper -> {
                                     AppExecutors.io().execute(() -> {
                                         try {
                                             wrapper.signApk(rebuilt);
@@ -176,7 +176,7 @@ public final class JiaguDumpDialog {
                     sink.log("FAILED: " + e.getMessage());
                 }
                 busy.set(false);
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     try {
                         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
                     } catch (Exception ignored) {}
