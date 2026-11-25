@@ -712,7 +712,7 @@ public class SettingsController {
         String sampleName = activity.getString(R.string.preview_sample_name);
         pvName.setText(sampleName);
         pvIcon.setImageDrawable(io.github.abdurazaaqmohammed.ui.main.FileIconSpec.forPath(
-                sampleName, false, activity.theme).drawable(activity));
+                sampleName, false).drawable(activity));
         previewHolder.addView(previewRow);
 
         int scale = UiPrefs.getScale(activity);
