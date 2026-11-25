@@ -4,9 +4,6 @@
 //
 package io.github.abdurazaaqmohammed.feature.arm64.decoder;
 
-import java.util.List;
-import java.util.ArrayList;
-
 @SuppressWarnings("ConstantConditions")
 public class ArmDisasmDecoder {
     private boolean verbose;

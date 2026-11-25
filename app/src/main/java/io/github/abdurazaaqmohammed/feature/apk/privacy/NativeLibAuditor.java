@@ -4,7 +4,6 @@ import com.reandroid.apk.ApkModule;
 import com.reandroid.archive.InputSource;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;

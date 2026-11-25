@@ -1,7 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.arm64;
 
-import java.util.Locale;
-
 /**
  * Model representing an item in the ELF structure explorer tree view.
  */

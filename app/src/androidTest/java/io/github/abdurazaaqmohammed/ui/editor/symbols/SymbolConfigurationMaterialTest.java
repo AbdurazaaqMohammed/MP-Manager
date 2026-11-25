@@ -13,7 +13,7 @@ import android.view.inspector.WindowInspector;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.SeekBar;
-import androidx.appcompat.app.AlertDialog;
+
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -23,7 +23,6 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.zerostudio.idea.widget.editor.symbolinput.v2.manager.SymbolDrawerManagerScreen;
 import com.zerostudio.idea.widget.editor.symbolinput.v2.settings.SharedPreferencesSymbolDrawerSettingsRepository;
-import com.zerostudio.idea.widget.editor.symbolinput.v2.settings.SymbolDrawerSettings;
 import com.zerostudio.idea.widget.editor.symbolinput.v2.settings.SymbolDrawerSettingsScreen;
 import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.ui.common.theme.BuiltInThemes;

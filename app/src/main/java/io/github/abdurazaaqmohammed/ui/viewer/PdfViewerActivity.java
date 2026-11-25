@@ -44,7 +44,6 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

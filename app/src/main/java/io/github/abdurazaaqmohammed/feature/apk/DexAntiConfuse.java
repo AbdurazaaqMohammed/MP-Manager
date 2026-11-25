@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.feature.apk;
 import androidx.annotation.NonNull;
 
 import com.android.tools.smali.dexlib2.DexFileFactory;
-import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.Annotation;
@@ -23,7 +22,6 @@ import com.android.tools.smali.dexlib2.iface.reference.Reference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
-import com.android.tools.smali.dexlib2.Opcode;
 
 import java.io.File;
 import java.io.FileOutputStream;

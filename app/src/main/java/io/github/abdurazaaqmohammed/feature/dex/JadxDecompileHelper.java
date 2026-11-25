@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.feature.dex;
 import android.app.Activity;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;

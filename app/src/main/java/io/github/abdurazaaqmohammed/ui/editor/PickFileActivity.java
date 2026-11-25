@@ -11,7 +11,6 @@ import android.provider.DocumentsContract;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
 import java.util.ArrayList;
