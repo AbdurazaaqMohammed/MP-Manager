@@ -241,18 +241,20 @@ public class EntryDialogs {
             if (ad.getWindow() != null) ad.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         } catch (Exception ignored) {}
         dialogUtil.styleAlertDialog(ad);
-        ad.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setOnClickListener(v6 -> {
-                    int selectionStart = renameInput.getSelectionStart();
-                    int selectionEnd = renameInput.getSelectionEnd();
-                    if (selectionStart != selectionEnd) {
-                        renameInput.getText().delete(selectionStart, selectionEnd);
-                    }
-                    CharSequence text = ((ClipboardManager) context
-                            .getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                    if (!TextUtils.isEmpty(text))
-                        renameInput.getText().insert(selectionStart, text);
-                });
+        android.widget.Button pasteBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
+        if (pasteBtn != null) {
+            pasteBtn.setOnClickListener(v6 -> {
+                int selectionStart = renameInput.getSelectionStart();
+                int selectionEnd = renameInput.getSelectionEnd();
+                if (selectionStart != selectionEnd) {
+                    renameInput.getText().delete(selectionStart, selectionEnd);
+                }
+                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                CharSequence text = cm == null ? null : cm.getText();
+                if (!TextUtils.isEmpty(text))
+                    renameInput.getText().insert(selectionStart, text);
+            });
+        }
     }
 
     /**

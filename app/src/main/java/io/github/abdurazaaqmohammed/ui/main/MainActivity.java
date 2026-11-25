@@ -1329,16 +1329,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 dialogRef[0] = ad;
                 KeyboardUtil.focusOnShow(ad, input, true);
                 dialogUtil.styleAlertDialog(ad);
-                ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
-                    int selectionStart = input.getSelectionStart();
-                    int selectionEnd = input.getSelectionEnd();
-                    if (selectionStart != selectionEnd) {
-                        input.getText().delete(selectionStart, selectionEnd);
-                    }
-                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                    if (TextUtils.isEmpty(text)) Extensions.showMessage(this, rss.getString(R.string.nothing_found_to_paste));
-                    else input.getText().insert(selectionStart, text);
-                });
+                Button pasteBtn = ad.getButton(DialogInterface.BUTTON_NEUTRAL);
+                if (pasteBtn != null) {
+                    pasteBtn.setOnClickListener(v2 -> {
+                        int selectionStart = input.getSelectionStart();
+                        int selectionEnd = input.getSelectionEnd();
+                        if (selectionStart != selectionEnd) {
+                            input.getText().delete(selectionStart, selectionEnd);
+                        }
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        CharSequence text = cm == null ? null : cm.getText();
+                        if (TextUtils.isEmpty(text)) Extensions.showMessage(this, rss.getString(R.string.nothing_found_to_paste));
+                        else input.getText().insert(selectionStart, text);
+                    });
+                }
             });
             View addButton = findViewById(R.id.addButton);
             addButton.setOnLongClickListener(this::showMsgOnLongPress);
@@ -1420,20 +1424,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                         }).create();
                 KeyboardUtil.focusOnShow(ad, input, false);
                 dialogUtil.styleAlertDialog(ad);
-                ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
-                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                    if (TextUtils.isEmpty(text)) {
-                        Extensions.showMessage(MainActivity.this, rss.getString(R.string.nothing_found_to_paste)); return;
-                    }
-                    int selectionStart = input.getSelectionStart();
-                    int selectionEnd = input.getSelectionEnd();
-                    if (selectionStart != selectionEnd) {
-                        input.getText().delete(selectionStart, selectionEnd);
-                        input.getText().insert(selectionStart, text);
-                    } else if(selectionEnd == -1) { // Empty
-                        input.setText(text);
-                    }
-                });
+                Button pasteBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
+                if (pasteBtn != null) {
+                    pasteBtn.setOnClickListener(v2 -> {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        CharSequence text = cm == null ? null : cm.getText();
+                        if (TextUtils.isEmpty(text)) {
+                            Extensions.showMessage(MainActivity.this, rss.getString(R.string.nothing_found_to_paste)); return;
+                        }
+                        int selectionStart = input.getSelectionStart();
+                        int selectionEnd = input.getSelectionEnd();
+                        if (selectionStart != selectionEnd) {
+                            input.getText().delete(selectionStart, selectionEnd);
+                            input.getText().insert(selectionStart, text);
+                        } else if(selectionEnd == -1) { // Empty
+                            input.setText(text);
+                        }
+                    });
+                }
             });
 
             View syncPaneButton = findViewById(R.id.syncPaneButton);

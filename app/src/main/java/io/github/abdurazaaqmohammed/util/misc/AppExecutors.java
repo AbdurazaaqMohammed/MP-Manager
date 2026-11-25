@@ -47,6 +47,10 @@ public final class AppExecutors {
      */
     public static void runOnUiIfAlive(@Nullable Activity activity, @NonNull Runnable action) {
         if (!isActivityAlive(activity)) return;
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run();
+            return;
+        }
         MAIN_HANDLER.post(() -> {
             if (isActivityAlive(activity)) {
                 action.run();
