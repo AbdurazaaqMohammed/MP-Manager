@@ -407,11 +407,23 @@ public class FileIconLoader {
         } else {
             long len = meta[1];
             long mt = meta[2];
-            boolean ghost = len <= 0 && mt <= 0 && isGhostFile(file);
-            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps) {
+            boolean listedStat = (file instanceof RootFile rf && rf.hasRootStat())
+                    || (file instanceof ShizukuFile sf && sf.hasStat());
+            boolean ghost = !listedStat && len <= 0 && mt <= 0 && isGhostFile(file);
+            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps || listedStat) {
                 fileDateView.setTag(null);
-                if (ghost) {
+                if (ghost || (listedStat && len <= 0 && mt <= 0 && !showPerms)) {
                     fileDateView.setVisibility(View.INVISIBLE);
+                } else if (listedStat && len <= 0 && mt <= 0) {
+                    String perms = detailPrefixIfPerms(file);
+                    if (perms != null) {
+                        fileDateView.setVisibility(View.VISIBLE);
+                        applyDateTextSize(fileDateView);
+                        fileDateView.setText(new StringBuilder(perms)
+                                .append(' ').append(FileSize.getHumanReadableFileSize(0)));
+                    } else {
+                        fileDateView.setVisibility(View.INVISIBLE);
+                    }
                 } else {
                     showFileStats(file, fileDateView, len, mt);
                     maybeFetchPerms(file, fileDateView, len, mt);
@@ -420,6 +432,16 @@ public class FileIconLoader {
                 showFileStatsAsync(file, fileDateView);
             }
             setupNonFolderIconView(file.getPath(), fileIconView);
+        }
+    }
+
+    private String detailPrefixIfPerms(File file) {
+        if (!showPerms || file == null) return null;
+        try {
+            String path = file.getAbsolutePath();
+            return isUserStorage(path) ? null : permOf(file, path);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -461,25 +483,29 @@ public class FileIconLoader {
 
     /**
      * Permission display for a path ("rwxr-x--x (750)"), or null when unknown.
-     * Listing-carried metadata first ({@link RootFile} caches either the
-     * {@code ls -l} mode column or the octal {@code stat %a} output depending
-     * on which listing strategy answered), then a local {@code lstat}, which
-     * answers every world-stat-able path such as /system with no shell at all.
-     * Misses are not memoized here so the async backend lookup can fill the
-     * memo.
+     * Listing-carried metadata first ({@link RootFile} and {@link ShizukuFile} cache
+     * either the {@code ls -l} mode column or octal stat output), then a local
+     * {@code lstat}, which answers every world-stat-able path such as /system
+     * with no shell at all. Misses are not memoized here so the async backend
+     * lookup can fill the memo.
      */
     private String permOf(File file, String path) {
         String memo = permMemo.get(path);
         if (memo != null) return memo.isEmpty() ? null : memo;
         String perms = null;
+        String mode = null;
         if (file instanceof RootFile) {
-            String mode = ((RootFile) file).getRootMode();
+            mode = ((RootFile) file).getRootMode();
+        } else if (file instanceof ShizukuFile) {
+            mode = ((ShizukuFile) file).getMode();
+        }
+        if (mode != null) {
             perms = FilePermissions.formatLsMode(mode);
             if (perms == null) perms = FilePermissions.formatOctal(mode);
         }
         if (perms == null) {
-            int mode = statModeLocal(path);
-            if (mode >= 0) perms = FilePermissions.formatMode(mode);
+            int stMode = statModeLocal(path);
+            if (stMode >= 0) perms = FilePermissions.formatMode(stMode);
         }
         if (perms != null) permMemo.put(path, perms);
         return perms;
@@ -791,7 +817,9 @@ public class FileIconLoader {
             return;
         }
 
-        boolean canElevate = canElevateStats();
+        boolean canElevate = canElevateStats()
+                && !(file instanceof RootFile rf && rf.hasRootStat())
+                && !(file instanceof ShizukuFile sf && sf.hasStat());
 
         if (!canElevate) {
             fileDateView.setTag(null);

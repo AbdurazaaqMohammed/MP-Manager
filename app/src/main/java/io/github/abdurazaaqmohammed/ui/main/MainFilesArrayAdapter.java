@@ -413,6 +413,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             context.loadFolderInPaneAsync(f, pane1);
             return;
         }
+        if ((f instanceof RootFile rf && rf.hasRootStat())
+                || (f instanceof ShizukuFile sf && sf.hasStat())) {
+            // Listing already resolved directory/file/symlink target status; avoid a second backend fork.
+            context.clearGreen(pane1);
+            context.setSelectedPane(pane1 ? 1 : 2);
+            context.loadFolderInPaneAsync(f, pane1);
+            return;
+        }
         AppExecutors.io().execute(() -> {
             final boolean dir = resolveDirViaBackend(f);
             context.handler.post(() -> {

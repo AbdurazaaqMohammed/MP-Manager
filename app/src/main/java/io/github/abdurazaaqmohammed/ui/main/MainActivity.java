@@ -1901,7 +1901,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         String folderPath = folder.getAbsolutePath();
         if ("/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath)
-                || !folder.canRead() || PrivilegeManager.Shizuku.isAndroidDataPath(folder)) {
+                || !folder.canRead() || PrivilegeManager.Shizuku.isAndroidDataPath(folder)
+                || !isDirectLocalPath(folder, folderPath)) {
             loadFolderInPaneAsync(folder, pane1, addToHistory);
             return;
         }
@@ -1914,10 +1915,34 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         File[] files = listPlainFolder(folder, pane1, pane1 ? paneLoadGen1 : paneLoadGen2);
         if (files == null) return;
-        Arrays.sort(files);
         sortFiles(files, folder.getPath());
         bindListedFolder(folder, files, pane1, addToHistory);
         if (saved != null) restorePaneScroll(pane1, saved);
+    }
+
+    private boolean isDirectLocalPath(File folder, String path) {
+        if (path == null || path.isEmpty()) return false;
+        if (PrivilegeManager.Shizuku.isAndroidDataPath(path)) return false;
+        if (path.equals("/sdcard") || path.startsWith("/storage/emulated/") || path.startsWith("/sdcard/")) {
+            return !path.matches("^(?:/storage/emulated/\\d+|/sdcard)/Android/(?:data|obb|media)(?:/.*)?$");
+        }
+        if (path.startsWith("/storage/")
+                && !path.equals("/storage")
+                && !path.startsWith("/storage/emulated")
+                && !path.startsWith("/storage/self")
+                && folder != null && folder.canRead()) {
+            return true;
+        }
+        try {
+            String filesRoot = getFilesDir().getAbsolutePath();
+            String cacheRoot = getCacheDir().getAbsolutePath();
+            if (path.equals(filesRoot) || path.startsWith(filesRoot + "/")
+                    || path.equals(cacheRoot) || path.startsWith(cacheRoot + "/")) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     /**
@@ -2099,18 +2124,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         boolean shizukuDir = PrivilegeManager.Shizuku.isAndroidDataPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
-        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath);
-        boolean rootActive = PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.ROOT;
+        boolean nonLocalPath = !isDirectLocalPath(folder, folderPath);
+        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath) || nonLocalPath;
+        PrivilegeManager.Backend activeBackend = PrivilegeManager.Files.active(this);
+        boolean rootActive = activeBackend == PrivilegeManager.Backend.ROOT;
+        boolean shizukuActive = activeBackend == PrivilegeManager.Backend.SHIZUKU;
         if ((rootListingPath || (rootActive && !folder.canRead())) && rootActive && PrivilegeManager.Files.fileOpsOn(this)) {
             files = PrivilegeManager.Files.listWithStat(this, folderPath);
             if (files != null) return Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
-        if (files == null && shizukuDir && PrivilegeManager.Files.active(this) == PrivilegeManager.Backend.SHIZUKU) {
-            // Scoped storage can return a nonempty but incomplete listing (for
-            // example only this app's own directory), so do not wait for the
-            // normal listing to be empty before asking the selected backend.
+        if (files == null && (shizukuDir || nonLocalPath) && shizukuActive) {
+            // Scoped storage can return incomplete listings, and Shizuku Binder IPC
+            // resolves /system, /vendor, and symlinked dirs in one call with permissions/mtime.
             File[] listed = PrivilegeManager.Shizuku.tryList(this, folder);
-            if (listed != null) files = Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
+            if (listed != null) return Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
+            if (PathGuards.isRootOnlyPath(folderPath) && PrivilegeManager.Files.fileOpsOn(this)) {
+                File[] rootFallback = PrivilegeManager.Files.listWithStat(this, folderPath);
+                if (rootFallback != null) return Arrays.stream(rootFallback).filter(this::isNotHidden).toArray(File[]::new);
+            }
         }
         if (files == null && folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile) {
             // File.listFiles(FileFilter) recreates plain Files and discards the
@@ -2673,7 +2704,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             if (files == null) return;
             try {
-                Arrays.sort(files);
                 sortFiles(files, folderPath);
             } catch (Exception ignored) {
             }
