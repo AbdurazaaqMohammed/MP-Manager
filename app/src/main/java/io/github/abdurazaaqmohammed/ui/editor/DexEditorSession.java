@@ -13,6 +13,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 import modder.hub.dexeditor.utils.ClassTree;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** Keeps the DEX tree and its files alive across configuration changes and minimized tasks. */
 public class DexEditorSession extends ViewModel {
@@ -83,7 +84,7 @@ public class DexEditorSession extends ViewModel {
     protected void onCleared() {
         closed = true;
         // Loading or a final autosave may still own the tree; never block the UI to join it.
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             synchronized (loadLock) {
                 if (tree != null) tree.clearAll();
                 tree = null;
@@ -98,6 +99,6 @@ public class DexEditorSession extends ViewModel {
                 for (DexWorkspaceStore.Lease input : inputs) input.close();
                 inputs.clear();
             }
-        }, "dex-session-close").start();
+        });
     }
 }

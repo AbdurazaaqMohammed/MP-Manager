@@ -67,6 +67,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ToolsHubActivity extends BaseActivity {
     private RecyclerView grid;
@@ -174,7 +175,7 @@ public class ToolsHubActivity extends BaseActivity {
 
     private void refreshCatalog() {
         Extensions.showMessage(this, getString(R.string.tools_hub_refreshing));
-        PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
+        PackCatalog.refreshAsync(this, fresh -> AppExecutors.runOnUiIfAlive(ToolsHubActivity.this, () -> {
             if (isFinishing() || isDestroyed()) return;
             if (fresh != null && !fresh.isEmpty()) {
                 catalog = PackCatalog.load(this);
@@ -571,9 +572,9 @@ public class ToolsHubActivity extends BaseActivity {
                 Extensions.showMessage(this, getString(R.string.tools_hub_not_apk));
                 return;
             }
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 String error = PackManager.installFromFile(this, pack, picked);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ToolsHubActivity.this, () -> {
                     if (error == null) {
                         Extensions.showMessage(this, getString(R.string.tools_hub_installed_toast, pack.title));
                         rebuildPacks();
@@ -581,7 +582,7 @@ public class ToolsHubActivity extends BaseActivity {
                         Extensions.showMessage(this, error);
                     }
                 });
-            }).start();
+            });
         });
         picker.show();
     }

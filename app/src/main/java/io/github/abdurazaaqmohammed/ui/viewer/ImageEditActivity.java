@@ -60,6 +60,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ImageEditActivity extends BaseActivity {
 
@@ -142,7 +143,7 @@ public class ImageEditActivity extends BaseActivity {
             return;
         }
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String name = "shared_image";
                 try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
@@ -168,15 +169,15 @@ public class ImageEditActivity extends BaseActivity {
                 originalPath = dest.getAbsolutePath();
                 fromShared = true;
                 pm.dismiss();
-                runOnUiThread(this::initEditor);
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, this::initEditor);
             } catch (Exception e) {
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     showError(e.getMessage() != null ? e.getMessage() : e.toString());
                     finish();
                 });
             }
-        }).start();
+        });
     }
 
     private void initEditor() {
@@ -514,7 +515,7 @@ public class ImageEditActivity extends BaseActivity {
 
     private void showResizePreview(int targetW, int targetH, int cropX, int cropY, int cropW, int cropH) {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 BitmapFactory.Options opts = new BitmapFactory.Options();
                 opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -545,7 +546,7 @@ public class ImageEditActivity extends BaseActivity {
                 Bitmap previewBitmap = Bitmap.createScaledBitmap(cropped, pw, ph, true);
                 if (previewBitmap != cropped) cropped.recycle();
 
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     pm.dismiss();
                     ImageView iv = new ImageView(this);
                     iv.setAdjustViewBounds(true);
@@ -562,14 +563,14 @@ public class ImageEditActivity extends BaseActivity {
                 });
             } catch (Throwable e) {
                 pm.dismiss();
-                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
-        }).start();
+        });
     }
 
     private void applyResizeAndCrop(int targetW, int targetH, int cropX, int cropY, int cropW, int cropH) {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 BitmapFactory.Options opts = new BitmapFactory.Options();
                 opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -616,7 +617,7 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 final Exception finalPersistError = persistError;
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     if (finalPersistError != null) {
                         showError(finalPersistError.getMessage() != null
                                 ? finalPersistError.getMessage() : finalPersistError.toString());
@@ -627,14 +628,14 @@ public class ImageEditActivity extends BaseActivity {
                 });
             } catch (Throwable e) {
                 pm.dismiss();
-                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
-        }).start();
+        });
     }
 
     private void prepareWorkingCopy() {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File src = new File(originalPath);
                 workingFile = new File(getCacheDir(), "imageedit_" + System.currentTimeMillis()
@@ -642,7 +643,7 @@ public class ImageEditActivity extends BaseActivity {
                 copyFile(src, workingFile);
                 if (isJpeg) normalizeOrientation();
                 readDims();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     pm.dismiss();
                     reloadPreview();
                     resetCropToFull();
@@ -650,12 +651,12 @@ public class ImageEditActivity extends BaseActivity {
                 });
             } catch (Exception e) {
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     showError(e.getMessage() != null ? e.getMessage() : e.toString());
                     finish();
                 });
             }
-        }).start();
+        });
     }
 
     private void normalizeOrientation() {
@@ -686,7 +687,7 @@ public class ImageEditActivity extends BaseActivity {
             exif.saveAttributes();
             if (isJpeg) JpegMetaStrip.fixJpegMarkerOrder(workingFile);
         } catch (Exception e) {
-            runOnUiThread(() -> showError(getString(R.string.img_orientation_kept)));
+            AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(getString(R.string.img_orientation_kept)));
         }
     }
 
@@ -694,7 +695,7 @@ public class ImageEditActivity extends BaseActivity {
         if (PrivilegeManager.Native.loadJpegtranJni(this)) return;
         final Exception[] failure = new Exception[1];
         final boolean[] done = {false};
-        runOnUiThread(() -> PrivilegeManager.Native.ensureJpegtran(this, new PrivilegeManager.Native.ReadyCallback() {
+        AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> PrivilegeManager.Native.ensureJpegtran(this, new PrivilegeManager.Native.ReadyCallback() {
             public void onReady() {
                 synchronized (done) {
                     done[0] = true;
@@ -801,7 +802,7 @@ public class ImageEditActivity extends BaseActivity {
 
     private void applyOp(String op) {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ensureJniBlocking();
                 if (isJpeg) {
@@ -821,15 +822,15 @@ public class ImageEditActivity extends BaseActivity {
                 dirty = true;
                 hasPixelEdits = true;
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     reloadPreview();
                     resetCropToFull();
                 });
             } catch (Exception e) {
                 pm.dismiss();
-                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
-        }).start();
+        });
     }
 
     private void applyBitmapOp(String op, int[] crop) throws Exception {
@@ -1070,7 +1071,7 @@ public class ImageEditActivity extends BaseActivity {
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(getString(R.string.save), (d, w) -> {
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
                             for (int i = 0; i < tags.length; i++) {
@@ -1121,14 +1122,14 @@ public class ImageEditActivity extends BaseActivity {
                             }
 
                             dirty = true;
-                            runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                                 updateInfo();
                                 showError(getString(R.string.img_exif_saved));
                             });
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                            AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
                         }
-                    }).start();
+                    });
                 }).show();
     }
 
@@ -1187,22 +1188,22 @@ public class ImageEditActivity extends BaseActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(getString(R.string.img_strip), (d, w) -> {
                     ProgressManager pm = new ProgressManager(this, true).show();
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             JpegMetaStrip.stripFile(workingFile);
                             readDims();
                             dirty = true;
                             pm.dismiss();
-                            runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                                 reloadPreview();
                                 updateInfo();
                                 showError(getString(R.string.img_meta_stripped));
                             });
                         } catch (Exception e) {
                             pm.dismiss();
-                            runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                            AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
                         }
-                    }).start();
+                    });
                 }).show();
     }
 
@@ -1273,7 +1274,7 @@ public class ImageEditActivity extends BaseActivity {
         allowLossyCrop = false;
         boolean hasCrop = hasCrop();
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (hasCrop) {
                     RectF crop = cropImageRect;
@@ -1314,7 +1315,7 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 if (fromShared) {
                     pm.dismiss();
-                    runOnUiThread(this::promptSharedSaveLocation);
+                    AppExecutors.runOnUiIfAlive(ImageEditActivity.this, this::promptSharedSaveLocation);
                     return;
                 }
                 File original = new File(originalPath);
@@ -1338,15 +1339,15 @@ public class ImageEditActivity extends BaseActivity {
                 }
                 scanMediaFile(originalPath);
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     setResult(RESULT_OK);
                     finish();
                 });
             } catch (Exception e) {
                 pm.dismiss();
-                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
-        }).start();
+        });
     }
 
     private void promptSharedSaveLocation() {
@@ -1370,7 +1371,7 @@ public class ImageEditActivity extends BaseActivity {
 
     private void saveSharedToFolder(File dir) {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String name = sharedName != null ? sharedName : new File(originalPath).getName();
                 File dest = new File(dir, name);
@@ -1385,15 +1386,15 @@ public class ImageEditActivity extends BaseActivity {
                 final String savedPath = dest.getAbsolutePath();
                 scanMediaFile(savedPath);
                 pm.dismiss();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> {
                     showError(getString(R.string.logger_saved_to, savedPath));
                     finish();
                 });
             } catch (Exception e) {
                 pm.dismiss();
-                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+                AppExecutors.runOnUiIfAlive(ImageEditActivity.this, () -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
             }
-        }).start();
+        });
     }
 
     private void scanMediaFile(String path) {

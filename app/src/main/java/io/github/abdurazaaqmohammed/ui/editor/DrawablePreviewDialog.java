@@ -35,6 +35,7 @@ import java.util.Locale;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.viewer.ApkDrawableRenderer;
 import io.github.abdurazaaqmohammed.ui.viewer.ZoomableImageView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Full size preview for drawable XMLs under the res/drawable*, res/mipmap*
@@ -268,7 +269,7 @@ public final class DrawablePreviewDialog {
         private void load() {
             progress.setVisibility(View.VISIBLE);
             error.setVisibility(View.GONE);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     ApkDrawableRenderer.Result r = ApkDrawableRenderer.render(
                             activity.getApplicationContext(), archive, entryPath, RENDER_PX);
@@ -283,7 +284,7 @@ public final class DrawablePreviewDialog {
                 } catch (Throwable t) {
                     post(() -> fail(String.valueOf(t.getMessage()), null));
                 }
-            }, "drawable-preview").start();
+            });
         }
 
         private void rasterize() {
@@ -291,13 +292,13 @@ public final class DrawablePreviewDialog {
             if (r == null) return;
             final int[] state = chips.get(selectedChip).state;
             final int lvl = level;
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 Bitmap bm = ApkDrawableRenderer.rasterize(r, state, lvl, RENDER_PX);
                 lastBitmap = bm;
                 post(() -> {
                     if (alive() && bm != null) image.setImageBitmap(bm);
                 });
-            }, "drawable-state").start();
+            });
         }
 
         private void apply(ApkDrawableRenderer.Result r, Bitmap bm) {
@@ -373,7 +374,7 @@ public final class DrawablePreviewDialog {
         private void sharePng() {
             final Bitmap bm = lastBitmap;
             if (bm == null) return;
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File dir = new File(activity.getCacheDir(), "drawable_previews");
                     if (!dir.exists() && !dir.mkdirs()) throw new IllegalStateException("mkdir");
@@ -405,7 +406,7 @@ public final class DrawablePreviewDialog {
                                 Toast.LENGTH_SHORT).show();
                     });
                 }
-            }, "drawable-export").start();
+            });
         }
 
         private void post(Runnable r) {

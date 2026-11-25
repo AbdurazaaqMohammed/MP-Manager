@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Pack catalog: bundled assets/packs.json, optionally refreshed from the
@@ -75,7 +76,7 @@ public final class PackCatalog {
 
     /** Best-effort refresh on a worker thread; callback runs on that thread. */
     public static void refreshAsync(Context context, RefreshCallback callback) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<PackDescriptor> fresh = null;
             try {
                 byte[] body = fetch(REMOTE_URL);
@@ -95,7 +96,7 @@ public final class PackCatalog {
             } catch (Exception ignored) {
             }
             if (callback != null) callback.onDone(fresh);
-        }).start();
+        });
     }
 
     private static byte[] fetch(String url) {

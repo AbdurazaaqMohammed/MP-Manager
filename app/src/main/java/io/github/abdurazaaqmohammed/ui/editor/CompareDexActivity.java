@@ -59,6 +59,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Future;
 import java.util.function.BiPredicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -69,6 +70,7 @@ import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.feature.dex.DexCompareEngine;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Compares two sets of APK/DEX files at the smali level. The first screen lists
@@ -357,56 +359,54 @@ public class CompareDexActivity extends BaseActivity {
         }
         summaryView.setText(R.string.dex_comparing);
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File cacheDir = new File(getCacheDir(), "dexcompare");
                 // both sides are independent; load them concurrently
                 Exception[] loadError = new Exception[1];
-                Thread leftThread = new Thread(() -> {
+                Future<?> leftFuture = AppExecutors.io().submit(() -> {
                     try {
                         engine.loadLeft(toFiles(paths1), cacheDir, (done, total) ->
-                                runOnUiThread(() ->
+                                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () ->
                                         summaryView.setText(getString(R.string.dex_comparing_loading, names1))));
                     } catch (Exception e) {
                         loadError[0] = e;
                     }
                 });
-                Thread rightThread = new Thread(() -> {
+                Future<?> rightFuture = AppExecutors.io().submit(() -> {
                     try {
                         engine.loadRight(toFiles(paths2), cacheDir, (done, total) ->
-                                runOnUiThread(() ->
+                                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () ->
                                         summaryView.setText(getString(R.string.dex_comparing_loading, names2))));
                     } catch (Exception e) {
                         loadError[0] = e;
                     }
                 });
-                leftThread.start();
-                rightThread.start();
-                leftThread.join();
-                rightThread.join();
+                leftFuture.get();
+                rightFuture.get();
                 if (loadError[0] != null) throw loadError[0];
                 List<DexCompareEngine.ComparedClass> differences = engine.computeDifferences((done, total) ->
-                        runOnUiThread(() -> summaryView.setText(getString(R.string.dex_compare_progress,
+                        AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> summaryView.setText(getString(R.string.dex_compare_progress,
                                 total <= 0 ? 100 : done * 100 / total))));
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     allClasses.clear();
                     allClasses.addAll(differences);
                     applyFilter();
                     progressBar.setVisibility(View.GONE);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareDexActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private void loadFromMtcr(File file) {
         summaryView.setText(R.string.loading);
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 mtcrZipFile = new ZipFile(file);
                 ZipEntry infoEntry = mtcrZipFile.getEntry("info.json");
@@ -451,7 +451,7 @@ public class CompareDexActivity extends BaseActivity {
                 }
                 list.sort((c1, c2) -> FileSorting.compareNaturalIgnoreCase(c1.displayName(), c2.displayName()));
 
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     updateListSubtitle();
                     allClasses.clear();
                     allClasses.addAll(list);
@@ -459,12 +459,12 @@ public class CompareDexActivity extends BaseActivity {
                     progressBar.setVisibility(View.GONE);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareDexActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private static List<File> toFiles(List<String> paths) {
@@ -522,7 +522,7 @@ public class CompareDexActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         diffListView.setVisibility(View.GONE);
         final String type = currentType;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String left;
                 String right;
@@ -537,7 +537,7 @@ public class CompareDexActivity extends BaseActivity {
                     right = engine.smaliRight(type);
                 }
                 final List<DiffLine> built = buildDiff(left, right);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     if (!type.equals(currentType)) return;
                     diffLines.clear();
                     diffLines.addAll(built);
@@ -553,12 +553,12 @@ public class CompareDexActivity extends BaseActivity {
                     activeSearchQuery = "";
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareDexActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private boolean isUnified() {
@@ -1362,7 +1362,7 @@ public class CompareDexActivity extends BaseActivity {
         progress.setText(getString(R.string.exporting));
         progress.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outFile), 65536))) {
                     zos.setLevel(1);
@@ -1408,17 +1408,17 @@ public class CompareDexActivity extends BaseActivity {
                         }
                     }
                 }
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     progress.dismiss();
                     Extensions.showMessage(CompareDexActivity.this, getString(R.string.exported_to_X, outFile.getAbsolutePath()));
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareDexActivity.this, () -> {
                     progress.dismiss();
                     new ErrorUtil(CompareDexActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private static String readZipEntryText(ZipFile zf, String entryName) {

@@ -21,6 +21,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Manages mounting, browsing, and unmounting disk images (EROFS, EXT4, F2FS, ISO, NTFS, FAT)
@@ -102,7 +103,7 @@ public final class SystemImageMountManager {
         pm.setText(isAr ? ("جاري فتح وتثبيت صورة " + imageFile.getName() + "...") : ("Mounting " + imageFile.getName() + "..."));
         pm.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String hash = hashPath(imageFile.getAbsolutePath());
                 File mountPoint = new File(MOUNT_BASE_DIR, hash + "_" + sanitizeName(imageFile.getName()));
@@ -157,7 +158,7 @@ public final class SystemImageMountManager {
                     new ErrorUtil(context).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     /**
@@ -193,7 +194,7 @@ public final class SystemImageMountManager {
         MountSession session = getSessionForFolder(folder);
         if (session == null) return;
         // If navigating strictly outside the mount point, unmount in background
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String ucmd = buildUnmountCommand(session.mountPoint.getAbsolutePath());
                 PrivilegeManager.Root.executeFs(context, ucmd, 10);
@@ -201,7 +202,7 @@ public final class SystemImageMountManager {
                 activeSessions.remove(session.mountPoint.getAbsolutePath());
             } catch (Exception ignored) {
             }
-        }).start();
+        });
     }
 
     /**

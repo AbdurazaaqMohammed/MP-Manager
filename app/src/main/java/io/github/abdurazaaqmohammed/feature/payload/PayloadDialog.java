@@ -36,6 +36,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Material 3 interactive dialog for inspecting and extracting Android OTA payload.bin files.
@@ -51,7 +52,7 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.extracting));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 PayloadParser.PayloadInfo info = PayloadParser.parse(payloadFile);
                 context.runOnUiThread(() -> {
@@ -64,7 +65,7 @@ public final class PayloadDialog {
                     Extensions.showMessage(context, "Failed to parse payload: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void displayDialog(MainActivity context, File payloadFile,
@@ -257,7 +258,7 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.payload_extracting, entry.getFileName()));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File extracted = PayloadExtractor.extractPartition(payloadFile, info, entry, outputDir, pm);
                 context.runOnUiThread(() -> {
@@ -274,7 +275,7 @@ public final class PayloadDialog {
                     Extensions.showMessage(context, "Extraction failed: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void extractAllPartitions(MainActivity context, File payloadFile,
@@ -289,7 +290,7 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Extracting all partitions…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 outputDir.mkdirs();
                 int total = info.partitions.size();
@@ -312,7 +313,7 @@ public final class PayloadDialog {
                     Extensions.showMessage(context, "Extraction error: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void showPayloadInfo(MainActivity context, File payloadFile,

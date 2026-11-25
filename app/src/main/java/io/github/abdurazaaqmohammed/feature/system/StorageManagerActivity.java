@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class StorageManagerActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -301,7 +302,7 @@ public class StorageManagerActivity extends BaseActivity {
 
     private void runRootRoundTrip(TextView body) {
         Extensions.showMessage(this, getString(R.string.storage_testing_rw));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             StringBuilder out = new StringBuilder();
             File local = null;
             File back = null;
@@ -358,7 +359,7 @@ public class StorageManagerActivity extends BaseActivity {
                 body.setText(body.getText().toString() + "\n" + extra.trim());
                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_roundtrip_done));
             });
-        }).start();
+        });
     }
 
     private void autoClearCaches(boolean selectedOnly) {
@@ -377,13 +378,13 @@ public class StorageManagerActivity extends BaseActivity {
                     .setMessage(elevated ? getString(R.string.storage_autoclear_need_elevated) : getString(R.string.storage_autoclear_need))
                     .setPositiveButton(elevated ? getString(R.string.storage_enable_auto) : getString(R.string.storage_open_settings), (d, w) -> {
                         if (elevated) {
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 boolean ok = PrivilegeManager.Permissions.enableAccessibilityForViaElevated(StorageManagerActivity.this, CacheCleanerService.class.getName());
                                 handler.post(() -> {
                                     Extensions.showMessage(StorageManagerActivity.this, ok ? getString(R.string.storage_service_enabled_again) : getString(R.string.storage_autoenable_failed));
                                     if (!ok) CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
                                 });
-                            }).start();
+                            });
                         } else {
                             CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
                         }
@@ -429,7 +430,7 @@ public class StorageManagerActivity extends BaseActivity {
                 }
                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_cleared_x, cleared, total));
                 List<String> remaining = new ArrayList<>();
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     for (CacheCleaner.QueueItem it : targets) {
                         rootEmptyCacheDirsWithVerify(it.packageName);
                         remaining.add(it.packageName);
@@ -438,7 +439,7 @@ public class StorageManagerActivity extends BaseActivity {
                         loadCaches();
                         refreshVolumes();
                     });
-                }).start();
+                });
             }
         });
         if (!started) {
@@ -491,7 +492,7 @@ public class StorageManagerActivity extends BaseActivity {
     }
 
     private void refreshVolumes() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<StorageUtil.StorageInfo> infos = StorageUtil.getStorageInfos(StorageManagerActivity.this);
             handler.post(() -> {
                 volumeBox.removeAllViews();
@@ -521,7 +522,7 @@ public class StorageManagerActivity extends BaseActivity {
                     volumeBox.addView(card);
                 }
             });
-        }).start();
+        });
     }
 
     private void startScan() {
@@ -533,7 +534,7 @@ public class StorageManagerActivity extends BaseActivity {
         typeBox.removeAllViews();
         scanBar.setIndeterminate(true);
         scanStatus.setText(getString(R.string.storage_scanning));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Map<String, Long> buckets = new HashMap<>();
             String[] names = new String[]{"Images", "Videos", "Audio", "Documents", "Archives", "APKs", "Other"};
             for (String n : names) buckets.put(n, 0L);
@@ -602,7 +603,7 @@ public class StorageManagerActivity extends BaseActivity {
                 updateScanButtons();
                 refreshVolumes();
             });
-        }).start();
+        });
     }
 
     private boolean isSymlink(File f) {
@@ -947,7 +948,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.storage_delete_n_files, targets.size()))
                 .setMessage(getString(R.string.storage_will_be_freed, FileSize.getHumanReadableFileSize(total)))
-                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.delete), (d, w) -> AppExecutors.io().execute(() -> {
                     int ok = 0;
                     for (FileRow row : targets) {
                         if (deleteOneFile(row.file)) ok++;
@@ -960,7 +961,7 @@ public class StorageManagerActivity extends BaseActivity {
                         refreshVolumes();
                         Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_deleted_x, done, targets.size()));
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -969,7 +970,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.delete))
                 .setMessage(file.getAbsolutePath() + "\n" + FileSize.getHumanReadableFileSize(file.length()))
-                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.delete), (d, w) -> AppExecutors.io().execute(() -> {
                     final boolean done = deleteOneFile(file);
                     handler.post(() -> {
                         Extensions.showMessage(StorageManagerActivity.this, done ? getString(R.string.storage_deleted) : getString(R.string.storage_delete_failed));
@@ -978,7 +979,7 @@ public class StorageManagerActivity extends BaseActivity {
                             refreshVolumes();
                         }
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -1043,7 +1044,7 @@ public class StorageManagerActivity extends BaseActivity {
 
     private void loadCaches() {
         cacheStatus.setText(getString(R.string.storage_loading_caches));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<CacheRow> rows = new ArrayList<>();
             boolean rootReady = PrivilegeManager.Permissions.isRootShellReady(StorageManagerActivity.this);
             Map<String, Long> rootSizes = rootReady ? readCacheSizesViaRoot() : new HashMap<>();
@@ -1093,7 +1094,7 @@ public class StorageManagerActivity extends BaseActivity {
                     cacheStatus.setText(getString(R.string.storage_apps_cache, rows.size(), FileSize.getHumanReadableFileSize(total)));
                 }
             });
-        }).start();
+        });
     }
 
     private Map<String, Long> readCacheSizesViaRoot() {
@@ -1166,7 +1167,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(selectedOnly ? getString(R.string.storage_clear_sel) : getString(R.string.storage_clear_all_caches))
                 .setMessage(getString(R.string.storage_apps_n, targets.size()))
-                .setPositiveButton(getString(R.string.clear), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.clear), (d, w) -> AppExecutors.io().execute(() -> {
                     int ok = 0;
                     List<String> failures = new ArrayList<>();
                     String firstError = "";
@@ -1240,7 +1241,7 @@ public class StorageManagerActivity extends BaseActivity {
                         loadCaches();
                         refreshVolumes();
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }

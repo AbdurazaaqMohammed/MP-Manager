@@ -118,6 +118,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldListFragment.DialogLineNumberListener {
 
@@ -540,7 +541,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         Activity activity = getActivity();
         if (!(activity instanceof DexEditorActivity dexActivity)) return;
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String smaliCode = dexActivity.classTree.getSmaliByType(
                         Objects.requireNonNull(dexActivity.classTree.classMap.get(className)));
@@ -558,7 +559,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
                 });
             }
-        }).start();
+        });
     }
 
     private void updateSmaliCursorInfo() {
@@ -1730,7 +1731,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         final int generation = syntaxPolicy.currentGeneration();
         final Context appContext = requireContext().getApplicationContext();
         final String finalScope = scope;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             LoadedSyntax loaded = loadSyntaxLanguage(appContext, finalScope);
             TextMateLanguage language = loaded == null ? null : loaded.language;
             ThemeRegistry languageRegistry = loaded == null ? null : loaded.registry;
@@ -1768,7 +1769,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     syntaxPolicy.onResultSuperseded(generation);
                 }
             });
-        }).start();
+        });
     }
 
     /** Language + the TextMate registry it was built against (null registry = global). */
@@ -2075,7 +2076,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 // only stalls the main thread here.
                 final String content = editor.getText().toString();
                 final int cursorLine = editor.getCursor().getLeftLine();
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     try {
                         saveSmaliCodeToFile(content, tempSmaliPath, null);
                     } catch (final Exception e) {
@@ -2089,7 +2090,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         if (getActivity() instanceof DexEditorActivity)
                             ((DexEditorActivity) getActivity()).showSmaliNavigation(tempSmaliPath, title, cursorLine);
                     });
-                }).start();
+                });
             } catch (Exception e) {
                 if (getContext() != null)
                     Notify_MT.Notify(getContext(), getString(R.string.error), e.toString(), getString(R.string.close));
@@ -2388,10 +2389,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
 
         void execute() {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 final TextLocation location = doInBackground();
                 mainHandler.post(() -> onPostExecute(location));
-            }).start();
+            });
         }
 
         protected TextLocation doInBackground() {

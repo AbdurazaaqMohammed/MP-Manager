@@ -53,6 +53,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class RenameUtil {
 
@@ -238,7 +239,7 @@ public class RenameUtil {
         }
         ProgressManager pm = new ProgressManager(context, true).show();
         Handler handler = context.handler;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Map<File, File> oldToTemp = new LinkedHashMap<>();
             Map<File, File> tempToOld = new HashMap<>();
             Map<File, File> tempToFinal = new HashMap<>();
@@ -284,7 +285,7 @@ public class RenameUtil {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     /**
@@ -348,7 +349,7 @@ public class RenameUtil {
         if (context == null || zipFile == null || wrapper == null) return;
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.signing, zipFile.getName()));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 wrapper.signApk(zipFile);
                 pm.dismiss();
@@ -363,7 +364,7 @@ public class RenameUtil {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath,
@@ -371,7 +372,7 @@ public class RenameUtil {
         File zipFile = ((ZipEntryInfo) plans.get(0).item).getZipFile();
         ProgressManager pm = new ProgressManager(context, true).show();
         Handler handler = context.handler;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try (ZipFile zf = new ZipFile(zipFile)) {
                 Map<String, String> oldToTemp = new LinkedHashMap<>();
                 Map<String, String> tempToFinal = new LinkedHashMap<>();
@@ -424,7 +425,7 @@ public class RenameUtil {
                 pm.dismiss();
                 handler.post(() -> new ErrorUtil(context).showError(e));
             }
-        }).start();
+        });
     }
 
     private static String validateFind(String find, boolean regex) {

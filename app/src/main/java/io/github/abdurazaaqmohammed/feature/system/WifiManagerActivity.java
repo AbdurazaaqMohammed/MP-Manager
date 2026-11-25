@@ -73,6 +73,7 @@ import io.github.abdurazaaqmohammed.utils.QrUtil;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.net.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class WifiManagerActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -96,10 +97,10 @@ public class WifiManagerActivity extends BaseActivity {
             String id = launching.getStringExtra(DnsManager.EXTRA_PROFILE_ID);
             DnsManager.DnsProfile target = DnsManager.findProfile(this, id);
             if (target != null) {
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     boolean ok = DnsManager.applyProfile(WifiManagerActivity.this, target);
                     handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.dns_applied, target.name) : getString(R.string.dns_switch_failed)));
-                }).start();
+                });
             }
             finish();
             return;
@@ -177,7 +178,7 @@ public class WifiManagerActivity extends BaseActivity {
     }
 
     private void refreshConnection() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             StringBuilder b = new StringBuilder();
             try {
                 ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -221,7 +222,7 @@ public class WifiManagerActivity extends BaseActivity {
             }
             String out = b.toString().trim();
             handler.post(() -> connText.setText(out));
-        }).start();
+        });
     }
 
     private String ipStr(int ip) {
@@ -252,7 +253,7 @@ public class WifiManagerActivity extends BaseActivity {
     }
 
     private void refreshDns() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String mode = DnsManager.currentMode(WifiManagerActivity.this);
             String host = DnsManager.currentHostname(WifiManagerActivity.this);
             DnsManager.DnsProfile match = DnsManager.matchingProfile(WifiManagerActivity.this);
@@ -302,19 +303,19 @@ public class WifiManagerActivity extends BaseActivity {
                 }
                 dnsList.addView(group);
             });
-        }).start();
+        });
     }
 
     private void applyDns(DnsManager.DnsProfile profile) {
         Extensions.showMessage(this, getString(R.string.wifi_applying, profile.name));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean ok = DnsManager.applyProfile(WifiManagerActivity.this, profile);
             handler.post(() -> {
                 Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.dns_applied, profile.name) : getString(R.string.wifi_needs_root));
                 if (!ok) offerRootGrant();
                 refreshDns();
             });
-        }).start();
+        });
     }
 
     private void offerRootGrant() {
@@ -324,10 +325,10 @@ public class WifiManagerActivity extends BaseActivity {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.wifi_grant_title))
                     .setMessage(getString(R.string.wifi_grant_msg))
-                    .setPositiveButton(getString(R.string.grant), (d, w) -> new Thread(() -> {
+                    .setPositiveButton(getString(R.string.grant), (d, w) -> AppExecutors.io().execute(() -> {
                         boolean ok = PrivilegeManager.Permissions.grantWriteSecureViaRoot(WifiManagerActivity.this);
                         handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.wifi_granted) : getString(R.string.wifi_grant_failed)));
-                    }).start())
+                    }))
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
         } catch (Exception ignored) {
@@ -605,14 +606,14 @@ public class WifiManagerActivity extends BaseActivity {
             qrBox.addView(secView);
             new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_share_wifi)).setView(qrBox)
                     .setPositiveButton(getString(R.string.share), (d, w) -> shareWifiText(config))
-                    .setNeutralButton(getString(R.string.wifi_save_image), (d, w) -> new Thread(() -> {
+                    .setNeutralButton(getString(R.string.wifi_save_image), (d, w) -> AppExecutors.io().execute(() -> {
                         try {
                             QrUtil.saveToGallery(WifiManagerActivity.this, qr, e.ssid + "_wifi_qr");
                             handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_qr_saved)));
                         } catch (Exception ex) {
                             handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_save_failed)));
                         }
-                    }).start())
+                    }))
                     .setNegativeButton(android.R.string.cancel, null).show();
         } catch (Exception ex) {
             Extensions.showMessage(this, getString(R.string.wifi_qr_failed));
@@ -624,7 +625,7 @@ public class WifiManagerActivity extends BaseActivity {
             Extensions.showMessage(this, getString(R.string.wifi_nothing_to_export));
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 StringBuilder all = new StringBuilder();
                 for (WifiPasswordUtil.WifiEntry e : entries) {
@@ -656,7 +657,7 @@ public class WifiManagerActivity extends BaseActivity {
             } catch (Exception ex) {
                 handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_export_failed)));
             }
-        }).start();
+        });
     }
 
     private String masked(String s) {
@@ -680,7 +681,7 @@ public class WifiManagerActivity extends BaseActivity {
     }
 
     private void loadPasswords() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean rooted = WifiPasswordUtil.isRooted(WifiManagerActivity.this);
             List<WifiPasswordUtil.WifiEntry> entries = rooted ? WifiPasswordUtil.loadWifiPasswords(WifiManagerActivity.this) : new ArrayList<>();
             handler.post(() -> {
@@ -691,7 +692,7 @@ public class WifiManagerActivity extends BaseActivity {
                 passAdapter.notifyDataSetChanged();
                 passCount.setText(rooted ? getString(R.string.wifi_networks_n, entries.size()) : getString(R.string.wifi_root_needed_passwords));
             });
-        }).start();
+        });
     }
 
     private void buildUsage(LinearLayout box) {
@@ -703,7 +704,7 @@ public class WifiManagerActivity extends BaseActivity {
     }
 
     private void refreshUsage() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             StringBuilder b = new StringBuilder();
             try {
                 b.append(getString(R.string.wifi_info_mobile_down)).append(" ").append(fmt(TrafficStats.getMobileRxBytes())).append("\n");
@@ -718,7 +719,7 @@ public class WifiManagerActivity extends BaseActivity {
             }
             String out = b.toString();
             handler.post(() -> usageText.setText(out));
-        }).start();
+        });
     }
 
     private String fmt(long bytes) {

@@ -18,6 +18,7 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.io.File;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public final class RenameHelper {
     private RenameHelper() {
@@ -71,7 +72,7 @@ public final class RenameHelper {
                 .setTitle(activity.rss.getString(R.string.rename_taken_title))
                 .setMessage(activity.rss.getString(R.string.rename_taken_msg, dest.getName()))
                 .setPositiveButton(activity.rss.getString(R.string.swap_names), (d, w) -> {
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         String err = swapNames(activity, src, dest);
                         activity.handler.post(() -> {
                             if (err == null) {
@@ -82,7 +83,7 @@ public final class RenameHelper {
                                 new ErrorUtil(activity).showError(new Exception(err));
                             }
                         });
-                    }).start();
+                    });
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create());

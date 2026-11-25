@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Dialog for exporting strings from an APK's strings.xml for translation.
@@ -123,7 +124,7 @@ public class TranslationExportDialog {
 
     /** Performs the actual export in a background thread. */
     private void performExport(File outputDir, String format) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 TranslationExporter.ExportResult result = TranslationExporter.exportStrings(
                         activity, selectedApkFile, format.toLowerCase(), outputDir);
@@ -142,7 +143,7 @@ public class TranslationExportDialog {
             } catch (Exception e) {
                 activity.runOnUiThread(() -> new ErrorUtil(activity).showError(e));
             }
-        }).start();
+        });
     }
 
     /**
@@ -151,7 +152,7 @@ public class TranslationExportDialog {
     public void showPreviewDialog(File apkFile) {
         this.selectedApkFile = apkFile;
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<TranslationExporter.StringEntry> entries =
                         extractStringsPreview(apkFile);
@@ -198,7 +199,7 @@ public class TranslationExportDialog {
                 activity.runOnUiThread(() ->
                         new ErrorUtil(activity).showError(e));
             }
-        }).start();
+        });
     }
 
     private List<TranslationExporter.StringEntry> extractStringsPreview(File apkFile) throws Exception {

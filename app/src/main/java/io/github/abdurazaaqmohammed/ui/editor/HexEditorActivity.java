@@ -71,6 +71,7 @@ import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 public class HexEditorActivity extends BaseActivity {
@@ -1384,11 +1385,11 @@ public class HexEditorActivity extends BaseActivity {
         final ProgressManager pm = new ProgressManager(this, true);
         pm.setText(getString(R.string.search) + "…");
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             long found = BytePatternSearch.find(this::readRange, size, pattern, startPos,
                     forward, () -> pm.isCancelling() || isDestroyed());
             final long f = found;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 pm.dismiss();
                 busy = false;
                 if (pm.isCancelling() || isFinishing() || isDestroyed()) return;
@@ -1399,7 +1400,7 @@ public class HexEditorActivity extends BaseActivity {
                     Extensions.showMessage(this, getString(R.string.hex_not_found));
                 }
             });
-        }).start();
+        });
     }
 
     private void replaceCurrentMatch() {
@@ -1581,7 +1582,7 @@ public class HexEditorActivity extends BaseActivity {
         busy = true;
         ProgressManager pm = new ProgressManager(this, false).show();
         pm.setText(getString(R.string.saving));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
           boolean localCommitted = false;
           try {
             backupForSave();
@@ -1598,7 +1599,7 @@ public class HexEditorActivity extends BaseActivity {
             localCommitted = true;
             if (rootOriginalPath != null) PrivilegeManager.Staging.writeBack(this, file, rootOriginalPath);
             pageCache.clear();
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 busy = false;
                 pm.dismiss();
                 if (isDestroyed()) return;
@@ -1614,7 +1615,7 @@ public class HexEditorActivity extends BaseActivity {
             });
           } catch (Exception error) {
             boolean committed = localCommitted;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 busy = false;
                 pm.dismiss();
                 if (committed && rootOriginalPath != null) {
@@ -1628,7 +1629,7 @@ public class HexEditorActivity extends BaseActivity {
                 if (!isDestroyed()) new ErrorUtil(this).showError(error);
             });
           }
-        }, "hex-save").start();
+        });
     }
 
     /**
@@ -1854,15 +1855,15 @@ public class HexEditorActivity extends BaseActivity {
         }
         ProgressManager pm = new ProgressManager(this, false).show();
         pm.setText(getString(R.string.hex_copy));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String value = formatBytesAs(data, format);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 pm.dismiss();
                 if (isFinishing() || isDestroyed()) return;
                 copyToClipboard(value);
                 Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
             });
-        }, "hex-copy").start();
+        });
     }
 
     @Override

@@ -48,6 +48,7 @@ import java.util.zip.ZipFile;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Compares two text files (or zip entries) line by line. It uses the same diff
@@ -173,7 +174,7 @@ public class CompareTextActivity extends BaseActivity {
         pm.setText(getString(R.string.dex_comparing));
         pm.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Read straight into line lists: buffering a multi-megabyte file
                 // into one String and re-splitting it duplicates the whole file
@@ -181,7 +182,7 @@ public class CompareTextActivity extends BaseActivity {
                 textLeft = loadText(path1, isZip1, zip1);
                 textRight = loadText(path2, isZip2, zip2);
                 final List<TextDiffEngine.DiffLine> built = buildDiff();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     pm.dismiss();
                     diffLines.clear();
                     diffLines.addAll(built);
@@ -190,13 +191,13 @@ public class CompareTextActivity extends BaseActivity {
                     diffContainer.setVisibility(View.VISIBLE);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     pm.dismiss();
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareTextActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     /** Lines of one side plus whether the content ends with a line terminator. */
@@ -597,7 +598,7 @@ public class CompareTextActivity extends BaseActivity {
         String oldName = intent.getStringExtra("file1");
         String newName = intent.getStringExtra("file2");
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String diff = TextDiffEngine.toUnifiedDiff(rows, left, right, oldName, newName,
                         textLeft.endsWithNewline, textRight.endsWithNewline);
@@ -605,18 +606,18 @@ public class CompareTextActivity extends BaseActivity {
                     if (out == null) throw new java.io.IOException("Provider returned no output stream");
                     out.write(diff.getBytes(StandardCharsets.UTF_8));
                 }
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     Extensions.showMessage(CompareTextActivity.this,
                             getString(R.string.exported_to_X, pendingExportName));
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     new ErrorUtil(CompareTextActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     // ==========================================
@@ -790,24 +791,24 @@ public class CompareTextActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         diffCanvasView.setVisibility(View.GONE);
         diffListView.setVisibility(View.GONE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Only the engine options change here, so the raw text is reused.
                 final List<TextDiffEngine.DiffLine> built = buildDiff();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     diffLines.clear();
                     diffLines.addAll(built);
                     applyFilter();
                     progressBar.setVisibility(View.GONE);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(CompareTextActivity.this, () -> {
                     progressBar.setVisibility(View.GONE);
                     syncActiveViewVisibility();
                     new ErrorUtil(CompareTextActivity.this).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     // ==========================================

@@ -42,6 +42,7 @@ import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.utils.DatabaseUtil;
 import io.github.ratul.topactivity.utils.PermissionUtil;
 import io.github.ratul.topactivity.utils.WindowManagerUtil;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class PopupManager {
 
@@ -173,11 +174,11 @@ public class PopupManager {
         if (isPackageChanged) {
             packageName.setText(state.getPkg());
             appName.setText(defaultAppName);
-            mainHandler.post(() -> new Thread(() -> {
+            mainHandler.post(() -> AppExecutors.io().execute(() -> {
                 final String fetched = getAppName(state.getPkg()) != null
                         ? getAppName(state.getPkg()) : defaultAppName;
                 mainHandler.post(() -> appName.setText(fetched));
-            }).start());
+            }));
         }
     }
 

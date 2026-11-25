@@ -46,6 +46,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Single share/view entry point replacing the old Locate / Save / Image-edit /
@@ -412,12 +413,12 @@ public class SharedEntryActivity extends BaseActivity {
             ItemState item = items.get(i);
             queryMeta(item);
             final int index = i;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 if (index == selected) renderSelection();
                 renderFileList();
             });
         }
-        runOnUiThread(this::updateCapabilities);
+        AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, this::updateCapabilities);
         for (int i = 0; i < items.size() && !cancelled; i++) {
             ItemState item = items.get(i);
             SharedPathResolver.Result r;
@@ -430,12 +431,12 @@ public class SharedEntryActivity extends BaseActivity {
             item.resolving = false;
             if (item.name == null || item.name.isEmpty()) item.name = r.displayName;
             final int index = i;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 if (index == selected) renderSelection();
                 renderFileList();
             });
         }
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
             progress.setVisibility(View.GONE);
             progress.setIndeterminate(false);
             renderSelection();
@@ -828,7 +829,7 @@ public class SharedEntryActivity extends BaseActivity {
     private void stageTempCopy(ItemState item, StageConsumer consumer) {
         ProgressManager pm = new ProgressManager(this, true).show();
         Uri uri = item.uri;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             File staged = null;
             try {
                 File base = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
@@ -849,7 +850,7 @@ public class SharedEntryActivity extends BaseActivity {
                 staged = null;
             }
             final File result = staged;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 try {
                     pm.dismiss();
                 } catch (Exception ignored) {
@@ -861,7 +862,7 @@ public class SharedEntryActivity extends BaseActivity {
                     Extensions.showMessage(this, getString(R.string.shared_entry_stage_failed));
                 }
             });
-        }).start();
+        });
     }
 
     private void pickSaveFolder() {
@@ -886,7 +887,7 @@ public class SharedEntryActivity extends BaseActivity {
         List<Uri> copy = new ArrayList<>(uris);
         String text = sharedText;
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int done = 0;
             int total = copy.size() + ((text != null && !text.isEmpty() && copy.isEmpty()) ? 1 : 0);
             int n = 0;
@@ -923,12 +924,12 @@ public class SharedEntryActivity extends BaseActivity {
             }
             int doneCount = done;
             int totalCount = Math.max(total, 1);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 Extensions.showMessage(this,
                         getString(R.string.saved_i_of_i_to_x, doneCount, totalCount, dir.getName()));
                 finish();
             });
-        }).start();
+        });
     }
 
     private File uniqueDest(File dir, String name) {
