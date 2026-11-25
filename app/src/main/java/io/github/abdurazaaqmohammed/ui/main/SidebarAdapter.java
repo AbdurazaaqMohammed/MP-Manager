@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -21,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.widget.ImageViewCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -680,14 +682,22 @@ public class SidebarAdapter extends RecyclerView.Adapter<SidebarAdapter.ViewHold
         if (type == 1) {
             StorageUtil.StorageInfo info = entry.storage;
             holder.storageName.setText(info.name);
-            Drawable glyph = entry.type == EntryType.PIN
-                    ? ResourcesCompat.getDrawable(context.getResources(), entry.icon, context.getTheme()) : null;
-            if (glyph != null) {
-                int size = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
-                glyph = glyph.mutate();
-                glyph.setBounds(0, 0, size, size);
-                DrawableCompat.setTint(glyph,
-                        MaterialColors.getColor(holder.storageName, android.R.attr.colorPrimary));
+            Drawable glyph = null;
+            if (entry.type == EntryType.PIN) {
+                if (entry.file != null || entry.icon == R.drawable.folder_24px) {
+                    glyph = FileIconSpec.FOLDER.drawable(context);
+                } else {
+                    glyph = ResourcesCompat.getDrawable(context.getResources(), entry.icon, context.getTheme());
+                    if (glyph != null) {
+                        glyph = glyph.mutate();
+                        DrawableCompat.setTint(glyph,
+                                MaterialColors.getColor(holder.storageName, android.R.attr.colorPrimary));
+                    }
+                }
+                if (glyph != null) {
+                    int size = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
+                    glyph.setBounds(0, 0, size, size);
+                }
             }
             holder.storageName.setCompoundDrawablesRelative(glyph, null, null, null);
             holder.storageName.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density));
@@ -723,7 +733,17 @@ public class SidebarAdapter extends RecyclerView.Adapter<SidebarAdapter.ViewHold
             return;
         }
         boolean hidden = isHidden(entry);
-        holder.optionIcon.setImageResource(hidden ? R.drawable.visibility_off_24px : entry.icon);
+        boolean isPinFolder = entry.type == EntryType.PIN && (entry.file != null || entry.icon == R.drawable.folder_24px);
+        boolean useFileArt = !hidden && ((entry.type == EntryType.BOOKMARK && entry.file != null) || isPinFolder);
+        if (useFileArt) {
+            ImageViewCompat.setImageTintList(holder.optionIcon, null);
+            FileIconSpec spec = isPinFolder
+                    ? FileIconSpec.FOLDER
+                    : FileIconSpec.forPath(entry.file.getPath(), !entry.file.isFile());
+            holder.optionIcon.setImageDrawable(spec.drawable(context));
+        } else {
+            holder.optionIcon.setImageResource(hidden ? R.drawable.visibility_off_24px : entry.icon);
+        }
         holder.optionIcon.setEnabled(!hidden);
         holder.optionIcon.setAlpha(hidden ? 0.55f : 1f);
         holder.optionText.setText(entry.label);
@@ -743,14 +763,17 @@ public class SidebarAdapter extends RecyclerView.Adapter<SidebarAdapter.ViewHold
             }
             return true;
         });
-        TypedValue value = new TypedValue();
-        Resources.Theme theme = context.getTheme();
-        theme.resolveAttribute(android.R.attr.colorPrimary, value, true);
-        Drawable drawable = holder.optionIcon.getDrawable();
-        if (drawable != null) {
-            drawable = drawable.mutate();
-            ColorUtil.changeImageColor(drawable, value.data);
-            holder.optionIcon.setImageDrawable(drawable);
+        if (!useFileArt) {
+            TypedValue value = new TypedValue();
+            Resources.Theme theme = context.getTheme();
+            theme.resolveAttribute(android.R.attr.colorPrimary, value, true);
+            ImageViewCompat.setImageTintList(holder.optionIcon, ColorStateList.valueOf(value.data));
+            Drawable drawable = holder.optionIcon.getDrawable();
+            if (drawable != null) {
+                drawable = drawable.mutate();
+                ColorUtil.changeImageColor(drawable, value.data);
+                holder.optionIcon.setImageDrawable(drawable);
+            }
         }
         view.setOnClickListener(v -> {
             if (callbacks != null) callbacks.onEntryClicked(entry, v);

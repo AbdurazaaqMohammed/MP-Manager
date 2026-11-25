@@ -130,15 +130,18 @@ public class FilePropertiesDialog {
             }
         }
         if (!hasIcon) {
-            propIcon.setImageResource(isFolder ? R.drawable.folder_24px : R.drawable.baseline_insert_drive_file_24);
-            propIcon.setColorFilter(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
+            propIcon.setColorFilter(null);
+            propIcon.setImageDrawable(FileIconSpec.forPath(fileName, isFolder, context.theme).drawable(context));
+            propIcon.setBackground(null);
+            propIcon.setPadding(0, 0, 0, 0);
+        } else {
+            GradientDrawable iconBg = new GradientDrawable();
+            iconBg.setShape(GradientDrawable.OVAL);
+            iconBg.setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, Color.GRAY));
+            propIcon.setBackground(iconBg);
+            int iconPad = dp(10);
+            propIcon.setPadding(iconPad, iconPad, iconPad, iconPad);
         }
-        GradientDrawable iconBg = new GradientDrawable();
-        iconBg.setShape(GradientDrawable.OVAL);
-        iconBg.setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, Color.GRAY));
-        propIcon.setBackground(iconBg);
-        int iconPad = dp(10);
-        propIcon.setPadding(iconPad, iconPad, iconPad, iconPad);
 
         final TextView[] nameHolder = new TextView[1];
         final AlertDialog[] selfDialog = new AlertDialog[1];

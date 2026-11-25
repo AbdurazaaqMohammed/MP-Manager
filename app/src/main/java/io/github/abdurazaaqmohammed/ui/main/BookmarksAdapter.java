@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.main;
 
-import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
-
 import android.graphics.Color;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,15 +12,10 @@ import androidx.annotation.NonNull;
 
 import com.google.android.material.color.MaterialColors;
 
-import org.apache.commons.io.FilenameUtils;
-
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
 
 public class BookmarksAdapter extends ArrayAdapter<File> {
@@ -61,23 +53,8 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
         String label = callbacks != null ? callbacks.labelOf(file) : file.getName();
         fileNameView.setText(label);
 
-        String ext = "." + FilenameUtils.getExtension(file.getName()).toLowerCase(Locale.ROOT);
-        if (file.isFile()) {
-            int ic;
-            if (ext.equals(".apk")) ic = R.drawable.apk_document_24px;
-            else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) ic = R.drawable.image_24px;
-            else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) ic = R.drawable.video_24px;
-            else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) ic = R.drawable.music_24px;
-            else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) ic = R.drawable.baseline_text_snippet_24;
-            else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) ic = R.drawable.baseline_folder_zip_24;
-            else ic = R.drawable.baseline_insert_drive_file_24;
-            fileIconView.setImageResource(ic);
-        } else {
-            fileIconView.setImageResource(R.drawable.folder_24px);
-        }
-        TypedValue typedValue = new TypedValue();
-        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
-        ColorUtil.changeImageColor(fileIconView.getDrawable(), typedValue.data);
+        fileIconView.setColorFilter(null);
+        fileIconView.setImageDrawable(FileIconSpec.forPath(file.getPath(), !file.isFile(), context.theme).drawable(context));
 
         boolean batch = callbacks != null && callbacks.isBatchMode();
         convertView.setBackgroundColor(batch && callbacks.isBatchSelected(position)

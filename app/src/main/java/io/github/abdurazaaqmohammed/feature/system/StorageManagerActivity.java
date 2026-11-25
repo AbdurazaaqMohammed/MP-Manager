@@ -45,6 +45,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
@@ -849,13 +850,16 @@ public class StorageManagerActivity extends BaseActivity {
                     updateDeleteSelectedBtn();
                 });
                 String absPath = row.file.getAbsolutePath();
+                holder.thumb.setColorFilter(null);
                 if ("Images".equals(row.bucket) || "Videos".equals(row.bucket)) {
                     holder.thumb.setTag(absPath);
                     Bitmap cached = thumbCache.get(absPath);
                     if (cached != null) {
+                        holder.thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
                         holder.thumb.setImageBitmap(cached);
                     } else {
-                        holder.thumb.setImageResource(android.R.drawable.ic_menu_gallery);
+                        holder.thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        holder.thumb.setImageDrawable(FileIconSpec.forPath(absPath, false).drawable(StorageManagerActivity.this));
                         ImageView target = holder.thumb;
                         thumbExecutor.execute(() -> {
                             Bitmap bmp = loadThumb(row.file, row.bucket);
@@ -868,20 +872,16 @@ public class StorageManagerActivity extends BaseActivity {
                             final Bitmap done = bmp;
                             handler.post(() -> {
                                 if (absPath.equals(target.getTag()) && done != null) {
+                                    target.setScaleType(ImageView.ScaleType.CENTER_CROP);
                                     target.setImageBitmap(done);
                                 }
                             });
                         });
                     }
-                } else if ("APKs".equals(row.bucket)) {
-                    holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.apk_document_24px);
-                } else if ("Archives".equals(row.bucket)) {
-                    holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.archive_24px);
                 } else {
                     holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(R.drawable.baseline_insert_drive_file_24);
+                    holder.thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    holder.thumb.setImageDrawable(FileIconSpec.forPath(absPath, false).drawable(StorageManagerActivity.this));
                 }
                 return convertView;
             }

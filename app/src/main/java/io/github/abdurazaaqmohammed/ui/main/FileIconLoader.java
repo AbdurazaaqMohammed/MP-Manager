@@ -63,6 +63,7 @@ import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.ratul.topactivity.App;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FileIconLoader {
@@ -116,11 +117,13 @@ public class FileIconLoader {
     }
     private static final Handler badgeHandler = new Handler(Looper.getMainLooper());
 
-    private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
+    private static Drawable cachedUpFolderIcon, cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon,
             cachedDbIcon, cachedFontIcon, cachedBinaryIcon, cachedProtoIcon, cachedDocIcon, cachedSheetIcon, cachedSlideIcon, cachedScriptIcon, cachedBackupIcon, cachedCertIcon;
     private static int cachedIconTheme = -1;
+    private static int cachedIconEpoch = -1;
+    private static boolean cachedIconDark;
     private static int cachedIconBucket = -1;
 
     private final MainActivity context;
@@ -214,12 +217,22 @@ public class FileIconLoader {
         return cachedApkIcon;
     }
 
+    /** Configures the ".." parent navigation row with its distinct 3D parent folder icon. */
+    public void setupUpView(ImageView icon, TextView detail) {
+        icon.setTag(null);
+        icon.setImageDrawable(cachedUpFolderIcon);
+        if (detail != null) {
+            detail.setTag(null);
+            detail.setVisibility(View.GONE);
+        }
+    }
+
     /** Listing metadata only: no thumbnails, content sniffing, shell stats or folder walks. */
     public void setupMetadataView(String name, boolean directory, long size, long modified,
                                   boolean up, ImageView icon, TextView detail) {
         icon.setTag(null);
         detail.setTag(null);
-        icon.setImageDrawable(directory || up ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false));
+        icon.setImageDrawable(up ? cachedUpFolderIcon : (directory ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false)));
         applyDateTextSize(detail);
         if (up) {
             detail.setText("");
@@ -237,7 +250,7 @@ public class FileIconLoader {
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
         if (zipEntry == null) return;
         if (zipEntry.isDirectory() && "..".equals(zipEntry.getName())) {
-            fileIconView.setImageDrawable(cachedFolderIcon);
+            fileIconView.setImageDrawable(cachedUpFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
             return;
         }
@@ -1514,9 +1527,15 @@ public class FileIconLoader {
         Resources res = context.getResources();
         float density = res.getDisplayMetrics().density;
         int bucket = (int) (density * 4);
-        if (cachedIconTheme == theme && cachedIconBucket == bucket) return;
+        int epoch = ThemeRegistry.currentEpoch();
+        boolean dark = ThemeRegistry.isDarkTheme(context);
+        if (cachedIconTheme == theme && cachedIconEpoch == epoch
+                && cachedIconDark == dark && cachedIconBucket == bucket) return;
         cachedIconTheme = theme;
+        cachedIconEpoch = epoch;
+        cachedIconDark = dark;
         cachedIconBucket = bucket;
+        cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
         cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
         cachedApkIcon = FileIconSpec.APK.drawable(context);
         cachedImageIcon = FileIconSpec.IMAGE.drawable(context);

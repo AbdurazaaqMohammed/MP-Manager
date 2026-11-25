@@ -438,7 +438,7 @@ public class FilePickerDialog {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             if (position == 0) {
                 holder.fileNameView.setText("..");
-                holder.fileDateView.setVisibility(View.INVISIBLE);
+                iconLoader.setupUpView(holder.fileIconView, holder.fileDateView);
                 holder.itemView.setBackgroundColor(Color.TRANSPARENT);
                 if (holder.selectIndicatorView != null) holder.selectIndicatorView.setVisibility(View.GONE);
                 holder.itemView.setOnClickListener(v -> {

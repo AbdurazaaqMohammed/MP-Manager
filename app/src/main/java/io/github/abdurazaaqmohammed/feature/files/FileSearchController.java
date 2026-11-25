@@ -41,6 +41,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
@@ -599,11 +600,9 @@ public class FileSearchController {
 
                 title.setText(f.getName());
                 sub.setText(f.getParent() != null ? f.getParent() : "");
-                if (f.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.ic_link_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(
+                        FileIconSpec.forPath(f.getPath(), f.isDirectory(), activity.theme).drawable(activity));
 
                 row.setOnClickListener(v -> {
                     if (list.getLayoutManager() != null) {
@@ -976,11 +975,9 @@ public class FileSearchController {
 
                 title.setText(entry.getName());
                 sub.setText(entry.getFullPath());
-                if (entry.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.ic_link_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(
+                        FileIconSpec.forPath(entry.getName(), entry.isDirectory(), activity.theme).drawable(activity));
 
                 row.setOnClickListener(v -> {
                     if (list.getLayoutManager() != null) {

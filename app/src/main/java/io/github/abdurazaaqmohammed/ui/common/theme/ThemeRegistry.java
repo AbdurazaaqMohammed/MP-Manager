@@ -560,9 +560,15 @@ public final class ThemeRegistry {
     }
 
     public static int packColor(Context context, String token, int fallback) {
-        ThemePacks.Snapshot pack = ThemePacks.active(context);
-        Integer color = pack == null ? null : pack.colors.get(token);
+        Integer color = packColorOrNull(context, token);
         return color == null ? fallback : color;
+    }
+
+    /** Returns the pack-supplied color token, or {@code null} when no active pack defines it. */
+    public static Integer packColorOrNull(Context context, String token) {
+        if (context == null) return null;
+        ThemePacks.Snapshot pack = ThemePacks.active(context);
+        return pack == null ? null : pack.colors.get(token);
     }
 
     public static CharSequence packLabel(Context context, String token, CharSequence fallback) {
@@ -829,6 +835,12 @@ public final class ThemeRegistry {
                     != Configuration.UI_MODE_NIGHT_YES;
         }
         return BuiltInThemes.LIGHT_ID.equals(pluginId);
+    }
+
+    /** True when the resolved theme (including ThemePacks and System night mode) is dark or black. */
+    public static boolean isDarkTheme(Context context) {
+        if (context == null) return true;
+        return !isLightBars(context, appliedBaseId(context));
     }
 
     // ---------- plugin theme extras ----------

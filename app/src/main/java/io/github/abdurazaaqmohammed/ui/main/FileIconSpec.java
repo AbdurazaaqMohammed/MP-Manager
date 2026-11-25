@@ -5,13 +5,8 @@ import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.LayerDrawable;
-import androidx.core.content.res.ResourcesCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import java.util.List;
@@ -19,7 +14,7 @@ import java.util.Locale;
 
 /** Shared file-type artwork for pane rows and configurable bookmark shortcuts. */
 public record FileIconSpec(int glyph, int background, int foreground, int label) {
-    public static final FileIconSpec FOLDER = new FileIconSpec(R.drawable.ic_folder_mt, 0xFF252525, Color.WHITE, R.string.folder);
+    public static final FileIconSpec FOLDER = new FileIconSpec(R.drawable.ic_folder_mt, 0xFFD4887C, Color.WHITE, R.string.folder);
     public static final FileIconSpec APK = spec(R.drawable.apk_document_24px, 0xFF2E7D32, R.string.shortcut_icon_apk);
     public static final FileIconSpec IMAGE = spec(R.drawable.image_24px, 0xFF6A1B9A, R.string.image);
     public static final FileIconSpec VIDEO = spec(R.drawable.video_24px, 0xFFC62828, R.string.shortcut_icon_video);
@@ -49,6 +44,10 @@ public record FileIconSpec(int glyph, int background, int foreground, int label)
     public static List<FileIconSpec> all() {
         return List.of(FOLDER, FILE, APK, IMAGE, VIDEO, AUDIO, DEX, ARSC, ARCHIVE, STICKER, PDF, TEXT,
                 ELF, DISK, DATABASE, FONT, BINARY, PROTO, DOCUMENT, SHEET, SLIDE, SCRIPT, BACKUP, CERTIFICATE);
+    }
+
+    public static FileIconSpec forPath(String path, boolean directory) {
+        return forPath(path, directory, 0);
     }
 
     public static FileIconSpec forPath(String path, boolean directory, int theme) {
@@ -81,21 +80,10 @@ public record FileIconSpec(int glyph, int background, int foreground, int label)
     }
 
     public Drawable drawable(Context context) {
-        float density = context.getResources().getDisplayMetrics().density;
-        GradientDrawable backgroundDrawable = new GradientDrawable();
-        backgroundDrawable.setCornerRadius(6 * density);
-        int tile = background;
-        if (glyph == R.drawable.ic_folder_mt) {
-            tile = ThemeRegistry.packColor(context, "folder_icon_bg", tile);
-        } else if (glyph == R.drawable.baseline_insert_drive_file_24) {
-            tile = ThemeRegistry.packColor(context, "file_icon_bg", tile);
-        }
-        backgroundDrawable.setColor(tile);
-        Drawable icon = ResourcesCompat.getDrawable(context.getResources(), glyph, context.getTheme()).mutate();
-        DrawableCompat.setTint(icon, foreground);
-        LayerDrawable layer = new LayerDrawable(new Drawable[]{backgroundDrawable, icon});
-        int inset = Math.round(6 * density);
-        layer.setLayerInset(1, inset, inset, inset, inset);
-        return layer;
+        return FileIconArt.drawable(context, this);
+    }
+
+    public static Drawable parentDrawable(Context context) {
+        return FileIconArt.parentFolderDrawable(context);
     }
 }

@@ -2,11 +2,13 @@ package io.github.abdurazaaqmohammed.feature.system;
 
 
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -22,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.util.net.AdbFileService;
 import io.github.abdurazaaqmohammed.util.net.AdbSync;
 import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
@@ -182,10 +185,11 @@ public class AdbBrowserActivity extends BaseActivity {
         status.setText(entries.size() + " entries in " + path);
 
         if (!"/".equals(path)) {
-            listContainer.addView(row("..", "up one level", v -> {
-                String parent = path.substring(0, path.lastIndexOf('/'));
-                navigate(parent.isEmpty() ? "/" : parent);
-            }));
+            listContainer.addView(row("..", "up one level",
+                    FileIconSpec.parentDrawable(this), v -> {
+                        String parent = path.substring(0, path.lastIndexOf('/'));
+                        navigate(parent.isEmpty() ? "/" : parent);
+                    }));
         }
         int shown = 0;
         for (AdbSync.Entry entry : entries) {
@@ -200,10 +204,11 @@ public class AdbBrowserActivity extends BaseActivity {
             boolean isDir = entry.isDirectory();
             String child = ("/".equals(path) ? "" : path) + "/" + entry.name;
             String detail = (isDir ? "dir" : entry.size + " bytes");
+            Drawable icon = FileIconSpec.forPath(entry.name, isDir).drawable(this);
             if (isDir) {
-                listContainer.addView(row(entry.name, detail, v -> navigate(child)));
+                listContainer.addView(row(entry.name, detail, icon, v -> navigate(child)));
             } else {
-                listContainer.addView(row(entry.name, detail, v -> showFile(child, entry)));
+                listContainer.addView(row(entry.name, detail, icon, v -> showFile(child, entry)));
             }
             shown++;
         }
@@ -215,24 +220,37 @@ public class AdbBrowserActivity extends BaseActivity {
                 + "  ·  " + entry.size + " bytes  ·  mtime " + entry.mtime);
     }
 
-    private View row(String title, String detail, View.OnClickListener onClick) {
+    private View row(String title, String detail, Drawable iconDrawable, View.OnClickListener onClick) {
         LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(0, dp(10), 0, dp(10));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(8), 0, dp(8));
         row.setOnClickListener(onClick);
+
+        ImageView icon = new ImageView(this);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(28), dp(28));
+        iconLp.setMarginEnd(dp(10));
+        icon.setLayoutParams(iconLp);
+        icon.setImageDrawable(iconDrawable);
+        row.addView(icon);
+
+        LinearLayout textCol = new LinearLayout(this);
+        textCol.setOrientation(LinearLayout.VERTICAL);
         TextView name = new TextView(this);
         name.setText(title);
         name.setTextSize(15);
         name.setTypeface(Typeface.DEFAULT_BOLD);
         name.setGravity(Gravity.START);
-        row.addView(name, new LinearLayout.LayoutParams(
+        textCol.addView(name, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView sub = new TextView(this);
         sub.setText(detail);
         sub.setTextSize(12);
         sub.setAlpha(0.7f);
-        row.addView(sub, new LinearLayout.LayoutParams(
+        textCol.addView(sub, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(textCol, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return row;
     }
 

@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.editor;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.SearchHistoryDropdown;
@@ -1092,15 +1093,9 @@ public class CompareDexActivity extends BaseActivity {
         private static final int TYPE_DIR = 0;
         private static final int TYPE_CLASS = 1;
 
-        private GradientDrawable folderBg;
         private GradientDrawable classBg;
 
         private void ensureDrawables(float density) {
-            if (folderBg == null) {
-                folderBg = new GradientDrawable();
-                folderBg.setCornerRadius(5 * density);
-                folderBg.setColor(0xFF252525);
-            }
             if (classBg == null) {
                 classBg = new GradientDrawable();
                 classBg.setCornerRadius(100 * density);
@@ -1165,12 +1160,16 @@ public class CompareDexActivity extends BaseActivity {
                 holder.arrow.setVisibility(View.VISIBLE);
                 holder.arrow.setRotation(node.expanded ? 45f : 0f);
                 holder.icon.setVisibility(View.VISIBLE);
-                holder.icon.setImageResource(R.drawable.ic_folder_mt);
+                ViewGroup.LayoutParams lp = holder.icon.getLayoutParams();
+                lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                holder.icon.setLayoutParams(lp);
+                holder.icon.setImageDrawable(FileIconSpec.FOLDER.drawable(CompareDexActivity.this));
                 holder.symbol.setVisibility(View.GONE);
                 holder.iconBg.setVisibility(View.VISIBLE);
-                holder.iconBg.setBackground(folderBg);
+                holder.iconBg.setBackground(null);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.iconBg.setElevation(5 * density);
+                    holder.iconBg.setElevation(0f);
                 }
                 holder.name.setTextColor(MaterialColors.getColor(
                         CompareDexActivity.this, com.google.android.material.R.attr.colorOnSurface,

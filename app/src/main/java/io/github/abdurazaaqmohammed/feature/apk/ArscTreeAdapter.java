@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 
 public class ArscTreeAdapter extends RecyclerView.Adapter<ArscTreeAdapter.Holder> {
 
@@ -50,17 +51,20 @@ public class ArscTreeAdapter extends RecyclerView.Adapter<ArscTreeAdapter.Holder
     private int batchSelected = 0;
     private Runnable selectionWatcher;
     private ArscData.Node animatedNode;
-    private GradientDrawable folderBg;
     private GradientDrawable codeBg;
     private Drawable chevronDrawable;
     private Drawable codeDrawable;
 
-    private void ensureRowDrawables(float density) {
-        if (folderBg == null) {
-            folderBg = new GradientDrawable();
-            folderBg.setCornerRadius(5 * density);
-            folderBg.setColor(0xFF252525);
+    private static void setIconSize(ImageView icon, int sizePx) {
+        ViewGroup.LayoutParams lp = icon.getLayoutParams();
+        if (lp != null && (lp.width != sizePx || lp.height != sizePx)) {
+            lp.width = sizePx;
+            lp.height = sizePx;
+            icon.setLayoutParams(lp);
         }
+    }
+
+    private void ensureRowDrawables(float density) {
         if (codeBg == null) {
             codeBg = new GradientDrawable();
             codeBg.setCornerRadius(100 * density);
@@ -302,9 +306,12 @@ public class ArscTreeAdapter extends RecyclerView.Adapter<ArscTreeAdapter.Holder
         holder.row.setPadding((int) (node.depth * 22 * density), holder.row.getPaddingTop(), holder.row.getPaddingRight(), holder.row.getPaddingBottom());
         boolean isConfig = node.dir && node.tag instanceof TypeBlock;
         holder.arrow.animate().cancel();
+        int leafIconPx = (int) (12 * density);
         if (isConfig) {
             holder.arrow.setVisibility(View.GONE);
+            setIconSize(holder.icon, leafIconPx);
             holder.iconBg.setBackground(codeBg);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) holder.iconBg.setElevation(0f);
             holder.icon.setImageDrawable(codeDrawable);
         } else if (node.dir) {
             holder.arrow.setVisibility(View.VISIBLE);
@@ -319,12 +326,15 @@ public class ArscTreeAdapter extends RecyclerView.Adapter<ArscTreeAdapter.Holder
             } else {
                 holder.arrow.setRotation(node.expanded ? 45f : 0f);
             }
-            holder.iconBg.setBackground(folderBg);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) holder.iconBg.setElevation(5 * density);
-            holder.icon.setImageResource(R.drawable.ic_folder_mt);
+            setIconSize(holder.icon, ViewGroup.LayoutParams.MATCH_PARENT);
+            holder.iconBg.setBackground(null);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) holder.iconBg.setElevation(0f);
+            holder.icon.setImageDrawable(FileIconSpec.FOLDER.drawable(context));
         } else {
             holder.arrow.setVisibility(View.GONE);
+            setIconSize(holder.icon, leafIconPx);
             holder.iconBg.setBackground(codeBg);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) holder.iconBg.setElevation(0f);
             holder.icon.setImageDrawable(codeDrawable);
         }
         holder.check.setVisibility(batchMode ? View.VISIBLE : View.GONE);

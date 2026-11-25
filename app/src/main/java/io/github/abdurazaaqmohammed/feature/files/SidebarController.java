@@ -55,6 +55,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
@@ -1188,11 +1189,9 @@ public class SidebarController {
                 ssb.setSpan(new ForegroundColorSpan(0xFFFF5252), delStart, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 sub.setText(ssb);
 
-                if (entry.file.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(FileIconSpec.forPath(
+                        entry.displayName(), entry.file.isDirectory(), activity.theme).drawable(activity));
 
                 if (!selectedEntries.isEmpty()) {
                     cb.setVisibility(View.VISIBLE);

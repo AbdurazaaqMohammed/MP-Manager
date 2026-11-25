@@ -709,8 +709,10 @@ public class SettingsController {
         TextView pvName = previewRow.findViewById(R.id.fileName);
         TextView pvDate = previewRow.findViewById(R.id.fileDate);
         ImageView pvIcon = previewRow.findViewById(R.id.fileIcon);
-        pvName.setText(activity.getString(R.string.preview_sample_name));
-        pvIcon.setImageResource(R.drawable.baseline_insert_drive_file_24);
+        String sampleName = activity.getString(R.string.preview_sample_name);
+        pvName.setText(sampleName);
+        pvIcon.setImageDrawable(io.github.abdurazaaqmohammed.ui.main.FileIconSpec.forPath(
+                sampleName, false, activity.theme).drawable(activity));
         previewHolder.addView(previewRow);
 
         int scale = UiPrefs.getScale(activity);

@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
@@ -129,8 +130,8 @@ public final class PayloadDialog {
                 LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
                 iconLp.rightMargin = Extensions.dp2px(context, 10);
                 iconView.setLayoutParams(iconLp);
-                iconView.setImageResource(R.drawable.ic_disk_drive_24px);
-                iconView.setColorFilter(0xFF455A64);
+                iconView.setColorFilter(null);
+                iconView.setImageDrawable(FileIconSpec.DISK.drawable(context));
                 itemLayout.addView(iconView);
 
                 LinearLayout textContainer = new LinearLayout(context);

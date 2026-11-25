@@ -745,29 +745,31 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         } else {
             entry = null;
             file = (File) item;
-            iconLoader.setupFileView(file, holder.fileIconView, holder.fileDateView);
             holder.fileNameView.setText(fileName = (position == 0 ? ".." : file.getName()));
             if (position == 0) {
-                holder.fileDateView.setVisibility(View.GONE);
-                holder.fileDateView.setTag(null);
-            } else if (isSearchResultsMode) {
-                holder.fileDateView.setVisibility(View.VISIBLE);
-                // getParent() of a SafFile is the percent-encoded synthetic path;
-                // show the decoded document location instead.
-                File parentFile = file.getParentFile();
-                holder.fileDateView.setText(parentFile != null ? SafFile.displayPathOf(parentFile) : "");
-                if (holder.appBadgeView != null) {
-                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
-                    holder.appBadgeView.setVisibility(View.VISIBLE);
-                }
-            } else if (holder.appBadgeView != null) {
-                if (isSymlink(file)) {
-                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
-                    holder.appBadgeView.setVisibility(View.VISIBLE);
-                } else if (file.getParent() != null) {
-                    iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
-                } else {
-                    holder.appBadgeView.setVisibility(View.GONE);
+                iconLoader.setupUpView(holder.fileIconView, holder.fileDateView);
+                if (holder.appBadgeView != null) holder.appBadgeView.setVisibility(View.GONE);
+            } else {
+                iconLoader.setupFileView(file, holder.fileIconView, holder.fileDateView);
+                if (isSearchResultsMode) {
+                    holder.fileDateView.setVisibility(View.VISIBLE);
+                    // getParent() of a SafFile is the percent-encoded synthetic path;
+                    // show the decoded document location instead.
+                    File parentFile = file.getParentFile();
+                    holder.fileDateView.setText(parentFile != null ? SafFile.displayPathOf(parentFile) : "");
+                    if (holder.appBadgeView != null) {
+                        holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                        holder.appBadgeView.setVisibility(View.VISIBLE);
+                    }
+                } else if (holder.appBadgeView != null) {
+                    if (isSymlink(file)) {
+                        holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                        holder.appBadgeView.setVisibility(View.VISIBLE);
+                    } else if (file.getParent() != null) {
+                        iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+                    } else {
+                        holder.appBadgeView.setVisibility(View.GONE);
+                    }
                 }
             }
         }

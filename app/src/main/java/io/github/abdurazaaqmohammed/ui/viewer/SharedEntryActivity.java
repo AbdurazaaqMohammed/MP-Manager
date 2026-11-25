@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
@@ -509,7 +510,8 @@ public class SharedEntryActivity extends BaseActivity {
             meta.append(sourcePackage);
         }
         metaView.setText(meta.toString());
-        iconView.setImageResource(iconFor(item.mime, item.name));
+        iconView.setColorFilter(null);
+        iconView.setImageDrawable(specFor(item.mime, item.name).drawable(this));
 
         if (item.resolving) {
             progress.setVisibility(View.VISIBLE);
@@ -1046,19 +1048,26 @@ public class SharedEntryActivity extends BaseActivity {
         return null;
     }
 
-    private int iconFor(String mime, String name) {
+    private FileIconSpec specFor(String mime, String name) {
         try {
-            String ext = extensionOf(name);
-            if (isImage(mime, ext)) return R.drawable.image_24px;
+            if (name != null && !name.isEmpty()) {
+                FileIconSpec byExt = FileIconSpec.forPath(name, false);
+                if (byExt != FileIconSpec.FILE) return byExt;
+            }
             if (mime != null) {
                 String m = mime.toLowerCase(Locale.US);
-                if (m.startsWith("video/")) return R.drawable.video_24px;
-                if (m.startsWith("audio/")) return R.drawable.music_24px;
-                if (m.equals("application/pdf")) return R.drawable.pdf_24px;
-                if (m.startsWith("text/")) return R.drawable.ic_edit_mt;
+                if (m.startsWith("image/")) return FileIconSpec.IMAGE;
+                if (m.startsWith("video/")) return FileIconSpec.VIDEO;
+                if (m.startsWith("audio/")) return FileIconSpec.AUDIO;
+                if ("application/pdf".equals(m)) return FileIconSpec.PDF;
+                if ("application/vnd.android.package-archive".equals(m)) return FileIconSpec.APK;
+                if (m.contains("zip") || m.contains("rar") || m.contains("7z") || m.contains("archive")) {
+                    return FileIconSpec.ARCHIVE;
+                }
+                if (m.startsWith("text/")) return FileIconSpec.TEXT;
             }
         } catch (Exception ignored) {
         }
-        return R.drawable.baseline_insert_drive_file_24;
+        return FileIconSpec.FILE;
     }
 }
