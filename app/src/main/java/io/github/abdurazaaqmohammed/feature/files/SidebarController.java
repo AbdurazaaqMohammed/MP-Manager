@@ -17,9 +17,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
-import android.widget.ListView;
 import android.widget.PopupMenu;
 
 import androidx.preference.PreferenceManager;
@@ -101,7 +99,7 @@ public class SidebarController {
 
     private final MainActivity activity;
     private SidebarAdapter sidebarAdapter;
-    private ListView sidebarList;
+    private RecyclerView sidebarList;
     private SwipeRefreshLayout sidebarRefresh;
     private boolean sidebarOrganizeMode;
     private View organizeDragView;
@@ -243,24 +241,16 @@ public class SidebarController {
         // Data intentionally NOT loaded here: ensureSidebarData() fills the
         // adapter on first drawer open (async), keeping cold start free of
         // storage stats and PackageManager queries.
-        sidebarList.setAdapter(sidebarAdapter);
-        sidebarList.setOnItemClickListener((parent, view, position, id) -> {
-            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
-            if (sidebarOrganizeMode) {
-                if (entry != null && entry.type() != SidebarAdapter.EntryType.HEADER) {
-                    startSidebarDrag(view, entry);
-                }
-                return;
+        sidebarList.setLayoutManager(new LinearLayoutManager(activity));
+        final int gapPx = Math.round(8 * activity.getResources().getDisplayMetrics().density);
+        sidebarList.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(@NonNull android.graphics.Rect outRect, @NonNull View view,
+                    @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                if (parent.getChildAdapterPosition(view) > 0) outRect.top = gapPx;
             }
-            if (entry != null) openSidebarEntry(entry);
         });
-        sidebarList.setOnItemLongClickListener((parent, view, position, id) -> {
-            if (!sidebarOrganizeMode) return false;
-            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
-            if (entry == null || entry.type() == SidebarAdapter.EntryType.STORAGE) return false;
-            startSidebarDrag(view, entry);
-            return true;
-        });
+        sidebarList.setAdapter(sidebarAdapter);
         sidebarList.setOnDragListener((v, event) -> handleSidebarDrag(event));
         sidebarRefresh = activity.findViewById(R.id.sidebarRefresh);
         if (sidebarRefresh != null) {
@@ -355,11 +345,10 @@ public class SidebarController {
             organizeDragStarted = false;
             organizeDownX = event.getX();
             organizeDownY = event.getY();
-            int position = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
+            View child = sidebarList.findChildViewUnder(event.getX(), event.getY());
+            int position = child != null ? sidebarList.getChildAdapterPosition(child) : RecyclerView.NO_POSITION;
             organizeDragEntry = sidebarAdapter.getEntry(position);
-            int childIndex = position - sidebarList.getFirstVisiblePosition();
-            organizeDragView = childIndex >= 0 && childIndex < sidebarList.getChildCount()
-                    ? sidebarList.getChildAt(childIndex) : null;
+            organizeDragView = child;
             organizeDragCard = organizeDragView;
             if (organizeDragEntry != null && organizeDragView != null) {
                 activity.handler.postDelayed(organizeLongPressRunnable, ViewConfiguration.getLongPressTimeout());
@@ -814,13 +803,14 @@ public class SidebarController {
             String payload = event.getClipData() == null || event.getClipData().getItemCount() == 0
                     ? null : event.getClipData().getItemAt(0).getText().toString();
             SidebarAdapter.SidebarEntry source = sidebarAdapter.findByPayload(payload);
-            int dropPos = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
-            if (dropPos == AdapterView.INVALID_POSITION) {
-                int y = (int) event.getY();
+            View dropChild = sidebarList.findChildViewUnder(event.getX(), event.getY());
+            int dropPos = dropChild != null ? sidebarList.getChildAdapterPosition(dropChild) : RecyclerView.NO_POSITION;
+            if (dropPos == RecyclerView.NO_POSITION) {
+                float y = event.getY();
                 for (int i = 0; i < sidebarList.getChildCount(); i++) {
                     View child = sidebarList.getChildAt(i);
                     if (y >= child.getTop() && y <= child.getBottom()) {
-                        dropPos = sidebarList.getFirstVisiblePosition() + i;
+                        dropPos = sidebarList.getChildAdapterPosition(child);
                         break;
                     }
                 }

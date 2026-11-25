@@ -12,7 +12,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -22,6 +21,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
@@ -32,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -46,7 +48,7 @@ import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.feature.system.SidebarToolSelection;
 import io.github.abdurazaaqmohammed.feature.system.ToolRegistry;
 
-public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
+public class SidebarAdapter extends RecyclerView.Adapter<SidebarAdapter.ViewHolder> {
 
     public enum EntryType {
         HEADER, STORAGE, TOOL, BOOKMARK, PIN
@@ -59,6 +61,11 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 return type.name() + "\u0001" + section + "\u0001" + (id == null ? "" : id);
             }
         }
+
+    private record EntrySnapshot(EntryType type, String section, String id, String label, int icon,
+                                 boolean collapsed, boolean organize, boolean hidden,
+                                 long totalBytes, long usedBytes, long freeBytes,
+                                 String description, boolean animate) {}
 
     public interface Callbacks {
         void onEntryClicked(SidebarEntry entry, View view);
@@ -80,6 +87,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     /** id prefix of a pack tool row inside the plugins section. */
     public static final String PACK_TOOL_PREFIX = SidebarToolSelection.PACK_TOOL_PREFIX;
     private final List<SidebarEntry> entries = new ArrayList<>();
+    private List<EntrySnapshot> lastSnapshots = new ArrayList<>();
     private final Map<String, Boolean> collapsed = new LinkedHashMap<>();
     private final List<String> sectionOrder = new ArrayList<>();
     private final List<StorageUtil.StorageInfo> storage = new ArrayList<>();
@@ -98,13 +106,55 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private String animateToggleSection;
 
     public SidebarAdapter(Context context, Callbacks callbacks) {
-        super(context, R.layout.item_dropdown_option);
         this.context = context;
         this.callbacks = callbacks;
         sectionOrder.add("storage");
         sectionOrder.add("bookmarks");
         sectionOrder.add("tools");
         sectionOrder.add("plugins");
+    }
+
+    private List<EntrySnapshot> captureSnapshots() {
+        List<EntrySnapshot> out = new ArrayList<>(entries.size());
+        for (SidebarEntry entry : entries) {
+            StorageUtil.StorageInfo info = entry.storage;
+            boolean isCollapsed = entry.type == EntryType.HEADER && Boolean.TRUE.equals(collapsed.get(entry.section));
+            boolean anim = entry.type == EntryType.HEADER && entry.section.equals(animateToggleSection);
+            out.add(new EntrySnapshot(
+                    entry.type, entry.section, entry.id, entry.label, entry.icon,
+                    isCollapsed, organizeMode, isHidden(entry),
+                    info != null ? info.totalBytes : -2L,
+                    info != null ? info.usedBytes : -2L,
+                    info != null ? info.freeBytes : -2L,
+                    info != null ? info.description : null,
+                    anim));
+        }
+        return out;
+    }
+
+    private void dispatchEntriesDiff() {
+        final List<EntrySnapshot> oldList = lastSnapshots;
+        final List<EntrySnapshot> newList = captureSnapshots();
+        lastSnapshots = newList;
+        DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() { return oldList.size(); }
+
+            @Override
+            public int getNewListSize() { return newList.size(); }
+
+            @Override
+            public boolean areItemsTheSame(int oldPos, int newPos) {
+                EntrySnapshot a = oldList.get(oldPos);
+                EntrySnapshot b = newList.get(newPos);
+                return a.type == b.type && Objects.equals(a.section, b.section) && Objects.equals(a.id, b.id);
+            }
+
+            @Override
+            public boolean areContentsTheSame(int oldPos, int newPos) {
+                return oldList.get(oldPos).equals(newList.get(newPos));
+            }
+        }).dispatchUpdatesTo(this);
     }
 
     public void setData(List<String> order, boolean showBookmarks, boolean showGroups,
@@ -256,7 +306,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 addTools();
             }
         }
-        notifyDataSetChanged();
+        dispatchEntriesDiff();
     }
 
     private String sectionTitle(String section) {
@@ -490,8 +540,12 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     @Override
-    public int getCount() {
+    public int getItemCount() {
         return entries.size();
+    }
+
+    public int getCount() {
+        return getItemCount();
     }
 
     public SidebarEntry getEntry(int position) {
@@ -529,7 +583,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         entries.add(Math.max(0, Math.min(to, entries.size())), moved);
         if (moved.type == EntryType.BOOKMARK) syncBookmarkSources();
         if (moved.type == EntryType.TOOL) syncToolOrder();
-        notifyDataSetChanged();
+        dispatchEntriesDiff();
         return true;
     }
 
@@ -571,108 +625,120 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         return 2;
     }
 
-    @Override
-    public int getViewTypeCount() {
-        return 3;
-    }
-
     @NonNull
     @Override
-    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(context);
+        View view;
+        if (viewType == 0) view = inflater.inflate(R.layout.item_sidebar_header, parent, false);
+        else if (viewType == 1) view = inflater.inflate(R.layout.item_storage, parent, false);
+        else view = inflater.inflate(R.layout.item_dropdown_option, parent, false);
+        ViewHolder holder = new ViewHolder(view, viewType);
+        view.setTag(holder);
+        return holder;
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         SidebarEntry entry = getEntry(position);
-        int type = getItemViewType(position);
+        if (entry == null) return;
+        int type = holder.viewType;
         if (type == 0) {
-            View view = convertView;
-            if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_sidebar_header, parent, false);
-            TextView title = view.findViewById(R.id.sidebarSectionTitle);
-            title.setText(entry.label);
-            ImageView dragHandle = view.findViewById(R.id.sidebarSectionDragHandle);
-            dragHandle.setVisibility(organizeMode ? View.VISIBLE : View.INVISIBLE);
-            dragHandle.setOnTouchListener((v, event) -> {
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            holder.headerTitle.setText(entry.label);
+            holder.headerDragHandle.setVisibility(organizeMode ? View.VISIBLE : View.INVISIBLE);
+            holder.headerDragHandle.setOnTouchListener((v, event) -> {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN && callbacks != null) {
                     callbacks.onEntryDragHandleTouched(entry, v);
                 }
                 return true;
             });
-            ImageView toggle = view.findViewById(R.id.sidebarSectionToggle);
             boolean groupCollapsed = Boolean.TRUE.equals(this.collapsed.get(entry.section));
-            Drawable d = ResourcesCompat.getDrawable(context.getResources(), groupCollapsed ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px, null);
-            toggle.setImageDrawable(d.mutate());
-            toggle.setContentDescription(context.getString(groupCollapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
-            ((View) toggle.getParent()).setOnClickListener(v -> callbacks.onHeaderToggle(entry));
-            toggle.animate().cancel();
-            toggle.setRotation(0f);
+            Drawable d = ResourcesCompat.getDrawable(context.getResources(),
+                    groupCollapsed ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px, null);
+            if (d != null) holder.headerToggle.setImageDrawable(d.mutate());
+            holder.headerToggle.setContentDescription(context.getString(
+                    groupCollapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
+            ((View) holder.headerToggle.getParent()).setOnClickListener(v -> {
+                if (callbacks != null) callbacks.onHeaderToggle(entry);
+            });
+            holder.headerToggle.animate().cancel();
+            holder.headerToggle.setRotation(0f);
             if (entry.section.equals(animateToggleSection)) {
                 animateToggleSection = null;
-                toggle.setAlpha(0.45f);
-                toggle.setScaleX(0.88f);
-                toggle.setScaleY(0.88f);
-                toggle.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180L).start();
+                holder.headerToggle.setAlpha(0.45f);
+                holder.headerToggle.setScaleX(0.88f);
+                holder.headerToggle.setScaleY(0.88f);
+                holder.headerToggle.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180L).start();
             } else {
-                toggle.setAlpha(1f);
-                toggle.setScaleX(1f);
-                toggle.setScaleY(1f);
+                holder.headerToggle.setAlpha(1f);
+                holder.headerToggle.setScaleX(1f);
+                holder.headerToggle.setScaleY(1f);
             }
-            return view;
+            return;
         }
+        View view = holder.itemView;
         if (type == 1) {
-            View view = convertView;
-            if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_storage, parent, false);
             StorageUtil.StorageInfo info = entry.storage;
-            TextView name = view.findViewById(R.id.tvStorageName);
-            name.setText(info.name);
-            Drawable glyph = entry.type == EntryType.PIN ? ResourcesCompat.getDrawable(context.getResources(), entry.icon, context.getTheme()) : null;
+            holder.storageName.setText(info.name);
+            Drawable glyph = entry.type == EntryType.PIN
+                    ? ResourcesCompat.getDrawable(context.getResources(), entry.icon, context.getTheme()) : null;
             if (glyph != null) {
                 int size = (int) (20 * context.getResources().getDisplayMetrics().density + 0.5f);
                 glyph = glyph.mutate();
                 glyph.setBounds(0, 0, size, size);
                 DrawableCompat.setTint(glyph,
-                        MaterialColors.getColor(name, android.R.attr.colorPrimary));
+                        MaterialColors.getColor(holder.storageName, android.R.attr.colorPrimary));
             }
-            name.setCompoundDrawablesRelative(glyph, null, null, null);
-            name.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density));
+            holder.storageName.setCompoundDrawablesRelative(glyph, null, null, null);
+            holder.storageName.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density));
             boolean known = info.totalBytes >= 0 && info.usedBytes >= 0 && info.freeBytes >= 0;
-            ((View) view.findViewById(R.id.pbUsed).getParent()).setVisibility(known ? View.VISIBLE : View.GONE);
-            ((TextView) view.findViewById(R.id.tvUsedPercent)).setText(context.getString(R.string.usedpt, info.usedPercent()));
-            TextView freeSpace = view.findViewById(R.id.tvUsedFree);
+            ((View) holder.storageProgress.getParent()).setVisibility(known ? View.VISIBLE : View.GONE);
+            holder.storageUsedPercent.setText(context.getString(R.string.usedpt, info.usedPercent()));
             if (known) {
-                freeSpace.setText(context.getString(R.string.used,
+                holder.storageFreeSpace.setVisibility(View.VISIBLE);
+                holder.storageFreeSpace.setText(context.getString(R.string.used,
                         FileSize.getHumanReadableFileSize(info.usedBytes), FileSize.getHumanReadableFileSize(info.freeBytes)));
             } else {
-                if (info.freeBytes >= 0) freeSpace.setText(context.getString(R.string.network_storage_free, FileSize.getHumanReadableFileSize(info.freeBytes)));
-                else if(TextUtils.isEmpty(info.description)) freeSpace.setVisibility(View.GONE);
-                else freeSpace.setText(info.description);
+                if (info.freeBytes >= 0) {
+                    holder.storageFreeSpace.setVisibility(View.VISIBLE);
+                    holder.storageFreeSpace.setText(context.getString(
+                            R.string.network_storage_free, FileSize.getHumanReadableFileSize(info.freeBytes)));
+                } else if (TextUtils.isEmpty(info.description)) {
+                    holder.storageFreeSpace.setVisibility(View.GONE);
+                } else {
+                    holder.storageFreeSpace.setVisibility(View.VISIBLE);
+                    holder.storageFreeSpace.setText(info.description);
+                }
             }
-            ((ProgressBar) view.findViewById(R.id.pbUsed)).setProgress(info.usedPercent());
-            view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
+            holder.storageProgress.setProgress(info.usedPercent());
+            view.setOnClickListener(v -> {
+                if (callbacks != null) callbacks.onEntryClicked(entry, v);
+            });
             view.setOnLongClickListener(v -> {
+                if (callbacks == null) return false;
                 if (entry.type == EntryType.PIN) callbacks.onEntryLongPressed(entry, v);
                 else callbacks.onEntryStorageLongPressed(entry, v);
                 return true;
             });
-            return view;
+            return;
         }
-        View view = convertView;
-        if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_dropdown_option, parent, false);
-        ImageView icon = view.findViewById(R.id.optionIcon);
-        TextView text = view.findViewById(R.id.optionText);
-        ImageView dragHandle = view.findViewById(R.id.optionDragHandle);
-        ImageButton hideButton = view.findViewById(R.id.optionHideButton);
         boolean hidden = isHidden(entry);
-        icon.setImageResource(hidden ? R.drawable.visibility_off_24px : entry.icon);
-        icon.setEnabled(!hidden);
-        icon.setAlpha(hidden ? 0.55f : 1f);
-        text.setText(entry.label);
-        text.setEnabled(!hidden);
-        text.setAlpha(hidden ? 0.55f : 1f);
+        holder.optionIcon.setImageResource(hidden ? R.drawable.visibility_off_24px : entry.icon);
+        holder.optionIcon.setEnabled(!hidden);
+        holder.optionIcon.setAlpha(hidden ? 0.55f : 1f);
+        holder.optionText.setText(entry.label);
+        holder.optionText.setEnabled(!hidden);
+        holder.optionText.setAlpha(hidden ? 0.55f : 1f);
         view.setAlpha(hidden ? 0.7f : 1f);
         view.setTranslationY(0f);
-        dragHandle.setVisibility(organizeMode && entry.type != EntryType.STORAGE ? View.VISIBLE : View.INVISIBLE);
-        hideButton.setVisibility(organizeMode && entry.type != EntryType.STORAGE ? View.VISIBLE : View.INVISIBLE);
-        hideButton.setContentDescription(context.getString(hidden ? R.string.restore_sidebar_item : R.string.hide));
-        hideButton.setOnClickListener(v -> callbacks.onEntryHideRequested(entry));
-        dragHandle.setOnTouchListener((v, event) -> {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+        holder.optionDragHandle.setVisibility(organizeMode && entry.type != EntryType.STORAGE ? View.VISIBLE : View.INVISIBLE);
+        holder.optionHideButton.setVisibility(organizeMode && entry.type != EntryType.STORAGE ? View.VISIBLE : View.INVISIBLE);
+        holder.optionHideButton.setContentDescription(context.getString(hidden ? R.string.restore_sidebar_item : R.string.hide));
+        holder.optionHideButton.setOnClickListener(v -> {
+            if (callbacks != null) callbacks.onEntryHideRequested(entry);
+        });
+        holder.optionDragHandle.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN && callbacks != null) {
                 callbacks.onEntryDragHandleTouched(entry, v);
             }
             return true;
@@ -680,19 +746,87 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         TypedValue value = new TypedValue();
         Resources.Theme theme = context.getTheme();
         theme.resolveAttribute(android.R.attr.colorPrimary, value, true);
-        Drawable drawable = icon.getDrawable();
+        Drawable drawable = holder.optionIcon.getDrawable();
         if (drawable != null) {
             drawable = drawable.mutate();
             ColorUtil.changeImageColor(drawable, value.data);
-            icon.setImageDrawable(drawable);
+            holder.optionIcon.setImageDrawable(drawable);
         }
-        view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
+        view.setOnClickListener(v -> {
+            if (callbacks != null) callbacks.onEntryClicked(entry, v);
+        });
         view.setOnLongClickListener(v -> {
-            callbacks.onEntryLongPressed(entry, v);
+            if (callbacks != null) callbacks.onEntryLongPressed(entry, v);
             return true;
         });
         int surfaceColor = MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurfaceContainer, Color.TRANSPARENT);
         if (view instanceof MaterialCardView card) card.setCardBackgroundColor(surfaceColor);
-        return view;
+    }
+
+    /** Legacy row-binding helper retained for direct instrumentation callers. */
+    @NonNull
+    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+        int type = getItemViewType(position);
+        ViewHolder holder = (convertView != null && convertView.getTag() instanceof ViewHolder vh
+                && vh.viewType == type) ? vh : onCreateViewHolder(parent, type);
+        onBindViewHolder(holder, position);
+        return holder.itemView;
+    }
+
+    public static final class ViewHolder extends RecyclerView.ViewHolder {
+        final int viewType;
+        final TextView headerTitle;
+        final ImageView headerDragHandle;
+        final ImageView headerToggle;
+        final TextView storageName;
+        final TextView storageUsedPercent;
+        final TextView storageFreeSpace;
+        final ProgressBar storageProgress;
+        final ImageView optionIcon;
+        final TextView optionText;
+        final ImageView optionDragHandle;
+        final ImageButton optionHideButton;
+
+        ViewHolder(@NonNull View itemView, int viewType) {
+            super(itemView);
+            this.viewType = viewType;
+            if (viewType == 0) {
+                headerTitle = itemView.findViewById(R.id.sidebarSectionTitle);
+                headerDragHandle = itemView.findViewById(R.id.sidebarSectionDragHandle);
+                headerToggle = itemView.findViewById(R.id.sidebarSectionToggle);
+                storageName = null;
+                storageUsedPercent = null;
+                storageFreeSpace = null;
+                storageProgress = null;
+                optionIcon = null;
+                optionText = null;
+                optionDragHandle = null;
+                optionHideButton = null;
+            } else if (viewType == 1) {
+                headerTitle = null;
+                headerDragHandle = null;
+                headerToggle = null;
+                storageName = itemView.findViewById(R.id.tvStorageName);
+                storageUsedPercent = itemView.findViewById(R.id.tvUsedPercent);
+                storageFreeSpace = itemView.findViewById(R.id.tvUsedFree);
+                storageProgress = itemView.findViewById(R.id.pbUsed);
+                optionIcon = null;
+                optionText = null;
+                optionDragHandle = null;
+                optionHideButton = null;
+            } else {
+                headerTitle = null;
+                headerDragHandle = null;
+                headerToggle = null;
+                storageName = null;
+                storageUsedPercent = null;
+                storageFreeSpace = null;
+                storageProgress = null;
+                optionIcon = itemView.findViewById(R.id.optionIcon);
+                optionText = itemView.findViewById(R.id.optionText);
+                optionDragHandle = itemView.findViewById(R.id.optionDragHandle);
+                optionHideButton = itemView.findViewById(R.id.optionHideButton);
+            }
+        }
     }
 }
