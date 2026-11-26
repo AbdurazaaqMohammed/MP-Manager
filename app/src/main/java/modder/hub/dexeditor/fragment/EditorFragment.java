@@ -701,6 +701,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
                     ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
         }
+        ThemePackEditorColors.applyIndentGuideColors(scheme, true);
         return scheme;
     }
 

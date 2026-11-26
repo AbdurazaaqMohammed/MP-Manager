@@ -478,7 +478,8 @@ public final class ThemePackEditorColors {
      * indent guides stay readable without competing with syntax tokens.
      */
     public static int deriveIndentGuideColor(int backgroundArgb, int foregroundArgb, boolean active) {
-        float ratio = active ? 0.48f : 0.22f;
+        boolean darkSurface = isColorDark(backgroundArgb);
+        float ratio = darkSurface ? (active ? 0.72f : 0.40f) : (active ? 0.58f : 0.30f);
         int r = Math.round(((backgroundArgb >> 16) & 0xFF) * (1f - ratio)
                 + ((foregroundArgb >> 16) & 0xFF) * ratio);
         int g = Math.round(((backgroundArgb >> 8) & 0xFF) * (1f - ratio)

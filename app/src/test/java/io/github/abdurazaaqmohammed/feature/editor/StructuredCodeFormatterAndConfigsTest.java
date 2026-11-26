@@ -118,4 +118,32 @@ public class StructuredCodeFormatterAndConfigsTest {
             assertFalse(colors.get("editorIndentGuide.activeBackground").getAsString().isEmpty());
         }
     }
+
+    @Test
+    public void wrappedIndentGuideGeometryAndContrastBehaveAsExpected() throws Exception {
+        assertTrue(io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.isBlockVisible(5, 18, 10, 25));
+        assertTrue(io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.isBlockVisible(2, 40, 10, 25));
+        assertFalse(io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.isBlockVisible(1, 9, 10, 25));
+        assertFalse(io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.isBlockVisible(26, 30, 10, 25));
+
+        assertEquals(0, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.clampIndex(-3, 0, 10));
+        assertEquals(10, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.clampIndex(99, 0, 10));
+        assertEquals(0, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.clampIndex(5, 0, -1));
+
+        assertEquals(0xCC5A5A5A,
+                io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.softenWrappedGuideColor(0xFF5A5A5A));
+        assertEquals(0x403399FF,
+                io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.softenWrappedGuideColor(0x403399FF));
+
+        assertEquals(0f, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.resolveGuideTop(40f, 100), 0.01f);
+        assertEquals(80f, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.resolveGuideTop(180f, 100), 0.01f);
+        assertEquals(500f, io.github.abdurazaaqmohammed.ui.editor.IndentGuideGeometry.resolveGuideBottom(700f, 100, 500), 0.01f);
+
+        int darkGuide = ThemePackEditorColors.deriveIndentGuideColor(0xFF000000, 0xFFE0E0E0, false);
+        assertTrue("Dark surface guide channel should be >= 0x45 for AMOLED legibility", (darkGuide & 0xFF) >= 0x45);
+
+        File smaliCfg = new File(resolveAssetsDir(), "smali/language-configuration.json");
+        JsonObject smaliObj = JsonParser.parseString(Files.readString(smaliCfg.toPath())).getAsJsonObject();
+        assertEquals("#", smaliObj.getAsJsonObject("comments").get("lineComment").getAsString());
+    }
 }

@@ -918,7 +918,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
         }
         ColorPreviewHelper.syncScheme(scheme);
-        ThemePackEditorColors.applyIndentGuideColors(scheme, false);
+        ThemePackEditorColors.applyIndentGuideColors(scheme, true);
         return scheme;
     }
 
@@ -2315,6 +2315,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (cachedSmaliLanguage != null && themeName.equals(cachedThemeName)) return;
         try {
             initTMStatic(context);
+            if (!syntaxGrammarsLoaded) {
+                GrammarRegistry.getInstance().loadGrammars("languages.json");
+                syntaxGrammarsLoaded = true;
+            }
             ThemeRegistry registry = ThemeRegistry.getInstance();
             cachedThemeName = themeName;
             IThemeSource themeSource = null;
