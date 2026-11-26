@@ -19,6 +19,7 @@ public final class RightMenuOrder {
     public static final String SEARCH_RESULTS = "search_results";
     public static final String CLEAR_SEARCH = "clear_search";
     public static final String MINIMIZED_PROCESSES = "minimized_processes";
+    public static final String TASKS = "tasks";
     public static final String SELECT_ALL = "select_all";
     public static final String SORT = "sort";
     public static final String SHOW_SYSTEM_HIDDEN = "show_system_hidden";
@@ -38,6 +39,7 @@ public final class RightMenuOrder {
             SEARCH_RESULTS,
             CLEAR_SEARCH,
             MINIMIZED_PROCESSES,
+            TASKS,
             SELECT_ALL,
             SORT,
             COMPARE_FOLDERS,
@@ -111,6 +113,7 @@ public final class RightMenuOrder {
             case SEARCH_RESULTS: return context.getString(R.string.search_results);
             case CLEAR_SEARCH: return context.getString(R.string.clear_search_results);
             case MINIMIZED_PROCESSES: return context.getString(R.string.minimized_processes);
+            case TASKS: return context.getString(R.string.tasks);
             case SELECT_ALL: return context.getString(R.string.menu_select_all);
             case SORT: return context.getString(R.string.sort);
             case SHOW_SYSTEM_HIDDEN: return context.getString(R.string.menu_show_system_hidden);
@@ -135,6 +138,7 @@ public final class RightMenuOrder {
             case SEARCH_RESULTS: return R.drawable.ic_eye_mt;
             case CLEAR_SEARCH: return R.drawable.close_24px;
             case MINIMIZED_PROCESSES: return R.drawable.ic_arrow_up_mt;
+            case TASKS: return R.drawable.baseline_task_24;
             case SELECT_ALL: return R.drawable.baseline_select_all_24;
             case SORT: return R.drawable.baseline_sort_24;
             case COMPARE_FOLDERS: return R.drawable.baseline_compare_24;

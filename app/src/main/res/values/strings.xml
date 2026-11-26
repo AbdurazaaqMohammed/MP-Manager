@@ -2201,6 +2201,10 @@ The stub application is replaced with the real one found in the dump and all inj
     <!-- Progress dialog: pause / cancel controls -->
     <string name="progress_paused">Paused</string>
     <string name="progress_cancelling">Cancelling…</string>
+    <string name="tasks">Tasks</string>
+    <string name="tasks_empty">No active tasks</string>
+    <string name="task_status_running">Running</string>
+    <string name="task_status_background">Running in background</string>
     <string name="progress_cancel_confirm">Cancel this operation?</string>
     <string name="progress_cancel_confirm_msg">The operation will stop as soon as possible. Files already copied or deleted will not be undone.</string>
     <string name="progress_keep_waiting">Keep waiting</string>

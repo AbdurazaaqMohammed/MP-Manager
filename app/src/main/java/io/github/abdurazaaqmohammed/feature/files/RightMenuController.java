@@ -161,6 +161,10 @@ public class RightMenuController {
                         addRightDrawerItem(container, R.drawable.ic_arrow_up_mt, activity.getString(R.string.minimized_processes), v -> MinimizedEditors.showListDialog(activity));
                     }
                     break;
+                case RightMenuOrder.TASKS:
+                    addRightDrawerItem(container, R.drawable.baseline_task_24,
+                            activity.getString(R.string.tasks), v -> OperationTasksDialog.show(activity));
+                    break;
                 case RightMenuOrder.SELECT_ALL:
                     addRightDrawerItem(container, R.drawable.baseline_select_all_24, activity.getString(R.string.menu_select_all), v -> {
                         RecyclerView.Adapter a = activity.getCurrentPane().getAdapter();

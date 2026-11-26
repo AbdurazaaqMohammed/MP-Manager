@@ -165,6 +165,45 @@ public class ProgressManager {
         }
     }
 
+    /** A point-in-time view of an operation for the Tasks screen. */
+    public record TaskSnapshot(ProgressManager operation, String title, String operationLabel,
+                               String fileName, String status, String progressText,
+                               int percent, boolean indeterminate) {}
+
+    /** Returns a snapshot of every operation that has not finished yet. */
+    public static List<TaskSnapshot> getLiveTasks() {
+        List<TaskSnapshot> tasks = new ArrayList<>();
+        for (ProgressManager pm : liveInstances) {
+            if (!pm.dismissed) tasks.add(pm.taskSnapshot());
+        }
+        return tasks;
+    }
+
+    private TaskSnapshot taskSnapshot() {
+        String title = currentText;
+        if (isBlank(title)) title = operationLabel;
+        if (isBlank(title)) title = activity.getString(R.string.progress_working);
+
+        String status;
+        if (cancelling || control.isCancelled()) {
+            status = activity.getString(R.string.progress_cancelling);
+        } else if (control.isPaused()) {
+            status = activity.getString(R.string.progress_paused);
+        } else if (hidden) {
+            status = activity.getString(R.string.task_status_background);
+        } else {
+            status = activity.getString(R.string.task_status_running);
+        }
+
+        String progressText = buildStatsLine();
+        String speed = buildSpeedLine();
+        if (!isBlank(speed)) {
+            progressText = isBlank(progressText) ? speed : progressText + " • " + speed;
+        }
+        return new TaskSnapshot(this, title, operationLabel, fileName, status, progressText,
+                percent(), !hasBytes() && maxVal <= 0);
+    }
+
     public static boolean hasHidden() {
         for (ProgressManager pm : activeInstances) {
             if (pm.hidden && !pm.dismissed) return true;
