@@ -72,6 +72,15 @@
 -keepclassmembers class com.hierynomus.smbj.** {
     @net.engio.mbassy.listener.Handler <methods>;
 }
+# @Handler.invocation() defaults to ReflectiveHandlerInvocation.class, which
+# MBassador reads from the annotation at runtime and instantiates reflectively
+# via getConstructor(SubscriptionContext). R8 kept the class name (annotations
+# are preserved) but deleted its only constructor, so constructing SMBClient
+# failed with "provided handler invocation did not specify the necessary
+# constructor ReflectiveHandlerInvocation(SubscriptionContext)".
+-keep class net.engio.mbassy.dispatch.ReflectiveHandlerInvocation {
+    public <init>(net.engio.mbassy.subscription.SubscriptionContext);
+}
 -dontwarn javax.el.**
 -keep class io.github.abdurazaaqmohammed.util.net.DnsManager$DnsProfile { *; }
 -keep class io.github.abdurazaaqmohammed.util.io.RecycleBin$Meta { *; }
