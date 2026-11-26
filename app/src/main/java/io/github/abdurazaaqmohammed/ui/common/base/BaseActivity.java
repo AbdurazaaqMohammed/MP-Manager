@@ -113,6 +113,10 @@ public abstract class BaseActivity extends AppCompatActivity {
         return explicitFinish;
     }
 
+    protected final boolean wasMinimizedFinish() {
+        return minimizedFinish;
+    }
+
     protected final boolean shouldDiscardStateOnDestroy() {
         return !minimizedFinish && explicitFinish;
     }
